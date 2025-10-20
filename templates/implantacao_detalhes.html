@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block title %}Detalhes da Implantação - {{ implantacao.nome_empresa }}{% endblock %}
+
+{% block content %}
+<header class="header-bg p-3 shadow-sm d-flex justify-content-between align-items-center">
+    <h1 class="main-title mb-0 fs-4">CS ONBOARDING DETALHES</h1>
+    <div class="d-flex align-items-center">
+        <button class="btn btn-outline-light d-lg-none me-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar" aria-controls="mobileSidebar">
+            <i class="bi bi-list"></i>
+        </button>
+        <button id="mode-toggle" class="btn btn-dark" type="button" title="Alternar tema">
+            <span id="mode-icon">🌙</span>
+        </button>
+    </div>
+</header>
+
+<div class="d-flex">
+    <div class="offcanvas-lg offcanvas-start bg-dark text-white sidebar-bg d-lg-block" tabindex="-1" id="mobileSidebar" aria-labelledby="mobileSidebarLabel" style="width: 250px;">
+        <div class="offcanvas-header header-bg">
+            <h5 class="offcanvas-title" id="mobileSidebarLabel">Opções de Implantação</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" data-bs-target="#mobileSidebar" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body d-flex flex-column p-3">
+            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-primary mb-3">
+                <i class="bi bi-arrow-left me-2"></i> Voltar ao Dashboard
+            </a>
+            <p class="text-secondary small mt-2">Ações Rápidas</p>
+            <ul class="list-group list-group-flush mb-4">
+                <li class="list-group-item">
+                    <button class="btn btn-sm btn-link text-decoration-none p-0" data-bs-toggle="modal" data-bs-target="#adicionarTarefaModal">
+                        <i class="bi bi-plus-circle me-2"></i> Adicionar Tarefa
+                    </button>
+                </li>
+                {% if implantacao.status == 'andamento' %}
+                <li class="list-group-item">
+                    <button class="btn btn-sm btn-link text-success text-decoration-none p-0" data-bs-toggle="modal" data-bs-target="#modalFinalizar">
+                        <i class="bi bi-check-circle me-2"></i> Finalizar Implantação
+                    </button>
+                </li>
+                <li class="list-group-item">
+                    <button class="btn btn-sm btn-link text-danger text-decoration-none p-0" data-bs-toggle="modal" data-bs-target="#modalParar">
+                        <i class="bi bi-stop-circle me-2"></i> Parar Implantação
+                    </button>
+                </li>
+                {% endif %}
+            </ul>
+
+            <a href="{{ url_for('logout') }}" class="btn btn-outline-secondary mt-auto">
+                <i class="bi bi-box-arrow-right me-2"></i> Sair
+            </a>
+        </div>
+    </div>
+    
+    <main class="flex-grow-1 p-4" id="main-content">
+        <div class="metric-card p-3 rounded shadow-sm mb-4">
+            <div class="row align-items-center">
+                <div class="col-md-6 mb-3 mb-md-0">
+                    <p class="mb-1"><strong>Status:</strong> 
+                        {% if implantacao.status == 'finalizada' %}
+                            <span class="badge bg-success">Concluído</span>
+                        {% elif implantacao.status == 'parada' %}
+                            <span class="badge bg-danger">Parada</span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark">Em Andamento</span>
+                        {% endif %}
+                    </p>
+                    <p class="mb-0"><strong>Criação:</strong> {{ implantacao.data_criacao }}</p> 
+                </div>
+                <div class="col-md-6">
+                    <h4 class="h6 mb-2">Progresso Total</h4>
+                    <div class="progress" style="height: 30px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 50%;" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100">50%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h2 class="h5 mb-3">Checklist de Implantação</h2>
+        <div id="checklist-area">
+            {% for modulo, tarefas in tarefas_agrupadas.items() %}
+            {% if modulo != 'Observação' %} 
+            <div class="card metric-card mb-4 shadow-sm">
+                <div class="card-header header-bg d-flex justify-content-between align-items-center" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#collapse{{ loop.index }}" aria-expanded="true" aria-controls="collapse{{ loop.index }}">
+                    <h5 class="mb-0 fs-6">{{ modulo }}</h5>
+                    <i class="bi bi-chevron-down"></i>
+                </div>
+                <div id="collapse{{ loop.index }}" class="collapse show" data-modulo="{{ modulo }}">
+                    <ul class="list-group list-group-flush list-group-sortable" id="sortable-list-{{ loop.index }}">
+                        {% for tarefa in tarefas %}
+                        <li class="list-group-item d-flex align-items-start justify-content-between" data-id="{{ tarefa.id }}">
+                            <div class="d-flex flex-column flex-grow-1">
+                                <form method="POST" action="{{ url_for('toggle_tarefa', tarefa_id=tarefa.id) }}" class="d-inline">
+                                    <div class="form-check d-flex align-items-center">
+                                        <input class="form-check-input me-3 task-checkbox" type="checkbox" value="1" onchange="this.form.submit()" {% if tarefa.concluida %}checked{% endif %}>
+                                        <label class="form-check-label {% if tarefa.concluida %}text-decoration-line-through text-success{% endif %}">
+                                            {{ tarefa.tarefa_filho }}
+                                        </label>
+                                    </div>
+                                </form>
+                                
+                                <form method="POST" action="{{ url_for('salvar_observacao', tarefa_id=tarefa.id) }}" class="mt-2 ms-5 me-5">
+                                    <label class="form-label small text-secondary">Observação (máx 240)</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" class="form-control" name="observacao" value="{{ tarefa.observacao }}" maxlength="240" placeholder="Adicionar observação...">
+                                        <button class="btn btn-outline-secondary" type="submit" title="Salvar Observação">Salvar</button>
+                                    </div>
+                                </form>
+                            </div>
+                            
+                            <div class="d-flex align-items-center ms-3">
+                                <form method="POST" action="{{ url_for('excluir_tarefa', tarefa_id=tarefa.id) }}" onsubmit="return confirm('Tem certeza que deseja excluir esta tarefa?');" class="d-inline me-2">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger p-1"><i class="bi bi-x-circle-fill"></i></button>
+                                </form>
+                                <i class="bi bi-grip-vertical handle" style="cursor: grab;"></i>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </main>
+</div>
+
+<div class="modal fade" id="modalFinalizar" tabindex="-1" aria-labelledby="modalFinalizarLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title" id="modalFinalizarLabel" style="color: var(--body-color);">Finalizar Implantação</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Tem certeza que deseja marcar "{{ implantacao.nome_empresa }}" como **Concluída**?
+            </div>
+            <form method="POST" action="{{ url_for('finalizar_implantacao') }}">
+                <div class="modal-footer header-bg">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
+                    <button type="submit" class="btn btn-success">Confirmar Finalização</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalParar" tabindex="-1" aria-labelledby="modalPararLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title" id="modalPararLabel" style="color: var(--body-color);">Parar Implantação</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Tem certeza que deseja marcar "{{ implantacao.nome_empresa }}" como **Parada**?
+            </div>
+            <form method="POST" action="{{ url_for('parar_implantacao') }}">
+                <div class="modal-footer header-bg">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
+                    <button type="submit" class="btn btn-danger">Confirmar Parada</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="adicionarTarefaModal" tabindex="-1" aria-labelledby="adicionarTarefaModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title" id="adicionarTarefaModalLabel" style="color: var(--body-color);">Adicionar Tarefa Personalizada</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('adicionar_tarefa') }}" method="POST">
+                <div class="modal-body">
+                    <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
+                    <div class="mb-3">
+                        <label for="tarefaPai" class="form-label">Módulo (Agrupamento)</label>
+                        <select class="form-select" id="tarefaPai" name="tarefa_pai" required>
+                            <option value="">Selecione um módulo</option>
+                            {% for modulo in tarefas_agrupadas.keys() %}
+                                {% if modulo != 'Observação' %}
+                                    <option value="{{ modulo }}">{{ modulo }}</option>
+                                {% endif %}
+                            {% endfor %}
+                            <option value="Personalizado">Outro (Novo Módulo)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="tarefaFilho" class="form-label">Nome da Tarefa</label>
+                        <input type="text" class="form-control" id="tarefaFilho" name="tarefa_filho" required>
+                    </div>
+                </div>
+                <div class="modal-footer header-bg">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" style="background-color: var(--accent-color); border-color: var(--accent-color);">Adicionar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts_extra %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const implantacaoId = {{ implantacao.id }};
+    const endpointReordenar = '{{ url_for('reordenar_tarefas') }}';
+    const endpointDetalhes = '{{ url_for('ver_implantacao', impl_id=implantacao.id) }}';
+
+    // --- Lógica de Arrastar e Soltar (Reorder) ---
+    document.querySelectorAll('.list-group-sortable').forEach(list => {
+        const modulo = list.closest('.collapse').dataset.modulo;
+        
+        new Sortable(list, {
+            animation: 150,
+            handle: '.handle', 
+            onEnd: function (evt) {
+                const novaOrdem = Array.from(evt.to.children).map(item => parseInt(item.dataset.id));
+                
+                fetch(endpointReordenar, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        implantacao_id: implantacaoId,
+                        tarefa_pai: modulo,
+                        ordem: novaOrdem
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.ok) {
+                        console.error('Erro ao reordenar:', data.error);
+                        window.location.href = endpointDetalhes; 
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro de rede ao reordenar:', error);
+                    window.location.href = endpointDetalhes;
+                });
+            },
+        });
+    });
+});
+</script>
+{% endblock %}

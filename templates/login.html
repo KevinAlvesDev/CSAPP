@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login/Cadastro - CS Onboarding</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        
+        /* ============================== */
+        /* MODO ESCURO PADRÃO (DARK MODE) */
+        /* ============================== */
+        :root {
+            --body-bg: #0d1117;
+            --body-color: #c9d1d9;
+            --container-bg: #161b22;
+            --input-bg: #010409;
+            --input-border: #30363d;
+            --input-color: #c9d1d9;
+            --accent-color: #58a6ff;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            --tab-color: #444c56;
+            --tab-active-color: var(--accent-color);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--body-bg);
+            color: var(--body-color);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 400px;
+            background-color: var(--container-bg);
+            border: 1px solid var(--input-border);
+            border-radius: 6px;
+            box-shadow: var(--shadow);
+            padding: 30px;
+        }
+
+        .form-control {
+            background-color: var(--input-bg);
+            border: 1px solid var(--input-border);
+            color: var(--input-color);
+        }
+
+        .form-control:focus {
+            background-color: var(--input-bg);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 0.25rem rgba(88, 166, 255, 0.25);
+            color: var(--input-color);
+        }
+        
+        .btn-primary {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+            font-weight: 600;
+        }
+
+        .btn-primary:hover {
+            background-color: #79c0ff;
+            border-color: #79c0ff;
+        }
+
+        .nav-link {
+            color: var(--body-color);
+            border-bottom: 2px solid transparent;
+            font-weight: 600;
+        }
+
+        .nav-link.active {
+            color: var(--tab-active-color);
+            border-color: var(--tab-active-color);
+            background-color: transparent !important;
+        }
+        
+        /* ============================== */
+        /* MODO CLARO (LIGHT MODE) */
+        /* ============================== */
+        body.light-mode {
+            --body-bg: #f5f5f5;
+            --body-color: #333;
+            --container-bg: #ffffff;
+            --input-bg: #ffffff;
+            --input-border: #ccc;
+            --input-color: #333;
+            --shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            --tab-color: #eee;
+        }
+        
+        body.light-mode .nav-link {
+            color: #555;
+        }
+        
+        body.light-mode .nav-link.active {
+            color: var(--tab-active-color);
+            border-color: var(--tab-active-color);
+        }
+    </style>
+</head>
+<body class="bg-dark">
+    <div class="position-absolute top-0 end-0 p-3">
+        <button id="mode-toggle" class="btn btn-dark rounded-circle" style="width: 40px; height: 40px; line-height: 1;">
+            <span id="mode-icon">🌙</span>
+        </button>
+    </div>
+    
+    <div class="login-container">
+        <h2 class="text-center mb-4 main-title">CS Dashboard</h2>
+
+        <ul class="nav nav-tabs mb-4 justify-content-center" id="myTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link {% if aba_ativa == 'login' %}active{% endif %}" id="login-tab" data-bs-toggle="tab" data-bs-target="#login" type="button" role="tab" aria-controls="login" aria-selected="{% if aba_ativa == 'login' %}true{% else %}false{% endif %}">
+                    Login
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link {% if aba_ativa == 'cadastro' %}active{% endif %}" id="cadastro-tab" data-bs-toggle="tab" data-bs-target="#cadastro" type="button" role="tab" aria-controls="cadastro" aria-selected="{% if aba_ativa == 'cadastro' %}true{% else %}false{% endif %}">
+                    Registro
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="myTabContent">
+            <div class="tab-pane fade {% if aba_ativa == 'login' %}show active{% endif %}" id="login" role="tabpanel" aria-labelledby="login-tab">
+                <form action="{{ url_for('login_cadastro') }}" method="post">
+                    <input type="hidden" name="action" value="login">
+                    
+                    {% if aba_ativa == 'login' and error %}
+                    <div class="alert alert-danger" role="alert">
+                        {{ error }}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        <label for="login-usuario" class="form-label">Usuário (Email)</label>
+                        <input type="text" class="form-control" id="login-usuario" name="usuario" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="login-senha" class="form-label">Senha</label>
+                        <input type="password" class="form-control" id="login-senha" name="senha" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Entrar</button>
+                </form>
+            </div>
+
+            <div class="tab-pane fade {% if aba_ativa == 'cadastro' %}show active{% endif %}" id="cadastro" role="tabpanel" aria-labelledby="cadastro-tab">
+                <form action="{{ url_for('login_cadastro') }}" method="post">
+                    <input type="hidden" name="action" value="cadastro">
+
+                    {% if aba_ativa == 'cadastro' and error %}
+                    <div class="alert alert-danger" role="alert">
+                        {{ error }}
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label for="cadastro-nome-completo" class="form-label">Nome Completo</label>
+                        <input type="text" class="form-control" id="cadastro-nome-completo" name="nome_completo" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="cadastro-usuario" class="form-label">Usuário (Email)</label>
+                        <input type="text" class="form-control" id="cadastro-usuario" name="usuario" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="cadastro-senha" class="form-label">Senha (mín. 6 caracteres)</label>
+                        <input type="password" class="form-control" id="cadastro-senha" name="senha" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Registrar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const body = document.body;
+            const toggleBtn = document.getElementById('mode-toggle');
+            const icon = document.getElementById('mode-icon');
+            
+            // Lógica para alternar entre as abas e manter o estado após o POST
+            const abaAtiva = "{{ aba_ativa }}" || 'login';
+            const tabEl = document.getElementById(abaAtiva + '-tab');
+            if (tabEl) {
+                new bootstrap.Tab(tabEl).show();
+            }
+
+            // Aplica tema salvo
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'light') {
+                body.classList.add('light-mode');
+                toggleBtn.classList.remove('btn-dark');
+                toggleBtn.classList.add('btn-light');
+                icon.textContent = '🌞';
+            } else {
+                icon.textContent = '🌙';
+            }
+
+            toggleBtn.addEventListener('click', () => {
+                const isLight = body.classList.toggle('light-mode');
+                localStorage.setItem('theme', isLight ? 'light' : 'dark');
+                if (isLight) {
+                    icon.textContent = '🌞';
+                    toggleBtn.classList.remove('btn-dark'); toggleBtn.classList.add('btn-light');
+                } else {
+                    icon.textContent = '🌙';
+                    toggleBtn.classList.remove('btn-light'); toggleBtn.classList.add('btn-dark');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
