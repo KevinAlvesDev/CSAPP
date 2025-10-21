@@ -7,9 +7,12 @@
     <header class="header-bg p-3 shadow-sm d-flex justify-content-between align-items-center">
         <h1 class="main-title mb-0 fs-4 flex-grow-1 text-center">CS ONBOARDING DASHBOARD</h1>
         <div class="d-flex align-items-center position-absolute end-0 me-3">
+<<<<<<< HEAD
             <button id="mode-toggle" class="btn btn-dark" type="button" title="Alternar tema">
                 <span id="mode-icon">🌙</span>
             </button>
+=======
+>>>>>>> 6d78c716439a5aa5a8166507cdeea87fc9f15668
             <button class="btn btn-success ms-3" data-bs-toggle="modal" data-bs-target="#novaImplantacaoModal">
                 <i class="bi bi-plus-circle me-1"></i> Nova Implantação
             </button>
@@ -20,7 +23,7 @@
     </header>
 
     <main class="p-4" id="main-content">
-        
+
         <h2 class="h5 mb-3">Resumo Rápido</h2>
         <div class="row row-cols-1 row-cols-md-2 row-cols-lg-5 g-3 mb-4">
             {% set m = metrics or {} %}
@@ -30,14 +33,14 @@
                     <h4 class="mb-0 text-primary">{{ m.impl_andamento_total }}</h4>
                 </div>
             </div>
-            
+
             <div class="col">
                 <div class="metric-card p-3 rounded shadow-sm text-center">
                     <h6 class="text-secondary">Atrasadas (> 25d)</h6>
                     <h4 class="mb-0 text-danger">{{ m.implantacoes_atrasadas }}</h4>
                 </div>
             </div>
-            
+
             <div class="col">
                 <div class="metric-card p-3 rounded shadow-sm text-center">
                     <h6 class="text-secondary">Futuras</h6>
@@ -57,7 +60,7 @@
                 </div>
             </div>
         </div>
-        
+
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -86,9 +89,9 @@
                 <button class="nav-link" id="paradas-tab" data-bs-toggle="tab" data-bs-target="#paradas" type="button" role="tab" aria-controls="paradas" aria-selected="false">Paradas</button>
             </li>
         </ul>
-        
+
         <div class="tab-content metric-card p-3" id="myTabContent" style="border-top: none;">
-            
+
             <div class="tab-pane fade show active" id="andamento" role="tabpanel" aria-labelledby="andamento-tab">
                 <h2 class="h5 mb-3">Clientes em Andamento</h2>
                 {% if not implantacoes_andamento %}
@@ -109,7 +112,7 @@
                             {% for impl in implantacoes_andamento %}
                             <tr>
                                 <td class="text-truncate" style="max-width: 200px;">
-                                    <a href="#" class="btn-edit-empresa fw-bold text-decoration-none" 
+                                    <a href="#" class="btn-edit-empresa fw-bold text-decoration-none"
                                        data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa"
                                        data-id="{{ impl.id }}"
                                        data-nome="{{ impl.nome_empresa }}"
@@ -117,7 +120,7 @@
                                        data-cargo="{{ impl.cargo_responsavel | default('') }}"
                                        data-telefone="{{ impl.telefone_responsavel | default('') }}"
                                        data-email="{{ impl.email_responsavel | default('') }}"
-                                       data-inicio-implantacao="{{ impl.data_criacao.split(' ')[0] if impl.data_criacao else 'N/A' }}"
+                                       data-inicio-implantacao="{{ impl.data_criacao.strftime('%Y-%m-%d') if impl.data_criacao else 'N/A' }}"
                                        data-inicio-producao="{{ impl.data_inicio_producao | default('') }}"
                                        data-final-implantacao="{{ impl.data_final_implantacao | default('') }}"
                                        data-chave-oamd="{{ impl.chave_oamd | default('') }}"
@@ -141,7 +144,7 @@
                 </div>
                 {% endif %}
             </div>
-            
+
             <div class="tab-pane fade" id="atrasadas" role="tabpanel" aria-labelledby="atrasadas-tab">
                 <h2 class="h5 mb-3">Implantações Atrasadas (> 25 dias)</h2>
                 {% if not implantacoes_atrasadas %}
@@ -222,7 +225,7 @@
                 </div>
                 {% endif %}
             </div>
-            
+
             <div class="tab-pane fade" id="finalizadas" role="tabpanel" aria-labelledby="finalizadas-tab">
                 <h2 class="h5 mb-3">Implantações Concluídas</h2>
                 {% if not implantacoes_finalizadas %}
@@ -280,7 +283,7 @@
                                 <td class="text-truncate" style="max-width: 200px;">{{ impl.motivo_parada | default('N/A') }}</td>
                                 <td>
                                     <a href="{{ url_for('ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary">Ver Detalhes</a>
-                                    
+
                                     <form method="POST" action="{{ url_for('retomar_implantacao') }}" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja retomar esta implantação?');">
                                         <input type="hidden" name="implantacao_id" value="{{ impl.id }}">
                                         <input type="hidden" name="redirect_to" value="dashboard">
@@ -337,150 +340,7 @@
     </div>
 </div>
 
-<div class="modal fade" id="modalDetalhesEmpresa" tabindex="-1" aria-labelledby="modalDetalhesEmpresaLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);">
-            <div class="modal-header header-bg">
-                <h5 class="modal-title" id="modalDetalhesEmpresaLabel" style="color: var(--body-color);">Detalhes da Empresa</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form action="{{ url_for('atualizar_detalhes_empresa') }}" method="POST">
-                <div class="modal-body">
-                    <input type="hidden" id="modal-implantacao_id" name="implantacao_id" value="">
-                    
-                    <div class="mb-3">
-                        <label for="modal-nome_empresa" class="form-label">Nome da Empresa</label>
-                        <input type="text" class="form-control" id="modal-nome_empresa" name="nome_empresa" readonly disabled>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-8 mb-3">
-                            <label for="modal-responsavel_cliente" class="form-label">Responsável</label>
-                            <input type="text" class="form-control" id="modal-responsavel_cliente" name="responsavel_cliente">
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label for="modal-cargo_responsavel" class="form-label">Cargo</label>
-                            <select class="form-select" id="modal-cargo_responsavel" name="cargo_responsavel">
-                                <option value="">Selecione...</option>
-                                {% for cargo in cargos_responsavel %}
-                                <option value="{{ cargo }}">{{ cargo }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="modal-telefone_responsavel" class="form-label">Telefone</label>
-                            <input type="tel" class="form-control" id="modal-telefone_responsavel" name="telefone_responsavel">
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="modal-email_responsavel" class="form-label">E-mail</label>
-                            <input type="email" class="form-control" id="modal-email_responsavel" name="email_responsavel">
-                        </div>
-                    </div>
-                    
-                    <hr>
-                    <p class="text-secondary small">Datas</p>
-                    
-                    <div class="row">
-                        <div class="col-md-4 mb-3">
-                            <label for="modal-inicio_implantacao" class="form-label">Início da Implantação</label>
-                            <input type="text" class="form-control" id="modal-inicio_implantacao" name="inicio_implantacao" readonly disabled>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label for="modal-data_inicio_producao" class="form-label">Início em Produção</label>
-                            <input type="date" class="form-control" id="modal-data_inicio_producao" name="data_inicio_producao">
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label for="modal-data_final_implantacao" class="form-label">Final da Implantação</label>
-                            <input type="date" class="form-control" id="modal-data_final_implantacao" name="data_final_implantacao">
-                        </div>
-                    </div>
-
-                    <hr>
-                    <p class="text-secondary small">Atributos</p>
-
-                    <div class="row">
-                         <div class="col-md-4 mb-3">
-                            <label for="modal-chave_oamd" class="form-label">Chave OAMD</label>
-                            <input type="text" class="form-control" id="modal-chave_oamd" name="chave_oamd">
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label for="modal-catraca" class="form-label">Catraca</label>
-                            <input type="text" class="form-control" id="modal-catraca" name="catraca">
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label for="modal-facial" class="form-label">Facial</label>
-                            <input type="text" class="form-control" id="modal-facial" name="facial">
-                        </div>
-                    </div>
-
-                </div>
-                <div class="modal-footer header-bg">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary" style="background-color: var(--accent-color); border-color: var(--accent-color);">Salvar Alterações</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 {% endblock %}
 
 {% block scripts_extra %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // [NOVO] Script para popular o modal de detalhes da empresa
-    const modalDetalhesEmpresa = document.getElementById('modalDetalhesEmpresa');
-    if (modalDetalhesEmpresa) {
-        modalDetalhesEmpresa.addEventListener('show.bs.modal', function (event) {
-            // Botão que acionou o modal
-            const button = event.relatedTarget;
-            
-            // Extrai dados dos atributos data-*
-            const id = button.getAttribute('data-id');
-            const nome = button.getAttribute('data-nome');
-            const responsavel = button.getAttribute('data-responsavel');
-            const cargo = button.getAttribute('data-cargo');
-            const telefone = button.getAttribute('data-telefone');
-            const email = button.getAttribute('data-email');
-            const inicioImplantacao = button.getAttribute('data-inicio-implantacao');
-            const inicioProducao = button.getAttribute('data-inicio-producao');
-            const finalImplantacao = button.getAttribute('data-final-implantacao');
-            const chaveOamd = button.getAttribute('data-chave-oamd');
-            const catraca = button.getAttribute('data-catraca');
-            const facial = button.getAttribute('data-facial');
-
-            // Encontra os campos do modal
-            const modal = modalDetalhesEmpresa;
-            const modalId = modal.querySelector('#modal-implantacao_id');
-            const modalNome = modal.querySelector('#modal-nome_empresa');
-            const modalResponsavel = modal.querySelector('#modal-responsavel_cliente');
-            const modalCargo = modal.querySelector('#modal-cargo_responsavel');
-            const modalTelefone = modal.querySelector('#modal-telefone_responsavel');
-            const modalEmail = modal.querySelector('#modal-email_responsavel');
-            const modalInicioImplantacao = modal.querySelector('#modal-inicio_implantacao');
-            const modalInicioProducao = modal.querySelector('#modal-data_inicio_producao');
-            const modalFinalImplantacao = modal.querySelector('#modal-data_final_implantacao');
-            const modalChaveOamd = modal.querySelector('#modal-chave_oamd');
-            const modalCatraca = modal.querySelector('#modal-catraca');
-            const modalFacial = modal.querySelector('#modal-facial');
-            
-            // Popula os campos do modal com os dados
-            modalId.value = id;
-            modalNome.value = nome;
-            modalResponsavel.value = responsavel;
-            modalCargo.value = cargo;
-            modalTelefone.value = telefone;
-            modalEmail.value = email;
-            modalInicioImplantacao.value = inicioImplantacao;
-            modalInicioProducao.value = inicioProducao;
-            modalFinalImplantacao.value = finalImplantacao;
-            modalChaveOamd.value = chaveOamd;
-            modalCatraca.value = catraca;
-            modalFacial.value = facial;
-        });
-    }
-});
-</script>
 {% endblock %}
