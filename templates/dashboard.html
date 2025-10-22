@@ -7,16 +7,20 @@
     <header class="header-bg p-3 shadow-sm d-flex justify-content-between align-items-center">
         <h1 class="main-title mb-0 fs-4 flex-grow-1 text-center">CS ONBOARDING DASHBOARD</h1>
         <div class="d-flex align-items-center position-absolute end-0 me-3">
-<<<<<<< HEAD
+            {# Informações do Usuário Logado vindas do app.py #}
+            {% if user_info %}
+                <span class="navbar-text me-2 d-none d-md-inline" style="color: var(--body-color);">
+                   Olá, {{ user_info.get('name', user_info.get('email', 'Usuário')) }} {# Exibe nome ou email #}
+                </span>
+            {% endif %}
             <button id="mode-toggle" class="btn btn-dark" type="button" title="Alternar tema">
                 <span id="mode-icon">🌙</span>
             </button>
-=======
->>>>>>> 6d78c716439a5aa5a8166507cdeea87fc9f15668
             <button class="btn btn-success ms-3" data-bs-toggle="modal" data-bs-target="#novaImplantacaoModal">
                 <i class="bi bi-plus-circle me-1"></i> Nova Implantação
             </button>
-            <a href="{{ url_for('logout') }}" class="btn btn-outline-secondary ms-2">
+            {# Botão Logout aponta para a rota /logout do Flask #}
+            <a href="{{ url_for('logout') }}" class="btn btn-outline-secondary ms-2" title="Sair">
                 <i class="bi bi-box-arrow-right"></i>
             </a>
         </div>
@@ -24,47 +28,22 @@
 
     <main class="p-4" id="main-content">
 
+        {# Resumo Rápido (métricas) #}
         <h2 class="h5 mb-3">Resumo Rápido</h2>
         <div class="row row-cols-1 row-cols-md-2 row-cols-lg-5 g-3 mb-4">
             {% set m = metrics or {} %}
-            <div class="col">
-                <div class="metric-card p-3 rounded shadow-sm text-center">
-                    <h6 class="text-secondary">Em Andamento</h6>
-                    <h4 class="mb-0 text-primary">{{ m.impl_andamento_total }}</h4>
-                </div>
-            </div>
-
-            <div class="col">
-                <div class="metric-card p-3 rounded shadow-sm text-center">
-                    <h6 class="text-secondary">Atrasadas (> 25d)</h6>
-                    <h4 class="mb-0 text-danger">{{ m.implantacoes_atrasadas }}</h4>
-                </div>
-            </div>
-
-            <div class="col">
-                <div class="metric-card p-3 rounded shadow-sm text-center">
-                    <h6 class="text-secondary">Futuras</h6>
-                    <h4 class="mb-0 text-info">{{ m.implantacoes_futuras }}</h4>
-                </div>
-            </div>
-            <div class="col">
-                <div class="metric-card p-3 rounded shadow-sm text-center">
-                    <h6 class="text-secondary">Concluídas</h6>
-                    <h4 class="mb-0 text-success">{{ m.impl_finalizadas }}</h4>
-                </div>
-            </div>
-            <div class="col">
-                <div class="metric-card p-3 rounded shadow-sm text-center">
-                    <h6 class="text-secondary">Paradas</h6>
-                    <h4 class="mb-0 text-danger">{{ m.impl_paradas }}</h4>
-                </div>
-            </div>
+            <div class="col"><div class="metric-card p-3 rounded shadow-sm text-center"><h6 class="text-secondary">Em Andamento</h6><h4 class="mb-0 text-primary">{{ m.impl_andamento_total | default(0) }}</h4></div></div>
+            <div class="col"><div class="metric-card p-3 rounded shadow-sm text-center"><h6 class="text-secondary">Atrasadas (> 25d)</h6><h4 class="mb-0 text-danger">{{ m.implantacoes_atrasadas | default(0) }}</h4></div></div>
+            <div class="col"><div class="metric-card p-3 rounded shadow-sm text-center"><h6 class="text-secondary">Futuras</h6><h4 class="mb-0 text-info">{{ m.implantacoes_futuras | default(0) }}</h4></div></div>
+            <div class="col"><div class="metric-card p-3 rounded shadow-sm text-center"><h6 class="text-secondary">Concluídas</h6><h4 class="mb-0 text-success">{{ m.impl_finalizadas | default(0) }}</h4></div></div>
+            <div class="col"><div class="metric-card p-3 rounded shadow-sm text-center"><h6 class="text-secondary">Paradas</h6><h4 class="mb-0 text-danger">{{ m.impl_paradas | default(0) }}</h4></div></div>
         </div>
 
+        {# Mensagens Flash #}
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
                         {{ message }}
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
@@ -72,26 +51,19 @@
             {% endif %}
         {% endwith %}
 
+        {# Abas #}
         <ul class="nav nav-tabs" id="myTab" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="andamento-tab" data-bs-toggle="tab" data-bs-target="#andamento" type="button" role="tab" aria-controls="andamento" aria-selected="true">Em Andamento</button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="atrasadas-tab" data-bs-toggle="tab" data-bs-target="#atrasadas" type="button" role="tab" aria-controls="atrasadas" aria-selected="false">Atrasadas</button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="futuras-tab" data-bs-toggle="tab" data-bs-target="#futuras" type="button" role="tab" aria-controls="futuras" aria-selected="false">Futuras</button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="finalizadas-tab" data-bs-toggle="tab" data-bs-target="#finalizadas" type="button" role="tab" aria-controls="finalizadas" aria-selected="false">Concluídas</button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="paradas-tab" data-bs-toggle="tab" data-bs-target="#paradas" type="button" role="tab" aria-controls="paradas" aria-selected="false">Paradas</button>
-            </li>
+            <li class="nav-item" role="presentation"><button class="nav-link active" id="andamento-tab" data-bs-toggle="tab" data-bs-target="#andamento" type="button" role="tab">Em Andamento</button></li>
+            <li class="nav-item" role="presentation"><button class="nav-link" id="atrasadas-tab" data-bs-toggle="tab" data-bs-target="#atrasadas" type="button" role="tab">Atrasadas</button></li>
+            <li class="nav-item" role="presentation"><button class="nav-link" id="futuras-tab" data-bs-toggle="tab" data-bs-target="#futuras" type="button" role="tab">Futuras</button></li>
+            <li class="nav-item" role="presentation"><button class="nav-link" id="finalizadas-tab" data-bs-toggle="tab" data-bs-target="#finalizadas" type="button" role="tab">Concluídas</button></li>
+            <li class="nav-item" role="presentation"><button class="nav-link" id="paradas-tab" data-bs-toggle="tab" data-bs-target="#paradas" type="button" role="tab">Paradas</button></li>
         </ul>
 
+        {# Conteúdo das Abas #}
         <div class="tab-content metric-card p-3" id="myTabContent" style="border-top: none;">
 
+            {# Aba Em Andamento #}
             <div class="tab-pane fade show active" id="andamento" role="tabpanel" aria-labelledby="andamento-tab">
                 <h2 class="h5 mb-3">Clientes em Andamento</h2>
                 {% if not implantacoes_andamento %}
@@ -112,6 +84,7 @@
                             {% for impl in implantacoes_andamento %}
                             <tr>
                                 <td class="text-truncate" style="max-width: 200px;">
+                                    {# Link/Botão para abrir Modal Detalhes Empresa #}
                                     <a href="#" class="btn-edit-empresa fw-bold text-decoration-none"
                                        data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa"
                                        data-id="{{ impl.id }}"
@@ -120,9 +93,9 @@
                                        data-cargo="{{ impl.cargo_responsavel | default('') }}"
                                        data-telefone="{{ impl.telefone_responsavel | default('') }}"
                                        data-email="{{ impl.email_responsavel | default('') }}"
-                                       data-inicio-implantacao="{{ impl.data_criacao.strftime('%Y-%m-%d') if impl.data_criacao else 'N/A' }}"
-                                       data-inicio-producao="{{ impl.data_inicio_producao | default('') }}"
-                                       data-final-implantacao="{{ impl.data_final_implantacao | default('') }}"
+                                       data-inicio-implantacao="{{ impl.data_criacao.strftime('%Y-%m-%d') if impl.data_criacao else '' }}" {# Formato YYYY-MM-DD para JS #}
+                                       data-inicio-producao="{{ impl.data_inicio_producao.strftime('%Y-%m-%d') if impl.data_inicio_producao else '' }}"
+                                       data-final-implantacao="{{ impl.data_final_implantacao.strftime('%Y-%m-%d') if impl.data_final_implantacao else '' }}"
                                        data-chave-oamd="{{ impl.chave_oamd | default('') }}"
                                        data-catraca="{{ impl.catraca | default('') }}"
                                        data-facial="{{ impl.facial | default('') }}">
@@ -131,7 +104,7 @@
                                 </td>
                                 <td>
                                     <div class="progress" style="height: 20px;">
-                                        <div class="progress-bar progress-bar-striped bg-warning text-dark" role="progressbar" style="width: {{ impl.progresso }}%;" aria-valuenow="{{ impl.progresso }}" aria-valuemin="0" aria-valuemax="100">{{ impl.progresso }}%</div>
+                                        <div class="progress-bar progress-bar-striped bg-warning text-dark" role="progressbar" style="width: {{ impl.progresso }}%;" aria-valuenow="{{ impl.progresso }}">{{ impl.progresso }}%</div>
                                     </div>
                                 </td>
                                 <td>
@@ -145,6 +118,7 @@
                 {% endif %}
             </div>
 
+            {# Aba Atrasadas #}
             <div class="tab-pane fade" id="atrasadas" role="tabpanel" aria-labelledby="atrasadas-tab">
                 <h2 class="h5 mb-3">Implantações Atrasadas (> 25 dias)</h2>
                 {% if not implantacoes_atrasadas %}
@@ -166,7 +140,18 @@
                         <tbody>
                             {% for impl in implantacoes_atrasadas %}
                             <tr>
-                                <td class="text-truncate" style="max-width: 200px;">{{ impl.nome_empresa }}</td>
+                                <td class="text-truncate" style="max-width: 200px;">
+                                     <a href="#" class="btn-edit-empresa fw-bold text-decoration-none" data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa"
+                                        data-id="{{ impl.id }}" data-nome="{{ impl.nome_empresa }}"
+                                        data-responsavel="{{ impl.responsavel_cliente | default('') }}" data-cargo="{{ impl.cargo_responsavel | default('') }}"
+                                        data-telefone="{{ impl.telefone_responsavel | default('') }}" data-email="{{ impl.email_responsavel | default('') }}"
+                                        data-inicio-implantacao="{{ impl.data_criacao.strftime('%Y-%m-%d') if impl.data_criacao else '' }}"
+                                        data-inicio-producao="{{ impl.data_inicio_producao.strftime('%Y-%m-%d') if impl.data_inicio_producao else '' }}"
+                                        data-final-implantacao="{{ impl.data_final_implantacao.strftime('%Y-%m-%d') if impl.data_final_implantacao else '' }}"
+                                        data-chave-oamd="{{ impl.chave_oamd | default('') }}" data-catraca="{{ impl.catraca | default('') }}" data-facial="{{ impl.facial | default('') }}">
+                                         {{ impl.nome_empresa }}
+                                     </a>
+                                </td>
                                 <td><span class="badge bg-danger">{{ impl.dias_passados | int }} dias</span></td>
                                 <td>
                                     {% if impl.status == 'parada' %}
@@ -177,7 +162,7 @@
                                 </td>
                                 <td>
                                     <div class="progress" style="height: 20px;">
-                                        <div class="progress-bar progress-bar-striped bg-danger" role="progressbar" style="width: {{ impl.progresso }}%;" aria-valuenow="{{ impl.progresso }}" aria-valuemin="0" aria-valuemax="100">{{ impl.progresso }}%</div>
+                                        <div class="progress-bar progress-bar-striped bg-danger" role="progressbar" style="width: {{ impl.progresso }}%;" aria-valuenow="{{ impl.progresso }}">{{ impl.progresso }}%</div>
                                     </div>
                                 </td>
                                 <td>
@@ -191,6 +176,7 @@
                 {% endif %}
             </div>
 
+            {# Aba Futuras #}
             <div class="tab-pane fade" id="futuras" role="tabpanel" aria-labelledby="futuras-tab">
                 <h2 class="h5 mb-3">Implantações Futuras</h2>
                 {% if not implantacoes_futuras %}
@@ -210,13 +196,25 @@
                         <tbody>
                             {% for impl in implantacoes_futuras %}
                             <tr>
-                                <td class="text-truncate" style="max-width: 200px;">{{ impl.nome_empresa }}</td>
+                                <td class="text-truncate" style="max-width: 200px;">
+                                    <a href="#" class="btn-edit-empresa fw-bold text-decoration-none" data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa"
+                                       data-id="{{ impl.id }}" data-nome="{{ impl.nome_empresa }}"
+                                       data-responsavel="{{ impl.responsavel_cliente | default('') }}" data-cargo="{{ impl.cargo_responsavel | default('') }}"
+                                       data-telefone="{{ impl.telefone_responsavel | default('') }}" data-email="{{ impl.email_responsavel | default('') }}"
+                                       data-inicio-implantacao="{{ impl.data_criacao.strftime('%Y-%m-%d') if impl.data_criacao else '' }}"
+                                       data-inicio-producao="{{ impl.data_inicio_producao.strftime('%Y-%m-%d') if impl.data_inicio_producao else '' }}"
+                                       data-final-implantacao="{{ impl.data_final_implantacao.strftime('%Y-%m-%d') if impl.data_final_implantacao else '' }}"
+                                       data-chave-oamd="{{ impl.chave_oamd | default('') }}" data-catraca="{{ impl.catraca | default('') }}" data-facial="{{ impl.facial | default('') }}">
+                                        {{ impl.nome_empresa }}
+                                    </a>
+                                </td>
                                 <td><span class="badge bg-info text-dark">Futura</span></td>
                                 <td>
                                     <form method="POST" action="{{ url_for('iniciar_implantacao') }}" style="display:inline;">
                                         <input type="hidden" name="implantacao_id" value="{{ impl.id }}">
                                         <button type="submit" class="btn btn-sm btn-success">Iniciar Implantação</button>
                                     </form>
+                                     <a href="{{ url_for('ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-secondary ms-1">Ver Detalhes</a>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -226,6 +224,7 @@
                 {% endif %}
             </div>
 
+            {# Aba Finalizadas #}
             <div class="tab-pane fade" id="finalizadas" role="tabpanel" aria-labelledby="finalizadas-tab">
                 <h2 class="h5 mb-3">Implantações Concluídas</h2>
                 {% if not implantacoes_finalizadas %}
@@ -245,7 +244,18 @@
                         <tbody>
                             {% for impl in implantacoes_finalizadas %}
                             <tr>
-                                <td class="text-truncate" style="max-width: 200px;">{{ impl.nome_empresa }}</td>
+                                <td class="text-truncate" style="max-width: 200px;">
+                                    <a href="#" class="btn-edit-empresa fw-bold text-decoration-none" data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa"
+                                       data-id="{{ impl.id }}" data-nome="{{ impl.nome_empresa }}"
+                                       data-responsavel="{{ impl.responsavel_cliente | default('') }}" data-cargo="{{ impl.cargo_responsavel | default('') }}"
+                                       data-telefone="{{ impl.telefone_responsavel | default('') }}" data-email="{{ impl.email_responsavel | default('') }}"
+                                       data-inicio-implantacao="{{ impl.data_criacao.strftime('%Y-%m-%d') if impl.data_criacao else '' }}"
+                                       data-inicio-producao="{{ impl.data_inicio_producao.strftime('%Y-%m-%d') if impl.data_inicio_producao else '' }}"
+                                       data-final-implantacao="{{ impl.data_final_implantacao.strftime('%Y-%m-%d') if impl.data_final_implantacao else '' }}"
+                                       data-chave-oamd="{{ impl.chave_oamd | default('') }}" data-catraca="{{ impl.catraca | default('') }}" data-facial="{{ impl.facial | default('') }}">
+                                        {{ impl.nome_empresa }}
+                                    </a>
+                                </td>
                                 <td>
                                     <span class="badge bg-success">100% Concluída</span>
                                 </td>
@@ -260,6 +270,7 @@
                 {% endif %}
             </div>
 
+            {# Aba Paradas #}
             <div class="tab-pane fade" id="paradas" role="tabpanel" aria-labelledby="paradas-tab">
                 <h2 class="h5 mb-3">Implantações Paradas</h2>
                 {% if not implantacoes_paradas %}
@@ -279,15 +290,26 @@
                         <tbody>
                             {% for impl in implantacoes_paradas %}
                             <tr>
-                                <td class="text-truncate" style="max-width: 200px;">{{ impl.nome_empresa }}</td>
+                                <td class="text-truncate" style="max-width: 200px;">
+                                    <a href="#" class="btn-edit-empresa fw-bold text-decoration-none" data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa"
+                                       data-id="{{ impl.id }}" data-nome="{{ impl.nome_empresa }}"
+                                       data-responsavel="{{ impl.responsavel_cliente | default('') }}" data-cargo="{{ impl.cargo_responsavel | default('') }}"
+                                       data-telefone="{{ impl.telefone_responsavel | default('') }}" data-email="{{ impl.email_responsavel | default('') }}"
+                                       data-inicio-implantacao="{{ impl.data_criacao.strftime('%Y-%m-%d') if impl.data_criacao else '' }}"
+                                       data-inicio-producao="{{ impl.data_inicio_producao.strftime('%Y-%m-%d') if impl.data_inicio_producao else '' }}"
+                                       data-final-implantacao="{{ impl.data_final_implantacao.strftime('%Y-%m-%d') if impl.data_final_implantacao else '' }}"
+                                       data-chave-oamd="{{ impl.chave_oamd | default('') }}" data-catraca="{{ impl.catraca | default('') }}" data-facial="{{ impl.facial | default('') }}">
+                                        {{ impl.nome_empresa }}
+                                    </a>
+                                </td>
                                 <td class="text-truncate" style="max-width: 200px;">{{ impl.motivo_parada | default('N/A') }}</td>
                                 <td>
                                     <a href="{{ url_for('ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary">Ver Detalhes</a>
-
+                                    {# Formulário para Retomar #}
                                     <form method="POST" action="{{ url_for('retomar_implantacao') }}" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja retomar esta implantação?');">
                                         <input type="hidden" name="implantacao_id" value="{{ impl.id }}">
-                                        <input type="hidden" name="redirect_to" value="dashboard">
-                                        <button type="submit" class="btn btn-sm btn-success">Retomar</button>
+                                        <input type="hidden" name="redirect_to" value="dashboard"> {# Redireciona de volta pro dashboard #}
+                                        <button type="submit" class="btn btn-sm btn-success ms-1">Retomar</button>
                                     </form>
                                 </td>
                             </tr>
@@ -298,10 +320,11 @@
                 {% endif %}
             </div>
 
-        </div>
+        </div> {# Fim do tab-content #}
     </main>
 </div>
 
+{# Modal Nova Implantação (sem alterações) #}
 <div class="modal fade" id="novaImplantacaoModal" tabindex="-1" aria-labelledby="novaImplantacaoModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);">
@@ -343,4 +366,45 @@
 {% endblock %}
 
 {% block scripts_extra %}
+<script>
+    // Memória da Aba Ativa (Dashboard)
+    document.addEventListener('DOMContentLoaded', function () {
+        const tabSelector = '#myTab .nav-link';
+        const tabs = document.querySelectorAll(tabSelector);
+        const tabStorageKey = 'tabAtiva-dashboard'; // Chave única para o dashboard
+
+        tabs.forEach(tab => {
+            tab.addEventListener('shown.bs.tab', event => {
+                localStorage.setItem(tabStorageKey, event.target.id);
+            });
+        });
+
+        const abaAtivaId = localStorage.getItem(tabStorageKey);
+        if (abaAtivaId) {
+            const tabEl = document.getElementById(abaAtivaId);
+            if (tabEl) {
+                // Tenta mostrar a aba salva
+                try {
+                     new bootstrap.Tab(tabEl).show();
+                } catch (e) {
+                     console.warn("Não foi possível restaurar a aba ativa:", e);
+                     // Se der erro (ex: aba não existe mais), limpa a memória
+                     localStorage.removeItem(tabStorageKey);
+                     // Garante que a primeira aba ('andamento') esteja ativa
+                     const defaultTab = document.getElementById('andamento-tab');
+                     if(defaultTab) new bootstrap.Tab(defaultTab).show();
+                }
+            } else {
+                 // Se o ID salvo não corresponde a nenhum elemento, limpa
+                 localStorage.removeItem(tabStorageKey);
+                 const defaultTab = document.getElementById('andamento-tab');
+                 if(defaultTab) new bootstrap.Tab(defaultTab).show();
+            }
+        } else {
+            // Se não há aba salva, garante que a primeira ('andamento') está ativa
+            const defaultTab = document.getElementById('andamento-tab');
+            if(defaultTab) new bootstrap.Tab(defaultTab).show();
+        }
+    });
+</script>
 {% endblock %}
