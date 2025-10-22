@@ -1,34 +1,20 @@
-# Ambiente virtual
+# Ambiente Virtual
 venv/
 .venv/
-*.env
-env/
 
-# Segredos e configuração local
+# Arquivos de configuração e segredos
 .env
+*.env
+
+# Bancos de dados
 *.db
 *.sqlite
 *.db-journal
 
-# Arquivos do Python
+# Python (cache)
 __pycache__/
 *.pyc
 *.pyo
-*.pyd
 
-# Pasta de uploads
-uploads/
-
-# Ferramentas de desenvolvimento e lixo do OS
+# Arquivos de OS
 .DS_Store
-.vscode/
-.idea/
-
-# Flask App
-FLASK_APP=app.py
-FLASK_SECRET_KEY=sua_chave_secreta_super_forte_aqui_para_flask # Gere uma nova e forte!
-
-# Auth0 Credentials
-AUTH0_CLIENT_ID=SEU_AUTH0_CLIENT_ID_AQUI
-AUTH0_CLIENT_SECRET=SEU_AUTH0_CLIENT_SECRET_AQUI
-AUTH0_DOMAIN=SEU_AUTH0_DOMAIN_AQUI
