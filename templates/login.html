@@ -7,20 +7,11 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
-        /* Estilos básicos para a página de boas-vindas/login */
+        /* Estilos básicos para a página de boas-vindas/login (APENAS TEMA CLARO) */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
         
-        /* Define variáveis de cor baseadas no tema (padrão escuro) */
+        /* Define variáveis de cor baseadas no tema CLARO */
         :root { 
-            --body-bg: #0d1117; 
-            --body-color: #c9d1d9; 
-            --container-bg: #161b22;
-            --accent-color: #58a6ff; 
-            --shadow: 0 5px 15px rgba(0,0,0,0.3);
-            --btn-color: white;
-        } 
-        /* Sobrescreve variáveis para o modo claro */
-        body.light-mode { 
             --body-bg: #f5f5f5; 
             --body-color: #333; 
             --container-bg: #ffffff;
@@ -37,7 +28,7 @@
             min-height: 100vh;
             background-color: var(--body-bg);
             color: var(--body-color);
-            transition: background-color 0.3s, color 0.3s; /* Suaviza a troca de tema */
+            transition: background-color 0.3s, color 0.3s;
         }
         .login-box { 
             text-align: center; 
@@ -45,49 +36,40 @@
             background-color: var(--container-bg); 
             border-radius: 8px; 
             box-shadow: var(--shadow); 
-            max-width: 450px; /* Limita largura */
-            width: 90%; /* Responsivo */
+            max-width: 450px; 
+            width: 90%; 
         }
         .main-title { 
             color: var(--accent-color); 
             font-weight: 800; 
-            font-size: 2rem; /* Tamanho do título */
+            font-size: 2rem; 
         }
         .btn-login { 
             background-color: var(--accent-color); 
             border-color: var(--accent-color); 
-            color: var(--btn-color); /* Cor do texto do botão */
+            color: var(--btn-color); 
             font-weight: 600; 
             padding: 10px 30px; 
-            font-size: 1.1rem; /* Tamanho do texto do botão */
-            transition: opacity 0.2s; /* Efeito suave no hover */
+            font-size: 1.1rem; 
+            transition: opacity 0.2s; 
         }
         .btn-login:hover { 
             opacity: 0.85; 
-            color: var(--btn-color); /* Garante cor no hover */
+            color: var(--btn-color); 
         }
-        /* Estilo para o botão de dark mode */
-        #mode-toggle { border: 1px solid var(--input-border, #444); } /* Adiciona borda sutil */
-        body.light-mode #mode-toggle { border-color: #ccc; }
     </style>
 </head>
 <body>
-    {# Botão Dark Mode #}
-    <div class="position-absolute top-0 end-0 p-3">
-        <button id="mode-toggle" class="btn btn-dark rounded-circle" style="width: 40px; height: 40px; line-height: 1;">
-            <span id="mode-icon">🌙</span>
-        </button>
-    </div>
+    {# REMOVIDO: Botão Dark Mode #}
 
     <div class="login-box">
         <h1 class="main-title mb-4">CS Onboarding</h1>
-        <p class="lead mb-4">Gerencie suas implantações de forma eficiente.</p> {# Texto um pouco maior #}
+        <p class="lead mb-4">Gerencie suas implantações de forma eficiente.</p>
         
-        {# Exibe mensagens flash (ex: erro no callback do Auth0) #}
+        {# Exibe mensagens flash #}
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    {# Adapta a classe do alerta: 'error' vira 'danger', 'info' vira 'info', etc. #}
                     <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show my-3" role="alert">
                         {{ message }}
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -96,62 +78,16 @@
             {% endif %}
         {% endwith %}
 
-        {# Botão que redireciona para a rota /login do Flask, que inicia o fluxo Auth0 #}
+        {# Botão que redireciona para a rota /login do Flask #}
         <a href="{{ url_for('login') }}" class="btn btn-login btn-lg mt-3">
             <i class="bi bi-box-arrow-in-right me-2"></i> Entrar ou Registrar
         </a>
     </div>
 
-    {# Scripts (Bootstrap e Lógica Dark Mode) #}
+    {# Scripts (Apenas Bootstrap) #}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Script Dark Mode (essencial aqui, pois não herda de base.html)
-        document.addEventListener('DOMContentLoaded', function() {
-            const body = document.body; 
-            const themeToggle = document.getElementById('mode-toggle'); 
-            const modeIcon = document.getElementById('mode-icon');
-            
-            // Funções para aplicar os estilos visuais de cada tema
-            function applyLightModeUI() { 
-                body.classList.add('light-mode'); 
-                if (themeToggle) { 
-                    themeToggle.classList.remove('btn-dark'); 
-                    themeToggle.classList.add('btn-light'); 
-                } 
-                if (modeIcon) modeIcon.textContent = '🌞'; 
-            }
-            function applyDarkModeUI() { 
-                body.classList.remove('light-mode'); 
-                if (themeToggle) { 
-                    themeToggle.classList.remove('btn-light'); 
-                    themeToggle.classList.add('btn-dark'); 
-                } 
-                if (modeIcon) modeIcon.textContent = '🌙'; 
-            }
-            
-            // Verifica se há um tema salvo no localStorage e aplica
-            const savedTheme = localStorage.getItem('theme'); 
-            if (savedTheme === 'light') {
-                applyLightModeUI(); 
-            } else {
-                // Assume escuro como padrão se não houver nada salvo ou for 'dark'
-                applyDarkModeUI(); 
-            }
-            
-            // Adiciona o listener para o botão de troca de tema
-            if (themeToggle) { 
-                themeToggle.addEventListener('click', () => { 
-                    const isLight = body.classList.toggle('light-mode'); 
-                    localStorage.setItem('theme', isLight ? 'light' : 'dark'); 
-                    // Aplica a UI correspondente ao novo estado
-                    if (isLight) {
-                         applyLightModeUI(); 
-                    } else {
-                         applyDarkModeUI(); 
-                    }
-                }); 
-            }
-        });
+        // Lógica de tema removida.
     </script>
 </body>
 </html>

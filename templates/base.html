@@ -7,25 +7,19 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
-        /* CSS do Tema e Layout (Incluindo Dark Mode) - Sem alterações */
+        /* CSS do Tema e Layout (AGORA APENAS CLARO) */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        
         :root {
-            --body-bg: #0d1117; --body-color: #c9d1d9; --container-bg: #161b22;
-            --card-bg: #161b22; --input-bg: #010409; --input-border: #30363d;
-            --input-color: #c9d1d9; --accent-color: #58a6ff; --accent-color-rgb: 88, 166, 255;
-            --shadow: 0 4px 20px rgba(0, 0, 0, 0.2); --header-bg: #161b22;
-            --header-border: #30363d; --sidebar-bg: #161b22; --table-bg: var(--card-bg);
-            --table-border-color: var(--input-border); --table-hover-bg: rgba(255, 255, 255, 0.05);
-        }
-        body.light-mode {
+            /* TEMA CLARO PADRÃO */
             --body-bg: #f5f5f5; --body-color: #333; --container-bg: #ffffff;
             --card-bg: #ffffff; --input-bg: #ffffff; --input-border: #ccc;
             --input-color: #333; --accent-color: #007bff; --accent-color-rgb: 0, 123, 255;
             --shadow: 0 4px 15px rgba(0, 0, 0, 0.1); --header-bg: #ffffff;
             --header-border: #eee; --sidebar-bg: #e9ecef; --table-bg: var(--card-bg);
             --table-border-color: var(--input-border); --table-hover-bg: rgba(0, 0, 0, 0.05);
-        }
-        /* ... (restante dos estilos gerais, tabelas, abas, etc - sem alterações) ... */
+        } 
+
          body { font-family: 'Inter', sans-serif; background-color: var(--body-bg); color: var(--body-color); min-height: 100vh; overflow-x: hidden; transition: background-color 0.3s, color 0.3s; }
         .header-bg { background-color: var(--header-bg); border-bottom: 1px solid var(--header-border); }
         .main-title { color: var(--accent-color); font-weight: 800; }
@@ -43,8 +37,17 @@
         .table th, .table td { border-color: var(--table-border-color); vertical-align: middle; }
         .table-hover > tbody > tr:hover > * { color: var(--body-color); background-color: var(--table-hover-bg); }
         .table thead th { color: var(--body-color); }
-        body:not(.light-mode) .table a { color: var(--accent-color); }
-        body:not(.light-mode) .table a:hover { color: #79c0ff; }
+        
+        /* CORREÇÃO DO CONTRASTE (PRIORIDADE): Garante que o texto do botão primário seja branco */
+        .btn-primary, .btn-success { 
+            /* Força a cor do texto para ser legível no fundo colorido */
+            color: white !important; 
+        }
+        
+        /* Contraste geral de links */
+        .table a { color: var(--accent-color); }
+        .table a:hover { color: #0056b3; }
+
         .list-group-item .handle { color: var(--accent-color) !important; opacity: 0.6; transition: opacity 0.2s; cursor: grab !important; }
         .list-group-item .handle:hover { opacity: 1; }
         .card-header.header-bg h5, .card-header.header-bg .h5 { color: var(--body-color); }
@@ -57,19 +60,19 @@
     {% block content %}
     {% endblock %}
 
-    {# Modal Detalhes Empresa (sem alterações, continua sendo populado via JS com data-*) #}
+    {# Modal Detalhes Empresa #}
     <div class="modal fade" id="modalDetalhesEmpresa" tabindex="-1" aria-labelledby="modalDetalhesEmpresaLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);">
                 <div class="modal-header header-bg">
                     <h5 class="modal-title" id="modalDetalhesEmpresaLabel" style="color: var(--body-color);">Detalhes da Empresa</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close btn-close-dark" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form action="{{ url_for('atualizar_detalhes_empresa') }}" method="POST">
                     <div class="modal-body">
                         <input type="hidden" id="modal-implantacao_id" name="implantacao_id" value="">
                         <input type="hidden" name="redirect_to" id="modal-redirect_to" value="dashboard"> {# Define para onde voltar #}
-                        {# Campos do formulário (Nome, Responsável, Cargo, etc.) - Sem alterações #}
+                        {# Campos do formulário #}
                         <div class="mb-3"><label for="modal-nome_empresa" class="form-label">Nome da Empresa</label><input type="text" class="form-control" id="modal-nome_empresa" name="nome_empresa" readonly disabled></div>
                         <div class="row">
                             <div class="col-md-8 mb-3"><label for="modal-responsavel_cliente" class="form-label">Responsável</label><input type="text" class="form-control" id="modal-responsavel_cliente" name="responsavel_cliente"></div>
@@ -98,59 +101,49 @@
         </div>
     </div>
 
-    {# Scripts Essenciais (Bootstrap, Dark Mode, Lógica do Modal) #}
+    {# Scripts Essenciais (Bootstrap, Lógica do Modal) #}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Script Dark Mode e Lógica do Modal Detalhes Empresa (sem alterações na funcionalidade)
+        // Lógica para popular o Modal Detalhes Empresa
         document.addEventListener('DOMContentLoaded', function() {
-            // Lógica Dark Mode
-            const body = document.body; const themeToggle = document.getElementById('mode-toggle'); const modeIcon = document.getElementById('mode-icon');
-            function applyLightModeUI() { body.classList.add('light-mode'); if (themeToggle) { themeToggle.classList.remove('btn-dark'); themeToggle.classList.add('btn-light'); } if (modeIcon) modeIcon.textContent = '🌞'; }
-            function applyDarkModeUI() { body.classList.remove('light-mode'); if (themeToggle) { themeToggle.classList.remove('btn-light'); themeToggle.classList.add('btn-dark'); } if (modeIcon) modeIcon.textContent = '🌙'; }
-            const savedTheme = localStorage.getItem('theme'); if (savedTheme === 'light') applyLightModeUI(); else applyDarkModeUI();
-            if (themeToggle) { themeToggle.addEventListener('click', () => { const isLight = body.classList.toggle('light-mode'); localStorage.setItem('theme', isLight ? 'light' : 'dark'); if (isLight) applyLightModeUI(); else applyDarkModeUI(); }); }
 
-            // Lógica para popular o Modal Detalhes Empresa quando ele é aberto
             const modalDetalhesEmpresa = document.getElementById('modalDetalhesEmpresa');
             if (modalDetalhesEmpresa) {
                 modalDetalhesEmpresa.addEventListener('show.bs.modal', function (event) {
-                    const button = event.relatedTarget; // Botão que acionou o modal
-                    // Extrai os dados dos atributos data-* do botão
+                    const button = event.relatedTarget;
+                    // Extrai os dados dos atributos data-* do botão (que agora usa as chaves *_iso do app.py)
                     const id = button.getAttribute('data-id');
                     const nome = button.getAttribute('data-nome');
-                    // Usa || '' para garantir que temos uma string vazia se o atributo for nulo/ausente
                     const responsavel = button.getAttribute('data-responsavel') || '';
                     const cargo = button.getAttribute('data-cargo') || '';
                     const telefone = button.getAttribute('data-telefone') || '';
                     const email = button.getAttribute('data-email') || '';
-                    // Datas precisam estar no formato YYYY-MM-DD para o input type="date"
-                    const inicioImplantacao = button.getAttribute('data-inicio-implantacao') || ''; // Readonly, formato pode ser BR
-                    const inicioProducao = button.getAttribute('data-inicio-producao') || '';     // Precisa ser YYYY-MM-DD
-                    const finalImplantacao = button.getAttribute('data-final-implantacao') || ''; // Precisa ser YYYY-MM-DD
+                    // Datas JÁ ESTÃO no formato YYYY-MM-DD
+                    const inicioImplantacao = button.getAttribute('data-inicio-implantacao') || ''; // Readonly
+                    const inicioProducao = button.getAttribute('data-inicio-producao') || '';     // YYYY-MM-DD
+                    const finalImplantacao = button.getAttribute('data-final-implantacao') || ''; // YYYY-MM-DD
                     const chaveOamd = button.getAttribute('data-chave-oamd') || '';
                     const catraca = button.getAttribute('data-catraca') || '';
                     const facial = button.getAttribute('data-facial') || '';
 
                     const modal = modalDetalhesEmpresa;
-                    // Preenche os campos do formulário do modal com os dados extraídos
+                    // Preenche os campos do formulário do modal
                     modal.querySelector('#modal-implantacao_id').value = id;
-                    modal.querySelector('#modal-nome_empresa').value = nome; // Campo readonly
+                    modal.querySelector('#modal-nome_empresa').value = nome;
                     modal.querySelector('#modal-responsavel_cliente').value = responsavel;
                     modal.querySelector('#modal-cargo_responsavel').value = cargo;
                     modal.querySelector('#modal-telefone_responsavel').value = telefone;
                     modal.querySelector('#modal-email_responsavel').value = email;
-                    modal.querySelector('#modal-inicio_implantacao').value = inicioImplantacao; // Campo readonly
-                    modal.querySelector('#modal-data_inicio_producao').value = inicioProducao; // Input date
-                    modal.querySelector('#modal-data_final_implantacao').value = finalImplantacao; // Input date
+                    modal.querySelector('#modal-inicio_implantacao').value = inicioImplantacao;
+                    modal.querySelector('#modal-data_inicio_producao').value = inicioProducao;
+                    modal.querySelector('#modal-data_final_implantacao').value = finalImplantacao;
                     modal.querySelector('#modal-chave_oamd').value = chaveOamd;
                     modal.querySelector('#modal-catraca').value = catraca;
                     modal.querySelector('#modal-facial').value = facial;
 
                     // Define para onde o formulário deve redirecionar após salvar
                     const modalRedirect = modal.querySelector('#modal-redirect_to');
-                    // Verifica se estamos na página de detalhes (procurando um elemento específico dela)
                     const isDetailsPage = document.getElementById('checklist-area');
-                    // Se estivermos em detalhes, volta para detalhes, senão volta para o dashboard
                     modalRedirect.value = isDetailsPage ? 'detalhes' : 'dashboard';
                 });
             }

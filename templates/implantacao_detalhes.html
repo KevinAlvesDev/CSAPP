@@ -4,7 +4,7 @@
 
 {% block head_extra %}
 <style>
-    /* Estilos CSS específicos desta página (Timeline, Comentários, etc.) - Sem alterações */
+    /* Estilos CSS específicos desta página (Timeline, Comentários, etc.) - Inalterado */
     .timeline-list { list-style-type: none; padding-left: 0; }
     .timeline-item { display: flex; padding: 12px 0; border-bottom: 1px solid var(--input-border); }
     .timeline-item:last-child { border-bottom: none; }
@@ -31,20 +31,19 @@
 
 {% block content %}
 {# Cabeçalho da Página #}
-<header class="header-bg p-3 shadow-sm d-flex justify-content-center align-items-center position-relative"> {# Adicionado position-relative #}
-    <h1 class="main-title mb-0 fs-4 text-center flex-grow-1">CS ONBOARDING DETALHES</h1>
-    <div class="d-flex align-items-center position-absolute end-0 me-3">
+<header class="header-bg p-3 shadow-sm d-flex justify-content-between align-items-center">
+    <h1 class="main-title mb-0 fs-4 me-auto">CS ONBOARDING DETALHES</h1>
+    <div class="d-flex align-items-center ms-auto">
         {# Exibe Nome/Email do Usuário Logado #}
          {% if user_info %}
-            <span class="navbar-text me-2 d-none d-lg-inline" style="color: var(--body-color);">
-                {{ user_info.get('name', user_info.get('email', 'Usuário')) }}
+            <span class="navbar-text me-3 d-none d-lg-inline" style="color: var(--body-color); white-space: nowrap;">
+                Olá, {{ user_info.get('name', user_info.get('email', 'Usuário')) }}
             </span>
          {% endif %}
         {# Botão para abrir sidebar em telas pequenas #}
-        <button class="btn btn-outline-light d-lg-none me-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar" aria-controls="mobileSidebar"> <i class="bi bi-list"></i> </button>
-        {# Botão Dark Mode #}
-        <button id="mode-toggle" class="btn btn-dark" type="button" title="Alternar tema"> <span id="mode-icon">🌙</span> </button>
-        {# Botão Sair (visível apenas em telas grandes, o sidebar tem outro) #}
+        <button class="btn btn-outline-secondary d-lg-none me-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar" aria-controls="mobileSidebar"> <i class="bi bi-list"></i> </button>
+        {# REMOVIDO: Botão Dark Mode #}
+        {# Botão Sair #}
         <a href="{{ url_for('logout') }}" class="btn btn-outline-secondary ms-2 d-none d-lg-inline-flex" title="Sair">
             <i class="bi bi-box-arrow-right"></i>
         </a>
@@ -53,11 +52,11 @@
 
 {# Layout Principal (Sidebar + Conteúdo) #}
 <div class="d-flex">
-    {# Sidebar (Offcanvas em telas pequenas, fixo em grandes) #}
+    {# Sidebar #}
     <div class="offcanvas-lg offcanvas-start sidebar-bg d-lg-block" tabindex="-1" id="mobileSidebar" aria-labelledby="mobileSidebarLabel" style="width: 250px;">
         <div class="offcanvas-header header-bg">
             <h5 class="offcanvas-title" id="mobileSidebarLabel" style="color: var(--body-color);">Opções</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" data-bs-target="#mobileSidebar" aria-label="Close"></button>
+            <button type="button" class="btn-close btn-close-dark" data-bs-dismiss="offcanvas" data-bs-target="#mobileSidebar" aria-label="Close"></button>
         </div>
         <div class="offcanvas-body d-flex flex-column p-3">
             {# Link Voltar #}
@@ -68,7 +67,7 @@
             <ul class="list-group list-group-flush mb-4">
                 {# Adicionar Tarefa #}
                 <li class="list-group-item"> <button class="btn btn-sm btn-link text-decoration-none p-0" data-bs-toggle="modal" data-bs-target="#adicionarTarefaModal"> <i class="bi bi-plus-circle me-2"></i> Adicionar Tarefa </button> </li>
-                {# Editar Detalhes #}
+                {# Editar Detalhes - ATENÇÃO: CHAVES CORRIGIDAS #}
                 <li class="list-group-item">
                     <button class="btn btn-sm btn-link text-decoration-none p-0"
                         data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa"
@@ -78,10 +77,9 @@
                         data-cargo="{{ implantacao.cargo_responsavel | default('') }}"
                         data-telefone="{{ implantacao.telefone_responsavel | default('') }}"
                         data-email="{{ implantacao.email_responsavel | default('') }}"
-                        {# Passa datas no formato YYYY-MM-DD esperado pelo input type="date" e JS #}
-                        data-inicio-implantacao="{{ implantacao.data_criacao.strftime('%Y-%m-%d') if implantacao.data_criacao else '' }}"
-                        data-inicio-producao="{{ implantacao.data_inicio_producao.strftime('%Y-%m-%d') if implantacao.data_inicio_producao else '' }}"
-                        data-final-implantacao="{{ implantacao.data_final_implantacao.strftime('%Y-%m-%d') if implantacao.data_final_implantacao else '' }}"
+                        data-inicio-implantacao="{{ implantacao.data_criacao_iso | default('') }}" {# CHAVE CORRIGIDA #}
+                        data-inicio-producao="{{ implantacao.data_inicio_producao_iso | default('') }}" {# CHAVE CORRIGIDA #}
+                        data-final-implantacao="{{ implantacao.data_final_implantacao_iso | default('') }}" {# CHAVE CORRIGIDA #}
                         data-chave-oamd="{{ implantacao.chave_oamd | default('') }}"
                         data-catraca="{{ implantacao.catraca | default('') }}"
                         data-facial="{{ implantacao.facial | default('') }}">
@@ -103,7 +101,7 @@
                 </li>
             </ul>
 
-            {# Detalhes (formatados com _fmt_d/_fmt_dt_hr do app.py) #}
+            {# Detalhes (formatados com _fmt_d/_fmt_dt_hr do app.py) - Inalterado #}
             <h6 class="text-secondary border-bottom pb-2 mb-3 mt-3">Detalhes da Empresa</h6>
             <ul class="list-unstyled small sidebar-info-list">
                 <li><i class="bi bi-building me-2"></i><strong>Empresa:</strong> {{ implantacao.nome_empresa }}</li>
@@ -139,7 +137,7 @@
         </div>
     </div>
 
-    {# Conteúdo Principal (Checklist / Timeline) #}
+    {# Conteúdo Principal (Checklist / Timeline) - Inalterado #}
     <main class="flex-grow-1 p-4" id="main-content">
 
         {# Mensagens Flash #}
@@ -154,7 +152,7 @@
             {% endif %}
         {% endwith %}
 
-        {# Card de Status e Progresso #}
+        {# Card de Status e Progresso - Inalterado #}
         <div class="metric-card p-3 rounded shadow-sm mb-4">
             <div class="row align-items-center">
                 <div class="col-md-6 mb-3 mb-md-0">
@@ -182,13 +180,13 @@
             </div>
         </div>
 
-        {# Abas Checklist / Timeline #}
+        {# Abas Checklist / Timeline - Inalterado #}
         <ul class="nav nav-tabs" id="detalhesTab" role="tablist">
             <li class="nav-item" role="presentation"> <button class="nav-link active" id="checklist-tab" data-bs-toggle="tab" data-bs-target="#checklist-content" type="button" role="tab"> <i class="bi bi-check2-square me-1"></i> Checklist </button> </li>
             <li class="nav-item" role="presentation"> <button class="nav-link" id="timeline-tab" data-bs-toggle="tab" data-bs-target="#timeline-content" type="button" role="tab"> <i class="bi bi-clock-history me-1"></i> Linha do Tempo </button> </li>
         </ul>
 
-        {# Conteúdo das Abas #}
+        {# Conteúdo das Abas - Inalterado #}
         <div class="tab-content" id="detalhesTabContent">
 
             {# Aba Checklist #}
@@ -286,7 +284,7 @@
                 </div> {# Fim da checklist-area #}
             </div> {# Fim da tab checklist #}
 
-            {# Aba Timeline #}
+            {# Aba Timeline - Inalterado #}
             <div class="tab-pane fade" id="timeline-content" role="tabpanel" aria-labelledby="timeline-tab">
                 <div class="metric-card p-3 rounded shadow-sm mt-3"> {# Adicionado mt-3 #}
                     <h5 class="mb-3 border-bottom pb-2">Histórico de Eventos</h5>
@@ -324,12 +322,13 @@
     </main>
 </div> {# Fim do d-flex principal #}
 
-{# Modais (Finalizar, Parar, Retomar, Add Tarefa, Excluir Implantação) - HTML sem alterações #}
+{# Modais (Finalizar, Parar, Retomar, Add Tarefa, Excluir Implantação) - Inalterado #}
 <div class="modal fade" id="modalFinalizar" tabindex="-1">...</div>
 <div class="modal fade" id="modalParar" tabindex="-1">...</div>
 <div class="modal fade" id="modalRetomar" tabindex="-1">...</div>
 <div class="modal fade" id="adicionarTarefaModal" tabindex="-1">...</div>
 <div class="modal fade" id="modalExcluirImplantacao" tabindex="-1">...</div>
+
 
 {% endblock %}
 
@@ -585,8 +584,6 @@
                     if (comentarioElement) comentarioElement.remove();
 
                     // Verifica se a lista ficou vazia e adiciona a msg "Nenhum comentário"
-                    const commentList = document.getElementById(`comment-list-${data.log_exclusao?.tarefa_id}`); // Precisa do tarefa_id no retorno da API? Ou buscar pelo ID da lista pai
-                    // Simplificado: Buscar pelo ID do elemento pai do botão
                     const listElement = button.closest('.list-group');
                     if(listElement && listElement.children.length === 0){
                         const tarefaIdGuess = listElement.id.split('-')[2]; // Tenta pegar ID da lista
@@ -745,7 +742,7 @@
                         body: JSON.stringify({
                             implantacao_id: implantacaoId,
                             tarefa_pai: modulo, // Nome do módulo
-                            ordem: novaOrdemIds // Array de IDs na nova ordem
+                            ordem: nova_ordem_ids // Array de IDs na nova ordem
                         })
                     })
                     .then(response => response.json())

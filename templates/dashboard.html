@@ -4,19 +4,17 @@
 
 {% block content %}
 <div class="container-fluid p-0">
+    {# CORREÇÃO DE LAYOUT: Removida a classe position-fixed/absolute e o padding-top forçado, voltando ao fluxo normal. #}
     <header class="header-bg p-3 shadow-sm d-flex justify-content-between align-items-center">
-        <h1 class="main-title mb-0 fs-4 flex-grow-1 text-center">CS ONBOARDING DASHBOARD</h1>
-        <div class="d-flex align-items-center position-absolute end-0 me-3">
+        <h1 class="main-title mb-0 fs-4 flex-grow-1 text-center me-3">CS ONBOARDING DASHBOARD</h1>
+        <div class="d-flex align-items-center ms-auto">
             {# Informações do Usuário Logado vindas do app.py #}
             {% if user_info %}
-                <span class="navbar-text me-2 d-none d-md-inline" style="color: var(--body-color);">
+                <span class="navbar-text me-3 d-none d-md-inline" style="color: var(--body-color); white-space: nowrap;">
                    Olá, {{ user_info.get('name', user_info.get('email', 'Usuário')) }} {# Exibe nome ou email #}
                 </span>
             {% endif %}
-            <button id="mode-toggle" class="btn btn-dark" type="button" title="Alternar tema">
-                <span id="mode-icon">🌙</span>
-            </button>
-            <button class="btn btn-success ms-3" data-bs-toggle="modal" data-bs-target="#novaImplantacaoModal">
+            <button class="btn btn-success ms-3" data-bs-toggle="modal" data-bs-target="#novaImplantacaoModal" style="background-color: var(--accent-color); border-color: var(--accent-color);">
                 <i class="bi bi-plus-circle me-1"></i> Nova Implantação
             </button>
             {# Botão Logout aponta para a rota /logout do Flask #}
@@ -32,6 +30,7 @@
         <h2 class="h5 mb-3">Resumo Rápido</h2>
         <div class="row row-cols-1 row-cols-md-2 row-cols-lg-5 g-3 mb-4">
             {% set m = metrics or {} %}
+            {# CORREÇÃO: Usando a variável 'metrics' e as chaves corretas fornecidas pelo app.py #}
             <div class="col"><div class="metric-card p-3 rounded shadow-sm text-center"><h6 class="text-secondary">Em Andamento</h6><h4 class="mb-0 text-primary">{{ m.impl_andamento_total | default(0) }}</h4></div></div>
             <div class="col"><div class="metric-card p-3 rounded shadow-sm text-center"><h6 class="text-secondary">Atrasadas (> 25d)</h6><h4 class="mb-0 text-danger">{{ m.implantacoes_atrasadas | default(0) }}</h4></div></div>
             <div class="col"><div class="metric-card p-3 rounded shadow-sm text-center"><h6 class="text-secondary">Futuras</h6><h4 class="mb-0 text-info">{{ m.implantacoes_futuras | default(0) }}</h4></div></div>
@@ -93,9 +92,9 @@
                                        data-cargo="{{ impl.cargo_responsavel | default('') }}"
                                        data-telefone="{{ impl.telefone_responsavel | default('') }}"
                                        data-email="{{ impl.email_responsavel | default('') }}"
-                                       data-inicio-implantacao="{{ impl.data_criacao.strftime('%Y-%m-%d') if impl.data_criacao else '' }}" {# Formato YYYY-MM-DD para JS #}
-                                       data-inicio-producao="{{ impl.data_inicio_producao.strftime('%Y-%m-%d') if impl.data_inicio_producao else '' }}"
-                                       data-final-implantacao="{{ impl.data_final_implantacao.strftime('%Y-%m-%d') if impl.data_final_implantacao else '' }}"
+                                       data-inicio-implantacao="{{ impl.data_criacao_iso | default('') }}"
+                                       data-inicio-producao="{{ impl.data_inicio_producao_iso | default('') }}"
+                                       data-final-implantacao="{{ impl.data_final_implantacao_iso | default('') }}"
                                        data-chave-oamd="{{ impl.chave_oamd | default('') }}"
                                        data-catraca="{{ impl.catraca | default('') }}"
                                        data-facial="{{ impl.facial | default('') }}">
@@ -145,9 +144,9 @@
                                         data-id="{{ impl.id }}" data-nome="{{ impl.nome_empresa }}"
                                         data-responsavel="{{ impl.responsavel_cliente | default('') }}" data-cargo="{{ impl.cargo_responsavel | default('') }}"
                                         data-telefone="{{ impl.telefone_responsavel | default('') }}" data-email="{{ impl.email_responsavel | default('') }}"
-                                        data-inicio-implantacao="{{ impl.data_criacao.strftime('%Y-%m-%d') if impl.data_criacao else '' }}"
-                                        data-inicio-producao="{{ impl.data_inicio_producao.strftime('%Y-%m-%d') if impl.data_inicio_producao else '' }}"
-                                        data-final-implantacao="{{ impl.data_final_implantacao.strftime('%Y-%m-%d') if impl.data_final_implantacao else '' }}"
+                                        data-inicio-implantacao="{{ impl.data_criacao_iso | default('') }}"
+                                        data-inicio-producao="{{ impl.data_inicio_producao_iso | default('') }}"
+                                        data-final-implantacao="{{ impl.data_final_implantacao_iso | default('') }}"
                                         data-chave-oamd="{{ impl.chave_oamd | default('') }}" data-catraca="{{ impl.catraca | default('') }}" data-facial="{{ impl.facial | default('') }}">
                                          {{ impl.nome_empresa }}
                                      </a>
@@ -201,9 +200,9 @@
                                        data-id="{{ impl.id }}" data-nome="{{ impl.nome_empresa }}"
                                        data-responsavel="{{ impl.responsavel_cliente | default('') }}" data-cargo="{{ impl.cargo_responsavel | default('') }}"
                                        data-telefone="{{ impl.telefone_responsavel | default('') }}" data-email="{{ impl.email_responsavel | default('') }}"
-                                       data-inicio-implantacao="{{ impl.data_criacao.strftime('%Y-%m-%d') if impl.data_criacao else '' }}"
-                                       data-inicio-producao="{{ impl.data_inicio_producao.strftime('%Y-%m-%d') if impl.data_inicio_producao else '' }}"
-                                       data-final-implantacao="{{ impl.data_final_implantacao.strftime('%Y-%m-%d') if impl.data_final_implantacao else '' }}"
+                                       data-inicio-implantacao="{{ impl.data_criacao_iso | default('') }}"
+                                       data-inicio-producao="{{ impl.data_inicio_producao_iso | default('') }}"
+                                       data-final-implantacao="{{ impl.data_final_implantacao_iso | default('') }}"
                                        data-chave-oamd="{{ impl.chave_oamd | default('') }}" data-catraca="{{ impl.catraca | default('') }}" data-facial="{{ impl.facial | default('') }}">
                                         {{ impl.nome_empresa }}
                                     </a>
@@ -214,7 +213,8 @@
                                         <input type="hidden" name="implantacao_id" value="{{ impl.id }}">
                                         <button type="submit" class="btn btn-sm btn-success">Iniciar Implantação</button>
                                     </form>
-                                     <a href="{{ url_for('ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-secondary ms-1">Ver Detalhes</a>
+                                     {# CORRIGIDO: Mudança para btn-primary para alto contraste (azul/branco) #}
+                                     <a href="{{ url_for('ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary ms-1">Ver Detalhes</a>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -249,9 +249,9 @@
                                        data-id="{{ impl.id }}" data-nome="{{ impl.nome_empresa }}"
                                        data-responsavel="{{ impl.responsavel_cliente | default('') }}" data-cargo="{{ impl.cargo_responsavel | default('') }}"
                                        data-telefone="{{ impl.telefone_responsavel | default('') }}" data-email="{{ impl.email_responsavel | default('') }}"
-                                       data-inicio-implantacao="{{ impl.data_criacao.strftime('%Y-%m-%d') if impl.data_criacao else '' }}"
-                                       data-inicio-producao="{{ impl.data_inicio_producao.strftime('%Y-%m-%d') if impl.data_inicio_producao else '' }}"
-                                       data-final-implantacao="{{ impl.data_final_implantacao.strftime('%Y-%m-%d') if impl.data_final_implantacao else '' }}"
+                                       data-inicio-implantacao="{{ impl.data_criacao_iso | default('') }}"
+                                       data-inicio-producao="{{ impl.data_inicio_producao_iso | default('') }}"
+                                       data-final-implantacao="{{ impl.data_final_implantacao_iso | default('') }}"
                                        data-chave-oamd="{{ impl.chave_oamd | default('') }}" data-catraca="{{ impl.catraca | default('') }}" data-facial="{{ impl.facial | default('') }}">
                                         {{ impl.nome_empresa }}
                                     </a>
@@ -295,9 +295,9 @@
                                        data-id="{{ impl.id }}" data-nome="{{ impl.nome_empresa }}"
                                        data-responsavel="{{ impl.responsavel_cliente | default('') }}" data-cargo="{{ impl.cargo_responsavel | default('') }}"
                                        data-telefone="{{ impl.telefone_responsavel | default('') }}" data-email="{{ impl.email_responsavel | default('') }}"
-                                       data-inicio-implantacao="{{ impl.data_criacao.strftime('%Y-%m-%d') if impl.data_criacao else '' }}"
-                                       data-inicio-producao="{{ impl.data_inicio_producao.strftime('%Y-%m-%d') if impl.data_inicio_producao else '' }}"
-                                       data-final-implantacao="{{ impl.data_final_implantacao.strftime('%Y-%m-%d') if impl.data_final_implantacao else '' }}"
+                                       data-inicio-implantacao="{{ impl.data_criacao_iso | default('') }}"
+                                       data-inicio-producao="{{ impl.data_inicio_producao_iso | default('') }}"
+                                       data-final-implantacao="{{ impl.data_final_implantacao_iso | default('') }}"
                                        data-chave-oamd="{{ impl.chave_oamd | default('') }}" data-catraca="{{ impl.catraca | default('') }}" data-facial="{{ impl.facial | default('') }}">
                                         {{ impl.nome_empresa }}
                                     </a>
@@ -330,7 +330,7 @@
         <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);">
             <div class="modal-header header-bg">
                 <h5 class="modal-title" id="novaImplantacaoModalLabel" style="color: var(--body-color);">Nova Implantação</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-dark" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form action="{{ url_for('criar_implantacao') }}" method="POST">
                 <div class="modal-body">
