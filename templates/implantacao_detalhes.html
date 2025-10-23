@@ -30,26 +30,32 @@
 
 
 {% block content %}
-{# Cabeçalho da Página #}
-<header class="header-bg p-3 shadow-sm d-flex justify-content-between align-items-center">
-    <h1 class="main-title mb-0 fs-4 me-auto">CS ONBOARDING DETALHES</h1>
-    <div class="d-flex align-items-center ms-auto">
-        {# Exibe Nome/Email do Usuário Logado #}
-         {% if user_info %}
-            <span class="navbar-text me-3 d-none d-lg-inline" style="color: var(--body-color); white-space: nowrap;">
-                Olá, {{ user_info.get('name', user_info.get('email', 'Usuário')) }}
-            </span>
-         {% endif %}
+<header class="header-bg p-3 shadow-sm d-flex justify-content-end align-items-center position-relative">
+    <h1 class="main-title mb-0 fs-4" style="position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap;">CS ONBOARDING DETALHES</h1>
+    <div class="d-flex align-items-center">
+        {# REMOVIDO: "Olá..." #}
+        
         {# Botão para abrir sidebar em telas pequenas #}
         <button class="btn btn-outline-secondary d-lg-none me-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar" aria-controls="mobileSidebar"> <i class="bi bi-list"></i> </button>
-        {# REMOVIDO: Botão Dark Mode #}
-        {# Botão Sair #}
-        <a href="{{ url_for('logout') }}" class="btn btn-outline-secondary ms-2 d-none d-lg-inline-flex" title="Sair">
-            <i class="bi bi-box-arrow-right"></i>
-        </a>
+        
+        {# ALTERAÇÃO: Botão Sair agora é um Dropdown Menu #}
+        <div class="dropdown ms-2">
+            <button class="btn btn-outline-secondary" type="button" id="userMenuDropdownDetails" data-bs-toggle="dropdown" aria-expanded="false" title="Menu">
+                <i class="bi bi-list"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuDropdownDetails">
+                <li><a class="dropdown-item" href="#">Editar Perfil</a></li>
+                <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalGamificacao">Gamificação</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <a class="dropdown-item text-danger" href="{{ url_for('logout') }}">
+                        <i class="bi bi-box-arrow-right me-2"></i> Sair
+                    </a>
+                </li>
+            </ul>
+        </div>
     </div>
 </header>
-
 {# Layout Principal (Sidebar + Conteúdo) #}
 <div class="d-flex">
     {# Sidebar #}
@@ -322,12 +328,141 @@
     </main>
 </div> {# Fim do d-flex principal #}
 
-{# Modais (Finalizar, Parar, Retomar, Add Tarefa, Excluir Implantação) - Inalterado #}
-<div class="modal fade" id="modalFinalizar" tabindex="-1">...</div>
-<div class="modal fade" id="modalParar" tabindex="-1">...</div>
-<div class="modal fade" id="modalRetomar" tabindex="-1">...</div>
-<div class="modal fade" id="adicionarTarefaModal" tabindex="-1">...</div>
-<div class="modal fade" id="modalExcluirImplantacao" tabindex="-1">...</div>
+{# Modais (Finalizar, Parar, Retomar, Add Tarefa, Excluir Implantação) - HTML Completo #}
+
+{# Modal Finalizar #}
+<div class="modal fade" id="modalFinalizar" tabindex="-1" aria-labelledby="modalFinalizarLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);">
+            <div class="modal-header header-bg"><h5 class="modal-title" id="modalFinalizarLabel" style="color: var(--body-color);">Finalizar Implantação</h5><button type="button" class="btn-close btn-close-dark" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <form action="{{ url_for('finalizar_implantacao') }}" method="POST">
+                <div class="modal-body">
+                    <p>Tem certeza que deseja marcar esta implantação como "Finalizada"?</p>
+                    <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
+                    <input type="hidden" name="redirect_to" value="detalhes">
+                </div>
+                <div class="modal-footer header-bg">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Confirmar Finalização</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{# Modal Parar #}
+<div class="modal fade" id="modalParar" tabindex="-1" aria-labelledby="modalPararLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);">
+            <div class="modal-header header-bg"><h5 class="modal-title" id="modalPararLabel" style="color: var(--body-color);">Parar Implantação</h5><button type="button" class="btn-close btn-close-dark" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <form action="{{ url_for('parar_implantacao') }}" method="POST">
+                <div class="modal-body">
+                    <p>Tem certeza que deseja "Parar" esta implantação? Ela sairá da fila "Em Andamento".</p>
+                    <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
+                    <div class="mb-3">
+                        <label for="motivo_parada" class="form-label">Motivo da Parada (Obrigatório)</label>
+                        <select class="form-select" id="motivo_parada" name="motivo_parada" required>
+                            <option value="">Selecione um motivo...</option>
+                            {% for motivo in justificativas_parada %}
+                            <option value="{{ motivo }}">{{ motivo }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer header-bg">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Parar Implantação</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{# Modal Retomar #}
+<div class="modal fade" id="modalRetomar" tabindex="-1" aria-labelledby="modalRetomarLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);">
+            <div class="modal-header header-bg"><h5 class="modal-title" id="modalRetomarLabel" style="color: var(--body-color);">Retomar Implantação</h5><button type="button" class="btn-close btn-close-dark" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <form action="{{ url_for('retomar_implantacao') }}" method="POST">
+                <div class="modal-body">
+                    <p>Tem certeza que deseja "Retomar" esta implantação? Ela voltará para a fila "Em Andamento".</p>
+                    <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
+                    <input type="hidden" name="redirect_to" value="detalhes">
+                </div>
+                <div class="modal-footer header-bg">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Retomar Implantação</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{# Modal Adicionar Tarefa #}
+<div class="modal fade" id="adicionarTarefaModal" tabindex="-1" aria-labelledby="adicionarTarefaModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);">
+            <div class="modal-header header-bg"><h5 class="modal-title" id="adicionarTarefaModalLabel" style="color: var(--body-color);">Adicionar Nova Tarefa</h5><button type="button" class="btn-close btn-close-dark" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            
+            <form action="{{ url_for('adicionar_tarefa') }}" method="POST"> 
+                <div class="modal-body">
+                    <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
+                    
+                    <div class="mb-3">
+                        <label for="add-tarefa-filho" class="form-label">Nome da Tarefa</label>
+                        <input type="text" class="form-control" id="add-tarefa-filho" name="tarefa_filho" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="add-tarefa-pai" class="form-label">Módulo (Agrupador)</label>
+                        <select class="form-select" id="add-tarefa-pai" name="tarefa_pai" required>
+                            <option value="">Selecione um módulo existente...</option>
+                            {% for modulo in tarefas_agrupadas.keys() %}
+                            <option value="{{ modulo }}">{{ modulo }}</option>
+                            {% endfor %}
+                            <option value="Outros">Outros (Novo Módulo)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="add-tarefa-tag" class="form-label">Tag (Opcional)</label>
+                        <select class="form-select" id="add-tarefa-tag" name="tag">
+                            <option value="">Sem Tag</option>
+                            <option value="Ação interna">Ação interna</option>
+                            <option value="Reunião">Reunião</option>
+                            <option value="Outro">Outro</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer header-bg">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Adicionar Tarefa</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{# Modal Excluir Implantação #}
+<div class="modal fade" id="modalExcluirImplantacao" tabindex="-1" aria-labelledby="modalExcluirImplantacaoLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);">
+            <div class="modal-header header-bg"><h5 class="modal-title text-danger" id="modalExcluirImplantacaoLabel" style="color: var(--body-color);">Excluir Implantação</h5><button type="button" class="btn-close btn-close-dark" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <form action="{{ url_for('excluir_implantacao') }}" method="POST">
+                <div class="modal-body">
+                    <h5 class="text-danger">Atenção! Ação irreversível!</h5>
+                    <p>Você tem certeza que deseja excluir permanentemente a implantação de <strong>{{ implantacao.nome_empresa }}</strong>?</p>
+                    <p>Todos os dados, tarefas e comentários associados serão perdidos para sempre.</p>
+                    <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
+                </div>
+                <div class="modal-footer header-bg">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Sim, excluir permanentemente</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 
 {% endblock %}
@@ -532,7 +667,7 @@
             .then(data => {
                 if (data.ok && data.comentario) {
                     const commentList = document.getElementById('comment-list-' + tarefaId);
-                    const noCommentMsg = document.getElementById('no-comment-' + tarefaId);
+                    const noCommentMsg = document.getElementById('no-comment-'a + tarefaId);
                     if (noCommentMsg) noCommentMsg.remove(); // Remove msg "Nenhum comentário"
 
                     // Adiciona o novo comentário no final da lista

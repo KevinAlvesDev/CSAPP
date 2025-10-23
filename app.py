@@ -11,15 +11,19 @@ from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
 from collections import OrderedDict
 from datetime import datetime, date
-from werkzeug.middleware.proxy_fix import ProxyFix
 import math 
 import time 
+
+# ADIÇÃO PARA CORRIGIR PROXY HTTPS (Logout/Login no Railway)
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 load_dotenv()
 
 # --- CONFIGURAÇÃO INICIAL E AUTHLIB ---
 app = Flask(__name__)
+# ADIÇÃO PARA CORRIGIR PROXY HTTPS (Logout/Login no Railway)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
 app.secret_key = os.environ.get("FLASK_SECRET_KEY")
 if not app.secret_key:
     raise ValueError("FLASK_SECRET_KEY não definida no ambiente ou .env. Gere uma chave segura.")
@@ -1000,7 +1004,50 @@ def excluir_comentario(comentario_id):
     except Exception as e:
         print(f"ERRO ao excluir comentário ID {comentario_id}: {e}")
         return jsonify({'ok': False, 'error': f"Erro interno do servidor: {e}"}), 500
+
+# =================== BLOC ALVO DA ALTERAÇÃO (NOVA ROTA) ===================
+@app.route('/adicionar_tarefa', methods=['POST'])
+@login_required
+def adicionar_tarefa():
+    usuario_cs_email = g.user_email
+    implantacao_id = request.form.get('implantacao_id')
+    tarefa_filho = request.form.get('tarefa_filho', '').strip()
+    tarefa_pai = request.form.get('tarefa_pai', '').strip()
+    tag = request.form.get('tag', '').strip()
+
+    if not all([implantacao_id, tarefa_filho, tarefa_pai]):
+        flash('Dados incompletos para adicionar tarefa.', 'error')
+        return redirect(request.referrer or url_for('dashboard'))
+
+    try:
+        impl = query_db("SELECT id, nome_empresa, status FROM implantacoes WHERE id = %s AND usuario_cs = %s", (implantacao_id, usuario_cs_email), one=True)
+        if not impl:
+            flash('Permissão negada ou implantação não encontrada.', 'error')
+            return redirect(url_for('dashboard'))
+            
+        if impl.get('status') == 'finalizada':
+            flash('Não é possível adicionar tarefas a implantações finalizadas.', 'warning')
+            return redirect(url_for('ver_implantacao', impl_id=implantacao_id))
+
+        # Pega a próxima ordem para a nova tarefa
+        max_ordem = query_db("SELECT MAX(ordem) as max_o FROM tarefas WHERE implantacao_id = %s AND tarefa_pai = %s", (implantacao_id, tarefa_pai), one=True)
+        nova_ordem = (max_ordem.get('max_o') or 0) + 1
+
+        execute_db(
+            "INSERT INTO tarefas (implantacao_id, tarefa_pai, tarefa_filho, tag, ordem, concluida) VALUES (%s, %s, %s, %s, %s, %s)",
+            (implantacao_id, tarefa_pai, tarefa_filho, tag, nova_ordem, 0)
+        )
         
+        logar_timeline(implantacao_id, usuario_cs_email, 'tarefa_adicionada', f"Nova tarefa '{tarefa_filho}' adicionada ao módulo '{tarefa_pai}'.")
+        flash('Nova tarefa adicionada com sucesso!', 'success')
+
+    except Exception as e:
+        print(f"Erro ao adicionar tarefa na implantação ID {implantacao_id}: {e}")
+        flash(f'Erro ao adicionar tarefa: {e}', 'error')
+    
+    return redirect(url_for('ver_implantacao', impl_id=implantacao_id))
+# ========================================================================
+
 @app.route('/excluir_tarefa/<int:tarefa_id>', methods=['POST'])
 @login_required
 def excluir_tarefa(tarefa_id):
