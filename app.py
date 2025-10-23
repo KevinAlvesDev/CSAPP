@@ -11,6 +11,7 @@ from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
 from collections import OrderedDict
 from datetime import datetime, date
+from werkzeug.middleware.proxy_fix import ProxyFix
 import math 
 import time 
 
@@ -18,6 +19,7 @@ load_dotenv()
 
 # --- CONFIGURAÇÃO INICIAL E AUTHLIB ---
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY")
 if not app.secret_key:
     raise ValueError("FLASK_SECRET_KEY não definida no ambiente ou .env. Gere uma chave segura.")
