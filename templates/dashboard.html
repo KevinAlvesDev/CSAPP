@@ -8,20 +8,22 @@
         <h1 class="main-title mb-0 fs-4" style="position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap;">CS ONBOARDING DASHBOARD</h1>
         
         <div class="d-flex align-items-center">
-            {# REMOVIDO: Informações do Usuário "Olá, ..." #}
-
+            
             <button class="btn btn-success ms-3" data-bs-toggle="modal" data-bs-target="#novaImplantacaoModal" style="background-color: var(--accent-color); border-color: var(--accent-color);">
                 <i class="bi bi-plus-circle me-1"></i> Nova Implantação
             </button>
             
-            {# ALTERAÇÃO: Botão Logout agora é um Dropdown Menu #}
             <div class="dropdown ms-2">
-                <button class="btn btn-outline-secondary" type="button" id="userMenuDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Menu">
-                    <i class="bi bi-list"></i>
+                <button class="btn btn-outline-secondary rounded-circle p-0" type="button" id="userMenuDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Menu" style="width: 40px; height: 40px; border: 2px solid var(--accent-color); overflow: hidden;">
+                    {# g.perfil é injetado pelo decorator @login_required #}
+                    {% if g.perfil.foto_url %}
+                        <img src="{{ g.perfil.foto_url }}" alt="Foto de Perfil" style="width: 100%; height: 100%; object-fit: cover;">
+                    {% else %}
+                        <i class="bi bi-person-fill" style="font-size: 1.5rem; color: var(--accent-color);"></i>
+                    {% endif %}
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuDropdown">
-                    <li><a class="dropdown-item" href="#">Editar Perfil</a></li>
-                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalGamificacao">Gamificação</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('perfil') }}">Editar Perfil</a></li> <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalGamificacao">Gamificação</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li>
                         <a class="dropdown-item text-danger" href="{{ url_for('logout') }}">
@@ -30,7 +32,7 @@
                     </li>
                 </ul>
             </div>
-        </div>
+            </div>
     </header>
     <main class="p-4" id="main-content">
 

@@ -33,18 +33,21 @@
 <header class="header-bg p-3 shadow-sm d-flex justify-content-end align-items-center position-relative">
     <h1 class="main-title mb-0 fs-4" style="position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap;">CS ONBOARDING DETALHES</h1>
     <div class="d-flex align-items-center">
-        {# REMOVIDO: "Olá..." #}
-        
+
         {# Botão para abrir sidebar em telas pequenas #}
         <button class="btn btn-outline-secondary d-lg-none me-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar" aria-controls="mobileSidebar"> <i class="bi bi-list"></i> </button>
-        
-        {# ALTERAÇÃO: Botão Sair agora é um Dropdown Menu #}
+
         <div class="dropdown ms-2">
-            <button class="btn btn-outline-secondary" type="button" id="userMenuDropdownDetails" data-bs-toggle="dropdown" aria-expanded="false" title="Menu">
-                <i class="bi bi-list"></i>
+            <button class="btn btn-outline-secondary rounded-circle p-0" type="button" id="userMenuDropdownDetails" data-bs-toggle="dropdown" aria-expanded="false" title="Menu" style="width: 40px; height: 40px; border: 2px solid var(--accent-color); overflow: hidden;">
+                {# g.perfil é injetado pelo decorator @login_required #}
+                {% if g.perfil.foto_url %}
+                    <img src="{{ g.perfil.foto_url }}" alt="Foto de Perfil" style="width: 100%; height: 100%; object-fit: cover;">
+                {% else %}
+                    <i class="bi bi-person-fill" style="font-size: 1.5rem; color: var(--accent-color);"></i>
+                {% endif %}
             </button>
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuDropdownDetails">
-                <li><a class="dropdown-item" href="#">Editar Perfil</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('perfil') }}">Editar Perfil</a></li>
                 <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalGamificacao">Gamificação</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li>
@@ -73,7 +76,7 @@
             <ul class="list-group list-group-flush mb-4">
                 {# Adicionar Tarefa #}
                 <li class="list-group-item"> <button class="btn btn-sm btn-link text-decoration-none p-0" data-bs-toggle="modal" data-bs-target="#adicionarTarefaModal"> <i class="bi bi-plus-circle me-2"></i> Adicionar Tarefa </button> </li>
-                {# Editar Detalhes - ATENÇÃO: CHAVES CORRIGIDAS #}
+                {# Editar Detalhes #}
                 <li class="list-group-item">
                     <button class="btn btn-sm btn-link text-decoration-none p-0"
                         data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa"
@@ -83,9 +86,9 @@
                         data-cargo="{{ implantacao.cargo_responsavel | default('') }}"
                         data-telefone="{{ implantacao.telefone_responsavel | default('') }}"
                         data-email="{{ implantacao.email_responsavel | default('') }}"
-                        data-inicio-implantacao="{{ implantacao.data_criacao_iso | default('') }}" {# CHAVE CORRIGIDA #}
-                        data-inicio-producao="{{ implantacao.data_inicio_producao_iso | default('') }}" {# CHAVE CORRIGIDA #}
-                        data-final-implantacao="{{ implantacao.data_final_implantacao_iso | default('') }}" {# CHAVE CORRIGIDA #}
+                        data-inicio-implantacao="{{ implantacao.data_criacao_iso | default('') }}"
+                        data-inicio-producao="{{ implantacao.data_inicio_producao_iso | default('') }}"
+                        data-final-implantacao="{{ implantacao.data_final_implantacao_iso | default('') }}"
                         data-chave-oamd="{{ implantacao.chave_oamd | default('') }}"
                         data-catraca="{{ implantacao.catraca | default('') }}"
                         data-facial="{{ implantacao.facial | default('') }}">
@@ -107,7 +110,7 @@
                 </li>
             </ul>
 
-            {# Detalhes (formatados com _fmt_d/_fmt_dt_hr do app.py) - Inalterado #}
+            {# Detalhes Empresa #}
             <h6 class="text-secondary border-bottom pb-2 mb-3 mt-3">Detalhes da Empresa</h6>
             <ul class="list-unstyled small sidebar-info-list">
                 <li><i class="bi bi-building me-2"></i><strong>Empresa:</strong> {{ implantacao.nome_empresa }}</li>
@@ -116,7 +119,7 @@
                 <li><i class="bi bi-calendar-check me-2"></i><strong>Criação:</strong> {{ implantacao.data_criacao_fmt_d }}</li>
                 {% if implantacao.status == 'finalizada' %}
                     <li><i class="bi bi-calendar-x me-2"></i><strong>Finalização:</strong> {{ implantacao.data_finalizacao_fmt_d }}</li>
-                {% elif implantacao.status == 'parada' and implantacao.data_finalizacao %} {# Mostra data da parada #}
+                {% elif implantacao.status == 'parada' and implantacao.data_finalizacao %}
                     <li><i class="bi bi-calendar-pause me-2"></i><strong>Pausada em:</strong> {{ implantacao.data_finalizacao_fmt_d }}</li>
                 {% endif %}
             </ul>
@@ -138,12 +141,12 @@
                 <li><i class="bi bi-person-bounding-box me-2"></i><strong>Facial:</strong> {{ implantacao.facial | default('N/A') }}</li>
             </ul>
 
-            {# Botão Sair no final do Sidebar #}
+            {# Botão Sair #}
             <a href="{{ url_for('logout') }}" class="btn btn-outline-secondary mt-auto w-100"> <i class="bi bi-box-arrow-right me-2"></i> Sair </a>
         </div>
     </div>
 
-    {# Conteúdo Principal (Checklist / Timeline) - Inalterado #}
+    {# Conteúdo Principal #}
     <main class="flex-grow-1 p-4" id="main-content">
 
         {# Mensagens Flash #}
@@ -158,7 +161,7 @@
             {% endif %}
         {% endwith %}
 
-        {# Card de Status e Progresso - Inalterado #}
+        {# Card de Status e Progresso #}
         <div class="metric-card p-3 rounded shadow-sm mb-4">
             <div class="row align-items-center">
                 <div class="col-md-6 mb-3 mb-md-0">
@@ -169,16 +172,13 @@
                         {% elif implantacao.status == 'futura' %} <span class="badge bg-info text-dark">Futura</span>
                         {% else %} <span class="badge bg-warning text-dark">Em Andamento</span> {% endif %}
                     </p>
-                    {# Mostra motivo se parada #}
                     {% if implantacao.status == 'parada' and implantacao.motivo_parada %}
                         <p class="mb-1 small text-danger"> <strong>Motivo:</strong> {{ implantacao.motivo_parada }} </p>
                     {% endif %}
-                    {# Data de Criação com hora #}
                     <p class="mb-0"><strong>Criação:</strong> {{ implantacao.data_criacao_fmt_dt_hr }}</p>
                 </div>
                 <div class="col-md-6">
                     <h4 class="h6 mb-2">Progresso Total</h4>
-                    {# Barra de Progresso #}
                     <div class="progress" style="height: 30px;">
                          <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: {{ progresso_porcentagem }}%;" aria-valuenow="{{ progresso_porcentagem }}">{{ progresso_porcentagem }}%</div>
                     </div>
@@ -186,88 +186,91 @@
             </div>
         </div>
 
-        {# Abas Checklist / Timeline - Inalterado #}
+        {# --- Abas --- #}
         <ul class="nav nav-tabs" id="detalhesTab" role="tablist">
-            <li class="nav-item" role="presentation"> <button class="nav-link active" id="checklist-tab" data-bs-toggle="tab" data-bs-target="#checklist-content" type="button" role="tab"> <i class="bi bi-check2-square me-1"></i> Checklist </button> </li>
-            <li class="nav-item" role="presentation"> <button class="nav-link" id="timeline-tab" data-bs-toggle="tab" data-bs-target="#timeline-content" type="button" role="tab"> <i class="bi bi-clock-history me-1"></i> Linha do Tempo </button> </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="checklist-treinamentos-tab" data-bs-toggle="tab" data-bs-target="#checklist-treinamentos-content" type="button" role="tab">
+                    <i class="bi bi-check2-square me-1"></i> Checklist Treinamentos
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="checklist-obrigatorio-tab" data-bs-toggle="tab" data-bs-target="#checklist-obrigatorio-content" type="button" role="tab">
+                    <i class="bi bi-check-circle-fill me-1"></i> Checklist Obrigatório
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="pendencias-tab" data-bs-toggle="tab" data-bs-target="#pendencias-content" type="button" role="tab">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i> Pendências
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="timeline-tab" data-bs-toggle="tab" data-bs-target="#timeline-content" type="button" role="tab">
+                    <i class="bi bi-clock-history me-1"></i> Linha do Tempo
+                </button>
+            </li>
         </ul>
 
-        {# Conteúdo das Abas - Inalterado #}
+        {# --- Conteúdo das Abas --- #}
         <div class="tab-content" id="detalhesTabContent">
 
-            {# Aba Checklist #}
-            <div class="tab-pane fade show active" id="checklist-content" role="tabpanel" aria-labelledby="checklist-tab">
-                <div id="checklist-area" class="pt-4">
-                    {% for modulo, tarefas in tarefas_agrupadas.items() %}
+            {# --- Aba Checklist Treinamentos --- #}
+            <div class="tab-pane fade show active" id="checklist-treinamentos-content" role="tabpanel" aria-labelledby="checklist-treinamentos-tab">
+                <div id="checklist-area-treinamento" class="pt-4">
+                    {% if not tarefas_agrupadas_treinamento %}
+                        <div class="alert alert-light text-center small py-2" role="alert">Nenhuma tarefa de treinamento encontrada.</div>
+                    {% endif %}
+                    {% for modulo, tarefas in tarefas_agrupadas_treinamento.items() %}
                     <div class="card metric-card mb-4 shadow-sm">
-                        {# Cabeçalho do Módulo (Collapse) #}
-                        <div class="card-header header-bg d-flex justify-content-between align-items-center" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#collapse{{ loop.index }}" aria-expanded="false">
+                        <div class="card-header header-bg d-flex justify-content-between align-items-center" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#collapse-trein-{{ loop.index }}" aria-expanded="false">
                             <h5 class="mb-0 fs-6">{{ modulo }}</h5>
                             <i class="bi bi-chevron-down"></i>
                         </div>
-                        {# Conteúdo Colapsável (Lista de Tarefas) #}
-                        <div id="collapse{{ loop.index }}" class="collapse" data-modulo="{{ modulo }}">
-                            <ul class="list-group list-group-flush list-group-sortable" id="sortable-list-{{ loop.index }}">
-                                {# Itera sobre as tarefas do módulo #}
+                        <div id="collapse-trein-{{ loop.index }}" class="collapse" data-modulo="{{ modulo }}">
+                            <ul class="list-group list-group-flush list-group-sortable" id="sortable-list-trein-{{ loop.index }}">
                                 {% for tarefa in tarefas %}
                                 <li class="list-group-item d-flex align-items-start justify-content-between" data-id="{{ tarefa.id }}">
-                                    {# Conteúdo Principal da Tarefa (Checkbox, Label, Comentários) #}
-                                    <div class="d-flex flex-column flex-grow-1 me-3"> {# Adicionado me-3 para espaçamento #}
-                                        {# Checkbox, Label e Tag #}
+                                    <div class="d-flex flex-column flex-grow-1 me-3">
                                         <div class="d-flex align-items-center mb-2">
-                                            <input class="form-check-input me-3 task-checkbox flex-shrink-0" type="checkbox" value="1" id="task-{{ tarefa.id }}" onchange="window.toggleTarefa({{ tarefa.id }}, this)" {% if tarefa.concluida %}checked{% endif %}>
+                                            <input class="form-check-input me-3 task-checkbox flex-shrink-0" type="checkbox" value="1" id="task-trein-{{ tarefa.id }}" onchange="window.toggleTarefa({{ tarefa.id }}, this)" {% if tarefa.concluida %}checked{% endif %}>
                                             <div class="task-label-container">
-                                                <label class="form-check-label {% if tarefa.concluida %}text-decoration-line-through text-success{% endif %}" for="task-{{ tarefa.id }}">
+                                                <label class="form-check-label {% if tarefa.concluida %}text-decoration-line-through text-success{% endif %}" for="task-trein-{{ tarefa.id }}">
                                                     {{ tarefa.tarefa_filho }}
                                                 </label>
-                                                {# Exibe a Tag se existir #}
                                                 {% if tarefa.tag %}
-                                                <span class="badge rounded-pill task-tag ms-2 {# Define cor da tag #}
-                                                    {% if tarefa.tag == 'Ação interna' %} bg-secondary
-                                                    {% elif tarefa.tag == 'Reunião' %} bg-info text-dark
-                                                    {% else %} bg-light text-dark {% endif %}">
+                                                <span class="badge rounded-pill task-tag ms-2 {% if tarefa.tag == 'Ação interna' %} bg-secondary {% elif tarefa.tag == 'Reunião' %} bg-info text-dark {% else %} bg-light text-dark {% endif %}">
                                                     {{ tarefa.tag }}
                                                 </span>
                                                 {% endif %}
                                             </div>
                                         </div>
-
-                                        {# Seção de Comentários (Indentada) #}
-                                        <div class="mt-1" style="margin-left: calc(1.25em + 0.75rem);"> {# Indentação manual alinhada com checkbox #}
+                                        <div class="mt-1" style="margin-left: calc(1.25em + 0.75rem);">
                                             <label class="form-label small text-secondary mb-1">Comentários</label>
-                                            {# Formulário Novo Comentário #}
                                             <form onsubmit="return false;" class="comment-form mb-2">
                                                 <textarea id="comment-text-{{ tarefa.id }}-new" class="form-control form-control-sm" name="comentario" maxlength="8000" rows="2" placeholder="Adicionar comentário..."></textarea>
                                                 <input type="file" name="imagem" class="form-control form-control-sm my-1" accept="image/png, image/jpeg, image/gif">
                                                 <button class="btn btn-outline-primary btn-sm px-2 py-1" type="button" onclick="window.adicionarComentario({{ tarefa.id }}, '{{ url_for('adicionar_comentario', tarefa_id=tarefa.id) }}', this)"> Salvar </button>
                                             </form>
-                                            {# Lista de Comentários Existentes #}
                                             <div class="list-group list-group-flush border rounded-1" id="comment-list-{{ tarefa.id }}" style="max-height: 300px; overflow-y: auto;">
-                                                {# Mensagem se não houver comentários #}
                                                 {% if not tarefa.comentarios %}
                                                     <div class="list-group-item list-group-item-action py-1 px-2 small text-secondary fst-italic" id="no-comment-{{ tarefa.id }}"> Nenhum comentário ainda. </div>
                                                 {% endif %}
-                                                {# Itera sobre os comentários da tarefa #}
                                                 {% for comentario in tarefa.comentarios %}
-                                                <div class="list-group-item list-group-item-action py-1 px-2">
+                                                <div class="list-group-item list-group-item-action py-1 px-2" id="comentario-{{ comentario.id }}">
                                                     <div class="d-flex w-100 justify-content-between align-items-center mb-1">
                                                         <strong class="mb-0 small"> <i class="bi bi-person-fill me-1"></i> {{ comentario.usuario_nome }} </strong>
-                                                        <small class="text-secondary">{{ comentario.data_criacao_fmt_d }}</small> {# Data formatada BR #}
+                                                        <small class="text-secondary">{{ comentario.data_criacao_fmt_d }}</small>
                                                     </div>
                                                     <div class="comment-content-wrapper">
-                                                        {# Texto do Comentário com "Ver mais" #}
                                                         <p class="mb-1 small comment-text" id="comment-text-{{ comentario.id }}">{{ comentario.texto | safe }}</p>
-                                                        {% if comentario.texto and comentario.texto | length > 200 %} {# Limite menor para 'Ver mais' #}
+                                                        {% if comentario.texto and comentario.texto | length > 200 %}
                                                             <button class="btn btn-sm btn-link p-0 small" onclick="toggleComment(this, 'comment-text-{{ comentario.id }}')">Ver mais...</button>
                                                         {% endif %}
-                                                        {# Imagem Anexada #}
                                                         {% if comentario.imagem_url %}
                                                             <a href="{{ comentario.imagem_url }}" target="_blank" title="Clique para ampliar">
                                                                 <img src="{{ comentario.imagem_url }}" class="img-fluid rounded mt-1 comment-image">
                                                             </a>
                                                         {% endif %}
                                                     </div>
-                                                    {# Botão Excluir (se for o dono do comentário) #}
                                                     {% if comentario.usuario_cs == email_usuario_logado %}
                                                         <button class="btn btn-sm btn-link text-danger p-0 small mt-1" onclick="window.excluirComentario({{ comentario.id }}, '{{ url_for('excluir_comentario', comentario_id=comentario.id) }}', this)"> Excluir </button>
                                                     {% endif %}
@@ -276,9 +279,8 @@
                                             </div>
                                         </div>
                                     </div>
-                                    {# Botões de Ação da Tarefa (Excluir, Mover) #}
                                     <div class="d-flex align-items-center ms-2 flex-shrink-0">
-                                        <button class="btn btn-sm btn-outline-danger p-1 me-1" onclick="window.excluirTarefa({{ tarefa.id }}, this)" title="Excluir Tarefa"><i class="bi bi-x-lg"></i></button> {# Ícone menor #}
+                                        <button class="btn btn-sm btn-outline-danger p-1 me-1" onclick="window.excluirTarefa({{ tarefa.id }}, this)" title="Excluir Tarefa"><i class="bi bi-x-lg"></i></button>
                                         <i class="bi bi-grip-vertical handle" style="cursor: grab;" title="Mover Tarefa"></i>
                                     </div>
                                 </li>
@@ -286,25 +288,207 @@
                             </ul>
                         </div>
                     </div>
-                    {% endfor %} {# Fim do loop de módulos #}
-                </div> {# Fim da checklist-area #}
-            </div> {# Fim da tab checklist #}
+                    {% endfor %}
+                </div>
+            </div>
 
-            {# Aba Timeline - Inalterado #}
+
+            {# --- Aba Checklist Obrigatório --- #}
+            <div class="tab-pane fade" id="checklist-obrigatorio-content" role="tabpanel" aria-labelledby="checklist-obrigatorio-tab">
+                <div id="checklist-area-obrigatorio" class="pt-4">
+                    {% if not tarefas_agrupadas_obrigatorio %}
+                        <div class="alert alert-light text-center small py-2" role="alert">Nenhuma tarefa obrigatória encontrada.</div>
+                    {% endif %}
+                    {% for modulo, tarefas in tarefas_agrupadas_obrigatorio.items() %}
+                    <div class="card metric-card mb-4 shadow-sm">
+                        <div class="card-header header-bg d-flex justify-content-between align-items-center" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#collapse-obrig-{{ loop.index }}" aria-expanded="false">
+                            <h5 class="mb-0 fs-6">{{ modulo }}</h5>
+                            <i class="bi bi-chevron-down"></i>
+                        </div>
+                        <div id="collapse-obrig-{{ loop.index }}" class="collapse" data-modulo="{{ modulo }}">
+                            <ul class="list-group list-group-flush list-group-sortable" id="sortable-list-obrig-{{ loop.index }}">
+                                {% for tarefa in tarefas %}
+                                <li class="list-group-item d-flex align-items-start justify-content-between" data-id="{{ tarefa.id }}">
+                                    <div class="d-flex flex-column flex-grow-1 me-3">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <input class="form-check-input me-3 task-checkbox flex-shrink-0" type="checkbox" value="1" id="task-obrig-{{ tarefa.id }}" onchange="window.toggleTarefa({{ tarefa.id }}, this)" {% if tarefa.concluida %}checked{% endif %}>
+                                            <div class="task-label-container">
+                                                <label class="form-check-label {% if tarefa.concluida %}text-decoration-line-through text-success{% endif %}" for="task-obrig-{{ tarefa.id }}">
+                                                    {{ tarefa.tarefa_filho }}
+                                                </label>
+                                                {% if tarefa.tag %}
+                                                <span class="badge rounded-pill task-tag ms-2 {% if tarefa.tag == 'Ação interna' %} bg-secondary {% elif tarefa.tag == 'Reunião' %} bg-info text-dark {% else %} bg-light text-dark {% endif %}">
+                                                    {{ tarefa.tag }}
+                                                </span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="mt-1" style="margin-left: calc(1.25em + 0.75rem);">
+                                            <label class="form-label small text-secondary mb-1">Comentários</label>
+                                            <form onsubmit="return false;" class="comment-form mb-2">
+                                                <textarea id="comment-text-{{ tarefa.id }}-new" class="form-control form-control-sm" name="comentario" maxlength="8000" rows="2" placeholder="Adicionar comentário..."></textarea>
+                                                <input type="file" name="imagem" class="form-control form-control-sm my-1" accept="image/png, image/jpeg, image/gif">
+                                                <button class="btn btn-outline-primary btn-sm px-2 py-1" type="button" onclick="window.adicionarComentario({{ tarefa.id }}, '{{ url_for('adicionar_comentario', tarefa_id=tarefa.id) }}', this)"> Salvar </button>
+                                            </form>
+                                            <div class="list-group list-group-flush border rounded-1" id="comment-list-{{ tarefa.id }}" style="max-height: 300px; overflow-y: auto;">
+                                                {% if not tarefa.comentarios %}
+                                                    <div class="list-group-item list-group-item-action py-1 px-2 small text-secondary fst-italic" id="no-comment-{{ tarefa.id }}"> Nenhum comentário ainda. </div>
+                                                {% endif %}
+                                                {% for comentario in tarefa.comentarios %}
+                                                <div class="list-group-item list-group-item-action py-1 px-2" id="comentario-{{ comentario.id }}">
+                                                    <div class="d-flex w-100 justify-content-between align-items-center mb-1">
+                                                        <strong class="mb-0 small"> <i class="bi bi-person-fill me-1"></i> {{ comentario.usuario_nome }} </strong>
+                                                        <small class="text-secondary">{{ comentario.data_criacao_fmt_d }}</small>
+                                                    </div>
+                                                    <div class="comment-content-wrapper">
+                                                        <p class="mb-1 small comment-text" id="comment-text-{{ comentario.id }}">{{ comentario.texto | safe }}</p>
+                                                        {% if comentario.texto and comentario.texto | length > 200 %}
+                                                            <button class="btn btn-sm btn-link p-0 small" onclick="toggleComment(this, 'comment-text-{{ comentario.id }}')">Ver mais...</button>
+                                                        {% endif %}
+                                                        {% if comentario.imagem_url %}
+                                                            <a href="{{ comentario.imagem_url }}" target="_blank" title="Clique para ampliar">
+                                                                <img src="{{ comentario.imagem_url }}" class="img-fluid rounded mt-1 comment-image">
+                                                            </a>
+                                                        {% endif %}
+                                                    </div>
+                                                    {% if comentario.usuario_cs == email_usuario_logado %}
+                                                        <button class="btn btn-sm btn-link text-danger p-0 small mt-1" onclick="window.excluirComentario({{ comentario.id }}, '{{ url_for('excluir_comentario', comentario_id=comentario.id) }}', this)"> Excluir </button>
+                                                    {% endif %}
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center ms-2 flex-shrink-0">
+                                        <button class="btn btn-sm btn-outline-danger p-1 me-1" onclick="window.excluirTarefa({{ tarefa.id }}, this)" title="Excluir Tarefa"><i class="bi bi-x-lg"></i></button>
+                                        <i class="bi bi-grip-vertical handle" style="cursor: grab;" title="Mover Tarefa"></i>
+                                    </div>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+
+            {# --- Aba Pendências --- #}
+            <div class="tab-pane fade" id="pendencias-content" role="tabpanel" aria-labelledby="pendencias-tab">
+                <div id="checklist-area-pendencias" class="pt-4">
+                    {# Formulário Rápido para Adicionar Pendência #}
+                    <div class="card metric-card mb-4 shadow-sm">
+                        <div class="card-header header-bg">
+                            <h5 class="mb-0 fs-6">Adicionar Nova Pendência</h5>
+                        </div>
+                        <div class="card-body">
+                             {# Adicionado onsubmit para salvar a aba ativa #}
+                            <form action="{{ url_for('adicionar_tarefa') }}" method="POST" class="row g-2 align-items-end"
+                                  onsubmit="localStorage.setItem('tabAtiva-implantacao-{{ implantacao.id }}', 'pendencias-tab'); return true;">
+                                <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
+                                <input type="hidden" name="tarefa_pai" value="{{ modulo_pendencias_nome }}">
+                                <input type="hidden" name="tag" value="">
+                                <div class="col-md">
+                                    <label for="add-pendencia-filho" class="form-label visually-hidden">Nome da Pendência</label>
+                                    <input type="text" class="form-control" id="add-pendencia-filho" name="tarefa_filho" placeholder="Descreva a pendência..." required>
+                                </div>
+                                <div class="col-md-auto">
+                                    <button type="submit" class="btn btn-primary w-100">
+                                        <i class="bi bi-plus-circle me-1"></i> Adicionar
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    {# Lista de Pendências Existentes #}
+                    {% if not tarefas_agrupadas_pendencias %}
+                        <div class="alert alert-light text-center small py-2" role="alert">Nenhuma pendência registrada.</div>
+                    {% else %}
+                        {% for modulo, tarefas in tarefas_agrupadas_pendencias.items() %}
+                        <div class="card metric-card mb-4 shadow-sm">
+                             <div class="card-header header-bg">
+                                <h5 class="mb-0 fs-6">{{ modulo }}</h5>
+                             </div>
+                             <ul class="list-group list-group-flush list-group-sortable" id="sortable-list-pend-{{ loop.index }}">
+                                {% for tarefa in tarefas %}
+                                <li class="list-group-item d-flex align-items-start justify-content-between" data-id="{{ tarefa.id }}">
+                                    <div class="d-flex flex-column flex-grow-1 me-3">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <input class="form-check-input me-3 task-checkbox flex-shrink-0" type="checkbox" value="1" id="task-pend-{{ tarefa.id }}" onchange="window.toggleTarefa({{ tarefa.id }}, this)" {% if tarefa.concluida %}checked{% endif %}>
+                                            <div class="task-label-container">
+                                                <label class="form-check-label {% if tarefa.concluida %}text-decoration-line-through text-success{% endif %}" for="task-pend-{{ tarefa.id }}">
+                                                    {{ tarefa.tarefa_filho }}
+                                                </label>
+                                                {% if tarefa.tag %}
+                                                <span class="badge rounded-pill task-tag ms-2 bg-warning text-dark">
+                                                    {{ tarefa.tag }}
+                                                </span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="mt-1" style="margin-left: calc(1.25em + 0.75rem);">
+                                            <label class="form-label small text-secondary mb-1">Comentários</label>
+                                            <form onsubmit="return false;" class="comment-form mb-2">
+                                                <textarea id="comment-text-{{ tarefa.id }}-new" class="form-control form-control-sm" name="comentario" maxlength="8000" rows="2" placeholder="Adicionar comentário..."></textarea>
+                                                <input type="file" name="imagem" class="form-control form-control-sm my-1" accept="image/png, image/jpeg, image/gif">
+                                                <button class="btn btn-outline-primary btn-sm px-2 py-1" type="button" onclick="window.adicionarComentario({{ tarefa.id }}, '{{ url_for('adicionar_comentario', tarefa_id=tarefa.id) }}', this)"> Salvar </button>
+                                            </form>
+                                            <div class="list-group list-group-flush border rounded-1" id="comment-list-{{ tarefa.id }}" style="max-height: 300px; overflow-y: auto;">
+                                                {% if not tarefa.comentarios %}
+                                                    <div class="list-group-item list-group-item-action py-1 px-2 small text-secondary fst-italic" id="no-comment-{{ tarefa.id }}"> Nenhum comentário ainda. </div>
+                                                {% endif %}
+                                                {% for comentario in tarefa.comentarios %}
+                                                <div class="list-group-item list-group-item-action py-1 px-2" id="comentario-{{ comentario.id }}">
+                                                    <div class="d-flex w-100 justify-content-between align-items-center mb-1">
+                                                        <strong class="mb-0 small"> <i class="bi bi-person-fill me-1"></i> {{ comentario.usuario_nome }} </strong>
+                                                        <small class="text-secondary">{{ comentario.data_criacao_fmt_d }}</small>
+                                                    </div>
+                                                    <div class="comment-content-wrapper">
+                                                        <p class="mb-1 small comment-text" id="comment-text-{{ comentario.id }}">{{ comentario.texto | safe }}</p>
+                                                        {% if comentario.texto and comentario.texto | length > 200 %}
+                                                            <button class="btn btn-sm btn-link p-0 small" onclick="toggleComment(this, 'comment-text-{{ comentario.id }}')">Ver mais...</button>
+                                                        {% endif %}
+                                                        {% if comentario.imagem_url %}
+                                                            <a href="{{ comentario.imagem_url }}" target="_blank" title="Clique para ampliar">
+                                                                <img src="{{ comentario.imagem_url }}" class="img-fluid rounded mt-1 comment-image">
+                                                            </a>
+                                                        {% endif %}
+                                                    </div>
+                                                    {% if comentario.usuario_cs == email_usuario_logado %}
+                                                        <button class="btn btn-sm btn-link text-danger p-0 small mt-1" onclick="window.excluirComentario({{ comentario.id }}, '{{ url_for('excluir_comentario', comentario_id=comentario.id) }}', this)"> Excluir </button>
+                                                    {% endif %}
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center ms-2 flex-shrink-0">
+                                        <button class="btn btn-sm btn-outline-danger p-1 me-1" onclick="window.excluirTarefa({{ tarefa.id }}, this)" title="Excluir Tarefa"><i class="bi bi-x-lg"></i></button>
+                                        <i class="bi bi-grip-vertical handle" style="cursor: grab;" title="Mover Tarefa"></i>
+                                    </div>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+
+
+            {# Aba Timeline #}
             <div class="tab-pane fade" id="timeline-content" role="tabpanel" aria-labelledby="timeline-tab">
-                <div class="metric-card p-3 rounded shadow-sm mt-3"> {# Adicionado mt-3 #}
+                <div class="metric-card p-3 rounded shadow-sm mt-3">
                     <h5 class="mb-3 border-bottom pb-2">Histórico de Eventos</h5>
                     <ul class="timeline-list">
-                         {# Mensagem se timeline vazia #}
                          {% if not logs_timeline %}
                             <li class="alert alert-light text-center small py-2" role="alert" id="no-timeline-msg">
                                 Nenhum evento registrado para esta implantação ainda.
                             </li>
                          {% endif %}
-                         {# Itera sobre os logs #}
                         {% for log in logs_timeline %}
                         <li class="timeline-item">
-                            <div class="timeline-icon"> {# Ícone baseado no tipo de evento #}
+                            <div class="timeline-icon">
                                 {% if log.tipo_evento == 'novo_comentario' %} <i class="bi bi-chat-left-text-fill"></i>
                                 {% elif 'tarefa' in log.tipo_evento %} <i class="bi bi-check-circle-fill"></i>
                                 {% elif 'status' in log.tipo_evento or 'implantacao' in log.tipo_evento or 'detalhes' in log.tipo_evento %} <i class="bi bi-flag-fill"></i>
@@ -312,23 +496,22 @@
                             </div>
                             <div class="timeline-content">
                                 <div class="timeline-header">
-                                    <span class="timeline-usuario">{{ log.usuario_nome }}</span> {# Nome já com fallback no app.py #}
-                                    <span class="timeline-data">{{ log.data_criacao_fmt_dt_hr }}</span> {# Data formatada BR com hora #}
+                                    <span class="timeline-usuario">{{ log.usuario_nome }}</span>
+                                    <span class="timeline-data">{{ log.data_criacao_fmt_dt_hr }}</span>
                                 </div>
-                                {# Detalhes do log (permite HTML e quebra de linha) #}
                                 <p class="timeline-detalhes">{{ log.detalhes | safe | replace('\n', '<br>') }}</p>
                             </div>
                         </li>
                         {% endfor %}
                     </ul>
                 </div>
-            </div> {# Fim da tab timeline #}
+            </div>
 
         </div> {# Fim do tab-content #}
     </main>
 </div> {# Fim do d-flex principal #}
 
-{# Modais (Finalizar, Parar, Retomar, Add Tarefa, Excluir Implantação) - HTML Completo #}
+{# Modais (Finalizar, Parar, Retomar, Add Tarefa, Excluir Implantação) #}
 
 {# Modal Finalizar #}
 <div class="modal fade" id="modalFinalizar" tabindex="-1" aria-labelledby="modalFinalizarLabel" aria-hidden="true">
@@ -338,6 +521,7 @@
             <form action="{{ url_for('finalizar_implantacao') }}" method="POST">
                 <div class="modal-body">
                     <p>Tem certeza que deseja marcar esta implantação como "Finalizada"?</p>
+                    <p class="small text-warning"><i class="bi bi-exclamation-triangle-fill me-1"></i> A finalização só será permitida se todas as tarefas dos checklists Obrigatório e de Treinamentos estiverem concluídas.</p>
                     <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
                     <input type="hidden" name="redirect_to" value="detalhes">
                 </div>
@@ -357,7 +541,7 @@
             <div class="modal-header header-bg"><h5 class="modal-title" id="modalPararLabel" style="color: var(--body-color);">Parar Implantação</h5><button type="button" class="btn-close btn-close-dark" data-bs-dismiss="modal" aria-label="Close"></button></div>
             <form action="{{ url_for('parar_implantacao') }}" method="POST">
                 <div class="modal-body">
-                    <p>Tem certeza que deseja "Parar" esta implantação? Ela sairá da fila "Em Andamento".</p>
+                    <p>Tem certeza que deseja "Parar" esta implantação?</p>
                     <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
                     <div class="mb-3">
                         <label for="motivo_parada" class="form-label">Motivo da Parada (Obrigatório)</label>
@@ -385,7 +569,7 @@
             <div class="modal-header header-bg"><h5 class="modal-title" id="modalRetomarLabel" style="color: var(--body-color);">Retomar Implantação</h5><button type="button" class="btn-close btn-close-dark" data-bs-dismiss="modal" aria-label="Close"></button></div>
             <form action="{{ url_for('retomar_implantacao') }}" method="POST">
                 <div class="modal-body">
-                    <p>Tem certeza que deseja "Retomar" esta implantação? Ela voltará para a fila "Em Andamento".</p>
+                    <p>Tem certeza que deseja "Retomar" esta implantação?</p>
                     <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
                     <input type="hidden" name="redirect_to" value="detalhes">
                 </div>
@@ -403,30 +587,27 @@
     <div class="modal-dialog">
         <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);">
             <div class="modal-header header-bg"><h5 class="modal-title" id="adicionarTarefaModalLabel" style="color: var(--body-color);">Adicionar Nova Tarefa</h5><button type="button" class="btn-close btn-close-dark" data-bs-dismiss="modal" aria-label="Close"></button></div>
-            
-            <form action="{{ url_for('adicionar_tarefa') }}" method="POST"> 
+            <form action="{{ url_for('adicionar_tarefa') }}" method="POST">
                 <div class="modal-body">
                     <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
-                    
                     <div class="mb-3">
-                        <label for="add-tarefa-filho" class="form-label">Nome da Tarefa</label>
-                        <input type="text" class="form-control" id="add-tarefa-filho" name="tarefa_filho" required>
+                        <label for="add-tarefa-filho-modal" class="form-label">Nome da Tarefa</label>
+                        <input type="text" class="form-control" id="add-tarefa-filho-modal" name="tarefa_filho" required>
                     </div>
-
+                    {# Popula com todos os módulos #}
                     <div class="mb-3">
-                        <label for="add-tarefa-pai" class="form-label">Módulo (Agrupador)</label>
-                        <select class="form-select" id="add-tarefa-pai" name="tarefa_pai" required>
+                        <label for="add-tarefa-pai-modal" class="form-label">Módulo (Agrupador)</label>
+                        <select class="form-select" id="add-tarefa-pai-modal" name="tarefa_pai" required>
                             <option value="">Selecione um módulo existente...</option>
-                            {% for modulo in tarefas_agrupadas.keys() %}
+                            {% for modulo in todos_modulos %} {# Usa a lista passada pelo app.py #}
                             <option value="{{ modulo }}">{{ modulo }}</option>
                             {% endfor %}
                             <option value="Outros">Outros (Novo Módulo)</option>
                         </select>
                     </div>
-
                     <div class="mb-3">
-                        <label for="add-tarefa-tag" class="form-label">Tag (Opcional)</label>
-                        <select class="form-select" id="add-tarefa-tag" name="tag">
+                        <label for="add-tarefa-tag-modal" class="form-label">Tag (Opcional)</label>
+                        <select class="form-select" id="add-tarefa-tag-modal" name="tag">
                             <option value="">Sem Tag</option>
                             <option value="Ação interna">Ação interna</option>
                             <option value="Reunião">Reunião</option>
@@ -452,7 +633,7 @@
                 <div class="modal-body">
                     <h5 class="text-danger">Atenção! Ação irreversível!</h5>
                     <p>Você tem certeza que deseja excluir permanentemente a implantação de <strong>{{ implantacao.nome_empresa }}</strong>?</p>
-                    <p>Todos os dados, tarefas e comentários associados serão perdidos para sempre.</p>
+                    <p>Todos os dados serão perdidos.</p>
                     <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
                 </div>
                 <div class="modal-footer header-bg">
@@ -464,7 +645,6 @@
     </div>
 </div>
 
-
 {% endblock %}
 
 
@@ -473,12 +653,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js" integrity="sha512-Eezs+g9Lq4TCCq0wae01s9PuNWzHYoCMkQAi7cDM6ZQJJ5CmAGgk+FdIQ0+UI0EzfYRYzVLgsJdJAYNWMXifcA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
     // --- Funções Helper para UI ---
-
-    // Formata data ISO (YYYY-MM-DD HH:MM:SS) para DD/MM/AAAA
     function formatDataComentario(dataStr) {
         if (!dataStr) return '';
         try {
-            // Tenta criar Data a partir da string ISO (pode precisar de ajuste para timezone local se relevante)
             const dateObj = new Date(dataStr.replace(' ', 'T') + 'Z'); // Adiciona Z para UTC
             if (isNaN(dateObj.getTime())) throw new Error("Data inválida");
             const day = String(dateObj.getDate()).padStart(2, '0');
@@ -487,7 +664,6 @@
             return `${day}/${month}/${year}`;
         } catch (e) {
             console.error("Erro formatando data do comentário:", dataStr, e);
-            // Fallback: tenta extrair DD/MM/AAAA se a string já estiver quase no formato
             if(typeof dataStr === 'string'){
                 const parts = dataStr.split(' ')[0].split('-');
                 if(parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
@@ -495,8 +671,6 @@
             return 'Inválida';
         }
     }
-
-    // Formata data ISO (YYYY-MM-DD HH:MM:SS) para DD/MM/AAAA às HH:MM:SS
     function formatDataLog(dataStr) {
          if (!dataStr) return '';
         try {
@@ -511,7 +685,6 @@
             return `${day}/${month}/${year} às ${hours}:${minutes}:${seconds}`;
         } catch (e) {
             console.error("Erro formatando data do log:", dataStr, e);
-            // Fallback (menos preciso)
             if(typeof dataStr === 'string'){
                 const dtParts = dataStr.split(' ');
                 const dateParts = dtParts[0].split('-');
@@ -523,26 +696,20 @@
             return 'Inválida';
         }
     }
-
-    // Alterna a classe 'expanded' e o texto do botão "Ver mais/menos"
     function toggleComment(button, elementId) {
         const textElement = document.getElementById(elementId);
         if (!textElement) return;
         const isExpanded = textElement.classList.toggle('expanded');
         button.textContent = isExpanded ? 'Ver menos...' : 'Ver mais...';
     }
-
-    // Cria o HTML para um novo item da timeline
     function criarTimelineItemHTML(log) {
-        if (!log || !log.data_criacao) return ''; // Validação básica
-        let iconClass = 'bi-info-circle-fill'; // Ícone padrão
+        if (!log || !log.data_criacao) return '';
+        let iconClass = 'bi-info-circle-fill';
         if (log.tipo_evento === 'novo_comentario') iconClass = 'bi-chat-left-text-fill';
         else if (log.tipo_evento && log.tipo_evento.includes('tarefa')) iconClass = 'bi-check-circle-fill';
         else if (log.tipo_evento && (log.tipo_evento.includes('status') || log.tipo_evento.includes('implantacao') || log.tipo_evento.includes('detalhes'))) iconClass = 'bi-flag-fill';
-
-        const dataFormatada = formatDataLog(log.data_criacao); // Formata data/hora BR
-        const detalhesHTML = (log.detalhes || '').replace(/\n/g, '<br>'); // Permite quebras de linha
-
+        const dataFormatada = formatDataLog(log.data_criacao);
+        const detalhesHTML = (log.detalhes || '').replace(/\n/g, '<br>');
         return `
             <li class="timeline-item">
                 <div class="timeline-icon"><i class="bi ${iconClass}"></i></div>
@@ -555,31 +722,22 @@
                 </div>
             </li>`;
     }
-
-    // Adiciona um novo log no início da lista da timeline na UI
     function adicionarLogNaTimeline(log) {
         if (!log) return;
         const timelineList = document.querySelector('#timeline-content .timeline-list');
         if (!timelineList) return;
-        // Remove mensagem "Nenhum evento" se existir
         const noTimelineMsg = document.getElementById('no-timeline-msg');
         if (noTimelineMsg) noTimelineMsg.remove();
-        // Cria o HTML do log e insere no início da lista
         const logHTML = criarTimelineItemHTML(log);
         if (logHTML) {
             timelineList.insertAdjacentHTML('afterbegin', logHTML);
         }
     }
-
-    // Cria o HTML para um novo comentário
     function criarComentarioHTML(comentario, emailUsuarioLogado) {
-        if (!comentario || !comentario.id) return ''; // Validação
-        const dataFormatada = formatDataComentario(comentario.data_criacao); // Formato BR DD/MM/AAAA
-        
-        // Botão excluir (somente se o usuário logado for o autor)
+        if (!comentario || !comentario.id) return '';
+        const dataFormatada = formatDataComentario(comentario.data_criacao);
         let botaoExcluir = '';
         if (comentario.usuario_cs === emailUsuarioLogado) {
-            // Gera a URL correta para a exclusão
             const urlExcluir = `{{ url_for('excluir_comentario', comentario_id=0) }}`.replace('/0', `/${comentario.id}`);
             botaoExcluir = `
                 <button class="btn btn-sm btn-link text-danger p-0 small mt-1"
@@ -587,14 +745,10 @@
                     Excluir
                 </button>`;
         }
-
-        // Texto do comentário e botão "Ver mais" se necessário
         let textoHTML = `<p class="mb-1 small comment-text" id="comment-text-${comentario.id}">${comentario.texto || ''}</p>`;
-        if (comentario.texto && comentario.texto.length > 200) { // Limite para "Ver mais"
+        if (comentario.texto && comentario.texto.length > 200) {
             textoHTML += `<button class="btn btn-sm btn-link p-0 small" onclick="toggleComment(this, 'comment-text-${comentario.id}')">Ver mais...</button>`;
         }
-
-        // Imagem (se houver)
         let imagemHTML = '';
         if (comentario.imagem_url) {
             imagemHTML = `
@@ -602,8 +756,6 @@
                     <img src="${comentario.imagem_url}" class="img-fluid rounded mt-1 comment-image">
                 </a>`;
         }
-
-        // Monta o HTML final do item de comentário
         return `
             <div class="list-group-item list-group-item-action py-1 px-2" id="comentario-${comentario.id}">
                 <div class="d-flex w-100 justify-content-between align-items-center mb-1">
@@ -617,10 +769,8 @@
                 ${botaoExcluir}
             </div>`;
     }
-
-    // Atualiza a barra de progresso na UI
     function updateProgressBar(progress) {
-        const progressBar = document.querySelector('#main-content .progress-bar'); // Seleciona a barra correta
+        const progressBar = document.querySelector('#main-content .progress-bar');
         if (progressBar) {
             const progressNum = parseInt(progress) || 0;
             progressBar.style.width = progressNum + '%';
@@ -630,9 +780,6 @@
     }
 
     // --- Funções de Ação (Chamadas API via Fetch) ---
-    // Usam fetch() normal, pois o cookie de sessão é enviado automaticamente.
-
-    // Adiciona um comentário
     function adicionarComentario(tarefaId, endpointUrl, button) {
         const form = button.closest('.comment-form');
         const textarea = form.querySelector('textarea');
@@ -640,7 +787,6 @@
         const comentarioTexto = textarea.value.trim();
         const file = fileInput.files.length > 0 ? fileInput.files[0] : null;
 
-        // Validação básica
         if (comentarioTexto === '' && !file) {
             alert('O comentário não pode estar vazio se não houver imagem.');
             return;
@@ -649,44 +795,34 @@
             const allowedTypes = ['image/png', 'image/jpeg', 'image/gif'];
             if (!allowedTypes.includes(file.type)) {
                 alert('Tipo de arquivo de imagem não permitido. Use PNG, JPG ou GIF.');
-                fileInput.value = null; // Limpa seleção inválida
+                fileInput.value = null;
                 return;
             }
-            // Opcional: Validar tamanho do arquivo aqui
         }
 
-        // Feedback visual de carregamento
         const originalBtnHTML = button.innerHTML;
         button.disabled = true;
         button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Salvando...';
 
-        const formData = new FormData(form); // Pega texto e arquivo
-
-        fetch(endpointUrl, { method: 'POST', body: formData }) // fetch NORMAL
+        const formData = new FormData(form);
+        fetch(endpointUrl, { method: 'POST', body: formData })
             .then(response => response.json())
             .then(data => {
                 if (data.ok && data.comentario) {
                     const commentList = document.getElementById('comment-list-' + tarefaId);
-                    const noCommentMsg = document.getElementById('no-comment-'a + tarefaId);
-                    if (noCommentMsg) noCommentMsg.remove(); // Remove msg "Nenhum comentário"
+                    const noCommentMsg = document.getElementById('no-comment-' + tarefaId);
+                    if (noCommentMsg) noCommentMsg.remove();
 
-                    // Adiciona o novo comentário no final da lista
-                    const emailUsuarioLogado = '{{ email_usuario_logado }}'; // Pega do template
+                    const emailUsuarioLogado = '{{ email_usuario_logado }}';
                     const comentarioHTML = criarComentarioHTML(data.comentario, emailUsuarioLogado);
                     if (comentarioHTML) {
-                        commentList.insertAdjacentHTML('beforeend', comentarioHTML); // Adiciona no fim
-                        // Rola para o novo comentário (opcional)
+                        commentList.insertAdjacentHTML('beforeend', comentarioHTML);
                         commentList.scrollTop = commentList.scrollHeight;
                     }
-                    
-                    // Limpa o formulário
                     textarea.value = '';
                     fileInput.value = null;
-
-                    // Adiciona o log correspondente à timeline
                     adicionarLogNaTimeline(data.log_comentario);
                 } else {
-                    // Exibe erro retornado pela API
                     throw new Error(data.error || 'Erro desconhecido ao salvar comentário.');
                 }
             })
@@ -695,37 +831,27 @@
                 alert(`Erro ao salvar comentário: ${error.message}`);
             })
             .finally(() => {
-                // Restaura o botão
                 button.innerHTML = originalBtnHTML;
                 button.disabled = false;
             });
     }
 
-    // Exclui um comentário
     function excluirComentario(comentarioId, endpointUrl, button) {
         if (!confirm('Tem certeza que deseja excluir este comentário?')) {
             return;
         }
-
-        // Feedback visual (opcional)
         const comentarioElement = button.closest('.list-group-item');
-        if (comentarioElement) comentarioElement.style.opacity = '0.5'; // Atenua visualmente
-
-        fetch(endpointUrl, { method: 'POST' }) // fetch NORMAL
+        if (comentarioElement) comentarioElement.style.opacity = '0.5';
+        fetch(endpointUrl, { method: 'POST' })
             .then(response => response.json())
             .then(data => {
                 if (data.ok) {
-                    // Remove o elemento do comentário da lista
                     if (comentarioElement) comentarioElement.remove();
-
-                    // Verifica se a lista ficou vazia e adiciona a msg "Nenhum comentário"
                     const listElement = button.closest('.list-group');
                     if(listElement && listElement.children.length === 0){
-                        const tarefaIdGuess = listElement.id.split('-')[2]; // Tenta pegar ID da lista
+                        const tarefaIdGuess = listElement.id.split('-')[2];
                          listElement.innerHTML = `<div class="list-group-item list-group-item-action py-1 px-2 small text-secondary fst-italic" id="no-comment-${tarefaIdGuess}"> Nenhum comentário ainda. </div>`;
                     }
-
-                    // Adiciona o log de exclusão à timeline
                     adicionarLogNaTimeline(data.log_exclusao);
                 } else {
                     throw new Error(data.error || 'Erro desconhecido ao excluir.');
@@ -734,44 +860,33 @@
             .catch(error => {
                 console.error('Erro ao excluir comentário:', error);
                 alert(`Erro ao excluir comentário: ${error.message}`);
-                // Restaura a opacidade se a exclusão falhou
                 if (comentarioElement) comentarioElement.style.opacity = '1';
             });
     }
 
-    // Marca/Desmarca uma tarefa
     function toggleTarefa(tarefaId, checkbox) {
-        const label = checkbox.closest('li').querySelector('label.form-check-label'); // Encontra o label associado
-        const isChecked = checkbox.checked; // Novo estado desejado
-
-        // Desabilita temporariamente para evitar cliques duplos
+        const label = checkbox.closest('li').querySelector('label.form-check-label');
+        const isChecked = checkbox.checked;
         checkbox.disabled = true;
-
-        fetch(`/toggle_tarefa/${tarefaId}`, { method: 'POST' }) // fetch NORMAL
+        fetch(`/toggle_tarefa/${tarefaId}`, { method: 'POST' })
             .then(response => response.json())
             .then(data => {
                 if (data.ok) {
-                    // Atualiza visualmente o label (riscado/não riscado)
-                    if (data.novo_status === 1) { // 1 = Concluída
+                    if (data.novo_status === 1) {
                         label.classList.add('text-decoration-line-through', 'text-success');
                     } else {
                         label.classList.remove('text-decoration-line-through', 'text-success');
                     }
-                    // Atualiza a barra de progresso geral
                     if (data.novo_progresso !== undefined) {
                         updateProgressBar(data.novo_progresso);
                     }
-                    // Adiciona log da alteração da tarefa à timeline
                     adicionarLogNaTimeline(data.log_tarefa);
-                    // Se a implantação foi finalizada automaticamente, adiciona o log e recarrega
                     if (data.implantacao_finalizada) {
                         adicionarLogNaTimeline(data.log_finalizacao);
-                        alert('Parabéns! Todas as tarefas foram concluídas e a implantação foi finalizada automaticamente.');
-                        // Recarrega a página para refletir o status finalizado
+                        alert('Parabéns! Todas as tarefas obrigatórias e de treinamento foram concluídas e a implantação foi finalizada automaticamente.');
                         window.location.reload();
                     }
                 } else {
-                    // Reverte o checkbox em caso de erro
                     checkbox.checked = !isChecked;
                     throw new Error(data.error || 'Erro desconhecido ao alterar status da tarefa.');
                 }
@@ -779,50 +894,35 @@
             .catch(error => {
                 console.error('Erro ao alternar tarefa:', error);
                 alert(`Erro ao salvar status da tarefa: ${error.message}`);
-                // Garante que o checkbox volte ao estado original
                 checkbox.checked = !isChecked;
             })
             .finally(() => {
-                // Reabilita o checkbox
                 checkbox.disabled = false;
             });
     }
 
-    // Exclui uma tarefa
     function excluirTarefa(tarefaId, button) {
         if (!confirm('Tem certeza que deseja excluir esta tarefa? Todos os comentários associados também serão removidos permanentemente.')) {
             return;
         }
-
         const endpointUrl = `{{ url_for('excluir_tarefa', tarefa_id=0) }}`.replace('/0', `/${tarefaId}`);
-        
-        // Feedback visual de carregamento
         const originalBtnHTML = button.innerHTML;
         button.disabled = true;
         button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
         const listItem = button.closest('.list-group-item');
-        if (listItem) listItem.style.opacity = '0.5'; // Atenua
-
-        fetch(endpointUrl, { method: 'POST' }) // fetch NORMAL
+        if (listItem) listItem.style.opacity = '0.5';
+        fetch(endpointUrl, { method: 'POST' })
             .then(response => response.json())
             .then(data => {
                 if (data.ok) {
-                    // Remove o item da lista na UI
                     if(listItem) listItem.remove();
-                    
-                    // Adiciona log de exclusão à timeline
                     adicionarLogNaTimeline(data.log_exclusao);
-                    
-                    // Atualiza barra de progresso
                     if (data.novo_progresso !== undefined) {
                         updateProgressBar(data.novo_progresso);
                     }
-                    
-                    // Se a implantação foi finalizada após a exclusão
                     if (data.implantacao_finalizada) {
                         adicionarLogNaTimeline(data.log_finalizacao);
                         alert('Implantação finalizada automaticamente após exclusão da tarefa.');
-                        // Poderia recarregar ou apenas atualizar status visualmente
                     }
                 } else {
                     throw new Error(data.error || 'Erro desconhecido ao excluir tarefa.');
@@ -831,130 +931,62 @@
             .catch(error => {
                 console.error('Erro ao excluir tarefa:', error);
                 alert(`Erro ao excluir a tarefa: ${error.message}`);
-                // Restaura botão e opacidade em caso de erro
                 button.innerHTML = originalBtnHTML;
                 button.disabled = false;
                 if (listItem) listItem.style.opacity = '1';
             });
-            // Não precisa de finally para o botão aqui, pois o elemento é removido em caso de sucesso
     }
 
 
     // --- Inicialização da Página ---
     document.addEventListener('DOMContentLoaded', function() {
-        const implantacaoId = {{ implantacao.id }}; // Pega ID da implantação do template
-        const endpointReordenar = '{{ url_for("reordenar_tarefas") }}'; // URL para API de reordenação
+        const implantacaoId = {{ implantacao.id }};
+        const endpointReordenar = '{{ url_for("reordenar_tarefas") }}';
 
-        // Torna as funções de ação globais para serem chamadas pelos `onclick` nos botões
+        // Torna as funções de ação globais
         window.toggleTarefa = toggleTarefa;
         window.adicionarComentario = adicionarComentario;
         window.excluirComentario = excluirComentario;
-        window.toggleComment = toggleComment; // Função UI
+        window.toggleComment = toggleComment;
         window.excluirTarefa = excluirTarefa;
 
-        // Inicializa o SortableJS para cada lista de tarefas de módulo
+        // Inicializa SortableJS para TODAS as listas
         document.querySelectorAll('.list-group-sortable').forEach(listEl => {
-            const modulo = listEl.closest('.collapse')?.dataset.modulo; // Pega o nome do módulo do elemento pai
-            if (!modulo) {
-                console.warn("Não foi possível encontrar o data-modulo para a lista:", listEl);
-                return;
+            const moduloContainer = listEl.closest('.collapse, .card'); // Pega collapse ou card pai
+            let modulo = moduloContainer?.dataset.modulo; // Tenta pegar do data attribute primeiro
+            // Fallback: Se não tiver data attribute (pode acontecer na aba Pendências), pega do header
+            if (!modulo && moduloContainer?.classList.contains('card')) {
+                const headerText = moduloContainer.querySelector('.card-header h5')?.textContent.trim();
+                if (headerText) modulo = headerText;
             }
-            
+
+            if (!modulo) { console.warn("Não foi possível encontrar o módulo para a lista:", listEl); return; }
+
             new Sortable(listEl, {
-                animation: 150, // Animação suave
-                handle: '.handle', // Define o ícone de 'grip' como o handle para arrastar
-                ghostClass: 'bg-secondary', // Classe CSS para o item fantasma
+                animation: 150, handle: '.handle', ghostClass: 'bg-secondary',
                 onEnd: function (evt) {
-                    // Chamado quando o usuário solta um item
-                    const itemEl = evt.item; // O item que foi movido
-                    // Pega a nova ordem dos IDs das tarefas na lista
                     const novaOrdemIds = Array.from(evt.to.children).map(item => parseInt(item.dataset.id));
-                    
-                    // Envia a nova ordem para o backend via API
-                    fetch(endpointReordenar, { // fetch NORMAL
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({
-                            implantacao_id: implantacaoId,
-                            tarefa_pai: modulo, // Nome do módulo
-                            ordem: nova_ordem_ids // Array de IDs na nova ordem
-                        })
-                    })
+                    fetch(endpointReordenar, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ implantacao_id: implantacaoId, tarefa_pai: modulo, ordem: novaOrdemIds }) })
                     .then(response => response.json())
-                    .then(data => {
-                        if (data.ok) {
-                            // Adiciona log de reordenação à timeline
-                            adicionarLogNaTimeline(data.log_reordenar);
-                            console.log(`Ordem das tarefas do módulo '${modulo}' atualizada.`);
-                        } else {
-                            // Se falhar, reverte a ordem visualmente (ou recarrega a página)
-                            console.error('Erro ao reordenar tarefas no backend:', data.error);
-                            alert('Erro ao salvar a nova ordem das tarefas. A ordem pode não ter sido salva.');
-                            // Para garantir consistência, poderia recarregar: window.location.reload();
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Erro de rede ao reordenar tarefas:', error);
-                        alert('Erro de rede ao salvar a nova ordem das tarefas.');
-                    });
+                    .then(data => { if (data.ok) { adicionarLogNaTimeline(data.log_reordenar); console.log(`Ordem das tarefas do módulo '${modulo}' atualizada.`); } else { console.error('Erro ao reordenar tarefas no backend:', data.error); alert('Erro ao salvar a nova ordem das tarefas.'); } })
+                    .catch(error => { console.error('Erro de rede ao reordenar tarefas:', error); alert('Erro de rede ao salvar a nova ordem das tarefas.'); });
                 },
             });
         });
 
-        // Lógica para lembrar a aba ativa (Checklist ou Timeline)
+        // Lógica para lembrar a aba ativa
         const tabSelector = '#detalhesTab .nav-link';
         const tabs = document.querySelectorAll(tabSelector);
-        const tabStorageKey = `tabAtiva-implantacao-${implantacaoId}`; // Chave única por implantação
-
-        tabs.forEach(tab => {
-            tab.addEventListener('shown.bs.tab', event => { // Evento disparado APÓS a aba ser exibida
-                localStorage.setItem(tabStorageKey, event.target.id); // Salva o ID da aba ativa
-            });
-        });
-
-        // Ao carregar a página, tenta restaurar a aba salva
+        const tabStorageKey = `tabAtiva-implantacao-${implantacaoId}`;
+        tabs.forEach(tab => { tab.addEventListener('shown.bs.tab', event => { localStorage.setItem(tabStorageKey, event.target.id); }); });
         const abaAtivaId = localStorage.getItem(tabStorageKey);
-        if (abaAtivaId) {
-            const tabEl = document.getElementById(abaAtivaId);
-            if (tabEl) {
-                try {
-                     // Cria uma nova instância da Tab Bootstrap e a exibe
-                     new bootstrap.Tab(tabEl).show();
-                } catch(e) {
-                     console.warn("Não foi possível restaurar aba salva:", e);
-                     localStorage.removeItem(tabStorageKey); // Limpa chave inválida
-                }
-            } else {
-                 localStorage.removeItem(tabStorageKey); // Limpa chave se elemento não existe
-            }
-        }
-        // Se nenhuma aba foi restaurada, a padrão (active no HTML) será exibida.
+        if (abaAtivaId) { const tabEl = document.getElementById(abaAtivaId); if (tabEl) { try { new bootstrap.Tab(tabEl).show(); } catch(e) { console.warn("Não foi possível restaurar aba salva:", e); localStorage.removeItem(tabStorageKey); } } else { localStorage.removeItem(tabStorageKey); } } else { const defaultTab = document.getElementById('checklist-treinamentos-tab'); if(defaultTab) new bootstrap.Tab(defaultTab).show(); }
 
-        // Lógica para inicializar botões "Ver mais/menos" em comentários existentes
-         document.querySelectorAll('.comment-text').forEach(textEl => {
-            const wrapper = textEl.closest('.comment-content-wrapper');
-            let button = wrapper ? wrapper.querySelector('button[onclick^="toggleComment"]') : null;
-            // Verifica se o texto realmente transborda a altura máxima definida no CSS
-            const maxHeight = parseFloat(window.getComputedStyle(textEl).maxHeight);
-            // Adiciona uma pequena margem (5px) para evitar falso positivo
-            const isOverflowing = textEl.scrollHeight > maxHeight + 5;
+        // Inicializa botões "Ver mais/menos"
+         document.querySelectorAll('.comment-text').forEach(textEl => { const wrapper = textEl.closest('.comment-content-wrapper'); let button = wrapper ? wrapper.querySelector('button[onclick^="toggleComment"]') : null; const maxHeight = parseFloat(window.getComputedStyle(textEl).maxHeight); const isOverflowing = textEl.scrollHeight > maxHeight + 5; if (isOverflowing && !button) { const newButton = document.createElement('button'); newButton.className = 'btn btn-sm btn-link p-0 small'; newButton.textContent = 'Ver mais...'; newButton.onclick = function() { toggleComment(this, textEl.id); }; textEl.parentNode.insertBefore(newButton, textEl.nextSibling); } else if (!isOverflowing && button) { button.remove(); } else if (isOverflowing && button) { button.textContent = textEl.classList.contains('expanded') ? 'Ver menos...' : 'Ver mais...'; } });
 
-            if (isOverflowing && !button) {
-                // Se transborda e NÃO HÁ botão, cria e adiciona
-                 const newButton = document.createElement('button');
-                 newButton.className = 'btn btn-sm btn-link p-0 small';
-                 newButton.textContent = 'Ver mais...';
-                 newButton.onclick = function() { toggleComment(this, textEl.id); };
-                 // Insere após o elemento de texto
-                 textEl.parentNode.insertBefore(newButton, textEl.nextSibling);
-            } else if (!isOverflowing && button) {
-                // Se NÃO transborda e HÁ um botão, remove-o
-                 button.remove();
-            } else if (isOverflowing && button) {
-                 // Se transborda e HÁ botão, ajusta o texto inicial (Ver mais/Ver menos)
-                 button.textContent = textEl.classList.contains('expanded') ? 'Ver menos...' : 'Ver mais...';
-            }
-        });
+        // Adiciona funcionalidade aos ícones de collapse
+        document.querySelectorAll('.card-header[data-bs-toggle="collapse"]').forEach(header => { const collapseId = header.getAttribute('data-bs-target'); const collapseElement = document.querySelector(collapseId); const icon = header.querySelector('i.bi'); if (collapseElement && icon) { collapseElement.addEventListener('show.bs.collapse', () => { icon.classList.remove('bi-chevron-down'); icon.classList.add('bi-chevron-up'); }); collapseElement.addEventListener('hide.bs.collapse', () => { icon.classList.remove('bi-chevron-up'); icon.classList.add('bi-chevron-down'); }); if (collapseElement.classList.contains('show')) { icon.classList.remove('bi-chevron-down'); icon.classList.add('bi-chevron-up'); } } });
 
     }); // Fim do DOMContentLoaded
 </script>

@@ -11,8 +11,8 @@ from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
 from collections import OrderedDict
 from datetime import datetime, date
-import math 
-import time 
+import math
+import time
 
 # ADIÇÃO PARA CORRIGIR PROXY HTTPS (Logout/Login no Railway)
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -27,6 +27,11 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY")
 if not app.secret_key:
     raise ValueError("FLASK_SECRET_KEY não definida no ambiente ou .env. Gere uma chave segura.")
+
+# --- Configuração da Pasta de Upload ---
+UPLOAD_FOLDER = os.path.join(app.root_path, 'uploads')
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 oauth = OAuth(app)
 auth0_domain = os.environ.get("AUTH0_DOMAIN")
@@ -50,7 +55,21 @@ USE_SQLITE_LOCALLY = not DATABASE_URL
 LOCAL_SQLITE_DB = 'dashboard_simples.db'
 
 # --- Definições Globais ---
-TAREFAS_PADRAO = {
+
+# --- Checklist Obrigatório e Módulo ---
+MODULO_OBRIGATORIO = "Obrigações para finalização" # Nome do módulo/tarefa_pai
+CHECKLIST_OBRIGATORIO_ITEMS = [
+    "Fotos da unidade", "Propósito", "Descrição do Grupo", "Detalhes da Empresa",
+    "Inicio em produção", "Documento", "Detalhes da Empresa no Dashboard",
+    "Ticket catraca", "Atendimento OADM", "Módulo OAMD", "Plano de Sucesso",
+    "Fechar grupo no WhatsApp"
+]
+
+# --- Módulo de Pendências ---
+MODULO_PENDENCIAS = "Pendências"
+
+# --- Checklist Treinamentos ---
+TAREFAS_TREINAMENTO_PADRAO = {
     "Welcome": [{'nome': "Contato Inicial Whatsapp/Grupo", 'tag': "Ação interna"}, {'nome': "Criar Banco de Dados", 'tag': "Ação interna"}, {'nome': "Criar Usuário do Proprietário", 'tag': "Ação interna"}, {'nome': "Reunião de Kick-Off", 'tag': "Reunião"}],
     "Estruturação de BD": [{'nome': "Configurar planos", 'tag': "Ação interna"}, {'nome': "Configurar modelo de contrato", 'tag': "Ação interna"}, {'nome': "Configurar logo da empresa", 'tag': "Ação interna"}, {'nome': "Convênio de cobrança", 'tag': "Ação interna"}, {'nome': "Nota Fiscal", 'tag': "Ação interna"}],
     "Importação de dados": [{'nome': "Jira de implantação de dados", 'tag': "Ação interna"}, {'nome': "Importação de cartões de crédito", 'tag': "Ação interna"}],
@@ -63,13 +82,13 @@ TAREFAS_PADRAO = {
 JUSTIFICATIVAS_PARADA = ["Pausa solicitada pelo cliente", "Aguardando dados / material do cliente", "Cliente em viagem / Férias", "Aguardando pagamento / Questões financeiras", "Revisão interna de processos", "Outro (detalhar nos comentários da implantação)"]
 CARGOS_RESPONSAVEL = ["Proprietário(a)", "Sócio(a)", "Gerente", "Coordenador(a)", "Analista de TI", "Financeiro", "Outro"]
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+CARGOS_LIST = ["Júnior", "Pleno", "Sênior"]
 
 # ----------------------------------------------------------------------
-# --- Camada de Acesso a Dados (DAO - Data Access Object) - ABSTRATA ---
+# --- Camada de Acesso a Dados (DAO - Data Access Object) ---
 # ----------------------------------------------------------------------
 
 def get_db():
-    """Obtém e retorna a conexão com o banco de dados (PostgreSQL ou SQLite)."""
     db = getattr(g, '_database', None)
     if db is None:
         if not USE_SQLITE_LOCALLY and DATABASE_URL:
@@ -85,32 +104,25 @@ def get_db():
 
 @app.teardown_appcontext
 def close_connection(exception):
-    """Fecha a conexão com o banco de dados ao final da requisição."""
     db = getattr(g, '_database', None)
     if db is not None:
         db.close()
 
 def _db_query(query, args=(), one=False):
-    """Função interna para executar queries SELECT."""
     db = get_db()
     cur = None
     try:
         is_postgres = isinstance(db, psycopg2.extensions.connection)
-
         if is_postgres:
             cur = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
         else:
             query = query.replace('%s', '?')
             cur = db.cursor()
-
         cur.execute(query, args)
-        
         rv = cur.fetchall()
         cur.close()
-        
         if not is_postgres:
              rv = [dict(row) for row in rv]
-        
         return (rv[0] if rv else None) if one else rv
     except Exception as e:
         print(f"ERRO ao executar SELECT: {e}\nQuery SQL: {query}\nArgumentos: {args}")
@@ -118,23 +130,18 @@ def _db_query(query, args=(), one=False):
         raise e
 
 def _db_execute(command, args=()):
-    """Função interna para executar comandos (INSERT, UPDATE, DELETE)."""
     db = get_db()
     cur = None
     returned_id = None
     try:
         is_postgres = isinstance(db, psycopg2.extensions.connection)
-
         if not is_postgres:
             command = command.replace('%s', '?')
-
         cur = db.cursor()
-
         if is_postgres:
             command_upper = command.strip().upper()
             needs_returning_id = command_upper.startswith("INSERT") and \
                                  any(tbl in command_upper for tbl in ["INTO IMPLANTACOES", "INTO TAREFAS", "INTO COMENTARIOS", "INTO TIMELINE_LOG"])
-
             if needs_returning_id and "RETURNING" not in command_upper:
                 command += " RETURNING id"
                 cur.execute(command, args)
@@ -144,7 +151,6 @@ def _db_execute(command, args=()):
         else: # SQLite
              cur.execute(command, args)
              returned_id = cur.lastrowid
-
         db.commit()
         cur.close()
         return returned_id
@@ -154,7 +160,6 @@ def _db_execute(command, args=()):
         db.rollback()
         raise e
 
-# Funções públicas da camada DAO (wrappers)
 def query_db(query, args=(), one=False):
     return _db_query(query, args, one)
 
@@ -162,14 +167,12 @@ def execute_db(command, args=()):
     return _db_execute(command, args)
 
 # ----------------------------------------------------------------------
-# --- Funções Helper (Formatação, Validação) ---
+# --- Funções Helper ---
 # ----------------------------------------------------------------------
 
 def _convert_to_date_or_datetime(dt_obj):
-    """Converte string ISO (SQLite) para objeto datetime/date. Retorna o objeto original se já for um."""
     if not dt_obj or not isinstance(dt_obj, str):
         return dt_obj
-
     original_str = dt_obj
     try:
         if ' ' in dt_obj or 'T' in dt_obj:
@@ -185,17 +188,11 @@ def _convert_to_date_or_datetime(dt_obj):
         return original_str
 
 def format_date_br(dt_obj, include_time=False):
-    """
-    Formata um objeto datetime/date ou string ISO para o formato DD/MM/AAAA [HH:MM:SS].
-    """
     if not dt_obj:
         return 'N/A'
-        
     dt_obj = _convert_to_date_or_datetime(dt_obj)
-
     if not isinstance(dt_obj, (datetime, date)):
         return 'Data Inválida'
-
     output_fmt = '%d/%m/%Y %H:%M:%S' if include_time and isinstance(dt_obj, datetime) else '%d/%m/%Y'
     try:
         return dt_obj.strftime(output_fmt)
@@ -203,32 +200,23 @@ def format_date_br(dt_obj, include_time=False):
         return 'Data Inválida'
 
 def format_date_iso_for_json(dt_obj, only_date=False):
-    """
-    Formata um objeto datetime/date (ou string) para string ISO 'YYYY-MM-DD [HH:MM:SS]' para JSON/HTML.
-    Retorna YYYY-MM-DD se only_date=True.
-    """
     if not dt_obj:
         return None
-        
     dt_obj = _convert_to_date_or_datetime(dt_obj)
-    
     if not isinstance(dt_obj, (datetime, date)):
         return None
-
     if only_date:
         output_fmt = '%Y-%m-%d'
     else:
         if isinstance(dt_obj, date) and not isinstance(dt_obj, datetime):
              dt_obj = datetime.combine(dt_obj, datetime.min.time())
         output_fmt = '%Y-%m-%d %H:%M:%S'
-
     try:
         return dt_obj.strftime(output_fmt)
     except ValueError:
         return None
 
 def allowed_file(filename):
-    """Verifica se a extensão do arquivo é permitida."""
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -237,7 +225,6 @@ def allowed_file(filename):
 # ----------------------------------------------------------------------
 
 def logar_timeline(implantacao_id, usuario_cs, tipo_evento, detalhes):
-    """Registra um evento na tabela timeline_log."""
     try:
         execute_db(
             "INSERT INTO timeline_log (implantacao_id, usuario_cs, tipo_evento, detalhes) VALUES (%s, %s, %s, %s)",
@@ -245,12 +232,18 @@ def logar_timeline(implantacao_id, usuario_cs, tipo_evento, detalhes):
         )
     except Exception as e:
         print(f"AVISO/ERRO: Falha ao logar evento '{tipo_evento}' para implantação {implantacao_id}: {e}")
-        pass
 
 def _create_default_tasks(impl_id):
-    """Cria as tarefas padrão para uma nova implantação."""
     tasks_added = 0
-    for modulo, tarefas_info in TAREFAS_PADRAO.items():
+    # 1. Tarefas Obrigatórias
+    for i, tarefa_nome in enumerate(CHECKLIST_OBRIGATORIO_ITEMS, 1):
+        execute_db(
+            "INSERT INTO tarefas (implantacao_id, tarefa_pai, tarefa_filho, ordem, tag) VALUES (%s, %s, %s, %s, %s)",
+            (impl_id, MODULO_OBRIGATORIO, tarefa_nome, i, 'Ação interna')
+        )
+        tasks_added += 1
+    # 2. Tarefas de Treinamento
+    for modulo, tarefas_info in TAREFAS_TREINAMENTO_PADRAO.items():
         for i, tarefa_info in enumerate(tarefas_info, 1):
             execute_db(
                 "INSERT INTO tarefas (implantacao_id, tarefa_pai, tarefa_filho, ordem, tag) VALUES (%s, %s, %s, %s, %s)",
@@ -260,399 +253,219 @@ def _create_default_tasks(impl_id):
     return tasks_added
 
 def _get_progress(impl_id):
-    """Calcula o progresso de uma implantação (total e concluídas)."""
     counts = query_db("SELECT COUNT(*) as total, SUM(CASE WHEN concluida THEN 1 ELSE 0 END) as done FROM tarefas WHERE implantacao_id = %s", (impl_id,), one=True)
     total, done = (counts.get('total') or 0), (counts.get('done') or 0)
     progresso_pct = int(round((done / total) * 100)) if total > 0 else 0
     return progresso_pct, total, done
 
 def auto_finalizar_implantacao(impl_id, usuario_cs_email):
-    """Verifica e executa a auto-finalização de uma implantação."""
-    pending_tasks = query_db("SELECT COUNT(*) as total FROM tarefas WHERE implantacao_id = %s AND concluida = %s", (impl_id, 0), one=True)
-    
+    pending_tasks = query_db(
+        "SELECT COUNT(*) as total FROM tarefas WHERE implantacao_id = %s AND concluida = %s AND tarefa_pai != %s",
+        (impl_id, 0, MODULO_PENDENCIAS), one=True
+    )
     if pending_tasks and pending_tasks.get('total', 0) == 0:
         impl_status = query_db("SELECT status, nome_empresa FROM implantacoes WHERE id = %s", (impl_id,), one=True)
-        
         if impl_status and impl_status.get('status') == 'andamento':
             execute_db("UPDATE implantacoes SET status = 'finalizada', data_finalizacao = CURRENT_TIMESTAMP WHERE id = %s", (impl_id,))
-            
-            detalhe = f'Implantação "{impl_status.get("nome_empresa", "N/A")}" auto-finalizada. Todas as tarefas foram concluídas.'
+            detalhe = f'Implantação "{impl_status.get("nome_empresa", "N/A")}" auto-finalizada. Todas as tarefas obrigatórias e de treinamento foram concluídas.'
             logar_timeline(impl_id, usuario_cs_email, 'auto_finalizada', detalhe)
-
             perfil = query_db("SELECT nome FROM perfil_usuario WHERE usuario = %s", (usuario_cs_email,), one=True)
             nome = perfil.get('nome') if perfil else usuario_cs_email
-            
             log_final = query_db("SELECT *, %s as usuario_nome FROM timeline_log WHERE implantacao_id = %s AND tipo_evento = 'auto_finalizada' ORDER BY id DESC LIMIT 1", (nome, impl_id), one=True)
             if log_final: log_final['data_criacao'] = format_date_iso_for_json(log_final.get('data_criacao'))
-            
             return True, log_final
-
     return False, None
 
 def get_dashboard_data(user_email):
-    """Busca dados e calcula métricas do dashboard, atualizando o perfil do usuário."""
-    impl_list = query_db("""
-        SELECT *,
-        CASE 
-            WHEN status = 'andamento' OR status = 'parada' 
-            THEN (
-                CAST(strftime('%J', CURRENT_TIMESTAMP) AS REAL) - CAST(strftime('%J', data_criacao) AS REAL) 
-            )
-            ELSE NULL 
-        END AS dias_passados
-        FROM implantacoes
-        WHERE usuario_cs = %s
-        ORDER BY data_criacao DESC
-    """, (user_email,))
-
+    impl_list = query_db(""" SELECT *, CASE WHEN status = 'andamento' OR status = 'parada' THEN (CAST(strftime('%J', CURRENT_TIMESTAMP) AS REAL) - CAST(strftime('%J', data_criacao) AS REAL)) ELSE NULL END AS dias_passados FROM implantacoes WHERE usuario_cs = %s ORDER BY data_criacao DESC """, (user_email,))
     dashboard_data = {'andamento': [], 'atrasadas': [], 'futuras': [], 'finalizadas': [], 'paradas': []}
     metrics = {'impl_andamento_total': 0, 'implantacoes_atrasadas': 0, 'implantacoes_futuras': 0, 'impl_finalizadas': 0, 'impl_paradas': 0}
-    
     all_tasks = query_db("SELECT implantacao_id, concluida FROM tarefas WHERE implantacao_id IN (SELECT id FROM implantacoes WHERE usuario_cs = %s)", (user_email,))
-    tasks_by_impl = {}
-    for task in all_tasks:
-        tasks_by_impl.setdefault(task['implantacao_id'], []).append(task)
-    
+    tasks_by_impl = {}; [tasks_by_impl.setdefault(task['implantacao_id'], []).append(task) for task in all_tasks]
     for impl in impl_list:
-        impl_id = impl['id']
-        status = impl['status']
-        
-        # CHAVE DA CORREÇÃO: Formatar as datas ISO para os atributos data-* do HTML
-        impl['data_criacao_iso'] = format_date_iso_for_json(impl.get('data_criacao'), only_date=True)
-        impl['data_inicio_producao_iso'] = format_date_iso_for_json(impl.get('data_inicio_producao'), only_date=True)
-        impl['data_final_implantacao_iso'] = format_date_iso_for_json(impl.get('data_final_implantacao'), only_date=True)
-
-
-        # Cálculo de Progresso
-        total_tasks = len(tasks_by_impl.get(impl_id, []))
-        done_tasks = sum(1 for t in tasks_by_impl.get(impl_id, []) if t['concluida'])
-        impl['progresso'] = int(round((done_tasks / total_tasks) * 100)) if total_tasks > 0 else 0
-
-        # Classificação e Métrica
-        if status == 'finalizada':
-            dashboard_data['finalizadas'].append(impl)
-            metrics['impl_finalizadas'] += 1
-        elif status == 'parada':
-            dashboard_data['paradas'].append(impl)
-            metrics['impl_paradas'] += 1
-        elif status == 'futura' or impl['tipo'] == 'futura':
-            dashboard_data['futuras'].append(impl)
-            metrics['implantacoes_futuras'] += 1
-        else: # status == 'andamento'
-            dias_passados = int(float(impl.get('dias_passados', 0) or 0)) 
-            impl['dias_passados'] = dias_passados
-            
-            if dias_passados > 25:
-                dashboard_data['atrasadas'].append(impl)
-                metrics['implantacoes_atrasadas'] += 1
-            else:
-                 dashboard_data['andamento'].append(impl)
-            
+        impl_id = impl['id']; status = impl['status']
+        impl['data_criacao_iso'] = format_date_iso_for_json(impl.get('data_criacao'), only_date=True); impl['data_inicio_producao_iso'] = format_date_iso_for_json(impl.get('data_inicio_producao'), only_date=True); impl['data_final_implantacao_iso'] = format_date_iso_for_json(impl.get('data_final_implantacao'), only_date=True)
+        total_tasks = len(tasks_by_impl.get(impl_id, [])); done_tasks = sum(1 for t in tasks_by_impl.get(impl_id, []) if t['concluida']); impl['progresso'] = int(round((done_tasks / total_tasks) * 100)) if total_tasks > 0 else 0
+        if status == 'finalizada': dashboard_data['finalizadas'].append(impl); metrics['impl_finalizadas'] += 1
+        elif status == 'parada': dashboard_data['paradas'].append(impl); metrics['impl_paradas'] += 1
+        elif status == 'futura' or impl['tipo'] == 'futura': dashboard_data['futuras'].append(impl); metrics['implantacoes_futuras'] += 1
+        else:
+            dias_passados = int(float(impl.get('dias_passados', 0) or 0)); impl['dias_passados'] = dias_passados
+            if dias_passados > 25: dashboard_data['atrasadas'].append(impl); metrics['implantacoes_atrasadas'] += 1
+            else: dashboard_data['andamento'].append(impl)
             metrics['impl_andamento_total'] += 1
-
-    execute_db("""
-        UPDATE perfil_usuario SET
-            impl_andamento_total = %s,
-            implantacoes_atrasadas = %s,
-            impl_finalizadas = %s,
-            impl_paradas = %s
-        WHERE usuario = %s
-    """, (metrics['impl_andamento_total'], metrics['implantacoes_atrasadas'], metrics['impl_finalizadas'], metrics['impl_paradas'], user_email))
-    
+    execute_db(""" UPDATE perfil_usuario SET impl_andamento_total = %s, implantacoes_atrasadas = %s, impl_finalizadas = %s, impl_paradas = %s WHERE usuario = %s """, (metrics['impl_andamento_total'], metrics['implantacoes_atrasadas'], metrics['impl_finalizadas'], metrics['impl_paradas'], user_email))
     return dashboard_data, metrics
 
 def _sync_user_profile(user_email, user_name, auth0_user_id):
-    """Serviço para criar ou verificar o perfil do usuário no DB local após login."""
     try:
         perfil = query_db("SELECT nome FROM perfil_usuario WHERE usuario = %s", (user_email,), one=True)
-        
         if not perfil:
             usuario_existente = query_db("SELECT usuario FROM usuarios WHERE usuario = %s", (user_email,), one=True)
             if not usuario_existente:
-                senha_placeholder = generate_password_hash(auth0_user_id + app.secret_key)
-                execute_db("INSERT INTO usuarios (usuario, senha) VALUES (%s, %s)", (user_email, senha_placeholder))
-                print(f"Registro criado em 'usuarios' para {user_email}.")
-
-            execute_db("INSERT INTO perfil_usuario (usuario, nome) VALUES (%s, %s)", (user_email, user_name))
-            print(f"Perfil criado em 'perfil_usuario' para {user_email}.")
+                senha_placeholder = generate_password_hash(auth0_user_id + app.secret_key); execute_db("INSERT INTO usuarios (usuario, senha) VALUES (%s, %s)", (user_email, senha_placeholder)); print(f"Registro criado em 'usuarios' para {user_email}.")
+            execute_db("INSERT INTO perfil_usuario (usuario, nome) VALUES (%s, %s)", (user_email, user_name)); print(f"Perfil criado em 'perfil_usuario' para {user_email}.")
             return True
         return False
-
     except Exception as db_error:
-        print(f"ERRO NÃO FATAL ao sincronizar usuário {user_email} com DB local: {db_error}")
-        flash("Ocorreu um problema ao sincronizar seu perfil. Algumas informações podem não estar atualizadas.", "warning")
-        return False
+        print(f"ERRO NÃO FATAL ao sincronizar usuário {user_email} com DB local: {db_error}"); flash("Ocorreu um problema ao sincronizar seu perfil. Algumas informações podem não estar atualizadas.", "warning"); return False
 
 # ----------------------------------------------------------------------
-# --- Setup do DB (Mantido) ---
+# --- Setup do DB ---
 # ----------------------------------------------------------------------
 
 def init_db():
-    """Verifica e cria as tabelas do banco de dados se não existirem."""
     with app.app_context():
-        db = get_db()
-        cur = db.cursor()
-        is_postgres = isinstance(db, psycopg2.extensions.connection)
-        pk_type = "SERIAL PRIMARY KEY" if is_postgres else "INTEGER PRIMARY KEY AUTOINCREMENT"
-        boolean_type = "BOOLEAN" if is_postgres else "INTEGER"
-        timestamp_type = "TIMESTAMP WITH TIME ZONE" if is_postgres else "DATETIME"
-        date_type = "DATE" if is_postgres else "TEXT"
-
-        # Tabela usuarios
+        db = get_db(); cur = db.cursor(); is_postgres = isinstance(db, psycopg2.extensions.connection); pk_type = "SERIAL PRIMARY KEY" if is_postgres else "INTEGER PRIMARY KEY AUTOINCREMENT"; boolean_type = "BOOLEAN" if is_postgres else "INTEGER"; timestamp_type = "TIMESTAMP WITH TIME ZONE" if is_postgres else "DATETIME"; date_type = "DATE" if is_postgres else "TEXT"
         cur.execute(f"CREATE TABLE IF NOT EXISTS usuarios (usuario VARCHAR(255) PRIMARY KEY, senha TEXT NOT NULL)")
-        # Tabela perfil_usuario
-        cur.execute(f"""
-            CREATE TABLE IF NOT EXISTS perfil_usuario (
-                usuario VARCHAR(255) PRIMARY KEY REFERENCES usuarios(usuario) ON DELETE CASCADE,
-                nome TEXT, impl_andamento INTEGER DEFAULT 0, impl_finalizadas INTEGER DEFAULT 0, 
-                impl_paradas INTEGER DEFAULT 0, progresso_medio_carteira INTEGER DEFAULT 0,
-                impl_andamento_total INTEGER DEFAULT 0, implantacoes_atrasadas INTEGER DEFAULT 0
-            )
-        """)
-        # Tabela implantacoes
-        cur.execute(f"""
-            CREATE TABLE IF NOT EXISTS implantacoes (
-                id {pk_type}, usuario_cs VARCHAR(255) NOT NULL REFERENCES usuarios(usuario) ON DELETE NO ACTION,
-                nome_empresa TEXT NOT NULL,
-                status VARCHAR(50) DEFAULT 'andamento' CHECK(status IN ('andamento', 'futura', 'finalizada', 'parada')),
-                tipo VARCHAR(50) DEFAULT 'agora' CHECK(tipo IN ('agora', 'futura')),
-                data_criacao {timestamp_type} DEFAULT CURRENT_TIMESTAMP, data_finalizacao {timestamp_type}, motivo_parada TEXT DEFAULT '',
-                responsavel_cliente TEXT DEFAULT '', cargo_responsavel TEXT DEFAULT '', telefone_responsavel VARCHAR(50) DEFAULT '', email_responsavel VARCHAR(255) DEFAULT '',
-                data_inicio_producao {date_type} DEFAULT NULL, data_final_implantacao {date_type} DEFAULT NULL,
-                chave_oamd TEXT DEFAULT '', catraca TEXT DEFAULT '', facial TEXT DEFAULT ''
-            )
-        """)
-        # Tabela tarefas
-        cur.execute(f"""
-            CREATE TABLE IF NOT EXISTS tarefas (
-                id {pk_type}, implantacao_id INTEGER NOT NULL REFERENCES implantacoes(id) ON DELETE CASCADE,
-                tarefa_pai TEXT NOT NULL, tarefa_filho TEXT NOT NULL, concluida {boolean_type} DEFAULT FALSE,
-                ordem INTEGER DEFAULT 0, tag VARCHAR(100) DEFAULT ''
-            )
-        """)
-        # Tabela comentarios
-        cur.execute(f"""
-            CREATE TABLE IF NOT EXISTS comentarios (
-                id {pk_type}, tarefa_id INTEGER NOT NULL REFERENCES tarefas(id) ON DELETE CASCADE,
-                usuario_cs VARCHAR(255) NOT NULL REFERENCES usuarios(usuario) ON DELETE NO ACTION,
-                texto TEXT NOT NULL, data_criacao {timestamp_type} DEFAULT CURRENT_TIMESTAMP, imagem_url TEXT DEFAULT NULL
-            )
-        """)
-        # Tabela timeline_log
-        cur.execute(f"""
-            CREATE TABLE IF NOT EXISTS timeline_log (
-                id {pk_type}, implantacao_id INTEGER NOT NULL REFERENCES implantacoes(id) ON DELETE CASCADE,
-                usuario_cs VARCHAR(255) NOT NULL REFERENCES usuarios(usuario) ON DELETE NO ACTION,
-                tipo_evento VARCHAR(100) NOT NULL, detalhes TEXT NOT NULL, data_criacao {timestamp_type} DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_tarefas_implantacao_id ON tarefas (implantacao_id)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_comentarios_tarefa_id ON comentarios (tarefa_id)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_timeline_log_implantacao_id ON timeline_log (implantacao_id)")
-        db.commit()
-        cur.close()
-        print("Schema do banco de dados verificado/inicializado com sucesso.")
+        cur.execute(f""" CREATE TABLE IF NOT EXISTS perfil_usuario ( usuario VARCHAR(255) PRIMARY KEY REFERENCES usuarios(usuario) ON DELETE CASCADE, nome TEXT, impl_andamento INTEGER DEFAULT 0, impl_finalizadas INTEGER DEFAULT 0, impl_paradas INTEGER DEFAULT 0, progresso_medio_carteira INTEGER DEFAULT 0, impl_andamento_total INTEGER DEFAULT 0, implantacoes_atrasadas INTEGER DEFAULT 0, cargo TEXT, foto_url TEXT ) """)
+        cur.execute(f""" CREATE TABLE IF NOT EXISTS implantacoes ( id {pk_type}, usuario_cs VARCHAR(255) NOT NULL REFERENCES usuarios(usuario) ON DELETE NO ACTION, nome_empresa TEXT NOT NULL, status VARCHAR(50) DEFAULT 'andamento' CHECK(status IN ('andamento', 'futura', 'finalizada', 'parada')), tipo VARCHAR(50) DEFAULT 'agora' CHECK(tipo IN ('agora', 'futura')), data_criacao {timestamp_type} DEFAULT CURRENT_TIMESTAMP, data_finalizacao {timestamp_type}, motivo_parada TEXT DEFAULT '', responsavel_cliente TEXT DEFAULT '', cargo_responsavel TEXT DEFAULT '', telefone_responsavel VARCHAR(50) DEFAULT '', email_responsavel VARCHAR(255) DEFAULT '', data_inicio_producao {date_type} DEFAULT NULL, data_final_implantacao {date_type} DEFAULT NULL, chave_oamd TEXT DEFAULT '', catraca TEXT DEFAULT '', facial TEXT DEFAULT '' ) """)
+        cur.execute(f""" CREATE TABLE IF NOT EXISTS tarefas ( id {pk_type}, implantacao_id INTEGER NOT NULL REFERENCES implantacoes(id) ON DELETE CASCADE, tarefa_pai TEXT NOT NULL, tarefa_filho TEXT NOT NULL, concluida {boolean_type} DEFAULT FALSE, ordem INTEGER DEFAULT 0, tag VARCHAR(100) DEFAULT '' ) """)
+        cur.execute(f""" CREATE TABLE IF NOT EXISTS comentarios ( id {pk_type}, tarefa_id INTEGER NOT NULL REFERENCES tarefas(id) ON DELETE CASCADE, usuario_cs VARCHAR(255) NOT NULL REFERENCES usuarios(usuario) ON DELETE NO ACTION, texto TEXT NOT NULL, data_criacao {timestamp_type} DEFAULT CURRENT_TIMESTAMP, imagem_url TEXT DEFAULT NULL ) """)
+        cur.execute(f""" CREATE TABLE IF NOT EXISTS timeline_log ( id {pk_type}, implantacao_id INTEGER NOT NULL REFERENCES implantacoes(id) ON DELETE CASCADE, usuario_cs VARCHAR(255) NOT NULL REFERENCES usuarios(usuario) ON DELETE NO ACTION, tipo_evento VARCHAR(100) NOT NULL, detalhes TEXT NOT NULL, data_criacao {timestamp_type} DEFAULT CURRENT_TIMESTAMP ) """)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_tarefas_implantacao_id ON tarefas (implantacao_id)"); cur.execute("CREATE INDEX IF NOT EXISTS idx_comentarios_tarefa_id ON comentarios (tarefa_id)"); cur.execute("CREATE INDEX IF NOT EXISTS idx_timeline_log_implantacao_id ON timeline_log (implantacao_id)")
+        db.commit(); cur.close(); print("Schema do banco de dados verificado/inicializado com sucesso.")
 
 # ----------------------------------------------------------------------
-# --- Decoradores e Rotas de Autenticação (Mantidas) ---
+# --- Decoradores e Rotas de Autenticação ---
 # ----------------------------------------------------------------------
 
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if 'user' not in session:
-            flash('Login necessário para acessar esta página.', 'info')
-            return redirect(url_for('login'))
-
-        g.user = session.get('user')
-        g.user_email = g.user.get('email') if g.user else None
-
-        if not g.user_email:
-             flash("Sessão inválida ou email não encontrado. Faça login novamente.", "warning")
-             session.clear()
-             return redirect(url_for('logout'))
-
+        if 'user' not in session: flash('Login necessário para acessar esta página.', 'info'); return redirect(url_for('login'))
+        g.user = session.get('user'); g.user_email = g.user.get('email') if g.user else None
+        if not g.user_email: flash("Sessão inválida ou email não encontrado. Faça login novamente.", "warning"); session.clear(); return redirect(url_for('logout'))
+        g.perfil = query_db("SELECT * FROM perfil_usuario WHERE usuario = %s", (g.user_email,), one=True)
+        if not g.perfil: g.perfil = {'nome': g.user.get('name', g.user_email), 'usuario': g.user_email, 'foto_url': None, 'cargo': None}
         return f(*args, **kwargs)
     return decorated_function
 
 @app.route('/login')
 def login():
-    session.clear()
-    redirect_uri = url_for('callback', _external=True)
-    return auth0.authorize_redirect(redirect_uri=redirect_uri)
+    session.clear(); redirect_uri = url_for('callback', _external=True); return auth0.authorize_redirect(redirect_uri=redirect_uri)
 
 @app.route('/callback')
 def callback():
     try:
-        token = auth0.authorize_access_token()
-        userinfo = token.get('userinfo')
-        if not userinfo or not userinfo.get('email'):
-             raise Exception("Informações do usuário (userinfo) inválidas ou sem email.")
-        
-        session['user'] = userinfo
-        user_email = userinfo.get('email')
-        user_name = userinfo.get('name', user_email)
-        auth0_user_id = userinfo.get('sub')
-
+        token = auth0.authorize_access_token(); userinfo = token.get('userinfo')
+        if not userinfo or not userinfo.get('email'): raise Exception("Informações do usuário (userinfo) inválidas ou sem email.")
+        session['user'] = userinfo; user_email = userinfo.get('email'); user_name = userinfo.get('name', user_email); auth0_user_id = userinfo.get('sub')
         _sync_user_profile(user_email, user_name, auth0_user_id)
-        
         return redirect(url_for('dashboard'))
-
     except Exception as e:
-        print(f"ERRO CRÍTICO no callback do Auth0: {e}")
-        flash(f"Erro durante a autenticação: {e}. Tente novamente.", "error")
-        session.clear()
-        return redirect(url_for('home'))
+        print(f"ERRO CRÍTICO no callback do Auth0: {e}"); flash(f"Erro durante a autenticação: {e}. Tente novamente.", "error"); session.clear(); return redirect(url_for('home'))
 
 @app.route('/logout')
 def logout():
-    session.clear()
-    params = {'returnTo': url_for('home', _external=True), 'client_id': auth0_client_id}
-    logout_url = f"https://{auth0_domain}/v2/logout?{urlencode(params)}"
-    return redirect(logout_url)
+    session.clear(); params = {'returnTo': url_for('home', _external=True), 'client_id': auth0_client_id}; logout_url = f"https://{auth0_domain}/v2/logout?{urlencode(params)}"; return redirect(logout_url)
 
 # ----------------------------------------------------------------------
-# --- Rotas Principais (Mantidas) ---
+# --- Rotas Principais ---
 # ----------------------------------------------------------------------
+
+@app.route('/uploads/<path:filename>')
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 @app.route('/')
 def home():
-    if 'user' in session:
-        return redirect(url_for('dashboard'))
+    if 'user' in session: return redirect(url_for('dashboard'))
     return render_template('login.html')
 
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    user_email = g.user_email
-    user_info = g.user
-
+    user_email = g.user_email; user_info = g.user
     try:
         dashboard_data, metrics = get_dashboard_data(user_email)
-        perfil = query_db("SELECT * FROM perfil_usuario WHERE usuario = %s", (user_email,), one=True)
-        perfil_data = perfil if perfil else {}
-
-        default_metrics = {
-            'nome': user_info.get('name', user_email),
-            'impl_andamento': 0, 'impl_finalizadas': 0, 'impl_paradas': 0,
-            'progresso_medio_carteira': 0, 'impl_andamento_total': 0,
-            'implantacoes_atrasadas': 0, 'implantacoes_futuras': 0
-        }
+        perfil_data = g.perfil if g.perfil else {}
+        default_metrics = {'nome': user_info.get('name', user_email), 'impl_andamento': 0, 'impl_finalizadas': 0, 'impl_paradas': 0, 'progresso_medio_carteira': 0, 'impl_andamento_total': 0, 'implantacoes_atrasadas': 0, 'implantacoes_futuras': 0}
         final_metrics = {**default_metrics, **perfil_data, **metrics}
-
-        return render_template('dashboard.html',
-                               user_info=user_info,
-                               metrics=final_metrics,
-                               implantacoes_andamento=dashboard_data.get('andamento', []),
-                               implantacoes_futuras=dashboard_data.get('futuras', []),
-                               implantacoes_finalizadas=dashboard_data.get('finalizadas', []),
-                               implantacoes_paradas=dashboard_data.get('paradas', []),
-                               implantacoes_atrasadas=dashboard_data.get('atrasadas', []),
-                               cargos_responsavel=CARGOS_RESPONSAVEL
-                               )
+        return render_template('dashboard.html', user_info=user_info, metrics=final_metrics,
+                               implantacoes_andamento=dashboard_data.get('andamento', []), implantacoes_futuras=dashboard_data.get('futuras', []),
+                               implantacoes_finalizadas=dashboard_data.get('finalizadas', []), implantacoes_paradas=dashboard_data.get('paradas', []),
+                               implantacoes_atrasadas=dashboard_data.get('atrasadas', []), cargos_responsavel=CARGOS_RESPONSAVEL)
     except Exception as e:
-        print(f"ERRO ao carregar dashboard para {user_email}: {e}")
-        flash("Erro ao carregar os dados do dashboard. Tente atualizar a página.", "error")
+        print(f"ERRO ao carregar dashboard para {user_email}: {e}"); flash("Erro ao carregar os dados do dashboard. Tente atualizar a página.", "error")
         return render_template('dashboard.html', user_info=user_info, metrics={}, implantacoes_andamento=[], implantacoes_futuras=[], implantacoes_finalizadas=[], implantacoes_paradas=[], implantacoes_atrasadas=[], cargos_responsavel=CARGOS_RESPONSAVEL, error="Falha ao carregar dados.")
 
+@app.route('/perfil', methods=['GET', 'POST'])
+@login_required
+def perfil():
+    usuario_cs_email = g.user_email
+    if request.method == 'POST':
+        try:
+            nome = request.form.get('nome', '').strip(); cargo = request.form.get('cargo', '').strip()
+            if cargo not in CARGOS_LIST: cargo = None
+            perfil_atual = g.perfil; foto_url_atual = perfil_atual.get('foto_url')
+            if 'foto_perfil' in request.files:
+                file = request.files['foto_perfil']
+                if file and file.filename and allowed_file(file.filename):
+                    nome_base, extensao = os.path.splitext(secure_filename(file.filename)); email_hash = generate_password_hash(usuario_cs_email).split('$')[-1][:8]; nome_unico = f"perfil_{email_hash}_{int(time.time())}{extensao}"
+                    file_path = os.path.join(app.config['UPLOAD_FOLDER'], nome_unico); file.save(file_path); foto_url_atual = url_for('uploaded_file', filename=nome_unico)
+                    if perfil_atual.get('foto_url'):
+                        try:
+                            old_filename = perfil_atual['foto_url'].split('/')[-1]; old_path = os.path.join(app.config['UPLOAD_FOLDER'], old_filename)
+                            if os.path.exists(old_path) and old_filename != nome_unico: os.remove(old_path); print(f"Foto de perfil antiga removida: {old_path}")
+                        except Exception as e: print(f"Aviso: Falha ao excluir foto antiga. {e}")
+            execute_db(""" UPDATE perfil_usuario SET nome = %s, cargo = %s, foto_url = %s WHERE usuario = %s """, (nome, cargo, foto_url_atual, usuario_cs_email))
+            flash('Perfil atualizado com sucesso!', 'success'); return redirect(url_for('perfil'))
+        except Exception as e: print(f"ERRO ao atualizar perfil para {usuario_cs_email}: {e}"); flash(f'Erro ao atualizar perfil: {e}', 'error'); return redirect(url_for('perfil'))
+    return render_template('perfil.html', user_info=g.user, perfil=g.perfil, cargos_list=CARGOS_LIST)
 
 @app.route('/implantacao/<int:impl_id>')
 @login_required
 def ver_implantacao(impl_id):
-    usuario_cs_email = g.user_email
-    user_info = g.user
-
+    usuario_cs_email = g.user_email; user_info = g.user
     try:
         implantacao = query_db("SELECT * FROM implantacoes WHERE id = %s AND usuario_cs = %s", (impl_id, usuario_cs_email), one=True)
-        
-        if not implantacao:
-            flash('Implantação não encontrada ou acesso negado.', 'error')
-            return redirect(url_for('dashboard'))
-
-        # Formatação de Datas BR
-        implantacao['data_criacao_fmt_dt_hr'] = format_date_br(implantacao.get('data_criacao'), True)
-        implantacao['data_criacao_fmt_d'] = format_date_br(implantacao.get('data_criacao'), False)
-        implantacao['data_finalizacao_fmt_d'] = format_date_br(implantacao.get('data_finalizacao'), False)
-        implantacao['data_inicio_producao_fmt_d'] = format_date_br(implantacao.get('data_inicio_producao'), False)
-        implantacao['data_final_implantacao_fmt_d'] = format_date_br(implantacao.get('data_final_implantacao'), False)
-        
-        # Formatação de Datas ISO para o modal (Input type="date" do HTML)
-        implantacao['data_criacao_iso'] = format_date_iso_for_json(implantacao.get('data_criacao'), only_date=True)
-        implantacao['data_inicio_producao_iso'] = format_date_iso_for_json(implantacao.get('data_inicio_producao'), only_date=True)
-        implantacao['data_final_implantacao_iso'] = format_date_iso_for_json(implantacao.get('data_final_implantacao'), only_date=True)
-
-
+        if not implantacao: flash('Implantação não encontrada ou acesso negado.', 'error'); return redirect(url_for('dashboard'))
+        implantacao['data_criacao_fmt_dt_hr'] = format_date_br(implantacao.get('data_criacao'), True); implantacao['data_criacao_fmt_d'] = format_date_br(implantacao.get('data_criacao'), False); implantacao['data_finalizacao_fmt_d'] = format_date_br(implantacao.get('data_finalizacao'), False); implantacao['data_inicio_producao_fmt_d'] = format_date_br(implantacao.get('data_inicio_producao'), False); implantacao['data_final_implantacao_fmt_d'] = format_date_br(implantacao.get('data_final_implantacao'), False)
+        implantacao['data_criacao_iso'] = format_date_iso_for_json(implantacao.get('data_criacao'), only_date=True); implantacao['data_inicio_producao_iso'] = format_date_iso_for_json(implantacao.get('data_inicio_producao'), only_date=True); implantacao['data_final_implantacao_iso'] = format_date_iso_for_json(implantacao.get('data_final_implantacao'), only_date=True)
         progresso, _, _ = _get_progress(impl_id)
-
-        # Busca e Agrupamento de Tarefas e Comentários
         tarefas_raw = query_db("SELECT * FROM tarefas WHERE implantacao_id = %s ORDER BY tarefa_pai, ordem", (impl_id,))
-        comentarios_raw = query_db("""
-            SELECT c.*, COALESCE(p.nome, c.usuario_cs) as usuario_nome
-            FROM comentarios c
-            LEFT JOIN perfil_usuario p ON c.usuario_cs = p.usuario
-            WHERE c.tarefa_id IN (SELECT id FROM tarefas WHERE implantacao_id = %s)
-            ORDER BY c.data_criacao DESC
-        """, (impl_id,))
-
-        comentarios_por_tarefa = {}
-        for c in comentarios_raw:
-            c['data_criacao_fmt_d'] = format_date_br(c.get('data_criacao'))
-            comentarios_por_tarefa.setdefault(c['tarefa_id'], []).append(c)
-
-        tarefas_temp = {}
+        comentarios_raw = query_db(""" SELECT c.*, COALESCE(p.nome, c.usuario_cs) as usuario_nome FROM comentarios c LEFT JOIN perfil_usuario p ON c.usuario_cs = p.usuario WHERE c.tarefa_id IN (SELECT id FROM tarefas WHERE implantacao_id = %s) ORDER BY c.data_criacao DESC """, (impl_id,))
+        comentarios_por_tarefa = {}; [comentarios_por_tarefa.setdefault(c['tarefa_id'], []).append({**c, 'data_criacao_fmt_d': format_date_br(c.get('data_criacao'))}) for c in comentarios_raw]
+        tarefas_agrupadas_treinamento = OrderedDict(); tarefas_agrupadas_obrigatorio = OrderedDict(); tarefas_agrupadas_pendencias = OrderedDict(); todos_modulos_temp = set()
         for t in tarefas_raw:
-            t['comentarios'] = comentarios_por_tarefa.get(t['id'], [])
-            tarefas_temp.setdefault(t['tarefa_pai'], []).append(t)
-
-        tarefas_agrupadas = OrderedDict()
-        for modulo_padrao in TAREFAS_PADRAO:
-            if modulo_padrao in tarefas_temp:
-                 tarefas_agrupadas[modulo_padrao] = sorted(tarefas_temp.pop(modulo_padrao), key=lambda x: x.get('ordem', 0))
-        for modulo_restante in sorted(tarefas_temp.keys()):
-             tarefas_agrupadas[modulo_restante] = sorted(tarefas_temp[modulo_restante], key=lambda x: x.get('ordem', 0))
-
-        # Logs da Timeline
-        logs_timeline = query_db("""
-            SELECT tl.*, COALESCE(p.nome, tl.usuario_cs) as usuario_nome
-            FROM timeline_log tl
-            LEFT JOIN perfil_usuario p ON tl.usuario_cs = p.usuario
-            WHERE tl.implantacao_id = %s
-            ORDER BY tl.data_criacao DESC
-        """, (impl_id,))
-
-        for log in logs_timeline:
-            log['data_criacao_fmt_dt_hr'] = format_date_br(log.get('data_criacao'), True)
-
-        perfil_local = query_db("SELECT nome FROM perfil_usuario WHERE usuario = %s", (usuario_cs_email,), one=True)
-        nome_usuario_logado = perfil_local.get('nome') if perfil_local else usuario_cs_email
-
-        return render_template('implantacao_detalhes.html',
-                               user_info=user_info,
-                               implantacao=implantacao,
-                               tarefas_agrupadas=tarefas_agrupadas,
-                               progresso_porcentagem=progresso,
-                               nome_usuario_logado=nome_usuario_logado,
-                               email_usuario_logado=usuario_cs_email,
-                               justificativas_parada=JUSTIFICATIVAS_PARADA,
-                               logs_timeline=logs_timeline,
-                               cargos_responsavel=CARGOS_RESPONSAVEL
-                               )
+            t['comentarios'] = comentarios_por_tarefa.get(t['id'], []); modulo = t['tarefa_pai']; todos_modulos_temp.add(modulo)
+            if modulo == MODULO_OBRIGATORIO: tarefas_agrupadas_obrigatorio.setdefault(modulo, []).append(t)
+            elif modulo == MODULO_PENDENCIAS: tarefas_agrupadas_pendencias.setdefault(modulo, []).append(t)
+            else: tarefas_agrupadas_treinamento.setdefault(modulo, []).append(t)
+        for modulo in tarefas_agrupadas_obrigatorio: tarefas_agrupadas_obrigatorio[modulo].sort(key=lambda x: x.get('ordem', 0))
+        for modulo in tarefas_agrupadas_pendencias: tarefas_agrupadas_pendencias[modulo].sort(key=lambda x: x.get('ordem', 0))
+        for modulo in tarefas_agrupadas_treinamento: tarefas_agrupadas_treinamento[modulo].sort(key=lambda x: x.get('ordem', 0))
+        ordered_treinamento = OrderedDict(); [ordered_treinamento.update({mp: tarefas_agrupadas_treinamento.pop(mp)}) for mp in TAREFAS_TREINAMENTO_PADRAO if mp in tarefas_agrupadas_treinamento]; [ordered_treinamento.update({mr: tarefas_agrupadas_treinamento[mr]}) for mr in sorted(tarefas_agrupadas_treinamento.keys())]
+        todos_modulos_lista = sorted(list(todos_modulos_temp));
+        if MODULO_PENDENCIAS not in todos_modulos_lista: todos_modulos_lista.append(MODULO_PENDENCIAS)
+        # --- CORREÇÃO DE SINTAXE APLICADA AQUI (Com indentação) ---
+        if MODULO_OBRIGATORIO not in todos_modulos_lista:
+            try:
+                # Tenta inserir antes de "Pendências"
+                idx_pend = todos_modulos_lista.index(MODULO_PENDENCIAS)
+                todos_modulos_lista.insert(idx_pend, MODULO_OBRIGATORIO)
+            except ValueError:
+                # Se "Pendências" não existir, insere no início
+                todos_modulos_lista.insert(0, MODULO_OBRIGATORIO)
+        # --- FIM DA CORREÇÃO ---
+        logs_timeline = query_db(""" SELECT tl.*, COALESCE(p.nome, tl.usuario_cs) as usuario_nome FROM timeline_log tl LEFT JOIN perfil_usuario p ON tl.usuario_cs = p.usuario WHERE tl.implantacao_id = %s ORDER BY tl.data_criacao DESC """, (impl_id,))
+        for log in logs_timeline: log['data_criacao_fmt_dt_hr'] = format_date_br(log.get('data_criacao'), True)
+        nome_usuario_logado = g.perfil.get('nome', usuario_cs_email)
+        return render_template('implantacao_detalhes.html', user_info=user_info, implantacao=implantacao, tarefas_agrupadas_obrigatorio=tarefas_agrupadas_obrigatorio, tarefas_agrupadas_treinamento=ordered_treinamento, tarefas_agrupadas_pendencias=tarefas_agrupadas_pendencias, todos_modulos=todos_modulos_lista, modulo_pendencias_nome=MODULO_PENDENCIAS, progresso_porcentagem=progresso, nome_usuario_logado=nome_usuario_logado, email_usuario_logado=usuario_cs_email, justificativas_parada=JUSTIFICATIVAS_PARADA, logs_timeline=logs_timeline, cargos_responsavel=CARGOS_RESPONSAVEL)
     except Exception as e:
-        print(f"ERRO ao carregar detalhes da implantação ID {impl_id} para {usuario_cs_email}: {e}")
-        flash("Erro ao carregar os detalhes da implantação. Tente novamente.", "error")
-        return redirect(url_for('dashboard'))
+        print(f"ERRO ao carregar detalhes da implantação ID {impl_id} para {usuario_cs_email}: {e}"); flash("Erro ao carregar os detalhes da implantação. Tente novamente.", "error"); return redirect(url_for('dashboard'))
 
 # ----------------------------------------------------------------------
-# --- Rotas de Ação (Completas) ---
+# --- Rotas de Ação ---
 # ----------------------------------------------------------------------
 
 @app.route('/criar_implantacao', methods=['POST'])
 @login_required
 def criar_implantacao():
-    """Cria uma nova implantação e suas tarefas padrão."""
-    usuario_cs_email = g.user_email
+    usuario_cs_email = g.user_email # Definido aqui para o escopo da função
     nome_empresa = request.form.get('nome_empresa', '').strip()
-    tipo = request.form.get('tipo', 'agora') 
+    tipo = request.form.get('tipo', 'agora')
 
     if not nome_empresa or tipo not in ['agora', 'futura']:
         flash('Dados inválidos para criação.', 'error')
@@ -666,205 +479,108 @@ def criar_implantacao():
         if not implantacao_id: raise Exception("Falha ao obter ID da nova implantação.")
 
         logar_timeline(implantacao_id, usuario_cs_email, 'implantacao_criada', f'Implantação "{nome_empresa}" (Tipo: {tipo.capitalize()}) criada.')
-
         tasks_added = _create_default_tasks(implantacao_id)
-        
         flash(f'Implantação "{nome_empresa}" criada com sucesso! ({tasks_added} tarefas padrão).', 'success')
         return redirect(url_for('ver_implantacao', impl_id=implantacao_id))
 
     except Exception as e:
-        print(f"ERRO CRÍTICO ao criar implantação ou tarefas para {usuario_cs_email}: {e}")
+        # CORREÇÃO APLICADA: Busca o email de 'g' ou usa fallback
+        user_email_for_log = getattr(g, 'user_email', 'Email Desconhecido')
+        print(f"ERRO CRÍTICO ao criar implantação ou tarefas para {user_email_for_log}: {e}")
         flash(f'Erro grave ao criar implantação: {e}. Contate o suporte.', 'error')
         return redirect(url_for('dashboard'))
-
 
 @app.route('/iniciar_implantacao', methods=['POST'])
 @login_required
 def iniciar_implantacao():
-    """Muda o status de uma implantação 'futura' para 'andamento'."""
-    usuario_cs_email = g.user_email
-    implantacao_id = request.form.get('implantacao_id')
-    
+    usuario_cs_email = g.user_email; implantacao_id = request.form.get('implantacao_id')
     try:
         impl = query_db("SELECT usuario_cs, nome_empresa, tipo FROM implantacoes WHERE id = %s", (implantacao_id,), one=True)
-        
-        if not impl or impl.get('usuario_cs') != usuario_cs_email or impl.get('tipo') != 'futura':
-            flash('Operação negada ou implantação inválida.', 'error')
-            return redirect(request.referrer or url_for('dashboard'))
-
+        if not impl or impl.get('usuario_cs') != usuario_cs_email or impl.get('tipo') != 'futura': flash('Operação negada ou implantação inválida.', 'error'); return redirect(request.referrer or url_for('dashboard'))
         execute_db("UPDATE implantacoes SET tipo = 'agora', status = 'andamento', data_criacao = %s WHERE id = %s", (datetime.now(), implantacao_id))
-        
-        logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Implantação "{impl.get("nome_empresa", "N/A")}" iniciada (movida de "Futura" para "Em Andamento").')
-        flash('Implantação iniciada com sucesso!', 'success')
-        
+        logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Implantação "{impl.get("nome_empresa", "N/A")}" iniciada (movida de "Futura" para "Em Andamento").'); flash('Implantação iniciada com sucesso!', 'success')
         return redirect(url_for('ver_implantacao', impl_id=implantacao_id))
-
-    except Exception as e:
-        print(f"Erro ao iniciar implantação ID {implantacao_id}: {e}")
-        flash('Erro ao iniciar implantação.', 'error')
-        return redirect(url_for('dashboard'))
-
+    except Exception as e: print(f"Erro ao iniciar implantação ID {implantacao_id}: {e}"); flash('Erro ao iniciar implantação.', 'error'); return redirect(url_for('dashboard'))
 
 @app.route('/finalizar_implantacao', methods=['POST'])
 @login_required
 def finalizar_implantacao():
-    """Marca uma implantação 'andamento' como 'finalizada'."""
-    usuario_cs_email = g.user_email
-    implantacao_id = request.form.get('implantacao_id')
-    redirect_target = request.form.get('redirect_to', 'dashboard')
-
+    usuario_cs_email = g.user_email; implantacao_id = request.form.get('implantacao_id'); redirect_target = request.form.get('redirect_to', 'dashboard')
     try:
         impl = query_db("SELECT usuario_cs, nome_empresa, status FROM implantacoes WHERE id = %s", (implantacao_id,), one=True)
-        if not impl or impl.get('usuario_cs') != usuario_cs_email or impl.get('status') != 'andamento':
-             raise Exception('Operação negada ou status inválido.')
-
+        if not impl or impl.get('usuario_cs') != usuario_cs_email or impl.get('status') != 'andamento': raise Exception('Operação negada ou status inválido.')
+        pending_tasks = query_db("SELECT COUNT(*) as total FROM tarefas WHERE implantacao_id = %s AND concluida = %s AND tarefa_pai != %s", (implantacao_id, 0, MODULO_PENDENCIAS), one=True)
+        if pending_tasks and pending_tasks.get('total', 0) > 0:
+            total_pendentes = pending_tasks.get('total'); flash(f'Não é possível finalizar. Existem {total_pendentes} tarefas pendentes nos checklists Obrigatório ou de Treinamentos.', 'error'); dest = 'ver_implantacao' if redirect_target == 'detalhes' else 'dashboard'; return redirect(url_for(dest, impl_id=implantacao_id if dest == 'ver_implantacao' else None))
         execute_db("UPDATE implantacoes SET status = 'finalizada', data_finalizacao = CURRENT_TIMESTAMP WHERE id = %s", (implantacao_id,))
-        
-        logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Implantação "{impl.get("nome_empresa", "N/A")}" marcada como "Finalizada" manualmente.')
-        flash('Implantação finalizada com sucesso!', 'success')
-
-    except Exception as e:
-        print(f"Erro ao finalizar implantação ID {implantacao_id}: {e}")
-        flash(f'Erro ao finalizar implantação: {e}', 'error')
-
-    dest = 'ver_implantacao' if redirect_target == 'detalhes' else 'dashboard'
-    return redirect(url_for(dest, impl_id=implantacao_id if dest == 'ver_implantacao' else None))
-
+        logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Implantação "{impl.get("nome_empresa", "N/A")}" marcada como "Finalizada" manualmente.'); flash('Implantação finalizada com sucesso!', 'success')
+    except Exception as e: print(f"Erro ao finalizar implantação ID {implantacao_id}: {e}"); flash(f'Erro ao finalizar implantação: {e}', 'error')
+    dest = 'ver_implantacao' if redirect_target == 'detalhes' else 'dashboard'; return redirect(url_for(dest, impl_id=implantacao_id if dest == 'ver_implantacao' else None))
 
 @app.route('/parar_implantacao', methods=['POST'])
 @login_required
 def parar_implantacao():
-    """Marca uma implantação 'andamento' como 'parada' com um motivo."""
-    usuario_cs_email = g.user_email
-    implantacao_id = request.form.get('implantacao_id')
-    motivo = request.form.get('motivo_parada', '').strip()
-    
-    if not motivo:
-         flash('O motivo da parada é obrigatório.', 'error')
-         return redirect(url_for('ver_implantacao', impl_id=implantacao_id))
-
+    usuario_cs_email = g.user_email; implantacao_id = request.form.get('implantacao_id'); motivo = request.form.get('motivo_parada', '').strip()
+    if not motivo: flash('O motivo da parada é obrigatório.', 'error'); return redirect(url_for('ver_implantacao', impl_id=implantacao_id))
     try:
         impl = query_db("SELECT usuario_cs, nome_empresa, status FROM implantacoes WHERE id = %s", (implantacao_id,), one=True)
-
-        if not impl or impl.get('usuario_cs') != usuario_cs_email or impl.get('status') != 'andamento':
-            raise Exception('Operação negada ou status inválido.')
-
+        if not impl or impl.get('usuario_cs') != usuario_cs_email or impl.get('status') != 'andamento': raise Exception('Operação negada ou status inválido.')
         execute_db("UPDATE implantacoes SET status = 'parada', data_finalizacao = CURRENT_TIMESTAMP, motivo_parada = %s WHERE id = %s", (motivo, implantacao_id))
-        
-        logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Implantação "{impl.get("nome_empresa", "N/A")}" marcada como "Parada". Motivo: {motivo}')
-        flash('Implantação parada com sucesso.', 'success')
-
-    except Exception as e:
-        print(f"Erro ao parar implantação ID {implantacao_id}: {e}")
-        flash(f'Erro ao parar implantação: {e}', 'error')
-
+        logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Implantação "{impl.get("nome_empresa", "N/A")}" marcada como "Parada". Motivo: {motivo}'); flash('Implantação parada com sucesso.', 'success')
+    except Exception as e: print(f"Erro ao parar implantação ID {implantacao_id}: {e}"); flash(f'Erro ao parar implantação: {e}', 'error')
     return redirect(url_for('ver_implantacao', impl_id=implantacao_id))
-
 
 @app.route('/retomar_implantacao', methods=['POST'])
 @login_required
 def retomar_implantacao():
-    """Muda o status de uma implantação 'parada' de volta para 'andamento'."""
-    usuario_cs_email = g.user_email
-    implantacao_id = request.form.get('implantacao_id')
-    redirect_to = request.form.get('redirect_to', 'dashboard')
-
+    usuario_cs_email = g.user_email; implantacao_id = request.form.get('implantacao_id'); redirect_to = request.form.get('redirect_to', 'dashboard')
     try:
         impl = query_db("SELECT usuario_cs, nome_empresa, status FROM implantacoes WHERE id = %s", (implantacao_id,), one=True)
-
-        if not impl or impl.get('usuario_cs') != usuario_cs_email or impl.get('status') != 'parada':
-            flash('Apenas implantações paradas podem ser retomadas.', 'warning')
-            return redirect(request.referrer or url_for('dashboard'))
-
+        if not impl or impl.get('usuario_cs') != usuario_cs_email or impl.get('status') != 'parada': flash('Apenas implantações paradas podem ser retomadas.', 'warning'); return redirect(request.referrer or url_for('dashboard'))
         execute_db("UPDATE implantacoes SET status = 'andamento', data_finalizacao = NULL, motivo_parada = '' WHERE id = %s", (implantacao_id,))
-        
-        logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Implantação "{impl.get("nome_empresa", "N/A")}" retomada (status alterado de "Parada" para "Em Andamento").')
-        flash('Implantação retomada com sucesso.', 'success')
-
-    except Exception as e:
-        print(f"Erro ao retomar implantação ID {implantacao_id}: {e}")
-        flash(f'Erro ao retomar implantação: {e}', 'error')
-
-    dest = 'ver_implantacao' if redirect_to == 'detalhes' else 'dashboard'
-    return redirect(url_for(dest, impl_id=implantacao_id if dest == 'ver_implantacao' else None))
-
+        logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Implantação "{impl.get("nome_empresa", "N/A")}" retomada (status alterado de "Parada" para "Em Andamento").'); flash('Implantação retomada com sucesso!', 'success')
+    except Exception as e: print(f"Erro ao retomar implantação ID {implantacao_id}: {e}"); flash(f'Erro ao retomar implantação: {e}', 'error')
+    dest = 'ver_implantacao' if redirect_to == 'detalhes' else 'dashboard'; return redirect(url_for(dest, impl_id=implantacao_id if dest == 'ver_implantacao' else None))
 
 @app.route('/atualizar_detalhes_empresa', methods=['POST'])
 @login_required
 def atualizar_detalhes_empresa():
-    """Atualiza os campos de detalhes do cliente/implantação."""
-    usuario_cs_email = g.user_email
-    implantacao_id = request.form.get('implantacao_id')
-    redirect_to = request.form.get('redirect_to', 'dashboard')
-
-    if not query_db("SELECT id FROM implantacoes WHERE id = %s AND usuario_cs = %s", (implantacao_id, usuario_cs_email), one=True):
-        flash('Você não tem permissão para editar esta implantação.', 'error')
-        return redirect(url_for('dashboard'))
-
+    usuario_cs_email = g.user_email; implantacao_id = request.form.get('implantacao_id'); redirect_to = request.form.get('redirect_to', 'dashboard')
+    if not query_db("SELECT id FROM implantacoes WHERE id = %s AND usuario_cs = %s", (implantacao_id, usuario_cs_email), one=True): flash('Você não tem permissão para editar esta implantação.', 'error'); return redirect(url_for('dashboard'))
     try:
-        data_inicio_prod = request.form.get('data_inicio_producao') or None
-        data_final_impl = request.form.get('data_final_implantacao') or None
-        
-        query = """
-            UPDATE implantacoes SET
-                responsavel_cliente = %s, cargo_responsavel = %s, telefone_responsavel = %s,
-                email_responsavel = %s, data_inicio_producao = %s, data_final_implantacao = %s,
-                chave_oamd = %s, catraca = %s, facial = %s
-            WHERE id = %s AND usuario_cs = %s
-        """
-        args = (
-            request.form.get('responsavel_cliente', '').strip(), request.form.get('cargo_responsavel', '').strip(),
-            request.form.get('telefone_responsavel', '').strip(), request.form.get('email_responsavel', '').strip(),
-            data_inicio_prod, data_final_impl,
-            request.form.get('chave_oamd', '').strip(), request.form.get('catraca', '').strip(),
-            request.form.get('facial', '').strip(),
-            implantacao_id, usuario_cs_email
-        )
-        
-        execute_db(query, args)
-        
-        logar_timeline(implantacao_id, usuario_cs_email, 'detalhes_alterados', 'Os detalhes da empresa/cliente foram atualizados.')
-        flash('Detalhes da empresa atualizados com sucesso!', 'success')
-
-    except Exception as e:
-        print(f"Erro ao atualizar detalhes da implantação ID {implantacao_id}: {e}")
-        flash('Erro ao atualizar detalhes da empresa.', 'error')
-
-    dest = 'ver_implantacao' if redirect_to == 'detalhes' else 'dashboard'
-    return redirect(url_for(dest, impl_id=implantacao_id if dest == 'ver_implantacao' else None))
-
+        data_inicio_prod = request.form.get('data_inicio_producao') or None; data_final_impl = request.form.get('data_final_implantacao') or None
+        query = """ UPDATE implantacoes SET responsavel_cliente = %s, cargo_responsavel = %s, telefone_responsavel = %s, email_responsavel = %s, data_inicio_producao = %s, data_final_implantacao = %s, chave_oamd = %s, catraca = %s, facial = %s WHERE id = %s AND usuario_cs = %s """
+        args = (request.form.get('responsavel_cliente', '').strip(), request.form.get('cargo_responsavel', '').strip(), request.form.get('telefone_responsavel', '').strip(), request.form.get('email_responsavel', '').strip(), data_inicio_prod, data_final_impl, request.form.get('chave_oamd', '').strip(), request.form.get('catraca', '').strip(), request.form.get('facial', '').strip(), implantacao_id, usuario_cs_email)
+        execute_db(query, args); logar_timeline(implantacao_id, usuario_cs_email, 'detalhes_alterados', 'Os detalhes da empresa/cliente foram atualizados.'); flash('Detalhes da empresa atualizados com sucesso!', 'success')
+    except Exception as e: print(f"Erro ao atualizar detalhes da implantação ID {implantacao_id}: {e}"); flash('Erro ao atualizar detalhes da empresa.', 'error')
+    dest = 'ver_implantacao' if redirect_to == 'detalhes' else 'dashboard'; return redirect(url_for(dest, impl_id=implantacao_id if dest == 'ver_implantacao' else None))
 
 @app.route('/excluir_implantacao', methods=['POST'])
 @login_required
 def excluir_implantacao():
-    """Exclui permanentemente uma implantação e seus dados associados."""
-    usuario_cs_email = g.user_email
-    implantacao_id = request.form.get('implantacao_id')
-
-    if not query_db("SELECT id FROM implantacoes WHERE id = %s AND usuario_cs = %s", (implantacao_id, usuario_cs_email), one=True):
-        flash('Permissão negada ou implantação não encontrada.', 'error')
-        return redirect(url_for('dashboard'))
-
+    usuario_cs_email = g.user_email; implantacao_id = request.form.get('implantacao_id')
+    if not query_db("SELECT id FROM implantacoes WHERE id = %s AND usuario_cs = %s", (implantacao_id, usuario_cs_email), one=True): flash('Permissão negada ou implantação não encontrada.', 'error'); return redirect(url_for('dashboard'))
     try:
-        comentarios_img = query_db("""
-            SELECT c.imagem_url FROM comentarios c
-            JOIN tarefas t ON c.tarefa_id = t.id
-            WHERE t.implantacao_id = %s AND c.imagem_url IS NOT NULL AND c.imagem_url != ''
-        """, (implantacao_id,))
+        comentarios_img = query_db(""" SELECT c.imagem_url FROM comentarios c JOIN tarefas t ON c.tarefa_id = t.id WHERE t.implantacao_id = %s AND c.imagem_url IS NOT NULL AND c.imagem_url != '' """, (implantacao_id,))
         for c in comentarios_img:
-             print(f"Lembrete: Implementar exclusão do Storage para URL: {c.get('imagem_url')}")
-        
-        execute_db("DELETE FROM implantacoes WHERE id = %s", (implantacao_id,))
-        
-        flash('Implantação excluída permanentemente com sucesso.', 'success')
-    except Exception as e:
-        print(f"Erro ao excluir implantação ID {implantacao_id}: {e}")
-        flash('Erro ao excluir a implantação.', 'error')
-
+            imagem_url = c.get('imagem_url')
+            if imagem_url:
+                print(f"Lembrete: Implementar exclusão do Storage para URL: {imagem_url}")
+                # Tenta excluir o arquivo local se existir (para ambiente de dev)
+                try:
+                    filename = imagem_url.split('/')[-1]
+                    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+                        print(f"Arquivo local de imagem removido: {file_path}")
+                except Exception as e_file:
+                    print(f"Aviso: Falha ao excluir arquivo local de imagem {imagem_url}. {e_file}")
+        execute_db("DELETE FROM implantacoes WHERE id = %s", (implantacao_id,)); flash('Implantação excluída permanentemente com sucesso.', 'success')
+    except Exception as e: print(f"Erro ao excluir implantação ID {implantacao_id}: {e}"); flash('Erro ao excluir a implantação.', 'error')
     return redirect(url_for('dashboard'))
 
 # ----------------------------------------------------------------------
-# --- Rotas API (Mantidas) ---
+# --- Rotas API ---
 # ----------------------------------------------------------------------
 
 @app.route('/toggle_tarefa/<int:tarefa_id>', methods=['POST'])
@@ -872,259 +588,121 @@ def excluir_implantacao():
 def toggle_tarefa(tarefa_id):
     usuario_cs_email = g.user_email
     try:
-        tarefa = query_db("""
-            SELECT t.*, i.usuario_cs, i.id as implantacao_id, i.status
-            FROM tarefas t JOIN implantacoes i ON t.implantacao_id = i.id
-            WHERE t.id = %s
-        """, (tarefa_id,), one=True)
-
-        if not tarefa or tarefa.get('usuario_cs') != usuario_cs_email:
-            return jsonify({'ok': False, 'error': 'forbidden'}), 403
-            
-        if tarefa.get('status') in ['finalizada', 'parada', 'futura']:
-             return jsonify({'ok': False, 'error': 'Não é possível alterar o status de tarefas em implantações finalizadas, paradas ou futuras.'}), 400
-
-        novo_status_bool = not tarefa.get('concluida', False)
-        execute_db("UPDATE tarefas SET concluida = %s WHERE id = %s", (novo_status_bool, tarefa_id))
-        
+        tarefa = query_db(""" SELECT t.*, i.usuario_cs, i.id as implantacao_id, i.status FROM tarefas t JOIN implantacoes i ON t.implantacao_id = i.id WHERE t.id = %s """, (tarefa_id,), one=True)
+        if not tarefa or tarefa.get('usuario_cs') != usuario_cs_email: return jsonify({'ok': False, 'error': 'forbidden'}), 403
+        if tarefa.get('status') in ['finalizada', 'parada', 'futura']: return jsonify({'ok': False, 'error': 'Não é possível alterar o status de tarefas em implantações finalizadas, paradas ou futuras.'}), 400
+        novo_status_bool = not tarefa.get('concluida', False); execute_db("UPDATE tarefas SET concluida = %s WHERE id = %s", (novo_status_bool, tarefa_id))
         detalhe = f"Atualização tarefa: {tarefa['tarefa_filho']}.\n{'Concluída: ' + datetime.now().strftime('%d/%m/%Y %H:%M') if novo_status_bool else 'Status: Não Concluída.'}"
         logar_timeline(tarefa['implantacao_id'], usuario_cs_email, 'tarefa_alterada', detalhe)
-        
         finalizada, log_finalizacao = auto_finalizar_implantacao(tarefa['implantacao_id'], usuario_cs_email)
-
         novo_prog, _, _ = _get_progress(tarefa['implantacao_id'])
-
-        perfil = query_db("SELECT nome FROM perfil_usuario WHERE usuario = %s", (usuario_cs_email,), one=True)
-        nome = perfil.get('nome') if perfil else usuario_cs_email
-        log_tarefa = query_db("SELECT *, %s as usuario_nome FROM timeline_log WHERE implantacao_id = %s AND tipo_evento = 'tarefa_alterada' ORDER BY id DESC LIMIT 1", (nome, tarefa['implantacao_id']), one=True)
+        nome = g.perfil.get('nome', usuario_cs_email); log_tarefa = query_db("SELECT *, %s as usuario_nome FROM timeline_log WHERE implantacao_id = %s AND tipo_evento = 'tarefa_alterada' ORDER BY id DESC LIMIT 1", (nome, tarefa['implantacao_id']), one=True)
         if log_tarefa: log_tarefa['data_criacao'] = format_date_iso_for_json(log_tarefa.get('data_criacao'))
-
-        return jsonify({
-            'ok': True,
-            'novo_status': 1 if novo_status_bool else 0,
-            'implantacao_finalizada': finalizada,
-            'novo_progresso': novo_prog,
-            'log_tarefa': log_tarefa,
-            'log_finalizacao': log_finalizacao
-        })
-    except Exception as e:
-        print(f"ERRO ao alternar tarefa ID {tarefa_id}: {e}")
-        return jsonify({'ok': False, 'error': f"Erro interno do servidor: {e}"}), 500
+        return jsonify({'ok': True, 'novo_status': 1 if novo_status_bool else 0, 'implantacao_finalizada': finalizada, 'novo_progresso': novo_prog, 'log_tarefa': log_tarefa, 'log_finalizacao': log_finalizacao})
+    except Exception as e: print(f"ERRO ao alternar tarefa ID {tarefa_id}: {e}"); return jsonify({'ok': False, 'error': f"Erro interno do servidor: {e}"}), 500
 
 @app.route('/adicionar_comentario/<int:tarefa_id>', methods=['POST'])
 @login_required
 def adicionar_comentario(tarefa_id):
-    usuario_cs_email = g.user_email
-    texto = request.form.get('comentario', '')[:8000].strip()
-    img_url = None
-
+    usuario_cs_email = g.user_email; texto = request.form.get('comentario', '')[:8000].strip(); img_url = None
     if 'imagem' in request.files:
         file = request.files.get('imagem')
         if file and file.filename and allowed_file(file.filename):
             try:
-                filename = secure_filename(file.filename)
-                nome_base, extensao = os.path.splitext(filename)
-                nome_unico = f"{nome_base}_task{tarefa_id}_{int(datetime.now().timestamp())}{extensao}"
-
+                filename = secure_filename(file.filename); nome_base, extensao = os.path.splitext(filename); nome_unico = f"{nome_base}_task{tarefa_id}_{int(datetime.now().timestamp())}{extensao}"
                 tarefa_info_temp = query_db("SELECT implantacao_id FROM tarefas WHERE id = %s", (tarefa_id,), one=True)
                 if not tarefa_info_temp: raise Exception("Tarefa não encontrada para upload.")
-                impl_id_temp = tarefa_info_temp.get('implantacao_id')
-                
-                blob_path = f"comentarios/impl_{impl_id_temp}/tarefa_{tarefa_id}/{nome_unico}"
-                print(f"SUCESSO (Simulado): Upload para {blob_path}. URL pública seria: /placeholder/{nome_unico}")
-                img_url = f"/placeholder/{nome_unico}"
-            except Exception as e:
-                return jsonify({'ok': False, 'error': f'Falha no upload da imagem: {e}'}), 500
-        elif file and file.filename and not allowed_file(file.filename):
-             return jsonify({'ok': False, 'error': 'Tipo de arquivo de imagem não permitido.'}), 400
-
-    if not texto and not img_url:
-        return jsonify({'ok': False, 'error': 'Comentário vazio.'}), 400
-
+                try: local_path = os.path.join(app.config['UPLOAD_FOLDER'], nome_unico); file.save(local_path); img_url = url_for('uploaded_file', filename=nome_unico); print(f"SUCESSO (Upload Local): Salvo em {local_path}. URL: {img_url}")
+                except Exception as upload_err: print(f"AVISO: Falha no salvamento local do upload: {upload_err}"); img_url = f"/placeholder/upload_falhou/{nome_unico}"
+            except Exception as e: return jsonify({'ok': False, 'error': f'Falha no upload da imagem: {e}'}), 500
+        elif file and file.filename and not allowed_file(file.filename): return jsonify({'ok': False, 'error': 'Tipo de arquivo de imagem não permitido.'}), 400
+    if not texto and not img_url: return jsonify({'ok': False, 'error': 'Comentário vazio.'}), 400
     try:
         tarefa = query_db("SELECT i.usuario_cs, i.id as implantacao_id, t.tarefa_filho FROM tarefas t JOIN implantacoes i ON t.implantacao_id = i.id WHERE t.id = %s", (tarefa_id,), one=True)
-        if not tarefa or tarefa.get('usuario_cs') != usuario_cs_email:
-            return jsonify({'ok': False, 'error': 'forbidden'}), 403
-
-        agora = datetime.now()
-        novo_id = execute_db(
-            "INSERT INTO comentarios (tarefa_id, usuario_cs, texto, data_criacao, imagem_url) VALUES (%s, %s, %s, %s, %s)",
-            (tarefa_id, usuario_cs_email, texto, agora, img_url)
-        )
+        if not tarefa or tarefa.get('usuario_cs') != usuario_cs_email: return jsonify({'ok': False, 'error': 'forbidden'}), 403
+        agora = datetime.now(); novo_id = execute_db("INSERT INTO comentarios (tarefa_id, usuario_cs, texto, data_criacao, imagem_url) VALUES (%s, %s, %s, %s, %s)", (tarefa_id, usuario_cs_email, texto, agora, img_url))
         if not novo_id: raise Exception("Falha ao obter ID do novo comentário.")
-
         detalhe = f"Novo comentário em '{tarefa['tarefa_filho']}':\n{texto}" if texto else f"Nova imagem adicionada em '{tarefa['tarefa_filho']}'."
-        if texto and img_url: detalhe = f"Novo comentário em '{tarefa['tarefa_filho']}':\n{texto}\n[Imagem Anexada]"
-        logar_timeline(tarefa['implantacao_id'], usuario_cs_email, 'novo_comentario', detalhe)
-
-        perfil = query_db("SELECT nome FROM perfil_usuario WHERE usuario = %s", (usuario_cs_email,), one=True)
-        nome = perfil.get('nome') if perfil else usuario_cs_email
-        log_com = query_db("SELECT *, %s as usuario_nome FROM timeline_log WHERE implantacao_id = %s AND tipo_evento = 'novo_comentario' ORDER BY id DESC LIMIT 1", (nome, tarefa['implantacao_id']), one=True)
-        data_criacao_str = format_date_iso_for_json(agora)
+        if texto and img_url: detalhe = f"Novo comentário em '{tarefa['tarefa_filho']}':\n{texto}\n[Imagem Anexada]"; logar_timeline(tarefa['implantacao_id'], usuario_cs_email, 'novo_comentario', detalhe)
+        nome = g.perfil.get('nome', usuario_cs_email); log_com = query_db("SELECT *, %s as usuario_nome FROM timeline_log WHERE implantacao_id = %s AND tipo_evento = 'novo_comentario' ORDER BY id DESC LIMIT 1", (nome, tarefa['implantacao_id']), one=True)
+        data_criacao_str = format_date_iso_for_json(agora);
         if log_com: log_com['data_criacao'] = format_date_iso_for_json(log_com.get('data_criacao'))
-
-        return jsonify({
-            'ok': True,
-            'comentario': {'id': novo_id, 'tarefa_id': tarefa_id, 'usuario_cs': usuario_cs_email, 'usuario_nome': nome, 'texto': texto, 'imagem_url': img_url, 'data_criacao': data_criacao_str},
-            'log_comentario': log_com
-        })
-    except Exception as e:
-        print(f"ERRO ao salvar comentário na tarefa {tarefa_id}: {e}")
-        return jsonify({'ok': False, 'error': f"Erro interno do servidor ao salvar comentário: {e}"}), 500
+        return jsonify({'ok': True, 'comentario': {'id': novo_id, 'tarefa_id': tarefa_id, 'usuario_cs': usuario_cs_email, 'usuario_nome': nome, 'texto': texto, 'imagem_url': img_url, 'data_criacao': data_criacao_str}, 'log_comentario': log_com})
+    except Exception as e: print(f"ERRO ao salvar comentário na tarefa {tarefa_id}: {e}"); return jsonify({'ok': False, 'error': f"Erro interno do servidor ao salvar comentário: {e}"}), 500
 
 @app.route('/excluir_comentario/<int:comentario_id>', methods=['POST'])
 @login_required
 def excluir_comentario(comentario_id):
     usuario_cs_email = g.user_email
     try:
-        comentario = query_db("""
-            SELECT c.*, i.id as impl_id, t.tarefa_filho
-            FROM comentarios c
-            JOIN tarefas t ON c.tarefa_id = t.id
-            JOIN implantacoes i ON t.implantacao_id = i.id
-            WHERE c.id = %s
-        """, (comentario_id,), one=True)
-
-        if not comentario or comentario.get('usuario_cs') != usuario_cs_email:
-             return jsonify({'ok': False, 'error': 'forbidden'}), 403
-
+        comentario = query_db(""" SELECT c.*, i.id as impl_id, t.tarefa_filho FROM comentarios c JOIN tarefas t ON c.tarefa_id = t.id JOIN implantacoes i ON t.implantacao_id = i.id WHERE c.id = %s """, (comentario_id,), one=True)
+        if not comentario or comentario.get('usuario_cs') != usuario_cs_email: return jsonify({'ok': False, 'error': 'forbidden'}), 403
         if comentario.get('imagem_url'):
-             print(f"Lembrete: Implementar exclusão do Storage para URL: {comentario.get('imagem_url')}")
-        
-        execute_db("DELETE FROM comentarios WHERE id = %s", (comentario_id,))
-        
-        logar_timeline(comentario['impl_id'], usuario_cs_email, 'comentario_excluido', f"Comentário em '{comentario['tarefa_filho']}' excluído.")
-
-        perfil = query_db("SELECT nome FROM perfil_usuario WHERE usuario = %s", (usuario_cs_email,), one=True)
-        nome = perfil.get('nome') if perfil else usuario_cs_email
-        log_exclusao = query_db("SELECT *, %s as usuario_nome FROM timeline_log WHERE implantacao_id = %s AND tipo_evento = 'comentario_excluido' ORDER BY id DESC LIMIT 1", (nome, comentario['impl_id']), one=True)
+            print(f"Lembrete: Implementar exclusão do Storage para URL: {comentario.get('imagem_url')}")
+            # --- CORREÇÃO DE SINTAXE E INDENTAÇÃO APLICADA AQUI ---
+            try:
+                filename = comentario['imagem_url'].split('/')[-1]
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                    print(f"Arquivo local de comentário removido: {file_path}")
+            except Exception as e:
+                print(f"Aviso: Falha ao excluir arquivo local de comentário. {e}")
+            # --- FIM DA CORREÇÃO ---
+        execute_db("DELETE FROM comentarios WHERE id = %s", (comentario_id,)); logar_timeline(comentario['impl_id'], usuario_cs_email, 'comentario_excluido', f"Comentário em '{comentario['tarefa_filho']}' excluído.")
+        nome = g.perfil.get('nome', usuario_cs_email); log_exclusao = query_db("SELECT *, %s as usuario_nome FROM timeline_log WHERE implantacao_id = %s AND tipo_evento = 'comentario_excluido' ORDER BY id DESC LIMIT 1", (nome, comentario['impl_id']), one=True)
         if log_exclusao: log_exclusao['data_criacao'] = format_date_iso_for_json(log_exclusao.get('data_criacao'))
-        
         return jsonify({'ok': True, 'log_exclusao': log_exclusao, 'tarefa_id': comentario['tarefa_id']})
-    except Exception as e:
-        print(f"ERRO ao excluir comentário ID {comentario_id}: {e}")
-        return jsonify({'ok': False, 'error': f"Erro interno do servidor: {e}"}), 500
+    except Exception as e: print(f"ERRO ao excluir comentário ID {comentario_id}: {e}"); return jsonify({'ok': False, 'error': f"Erro interno do servidor: {e}"}), 500
 
-# =================== BLOC ALVO DA ALTERAÇÃO (NOVA ROTA) ===================
 @app.route('/adicionar_tarefa', methods=['POST'])
 @login_required
 def adicionar_tarefa():
-    usuario_cs_email = g.user_email
-    implantacao_id = request.form.get('implantacao_id')
-    tarefa_filho = request.form.get('tarefa_filho', '').strip()
-    tarefa_pai = request.form.get('tarefa_pai', '').strip()
-    tag = request.form.get('tag', '').strip()
-
-    if not all([implantacao_id, tarefa_filho, tarefa_pai]):
-        flash('Dados incompletos para adicionar tarefa.', 'error')
-        return redirect(request.referrer or url_for('dashboard'))
-
+    usuario_cs_email = g.user_email; implantacao_id = request.form.get('implantacao_id'); tarefa_filho = request.form.get('tarefa_filho', '').strip(); tarefa_pai = request.form.get('tarefa_pai', '').strip(); tag = request.form.get('tag', '').strip()
+    if not all([implantacao_id, tarefa_filho, tarefa_pai]): flash('Dados incompletos para adicionar tarefa.', 'error'); return redirect(request.referrer or url_for('ver_implantacao', impl_id=implantacao_id))
     try:
         impl = query_db("SELECT id, nome_empresa, status FROM implantacoes WHERE id = %s AND usuario_cs = %s", (implantacao_id, usuario_cs_email), one=True)
-        if not impl:
-            flash('Permissão negada ou implantação não encontrada.', 'error')
-            return redirect(url_for('dashboard'))
-            
-        if impl.get('status') == 'finalizada':
-            flash('Não é possível adicionar tarefas a implantações finalizadas.', 'warning')
-            return redirect(url_for('ver_implantacao', impl_id=implantacao_id))
-
-        # Pega a próxima ordem para a nova tarefa
-        max_ordem = query_db("SELECT MAX(ordem) as max_o FROM tarefas WHERE implantacao_id = %s AND tarefa_pai = %s", (implantacao_id, tarefa_pai), one=True)
-        nova_ordem = (max_ordem.get('max_o') or 0) + 1
-
-        execute_db(
-            "INSERT INTO tarefas (implantacao_id, tarefa_pai, tarefa_filho, tag, ordem, concluida) VALUES (%s, %s, %s, %s, %s, %s)",
-            (implantacao_id, tarefa_pai, tarefa_filho, tag, nova_ordem, 0)
-        )
-        
-        logar_timeline(implantacao_id, usuario_cs_email, 'tarefa_adicionada', f"Nova tarefa '{tarefa_filho}' adicionada ao módulo '{tarefa_pai}'.")
-        flash('Nova tarefa adicionada com sucesso!', 'success')
-
-    except Exception as e:
-        print(f"Erro ao adicionar tarefa na implantação ID {implantacao_id}: {e}")
-        flash(f'Erro ao adicionar tarefa: {e}', 'error')
-    
+        if not impl: flash('Permissão negada ou implantação não encontrada.', 'error'); return redirect(url_for('dashboard'))
+        if impl.get('status') == 'finalizada': flash('Não é possível adicionar tarefas a implantações finalizadas.', 'warning'); return redirect(url_for('ver_implantacao', impl_id=implantacao_id))
+        max_ordem = query_db("SELECT MAX(ordem) as max_o FROM tarefas WHERE implantacao_id = %s AND tarefa_pai = %s", (implantacao_id, tarefa_pai), one=True); nova_ordem = (max_ordem.get('max_o') or 0) + 1
+        execute_db("INSERT INTO tarefas (implantacao_id, tarefa_pai, tarefa_filho, tag, ordem, concluida) VALUES (%s, %s, %s, %s, %s, %s)", (implantacao_id, tarefa_pai, tarefa_filho, tag, nova_ordem, 0))
+        logar_timeline(implantacao_id, usuario_cs_email, 'tarefa_adicionada', f"Nova tarefa '{tarefa_filho}' adicionada ao módulo '{tarefa_pai}'."); flash('Nova tarefa adicionada com sucesso!', 'success')
+    except Exception as e: print(f"Erro ao adicionar tarefa na implantação ID {implantacao_id}: {e}"); flash(f'Erro ao adicionar tarefa: {e}', 'error')
     return redirect(url_for('ver_implantacao', impl_id=implantacao_id))
-# ========================================================================
 
 @app.route('/excluir_tarefa/<int:tarefa_id>', methods=['POST'])
 @login_required
 def excluir_tarefa(tarefa_id):
     usuario_cs_email = g.user_email
     try:
-        tarefa = query_db("""
-            SELECT t.tarefa_filho, i.id as impl_id, i.usuario_cs, i.status
-            FROM tarefas t JOIN implantacoes i ON t.implantacao_id = i.id
-            WHERE t.id = %s
-        """, (tarefa_id,), one=True)
-
-        if not tarefa or tarefa.get('usuario_cs') != usuario_cs_email:
-            return jsonify({'ok': False, 'error': 'forbidden'}), 403
-
-        impl_id = tarefa['impl_id']
-        nome_tarefa = tarefa['tarefa_filho']
-        
-        if tarefa.get('status') in ['finalizada']:
-             return jsonify({'ok': False, 'error': 'Não é possível excluir tarefas em implantações finalizadas.'}), 400
-
-        execute_db("DELETE FROM tarefas WHERE id = %s", (tarefa_id,))
-        
-        logar_timeline(impl_id, usuario_cs_email, 'tarefa_excluida', f"Tarefa '{nome_tarefa}' excluída permanentemente.")
-
-        finalizada, log_finalizacao = auto_finalizar_implantacao(impl_id, usuario_cs_email)
-
-        novo_prog, _, _ = _get_progress(impl_id)
-
-        perfil = query_db("SELECT nome FROM perfil_usuario WHERE usuario = %s", (usuario_cs_email,), one=True)
-        nome = perfil.get('nome') if perfil else usuario_cs_email
-        log_exclusao = query_db("SELECT *, %s as usuario_nome FROM timeline_log WHERE implantacao_id = %s AND tipo_evento = 'tarefa_excluida' ORDER BY id DESC LIMIT 1", (nome, impl_id), one=True)
+        tarefa = query_db(""" SELECT t.tarefa_filho, i.id as impl_id, i.usuario_cs, i.status FROM tarefas t JOIN implantacoes i ON t.implantacao_id = i.id WHERE t.id = %s """, (tarefa_id,), one=True)
+        if not tarefa or tarefa.get('usuario_cs') != usuario_cs_email: return jsonify({'ok': False, 'error': 'forbidden'}), 403
+        impl_id = tarefa['impl_id']; nome_tarefa = tarefa['tarefa_filho']
+        if tarefa.get('status') in ['finalizada']: return jsonify({'ok': False, 'error': 'Não é possível excluir tarefas em implantações finalizadas.'}), 400
+        execute_db("DELETE FROM tarefas WHERE id = %s", (tarefa_id,)); logar_timeline(impl_id, usuario_cs_email, 'tarefa_excluida', f"Tarefa '{nome_tarefa}' excluída permanentemente.")
+        finalizada, log_finalizacao = auto_finalizar_implantacao(impl_id, usuario_cs_email); novo_prog, _, _ = _get_progress(impl_id)
+        nome = g.perfil.get('nome', usuario_cs_email); log_exclusao = query_db("SELECT *, %s as usuario_nome FROM timeline_log WHERE implantacao_id = %s AND tipo_evento = 'tarefa_excluida' ORDER BY id DESC LIMIT 1", (nome, impl_id), one=True)
         if log_exclusao: log_exclusao['data_criacao'] = format_date_iso_for_json(log_exclusao.get('data_criacao'))
-        
-        return jsonify({
-            'ok': True,
-            'log_exclusao': log_exclusao,
-            'novo_progresso': novo_prog,
-            'implantacao_finalizada': finalizada,
-            'log_finalizacao': log_finalizacao
-        })
-    except Exception as e:
-        print(f"ERRO ao excluir tarefa ID {tarefa_id}: {e}")
-        return jsonify({'ok': False, 'error': f"Erro interno do servidor: {e}"}), 500
+        return jsonify({'ok': True, 'log_exclusao': log_exclusao, 'novo_progresso': novo_prog, 'implantacao_finalizada': finalizada, 'log_finalizacao': log_finalizacao})
+    except Exception as e: print(f"ERRO ao excluir tarefa ID {tarefa_id}: {e}"); return jsonify({'ok': False, 'error': f"Erro interno do servidor: {e}"}), 500
 
 @app.route('/reordenar_tarefas', methods=['POST'])
 @login_required
 def reordenar_tarefas():
     usuario_cs_email = g.user_email
     try:
-        data = request.get_json()
-        impl_id = data.get('implantacao_id')
-        tarefa_pai = data.get('tarefa_pai')
-        nova_ordem_ids = data.get('ordem')
-
-        if not all([impl_id, tarefa_pai, isinstance(nova_ordem_ids, list)]):
-            return jsonify({'ok': False, 'error': 'Dados de reordenação incompletos.'}), 400
-
-        if not query_db("SELECT id FROM implantacoes WHERE id = %s AND usuario_cs = %s", (impl_id, usuario_cs_email), one=True):
-             return jsonify({'ok': False, 'error': 'forbidden'}), 403
-
-        for index, tarefa_id in enumerate(nova_ordem_ids, 1):
-            execute_db("UPDATE tarefas SET ordem = %s WHERE id = %s AND implantacao_id = %s AND tarefa_pai = %s", (index, tarefa_id, impl_id, tarefa_pai))
-
+        data = request.get_json(); impl_id = data.get('implantacao_id'); tarefa_pai = data.get('tarefa_pai'); nova_ordem_ids = data.get('ordem')
+        if not all([impl_id, tarefa_pai, isinstance(nova_ordem_ids, list)]): return jsonify({'ok': False, 'error': 'Dados de reordenação incompletos.'}), 400
+        if not query_db("SELECT id FROM implantacoes WHERE id = %s AND usuario_cs = %s", (impl_id, usuario_cs_email), one=True): return jsonify({'ok': False, 'error': 'forbidden'}), 403
+        for index, tarefa_id in enumerate(nova_ordem_ids, 1): execute_db("UPDATE tarefas SET ordem = %s WHERE id = %s AND implantacao_id = %s AND tarefa_pai = %s", (index, tarefa_id, impl_id, tarefa_pai))
         logar_timeline(impl_id, usuario_cs_email, 'tarefas_reordenadas', f"Ordem das tarefas no módulo '{tarefa_pai}' alterada.")
-
-        perfil = query_db("SELECT nome FROM perfil_usuario WHERE usuario = %s", (usuario_cs_email,), one=True)
-        nome = perfil.get('nome') if perfil else usuario_cs_email
-        log_reordenar = query_db("SELECT *, %s as usuario_nome FROM timeline_log WHERE implantacao_id = %s AND tipo_evento = 'tarefas_reordenadas' ORDER BY id DESC LIMIT 1", (nome, impl_id), one=True)
+        nome = g.perfil.get('nome', usuario_cs_email); log_reordenar = query_db("SELECT *, %s as usuario_nome FROM timeline_log WHERE implantacao_id = %s AND tipo_evento = 'tarefas_reordenadas' ORDER BY id DESC LIMIT 1", (nome, impl_id), one=True)
         if log_reordenar: log_reordenar['data_criacao'] = format_date_iso_for_json(log_reordenar.get('data_criacao'))
-        
         return jsonify({'ok': True, 'log_reordenar': log_reordenar})
-    except Exception as e:
-        print(f"ERRO ao reordenar tarefas: {e}")
-        return jsonify({'ok': False, 'error': f"Erro interno do servidor: {e}"}), 500
+    except Exception as e: print(f"ERRO ao reordenar tarefas: {e}"); return jsonify({'ok': False, 'error': f"Erro interno do servidor: {e}"}), 500
 
 # ----------------------------------------------------------------------
-# --- Bloco de Execução Principal (Mantido) ---
+# --- Bloco de Execução Principal ---
 # ----------------------------------------------------------------------
 
 if __name__ == '__main__':
@@ -1133,5 +711,5 @@ if __name__ == '__main__':
         init_db()
     except Exception as e:
         print(f"ERRO CRÍTICO durante inicialização do banco de dados local: {e}")
-    
+
     app.run(debug=True, host='127.0.0.1', port=5000)
