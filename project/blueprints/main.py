@@ -9,9 +9,10 @@ from botocore.exceptions import ClientError
 
 # Importações internas do projeto
 from ..blueprints.auth import login_required, permission_required 
-from ..db import query_db, execute_db, logar_timeline # <-- CORREÇÃO: logar_timeline importado de db
-from ..extensions import r2_client
-from ..services import get_dashboard_data, _create_default_tasks, _get_progress # logar_timeline removido daqui
+# logar_timeline importado de db, não services.
+from ..db import query_db, execute_db, logar_timeline 
+# CORREÇÃO CRÍTICA: Funções auxiliares mantidas aqui.
+from ..services import _get_progress
 from ..constants import (
     MODULO_OBRIGATORIO, MODULO_PENDENCIAS, TAREFAS_TREINAMENTO_PADRAO,
     JUSTIFICATIVAS_PARADA, CARGOS_RESPONSAVEL, PERFIS_COM_CRIACAO
@@ -32,10 +33,15 @@ def home():
 @main_bp.route('/dashboard')
 @login_required
 def dashboard():
+    # SOLUÇÃO PARA QUEBRAR O CICLO: Importar a função crítica aqui.
+    from ..services import get_dashboard_data 
+    
     user_email = g.user_email
     user_info = g.user
     try:
+        # Chama a função após a importação interna
         dashboard_data, metrics = get_dashboard_data(user_email)
+        
         perfil_data = g.perfil if g.perfil else {}
         default_metrics = { 'nome': user_info.get('name', user_email), 'impl_andamento': 0, 'impl_finalizadas': 0, 'impl_paradas': 0, 'progresso_medio_carteira': 0, 'impl_andamento_total': 0, 'implantacoes_atrasadas': 0, 'implantacoes_futuras': 0 }
         final_metrics = {**default_metrics, **perfil_data, **metrics}
@@ -55,7 +61,7 @@ def ver_implantacao(impl_id):
             flash('Implantação não encontrada ou não pertence a você.', 'error')
             return redirect(url_for('main.dashboard'))
 
-        # *** CORREÇÃO APLICADA AQUI ***
+        # Formatação de datas
         implantacao['data_criacao_fmt_dt_hr'] = utils.format_date_br(implantacao.get('data_criacao'), True)
         implantacao['data_criacao_fmt_d'] = utils.format_date_br(implantacao.get('data_criacao'), False)
         implantacao['data_finalizacao_fmt_d'] = utils.format_date_br(implantacao.get('data_finalizacao'), False)
@@ -64,7 +70,6 @@ def ver_implantacao(impl_id):
         implantacao['data_criacao_iso'] = utils.format_date_iso_for_json(implantacao.get('data_criacao'), only_date=True)
         implantacao['data_inicio_producao_iso'] = utils.format_date_iso_for_json(implantacao.get('data_inicio_producao'), only_date=True)
         implantacao['data_final_implantacao_iso'] = utils.format_date_iso_for_json(implantacao.get('data_final_implantacao'), only_date=True)
-        # *** FIM DA CORREÇÃO ***
 
         progresso, _, _ = _get_progress(impl_id)
 
@@ -73,7 +78,7 @@ def ver_implantacao(impl_id):
 
         comentarios_por_tarefa = {}
         for c in comentarios_raw:
-            c_formatado = {**c, 'data_criacao_fmt_d': utils.format_date_br(c.get('data_criacao'))} # Usa utils.
+            c_formatado = {**c, 'data_criacao_fmt_d': utils.format_date_br(c.get('data_criacao'))} 
             comentarios_por_tarefa.setdefault(c['tarefa_id'], []).append(c_formatado)
 
         tarefas_agrupadas_treinamento = OrderedDict()
@@ -99,7 +104,7 @@ def ver_implantacao(impl_id):
 
         logs_timeline = query_db( """ SELECT tl.*, COALESCE(p.nome, tl.usuario_cs) as usuario_nome FROM timeline_log tl LEFT JOIN perfil_usuario p ON tl.usuario_cs = p.usuario WHERE tl.implantacao_id = %s ORDER BY tl.data_criacao DESC """, (impl_id,) )
         for log in logs_timeline:
-            log['data_criacao_fmt_dt_hr'] = utils.format_date_br(log.get('data_criacao'), True) # Usa utils.
+            log['data_criacao_fmt_dt_hr'] = utils.format_date_br(log.get('data_criacao'), True) 
 
         nome_usuario_logado = g.perfil.get('nome', usuario_cs_email)
 
@@ -112,8 +117,11 @@ def ver_implantacao(impl_id):
 # --- Rotas de Ação (POST de Formulários) ---
 @main_bp.route('/criar_implantacao', methods=['POST'])
 @login_required
-@permission_required(PERFIS_COM_CRIACAO) # NOVO: Restrição de permissão aplicada aqui
+@permission_required(PERFIS_COM_CRIACAO) # Restrição de permissão aplicada aqui
 def criar_implantacao():
+    # SOLUÇÃO PARA QUEBRAR O CICLO: Importar a função crítica aqui.
+    from ..services import _create_default_tasks
+    
     usuario_cs_email = g.user_email
     nome_empresa = request.form.get('nome_empresa', '').strip()
     tipo = request.form.get('tipo', 'agora')
@@ -132,7 +140,7 @@ def criar_implantacao():
             raise Exception("Falha ao obter ID da nova implantação.")
 
         logar_timeline(implantacao_id, usuario_cs_email, 'implantacao_criada', f'Implantação "{nome_empresa}" ({tipo.capitalize()}) criada.')
-        tasks_added = _create_default_tasks(implantacao_id)
+        tasks_added = _create_default_tasks(implantacao_id) # Chama a função após importação interna
         flash(f'Implantação "{nome_empresa}" criada com {tasks_added} tarefas padrão.', 'success')
         return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
 
@@ -335,6 +343,8 @@ def excluir_implantacao():
         flash('Permissão negada.', 'error')
         return redirect(url_for('main.dashboard'))
 
+    # Importa r2_client aqui, para evitar ciclo se chamado no topo
+    from ..extensions import r2_client
     if not r2_client:
         flash("Erro: Serviço de armazenamento R2 não configurado. Não é possível excluir as imagens associadas.", "error")
         return redirect(request.referrer or url_for('main.dashboard'))
@@ -376,7 +386,7 @@ def excluir_implantacao():
 
     return redirect(url_for('main.dashboard'))
 
-# Rota para adicionar tarefa (movida da API, pois usa redirect)
+# Rota para adicionar tarefa (Pendências)
 @main_bp.route('/adicionar_tarefa', methods=['POST'])
 @login_required
 def adicionar_tarefa():
@@ -385,11 +395,15 @@ def adicionar_tarefa():
     tarefa_filho = request.form.get('tarefa_filho', '').strip()
     tarefa_pai = request.form.get('tarefa_pai', '').strip()
     tag = request.form.get('tag', '').strip()
-    dest_url = url_for('main.ver_implantacao', impl_id=implantacao_id)
+    
+    # --- CORREÇÃO: Adiciona a âncora para a aba de pendências ---
+    dest_url = url_for('main.ver_implantacao', impl_id=implantacao_id, _anchor='pendencias-tab') 
+    # -----------------------------------------------------------
 
     if not all([implantacao_id, tarefa_filho, tarefa_pai]):
         flash('Dados inválidos para adicionar tarefa (ID, Nome, Módulo).', 'error')
-        return redirect(request.referrer or dest_url)
+        # Redireciona de volta para a mesma página, mantendo a aba se possível
+        return redirect(request.referrer or dest_url) 
 
     try:
         impl = query_db(
@@ -402,7 +416,7 @@ def adicionar_tarefa():
 
         if impl.get('status') == 'finalizada':
             flash('Não é possível adicionar tarefas a implantações finalizadas.', 'warning')
-            return redirect(dest_url)
+            return redirect(dest_url) # Redireciona para a aba certa
 
         # Determina a próxima ordem
         max_ordem = query_db(
@@ -422,4 +436,4 @@ def adicionar_tarefa():
         print(f"Erro ao adicionar tarefa para implantação ID {implantacao_id}: {e}")
         flash(f'Erro ao adicionar tarefa: {e}', 'error')
 
-    return redirect(dest_url)
+    return redirect(dest_url) # Redireciona para a aba de pendências

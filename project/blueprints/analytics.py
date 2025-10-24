@@ -20,16 +20,20 @@ def analytics_dashboard():
     # Captura parâmetros de filtro
     cs_email = request.args.get('cs_email', None)
     status_filter = request.args.get('status_filter', 'todas')
+    start_date = request.args.get('start_date') or None
+    end_date = request.args.get('end_date') or None
     
     # Se o usuário não for gerencial, ele só pode ver os próprios dados
-    # Esta é uma checagem redundante, mas útil para fins de filtro e debug.
     if user_perfil not in PERFIS_COM_GESTAO:
         cs_email = g.user_email
     
     try:
         global_metrics, cs_metrics_list = get_analytics_data(
             target_cs_email=cs_email, 
-            target_status=status_filter
+            target_status=status_filter,
+            start_date=start_date,
+            end_date=end_date,
+            target_tag=None # Tag filter é tratado no frontend agora
         )
         
         all_cs = get_all_customer_success()
@@ -55,6 +59,8 @@ def analytics_dashboard():
             status_options=status_options,
             current_cs_email=cs_email,
             current_status_filter=status_filter,
+            current_start_date=start_date,
+            current_end_date=end_date,
             user_info=g.user,
             user_perfil=user_perfil,
             justificativas_parada=JUSTIFICATIVAS_PARADA

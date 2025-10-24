@@ -11,7 +11,7 @@ from ..blueprints.auth import login_required
 from ..db import execute_db, query_db
 from ..extensions import r2_client
 from ..utils import allowed_file
-from ..constants import CARGOS_LIST 
+from ..constants import CARGOS_LIST, PERFIL_COLABORADOR # Importa PERFIL_COLABORADOR
 
 profile_bp = Blueprint('profile', __name__)
 
@@ -19,6 +19,7 @@ profile_bp = Blueprint('profile', __name__)
 @login_required
 def perfil():
     usuario_cs_email = g.user_email
+    current_perfil = g.perfil # Perfil carregado pelo @login_required
 
     if request.method == 'POST':
         # Verifica se o R2 está configurado antes de tentar o upload
@@ -27,14 +28,23 @@ def perfil():
             return redirect(url_for('profile.perfil'))
             
         try:
-            nome = request.form.get('nome', '').strip()
-            cargo = request.form.get('cargo', '').strip()
+            # Pega os dados do formulário
+            form_nome = request.form.get('nome', '').strip()
+            form_cargo = request.form.get('cargo', '').strip()
             
-            # Garante que o cargo é válido (Júnior, Pleno, Sênior, etc.) ou NULL
-            cargo_to_save = cargo if cargo in CARGOS_LIST else None
+            # --- Lógica de Restrição ---
+            is_colaborador = current_perfil.get('perfil_acesso') == PERFIL_COLABORADOR
             
-            perfil_atual = g.perfil
-            foto_url_atual = perfil_atual.get('foto_url')
+            # Define os valores a serem salvos
+            nome_to_save = current_perfil.get('nome') if is_colaborador else form_nome
+            
+            # Cargo só é salvo se não for colaborador e se for válido
+            cargo_to_save = current_perfil.get('cargo') # Mantém o atual por padrão
+            if not is_colaborador:
+                cargo_to_save = form_cargo if form_cargo in CARGOS_LIST else None
+            # --------------------------
+            
+            foto_url_atual = current_perfil.get('foto_url')
 
             # --- Lógica de Upload para R2 (original) ---
             if 'foto_perfil' in request.files:
@@ -82,16 +92,20 @@ def perfil():
                         print(f"ERRO upload R2: {e_upload}")
                         flash("Erro ao fazer upload da nova foto.", "error")
 
-            # Atualiza o banco de dados (SOMENTE nome, cargo e foto_url. Não altera perfil_acesso)
+            # Atualiza o banco de dados com os valores corretos (respeitando a restrição)
             execute_db(
                 """
                 UPDATE perfil_usuario 
                 SET nome = %s, cargo = %s, foto_url = %s 
                 WHERE usuario = %s
                 """,
-                (nome, cargo_to_save, foto_url_atual, usuario_cs_email)
+                (nome_to_save, cargo_to_save, foto_url_atual, usuario_cs_email)
             )
-            flash('Perfil atualizado com sucesso!', 'success')
+            
+            if is_colaborador and (form_nome != nome_to_save or form_cargo != cargo_to_save):
+                 flash('Perfil atualizado. Nome e Cargo não podem ser alterados pelo perfil Colaborador.', 'warning')
+            else:
+                 flash('Perfil atualizado com sucesso!', 'success')
             
             # Recarrega o perfil para refletir a mudança no request atual
             g.perfil = query_db("SELECT * FROM perfil_usuario WHERE usuario = %s", (usuario_cs_email,), one=True)
@@ -104,4 +118,4 @@ def perfil():
             return redirect(url_for('profile.perfil'))
 
     # Método GET
-    return render_template('perfil.html', user_info=g.user, perfil=g.perfil, cargos_list=CARGOS_LIST)
+    return render_template('perfil.html', user_info=g.user, perfil=current_perfil, cargos_list=CARGOS_LIST)

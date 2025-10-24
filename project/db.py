@@ -181,9 +181,18 @@ def init_db():
             tarefa_filho TEXT NOT NULL,
             concluida {boolean_type} DEFAULT FALSE,
             ordem INTEGER DEFAULT 0,
-            tag VARCHAR(100) DEFAULT ''
+            tag VARCHAR(100) DEFAULT '',
+            data_conclusao {timestamp_type} DEFAULT NULL -- NOVO CAMPO
         )
     """)
+    
+    # Adiciona a nova coluna caso a tabela já exista sem ela
+    try:
+        cur.execute("SELECT data_conclusao FROM tarefas LIMIT 1")
+    except Exception:
+        print("Adicionando coluna 'data_conclusao' à tabela 'tarefas'...")
+        cur.execute(f"ALTER TABLE tarefas ADD COLUMN data_conclusao {timestamp_type} DEFAULT NULL")
+    
     cur.execute(f"""
         CREATE TABLE IF NOT EXISTS comentarios (
             id {pk_type},

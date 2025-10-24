@@ -25,6 +25,11 @@
     .list-group-flush .list-group-item:last-child { border-bottom-width: 0; }
     /* Adiciona estilo para feedback de salvamento/carregamento nos botões */
     .btn .spinner-border-sm { vertical-align: text-bottom; }
+    /* Estilo para o botão Marcar Todas */
+    .btn-marcar-todas {
+        font-size: 0.8rem;
+        padding: 0.2rem 0.5rem;
+    }
 </style>
 {% endblock %}
 
@@ -55,10 +60,6 @@
                     <li><a class="dropdown-item text-primary" href="#" data-bs-toggle="modal" data-bs-target="#modalGerenciarUsuarios">
                         <i class="bi bi-people-fill me-2"></i> Usuários
                     </a></li>
-                {% endif %}
-
-                {# NOVO: Adiciona link para Analytics, também protegido #}
-                {% if g.perfil and g.perfil.perfil_acesso in ['Administrador', 'Gerente', 'Coordenador'] %}
                     <li><a class="dropdown-item text-info" href="{{ url_for('analytics.analytics_dashboard') }}">
                         <i class="bi bi-graph-up me-2"></i> Analytics Gerencial
                     </a></li>
@@ -160,7 +161,6 @@
             </ul>
 
             {# Botão Sair #}
-            {# ATUALIZADO: url_for('auth.logout') #}
             <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-secondary mt-auto w-100"> <i class="bi bi-box-arrow-right me-2"></i> Sair </a>
         </div>
     </div>
@@ -242,7 +242,15 @@
                     <div class="card metric-card mb-4 shadow-sm">
                         <div class="card-header header-bg d-flex justify-content-between align-items-center" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#collapse-trein-{{ loop.index }}" aria-expanded="false">
                             <h5 class="mb-0 fs-6">{{ modulo }}</h5>
-                            <i class="bi bi-chevron-down"></i>
+                            <div>
+                                <button class="btn btn-outline-success btn-marcar-todas me-2" 
+                                        type="button" 
+                                        onclick="window.marcarTodasDoModulo(this, 'collapse-trein-{{ loop.index }}')"
+                                        title="Marcar todas as tarefas deste módulo como concluídas">
+                                    <i class="bi bi-check-all"></i> Marcar Todas
+                                </button>
+                                <i class="bi bi-chevron-down"></i>
+                            </div>
                         </div>
                         <div id="collapse-trein-{{ loop.index }}" class="collapse" data-modulo="{{ modulo }}">
                             <ul class="list-group list-group-flush list-group-sortable" id="sortable-list-trein-{{ loop.index }}">
@@ -267,7 +275,6 @@
                                             <form onsubmit="return false;" class="comment-form mb-2">
                                                 <textarea id="comment-text-{{ tarefa.id }}-new" class="form-control form-control-sm" name="comentario" maxlength="8000" rows="2" placeholder="Adicionar comentário..."></textarea>
                                                 <input type="file" name="imagem" class="form-control form-control-sm my-1" accept="image/png, image/jpeg, image/gif">
-                                                {# ATUALIZADO: url_for('api.adicionar_comentario') #}
                                                 <button class="btn btn-outline-primary btn-sm px-2 py-1" type="button" onclick="window.adicionarComentario({{ tarefa.id }}, '{{ url_for('api.adicionar_comentario', tarefa_id=tarefa.id) }}', this)"> Salvar </button>
                                             </form>
                                             <div class="list-group list-group-flush border rounded-1" id="comment-list-{{ tarefa.id }}" style="max-height: 300px; overflow-y: auto;">
@@ -292,7 +299,6 @@
                                                         {% endif %}
                                                     </div>
                                                     {% if comentario.usuario_cs == email_usuario_logado %}
-                                                        {# ATUALIZADO: url_for('api.excluir_comentario') #}
                                                         <button class="btn btn-sm btn-link text-danger p-0 small mt-1" onclick="window.excluirComentario({{ comentario.id }}, '{{ url_for('api.excluir_comentario', comentario_id=comentario.id) }}', this)"> Excluir </button>
                                                     {% endif %}
                                                 </div>
@@ -313,9 +319,9 @@
                 </div>
             </div>
 
-
             {# --- Aba Checklist Obrigatório --- #}
             <div class="tab-pane fade" id="checklist-obrigatorio-content" role="tabpanel" aria-labelledby="checklist-obrigatorio-tab">
+                {# Conteúdo da aba Checklist Obrigatório (sem botão Marcar Todas) #}
                 <div id="checklist-area-obrigatorio" class="pt-4">
                     {% if not tarefas_agrupadas_obrigatorio %}
                         <div class="alert alert-light text-center small py-2" role="alert">Nenhuma tarefa obrigatória encontrada.</div>
@@ -349,7 +355,6 @@
                                             <form onsubmit="return false;" class="comment-form mb-2">
                                                 <textarea id="comment-text-{{ tarefa.id }}-new" class="form-control form-control-sm" name="comentario" maxlength="8000" rows="2" placeholder="Adicionar comentário..."></textarea>
                                                 <input type="file" name="imagem" class="form-control form-control-sm my-1" accept="image/png, image/jpeg, image/gif">
-                                                {# ATUALIZADO: url_for('api.adicionar_comentario') #}
                                                 <button class="btn btn-outline-primary btn-sm px-2 py-1" type="button" onclick="window.adicionarComentario({{ tarefa.id }}, '{{ url_for('api.adicionar_comentario', tarefa_id=tarefa.id) }}', this)"> Salvar </button>
                                             </form>
                                             <div class="list-group list-group-flush border rounded-1" id="comment-list-{{ tarefa.id }}" style="max-height: 300px; overflow-y: auto;">
@@ -374,7 +379,6 @@
                                                         {% endif %}
                                                     </div>
                                                     {% if comentario.usuario_cs == email_usuario_logado %}
-                                                        {# ATUALIZADO: url_for('api.excluir_comentario') #}
                                                         <button class="btn btn-sm btn-link text-danger p-0 small mt-1" onclick="window.excluirComentario({{ comentario.id }}, '{{ url_for('api.excluir_comentario', comentario_id=comentario.id) }}', this)"> Excluir </button>
                                                     {% endif %}
                                                 </div>
@@ -398,6 +402,7 @@
 
             {# --- Aba Pendências --- #}
             <div class="tab-pane fade" id="pendencias-content" role="tabpanel" aria-labelledby="pendencias-tab">
+                {# Conteúdo da aba Pendências (sem botão Marcar Todas) #}
                 <div id="checklist-area-pendencias" class="pt-4">
                     {# Formulário Rápido para Adicionar Pendência #}
                     <div class="card metric-card mb-4 shadow-sm">
@@ -405,7 +410,7 @@
                             <h5 class="mb-0 fs-6">Adicionar Nova Pendência</h5>
                         </div>
                         <div class="card-body">
-                             {# ATUALIZADO: Salva 'pendencias-tab' no localStorage ANTES do submit #}
+                             {# Salva 'pendencias-tab' no localStorage ANTES do submit #}
                             <form action="{{ url_for('main.adicionar_tarefa') }}" method="POST" class="row g-2 align-items-end"
                                   onsubmit="localStorage.setItem('tabAtiva-implantacao-{{ implantacao.id }}', 'pendencias-tab'); return true;">
                                 <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
@@ -454,7 +459,6 @@
                                             <form onsubmit="return false;" class="comment-form mb-2">
                                                 <textarea id="comment-text-{{ tarefa.id }}-new" class="form-control form-control-sm" name="comentario" maxlength="8000" rows="2" placeholder="Adicionar comentário..."></textarea>
                                                 <input type="file" name="imagem" class="form-control form-control-sm my-1" accept="image/png, image/jpeg, image/gif">
-                                                {# ATUALIZADO: url_for('api.adicionar_comentario') #}
                                                 <button class="btn btn-outline-primary btn-sm px-2 py-1" type="button" onclick="window.adicionarComentario({{ tarefa.id }}, '{{ url_for('api.adicionar_comentario', tarefa_id=tarefa.id) }}', this)"> Salvar </button>
                                             </form>
                                             <div class="list-group list-group-flush border rounded-1" id="comment-list-{{ tarefa.id }}" style="max-height: 300px; overflow-y: auto;">
@@ -479,7 +483,6 @@
                                                         {% endif %}
                                                     </div>
                                                     {% if comentario.usuario_cs == email_usuario_logado %}
-                                                        {# ATUALIZADO: url_for('api.excluir_comentario') #}
                                                         <button class="btn btn-sm btn-link text-danger p-0 small mt-1" onclick="window.excluirComentario({{ comentario.id }}, '{{ url_for('api.excluir_comentario', comentario_id=comentario.id) }}', this)"> Excluir </button>
                                                     {% endif %}
                                                 </div>
@@ -543,7 +546,6 @@
     <div class="modal-dialog">
         <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);">
             <div class="modal-header header-bg"><h5 class="modal-title" id="modalFinalizarLabel" style="color: var(--body-color);">Finalizar Implantação</h5><button type="button" class="btn-close btn-close-dark" data-bs-dismiss="modal" aria-label="Close"></button></div>
-            {# ATUALIZADO: url_for('main.finalizar_implantacao') #}
             <form action="{{ url_for('main.finalizar_implantacao') }}" method="POST">
                 <div class="modal-body">
                     <p>Tem certeza que deseja marcar esta implantação como "Finalizada"?</p>
@@ -565,7 +567,6 @@
     <div class="modal-dialog">
         <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);">
             <div class="modal-header header-bg"><h5 class="modal-title" id="modalPararLabel" style="color: var(--body-color);">Parar Implantação</h5><button type="button" class="btn-close btn-close-dark" data-bs-dismiss="modal" aria-label="Close"></button></div>
-            {# ATUALIZADO: url_for('main.parar_implantacao') #}
             <form action="{{ url_for('main.parar_implantacao') }}" method="POST">
                 <div class="modal-body">
                     <p>Tem certeza que deseja "Parar" esta implantação?</p>
@@ -594,7 +595,6 @@
     <div class="modal-dialog">
         <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);">
             <div class="modal-header header-bg"><h5 class="modal-title" id="modalRetomarLabel" style="color: var(--body-color);">Retomar Implantação</h5><button type="button" class="btn-close btn-close-dark" data-bs-dismiss="modal" aria-label="Close"></button></div>
-            {# ATUALIZADO: url_for('main.retomar_implantacao') #}
             <form action="{{ url_for('main.retomar_implantacao') }}" method="POST">
                 <div class="modal-body">
                     <p>Tem certeza que deseja "Retomar" esta implantação?</p>
@@ -615,7 +615,6 @@
     <div class="modal-dialog">
         <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);">
             <div class="modal-header header-bg"><h5 class="modal-title" id="adicionarTarefaModalLabel" style="color: var(--body-color);">Adicionar Nova Tarefa</h5><button type="button" class="btn-close btn-close-dark" data-bs-dismiss="modal" aria-label="Close"></button></div>
-            {# ATUALIZADO: url_for('main.adicionar_tarefa') #}
             <form action="{{ url_for('main.adicionar_tarefa') }}" method="POST">
                 <div class="modal-body">
                     <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
@@ -623,12 +622,11 @@
                         <label for="add-tarefa-filho-modal" class="form-label">Nome da Tarefa</label>
                         <input type="text" class="form-control" id="add-tarefa-filho-modal" name="tarefa_filho" required>
                     </div>
-                    {# Popula com todos os módulos #}
                     <div class="mb-3">
                         <label for="add-tarefa-pai-modal" class="form-label">Módulo (Agrupador)</label>
                         <select class="form-select" id="add-tarefa-pai-modal" name="tarefa_pai" required>
                             <option value="">Selecione um módulo existente...</option>
-                            {% for modulo in todos_modulos %} {# Usa a lista passada pelo app.py #}
+                            {% for modulo in todos_modulos %} 
                             <option value="{{ modulo }}">{{ modulo }}</option>
                             {% endfor %}
                             <option value="Outros">Outros (Novo Módulo)</option>
@@ -658,7 +656,6 @@
     <div class="modal-dialog">
         <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);">
             <div class="modal-header header-bg"><h5 class="modal-title text-danger" id="modalExcluirImplantacaoLabel" style="color: var(--body-color);">Excluir Implantação</h5><button type="button" class="btn-close btn-close-dark" data-bs-dismiss="modal" aria-label="Close"></button></div>
-            {# ATUALIZADO: url_for('main.excluir_implantacao') #}
             <form action="{{ url_for('main.excluir_implantacao') }}" method="POST">
                 <div class="modal-body">
                     <h5 class="text-danger">Atenção! Ação irreversível!</h5>
@@ -769,7 +766,6 @@
         const dataFormatada = formatDataComentario(comentario.data_criacao);
         let botaoExcluir = '';
         if (comentario.usuario_cs === emailUsuarioLogado) {
-            {# ATUALIZADO: url_for('api.excluir_comentario') #}
             const urlExcluir = `{{ url_for('api.excluir_comentario', comentario_id=0) }}`.replace('/0', `/${comentario.id}`);
             botaoExcluir = `
                 <button class="btn btn-sm btn-link text-danger p-0 small mt-1"
@@ -900,7 +896,6 @@
         const label = checkbox.closest('li').querySelector('label.form-check-label');
         const isChecked = checkbox.checked;
         checkbox.disabled = true;
-        {# ATUALIZADO: url_for('api.toggle_tarefa') e corrigido para usar replace() #}
         const endpointUrl = `{{ url_for('api.toggle_tarefa', tarefa_id=0) }}`.replace('/0', `/${tarefaId}`);
         fetch(endpointUrl, { method: 'POST' })
             .then(response => response.json())
@@ -939,7 +934,6 @@
         if (!confirm('Tem certeza que deseja excluir esta tarefa? Todos os comentários associados também serão removidos permanentemente.')) {
             return;
         }
-        {# ATUALIZADO: url_for('api.excluir_tarefa') #}
         const endpointUrl = `{{ url_for('api.excluir_tarefa', tarefa_id=0) }}`.replace('/0', `/${tarefaId}`);
         const originalBtnHTML = button.innerHTML;
         button.disabled = true;
@@ -958,7 +952,6 @@
                     if (data.implantacao_finalizada) {
                         adicionarLogNaTimeline(data.log_finalizacao);
                         alert('Implantação finalizada automaticamente após exclusão da tarefa.');
-                        // Poderia recarregar a página aqui também se desejado
                         // window.location.reload();
                     }
                 } else {
@@ -973,12 +966,80 @@
                 if (listItem) listItem.style.opacity = '1';
             });
     }
-
-
+    
+    // --- NOVO: Função para Marcar Todas ---
+    async function marcarTodasDoModulo(button, collapseId) {
+        const collapseElement = document.getElementById(collapseId);
+        if (!collapseElement) return;
+        
+        // Abre o collapse se estiver fechado
+        const bsCollapse = bootstrap.Collapse.getOrCreateInstance(collapseElement);
+        bsCollapse.show(); 
+        
+        const checkboxes = collapseElement.querySelectorAll('.task-checkbox:not(:checked)');
+        if (checkboxes.length === 0) {
+            alert('Todas as tarefas deste módulo já estão concluídas.');
+            return;
+        }
+        
+        if (!confirm(`Marcar ${checkboxes.length} tarefa(s) restante(s) deste módulo como concluída(s)?`)) {
+            return;
+        }
+        
+        const originalBtnHTML = button.innerHTML;
+        button.disabled = true;
+        button.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Marcando...`;
+        
+        let errors = [];
+        
+        // Itera e chama a API para cada tarefa não marcada
+        for (const checkbox of checkboxes) {
+            const tarefaId = parseInt(checkbox.closest('li').dataset.id);
+            if (isNaN(tarefaId)) continue;
+            
+            // Simula o clique (chama a função toggleTarefa que faz a API call)
+            // Usamos 'await' para esperar cada chamada terminar antes da próxima (evita sobrecarga)
+            try {
+                // Chama a função toggleTarefa e espera a Promise resolver
+                await new Promise((resolve, reject) => {
+                     // Adiciona um listener temporário ao checkbox para saber quando o toggleTarefa terminou
+                     const handler = (event) => {
+                         checkbox.removeEventListener('change', handler); // Remove o listener
+                         resolve();
+                     };
+                     checkbox.addEventListener('change', handler);
+                     // Chama a função global toggleTarefa
+                     window.toggleTarefa(tarefaId, checkbox); 
+                     // Garante que o checkbox seja marcado visualmente (caso o toggle falhe)
+                     checkbox.checked = true; 
+                     // Resolve a promise após um pequeno delay para garantir que a API foi chamada
+                     setTimeout(resolve, 50); // Ajuste o delay se necessário
+                });
+            } catch (error) {
+                 console.error(`Erro ao marcar tarefa ${tarefaId}:`, error);
+                 errors.push(tarefaId);
+                 // Desmarca visualmente se deu erro
+                 checkbox.checked = false; 
+                 const label = checkbox.closest('li').querySelector('label.form-check-label');
+                 if (label) label.classList.remove('text-decoration-line-through', 'text-success');
+            }
+        }
+        
+        button.innerHTML = originalBtnHTML;
+        button.disabled = false;
+        
+        if (errors.length > 0) {
+            alert(`Falha ao marcar ${errors.length} tarefa(s). Verifique o console para detalhes.`);
+        } else {
+             // Opcional: Mostrar um feedback de sucesso
+             // alert('Todas as tarefas do módulo foram marcadas como concluídas.');
+             // Recalcula o progresso geral (a função toggleTarefa já faz isso individualmente)
+        }
+    }
+    
     // --- Inicialização da Página ---
     document.addEventListener('DOMContentLoaded', function() {
         const implantacaoId = {{ implantacao.id }};
-        {# ATUALIZADO: url_for('api.reordenar_tarefas') #}
         const endpointReordenar = '{{ url_for("api.reordenar_tarefas") }}';
 
         // Torna as funções de ação globais
@@ -987,17 +1048,16 @@
         window.excluirComentario = excluirComentario;
         window.toggleComment = toggleComment;
         window.excluirTarefa = excluirTarefa;
+        window.marcarTodasDoModulo = marcarTodasDoModulo; // Nova função global
 
         // Inicializa SortableJS para TODAS as listas
         document.querySelectorAll('.list-group-sortable').forEach(listEl => {
-            const moduloContainer = listEl.closest('.collapse, .card'); // Pega collapse ou card pai
-            let modulo = moduloContainer?.dataset.modulo; // Tenta pegar do data attribute primeiro
-            // Fallback: Se não tiver data attribute (pode acontecer na aba Pendências), pega do header
+            const moduloContainer = listEl.closest('.collapse, .card'); 
+            let modulo = moduloContainer?.dataset.modulo; 
             if (!modulo && moduloContainer?.classList.contains('card')) {
                 const headerText = moduloContainer.querySelector('.card-header h5')?.textContent.trim();
                 if (headerText) modulo = headerText;
             }
-
             if (!modulo) { console.warn("Não foi possível encontrar o módulo para a lista:", listEl); return; }
 
             new Sortable(listEl, {
@@ -1012,50 +1072,74 @@
             });
         });
 
-        // Lógica para lembrar a aba ativa (Melhorada)
+        // --- CORREÇÃO FINAL: Lógica para ativar aba via URL Hash ou localStorage ---
         const tabSelector = '#detalhesTab .nav-link';
         const tabs = document.querySelectorAll(tabSelector);
         const tabStorageKey = `tabAtiva-implantacao-${implantacaoId}`;
 
-        // Salva a aba ativa QUANDO ela é mostrada
+        // Salva a aba ativa QUANDO ela é mostrada (exceto se for via hash ou default)
         tabs.forEach(tab => {
             tab.addEventListener('shown.bs.tab', event => {
-                localStorage.setItem(tabStorageKey, event.target.id);
+                const activatedByHash = window.location.hash.substring(1) === event.target.id;
+                const isDefaultTab = event.target.id === 'checklist-treinamentos-tab'; // Sua aba padrão
+
+                // Só salva se NÃO foi ativada pelo HASH
+                if (!activatedByHash) {
+                    localStorage.setItem(tabStorageKey, event.target.id);
+                }
+                // Limpa o hash APÓS a ativação (se veio de hash) para não ficar na URL
+                if (activatedByHash) {
+                    history.replaceState(null, document.title, window.location.pathname + window.location.search);
+                }
             });
         });
 
-        // Tenta restaurar a aba salva AO CARREGAR A PÁGINA
-        const abaAtivaId = localStorage.getItem(tabStorageKey);
+        let abaAtivaId = null;
         let abaRestaurada = false;
-        if (abaAtivaId) {
-            const tabEl = document.getElementById(abaAtivaId);
-            if (tabEl) {
-                try {
-                    // Usa o método show() do Bootstrap para ativar a aba e seu conteúdo
-                    new bootstrap.Tab(tabEl).show();
-                    abaRestaurada = true;
-                    console.log('Aba restaurada:', abaAtivaId);
-                } catch(e) {
-                    console.warn("Não foi possível restaurar aba salva:", e);
-                    localStorage.removeItem(tabStorageKey); // Limpa chave inválida
-                }
-            } else {
-                 localStorage.removeItem(tabStorageKey); // Limpa chave inválida
-            }
-        }
-        // Se nenhuma aba foi restaurada (primeira visita ou chave inválida), ativa a primeira
-        if (!abaRestaurada) {
-             const defaultTab = document.getElementById('checklist-treinamentos-tab');
-             if(defaultTab) {
-                 try { new bootstrap.Tab(defaultTab).show(); } catch(e) { console.error("Erro ao ativar aba padrão:", e); }
+
+        // 1. Tenta ativar pela Âncora da URL (ex: #pendencias-tab)
+        const urlHash = window.location.hash;
+        if (urlHash) {
+             abaAtivaId = urlHash.substring(1); // Remove o '#'
+             const tabEl = document.getElementById(abaAtivaId);
+             if (tabEl) {
+                 try {
+                     // Ativa imediatamente
+                     new bootstrap.Tab(tabEl).show();
+                     abaRestaurada = true;
+                     console.log('Aba ativada via URL:', abaAtivaId);
+                 } catch(e) { console.warn("Não foi possível ativar aba via URL:", e); }
+             } else {
+                 console.warn("Hash da URL não corresponde a nenhuma aba:", abaAtivaId);
+                 // Limpa hash inválido
+                 history.replaceState(null, document.title, window.location.pathname + window.location.search);
              }
         }
+
+        // 2. Se não ativou pela URL, tenta pelo localStorage
+        if (!abaRestaurada) {
+            abaAtivaId = localStorage.getItem(tabStorageKey);
+            if (abaAtivaId) {
+                const tabEl = document.getElementById(abaAtivaId);
+                if (tabEl) {
+                    try {
+                        new bootstrap.Tab(tabEl).show();
+                        abaRestaurada = true;
+                        console.log('Aba restaurada via localStorage:', abaAtivaId);
+                    } catch(e) { console.warn("Não foi possível restaurar aba salva:", e); localStorage.removeItem(tabStorageKey); }
+                } else { localStorage.removeItem(tabStorageKey); }
+            }
+        }
+        
+        // 3. Se nenhuma aba foi restaurada, ativa a primeira ("Checklist Treinamentos")
+        // Não precisa forçar a ativação da primeira, pois o Bootstrap já faz isso se nenhuma estiver 'active'.
+        // -------------------------------------------------------------------
 
         // Inicializa botões "Ver mais/menos"
          document.querySelectorAll('.comment-text').forEach(textEl => { const wrapper = textEl.closest('.comment-content-wrapper'); let button = wrapper ? wrapper.querySelector('button[onclick^="toggleComment"]') : null; const maxHeight = parseFloat(window.getComputedStyle(textEl).maxHeight); const isOverflowing = textEl.scrollHeight > maxHeight + 5; if (isOverflowing && !button) { const newButton = document.createElement('button'); newButton.className = 'btn btn-sm btn-link p-0 small'; newButton.textContent = 'Ver mais...'; newButton.onclick = function() { toggleComment(this, textEl.id); }; textEl.parentNode.insertBefore(newButton, textEl.nextSibling); } else if (!isOverflowing && button) { button.remove(); } else if (isOverflowing && button) { button.textContent = textEl.classList.contains('expanded') ? 'Ver menos...' : 'Ver mais...'; } });
 
         // Adiciona funcionalidade aos ícones de collapse
-        document.querySelectorAll('.card-header[data-bs-toggle="collapse"]').forEach(header => { const collapseId = header.getAttribute('data-bs-target'); const collapseElement = document.querySelector(collapseId); const icon = header.querySelector('i.bi'); if (collapseElement && icon) { collapseElement.addEventListener('show.bs.collapse', () => { icon.classList.remove('bi-chevron-down'); icon.classList.add('bi-chevron-up'); }); collapseElement.addEventListener('hide.bs.collapse', () => { icon.classList.remove('bi-chevron-up'); icon.classList.add('bi-chevron-down'); }); if (collapseElement.classList.contains('show')) { icon.classList.remove('bi-chevron-down'); icon.classList.add('bi-chevron-up'); } } });
+        document.querySelectorAll('.card-header[data-bs-toggle="collapse"]').forEach(header => { const collapseId = header.getAttribute('data-bs-target'); const collapseElement = document.querySelector(collapseId); const icon = header.querySelector('i.bi-chevron-down, i.bi-chevron-up'); if (collapseElement && icon) { collapseElement.addEventListener('show.bs.collapse', () => { icon.classList.remove('bi-chevron-down'); icon.classList.add('bi-chevron-up'); }); collapseElement.addEventListener('hide.bs.collapse', () => { icon.classList.remove('bi-chevron-up'); icon.classList.add('bi-chevron-down'); }); if (collapseElement.classList.contains('show')) { icon.classList.remove('bi-chevron-down'); icon.classList.add('bi-chevron-up'); } } });
 
     }); // Fim do DOMContentLoaded
 </script>

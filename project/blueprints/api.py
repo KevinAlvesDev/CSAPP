@@ -6,9 +6,11 @@ from werkzeug.utils import secure_filename
 from botocore.exceptions import ClientError, NoCredentialsError
 
 from ..blueprints.auth import login_required
-from ..db import query_db, execute_db
+# CORREÇÃO: logar_timeline agora vem do db.py
+from ..db import query_db, execute_db, logar_timeline 
 from ..extensions import r2_client
-from ..services import logar_timeline, auto_finalizar_implantacao, _get_progress
+# CORREÇÃO: logar_timeline removido dos imports do services
+from ..services import auto_finalizar_implantacao, _get_progress 
 from ..utils import allowed_file, format_date_iso_for_json
 
 api_bp = Blueprint('api', __name__, url_prefix='/api') # Prefixo /api
@@ -33,7 +35,13 @@ def toggle_tarefa(tarefa_id):
             return jsonify({'ok': False, 'error': f'Não é possível alterar tarefas de implantações com status "{tarefa.get("status")}".'}), 400
             
         novo_status_bool = not tarefa.get('concluida', False)
-        execute_db("UPDATE tarefas SET concluida = %s WHERE id = %s", (novo_status_bool, tarefa_id))
+        
+        # Salva data_conclusao
+        data_conclusao_val = datetime.now() if novo_status_bool else None
+        execute_db(
+            "UPDATE tarefas SET concluida = %s, data_conclusao = %s WHERE id = %s", 
+            (novo_status_bool, data_conclusao_val, tarefa_id)
+        )
         
         detalhe = f"Tarefa '{tarefa['tarefa_filho']}': {'Marcada como Concluída' if novo_status_bool else 'Marcada como Não Concluída'}."
         logar_timeline(tarefa['implantacao_id'], usuario_cs_email, 'tarefa_alterada', detalhe)
@@ -234,17 +242,6 @@ def excluir_comentario(comentario_id):
         print(f"ERRO ao excluir comentário ID {comentario_id}: {e}")
         return jsonify({'ok': False, 'error': f"Erro interno do servidor: {e}"}), 500
 
-@api_bp.route('/adicionar_tarefa', methods=['POST'])
-@login_required
-def adicionar_tarefa():
-    # Esta rota é chamada por um formulário HTML normal na aba "Pendências",
-    # mas também pelo modal "Adicionar Tarefa". Ambas esperam um redirect.
-    # Se fosse uma API pura, retornaria JSON. Vamos manter o redirect.
-    # Por isso, esta rota ficará no 'main_bp'.
-    
-    # Movido para main_bp.py (adicionar_tarefa)
-    pass 
-
 @api_bp.route('/excluir_tarefa/<int:tarefa_id>', methods=['POST'])
 @login_required
 def excluir_tarefa(tarefa_id):
@@ -336,7 +333,6 @@ def reordenar_tarefas():
             return jsonify({'ok': False, 'error': 'Permissão negada.'}), 403
         
         # Atualiza a ordem no DB em um loop
-        # (Para DBs robustos, isso poderia ser uma transação mais complexa)
         for index, tarefa_id in enumerate(nova_ordem_ids, 1):
             execute_db(
                 "UPDATE tarefas SET ordem = %s WHERE id = %s AND implantacao_id = %s AND tarefa_pai = %s",

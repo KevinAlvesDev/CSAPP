@@ -8,6 +8,18 @@
     .metric-card-small {
         min-height: 100px; /* Garante tamanho uniforme */
     }
+    .filter-inline-form {
+        border-bottom: 1px solid var(--input-border);
+        padding-bottom: 15px;
+    }
+    .date-filter-group {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .date-filter-group input {
+        width: 150px; /* Ajusta a largura dos campos de data */
+    }
 </style>
 {% endblock %}
 
@@ -23,8 +35,7 @@
                 <i class="bi bi-arrow-left me-1"></i> Voltar ao Dashboard
             </a>
             
-            {# Menu Dropdown do Usuário (Para Ações) #}
-            {# Incluindo o menu completo para manter a consistência #}
+            {# Menu Dropdown do Usuário (Copiado de dashboard.html para consistência) #}
             <div class="dropdown ms-2">
                 <button class="btn btn-outline-secondary rounded-circle p-0" type="button" id="userMenuDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Menu" style="width: 40px; height: 40px; border: 2px solid var(--accent-color); overflow: hidden;">
                     {% if g.perfil.foto_url %}
@@ -72,15 +83,20 @@
             {% endif %}
         {% endwith %}
 
-        {# --- FILTROS DE CONTROLE --- #}
-        <h2 class="h5 mb-3">Controle de Dados</h2>
-        <form method="GET" action="{{ url_for('analytics.analytics_dashboard') }}" class="metric-card p-3 rounded shadow-sm mb-4">
+        {# --- FILTROS DE VISÃO (CS e STATUS) --- #}
+        <form method="GET" action="{{ url_for('analytics.analytics_dashboard') }}" class="metric-card p-4 rounded shadow-sm mb-4 filter-inline-form">
+            <h2 class="h5 mb-3">Filtros da Carteira</h2>
+            
+            {# Campos Ocultos para Reter Filtro de Data #}
+            <input type="hidden" name="start_date" value="{{ current_start_date | default('') }}">
+            <input type="hidden" name="end_date" value="{{ current_end_date | default('') }}">
+
             <div class="row g-3 align-items-end">
                 
                 {# Filtro por CS #}
-                <div class="col-md-5">
-                    <label for="cs_email" class="form-label small text-secondary">Filtrar por Customer Success (CS)</label>
-                    <select name="cs_email" id="cs_email" class="form-select">
+                <div class="col-md-4">
+                    <label for="cs_email" class="form-label small text-secondary">Customer Success</label>
+                    <select name="cs_email" id="cs_email" class="form-select form-select-sm">
                         <option value="">-- Todos os CS --</option>
                         {% for cs in all_cs %}
                             <option value="{{ cs.usuario }}" {% if current_cs_email == cs.usuario %}selected{% endif %}>
@@ -92,8 +108,8 @@
                 
                 {# Filtro por Status #}
                  <div class="col-md-4">
-                    <label for="status_filter" class="form-label small text-secondary">Filtrar por Status</label>
-                    <select name="status_filter" id="status_filter" class="form-select">
+                    <label for="status_filter" class="form-label small text-secondary">Status da Implantação</label>
+                    <select name="status_filter" id="status_filter" class="form-select form-select-sm">
                         {% for option in status_options %}
                             <option value="{{ option.value }}" {% if current_status_filter == option.value %}selected{% endif %}>
                                 {{ option.label }}
@@ -102,18 +118,18 @@
                     </select>
                 </div>
                 
-                {# Botão de Aplicar #}
-                <div class="col-md-3">
-                    <button type="submit" class="btn btn-primary w-100">Aplicar Filtros</button>
-                    {% if current_cs_email or current_status_filter != 'todas' %}
-                         <a href="{{ url_for('analytics.analytics_dashboard') }}" class="btn btn-sm btn-outline-danger mt-2 w-100">Limpar Filtros</a>
+                {# Botão Aplicar #}
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary btn-sm me-2">Aplicar Filtros</button>
+                    {% if current_cs_email or current_status_filter != 'todas' or current_start_date or current_end_date %}
+                         <a href="{{ url_for('analytics.analytics_dashboard') }}" class="btn btn-sm btn-outline-danger">Limpar Tudo</a>
                     {% endif %}
                 </div>
             </div>
         </form>
         
-        {# --- MÉTRICAS DE PRODUTIVIDADE E TEMPO --- #}
-        <h2 class="h5 mb-3">Produtividade e Tempo ({{ global_metrics.total_impl | default(0) }} Implantações Filtradas)</h2>
+        {# --- MÉTRICAS DA CARTEIRA (Visão Geral) --- #}
+        <h2 class="h5 mb-3">Carteira do CS ({{ global_metrics.total_impl | default(0) }} Implantações Filtradas)</h2>
         <div class="row row-cols-1 row-cols-md-3 row-cols-lg-5 g-3 mb-5">
             {# Total de Impl. #}
             <div class="col"><div class="metric-card metric-card-small p-3 rounded shadow-sm text-center"><h6 class="text-secondary">Total (Filtro)</h6><h4 class="mb-0 text-primary">{{ global_metrics.total_impl | default(0) }}</h4></div></div>
@@ -124,11 +140,51 @@
             {# TMA Médio #}
             <div class="col"><div class="metric-card metric-card-small p-3 rounded shadow-sm text-center"><h6 class="text-secondary">TMA Médio (dias)</h6><h4 class="mb-0 text-primary">{{ global_metrics.global_tma | default('N/A') }}</h4></div></div>
             {# Atrasadas #}
-            <div class="col"><div class="metric-card metric-card-small p-3 rounded shadow-sm text-center"><h6 class="text-secondary">Atrasadas (> 25d)</h6><h4 class="mb-0 text-danger">{{ global_metrics.total_atrasadas_status | default(0) }}</h4></div></div>
+            <div class="col"><div class="metric-card metric-card-small p-3 rounded shadow-sm text-center"><h6 class="text-secondary">Projetos Parados</h6><h4 class="mb-0 text-danger">{{ global_metrics.total_paradas | default(0) }}</h4></div></div>
         </div>
 
-        {# --- VISÃO POR COLABORADOR --- #}
+        {# --- VISÃO POR COLABORADOR (PRODUTIVIDADE POR PERÍODO) --- #}
         <h2 class="h5 mb-3">Produtividade por Customer Success</h2>
+        
+        {# FORMULÁRIO DE FILTRO DE DATA (INLINE) - AGORA COM CAMPO CS #}
+        <form method="GET" action="{{ url_for('analytics.analytics_dashboard') }}" class="metric-card p-3 rounded shadow-sm mb-4">
+            <h6 class="text-secondary mb-3 border-bottom pb-2">Filtrar Ações Concluídas por Período</h6>
+            
+            {# Campos Ocultos para Reter Filtro de Status #}
+            <input type="hidden" name="status_filter" value="{{ current_status_filter | default('todas') }}">
+
+            <div class="row g-3 align-items-end">
+                
+                {# Filtro de CS (para filtrar a tabela de produtividade) #}
+                <div class="col-md-3">
+                    <label for="cs_email_prod" class="form-label small text-secondary">CS (Produtividade)</label>
+                    <select name="cs_email" id="cs_email_prod" class="form-select form-select-sm">
+                        <option value="">-- Todos os CS --</option>
+                        {% for cs in all_cs %}
+                            <option value="{{ cs.usuario }}" {% if current_cs_email == cs.usuario %}selected{% endif %}>
+                                {{ cs.nome }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label for="start_date_prod" class="form-label small text-secondary">Data Inicial 🗓️</label>
+                    <input type="date" class="form-control form-control-sm" name="start_date" id="start_date_prod" value="{{ current_start_date | default('') }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="end_date_prod" class="form-label small text-secondary">Data Final 🗓️</label>
+                    <input type="date" class="form-control form-control-sm" name="end_date" id="end_date_prod" value="{{ current_end_date | default('') }}">
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-success btn-sm w-100">Atualizar Produtividade</button>
+                </div>
+            </div>
+        </form>
+
+        {# REMOVIDO: O aviso amarelo de filtro de data foi removido daqui #}
+
+
         {% if not cs_metrics %}
             <div class="alert alert-info text-center" role="alert">Nenhum Customer Success encontrado com as implantações filtradas.</div>
         {% else %}
@@ -137,11 +193,17 @@
                 <thead>
                     <tr class="table-light">
                         <th>CS / E-mail</th>
-                        <th class="text-center">Total Impl.</th>
+                        <th class="text-center">Total Impl. (Filtro)</th>
                         <th class="text-center">Em Andamento</th>
                         <th class="text-center">Finalizadas</th>
-                        <th class="text-center">Progresso Médio</th>
+                        
+                        {# COLUNAS SEPARADAS PARA PRODUTIVIDADE #}
+                        <th class="text-center text-primary">Ação Interna Concluída</th>
+                        <th class="text-center text-info">Reunião Concluída</th>
+
                         <th class="text-center">TMA Médio (dias)</th>
+                        {# TEMPO PARADO #}
+                        <th class="text-center text-danger">Tempo Parado Atual (dias)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -155,12 +217,20 @@
                         <td class="text-center">{{ cs.impl_total }}</td>
                         <td class="text-center">{{ cs.impl_andamento }}</td>
                         <td class="text-center">{{ cs.impl_finalizadas }}</td>
-                        <td class="text-center">
-                            <div class="progress" style="height: 15px; width: 100px; margin: 0 auto;">
-                                <div class="progress-bar" role="progressbar" style="width: {{ cs.progresso_medio }}%;">{{ cs.progresso_medio }}%</div>
-                            </div>
-                        </td>
+                        
+                        {# DADOS SEPARADOS PARA PRODUTIVIDADE #}
+                        <td class="text-center">{{ cs.prod_tags['Ação interna'] | default(0) }}</td>
+                        <td class="text-center">{{ cs.prod_tags['Reunião'] | default(0) }}</td>
+                        
                         <td class="text-center">{{ cs.tma_medio }}</td>
+                        {# DADOS DE TEMPO PARADO #}
+                        <td class="text-center">
+                            {% if cs.impl_paradas > 0 %}
+                                <span class="badge bg-danger">{{ cs.parada_dias_total | default('N/A') }}</span>
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -170,6 +240,7 @@
         
         {# --- MÉTRICAS DE QUALIDADE (MOTIVOS DE PARADA) --- #}
         <h2 class="h5 mb-3 mt-5">Qualidade e Bloqueios (Motivos de Parada)</h2>
+        <p class="small text-secondary">Identifica os maiores gargalos do processo que causam a paralisação de projetos.</p>
         <div class="row g-3">
             <div class="col-md-6">
                  <div class="metric-card p-3 rounded shadow-sm">
