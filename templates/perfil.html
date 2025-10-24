@@ -56,6 +56,14 @@
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuDropdown">
                     {# ATUALIZADO: 'profile.perfil' #}
                     <li><a class="dropdown-item active" href="{{ url_for('profile.perfil') }}">Editar Perfil</a></li>
+                    
+                    {# CORREÇÃO CRÍTICA: Chama o NOVO MODAL #}
+                    {% if g.perfil and g.perfil.perfil_acesso in ['Administrador', 'Gerente', 'Coordenador'] %}
+                        <li><a class="dropdown-item text-primary" href="#" data-bs-toggle="modal" data-bs-target="#modalGerenciarUsuarios">
+                            <i class="bi bi-people-fill me-2"></i> Usuários
+                        </a></li>
+                    {% endif %}
+                    
                     <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalGamificacao">Gamificação</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li>

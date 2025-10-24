@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics Gerencial{% endblock %}
+
+{% block head_extra %}
+<style>
+    /* Estilos específicos para o dashboard gerencial */
+    .metric-card-small {
+        min-height: 100px; /* Garante tamanho uniforme */
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <header class="header-bg p-3 shadow-sm d-flex justify-content-between align-items-center position-relative">
+        <h1 class="main-title mb-0 fs-4" style="position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap;">DASHBOARD GERENCIAL</h1>
+        
+        <div class="d-flex align-items-center">
+            
+            {# Botão Voltar ao Dashboard (para UX) #}
+            <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-primary me-3">
+                <i class="bi bi-arrow-left me-1"></i> Voltar ao Dashboard
+            </a>
+            
+            {# Menu Dropdown do Usuário (Para Ações) #}
+            {# Incluindo o menu completo para manter a consistência #}
+            <div class="dropdown ms-2">
+                <button class="btn btn-outline-secondary rounded-circle p-0" type="button" id="userMenuDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Menu" style="width: 40px; height: 40px; border: 2px solid var(--accent-color); overflow: hidden;">
+                    {% if g.perfil.foto_url %}
+                        <img src="{{ g.perfil.foto_url }}" alt="Foto de Perfil" style="width: 100%; height: 100%; object-fit: cover;">
+                    {% else %}
+                        <i class="bi bi-person-fill" style="font-size: 1.5rem; color: var(--accent-color);"></i>
+                    {% endif %}
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuDropdown">
+                    <li><a class="dropdown-item" href="{{ url_for('profile.perfil') }}">Editar Perfil</a></li>
+                    
+                    {% if g.perfil and g.perfil.perfil_acesso in ['Administrador', 'Gerente', 'Coordenador'] %}
+                        <li><a class="dropdown-item text-primary" href="#" data-bs-toggle="modal" data-bs-target="#modalGerenciarUsuarios">
+                            <i class="bi bi-people-fill me-2"></i> Usuários
+                        </a></li>
+                        <li><a class="dropdown-item active text-info" href="{{ url_for('analytics.analytics_dashboard') }}">
+                            <i class="bi bi-graph-up me-2"></i> Analytics Gerencial
+                        </a></li>
+                    {% endif %}
+
+                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalGamificacao">Gamificação</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}">
+                            <i class="bi bi-box-arrow-right me-2"></i> Sair
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            
+        </div>
+    </header>
+    
+    <main class="p-4" id="main-content">
+        
+        {# Mensagens Flash #}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {# --- FILTROS DE CONTROLE --- #}
+        <h2 class="h5 mb-3">Controle de Dados</h2>
+        <form method="GET" action="{{ url_for('analytics.analytics_dashboard') }}" class="metric-card p-3 rounded shadow-sm mb-4">
+            <div class="row g-3 align-items-end">
+                
+                {# Filtro por CS #}
+                <div class="col-md-5">
+                    <label for="cs_email" class="form-label small text-secondary">Filtrar por Customer Success (CS)</label>
+                    <select name="cs_email" id="cs_email" class="form-select">
+                        <option value="">-- Todos os CS --</option>
+                        {% for cs in all_cs %}
+                            <option value="{{ cs.usuario }}" {% if current_cs_email == cs.usuario %}selected{% endif %}>
+                                {{ cs.nome }} ({{ cs.perfil_acesso }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                {# Filtro por Status #}
+                 <div class="col-md-4">
+                    <label for="status_filter" class="form-label small text-secondary">Filtrar por Status</label>
+                    <select name="status_filter" id="status_filter" class="form-select">
+                        {% for option in status_options %}
+                            <option value="{{ option.value }}" {% if current_status_filter == option.value %}selected{% endif %}>
+                                {{ option.label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                {# Botão de Aplicar #}
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary w-100">Aplicar Filtros</button>
+                    {% if current_cs_email or current_status_filter != 'todas' %}
+                         <a href="{{ url_for('analytics.analytics_dashboard') }}" class="btn btn-sm btn-outline-danger mt-2 w-100">Limpar Filtros</a>
+                    {% endif %}
+                </div>
+            </div>
+        </form>
+        
+        {# --- MÉTRICAS DE PRODUTIVIDADE E TEMPO --- #}
+        <h2 class="h5 mb-3">Produtividade e Tempo ({{ global_metrics.total_impl | default(0) }} Implantações Filtradas)</h2>
+        <div class="row row-cols-1 row-cols-md-3 row-cols-lg-5 g-3 mb-5">
+            {# Total de Impl. #}
+            <div class="col"><div class="metric-card metric-card-small p-3 rounded shadow-sm text-center"><h6 class="text-secondary">Total (Filtro)</h6><h4 class="mb-0 text-primary">{{ global_metrics.total_impl | default(0) }}</h4></div></div>
+            {# Em Andamento #}
+            <div class="col"><div class="metric-card metric-card-small p-3 rounded shadow-sm text-center"><h6 class="text-secondary">Em Andamento</h6><h4 class="mb-0 text-warning text-dark">{{ global_metrics.total_andamento | default(0) }}</h4></div></div>
+            {# Finalizadas #}
+            <div class="col"><div class="metric-card metric-card-small p-3 rounded shadow-sm text-center"><h6 class="text-secondary">Finalizadas</h6><h4 class="mb-0 text-success">{{ global_metrics.total_finalizadas | default(0) }}</h4></div></div>
+            {# TMA Médio #}
+            <div class="col"><div class="metric-card metric-card-small p-3 rounded shadow-sm text-center"><h6 class="text-secondary">TMA Médio (dias)</h6><h4 class="mb-0 text-primary">{{ global_metrics.global_tma | default('N/A') }}</h4></div></div>
+            {# Atrasadas #}
+            <div class="col"><div class="metric-card metric-card-small p-3 rounded shadow-sm text-center"><h6 class="text-secondary">Atrasadas (> 25d)</h6><h4 class="mb-0 text-danger">{{ global_metrics.total_atrasadas_status | default(0) }}</h4></div></div>
+        </div>
+
+        {# --- VISÃO POR COLABORADOR --- #}
+        <h2 class="h5 mb-3">Produtividade por Customer Success</h2>
+        {% if not cs_metrics %}
+            <div class="alert alert-info text-center" role="alert">Nenhum Customer Success encontrado com as implantações filtradas.</div>
+        {% else %}
+        <div class="table-responsive metric-card p-3 rounded shadow-sm">
+             <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr class="table-light">
+                        <th>CS / E-mail</th>
+                        <th class="text-center">Total Impl.</th>
+                        <th class="text-center">Em Andamento</th>
+                        <th class="text-center">Finalizadas</th>
+                        <th class="text-center">Progresso Médio</th>
+                        <th class="text-center">TMA Médio (dias)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cs in cs_metrics %}
+                    <tr>
+                        <td>
+                            <strong>{{ cs.nome }}</strong>
+                            <small class="d-block text-muted">({{ cs.perfil }} - {{ cs.cargo }})</small>
+                            <small class="d-block text-secondary">{{ cs.email }}</small>
+                        </td>
+                        <td class="text-center">{{ cs.impl_total }}</td>
+                        <td class="text-center">{{ cs.impl_andamento }}</td>
+                        <td class="text-center">{{ cs.impl_finalizadas }}</td>
+                        <td class="text-center">
+                            <div class="progress" style="height: 15px; width: 100px; margin: 0 auto;">
+                                <div class="progress-bar" role="progressbar" style="width: {{ cs.progresso_medio }}%;">{{ cs.progresso_medio }}%</div>
+                            </div>
+                        </td>
+                        <td class="text-center">{{ cs.tma_medio }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+             </table>
+        </div>
+        {% endif %}
+        
+        {# --- MÉTRICAS DE QUALIDADE (MOTIVOS DE PARADA) --- #}
+        <h2 class="h5 mb-3 mt-5">Qualidade e Bloqueios (Motivos de Parada)</h2>
+        <div class="row g-3">
+            <div class="col-md-6">
+                 <div class="metric-card p-3 rounded shadow-sm">
+                     <h6 class="text-secondary border-bottom pb-2 mb-3">Distribuição Global de Paradas ({{ global_metrics.total_paradas | default(0) }} Registros)</h6>
+                     {% if global_metrics.total_paradas == 0 %}
+                        <div class="alert alert-info small">Nenhuma implantação parada nos filtros atuais.</div>
+                     {% else %}
+                         <ul class="list-group list-group-flush small">
+                             {% for motivo, count in global_metrics.motivos_parada.items() %}
+                                 {% set percent = (count / global_metrics.total_paradas) * 100 %}
+                                 <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                     <span class="text-truncate" style="max-width: 70%;">{{ motivo }}</span>
+                                     <span class="badge bg-danger ms-2">{{ count }} ({{ "%.1f"|format(percent) }}%)</span>
+                                 </li>
+                             {% endfor %}
+                         </ul>
+                     {% endif %}
+                 </div>
+            </div>
+            
+            <div class="col-md-6">
+                 <div class="metric-card p-3 rounded shadow-sm">
+                     <h6 class="text-secondary border-bottom pb-2 mb-3">Justificativas Padrão</h6>
+                     <ul class="list-group list-group-flush small">
+                         {% for motivo in justificativas_parada %}
+                              <li class="list-group-item px-0 py-1">{{ motivo }}</li>
+                         {% endfor %}
+                     </ul>
+                 </div>
+            </div>
+        </div>
+
+    </main>
+</div>
+{% endblock %}

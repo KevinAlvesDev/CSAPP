@@ -11,7 +11,7 @@ from ..blueprints.auth import login_required
 from ..db import execute_db, query_db
 from ..extensions import r2_client
 from ..utils import allowed_file
-from ..constants import CARGOS_LIST
+from ..constants import CARGOS_LIST 
 
 profile_bp = Blueprint('profile', __name__)
 
@@ -29,13 +29,14 @@ def perfil():
         try:
             nome = request.form.get('nome', '').strip()
             cargo = request.form.get('cargo', '').strip()
-            if cargo not in CARGOS_LIST:
-                cargo = None
+            
+            # Garante que o cargo é válido (Júnior, Pleno, Sênior, etc.) ou NULL
+            cargo_to_save = cargo if cargo in CARGOS_LIST else None
             
             perfil_atual = g.perfil
             foto_url_atual = perfil_atual.get('foto_url')
 
-            # --- Lógica de Upload para R2 ---
+            # --- Lógica de Upload para R2 (original) ---
             if 'foto_perfil' in request.files:
                 file = request.files['foto_perfil']
                 if file and file.filename and allowed_file(file.filename):
@@ -62,7 +63,7 @@ def perfil():
                         if foto_url_atual and foto_url_atual != nova_foto_url:
                             try:
                                 old_object_key = foto_url_atual.replace(f"{current_app.config['CLOUDFLARE_PUBLIC_URL']}/", "")
-                                if old_object_key and old_object_key != foto_url_atual: # Segurança
+                                if old_object_key and old_object_key != foto_url_atual:
                                     print(f"Tentando excluir objeto R2 antigo: {old_object_key}")
                                     r2_client.delete_object(
                                         Bucket=current_app.config['CLOUDFLARE_BUCKET_NAME'], 
@@ -72,7 +73,7 @@ def perfil():
                             except Exception as e_delete:
                                 print(f"Aviso: Falha ao excluir foto antiga do R2. {e_delete}")
                         
-                        foto_url_atual = nova_foto_url # Define a nova URL para salvar no DB
+                        foto_url_atual = nova_foto_url
 
                     except (ClientError, NoCredentialsError) as e_upload:
                         print(f"ERRO upload R2: {e_upload}")
@@ -81,16 +82,20 @@ def perfil():
                         print(f"ERRO upload R2: {e_upload}")
                         flash("Erro ao fazer upload da nova foto.", "error")
 
-            # Atualiza o banco de dados
+            # Atualiza o banco de dados (SOMENTE nome, cargo e foto_url. Não altera perfil_acesso)
             execute_db(
                 """
                 UPDATE perfil_usuario 
                 SET nome = %s, cargo = %s, foto_url = %s 
                 WHERE usuario = %s
                 """,
-                (nome, cargo, foto_url_atual, usuario_cs_email)
+                (nome, cargo_to_save, foto_url_atual, usuario_cs_email)
             )
             flash('Perfil atualizado com sucesso!', 'success')
+            
+            # Recarrega o perfil para refletir a mudança no request atual
+            g.perfil = query_db("SELECT * FROM perfil_usuario WHERE usuario = %s", (usuario_cs_email,), one=True)
+            
             return redirect(url_for('profile.perfil'))
             
         except Exception as e:

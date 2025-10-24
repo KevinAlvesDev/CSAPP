@@ -6,18 +6,15 @@ from .extensions import oauth, r2_client, init_extensions
 from .db import init_app as init_db_app
 from . import utils # Para registrar os filtros do Jinja2
 
-# --- INÍCIO DA ALTERAÇÃO ---
 # Define o caminho absoluto para o diretório do projeto (APP-23-10/project/)
 project_dir = os.path.dirname(os.path.abspath(__file__))
 # Define o caminho absoluto para a pasta raiz da aplicação (APP-23-10/)
 app_root_dir = os.path.dirname(project_dir)
 # Define o caminho absoluto para a pasta de templates (APP-23-10/templates/)
 templates_dir = os.path.join(app_root_dir, 'templates')
-# --- FIM DA ALTERAÇÃO ---
 
 def create_app():
     """Application Factory Function"""
-    # --- ALTERADO: Usa o caminho absoluto calculado ---
     app = Flask(__name__, template_folder=templates_dir)
 
     # Carrega a configuração do config.py
@@ -44,6 +41,23 @@ def create_app():
 
     from .blueprints.api import api_bp
     app.register_blueprint(api_bp)
+    
+    # REGISTRO DO BLUEPRINT MANAGEMENT
+    try:
+        from .blueprints.management import management_bp
+        app.register_blueprint(management_bp)
+        print("Blueprint 'management' registrado com sucesso.")
+    except ImportError as e:
+        print(f"ERRO CRÍTICO: Falha ao importar Blueprint 'management'. Erro: {e}")
+
+    # NOVO: REGISTRO DO BLUEPRINT ANALYTICS
+    try:
+        from .blueprints.analytics import analytics_bp
+        app.register_blueprint(analytics_bp)
+        print("Blueprint 'analytics' registrado com sucesso.")
+    except ImportError as e:
+        print(f"ERRO CRÍTICO: Falha ao importar Blueprint 'analytics'. Erro: {e}")
+
 
     # Registra filtros de template (ex: format_date_br)
     # Isso torna as funções de utils.py disponíveis no HTML
@@ -52,7 +66,6 @@ def create_app():
         return utils.format_date_br(dt_obj, include_time)
 
     # Adiciona a pasta de uploads local como rota estática (para fallback)
-    # A rota /uploads/<filename> ainda funcionará
     @app.route('/uploads/<path:filename>')
     def uploaded_file(filename):
         # A pasta de upload é definida em config.py
@@ -60,4 +73,3 @@ def create_app():
 
     print(f"Aplicação Flask criada com sucesso.")
     return app
-

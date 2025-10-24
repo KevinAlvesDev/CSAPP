@@ -1,0 +1,66 @@
+from flask import Blueprint, render_template, g, flash, redirect, url_for, request
+from ..blueprints.auth import permission_required
+from ..services import get_analytics_data
+from ..db import query_db
+from ..constants import PERFIS_COM_ANALYTICS, PERFIS_COM_GESTAO, JUSTIFICATIVAS_PARADA
+
+analytics_bp = Blueprint('analytics', __name__)
+
+def get_all_customer_success():
+    """Busca a lista de todos os CS com nome e e-mail para o filtro."""
+    return query_db("SELECT usuario, nome, perfil_acesso FROM perfil_usuario WHERE perfil_acesso IS NOT NULL AND perfil_acesso != '' ORDER BY nome", ())
+
+@analytics_bp.route('/analytics')
+@permission_required(PERFIS_COM_ANALYTICS)
+def analytics_dashboard():
+    """Rota para o dashboard gerencial de métricas e relatórios, com filtros."""
+    
+    user_perfil = g.perfil.get('perfil_acesso')
+    
+    # Captura parâmetros de filtro
+    cs_email = request.args.get('cs_email', None)
+    status_filter = request.args.get('status_filter', 'todas')
+    
+    # Se o usuário não for gerencial, ele só pode ver os próprios dados
+    # Esta é uma checagem redundante, mas útil para fins de filtro e debug.
+    if user_perfil not in PERFIS_COM_GESTAO:
+        cs_email = g.user_email
+    
+    try:
+        global_metrics, cs_metrics_list = get_analytics_data(
+            target_cs_email=cs_email, 
+            target_status=status_filter
+        )
+        
+        all_cs = get_all_customer_success()
+        
+        # Filtros de status para a UI
+        status_options = [
+            {'value': 'todas', 'label': 'Todas as Implantações'},
+            {'value': 'andamento', 'label': 'Em Andamento'},
+            {'value': 'atrasadas_status', 'label': 'Atrasadas (> 25d)'},
+            {'value': 'futura', 'label': 'Futuras'},
+            {'value': 'finalizada', 'label': 'Finalizadas'},
+            {'value': 'parada', 'label': 'Paradas'}
+        ]
+        
+        # Ordena a lista de CSs por nome
+        cs_metrics_list.sort(key=lambda x: x['nome'])
+        
+        return render_template(
+            'analytics.html',
+            global_metrics=global_metrics,
+            cs_metrics=cs_metrics_list,
+            all_cs=all_cs,
+            status_options=status_options,
+            current_cs_email=cs_email,
+            current_status_filter=status_filter,
+            user_info=g.user,
+            user_perfil=user_perfil,
+            justificativas_parada=JUSTIFICATIVAS_PARADA
+        )
+        
+    except Exception as e:
+        print(f"ERRO ao carregar dashboard de analytics: {e}")
+        flash("Erro interno ao carregar os dados de relatórios.", "error")
+        return redirect(url_for('main.dashboard'))

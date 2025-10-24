@@ -1,21 +1,15 @@
-from .db import query_db, execute_db
+from .db import query_db, execute_db 
 from .constants import (
     CHECKLIST_OBRIGATORIO_ITEMS, MODULO_OBRIGATORIO, 
-    TAREFAS_TREINAMENTO_PADRAO, MODULO_PENDENCIAS
+    TAREFAS_TREINAMENTO_PADRAO, MODULO_PENDENCIAS,
+    PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR
 )
 from .utils import format_date_iso_for_json
 
-# --- Camada de Serviço (Business Logic) ---
+# NOVO: Importa logar_timeline do DB
+from .db import logar_timeline
 
-def logar_timeline(implantacao_id, usuario_cs, tipo_evento, detalhes):
-    """Registra um evento na timeline de uma implantação."""
-    try:
-        execute_db(
-            "INSERT INTO timeline_log (implantacao_id, usuario_cs, tipo_evento, detalhes) VALUES (%s, %s, %s, %s)",
-            (implantacao_id, usuario_cs, tipo_evento, detalhes)
-        )
-    except Exception as e:
-        print(f"AVISO/ERRO: Falha ao logar evento '{tipo_evento}' para implantação {implantacao_id}: {e}")
+# --- Camada de Serviço (Business Logic) ---
 
 def _create_default_tasks(impl_id):
     """Cria as tarefas padrão (Obrigatórias e Treinamento) para uma nova implantação."""
@@ -91,7 +85,10 @@ def auto_finalizar_implantacao(impl_id, usuario_cs_email):
     return False, None
 
 def get_dashboard_data(user_email):
-    """Busca e processa todos os dados para o dashboard do usuário."""
+    """Busca e processa todos os dados APENAS para o dashboard do usuário logado."""
+    
+    # Esta função é para a visão INDIVIDUAL (carteira do CS)
+    
     impl_list = query_db(
         """
         SELECT *, 
@@ -176,3 +173,147 @@ def get_dashboard_data(user_email):
     )
     
     return dashboard_data, metrics
+
+
+def get_analytics_data(target_cs_email=None, target_status=None):
+    """Busca e processa dados de TODA a carteira (ou filtrada) para o módulo Gerencial."""
+    
+    query = """
+        SELECT i.*, 
+               p.nome as cs_nome, p.cargo as cs_cargo, p.perfil_acesso as cs_perfil,
+               (CAST(strftime('%J', i.data_finalizacao) AS REAL) - CAST(strftime('%J', i.data_criacao) AS REAL)) AS tma_dias 
+        FROM implantacoes i
+        LEFT JOIN perfil_usuario p ON i.usuario_cs = p.usuario
+        WHERE 1=1 
+    """
+    args = []
+    
+    # Aplica filtro por CS
+    if target_cs_email:
+        query += " AND i.usuario_cs = %s "
+        args.append(target_cs_email)
+        
+    # Aplica filtro por Status
+    if target_status and target_status != 'todas':
+        # Trata 'atrasadas' como um status que precisa de cálculo adicional
+        if target_status == 'atrasadas_status':
+            # Filtra por status 'andamento' e dias > 25. É complexo fazer isso 100% no SQLite
+            # Mantemos o filtro por status normal para simplicidade na primeira versão
+            query += " AND i.status = 'andamento' "
+        else:
+            query += " AND i.status = %s "
+            args.append(target_status)
+    
+    # Ordem por nome da empresa ou CS
+    query += " ORDER BY i.nome_empresa "
+    
+    # 1. Busca implantações filtradas
+    impl_list = query_db(query, tuple(args))
+    
+    # 2. Busca todas as tarefas para cálculo de progresso
+    all_tasks = query_db("SELECT implantacao_id, concluida, tarefa_pai FROM tarefas")
+    
+    tasks_by_impl = {}
+    for task in all_tasks:
+        tasks_by_impl.setdefault(task['implantacao_id'], []).append(task)
+        
+    # 3. Processamento e Agregação
+    
+    # Lista de todos os CS no sistema (para relatar mesmo aqueles sem implantações)
+    all_cs_profiles = query_db("SELECT usuario, nome, cargo, perfil_acesso FROM perfil_usuario")
+    cs_metrics = {p['usuario']: {
+        'email': p['usuario'], 'nome': p['nome'] or p['usuario'], 'cargo': p['cargo'] or 'N/A', 
+        'perfil': p['perfil_acesso'] or 'Nenhum', 'impl_total': 0, 'impl_andamento': 0, 
+        'impl_finalizadas': 0, 'impl_paradas': 0, 'tma_sum': 0, 'total_tasks': 0, 
+        'done_tasks': 0, 'progresso_medio': 0, 'tma_medio': 'N/A', 'motivos_parada': {}
+    } for p in all_cs_profiles}
+    
+    # Agregações Globais
+    total_impl_global = len(impl_list) # Total após filtros
+    total_finalizadas = 0
+    total_atrasadas_status = 0
+    total_paradas = 0
+    tma_dias_sum = 0
+    
+    # Agregação de Motivos de Parada
+    motivos_parada_global = {}
+    
+    for impl in impl_list:
+        impl_id = impl['id']
+        cs_email = impl['usuario_cs']
+        status = impl['status']
+        
+        # Garante que o CS existe no dicionário (caso a lista de implantações contenha um CS novo)
+        if cs_email not in cs_metrics:
+             cs_metrics[cs_email] = {'email': cs_email, 'nome': impl.get('cs_nome') or cs_email, 'cargo': impl.get('cs_cargo') or 'N/A', 'perfil': impl.get('cs_perfil') or 'Nenhum', 'impl_total': 0, 'impl_andamento': 0, 'impl_finalizadas': 0, 'impl_paradas': 0, 'tma_sum': 0, 'total_tasks': 0, 'done_tasks': 0, 'progresso_medio': 0, 'tma_medio': 'N/A', 'motivos_parada': {}}
+
+        
+        metrics = cs_metrics[cs_email]
+        metrics['impl_total'] += 1
+
+        # Cálculo de Progresso
+        impl_tasks = tasks_by_impl.get(impl_id, [])
+        total_tasks = len(impl_tasks)
+        done_tasks = sum(1 for t in impl_tasks if t['concluida'])
+        
+        metrics['total_tasks'] += total_tasks
+        metrics['done_tasks'] += done_tasks
+        
+        # Classificação e Agregação Global/CS
+        if status == 'finalizada':
+            total_finalizadas += 1
+            metrics['impl_finalizadas'] += 1
+            
+            if impl['tma_dias'] is not None:
+                tma_dias_sum += impl['tma_dias']
+                metrics['tma_sum'] += impl['tma_dias']
+                
+        elif status == 'parada':
+            total_paradas += 1
+            metrics['impl_paradas'] += 1
+            
+            # Agregação de Motivos de Parada (Qualidade)
+            motivo = impl.get('motivo_parada') or 'Motivo Não Especificado'
+            motivos_parada_global[motivo] = motivos_parada_global.get(motivo, 0) + 1
+            metrics['motivos_parada'][motivo] = metrics['motivos_parada'].get(motivo, 0) + 1
+            
+        elif status == 'andamento':
+            metrics['impl_andamento'] += 1
+            # Lógica de Atraso
+            dias_passados = (query_db(
+                "SELECT (CAST(strftime('%J', CURRENT_TIMESTAMP) AS REAL) - CAST(strftime('%J', data_criacao) AS REAL)) AS dias FROM implantacoes WHERE id = %s",
+                (impl_id,), one=True
+            ) or {}).get('dias', 0)
+            
+            if dias_passados > 25:
+                total_atrasadas_status += 1
+
+    # Finalização das Métricas do CS (Removendo CSs sem implantações se houver filtro)
+    final_cs_metrics = {}
+    for email, metrics in cs_metrics.items():
+        if metrics['impl_total'] > 0 or not target_cs_email: # Inclui CSs sem implantação se não houver filtro
+            
+            if metrics['impl_finalizadas'] > 0:
+                metrics['tma_medio'] = round(metrics['tma_sum'] / metrics['impl_finalizadas'], 1)
+            else:
+                metrics['tma_medio'] = 'N/A'
+                
+            if metrics['total_tasks'] > 0:
+                metrics['progresso_medio'] = int(round((metrics['done_tasks'] / metrics['total_tasks']) * 100))
+            else:
+                metrics['progresso_medio'] = 0
+            
+            final_cs_metrics[email] = metrics
+
+    # Finalização das Métricas Globais (Atualiza o total de andamento pós-filtro)
+    global_metrics = {
+        'total_impl': total_impl_global,
+        'total_finalizadas': total_finalizadas,
+        'total_andamento': sum(m['impl_andamento'] for m in final_cs_metrics.values()),
+        'total_paradas': total_paradas,
+        'total_atrasadas_status': total_atrasadas_status,
+        'global_tma': round(tma_dias_sum / total_finalizadas, 1) if total_finalizadas > 0 else 'N/A',
+        'motivos_parada': motivos_parada_global
+    }
+    
+    return global_metrics, list(final_cs_metrics.values())

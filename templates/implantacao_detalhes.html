@@ -48,8 +48,22 @@
                 {% endif %}
             </button>
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuDropdownDetails">
-                {# ATUALIZADO: url_for('profile.perfil') #}
                 <li><a class="dropdown-item" href="{{ url_for('profile.perfil') }}">Editar Perfil</a></li>
+                
+                {# Checagem para Usuários e Analytics #}
+                {% if g.perfil and g.perfil.perfil_acesso in ['Administrador', 'Gerente', 'Coordenador'] %}
+                    <li><a class="dropdown-item text-primary" href="#" data-bs-toggle="modal" data-bs-target="#modalGerenciarUsuarios">
+                        <i class="bi bi-people-fill me-2"></i> Usuários
+                    </a></li>
+                {% endif %}
+
+                {# NOVO: Adiciona link para Analytics, também protegido #}
+                {% if g.perfil and g.perfil.perfil_acesso in ['Administrador', 'Gerente', 'Coordenador'] %}
+                    <li><a class="dropdown-item text-info" href="{{ url_for('analytics.analytics_dashboard') }}">
+                        <i class="bi bi-graph-up me-2"></i> Analytics Gerencial
+                    </a></li>
+                {% endif %}
+
                 <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalGamificacao">Gamificação</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li>
@@ -666,7 +680,7 @@
 
 {% block scripts_extra %}
 {# Inclui SortableJS para drag-and-drop #}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js" xintegrity="sha512-Eezs+g9Lq4TCCq0wae01s9PuNWzHYoCMkQAi7cDM6ZQJJ5CmAGgk+FdIQ0+UI0EzfYRYzVLgsJdJAYNWMXifcA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js" integrity="sha512-Eezs+g9Lq4TCCq0wae01s9PuNWzHYoCMkQAi7cDM6ZQJJ5CmAGgk+FdIQ0+UI0EzfYRYzVLgsJdJAYNWMXifcA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
     // --- Funções Helper para UI ---
     function formatDataComentario(dataStr) {
@@ -724,6 +738,7 @@
         if (log.tipo_evento === 'novo_comentario') iconClass = 'bi-chat-left-text-fill';
         else if (log.tipo_evento && log.tipo_evento.includes('tarefa')) iconClass = 'bi-check-circle-fill';
         else if (log.tipo_evento && (log.tipo_evento.includes('status') || log.tipo_evento.includes('implantacao') || log.tipo_evento.includes('detalhes'))) iconClass = 'bi-flag-fill';
+        
         const dataFormatada = formatDataLog(log.data_criacao);
         const detalhesHTML = (log.detalhes || '').replace(/\n/g, '<br>');
         return `

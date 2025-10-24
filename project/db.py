@@ -93,6 +93,17 @@ def _db_execute(command, args=()):
         if cur: cur.close()
         raise e
 
+def logar_timeline(implantacao_id, usuario_cs, tipo_evento, detalhes):
+    """Registra um evento na timeline de uma implantação (Movida para cá)."""
+    try:
+        _db_execute(
+            "INSERT INTO timeline_log (implantacao_id, usuario_cs, tipo_evento, detalhes) VALUES (%s, %s, %s, %s)",
+            (implantacao_id, usuario_cs, tipo_evento, detalhes)
+        )
+    except Exception as e:
+        print(f"AVISO/ERRO: Falha ao logar evento '{tipo_evento}' para implantação {implantacao_id}: {e}")
+
+
 def query_db(query, args=(), one=False):
     """Helper para SELECTs."""
     return _db_query(query, args, one)
@@ -115,22 +126,32 @@ def init_db():
     timestamp_type = "TIMESTAMP WITH TIME ZONE" if is_postgres else "DATETIME"
     date_type = "DATE" if is_postgres else "TEXT"
 
-    # Criação das tabelas (lógica movida de app.py)
+    # Criação das tabelas
     cur.execute(f"CREATE TABLE IF NOT EXISTS usuarios (usuario VARCHAR(255) PRIMARY KEY, senha TEXT NOT NULL)")
     cur.execute(f"""
         CREATE TABLE IF NOT EXISTS perfil_usuario (
             usuario VARCHAR(255) PRIMARY KEY REFERENCES usuarios(usuario) ON DELETE CASCADE,
             nome TEXT,
+            cargo TEXT,
+            perfil_acesso VARCHAR(100) DEFAULT NULL,
+            foto_url TEXT,
             impl_andamento INTEGER DEFAULT 0,
             impl_finalizadas INTEGER DEFAULT 0,
             impl_paradas INTEGER DEFAULT 0,
             progresso_medio_carteira INTEGER DEFAULT 0,
             impl_andamento_total INTEGER DEFAULT 0,
             implantacoes_atrasadas INTEGER DEFAULT 0,
-            cargo TEXT,
-            foto_url TEXT
+            data_criacao {timestamp_type} DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    
+    # Adiciona a nova coluna caso o DB já exista, mas sem o campo
+    try:
+        cur.execute("SELECT perfil_acesso FROM perfil_usuario LIMIT 1")
+    except Exception:
+        print("Adicionando coluna 'perfil_acesso' à tabela 'perfil_usuario'...")
+        cur.execute(f"ALTER TABLE perfil_usuario ADD COLUMN perfil_acesso VARCHAR(100) DEFAULT NULL")
+
     cur.execute(f"""
         CREATE TABLE IF NOT EXISTS implantacoes (
             id {pk_type},

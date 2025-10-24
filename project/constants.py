@@ -1,3 +1,4 @@
+# project/constants.py
 # Definições Globais
 MODULO_OBRIGATORIO = "Obrigações para finalização"
 CHECKLIST_OBRIGATORIO_ITEMS = [
@@ -81,4 +82,24 @@ CARGOS_RESPONSAVEL = [
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
-CARGOS_LIST = ["Júnior", "Pleno", "Sênior"]
+# --- Cargos e Perfis de Acesso ---
+ADMIN_EMAIL = "kevinalveswp@gmail.com" 
+
+# Cargos (Função na empresa, editável pelo usuário no perfil)
+CARGOS_LIST = ["Júnior", "Pleno", "Sênior", "Estagiário"] 
+
+# Perfis de Acesso (Permissão no sistema, editável apenas pelo Admin/Gerente/Coordenador)
+PERFIL_ADMIN = "Administrador"
+PERFIL_GERENTE = "Gerente"
+PERFIL_COORDENADOR = "Coordenador"
+PERFIL_COLABORADOR = "Colaborador"
+PERFIL_VISUALIZADOR = "Visualizador"
+PERFIS_ACESSO_LIST = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR, PERFIL_COLABORADOR, PERFIL_VISUALIZADOR]
+
+PERFIS_COM_GESTAO = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR] 
+
+# Perfis que podem criar implantações (Exclui visualizador e perfis NULL)
+PERFIS_COM_CRIACAO = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR, PERFIL_COLABORADOR]
+
+# Perfis que podem ver a tela de Analytics (Gerentes e acima)
+PERFIS_COM_ANALYTICS = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]

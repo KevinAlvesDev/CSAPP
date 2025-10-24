@@ -8,13 +8,13 @@ from datetime import datetime
 from botocore.exceptions import ClientError
 
 # Importações internas do projeto
-from ..blueprints.auth import login_required
-from ..db import query_db, execute_db
+from ..blueprints.auth import login_required, permission_required 
+from ..db import query_db, execute_db, logar_timeline # <-- CORREÇÃO: logar_timeline importado de db
 from ..extensions import r2_client
-from ..services import get_dashboard_data, logar_timeline, _create_default_tasks, _get_progress
+from ..services import get_dashboard_data, _create_default_tasks, _get_progress # logar_timeline removido daqui
 from ..constants import (
     MODULO_OBRIGATORIO, MODULO_PENDENCIAS, TAREFAS_TREINAMENTO_PADRAO,
-    JUSTIFICATIVAS_PARADA, CARGOS_RESPONSAVEL
+    JUSTIFICATIVAS_PARADA, CARGOS_RESPONSAVEL, PERFIS_COM_CRIACAO
 )
 # Garanta que o 'utils' seja importado
 from .. import utils
@@ -110,10 +110,9 @@ def ver_implantacao(impl_id):
         return redirect(url_for('main.dashboard'))
 
 # --- Rotas de Ação (POST de Formulários) ---
-# (O restante do arquivo permanece igual - criar, iniciar, finalizar, parar, retomar, atualizar_detalhes, excluir, adicionar_tarefa)
-# ... (código das outras rotas POST aqui) ...
 @main_bp.route('/criar_implantacao', methods=['POST'])
 @login_required
+@permission_required(PERFIS_COM_CRIACAO) # NOVO: Restrição de permissão aplicada aqui
 def criar_implantacao():
     usuario_cs_email = g.user_email
     nome_empresa = request.form.get('nome_empresa', '').strip()
