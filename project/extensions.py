@@ -32,11 +32,18 @@ def init_extensions(app):
                 aws_secret_access_key=app.config['CLOUDFLARE_SECRET_ACCESS_KEY'],
                 region_name=app.config['AWS_REGION']
             )
-            r2_client.list_buckets() # Verifica a conexão
-            print(f"Cliente Boto3 R2 inicializado para o bucket '{app.config['CLOUDFLARE_BUCKET_NAME']}'.")
+            
+            # --- INÍCIO DA CORREÇÃO ---
+            # Verifica a conexão testando o bucket específico, não listando todos
+            bucket_name = app.config['CLOUDFLARE_BUCKET_NAME']
+            r2_client.head_bucket(Bucket=bucket_name)
+            print(f"Cliente Boto3 R2 inicializado e conectado ao bucket '{bucket_name}'.")
+            # --- FIM DA CORREÇÃO ---
+
             if not app.config['CLOUDFLARE_PUBLIC_URL']:
                 print("AVISO: CLOUDFLARE_PUBLIC_URL não definida. URLs de imagem podem não funcionar.")
         except (ClientError, NoCredentialsError) as e:
+            # Esta mensagem de erro agora pegará 'AccessDenied' se as chaves estiverem erradas
             print(f"ERRO CRÍTICO ao inicializar Boto3 R2: {e}. Uploads desativados.")
             r2_client = None
         except Exception as e:
