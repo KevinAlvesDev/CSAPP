@@ -41,17 +41,20 @@
             <button class="btn btn-outline-secondary rounded-circle p-0" type="button" id="userMenuDropdownDetails" data-bs-toggle="dropdown" aria-expanded="false" title="Menu" style="width: 40px; height: 40px; border: 2px solid var(--accent-color); overflow: hidden;">
                 {# g.perfil é injetado pelo decorator @login_required #}
                 {% if g.perfil.foto_url %}
-                    <img src="{{ g.perfil.foto_url }}" alt="Foto de Perfil" style="width: 100%; height: 100%; object-fit: cover;">
+                    {# ATUALIZADO: Cache Buster Adicionado #}
+                    <img src="{{ g.perfil.foto_url }}?v={{ range(1, 10000) | random }}" alt="Foto de Perfil" style="width: 100%; height: 100%; object-fit: cover;">
                 {% else %}
                     <i class="bi bi-person-fill" style="font-size: 1.5rem; color: var(--accent-color);"></i>
                 {% endif %}
             </button>
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuDropdownDetails">
-                <li><a class="dropdown-item" href="{{ url_for('perfil') }}">Editar Perfil</a></li>
+                {# ATUALIZADO: url_for('profile.perfil') #}
+                <li><a class="dropdown-item" href="{{ url_for('profile.perfil') }}">Editar Perfil</a></li>
                 <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalGamificacao">Gamificação</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li>
-                    <a class="dropdown-item text-danger" href="{{ url_for('logout') }}">
+                    {# ATUALIZADO: url_for('auth.logout') #}
+                    <a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}">
                         <i class="bi bi-box-arrow-right me-2"></i> Sair
                     </a>
                 </li>
@@ -69,7 +72,8 @@
         </div>
         <div class="offcanvas-body d-flex flex-column p-3">
             {# Link Voltar #}
-            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-primary mb-3 w-100"> <i class="bi bi-arrow-left me-2"></i> Dashboard </a>
+            {# ATUALIZADO: url_for('main.dashboard') #}
+            <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-primary mb-3 w-100"> <i class="bi bi-arrow-left me-2"></i> Dashboard </a>
 
             {# Ações Rápidas (Abrir Modais) #}
             <p class="text-secondary small mt-3 mb-2">Ações Rápidas</p>
@@ -142,7 +146,8 @@
             </ul>
 
             {# Botão Sair #}
-            <a href="{{ url_for('logout') }}" class="btn btn-outline-secondary mt-auto w-100"> <i class="bi bi-box-arrow-right me-2"></i> Sair </a>
+            {# ATUALIZADO: url_for('auth.logout') #}
+            <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-secondary mt-auto w-100"> <i class="bi bi-box-arrow-right me-2"></i> Sair </a>
         </div>
     </div>
 
@@ -248,7 +253,8 @@
                                             <form onsubmit="return false;" class="comment-form mb-2">
                                                 <textarea id="comment-text-{{ tarefa.id }}-new" class="form-control form-control-sm" name="comentario" maxlength="8000" rows="2" placeholder="Adicionar comentário..."></textarea>
                                                 <input type="file" name="imagem" class="form-control form-control-sm my-1" accept="image/png, image/jpeg, image/gif">
-                                                <button class="btn btn-outline-primary btn-sm px-2 py-1" type="button" onclick="window.adicionarComentario({{ tarefa.id }}, '{{ url_for('adicionar_comentario', tarefa_id=tarefa.id) }}', this)"> Salvar </button>
+                                                {# ATUALIZADO: url_for('api.adicionar_comentario') #}
+                                                <button class="btn btn-outline-primary btn-sm px-2 py-1" type="button" onclick="window.adicionarComentario({{ tarefa.id }}, '{{ url_for('api.adicionar_comentario', tarefa_id=tarefa.id) }}', this)"> Salvar </button>
                                             </form>
                                             <div class="list-group list-group-flush border rounded-1" id="comment-list-{{ tarefa.id }}" style="max-height: 300px; overflow-y: auto;">
                                                 {% if not tarefa.comentarios %}
@@ -272,7 +278,8 @@
                                                         {% endif %}
                                                     </div>
                                                     {% if comentario.usuario_cs == email_usuario_logado %}
-                                                        <button class="btn btn-sm btn-link text-danger p-0 small mt-1" onclick="window.excluirComentario({{ comentario.id }}, '{{ url_for('excluir_comentario', comentario_id=comentario.id) }}', this)"> Excluir </button>
+                                                        {# ATUALIZADO: url_for('api.excluir_comentario') #}
+                                                        <button class="btn btn-sm btn-link text-danger p-0 small mt-1" onclick="window.excluirComentario({{ comentario.id }}, '{{ url_for('api.excluir_comentario', comentario_id=comentario.id) }}', this)"> Excluir </button>
                                                     {% endif %}
                                                 </div>
                                                 {% endfor %}
@@ -328,7 +335,8 @@
                                             <form onsubmit="return false;" class="comment-form mb-2">
                                                 <textarea id="comment-text-{{ tarefa.id }}-new" class="form-control form-control-sm" name="comentario" maxlength="8000" rows="2" placeholder="Adicionar comentário..."></textarea>
                                                 <input type="file" name="imagem" class="form-control form-control-sm my-1" accept="image/png, image/jpeg, image/gif">
-                                                <button class="btn btn-outline-primary btn-sm px-2 py-1" type="button" onclick="window.adicionarComentario({{ tarefa.id }}, '{{ url_for('adicionar_comentario', tarefa_id=tarefa.id) }}', this)"> Salvar </button>
+                                                {# ATUALIZADO: url_for('api.adicionar_comentario') #}
+                                                <button class="btn btn-outline-primary btn-sm px-2 py-1" type="button" onclick="window.adicionarComentario({{ tarefa.id }}, '{{ url_for('api.adicionar_comentario', tarefa_id=tarefa.id) }}', this)"> Salvar </button>
                                             </form>
                                             <div class="list-group list-group-flush border rounded-1" id="comment-list-{{ tarefa.id }}" style="max-height: 300px; overflow-y: auto;">
                                                 {% if not tarefa.comentarios %}
@@ -352,7 +360,8 @@
                                                         {% endif %}
                                                     </div>
                                                     {% if comentario.usuario_cs == email_usuario_logado %}
-                                                        <button class="btn btn-sm btn-link text-danger p-0 small mt-1" onclick="window.excluirComentario({{ comentario.id }}, '{{ url_for('excluir_comentario', comentario_id=comentario.id) }}', this)"> Excluir </button>
+                                                        {# ATUALIZADO: url_for('api.excluir_comentario') #}
+                                                        <button class="btn btn-sm btn-link text-danger p-0 small mt-1" onclick="window.excluirComentario({{ comentario.id }}, '{{ url_for('api.excluir_comentario', comentario_id=comentario.id) }}', this)"> Excluir </button>
                                                     {% endif %}
                                                 </div>
                                                 {% endfor %}
@@ -382,8 +391,8 @@
                             <h5 class="mb-0 fs-6">Adicionar Nova Pendência</h5>
                         </div>
                         <div class="card-body">
-                             {# Adicionado onsubmit para salvar a aba ativa #}
-                            <form action="{{ url_for('adicionar_tarefa') }}" method="POST" class="row g-2 align-items-end"
+                             {# ATUALIZADO: Salva 'pendencias-tab' no localStorage ANTES do submit #}
+                            <form action="{{ url_for('main.adicionar_tarefa') }}" method="POST" class="row g-2 align-items-end"
                                   onsubmit="localStorage.setItem('tabAtiva-implantacao-{{ implantacao.id }}', 'pendencias-tab'); return true;">
                                 <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
                                 <input type="hidden" name="tarefa_pai" value="{{ modulo_pendencias_nome }}">
@@ -431,7 +440,8 @@
                                             <form onsubmit="return false;" class="comment-form mb-2">
                                                 <textarea id="comment-text-{{ tarefa.id }}-new" class="form-control form-control-sm" name="comentario" maxlength="8000" rows="2" placeholder="Adicionar comentário..."></textarea>
                                                 <input type="file" name="imagem" class="form-control form-control-sm my-1" accept="image/png, image/jpeg, image/gif">
-                                                <button class="btn btn-outline-primary btn-sm px-2 py-1" type="button" onclick="window.adicionarComentario({{ tarefa.id }}, '{{ url_for('adicionar_comentario', tarefa_id=tarefa.id) }}', this)"> Salvar </button>
+                                                {# ATUALIZADO: url_for('api.adicionar_comentario') #}
+                                                <button class="btn btn-outline-primary btn-sm px-2 py-1" type="button" onclick="window.adicionarComentario({{ tarefa.id }}, '{{ url_for('api.adicionar_comentario', tarefa_id=tarefa.id) }}', this)"> Salvar </button>
                                             </form>
                                             <div class="list-group list-group-flush border rounded-1" id="comment-list-{{ tarefa.id }}" style="max-height: 300px; overflow-y: auto;">
                                                 {% if not tarefa.comentarios %}
@@ -455,7 +465,8 @@
                                                         {% endif %}
                                                     </div>
                                                     {% if comentario.usuario_cs == email_usuario_logado %}
-                                                        <button class="btn btn-sm btn-link text-danger p-0 small mt-1" onclick="window.excluirComentario({{ comentario.id }}, '{{ url_for('excluir_comentario', comentario_id=comentario.id) }}', this)"> Excluir </button>
+                                                        {# ATUALIZADO: url_for('api.excluir_comentario') #}
+                                                        <button class="btn btn-sm btn-link text-danger p-0 small mt-1" onclick="window.excluirComentario({{ comentario.id }}, '{{ url_for('api.excluir_comentario', comentario_id=comentario.id) }}', this)"> Excluir </button>
                                                     {% endif %}
                                                 </div>
                                                 {% endfor %}
@@ -518,7 +529,8 @@
     <div class="modal-dialog">
         <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);">
             <div class="modal-header header-bg"><h5 class="modal-title" id="modalFinalizarLabel" style="color: var(--body-color);">Finalizar Implantação</h5><button type="button" class="btn-close btn-close-dark" data-bs-dismiss="modal" aria-label="Close"></button></div>
-            <form action="{{ url_for('finalizar_implantacao') }}" method="POST">
+            {# ATUALIZADO: url_for('main.finalizar_implantacao') #}
+            <form action="{{ url_for('main.finalizar_implantacao') }}" method="POST">
                 <div class="modal-body">
                     <p>Tem certeza que deseja marcar esta implantação como "Finalizada"?</p>
                     <p class="small text-warning"><i class="bi bi-exclamation-triangle-fill me-1"></i> A finalização só será permitida se todas as tarefas dos checklists Obrigatório e de Treinamentos estiverem concluídas.</p>
@@ -539,7 +551,8 @@
     <div class="modal-dialog">
         <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);">
             <div class="modal-header header-bg"><h5 class="modal-title" id="modalPararLabel" style="color: var(--body-color);">Parar Implantação</h5><button type="button" class="btn-close btn-close-dark" data-bs-dismiss="modal" aria-label="Close"></button></div>
-            <form action="{{ url_for('parar_implantacao') }}" method="POST">
+            {# ATUALIZADO: url_for('main.parar_implantacao') #}
+            <form action="{{ url_for('main.parar_implantacao') }}" method="POST">
                 <div class="modal-body">
                     <p>Tem certeza que deseja "Parar" esta implantação?</p>
                     <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
@@ -567,7 +580,8 @@
     <div class="modal-dialog">
         <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);">
             <div class="modal-header header-bg"><h5 class="modal-title" id="modalRetomarLabel" style="color: var(--body-color);">Retomar Implantação</h5><button type="button" class="btn-close btn-close-dark" data-bs-dismiss="modal" aria-label="Close"></button></div>
-            <form action="{{ url_for('retomar_implantacao') }}" method="POST">
+            {# ATUALIZADO: url_for('main.retomar_implantacao') #}
+            <form action="{{ url_for('main.retomar_implantacao') }}" method="POST">
                 <div class="modal-body">
                     <p>Tem certeza que deseja "Retomar" esta implantação?</p>
                     <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
@@ -587,7 +601,8 @@
     <div class="modal-dialog">
         <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);">
             <div class="modal-header header-bg"><h5 class="modal-title" id="adicionarTarefaModalLabel" style="color: var(--body-color);">Adicionar Nova Tarefa</h5><button type="button" class="btn-close btn-close-dark" data-bs-dismiss="modal" aria-label="Close"></button></div>
-            <form action="{{ url_for('adicionar_tarefa') }}" method="POST">
+            {# ATUALIZADO: url_for('main.adicionar_tarefa') #}
+            <form action="{{ url_for('main.adicionar_tarefa') }}" method="POST">
                 <div class="modal-body">
                     <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
                     <div class="mb-3">
@@ -629,7 +644,8 @@
     <div class="modal-dialog">
         <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);">
             <div class="modal-header header-bg"><h5 class="modal-title text-danger" id="modalExcluirImplantacaoLabel" style="color: var(--body-color);">Excluir Implantação</h5><button type="button" class="btn-close btn-close-dark" data-bs-dismiss="modal" aria-label="Close"></button></div>
-            <form action="{{ url_for('excluir_implantacao') }}" method="POST">
+            {# ATUALIZADO: url_for('main.excluir_implantacao') #}
+            <form action="{{ url_for('main.excluir_implantacao') }}" method="POST">
                 <div class="modal-body">
                     <h5 class="text-danger">Atenção! Ação irreversível!</h5>
                     <p>Você tem certeza que deseja excluir permanentemente a implantação de <strong>{{ implantacao.nome_empresa }}</strong>?</p>
@@ -650,7 +666,7 @@
 
 {% block scripts_extra %}
 {# Inclui SortableJS para drag-and-drop #}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js" integrity="sha512-Eezs+g9Lq4TCCq0wae01s9PuNWzHYoCMkQAi7cDM6ZQJJ5CmAGgk+FdIQ0+UI0EzfYRYzVLgsJdJAYNWMXifcA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js" xintegrity="sha512-Eezs+g9Lq4TCCq0wae01s9PuNWzHYoCMkQAi7cDM6ZQJJ5CmAGgk+FdIQ0+UI0EzfYRYzVLgsJdJAYNWMXifcA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
     // --- Funções Helper para UI ---
     function formatDataComentario(dataStr) {
@@ -738,7 +754,8 @@
         const dataFormatada = formatDataComentario(comentario.data_criacao);
         let botaoExcluir = '';
         if (comentario.usuario_cs === emailUsuarioLogado) {
-            const urlExcluir = `{{ url_for('excluir_comentario', comentario_id=0) }}`.replace('/0', `/${comentario.id}`);
+            {# ATUALIZADO: url_for('api.excluir_comentario') #}
+            const urlExcluir = `{{ url_for('api.excluir_comentario', comentario_id=0) }}`.replace('/0', `/${comentario.id}`);
             botaoExcluir = `
                 <button class="btn btn-sm btn-link text-danger p-0 small mt-1"
                         onclick="window.excluirComentario(${comentario.id}, '${urlExcluir}', this)">
@@ -868,7 +885,9 @@
         const label = checkbox.closest('li').querySelector('label.form-check-label');
         const isChecked = checkbox.checked;
         checkbox.disabled = true;
-        fetch(`/toggle_tarefa/${tarefaId}`, { method: 'POST' })
+        {# ATUALIZADO: url_for('api.toggle_tarefa') e corrigido para usar replace() #}
+        const endpointUrl = `{{ url_for('api.toggle_tarefa', tarefa_id=0) }}`.replace('/0', `/${tarefaId}`);
+        fetch(endpointUrl, { method: 'POST' })
             .then(response => response.json())
             .then(data => {
                 if (data.ok) {
@@ -905,7 +924,8 @@
         if (!confirm('Tem certeza que deseja excluir esta tarefa? Todos os comentários associados também serão removidos permanentemente.')) {
             return;
         }
-        const endpointUrl = `{{ url_for('excluir_tarefa', tarefa_id=0) }}`.replace('/0', `/${tarefaId}`);
+        {# ATUALIZADO: url_for('api.excluir_tarefa') #}
+        const endpointUrl = `{{ url_for('api.excluir_tarefa', tarefa_id=0) }}`.replace('/0', `/${tarefaId}`);
         const originalBtnHTML = button.innerHTML;
         button.disabled = true;
         button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
@@ -923,6 +943,8 @@
                     if (data.implantacao_finalizada) {
                         adicionarLogNaTimeline(data.log_finalizacao);
                         alert('Implantação finalizada automaticamente após exclusão da tarefa.');
+                        // Poderia recarregar a página aqui também se desejado
+                        // window.location.reload();
                     }
                 } else {
                     throw new Error(data.error || 'Erro desconhecido ao excluir tarefa.');
@@ -941,7 +963,8 @@
     // --- Inicialização da Página ---
     document.addEventListener('DOMContentLoaded', function() {
         const implantacaoId = {{ implantacao.id }};
-        const endpointReordenar = '{{ url_for("reordenar_tarefas") }}';
+        {# ATUALIZADO: url_for('api.reordenar_tarefas') #}
+        const endpointReordenar = '{{ url_for("api.reordenar_tarefas") }}';
 
         // Torna as funções de ação globais
         window.toggleTarefa = toggleTarefa;
@@ -974,13 +997,44 @@
             });
         });
 
-        // Lógica para lembrar a aba ativa
+        // Lógica para lembrar a aba ativa (Melhorada)
         const tabSelector = '#detalhesTab .nav-link';
         const tabs = document.querySelectorAll(tabSelector);
         const tabStorageKey = `tabAtiva-implantacao-${implantacaoId}`;
-        tabs.forEach(tab => { tab.addEventListener('shown.bs.tab', event => { localStorage.setItem(tabStorageKey, event.target.id); }); });
+
+        // Salva a aba ativa QUANDO ela é mostrada
+        tabs.forEach(tab => {
+            tab.addEventListener('shown.bs.tab', event => {
+                localStorage.setItem(tabStorageKey, event.target.id);
+            });
+        });
+
+        // Tenta restaurar a aba salva AO CARREGAR A PÁGINA
         const abaAtivaId = localStorage.getItem(tabStorageKey);
-        if (abaAtivaId) { const tabEl = document.getElementById(abaAtivaId); if (tabEl) { try { new bootstrap.Tab(tabEl).show(); } catch(e) { console.warn("Não foi possível restaurar aba salva:", e); localStorage.removeItem(tabStorageKey); } } else { localStorage.removeItem(tabStorageKey); } } else { const defaultTab = document.getElementById('checklist-treinamentos-tab'); if(defaultTab) new bootstrap.Tab(defaultTab).show(); }
+        let abaRestaurada = false;
+        if (abaAtivaId) {
+            const tabEl = document.getElementById(abaAtivaId);
+            if (tabEl) {
+                try {
+                    // Usa o método show() do Bootstrap para ativar a aba e seu conteúdo
+                    new bootstrap.Tab(tabEl).show();
+                    abaRestaurada = true;
+                    console.log('Aba restaurada:', abaAtivaId);
+                } catch(e) {
+                    console.warn("Não foi possível restaurar aba salva:", e);
+                    localStorage.removeItem(tabStorageKey); // Limpa chave inválida
+                }
+            } else {
+                 localStorage.removeItem(tabStorageKey); // Limpa chave inválida
+            }
+        }
+        // Se nenhuma aba foi restaurada (primeira visita ou chave inválida), ativa a primeira
+        if (!abaRestaurada) {
+             const defaultTab = document.getElementById('checklist-treinamentos-tab');
+             if(defaultTab) {
+                 try { new bootstrap.Tab(defaultTab).show(); } catch(e) { console.error("Erro ao ativar aba padrão:", e); }
+             }
+        }
 
         // Inicializa botões "Ver mais/menos"
          document.querySelectorAll('.comment-text').forEach(textEl => { const wrapper = textEl.closest('.comment-content-wrapper'); let button = wrapper ? wrapper.querySelector('button[onclick^="toggleComment"]') : null; const maxHeight = parseFloat(window.getComputedStyle(textEl).maxHeight); const isOverflowing = textEl.scrollHeight > maxHeight + 5; if (isOverflowing && !button) { const newButton = document.createElement('button'); newButton.className = 'btn btn-sm btn-link p-0 small'; newButton.textContent = 'Ver mais...'; newButton.onclick = function() { toggleComment(this, textEl.id); }; textEl.parentNode.insertBefore(newButton, textEl.nextSibling); } else if (!isOverflowing && button) { button.remove(); } else if (isOverflowing && button) { button.textContent = textEl.classList.contains('expanded') ? 'Ver menos...' : 'Ver mais...'; } });

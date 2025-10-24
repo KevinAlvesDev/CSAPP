@@ -23,10 +23,12 @@
                     {% endif %}
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuDropdown">
-                    <li><a class="dropdown-item" href="{{ url_for('perfil') }}">Editar Perfil</a></li> <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalGamificacao">Gamificação</a></li>
+                    {# ATUALIZADO: 'profile.perfil' #}
+                    <li><a class="dropdown-item" href="{{ url_for('profile.perfil') }}">Editar Perfil</a></li> <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalGamificacao">Gamificação</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li>
-                        <a class="dropdown-item text-danger" href="{{ url_for('logout') }}">
+                        {# ATUALIZADO: 'auth.logout' #}
+                        <a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}">
                             <i class="bi bi-box-arrow-right me-2"></i> Sair
                         </a>
                     </li>
@@ -117,7 +119,8 @@
                                     </div>
                                 </td>
                                 <td>
-                                    <a href="{{ url_for('ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary">Ver Detalhes</a>
+                                    {# ATUALIZADO: 'main.ver_implantacao' #}
+                                    <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary">Ver Detalhes</a>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -175,7 +178,8 @@
                                     </div>
                                 </td>
                                 <td>
-                                    <a href="{{ url_for('ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary">Ver Detalhes</a>
+                                    {# ATUALIZADO: 'main.ver_implantacao' #}
+                                    <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary">Ver Detalhes</a>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -219,12 +223,13 @@
                                 </td>
                                 <td><span class="badge bg-info text-dark">Futura</span></td>
                                 <td>
-                                    <form method="POST" action="{{ url_for('iniciar_implantacao') }}" style="display:inline;">
+                                    {# ATUALIZADO: 'main.iniciar_implantacao' #}
+                                    <form method="POST" action="{{ url_for('main.iniciar_implantacao') }}" style="display:inline;">
                                         <input type="hidden" name="implantacao_id" value="{{ impl.id }}">
                                         <button type="submit" class="btn btn-sm btn-success">Iniciar Implantação</button>
                                     </form>
-                                     {# CORRIGIDO: Mudança para btn-primary para alto contraste (azul/branco) #}
-                                     <a href="{{ url_for('ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary ms-1">Ver Detalhes</a>
+                                     {# ATUALIZADO: 'main.ver_implantacao' #}
+                                     <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary ms-1">Ver Detalhes</a>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -270,7 +275,8 @@
                                     <span class="badge bg-success">100% Concluída</span>
                                 </td>
                                 <td>
-                                    <a href="{{ url_for('ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary">Ver Histórico</a>
+                                    {# ATUALIZADO: 'main.ver_implantacao' #}
+                                    <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary">Ver Histórico</a>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -314,9 +320,11 @@
                                 </td>
                                 <td class="text-truncate" style="max-width: 200px;">{{ impl.motivo_parada | default('N/A') }}</td>
                                 <td>
-                                    <a href="{{ url_for('ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary">Ver Detalhes</a>
+                                    {# ATUALIZADO: 'main.ver_implantacao' #}
+                                    <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary">Ver Detalhes</a>
                                     {# Formulário para Retomar #}
-                                    <form method="POST" action="{{ url_for('retomar_implantacao') }}" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja retomar esta implantação?');">
+                                    {# ATUALIZADO: 'main.retomar_implantacao' #}
+                                    <form method="POST" action="{{ url_for('main.retomar_implantacao') }}" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja retomar esta implantação?');">
                                         <input type="hidden" name="implantacao_id" value="{{ impl.id }}">
                                         <input type="hidden" name="redirect_to" value="dashboard"> {# Redireciona de volta pro dashboard #}
                                         <button type="submit" class="btn btn-sm btn-success ms-1">Retomar</button>
@@ -342,7 +350,8 @@
                 <h5 class="modal-title" id="novaImplantacaoModalLabel" style="color: var(--body-color);">Nova Implantação</h5>
                 <button type="button" class="btn-close btn-close-dark" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="{{ url_for('criar_implantacao') }}" method="POST">
+            {# ATUALIZADO: 'main.criar_implantacao' #}
+            <form action="{{ url_for('main.criar_implantacao') }}" method="POST">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="nomeEmpresa" class="form-label">Nome da Empresa</label>

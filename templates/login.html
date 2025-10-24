@@ -79,7 +79,8 @@
         {% endwith %}
 
         {# Botão que redireciona para a rota /login do Flask #}
-        <a href="{{ url_for('login') }}" class="btn btn-login btn-lg mt-3">
+        {# ATUALIZADO: 'login' mudou para 'auth.login' por causa do Blueprint #}
+        <a href="{{ url_for('auth.login') }}" class="btn btn-login btn-lg mt-3">
             <i class="bi bi-box-arrow-in-right me-2"></i> Entrar ou Registrar
         </a>
     </div>
