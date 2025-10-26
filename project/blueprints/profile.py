@@ -35,13 +35,27 @@ def perfil():
             # --- Lógica de Restrição ---
             is_colaborador = current_perfil.get('perfil_acesso') == PERFIL_COLABORADOR
             
-            # Define os valores a serem salvos
-            nome_to_save = current_perfil.get('nome') if is_colaborador else form_nome
+            # DEFINE nome_to_save: Se não for colaborador, usa o valor do form.
+            # AJUSTE: Converte string vazia para None se for permitido alterar e estiver vazio.
+            if not is_colaborador:
+                 nome_to_save = form_nome if form_nome else None
+            else:
+                 nome_to_save = current_perfil.get('nome')
             
-            # Cargo só é salvo se não for colaborador e se for válido
+            # Cargo só é salvo se não for colaborador.
             cargo_to_save = current_perfil.get('cargo') # Mantém o atual por padrão
             if not is_colaborador:
-                cargo_to_save = form_cargo if form_cargo in CARGOS_LIST else None
+                # Se for vazio ("Selecione seu cargo..."), vira None.
+                if not form_cargo: 
+                    cargo_to_save = None
+                # Se não for vazio, verifica se é um cargo válido
+                elif form_cargo in CARGOS_LIST:
+                    cargo_to_save = form_cargo
+                # Se for um valor inválido, mantém o valor anterior (ou None se o anterior era None)
+                # OBS: Como o HTML só permite valores de CARGOS_LIST ou "", isso deve ser seguro.
+                # Mantemos a lógica para o caso de injeção de valor inválido.
+                else:
+                    cargo_to_save = current_perfil.get('cargo') 
             # --------------------------
             
             foto_url_atual = current_perfil.get('foto_url')
@@ -102,7 +116,8 @@ def perfil():
                 (nome_to_save, cargo_to_save, foto_url_atual, usuario_cs_email)
             )
             
-            if is_colaborador and (form_nome != nome_to_save or form_cargo != cargo_to_save):
+            if is_colaborador and (request.form.get('nome', '').strip() != current_perfil.get('nome') or request.form.get('cargo', '').strip() != current_perfil.get('cargo')):
+                 # Verifica se a intenção era mudar (o form submetido é diferente do valor inicial)
                  flash('Perfil atualizado. Nome e Cargo não podem ser alterados pelo perfil Colaborador.', 'warning')
             else:
                  flash('Perfil atualizado com sucesso!', 'success')

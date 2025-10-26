@@ -17,29 +17,30 @@
                 <button class="btn btn-outline-secondary rounded-circle p-0" type="button" id="userMenuDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Menu" style="width: 40px; height: 40px; border: 2px solid var(--accent-color); overflow: hidden;">
                     {# g.perfil é injetado pelo decorator @login_required #}
                     {% if g.perfil.foto_url %}
-                        <img src="{{ g.perfil.foto_url }}" alt="Foto de Perfil" style="width: 100%; height: 100%; object-fit: cover;">
+                        <img src="{{ g.perfil.foto_url }}?v={{ range(1, 10000) | random }}" alt="Foto de Perfil" style="width: 100%; height: 100%; object-fit: cover;">
                     {% else %}
                         <i class="bi bi-person-fill" style="font-size: 1.5rem; color: var(--accent-color);"></i>
                     {% endif %}
                 </button>
+                
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuDropdown">
-                    <li><a class="dropdown-item" href="{{ url_for('profile.perfil') }}">Editar Perfil</a></li>
+    
+                    {# EMOJI: Editar Perfil #}
+                    <li><a class="dropdown-item" href="{{ url_for('profile.perfil') }}"><i class="bi bi-person-circle me-2"></i> Editar Perfil</a></li>
                     
-                    {# CORREÇÃO CRÍTICA: Chama o NOVO MODAL #}
+                    {# Checagens para Usuários e Analytics #}
                     {% if g.perfil and g.perfil.perfil_acesso in ['Administrador', 'Gerente', 'Coordenador'] %}
                         <li><a class="dropdown-item text-primary" href="#" data-bs-toggle="modal" data-bs-target="#modalGerenciarUsuarios">
                             <i class="bi bi-people-fill me-2"></i> Usuários
                         </a></li>
-                    {% endif %}
-
-                    {# NOVO: Link para Analytics #}
-                    {% if g.perfil and g.perfil.perfil_acesso in ['Administrador', 'Gerente', 'Coordenador'] %}
                         <li><a class="dropdown-item text-info" href="{{ url_for('analytics.analytics_dashboard') }}">
                             <i class="bi bi-graph-up me-2"></i> Analytics Gerencial
                         </a></li>
                     {% endif %}
 
-                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalGamificacao">Gamificação</a></li>
+                    {# EMOJI: Gamificação #}
+                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalGamificacao"><i class="bi bi-trophy-fill me-2"></i> Gamificação</a></li>
+                    
                     <li><hr class="dropdown-divider"></li>
                     <li>
                         <a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}">
@@ -56,7 +57,6 @@
         <h2 class="h5 mb-3">Resumo Rápido</h2>
         <div class="row row-cols-1 row-cols-md-2 row-cols-lg-5 g-3 mb-4">
             {% set m = metrics or {} %}
-            {# CORREÇÃO: Usando a variável 'metrics' e as chaves corretas fornecidas pelo app.py #}
             <div class="col"><div class="metric-card p-3 rounded shadow-sm text-center"><h6 class="text-secondary">Em Andamento</h6><h4 class="mb-0 text-primary">{{ m.impl_andamento_total | default(0) }}</h4></div></div>
             <div class="col"><div class="metric-card p-3 rounded shadow-sm text-center"><h6 class="text-secondary">Atrasadas (> 25d)</h6><h4 class="mb-0 text-danger">{{ m.implantacoes_atrasadas | default(0) }}</h4></div></div>
             <div class="col"><div class="metric-card p-3 rounded shadow-sm text-center"><h6 class="text-secondary">Futuras</h6><h4 class="mb-0 text-info">{{ m.implantacoes_futuras | default(0) }}</h4></div></div>
@@ -88,7 +88,7 @@
         {# Conteúdo das Abas #}
         <div class="tab-content metric-card p-3" id="myTabContent" style="border-top: none;">
 
-            {# Aba Em Andamento #}
+            {# Aba Em Andamento - ATUALIZADA COM DIAS EM IMPLANTAÇÃO #}
             <div class="tab-pane fade show active" id="andamento" role="tabpanel" aria-labelledby="andamento-tab">
                 <h2 class="h5 mb-3">Clientes em Andamento</h2>
                 {% if not implantacoes_andamento %}
@@ -101,6 +101,7 @@
                         <thead>
                             <tr>
                                 <th scope="col">Empresa</th>
+                                <th scope="col">Dias em implantação</th>
                                 <th scope="col" style="width: 20%;">Progresso</th>
                                 <th scope="col">Ações</th>
                             </tr>
@@ -123,9 +124,33 @@
                                        data-final-implantacao="{{ impl.data_final_implantacao_iso | default('') }}"
                                        data-chave-oamd="{{ impl.chave_oamd | default('') }}"
                                        data-catraca="{{ impl.catraca | default('') }}"
-                                       data-facial="{{ impl.facial | default('') }}">
+                                       data-facial="{{ impl.facial | default('') }}"
+                                       data-nivel-receita="{{ impl.nivel_receita | default('') }}"
+                                       data-valor-atribuido="{{ impl.valor_atribuido | default('') }}"
+                                       data-id-favorecido="{{ impl.id_favorecido | default('') }}"
+                                       data-tela-apoio-link="{{ impl.tela_apoio_link | default('') }}"
+                                       data-resp-estrategico-nome="{{ impl.resp_estrategico_nome | default('') }}"
+                                       data-resp-onb-nome="{{ impl.resp_onb_nome | default('') }}"
+                                       data-resp-estrategico-obs="{{ impl.resp_estrategico_obs | default('') }}"
+                                       data-contatos="{{ impl.contatos | default('') }}"
+                                       data-seguimento="{{ impl.seguimento | default('') }}"
+                                       data-tipos-planos="{{ impl.tipos_planos | default('') }}"
+                                       data-modalidades="{{ impl.modalidades | default('') }}"
+                                       data-horarios-func="{{ impl.horarios_func | default('') }}"
+                                       data-formas-pagamento="{{ impl.formas_pagamento | default('') }}"
+                                       data-diaria="{{ impl.diaria | default('') }}"
+                                       data-freepass="{{ impl.freepass | default('') }}"
+                                       data-alunos-ativos="{{ impl.alunos_ativos | default(0) }}"
+                                       data-sistema-anterior="{{ impl.sistema_anterior | default('') }}"
+                                       data-importacao="{{ impl.importacao | default('') }}"
+                                       data-recorrencia-usa="{{ impl.recorrencia_usa | default('') }}"
+                                       data-boleto="{{ impl.boleto | default('') }}"
+                                       data-nota-fiscal="{{ impl.nota_fiscal | default('') }}">
                                         {{ impl.nome_empresa }}
                                     </a>
+                                </td>
+                                <td class="text-nowrap">
+                                    <span class="badge bg-secondary text-white">{{ impl.dias_passados | int }} dias</span>
                                 </td>
                                 <td>
                                     <div class="progress" style="height: 20px;">
@@ -174,7 +199,28 @@
                                         data-inicio-implantacao="{{ impl.data_criacao_iso | default('') }}"
                                         data-inicio-producao="{{ impl.data_inicio_producao_iso | default('') }}"
                                         data-final-implantacao="{{ impl.data_final_implantacao_iso | default('') }}"
-                                        data-chave-oamd="{{ impl.chave_oamd | default('') }}" data-catraca="{{ impl.catraca | default('') }}" data-facial="{{ impl.facial | default('') }}">
+                                        data-chave-oamd="{{ impl.chave_oamd | default('') }}" data-catraca="{{ impl.catraca | default('') }}" data-facial="{{ impl.facial | default('') }}"
+                                        data-nivel-receita="{{ impl.nivel_receita | default('') }}"
+                                        data-valor-atribuido="{{ impl.valor_atribuido | default('') }}"
+                                        data-id-favorecido="{{ impl.id_favorecido | default('') }}"
+                                        data-tela-apoio-link="{{ impl.tela_apoio_link | default('') }}"
+                                        data-resp-estrategico-nome="{{ impl.resp_estrategico_nome | default('') }}"
+                                        data-resp-onb-nome="{{ impl.resp_onb_nome | default('') }}"
+                                        data-resp-estrategico-obs="{{ impl.resp_estrategico_obs | default('') }}"
+                                        data-contatos="{{ impl.contatos | default('') }}"
+                                        data-seguimento="{{ impl.seguimento | default('') }}"
+                                        data-tipos-planos="{{ impl.tipos_planos | default('') }}"
+                                        data-modalidades="{{ impl.modalidades | default('') }}"
+                                        data-horarios-func="{{ impl.horarios_func | default('') }}"
+                                        data-formas-pagamento="{{ impl.formas_pagamento | default('') }}"
+                                        data-diaria="{{ impl.diaria | default('') }}"
+                                        data-freepass="{{ impl.freepass | default('') }}"
+                                        data-alunos-ativos="{{ impl.alunos_ativos | default(0) }}"
+                                        data-sistema-anterior="{{ impl.sistema_anterior | default('') }}"
+                                        data-importacao="{{ impl.importacao | default('') }}"
+                                        data-recorrencia-usa="{{ impl.recorrencia_usa | default('') }}"
+                                        data-boleto="{{ impl.boleto | default('') }}"
+                                        data-nota-fiscal="{{ impl.nota_fiscal | default('') }}">
                                          {{ impl.nome_empresa }}
                                      </a>
                                 </td>
@@ -231,7 +277,28 @@
                                        data-inicio-implantacao="{{ impl.data_criacao_iso | default('') }}"
                                        data-inicio-producao="{{ impl.data_inicio_producao_iso | default('') }}"
                                        data-final-implantacao="{{ impl.data_final_implantacao_iso | default('') }}"
-                                       data-chave-oamd="{{ impl.chave_oamd | default('') }}" data-catraca="{{ impl.catraca | default('') }}" data-facial="{{ impl.facial | default('') }}">
+                                       data-chave-oamd="{{ impl.chave_oamd | default('') }}" data-catraca="{{ impl.catraca | default('') }}" data-facial="{{ impl.facial | default('') }}"
+                                       data-nivel-receita="{{ impl.nivel_receita | default('') }}"
+                                       data-valor-atribuido="{{ impl.valor_atribuido | default('') }}"
+                                       data-id-favorecido="{{ impl.id_favorecido | default('') }}"
+                                       data-tela-apoio-link="{{ impl.tela_apoio_link | default('') }}"
+                                       data-resp-estrategico-nome="{{ impl.resp_estrategico_nome | default('') }}"
+                                       data-resp-onb-nome="{{ impl.resp_onb_nome | default('') }}"
+                                       data-resp-estrategico-obs="{{ impl.resp_estrategico_obs | default('') }}"
+                                       data-contatos="{{ impl.contatos | default('') }}"
+                                       data-seguimento="{{ impl.seguimento | default('') }}"
+                                       data-tipos-planos="{{ impl.tipos_planos | default('') }}"
+                                       data-modalidades="{{ impl.modalidades | default('') }}"
+                                       data-horarios-func="{{ impl.horarios_func | default('') }}"
+                                       data-formas-pagamento="{{ impl.formas_pagamento | default('') }}"
+                                       data-diaria="{{ impl.diaria | default('') }}"
+                                       data-freepass="{{ impl.freepass | default('') }}"
+                                       data-alunos-ativos="{{ impl.alunos_ativos | default(0) }}"
+                                       data-sistema-anterior="{{ impl.sistema_anterior | default('') }}"
+                                       data-importacao="{{ impl.importacao | default('') }}"
+                                       data-recorrencia-usa="{{ impl.recorrencia_usa | default('') }}"
+                                       data-boleto="{{ impl.boleto | default('') }}"
+                                       data-nota-fiscal="{{ impl.nota_fiscal | default('') }}">
                                         {{ impl.nome_empresa }}
                                     </a>
                                 </td>
@@ -281,7 +348,28 @@
                                        data-inicio-implantacao="{{ impl.data_criacao_iso | default('') }}"
                                        data-inicio-producao="{{ impl.data_inicio_producao_iso | default('') }}"
                                        data-final-implantacao="{{ impl.data_final_implantacao_iso | default('') }}"
-                                       data-chave-oamd="{{ impl.chave_oamd | default('') }}" data-catraca="{{ impl.catraca | default('') }}" data-facial="{{ impl.facial | default('') }}">
+                                       data-chave-oamd="{{ impl.chave_oamd | default('') }}" data-catraca="{{ impl.catraca | default('') }}" data-facial="{{ impl.facial | default('') }}"
+                                       data-nivel-receita="{{ impl.nivel_receita | default('') }}"
+                                       data-valor-atribuido="{{ impl.valor_atribuido | default('') }}"
+                                       data-id-favorecido="{{ impl.id_favorecido | default('') }}"
+                                       data-tela-apoio-link="{{ impl.tela_apoio_link | default('') }}"
+                                       data-resp-estrategico-nome="{{ impl.resp_estrategico_nome | default('') }}"
+                                       data-resp-onb-nome="{{ impl.resp_onb_nome | default('') }}"
+                                       data-resp-estrategico-obs="{{ impl.resp_estrategico_obs | default('') }}"
+                                       data-contatos="{{ impl.contatos | default('') }}"
+                                       data-seguimento="{{ impl.seguimento | default('') }}"
+                                       data-tipos-planos="{{ impl.tipos_planos | default('') }}"
+                                       data-modalidades="{{ impl.modalidades | default('') }}"
+                                       data-horarios-func="{{ impl.horarios_func | default('') }}"
+                                       data-formas-pagamento="{{ impl.formas_pagamento | default('') }}"
+                                       data-diaria="{{ impl.diaria | default('') }}"
+                                       data-freepass="{{ impl.freepass | default('') }}"
+                                       data-alunos-ativos="{{ impl.alunos_ativos | default(0) }}"
+                                       data-sistema-anterior="{{ impl.sistema_anterior | default('') }}"
+                                       data-importacao="{{ impl.importacao | default('') }}"
+                                       data-recorrencia-usa="{{ impl.recorrencia_usa | default('') }}"
+                                       data-boleto="{{ impl.boleto | default('') }}"
+                                       data-nota-fiscal="{{ impl.nota_fiscal | default('') }}">
                                         {{ impl.nome_empresa }}
                                     </a>
                                 </td>
@@ -328,7 +416,28 @@
                                        data-inicio-implantacao="{{ impl.data_criacao_iso | default('') }}"
                                        data-inicio-producao="{{ impl.data_inicio_producao_iso | default('') }}"
                                        data-final-implantacao="{{ impl.data_final_implantacao_iso | default('') }}"
-                                       data-chave-oamd="{{ impl.chave_oamd | default('') }}" data-catraca="{{ impl.catraca | default('') }}" data-facial="{{ impl.facial | default('') }}">
+                                       data-chave-oamd="{{ impl.chave_oamd | default('') }}" data-catraca="{{ impl.catraca | default('') }}" data-facial="{{ impl.facial | default('') }}"
+                                       data-nivel-receita="{{ impl.nivel_receita | default('') }}"
+                                       data-valor-atribuido="{{ impl.valor_atribuido | default('') }}"
+                                       data-id-favorecido="{{ impl.id_favorecido | default('') }}"
+                                       data-tela-apoio-link="{{ impl.tela_apoio_link | default('') }}"
+                                       data-resp-estrategico-nome="{{ impl.resp_estrategico_nome | default('') }}"
+                                       data-resp-onb-nome="{{ impl.resp_onb_nome | default('') }}"
+                                       data-resp-estrategico-obs="{{ impl.resp_estrategico_obs | default('') }}"
+                                       data-contatos="{{ impl.contatos | default('') }}"
+                                       data-seguimento="{{ impl.seguimento | default('') }}"
+                                       data-tipos-planos="{{ impl.tipos_planos | default('') }}"
+                                       data-modalidades="{{ impl.modalidades | default('') }}"
+                                       data-horarios-func="{{ impl.horarios_func | default('') }}"
+                                       data-formas-pagamento="{{ impl.formas_pagamento | default('') }}"
+                                       data-diaria="{{ impl.diaria | default('') }}"
+                                       data-freepass="{{ impl.freepass | default('') }}"
+                                       data-alunos-ativos="{{ impl.alunos_ativos | default(0) }}"
+                                       data-sistema-anterior="{{ impl.sistema_anterior | default('') }}"
+                                       data-importacao="{{ impl.importacao | default('') }}"
+                                       data-recorrencia-usa="{{ impl.recorrencia_usa | default('') }}"
+                                       data-boleto="{{ impl.boleto | default('') }}"
+                                       data-nota-fiscal="{{ impl.nota_fiscal | default('') }}">
                                         {{ impl.nome_empresa }}
                                     </a>
                                 </td>

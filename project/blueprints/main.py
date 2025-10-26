@@ -15,7 +15,13 @@ from ..db import query_db, execute_db, logar_timeline
 from ..services import _get_progress
 from ..constants import (
     MODULO_OBRIGATORIO, MODULO_PENDENCIAS, TAREFAS_TREINAMENTO_PADRAO,
-    JUSTIFICATIVAS_PARADA, CARGOS_RESPONSAVEL, PERFIS_COM_CRIACAO
+    JUSTIFICATIVAS_PARADA, CARGOS_RESPONSAVEL, PERFIS_COM_CRIACAO,
+    # NOVAS CONSTANTES
+    NIVEIS_RECEITA, SEGUIMENTOS_LIST, TIPOS_PLANOS, MODALIDADES_LIST,
+    HORARIOS_FUNCIONAMENTO, FORMAS_PAGAMENTO, SISTEMAS_ANTERIORES,
+    RECORRENCIA_USADA,
+    NAO_DEFINIDO_BOOL,
+    SIM_NAO_OPTIONS # NOVO: Importa a lista de opções para o template
 )
 # Garanta que o 'utils' seja importado
 from .. import utils
@@ -45,7 +51,27 @@ def dashboard():
         perfil_data = g.perfil if g.perfil else {}
         default_metrics = { 'nome': user_info.get('name', user_email), 'impl_andamento': 0, 'impl_finalizadas': 0, 'impl_paradas': 0, 'progresso_medio_carteira': 0, 'impl_andamento_total': 0, 'implantacoes_atrasadas': 0, 'implantacoes_futuras': 0 }
         final_metrics = {**default_metrics, **perfil_data, **metrics}
-        return render_template('dashboard.html', user_info=user_info, metrics=final_metrics, implantacoes_andamento=dashboard_data.get('andamento', []), implantacoes_futuras=dashboard_data.get('futuras', []), implantacoes_finalizadas=dashboard_data.get('finalizadas', []), implantacoes_paradas=dashboard_data.get('paradas', []), implantacoes_atrasadas=dashboard_data.get('atrasadas', []), cargos_responsavel=CARGOS_RESPONSAVEL )
+        return render_template(
+            'dashboard.html', 
+            user_info=user_info, 
+            metrics=final_metrics, 
+            implantacoes_andamento=dashboard_data.get('andamento', []), 
+            implantacoes_futuras=dashboard_data.get('futuras', []), 
+            implantacoes_finalizadas=dashboard_data.get('finalizadas', []), 
+            implantacoes_paradas=dashboard_data.get('paradas', []), 
+            implantacoes_atrasadas=dashboard_data.get('atrasadas', []), 
+            cargos_responsavel=CARGOS_RESPONSAVEL,
+            # ADICIONANDO TODAS AS CONSTANTES AQUI TAMBÉM:
+            NIVEIS_RECEITA=NIVEIS_RECEITA,
+            SEGUIMENTOS_LIST=SEGUIMENTOS_LIST,
+            TIPOS_PLANOS=TIPOS_PLANOS,
+            MODALIDADES_LIST=MODALIDADES_LIST,
+            HORARIOS_FUNCIONAMENTO=HORARIOS_FUNCIONAMENTO,
+            FORMAS_PAGAMENTO=FORMAS_PAGAMENTO,
+            SISTEMAS_ANTERIORES=SISTEMAS_ANTERIORES,
+            RECORRENCIA_USADA=RECORRENCIA_USADA,
+            SIM_NAO_OPTIONS=SIM_NAO_OPTIONS # Lista Sim/Não para o modal
+        )
     except Exception as e:
         print(f"ERRO ao carregar dashboard para {user_email}: {e}")
         flash("Erro ao carregar dados do dashboard.", "error")
@@ -56,6 +82,7 @@ def dashboard():
 def ver_implantacao(impl_id):
     usuario_cs_email = g.user_email
     try:
+        # SELECT * para pegar TODOS os novos campos da tabela implantacoes
         implantacao = query_db("SELECT * FROM implantacoes WHERE id = %s AND usuario_cs = %s", (impl_id, usuario_cs_email), one=True )
         if not implantacao:
             flash('Implantação não encontrada ou não pertence a você.', 'error')
@@ -108,7 +135,33 @@ def ver_implantacao(impl_id):
 
         nome_usuario_logado = g.perfil.get('nome', usuario_cs_email)
 
-        return render_template( 'implantacao_detalhes.html', user_info=g.user, implantacao=implantacao, tarefas_agrupadas_obrigatorio=tarefas_agrupadas_obrigatorio, tarefas_agrupadas_treinamento=ordered_treinamento, tarefas_agrupadas_pendencias=tarefas_agrupadas_pendencias, todos_modulos=todos_modulos_lista, modulo_pendencias_nome=MODULO_PENDENCIAS, progresso_porcentagem=progresso, nome_usuario_logado=nome_usuario_logado, email_usuario_logado=usuario_cs_email, justificativas_parada=JUSTIFICATIVAS_PARADA, logs_timeline=logs_timeline, cargos_responsavel=CARGOS_RESPONSAVEL )
+        # NOVOS PARÂMETROS DE CONSTANTES ADICIONADOS AO TEMPLATE PARA O MODAL
+        return render_template( 
+            'implantacao_detalhes.html', 
+            user_info=g.user, 
+            implantacao=implantacao, 
+            tarefas_agrupadas_obrigatorio=tarefas_agrupadas_obrigatorio, 
+            tarefas_agrupadas_treinamento=ordered_treinamento, 
+            tarefas_agrupadas_pendencias=tarefas_agrupadas_pendencias, 
+            todos_modulos=todos_modulos_lista, 
+            modulo_pendencias_nome=MODULO_PENDENCIAS, 
+            progresso_porcentagem=progresso, 
+            nome_usuario_logado=nome_usuario_logado, 
+            email_usuario_logado=usuario_cs_email, 
+            justificativas_parada=JUSTIFICATIVAS_PARADA, 
+            logs_timeline=logs_timeline, 
+            cargos_responsavel=CARGOS_RESPONSAVEL,
+            # NOVAS LISTAS PARA O MODAL DETALHES EMPRESA
+            NIVEIS_RECEITA=NIVEIS_RECEITA,
+            SEGUIMENTOS_LIST=SEGUIMENTOS_LIST,
+            TIPOS_PLANOS=TIPOS_PLANOS,
+            MODALIDADES_LIST=MODALIDADES_LIST,
+            HORARIOS_FUNCIONAMENTO=HORARIOS_FUNCIONAMENTO,
+            FORMAS_PAGAMENTO=FORMAS_PAGAMENTO,
+            SISTEMAS_ANTERIORES=SISTEMAS_ANTERIORES,
+            RECORRENCIA_USADA=RECORRENCIA_USADA,
+            SIM_NAO_OPTIONS=SIM_NAO_OPTIONS # Passa a lista Sim/Não para o modal
+        )
     except Exception as e:
         print(f"ERRO ao carregar detalhes da implantação ID {impl_id}: {e}")
         flash("Erro ao carregar detalhes da implantação.", "error")
@@ -299,37 +352,101 @@ def atualizar_detalhes_empresa():
         flash('Permissão negada.', 'error')
         return redirect(url_for('main.dashboard'))
 
+    # Helper para converter string vazia ou de espaços em None (para salvar NULL no DB)
+    def get_form_value(key):
+        # request.form.get retorna a string vazia ('') se o campo estiver no form e vazio
+        value = request.form.get(key, '').strip()
+        
+        # Se for string vazia, retorna None.
+        if value == "":
+            return None
+        return value
+    
+    # Helper específico para os campos de Sim/Não que DEVEM ser salvos como string (Sim, Não, ou None)
+    def get_boolean_value(key):
+        # Valor padrão 'Não definido' é o que deve vir do <select> quando nada é selecionado
+        value = request.form.get(key, NAO_DEFINIDO_BOOL).strip()
+        
+        # Se for igual ao padrão "Não definido", ou vazio, salva como None (NULL no DB)
+        if value == NAO_DEFINIDO_BOOL or value == "":
+             return None 
+        return value
+    
+    # Tratamento para campos numéricos que podem vir vazios
+    alunos_ativos = request.form.get('alunos_ativos')
     try:
-        data_inicio_prod = request.form.get('data_inicio_producao') or None
-        data_final_impl = request.form.get('data_final_implantacao') or None
+        # Tenta converter para inteiro, se falhar ou se for None, usa 0
+        alunos_ativos = int(alunos_ativos)
+    except (ValueError, TypeError):
+        alunos_ativos = 0
 
-        query = """
-            UPDATE implantacoes
-            SET responsavel_cliente = %s, cargo_responsavel = %s, telefone_responsavel = %s,
-                email_responsavel = %s, data_inicio_producao = %s, data_final_implantacao = %s,
-                chave_oamd = %s, catraca = %s, facial = %s
-            WHERE id = %s AND usuario_cs = %s
-        """
-        args = (
-            request.form.get('responsavel_cliente', '').strip(),
-            request.form.get('cargo_responsavel', '').strip(),
-            request.form.get('telefone_responsavel', '').strip(),
-            request.form.get('email_responsavel', '').strip(),
-            data_inicio_prod,
-            data_final_impl,
-            request.form.get('chave_oamd', '').strip(),
-            request.form.get('catraca', '').strip(),
-            request.form.get('facial', '').strip(),
-            implantacao_id,
-            usuario_cs_email
-        )
-        execute_db(query, args)
+
+    try:
+        # Mapeamento e validação dos campos de data
+        # Data fields are set to None if empty string is passed
+        data_inicio_prod = get_form_value('data_inicio_producao')
+        data_final_impl = get_form_value('data_final_implantacao')
+
+        # Coleta dos NOVOS campos (USANDO O HELPER get_form_value ou get_boolean_value)
+        # Campos de texto e seleção sem valor padrão booleano
+        campos = {
+            'responsavel_cliente': get_form_value('responsavel_cliente'),
+            'cargo_responsavel': get_form_value('cargo_responsavel'),
+            'telefone_responsavel': get_form_value('telefone_responsavel'),
+            'email_responsavel': get_form_value('email_responsavel'),
+            'data_inicio_producao': data_inicio_prod,
+            'data_final_implantacao': data_final_impl,
+            'chave_oamd': get_form_value('chave_oamd'),
+            
+            # NOVOS CAMPOS FINANCEIROS / IDENTIFICAÇÃO
+            'nivel_receita': get_form_value('nivel_receita'),
+            'valor_atribuido': get_form_value('valor_atribuido'),
+            'id_favorecido': get_form_value('id_favorecido'),
+            'tela_apoio_link': get_form_value('tela_apoio_link'),
+            
+            # NOVOS CAMPOS DE CONTATOS
+            'resp_estrategico_nome': get_form_value('resp_estrategico_nome'),
+            'resp_onb_nome': get_form_value('resp_onb_nome'),
+            'resp_estrategico_obs': get_form_value('resp_estrategico_obs'),
+            'contatos': get_form_value('contatos'),
+
+            # NOVOS CAMPOS OPERACIONAIS
+            'seguimento': get_form_value('seguimento'),
+            'tipos_planos': get_form_value('tipos_planos'),
+            'modalidades': get_form_value('modalidades'),
+            'horarios_func': get_form_value('horarios_func'),
+            'formas_pagamento': get_form_value('formas_pagamento'),
+            
+            # Campos Booleanos/Sim-Não
+            'diaria': get_boolean_value('diaria'), 
+            'freepass': get_boolean_value('freepass'), 
+            'alunos_ativos': alunos_ativos, # Já tratado
+            
+            # NOVOS CAMPOS DE SISTEMAS / INTEGRAÇÕES
+            'sistema_anterior': get_form_value('sistema_anterior'),
+            'importacao': get_boolean_value('importacao'), 
+            'recorrencia_usa': get_form_value('recorrencia_usa'),
+            'boleto': get_boolean_value('boleto'), 
+            'nota_fiscal': get_boolean_value('nota_fiscal'), 
+            'catraca': get_boolean_value('catraca'), 
+            'facial': get_boolean_value('facial'), 
+        }
+
+        # Construção dinâmica da query
+        set_clauses = [f"{k} = %s" for k in campos.keys()]
+        query = f"UPDATE implantacoes SET {', '.join(set_clauses)} WHERE id = %s AND usuario_cs = %s"
+        
+        args = list(campos.values())
+        args.extend([implantacao_id, usuario_cs_email])
+        
+        execute_db(query, tuple(args))
+        
         logar_timeline(implantacao_id, usuario_cs_email, 'detalhes_alterados', 'Detalhes da empresa/cliente foram atualizados.')
         flash('Detalhes da implantação atualizados com sucesso!', 'success')
 
     except Exception as e:
         print(f"Erro ao atualizar detalhes (Impl. ID {implantacao_id}): {e}")
-        flash('Erro ao atualizar detalhes.', 'error')
+        flash(f'Erro ao atualizar detalhes: {e}', 'error')
 
     return redirect(dest_url)
 
@@ -397,7 +514,9 @@ def adicionar_tarefa():
     tag = request.form.get('tag', '').strip()
     
     # --- CORREÇÃO: Adiciona a âncora para a aba de pendências ---
-    dest_url = url_for('main.ver_implantacao', impl_id=implantacao_id, _anchor='pendencias-tab') 
+    anchor = 'pendencias-content' if tarefa_pai == MODULO_PENDENCIAS else 'checklist-treinamentos-content' 
+    
+    dest_url = url_for('main.ver_implantacao', impl_id=implantacao_id, _anchor=anchor) 
     # -----------------------------------------------------------
 
     if not all([implantacao_id, tarefa_filho, tarefa_pai]):

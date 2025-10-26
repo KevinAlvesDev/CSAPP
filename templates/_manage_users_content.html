@@ -1,22 +1,10 @@
-{# templates/_manage_users_content.html #}
+{# templates/_manage_users_content.html (COMPLETO E CORRIGIDO) #}
 
 <div class="mb-4">
     <h5 class="card-title text-primary">Controle de Perfil de Acesso</h5>
     <p class="card-text">Permite a visualização de todos os usuários e a atribuição/alteração do seu <strong>Perfil de Acesso</strong>.</p>
     <p class="card-text">Novas contas não terão um perfil de acesso definido e não podem acessar funcionalidades de gestão.</p>
 </div>
-
-{# O get_flashed_messages só funciona no template principal, mas esta div é útil para mostrar erros via Fetch/JS #}
-{% with messages = get_flashed_messages(with_categories=true) %}
-{% if messages %}
-    {% for category, message in messages %}
-    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-        {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-    {% endfor %}
-{% endif %}
-{% endwith %}
 
 <div class="table-responsive">
     <table class="table table-hover align-middle">
@@ -27,42 +15,41 @@
                 <th>Perfil de Acesso Atual</th>
                 <th>Implantações</th>
                 <th>Alterar Perfil de Acesso</th>
+                {# COLUNA EXCLUIR #}
+                <th>Excluir</th> 
             </tr>
         </thead>
         <tbody>
             {% for user in users %}
             <tr id="user-row-{{ loop.index }}" class="
-                {% if user.perfil_acesso == 'Administrador' %}table-danger
-                {% elif user.perfil_acesso == 'Gerente' or user.perfil_acesso == 'Coordenador' %}table-warning
-                {% elif user.perfil_acesso == None %}table-info
-                {% endif %}
+            {% if user.perfil_acesso == 'Administrador' %}table-danger
+            {% elif not user.perfil_acesso %}table-warning
+            {% elif user.perfil_acesso == 'Gerente' or user.perfil_acesso == 'Coordenador' %}table-info
+            {% endif %}
             ">
                 <td>
-                    {{ user.usuario }}
-                    {% if user.usuario == g.user_email %}
-                    <span class="badge bg-success ms-1">Você</span>
+                    <strong class="text-truncate" style="max-width: 150px; display: inline-block;">{{ user.usuario }}</strong>
+                </td>
+                <td>
+                    {{ user.nome or 'N/A' }} / {{ user.cargo or 'Sem Cargo' }}
+                </td>
+                <td>
+                    {% if user.perfil_acesso %}
+                        <span class="badge 
+                        {% if user.perfil_acesso == 'Administrador' %}bg-danger
+                        {% elif user.perfil_acesso == 'Gerente' %}bg-primary
+                        {% elif user.perfil_acesso == 'Coordenador' %}bg-info
+                        {% else %}bg-secondary{% endif %}">
+                            {{ user.perfil_acesso }}
+                        </span>
+                    {% else %}
+                        <span class="text-muted">Nenhum</span>
                     {% endif %}
                 </td>
                 <td>
-                    {{ user.nome or 'N/A' }}
-                    {# CORREÇÃO APLICADA AQUI #}
-                    <small class="text-muted d-block">({{ user.cargo or 'Sem cargo' }})</small>
+                    <span title="Em Andamento / Finalizadas" class="text-nowrap">{{ user.impl_andamento_total or 0 }} / {{ user.impl_finalizadas or 0 }}</span>
                 </td>
                 <td>
-                    <span class="badge bg-secondary">
-                    {{ user.perfil_acesso or 'Nenhum' }}
-                    </span>
-                </td>
-                <td>
-                    <span class="badge bg-primary me-2" title="Implantações em Andamento">
-                        <i class="fas fa-hourglass-half"></i> {{ user.impl_andamento_total or 0 }}
-                    </span>
-                    <span class="badge bg-success" title="Implantações Finalizadas">
-                        <i class="fas fa-check-circle"></i> {{ user.impl_finalizadas or 0 }}
-                    </span>
-                </td>
-                <td>
-                    {# O formulário POST redirecionará de volta para a rota manage_users, que recarregará o modal via JS #}
                     <form method="POST" action="{{ url_for('management.update_user_perfil') }}" class="d-flex" 
                           onsubmit="return confirm('Tem certeza que deseja alterar o Perfil de Acesso de {{ user.usuario }}?');">
                         <input type="hidden" name="usuario_email" value="{{ user.usuario }}">
@@ -82,11 +69,28 @@
                         </button>
                     </form>
                 </td>
+                
+                {# COLUNA EXCLUIR #}
+                <td>
+                    {# Lógica de restrição: checa se g.perfil.perfil_acesso é 'Administrador' E se não é o próprio usuário E se não é o ADMIN_EMAIL #}
+                    {% set can_delete = g.perfil.perfil_acesso == 'Administrador' and user.usuario != g.user_email and user.usuario != ADMIN_EMAIL %}
+                    
+                    <form method="POST" action="{{ url_for('management.delete_user') }}" style="display:inline;"
+                          onsubmit="return confirm('ATENÇÃO: A exclusão de {{ user.usuario }} é IRREVERSÍVEL e removerá todos os dados! Tem certeza?');">
+                        <input type="hidden" name="usuario_email" value="{{ user.usuario }}">
+                        
+                        <button type="submit" class="btn btn-danger btn-sm" 
+                            {% if not can_delete %}disabled title="Você não pode excluir a si mesmo ou este usuário."{% endif %}>
+                            <i class="bi bi-trash"></i> Excluir
+                        </button>
+                    </form>
+                </td>
             </tr>
             {% endfor %}
             {% if not users %}
             <tr>
-                <td colspan="5" class="text-center text-muted">Nenhum usuário encontrado no sistema.</td>
+                {# Colspan corrigido de 5 para 6 #}
+                <td colspan="6" class="text-center text-muted">Nenhum usuário encontrado no sistema.</td> 
             </tr>
             {% endif %}
         </tbody>

@@ -51,6 +51,15 @@
         .list-group-item .handle { color: var(--accent-color) !important; opacity: 0.6; transition: opacity 0.2s; cursor: grab !important; }
         .list-group-item .handle:hover { opacity: 1; }
         .card-header.header-bg h5, .card-header.header-bg .h5 { color: var(--body-color); }
+        
+        /* CORREÇÃO FORÇADA DO SCROLL (Último Recurso) */
+        #modalDetalhesEmpresa .modal-content {
+            max-height: 95vh; /* Garante que o modal se encaixe na tela */
+        }
+        #modalDetalhesEmpresa .modal-body {
+            max-height: calc(95vh - 120px); /* Altura da viewport menos header e footer */
+            overflow-y: auto; /* Força o scroll no corpo do modal */
+        }
     </style>
     {% block head_extra %}{% endblock %}
 </head>
@@ -60,40 +69,136 @@
     {% block content %}
     {% endblock %}
 
-    {# Modal Detalhes Empresa #}
+    {# Modal Detalhes Empresa (REFORMULADO) #}
     <div class="modal fade" id="modalDetalhesEmpresa" tabindex="-1" aria-labelledby="modalDetalhesEmpresaLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable"> <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);">
                 <div class="modal-header header-bg">
                     <h5 class="modal-title" id="modalDetalhesEmpresaLabel" style="color: var(--body-color);">Detalhes da Empresa</h5>
                     <button type="button" class="btn-close btn-close-dark" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                {# ATUALIZADO: 'main.atualizar_detalhes_empresa' #}
                 <form action="{{ url_for('main.atualizar_detalhes_empresa') }}" method="POST">
                     <div class="modal-body">
                         <input type="hidden" id="modal-implantacao_id" name="implantacao_id" value="">
-                        <input type="hidden" name="redirect_to" id="modal-redirect_to" value="dashboard"> {# Define para onde voltar #}
-                        {# Campos do formulário #}
-                        <div class="mb-3"><label for="modal-nome_empresa" class="form-label">Nome da Empresa</label><input type="text" class="form-control" id="modal-nome_empresa" name="nome_empresa" readonly disabled></div>
+                        <input type="hidden" name="redirect_to" id="modal-redirect_to" value="dashboard">
+
+                        
+                        <h6 class="text-primary mb-3 border-bottom pb-1 mt-3">Contatos e Responsáveis</h6>
                         <div class="row">
-                            <div class="col-md-8 mb-3"><label for="modal-responsavel_cliente" class="form-label">Responsável</label><input type="text" class="form-control" id="modal-responsavel_cliente" name="responsavel_cliente"></div>
-                            <div class="col-md-4 mb-3"><label for="modal-cargo_responsavel" class="form-label">Cargo</label><select class="form-select" id="modal-cargo_responsavel" name="cargo_responsavel"><option value="">Selecione...</option>{% for cargo in cargos_responsavel %}<option value="{{ cargo }}">{{ cargo }}</option>{% endfor %}</select></div>
+                            <div class="col-md-4 mb-3"><label for="modal-responsavel_cliente" class="form-label">Resp. Cliente (Nome)</label><input type="text" class="form-control" id="modal-responsavel_cliente" name="responsavel_cliente"></div>
+                            {# CARGO RESP. CORRIGIDO: Agora usa a variável injetada 'cargos_responsavel' #}
+                            <div class="col-md-4 mb-3">
+                                <label for="modal-cargo_responsavel" class="form-label">Cargo Resp.</label>
+                                <select class="form-select" id="modal-cargo_responsavel" name="cargo_responsavel">
+                                    <option value="">Selecione...</option>
+                                    {% for cargo in cargos_responsavel %}
+                                        <option value="{{ cargo }}">{{ cargo }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3"><label for="modal-email_responsavel" class="form-label">E-mail Resp.</label><input type="email" class="form-control" id="modal-email_responsavel" name="email_responsavel"></div>
                         </div>
                         <div class="row">
-                            <div class="col-md-6 mb-3"><label for="modal-telefone_responsavel" class="form-label">Telefone</label><input type="tel" class="form-control" id="modal-telefone_responsavel" name="telefone_responsavel" placeholder="(XX) XXXXX-XXXX" maxlength="15" oninput="formatarTelefone(this)"></div>
-                            <div class="col-md-6 mb-3"><label for="modal-email_responsavel" class="form-label">E-mail</label><input type="email" class="form-control" id="modal-email_responsavel" name="email_responsavel"></div>
+                             <div class="col-md-4 mb-3"><label for="modal-telefone_responsavel" class="form-label">Telefone Resp.</label><input type="tel" class="form-control" id="modal-telefone_responsavel" name="telefone_responsavel" placeholder="(XX) XXXXX-XXXX" maxlength="15" oninput="formatarTelefone(this)"></div>
+                             {# CAMPOS REMOVIDOS (MANTIDOS HIDDEN PARA SUBMISSÃO, SE NECESSÁRIO NO BACKEND) #}
+                             <div class="col-md-4 mb-3 d-none">
+                                 <label for="modal-resp_estrategico_nome" class="form-label">Resp. Estratégico (Nome)</label>
+                                 <input type="hidden" id="modal-resp_estrategico_nome" name="resp_estrategico_nome">
+                             </div>
+                             <div class="col-md-4 mb-3 d-none">
+                                 <label for="modal-resp_onb_nome" class="form-label">Resp. Onb Treinamentos (Nome)</label>
+                                 <input type="hidden" id="modal-resp_onb_nome" name="resp_onb_nome">
+                             </div>
                         </div>
-                        <hr><p class="text-secondary small">Datas</p>
-                        <div class="row">
-                            <div class="col-md-4 mb-3"><label for="modal-inicio_implantacao" class="form-label">Início Implantação</label><input type="text" class="form-control" id="modal-inicio_implantacao" name="inicio_implantacao" readonly disabled></div>
-                            <div class="col-md-4 mb-3"><label for="modal-data_inicio_producao" class="form-label">Início Produção</label><input type="date" class="form-control" id="modal-data_inicio_producao" name="data_inicio_producao"></div>
-                            <div class="col-md-4 mb-3"><label for="modal-data_final_implantacao" class="form-label">Final Implantação</label><input type="date" class="form-control" id="modal-data_final_implantacao" name="data_final_implantacao"></div>
+                        <div class="mb-3 d-none">
+                             {# CONTATOS DA ACADEMIA REMOVIDOS (MANTIDOS HIDDEN PARA SUBMISSÃO) #}
+                             <label for="modal-contatos" class="form-label">Contatos da Academia (Nomes/Cargos)</label>
+                             <textarea class="form-control" id="modal-contatos" name="contatos" rows="2" maxlength="8000"></textarea>
                         </div>
-                        <hr><p class="text-secondary small">Atributos</p>
+                        <div class="mb-3 d-none">
+                             {# OBS. RESP. ESTRATÉGICO / ONB REMOVIDOS (MANTIDOS HIDDEN PARA SUBMISSÃO) #}
+                             <label for="modal-resp_estrategico_obs" class="form-label">Obs. Resp. Estratégico/Onb (Telefones/Detalhes)</label>
+                             <textarea class="form-control" id="modal-resp_estrategico_obs" name="resp_estrategico_obs" rows="2" maxlength="8000" placeholder="Telefones, observações de contato..."></textarea>
+                        </div>
+                        {# VALOR ATRIBUÍDO REMOVIDO (MANTIDO HIDDEN PARA SUBMISSÃO) #}
+                        <div class="col-md-3 mb-3 d-none">
+                            <label for="modal-valor_atribuido" class="form-label">Valor Atribuído (R$)</label>
+                            <input type="hidden" id="modal-valor_atribuido" name="valor_atribuido">
+                        </div>
+
+
+                        <h6 class="text-primary mb-3 border-bottom pb-1 mt-4">Datas e Atributos de Sistema</h6>
                         <div class="row">
-                             <div class="col-md-4 mb-3"><label for="modal-chave_oamd" class="form-label">Chave OAMD</label><input type="text" class="form-control" id="modal-chave_oamd" name="chave_oamd"></div>
-                             <div class="col-md-4 mb-3"><label for="modal-catraca" class="form-label">Catraca</label><input type="text" class="form-control" id="modal-catraca" name="catraca"></div>
-                             <div class="col-md-4 mb-3"><label for="modal-facial" class="form-label">Facial</label><input type="text" class="form-control" id="modal-facial" name="facial"></div>
+                            <div class="col-md-3 mb-3"><label for="modal-data_cadastro" class="form-label">Data de Cadastro</label><input type="text" class="form-control" id="modal-data_cadastro" name="data_cadastro" readonly disabled></div>
+                            <div class="col-md-3 mb-3"><label for="modal-inicio_implantacao" class="form-label">Início da Implantação</label><input type="text" class="form-control" id="modal-inicio_implantacao" name="inicio_implantacao" readonly disabled></div>
+                            <div class="col-md-3 mb-3"><label for="modal-data_inicio_producao" class="form-label">Início Produção (Data)</label><input type="date" class="form-control" id="modal-data_inicio_producao" name="data_inicio_producao"></div>
+                            <div class="col-md-3 mb-3"><label for="modal-data_final_implantacao" class="form-label">Fim da Implantação (Data)</label><input type="date" class="form-control" id="modal-data_final_implantacao" name="data_final_implantacao"></div>
+                        </div>
+                        <div class="row">
+                            {# CAMPOS MOVIDOS DA SEÇÃO FINANCEIRA #}
+                            <div class="col-md-4 mb-3"><label for="modal-id_favorecido" class="form-label">ID Favorecido</label><input type="text" class="form-control" id="modal-id_favorecido" name="id_favorecido"></div>
+                            <div class="col-md-4 mb-3"><label for="modal-nivel_receita" class="form-label">Nível de Receita (MRR)</label>
+                                <select class="form-select" id="modal-nivel_receita" name="nivel_receita">
+                                    <option value="">Selecione o Nível...</option>
+                                    {% for nivel in NIVEIS_RECEITA %}
+                                        <option value="{{ nivel }}">{{ nivel }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3"><label for="modal-chave_oamd" class="form-label">Chave OAMD</label><input type="text" class="form-control" id="modal-chave_oamd" name="chave_oamd"></div>
+                        </div>
+                        <div class="row">
+                            {# TELA DE APOIO (LINK): Deixado em branco #}
+                            <div class="col-md-12 mb-3"><label for="modal-tela_apoio_link" class="form-label">Tela de Apoio (Link)</label><input type="url" class="form-control" id="modal-tela_apoio_link" name="tela_apoio_link"></div>
+                        </div>
+
+                        <h6 class="text-primary mb-3 border-bottom pb-1 mt-4">Configurações e Detalhes Operacionais</h6>
+                        <div class="row">
+                            <div class="col-md-4 mb-3"><label for="modal-seguimento" class="form-label">Seguimento</label><select class="form-select" id="modal-seguimento" name="seguimento"><option value="">Selecione...</option>{% for s in SEGUIMENTOS_LIST %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select></div>
+                            <div class="col-md-4 mb-3"><label for="modal-tipos_planos" class="form-label">Tipos de Planos</label><select class="form-select" id="modal-tipos_planos" name="tipos_planos"><option value="">Selecione...</option>{% for tp in TIPOS_PLANOS %}<option value="{{ tp }}">{{ tp }}</option>{% endfor %}</select></div>
+                            <div class="col-md-4 mb-3"><label for="modal-modalidades" class="form-label">Modalidades</label><select class="form-select" id="modal-modalidades" name="modalidades"><option value="">Selecione...</option>{% for m in MODALIDADES_LIST %}<option value="{{ m }}">{{ m }}</option>{% endfor %}</select></div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3"><label for="modal-horarios_func" class="form-label">Horários de Funcionamento</label><select class="form-select" id="modal-horarios_func" name="horarios_func"><option value="">Selecione...</option>{% for hf in HORARIOS_FUNCIONAMENTO %}<option value="{{ hf }}">{{ hf }}</option>{% endfor %}</select></div>
+                            <div class="col-md-6 mb-3"><label for="modal-formas_pagamento" class="form-label">Formas de Pagamento (Principais)</label><select class="form-select" id="modal-formas_pagamento" name="formas_pagamento"><option value="">Selecione...</option>{% for fp in FORMAS_PAGAMENTO %}<option value="{{ fp }}">{{ fp }}</option>{% endfor %}</select></div>
+                        </div>
+                        <div class="row">
+                            {# DIÁRIA - Mantém SIM_NAO_OPTIONS #}
+                            <div class="col-md-3 mb-3"><label for="modal-diaria" class="form-label">Trabalha com Diária?</label><select class="form-select" id="modal-diaria" name="diaria">
+                                {% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}
+                            </select></div>
+                            {# FREEPASS - Mantém SIM_NAO_OPTIONS #}
+                            <div class="col-md-3 mb-3"><label for="modal-freepass" class="form-label">Trabalha com Freepass?</label><select class="form-select" id="modal-freepass" name="freepass">
+                                {% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}
+                            </select></div>
+                            <div class="col-md-6 mb-3"><label for="modal-alunos_ativos" class="form-label">Qtd. Alunos Ativos</label><input type="number" class="form-control" id="modal-alunos_ativos" name="alunos_ativos" min="0"></div>
+                        </div>
+
+                        <h6 class="text-primary mb-3 border-bottom pb-1 mt-4">Sistemas e Integrações</h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-3"><label for="modal-sistema_anterior" class="form-label">Qual o Sistema Anterior</label><select class="form-select" id="modal-sistema_anterior" name="sistema_anterior"><option value="">Selecione...</option>{% for sa in SISTEMAS_ANTERIORES %}<option value="{{ sa }}">{{ sa }}</option>{% endfor %}</select></div>
+                            <div class="col-md-6 mb-3"><label for="modal-recorrencia_usa" class="form-label">Usa Recorrência (Empresa)</label><select class="form-select" id="modal-recorrencia_usa" name="recorrencia_usa"><option value="">Selecione...</option>{% for ru in RECORRENCIA_USADA %}<option value="{{ ru }}">{{ ru }}</option>{% endfor %}</select></div>
+                        </div>
+                        <div class="row">
+                            {# IMPORTAÇÃO - Mantém SIM_NAO_OPTIONS #}
+                            <div class="col-md-3 mb-3"><label for="modal-importacao" class="form-label">Haverá Importação?</label><select class="form-select" id="modal-importacao" name="importacao">
+                                {% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}
+                            </select></div>
+                            {# BOLETO - Mantém SIM_NAO_OPTIONS #}
+                            <div class="col-md-3 mb-3"><label for="modal-boleto" class="form-label">Boleto?</label><select class="form-select" id="modal-boleto" name="boleto">
+                                {% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}
+                            </select></div>
+                            {# NOTA FISCAL - Mantém SIM_NAO_OPTIONS #}
+                            <div class="col-md-3 mb-3"><label for="modal-nota_fiscal" class="form-label">Nota Fiscal?</label><select class="form-select" id="modal-nota_fiscal" name="nota_fiscal">
+                                {% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}
+                            </select></div>
+                            {# CATRACA - Mantém SIM_NAO_OPTIONS #}
+                            <div class="col-md-3 mb-3"><label for="modal-catraca" class="form-label">Catraca?</label><select class="form-select" id="modal-catraca" name="catraca">
+                                {% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}
+                            </select></div>
+                            {# FACIAL - Mantém SIM_NAO_OPTIONS #}
+                            <div class="col-md-3 mb-3"><label for="modal-facial" class="form-label">Reconhecimento Facial?</label><select class="form-select" id="modal-facial" name="facial">
+                                {% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}
+                            </select></div>
                         </div>
                     </div>
                     <div class="modal-footer header-bg"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary" style="background-color: var(--accent-color); border-color: var(--accent-color);">Salvar Alterações</button></div>
@@ -110,7 +215,7 @@
                     <button type="button" class="btn-close btn-close-dark" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    {# ... (Conteúdo do Modal Gamificação - Inalterado) ... #}
+                    {# ... (Conteúdo do Modal Gamificação) ... #}
                     <div class="card mb-3">
                         <div class="card-header">
                             Critérios de Elegibilidade
@@ -211,7 +316,7 @@
                             <tbody>
                                 <tr><td>7</td><td>20</td></tr>
                                 <tr><td>6</td><td>15</td></tr>
-                                <tr><td>5</td><td>10</td></tr>
+                            <tr><td>5</td><td>10</td></tr>
                                 <tr><td>4</td><td>5</td></tr>
                                 <tr><td>3</td><td>3</td></tr>
                             </tbody>
@@ -362,61 +467,148 @@
         }
 
 
-        // Lógica para popular o Modal Detalhes Empresa
+        // Lógica para popular o Modal Detalhes Empresa (CORRIGIDO)
         document.addEventListener('DOMContentLoaded', function() {
 
             const modalDetalhesEmpresa = document.getElementById('modalDetalhesEmpresa');
             if (modalDetalhesEmpresa) {
                 modalDetalhesEmpresa.addEventListener('show.bs.modal', function (event) {
                     const button = event.relatedTarget;
-                    // Extrai os dados dos atributos data-* do botão (que agora usa as chaves *_iso do app.py)
+                    // Extrai os dados dos atributos data-* do botão (CHAVES NOVAS/ATUALIZADAS)
                     const id = button.getAttribute('data-id');
                     const nome = button.getAttribute('data-nome');
+                    // Contatos e Responsáveis
                     const responsavel = button.getAttribute('data-responsavel') || '';
                     const cargo = button.getAttribute('data-cargo') || '';
                     const telefone = button.getAttribute('data-telefone') || '';
                     const email = button.getAttribute('data-email') || '';
-                    // Datas JÁ ESTÃO no formato YYYY-MM-DD
-                    const inicioImplantacao = button.getAttribute('data-inicio-implantacao') || ''; // Readonly
+                    
+                    // VARIÁVEIS REMOVIDAS (MANTIDAS NO JS PARA GARANTIR QUE NÃO QUEBREM A EXTRAÇÃO EM OUTROS TEMPLATES)
+                    const respEstrategicoNome = button.getAttribute('data-resp-estrategico-nome') || '';
+                    const respOnbNome = button.getAttribute('data-resp-onb-nome') || '';
+                    const contatos = button.getAttribute('data-contatos') || '';
+                    const respEstrategicoObs = button.getAttribute('data-resp-estrategico-obs') || '';
+                    
+                    // Financeiro
+                    const valorAtribuido = button.getAttribute('data-valor-atribuido') || ''; // REMOVIDO NO HTML
+                    const idFavorecido = button.getAttribute('data-id-favorecido') || '';
+                    const nivelReceita = button.getAttribute('data-nivel-receita') || '';
+                    // Datas
+                    const dataCadastro = button.getAttribute('data-data-cadastro') || '';
+                    const inicioImplantacao = button.getAttribute('data-inicio-implantacao') || ''; // Readonly (Data Criação)
                     const inicioProducao = button.getAttribute('data-inicio-producao') || '';     // YYYY-MM-DD
                     const finalImplantacao = button.getAttribute('data-final-implantacao') || ''; // YYYY-MM-DD
+                    // Atributos de Sistema/Operacionais
                     const chaveOamd = button.getAttribute('data-chave-oamd') || '';
-                    const catraca = button.getAttribute('data-catraca') || '';
-                    const facial = button.getAttribute('data-facial') || '';
+                    const telaApoioLink = button.getAttribute('data-tela-apoio-link') || '';
+                    const seguimento = button.getAttribute('data-seguimento') || '';
+                    const tiposPlanos = button.getAttribute('data-tipos-planos') || '';
+                    const modalidades = button.getAttribute('data-modalidades') || '';
+                    const horariosFunc = button.getAttribute('data-horarios-func') || '';
+                    const formasPagamento = button.getAttribute('data-formas-pagamento') || '';
+                    const diaria = button.getAttribute('data-diaria') || 'Não definido';
+                    const freepass = button.getAttribute('data-freepass') || 'Não definido';
+                    const alunosAtivos = button.getAttribute('data-alunos-ativos') || '';
+                    const sistemaAnterior = button.getAttribute('data-sistema-anterior') || '';
+                    const importacao = button.getAttribute('data-importacao') || 'Não definido';
+                    const recorrenciaUsa = button.getAttribute('data-recorrencia-usa') || '';
+                    const boleto = button.getAttribute('data-boleto') || 'Não definido';
+                    const notaFiscal = button.getAttribute('data-nota-fiscal') || 'Não definido';
+                    const catraca = button.getAttribute('data-catraca') || 'Não definido';
+                    const facial = button.getAttribute('data-facial') || 'Não definido';
 
                     const modal = modalDetalhesEmpresa;
-                    // Preenche os campos do formulário do modal
+                    
+                    // Helper para tratar a string 'null', 'undefined' ou 'None' vinda de data-attribute para ''
+                    const cleanVal = (val) => (val === 'null' || val === 'undefined' || val === null || val === 'None') ? '' : val;
+
+                    // Preenche os campos do formulário do modal (ATUALIZADO)
                     modal.querySelector('#modal-implantacao_id').value = id;
-                    modal.querySelector('#modal-nome_empresa').value = nome;
-                    modal.querySelector('#modal-responsavel_cliente').value = responsavel;
-                    modal.querySelector('#modal-cargo_responsavel').value = cargo;
-                    modal.querySelector('#modal-telefone_responsavel').value = telefone;
-                    modal.querySelector('#modal-email_responsavel').value = email;
-                    modal.querySelector('#modal-inicio_implantacao').value = inicioImplantacao;
-                    modal.querySelector('#modal-data_inicio_producao').value = inicioProducao;
-                    modal.querySelector('#modal-data_final_implantacao').value = finalImplantacao;
-                    modal.querySelector('#modal-chave_oamd').value = chaveOamd;
-                    modal.querySelector('#modal-catraca').value = catraca;
-                    modal.querySelector('#modal-facial').value = facial;
+                    
+                    // Financeiro
+                    const nomeEmpresaInput = modal.querySelector('#modal-nome_empresa');
+                    if (nomeEmpresaInput) nomeEmpresaInput.value = nome;
+                    
+                    // VALOR ATRIBUÍDO (REMOVIDO DO HTML, MANTIDO NO INPUT HIDDEN PARA SUBMISSÃO)
+                    const valorAtribuidoInput = modal.querySelector('#modal-valor_atribuido');
+                    if (valorAtribuidoInput) valorAtribuidoInput.value = cleanVal(valorAtribuido);
+                    
+                    // Contatos e Responsáveis
+                    modal.querySelector('#modal-responsavel_cliente').value = cleanVal(responsavel);
+                    modal.querySelector('#modal-cargo_responsavel').value = cleanVal(cargo); // SELECT
+                    modal.querySelector('#modal-telefone_responsavel').value = cleanVal(telefone);
+                    modal.querySelector('#modal-email_responsavel').value = cleanVal(email);
+                    
+                    // Campos removidos no HTML (MANTIDOS NO JS PARA SUBMISSÃO)
+                    const respEstrategicoNomeInput = modal.querySelector('#modal-resp_estrategico_nome');
+                    if (respEstrategicoNomeInput) respEstrategicoNomeInput.value = cleanVal(respEstrategicoNome);
+                    const respOnbNomeInput = modal.querySelector('#modal-resp_onb_nome');
+                    if (respOnbNomeInput) respOnbNomeInput.value = cleanVal(respOnbNome);
+                    const contatosInput = modal.querySelector('#modal-contatos');
+                    if (contatosInput) contatosInput.value = cleanVal(contatos);
+                    const respEstrategicoObsInput = modal.querySelector('#modal-resp_estrategico_obs');
+                    if (respEstrategicoObsInput) respEstrategicoObsInput.value = cleanVal(respEstrategicoObs);
+
+
+                    // Datas e Atributos de Sistema (INCLUINDO OS MOVIDOS)
+                    modal.querySelector('#modal-data_cadastro').value = cleanVal(inicioImplantacao); 
+                    modal.querySelector('#modal-inicio_implantacao').value = cleanVal(inicioImplantacao); 
+                    modal.querySelector('#modal-data_inicio_producao').value = cleanVal(inicioProducao);
+                    modal.querySelector('#modal-data_final_implantacao').value = cleanVal(finalImplantacao);
+                    
+                    // CAMPOS MOVIDOS
+                    modal.querySelector('#modal-id_favorecido').value = cleanVal(idFavorecido);
+                    modal.querySelector('#modal-nivel_receita').value = cleanVal(nivelReceita);
+                    
+                    modal.querySelector('#modal-chave_oamd').value = cleanVal(chaveOamd);
+                    modal.querySelector('#modal-tela_apoio_link').value = cleanVal(telaApoioLink);
+                    
+                    // Configurações Operacionais (SELECTS)
+                    modal.querySelector('#modal-seguimento').value = cleanVal(seguimento); // SELECT
+                    modal.querySelector('#modal-tipos_planos').value = cleanVal(tiposPlanos); // SELECT
+                    modal.querySelector('#modal-modalidades').value = cleanVal(modalidades); // SELECT
+                    modal.querySelector('#modal-horarios_func').value = cleanVal(horariosFunc); // SELECT
+                    modal.querySelector('#modal-formas_pagamento').value = cleanVal(formasPagamento); // SELECT
+                    
+                    // Campos Sim/Não (SELECTS)
+                    modal.querySelector('#modal-diaria').value = cleanVal(diaria); 
+                    modal.querySelector('#modal-freepass').value = cleanVal(freepass); 
+                    
+                    modal.querySelector('#modal-alunos_ativos').value = cleanVal(alunosAtivos);
+                    
+                    // Importação e Sistemas (SELECTS)
+                    modal.querySelector('#modal-sistema_anterior').value = cleanVal(sistemaAnterior); // SELECT
+                    modal.querySelector('#modal-recorrencia_usa').value = cleanVal(recorrenciaUsa); // SELECT
+                    
+                    // Campos Sim/Não (SELECTS)
+                    modal.querySelector('#modal-importacao').value = cleanVal(importacao); 
+                    modal.querySelector('#modal-boleto').value = cleanVal(boleto); 
+                    modal.querySelector('#modal-nota_fiscal').value = cleanVal(notaFiscal); 
+                    modal.querySelector('#modal-catraca').value = cleanVal(catraca); 
+                    modal.querySelector('#modal-facial').value = cleanVal(facial); 
+
 
                     // Formata o telefone ao carregar o modal
                     formatarTelefone(modal.querySelector('#modal-telefone_responsavel'));
 
                     // Define para onde o formulário deve redirecionar após salvar
                     const modalRedirect = modal.querySelector('#modal-redirect_to');
-                    // ATUALIZADO: Verifica pela ID 'main-content' que existe em ambas as páginas
-                    // E se existe o elemento específico da página de detalhes
+                    // Verifica pela ID 'main-content' que existe em ambas as páginas
                     const isDetailsPage = document.querySelector('#main-content #checklist-area-treinamento');
                     modalRedirect.value = isDetailsPage ? 'detalhes' : 'dashboard';
                 });
             }
         });
         
-        // --- NOVO: Lógica para carregar Modal Gerenciamento de Usuários ---
+        // --- Lógica para carregar e REABRIR Modal Gerenciamento de Usuários ---
         document.addEventListener('DOMContentLoaded', function() {
             const modalGerenciarUsuarios = document.getElementById('modalGerenciarUsuarios');
+            const urlParams = new URLSearchParams(window.location.search);
+            const shouldOpenModal = urlParams.get('open_users_modal') === 'true'; // Novo parâmetro
+            
             if (modalGerenciarUsuarios) {
-                modalGerenciarUsuarios.addEventListener('show.bs.modal', function () {
+                // Função para carregar o conteúdo via Fetch
+                const loadManagementContent = () => {
                     const contentDiv = document.getElementById('users-management-content');
                     // Reconfigura o spinner antes de carregar
                     contentDiv.innerHTML = `<div class="text-center py-5" id="users-loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div><p class="mt-2">Carregando lista de usuários...</p></div>`;
@@ -441,7 +633,19 @@
                             console.error('Erro ao carregar gerenciamento de usuários:', error);
                             contentDiv.innerHTML = `<div class="alert alert-danger">Falha ao carregar a lista de usuários. Detalhes: ${error.message}</div>`;
                         });
-                });
+                };
+                
+                // 1. Ouve o evento de ABRIR o modal (manualmente)
+                modalGerenciarUsuarios.addEventListener('show.bs.modal', loadManagementContent);
+                
+                // 2. Lógica de Auto-abertura (se a página veio de um redirecionamento de POST)
+                if (shouldOpenModal) {
+                    const bsModal = new bootstrap.Modal(modalGerenciarUsuarios);
+                    bsModal.show();
+                    
+                    // Limpa o parâmetro da URL após a abertura para evitar reabrir em um refresh
+                    history.replaceState(null, document.title, window.location.pathname + window.location.hash);
+                }
             }
         });
         

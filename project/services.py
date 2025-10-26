@@ -1,4 +1,6 @@
-from flask import current_app # Importa current_app para checar config
+# project/services.py
+
+from flask import current_app
 from .db import query_db, execute_db 
 from .constants import (
     CHECKLIST_OBRIGATORIO_ITEMS, MODULO_OBRIGATORIO, 
@@ -9,8 +11,8 @@ from .utils import format_date_iso_for_json
 
 # Importa logar_timeline do DB (para uso interno)
 from .db import logar_timeline
-# Importa timedelta para cálculo de data
-from datetime import datetime, timedelta, date # Adicionado date
+# Importa timedelta, datetime e date para cálculo de data
+from datetime import datetime, timedelta, date 
 
 # --- Camada de Serviço (Business Logic) ---
 
@@ -90,16 +92,10 @@ def auto_finalizar_implantacao(impl_id, usuario_cs_email):
 def get_dashboard_data(user_email):
     """Busca e processa todos os dados APENAS para o dashboard do usuário logado."""
     
-    # Esta função é para a visão INDIVIDUAL (carteira do CS)
-    
+    # 1. REMOVIDO o cálculo de dias_passados do SQL
     impl_list = query_db(
         """
-        SELECT *, 
-               CASE 
-                   WHEN status = 'andamento' OR status = 'parada' 
-                   THEN (CAST(strftime('%J', CURRENT_TIMESTAMP) AS REAL) - CAST(strftime('%J', data_criacao) AS REAL))
-                   ELSE NULL 
-               END AS dias_passados 
+        SELECT *
         FROM implantacoes 
         WHERE usuario_cs = %s 
         ORDER BY data_criacao DESC
@@ -152,9 +148,22 @@ def get_dashboard_data(user_email):
             dashboard_data['futuras'].append(impl)
             metrics['implantacoes_futuras'] += 1
         else: # andamento
-            dias_passados = int(float(impl.get('dias_passados', 0) or 0))
-            impl['dias_passados'] = dias_passados
             
+            # 2. IMPLEMENTADO o cálculo de dias_passados em Python
+            dias_passados = 0 
+            data_criacao_obj = impl.get('data_criacao')
+            
+            if data_criacao_obj and isinstance(data_criacao_obj, (datetime, date)):
+                # Garante que seja um objeto datetime para que a subtração funcione
+                if isinstance(data_criacao_obj, date) and not isinstance(data_criacao_obj, datetime):
+                     data_criacao_obj = datetime.combine(data_criacao_obj, datetime.min.time())
+                     
+                end_time = datetime.now() 
+                dias_passados_delta = end_time - data_criacao_obj
+                dias_passados = dias_passados_delta.days if dias_passados_delta.days >= 0 else 0
+            
+            impl['dias_passados'] = dias_passados # Adiciona o campo para o template
+
             if dias_passados > 25:
                 dashboard_data['atrasadas'].append(impl)
                 metrics['implantacoes_atrasadas'] += 1
@@ -191,16 +200,18 @@ def calculate_time_in_status(impl_id, status_target='parada'):
     if not impl or impl['status'] != status_target or not impl['data_criacao']:
         return None
 
-    # Se a implantação está 'parada' e tem uma data_finalizacao (que marca a pausa)
+    # Se a implantação está 'parada' e tem uma data_finalizacao (que guarda a data da pausa)
     if impl['status'] == 'parada' and impl['data_finalizacao']:
-         # Note: data_finalizacao é TEXT/DATETIME no DB, precisamos converter
-         from ..utils import _convert_to_date_or_datetime
-         data_inicio_parada = _convert_to_date_or_datetime(impl['data_finalizacao'])
-         
-         if isinstance(data_inicio_parada, datetime):
+        data_inicio_parada_obj = impl['data_finalizacao']
+        
+        # O DB retorna um objeto datetime ou date, precisamos garantir que seja datetime para o cálculo com datetime.now()
+        if isinstance(data_inicio_parada_obj, date) and not isinstance(data_inicio_parada_obj, datetime):
+             data_inicio_parada_obj = datetime.combine(data_inicio_parada_obj, datetime.min.time())
+        
+        if isinstance(data_inicio_parada_obj, datetime):
              # Diferença entre agora e a data em que foi parada
-             delta = datetime.now() - data_inicio_parada
-             # Retorna 0 se for menos de um dia, caso contrário o número de dias
+             delta = datetime.now() - data_inicio_parada_obj
+             # Retorna o número de dias
              return max(0, int(delta.days)) 
 
     return None
@@ -209,10 +220,10 @@ def calculate_time_in_status(impl_id, status_target='parada'):
 def get_analytics_data(target_cs_email=None, target_status=None, start_date=None, end_date=None, target_tag=None):
     """Busca e processa dados de TODA a carteira (ou filtrada) para o módulo Gerencial."""
     
+    # 3. CORRIGIDO o cálculo TMA: Removido do SQL para compatibilidade
     query_impl = """
         SELECT i.*, 
-               p.nome as cs_nome, p.cargo as cs_cargo, p.perfil_acesso as cs_perfil,
-               (CAST(strftime('%J', i.data_finalizacao) AS REAL) - CAST(strftime('%J', i.data_criacao) AS REAL)) AS tma_dias 
+               p.nome as cs_nome, p.cargo as cs_cargo, p.perfil_acesso as cs_perfil
         FROM implantacoes i
         LEFT JOIN perfil_usuario p ON i.usuario_cs = p.usuario
         WHERE 1=1 
@@ -220,7 +231,7 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
     args_impl = []
     
     is_sqlite = current_app.config['USE_SQLITE_LOCALLY']
-    date_func = "date" if is_sqlite else "" # Assume date() no SQLite, nada no PostgreSQL
+    date_func = "date" if is_sqlite else "" 
     
     # Filtro por CS
     if target_cs_email:
@@ -236,15 +247,16 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
             args_impl.append(target_status)
     
     # Filtro de Data para Implantações Finalizadas (Usa date() para SQLite)
-    if start_date and end_date and target_status in ['todas', 'finalizada']:
-        query_impl += f" AND (i.status != 'finalizada' OR (i.status = 'finalizada' AND {date_func}(i.data_finalizacao) >= {date_func}(%s) AND {date_func}(i.data_finalizacao) <= {date_func}(%s)))"
-        args_impl.extend([start_date, end_date])
-    elif start_date and target_status in ['todas', 'finalizada']:
-         query_impl += f" AND (i.status != 'finalizada' OR (i.status = 'finalizada' AND {date_func}(i.data_finalizacao) >= {date_func}(%s)))"
-         args_impl.append(start_date)
-    elif end_date and target_status in ['todas', 'finalizada']:
-         query_impl += f" AND (i.status != 'finalizada' OR (i.status = 'finalizada' AND {date_func}(i.data_finalizacao) <= {date_func}(%s)))"
-         args_impl.append(end_date)
+    if target_status in ['todas', 'finalizada']:
+        if start_date and end_date:
+            query_impl += f" AND (i.status != 'finalizada' OR (i.status = 'finalizada' AND {date_func}(i.data_finalizacao) >= {date_func}(%s) AND {date_func}(i.data_finalizacao) <= {date_func}(%s)))"
+            args_impl.extend([start_date, end_date])
+        elif start_date:
+            query_impl += f" AND (i.status != 'finalizada' OR (i.status = 'finalizada' AND {date_func}(i.data_finalizacao) >= {date_func}(%s)))"
+            args_impl.append(start_date)
+        elif end_date:
+            query_impl += f" AND (i.status != 'finalizada' OR (i.status = 'finalizada' AND {date_func}(i.data_finalizacao) <= {date_func}(%s)))"
+            args_impl.append(end_date)
     
     query_impl += " ORDER BY i.nome_empresa "
     
@@ -261,32 +273,23 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
     """ 
     args_tasks = []
 
-    # --- CORREÇÃO DEFINITIVA DO FILTRO DE DATA ---
-    date_filter_applied = False
-    
+    # --- CORREÇÃO DEFINITIVA DO FILTRO DE DATA para data_conclusao (produtividade) ---
     if start_date:
-        date_filter_applied = True
-        # Garante que tarefas sem data de conclusão não sejam contadas no período
         query_tasks += " AND t.data_conclusao IS NOT NULL " 
         if is_sqlite:
-            # Compara a string formatada da data de conclusão com a data inicial
-            query_tasks += " AND date(t.data_conclusao) >= date(?) " # Usa ? placeholder
-        else: # PostgreSQL/other DBs
+            query_tasks += " AND date(t.data_conclusao) >= date(%s) "
+        else:
              query_tasks += " AND t.data_conclusao >= %s "
         args_tasks.append(start_date)
 
     if end_date:
-        date_filter_applied = True
-        # Garante que tarefas sem data de conclusão não sejam contadas no período
-        if not start_date: # Adiciona IS NOT NULL se só end_date for fornecido
-             query_tasks += " AND t.data_conclusao IS NOT NULL "
-             
+        query_tasks += " AND t.data_conclusao IS NOT NULL "
         if is_sqlite:
-             # Compara a string formatada da data de conclusão com a data final (inclusivo)
-             query_tasks += " AND date(t.data_conclusao) <= date(?) " # Usa ? placeholder
-             args_tasks.append(end_date) # Adiciona end_date aqui para SQLite
-        else: # PostgreSQL needs precise end-of-day or < next_day logic
+             query_tasks += " AND date(t.data_conclusao) <= date(%s) "
+             args_tasks.append(end_date)
+        else: # PostgreSQL/outros DBs
             try:
+                # Usa '< próximo dia' para incluir o dia inteiro
                 end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
                 next_day = end_date_obj + timedelta(days=1)
                 next_day_str = next_day.strftime('%Y-%m-%d')
@@ -297,7 +300,7 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
     # ----------------------------------------
         
     if target_cs_email:
-        query_tasks += " AND i.usuario_cs = %s " # %s será ? em SQLite
+        query_tasks += " AND i.usuario_cs = %s "
         args_tasks.append(target_cs_email)
         
     # Agregação dos dados das tarefas
@@ -323,7 +326,6 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
             tag = row['tag'] or 'Outro'
             if tag in ['Ação interna', 'Reunião']:
                 cs_metrics[cs_email]['prod_tags'][tag] += 1
-            # 'Outro' é descartado para manter o foco apenas em Ação interna/Reunião
 
     # Agregações Globais e por Implantação (TMA, Status)
     total_impl_global = len(impl_list)
@@ -338,6 +340,22 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
         cs_email = impl['usuario_cs']
         status = impl['status']
         
+        # 4. IMPLEMENTADO o cálculo TMA em PYTHON
+        impl['tma_dias'] = None
+        
+        if status == 'finalizada':
+            data_criacao_obj = impl.get('data_criacao')
+            data_finalizacao_obj = impl.get('data_finalizacao')
+            if data_criacao_obj and data_finalizacao_obj:
+                # Garante que as datas sejam datetimes para a subtração
+                if isinstance(data_criacao_obj, date) and not isinstance(data_criacao_obj, datetime):
+                     data_criacao_obj = datetime.combine(data_criacao_obj, datetime.min.time())
+                if isinstance(data_finalizacao_obj, date) and not isinstance(data_finalizacao_obj, datetime):
+                     data_finalizacao_obj = datetime.combine(data_finalizacao_obj, datetime.min.time())
+
+                delta = data_finalizacao_obj - data_criacao_obj
+                impl['tma_dias'] = max(0, delta.days) 
+
         if cs_email not in cs_metrics:
             # Garante que o CS exista
             cs_metrics[cs_email] = {'email': cs_email, 'nome': impl.get('cs_nome') or cs_email, 'cargo': impl.get('cs_cargo') or 'N/A', 'perfil': impl.get('cs_perfil') or 'Nenhum', 'impl_total': 0, 'impl_andamento': 0, 'impl_finalizadas': 0, 'impl_paradas': 0, 'tma_sum': 0, 'total_tasks': 0, 'done_tasks': 0, 'progresso_medio': 0, 'tma_medio': 'N/A', 'motivos_parada': {}, 'prod_tags': {'Ação interna': 0, 'Reunião': 0, 'Outro': 0}, 'parada_dias_total': 0}
@@ -348,6 +366,7 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
         if status == 'finalizada':
             total_finalizadas += 1
             metrics['impl_finalizadas'] += 1
+            # Usa o novo campo calculado em Python
             if impl['tma_dias'] is not None:
                 tma_dias_sum += impl['tma_dias']
                 metrics['tma_sum'] += impl['tma_dias']
@@ -355,7 +374,7 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
             total_paradas += 1
             metrics['impl_paradas'] += 1
             
-            # --- CÁLCULO DE TEMPO DE PARADA (Aproximação) ---
+            # --- CÁLCULO DE TEMPO DE PARADA ---
             parada_dias = calculate_time_in_status(impl_id, 'parada')
             if parada_dias is not None:
                 metrics['parada_dias_total'] = parada_dias 
@@ -366,10 +385,17 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
             
         elif status == 'andamento':
             metrics['impl_andamento'] += 1
-            dias_passados = (query_db(
-                "SELECT (CAST(strftime('%J', CURRENT_TIMESTAMP) AS REAL) - CAST(strftime('%J', data_criacao) AS REAL)) AS dias FROM implantacoes WHERE id = %s",
-                (impl_id,), one=True
-            ) or {}).get('dias', 0)
+            
+            # Cálculo de Dias Passados (necessário aqui para o filtro 'atrasadas_status')
+            dias_passados_obj = impl.get('data_criacao')
+            dias_passados = 0
+            if dias_passados_obj and isinstance(dias_passados_obj, (datetime, date)):
+                 if isinstance(dias_passados_obj, date) and not isinstance(dias_passados_obj, datetime):
+                     dias_passados_obj = datetime.combine(dias_passados_obj, datetime.min.time())
+                
+                 dias_passados_delta = datetime.now() - dias_passados_obj
+                 dias_passados = dias_passados_delta.days if dias_passados_delta.days >= 0 else 0
+                 
             if dias_passados > 25:
                 total_atrasadas_status += 1
 
@@ -383,7 +409,7 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
         
         metrics['progresso_medio'] = 0 
 
-        # Corrigido: Se não há CS selecionado, traz TODOS os CSs (visão gerencial)
+        # Traz todos os CSs se nenhum filtro for aplicado (visão gerencial)
         if metrics['impl_total'] > 0 or not target_cs_email: 
              final_cs_metrics[email] = metrics
 
@@ -393,7 +419,7 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
         'total_finalizadas': total_finalizadas,
         'total_andamento': sum(m['impl_andamento'] for m in final_cs_metrics.values()),
         'total_paradas': total_paradas,
-        'total_atrasadas_status': total_atrasadas_status,
+        'total_atrasadas': total_atrasadas_status, 
         'global_tma': round(tma_dias_sum / total_finalizadas, 1) if total_finalizadas > 0 else 'N/A',
         'motivos_parada': motivos_parada_global
     }

@@ -28,14 +28,15 @@
     <header class="header-bg p-3 shadow-sm d-flex justify-content-between align-items-center position-relative">
         <h1 class="main-title mb-0 fs-4" style="position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap;">DASHBOARD GERENCIAL</h1>
         
-        <div class="d-flex align-items-center">
+        {# CONTÊINER CORRIGIDO: d-flex justify-content-end garante que os elementos vão para a direita #}
+        <div class="d-flex align-items-center ms-auto"> 
             
             {# Botão Voltar ao Dashboard (para UX) #}
             <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-primary me-3">
                 <i class="bi bi-arrow-left me-1"></i> Voltar ao Dashboard
             </a>
             
-            {# Menu Dropdown do Usuário (Copiado de dashboard.html para consistência) #}
+            {# Menu Dropdown do Usuário #}
             <div class="dropdown ms-2">
                 <button class="btn btn-outline-secondary rounded-circle p-0" type="button" id="userMenuDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Menu" style="width: 40px; height: 40px; border: 2px solid var(--accent-color); overflow: hidden;">
                     {% if g.perfil.foto_url %}
@@ -45,7 +46,9 @@
                     {% endif %}
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuDropdown">
-                    <li><a class="dropdown-item" href="{{ url_for('profile.perfil') }}">Editar Perfil</a></li>
+                    
+                    {# ÍCONE ADICIONADO #}
+                    <li><a class="dropdown-item" href="{{ url_for('profile.perfil') }}"><i class="bi bi-person-circle me-2"></i> Editar Perfil</a></li>
                     
                     {% if g.perfil and g.perfil.perfil_acesso in ['Administrador', 'Gerente', 'Coordenador'] %}
                         <li><a class="dropdown-item text-primary" href="#" data-bs-toggle="modal" data-bs-target="#modalGerenciarUsuarios">
@@ -55,8 +58,9 @@
                             <i class="bi bi-graph-up me-2"></i> Analytics Gerencial
                         </a></li>
                     {% endif %}
-
-                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalGamificacao">Gamificação</a></li>
+                    
+                    {# ÍCONE ADICIONADO #}
+                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalGamificacao"><i class="bi bi-trophy-fill me-2"></i> Gamificação</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li>
                         <a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}">

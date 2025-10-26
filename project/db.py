@@ -125,6 +125,7 @@ def init_db():
     boolean_type = "BOOLEAN" if is_postgres else "INTEGER"
     timestamp_type = "TIMESTAMP WITH TIME ZONE" if is_postgres else "DATETIME"
     date_type = "DATE" if is_postgres else "TEXT"
+    text_type = "TEXT"
 
     # Criação das tabelas
     cur.execute(f"CREATE TABLE IF NOT EXISTS usuarios (usuario VARCHAR(255) PRIMARY KEY, senha TEXT NOT NULL)")
@@ -145,17 +146,48 @@ def init_db():
         )
     """)
     
-    # Adiciona a nova coluna caso o DB já exista, mas sem o campo
-    try:
-        cur.execute("SELECT perfil_acesso FROM perfil_usuario LIMIT 1")
-    except Exception:
-        print("Adicionando coluna 'perfil_acesso' à tabela 'perfil_usuario'...")
-        cur.execute(f"ALTER TABLE perfil_usuario ADD COLUMN perfil_acesso VARCHAR(100) DEFAULT NULL")
+    # Lógica para adicionar novas colunas se a tabela já existir (usada para retrocompatibilidade)
+    def check_and_add_column(table, column, definition):
+        try:
+            cur.execute(f"SELECT {column} FROM {table} LIMIT 0")
+            return False # Coluna já existe
+        except Exception:
+            print(f"Adicionando coluna '{column}' à tabela '{table}'...")
+            cur.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+            return True # Coluna adicionada
 
+    check_and_add_column('perfil_usuario', 'perfil_acesso', 'VARCHAR(100) DEFAULT NULL')
+
+    # NOVAS COLUNAS ADICIONADAS À TABELA IMPLANTACOES
+    new_impl_columns_definitions = {
+        'nivel_receita': 'VARCHAR(100) DEFAULT NULL',
+        'valor_atribuido': 'VARCHAR(100) DEFAULT NULL',
+        'id_favorecido': 'VARCHAR(50) DEFAULT NULL',
+        'tela_apoio_link': text_type + ' DEFAULT NULL',
+        'seguimento': 'VARCHAR(100) DEFAULT NULL',
+        'tipos_planos': 'VARCHAR(100) DEFAULT NULL',
+        'modalidades': 'VARCHAR(100) DEFAULT NULL',
+        'horarios_func': 'VARCHAR(100) DEFAULT NULL',
+        'formas_pagamento': 'VARCHAR(100) DEFAULT NULL',
+        'diaria': 'VARCHAR(10) DEFAULT \'Não\'',
+        'freepass': 'VARCHAR(10) DEFAULT \'Não\'',
+        'alunos_ativos': 'INTEGER DEFAULT 0',
+        'sistema_anterior': 'VARCHAR(100) DEFAULT NULL',
+        'importacao': 'VARCHAR(10) DEFAULT \'Não\'',
+        'recorrencia_usa': 'VARCHAR(100) DEFAULT NULL',
+        'boleto': 'VARCHAR(10) DEFAULT \'Não\'',
+        'nota_fiscal': 'VARCHAR(10) DEFAULT \'Não\'',
+        'resp_estrategico_nome': 'VARCHAR(255) DEFAULT NULL',
+        'resp_onb_nome': 'VARCHAR(255) DEFAULT NULL',
+        'resp_estrategico_obs': text_type + ' DEFAULT NULL',
+        'contatos': text_type + ' DEFAULT NULL',
+    }
+
+    # CRIAÇÃO INICIAL DA TABELA (com colunas antigas + novas)
     cur.execute(f"""
         CREATE TABLE IF NOT EXISTS implantacoes (
             id {pk_type},
-            usuario_cs VARCHAR(255) NOT NULL REFERENCES usuarios(usuario) ON DELETE NO ACTION,
+            usuario_cs VARCHAR(255) REFERENCES usuarios(usuario) ON DELETE SET NULL,
             nome_empresa TEXT NOT NULL,
             status VARCHAR(50) DEFAULT 'andamento' CHECK(status IN ('andamento', 'futura', 'finalizada', 'parada')),
             tipo VARCHAR(50) DEFAULT 'agora' CHECK(tipo IN ('agora', 'futura')),
@@ -169,10 +201,39 @@ def init_db():
             data_inicio_producao {date_type} DEFAULT NULL,
             data_final_implantacao {date_type} DEFAULT NULL,
             chave_oamd TEXT DEFAULT '',
-            catraca TEXT DEFAULT '',
-            facial TEXT DEFAULT ''
+            catraca VARCHAR(10) DEFAULT 'Não',
+            facial VARCHAR(10) DEFAULT 'Não',
+            
+            -- NOVAS COLUNAS INSERIDAS DIRETAMENTE PARA NOVOS DBs
+            nivel_receita VARCHAR(100) DEFAULT NULL,
+            valor_atribuido VARCHAR(100) DEFAULT NULL,
+            id_favorecido VARCHAR(50) DEFAULT NULL,
+            tela_apoio_link TEXT DEFAULT NULL,
+            seguimento VARCHAR(100) DEFAULT NULL,
+            tipos_planos VARCHAR(100) DEFAULT NULL,
+            modalidades VARCHAR(100) DEFAULT NULL,
+            horarios_func VARCHAR(100) DEFAULT NULL,
+            formas_pagamento VARCHAR(100) DEFAULT NULL,
+            diaria VARCHAR(10) DEFAULT 'Não',
+            freepass VARCHAR(10) DEFAULT 'Não',
+            alunos_ativos INTEGER DEFAULT 0,
+            sistema_anterior VARCHAR(100) DEFAULT NULL,
+            importacao VARCHAR(10) DEFAULT 'Não',
+            recorrencia_usa VARCHAR(100) DEFAULT NULL,
+            boleto VARCHAR(10) DEFAULT 'Não',
+            nota_fiscal VARCHAR(10) DEFAULT 'Não',
+            resp_estrategico_nome VARCHAR(255) DEFAULT NULL,
+            resp_onb_nome VARCHAR(255) DEFAULT NULL,
+            resp_estrategico_obs TEXT DEFAULT NULL,
+            contatos TEXT DEFAULT NULL
         )
     """)
+    
+    # Adição de novas colunas para DBs existentes
+    for col_name, col_definition in new_impl_columns_definitions.items():
+        check_and_add_column('implantacoes', col_name, col_definition)
+
+
     cur.execute(f"""
         CREATE TABLE IF NOT EXISTS tarefas (
             id {pk_type},
@@ -182,22 +243,17 @@ def init_db():
             concluida {boolean_type} DEFAULT FALSE,
             ordem INTEGER DEFAULT 0,
             tag VARCHAR(100) DEFAULT '',
-            data_conclusao {timestamp_type} DEFAULT NULL -- NOVO CAMPO
+            data_conclusao {timestamp_type} DEFAULT NULL
         )
     """)
     
-    # Adiciona a nova coluna caso a tabela já exista sem ela
-    try:
-        cur.execute("SELECT data_conclusao FROM tarefas LIMIT 1")
-    except Exception:
-        print("Adicionando coluna 'data_conclusao' à tabela 'tarefas'...")
-        cur.execute(f"ALTER TABLE tarefas ADD COLUMN data_conclusao {timestamp_type} DEFAULT NULL")
+    check_and_add_column('tarefas', 'data_conclusao', timestamp_type + ' DEFAULT NULL')
     
     cur.execute(f"""
         CREATE TABLE IF NOT EXISTS comentarios (
             id {pk_type},
             tarefa_id INTEGER NOT NULL REFERENCES tarefas(id) ON DELETE CASCADE,
-            usuario_cs VARCHAR(255) NOT NULL REFERENCES usuarios(usuario) ON DELETE NO ACTION,
+            usuario_cs VARCHAR(255) REFERENCES usuarios(usuario) ON DELETE SET NULL,
             texto TEXT NOT NULL,
             data_criacao {timestamp_type} DEFAULT CURRENT_TIMESTAMP,
             imagem_url TEXT DEFAULT NULL
@@ -207,7 +263,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS timeline_log (
             id {pk_type},
             implantacao_id INTEGER NOT NULL REFERENCES implantacoes(id) ON DELETE CASCADE,
-            usuario_cs VARCHAR(255) NOT NULL REFERENCES usuarios(usuario) ON DELETE NO ACTION,
+            usuario_cs VARCHAR(255) REFERENCES usuarios(usuario) ON DELETE SET NULL,
             tipo_evento VARCHAR(100) NOT NULL,
             detalhes TEXT NOT NULL,
             data_criacao {timestamp_type} DEFAULT CURRENT_TIMESTAMP

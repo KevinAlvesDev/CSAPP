@@ -82,6 +82,12 @@ CARGOS_RESPONSAVEL = [
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
+# --- Valor Padrão para Sim/Não (Booleans) ---
+NAO_DEFINIDO_BOOL = "Não definido" 
+
+# --- Opções para Seleção Sim/Não no Front-end ---
+SIM_NAO_OPTIONS = [NAO_DEFINIDO_BOOL, "Sim", "Não"]
+
 # --- Cargos e Perfis de Acesso ---
 ADMIN_EMAIL = "kevinalveswp@gmail.com" 
 
@@ -103,3 +109,38 @@ PERFIS_COM_CRIACAO = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR, PERFIL_C
 
 # Perfis que podem ver a tela de Analytics (Gerentes e acima)
 PERFIS_COM_ANALYTICS = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
+
+
+# NOVAS CONSTANTES PARA DETALHES DA EMPRESA
+NIVEIS_RECEITA = [
+    "Diamante (MRR > R$ 2.000,00)",
+    "Platina (MRR R$ 1.000,00 - R$ 2.000,00)",
+    "Ouro (MRR R$ 500,00 - R$ 1.000,00)",
+    "Prata (MRR < R$ 500,00)"
+]
+
+SEGUIMENTOS_LIST = [
+    "Natação", "Estúdio/Boutique", "Pilates", "Cross", "Low Cost", 
+    "Full Service", "Escola", "Quadra de Areia", "Personal Trainer", "Outro"
+]
+
+TIPOS_PLANOS = ["Recorrência", "Normal", "Plano Personal", "Plano de Crédito", "Misto"]
+
+MODALIDADES_LIST = ["Musculação", "Aulas Coletivas Gerais", "Natação", "Lutas", "Outros"]
+
+HORARIOS_FUNCIONAMENTO = ["Livre", "Horário da Turma", "Personalizado"]
+
+FORMAS_PAGAMENTO = ["Dinheiro", "Cartão de Crédito", "Cartão de Débito", "Cheque", "Pix", "Outra"]
+
+SISTEMAS_ANTERIORES = [
+    "ACTUAR DESK / WEB", "BH SYSTEM", "BOSS - QUALYFIT", "CLOUD GYM WEB", "Control Fit", 
+    "DATA 4 YOU", "DATA FITNESS", "EASY MANAGER", "EVO", "FITNESS SCHOOL", "IFITNESS - FITSYSTEM", 
+    "INFO SKY", "MU - MICRO UNIVERSITY", "MU WEB", "OPERFIT", "PLANILHA EXCEL - DADOS CADASTRAIS", 
+    "POLISYSTEM - (DIGITAL GYM)", "Polisystem Web", "SAGAS", "SCA", "SCA WEB", "SECULLUM", 
+    "TECNOFIT", "VYSOR", "NEXT FIT", "Não Possuia"
+]
+
+RECORRENCIA_USADA = [
+    "Não", "Afinz", "Caixa", "Ceopag", "Cielo", "Getnet", "One Payment", "Pagar.me", 
+    "PagBnk", "PinBank", "Rede", "Stone", "Strip", "Vind"
+]

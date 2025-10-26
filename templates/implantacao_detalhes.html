@@ -52,10 +52,12 @@
                     <i class="bi bi-person-fill" style="font-size: 1.5rem; color: var(--accent-color);"></i>
                 {% endif %}
             </button>
-            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuDropdownDetails">
-                <li><a class="dropdown-item" href="{{ url_for('profile.perfil') }}">Editar Perfil</a></li>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuDropdown">
+    
+                {# NOVO EMOJI: Editar Perfil #}
+                <li><a class="dropdown-item" href="{{ url_for('profile.perfil') }}"><i class="bi bi-person-circle me-2"></i> Editar Perfil</a></li>
                 
-                {# Checagem para Usuários e Analytics #}
+                {# Checagens para Usuários e Analytics #}
                 {% if g.perfil and g.perfil.perfil_acesso in ['Administrador', 'Gerente', 'Coordenador'] %}
                     <li><a class="dropdown-item text-primary" href="#" data-bs-toggle="modal" data-bs-target="#modalGerenciarUsuarios">
                         <i class="bi bi-people-fill me-2"></i> Usuários
@@ -65,7 +67,9 @@
                     </a></li>
                 {% endif %}
 
-                <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalGamificacao">Gamificação</a></li>
+                {# NOVO EMOJI: Gamificação #}
+                <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalGamificacao"><i class="bi bi-trophy-fill me-2"></i> Gamificação</a></li>
+                
                 <li><hr class="dropdown-divider"></li>
                 <li>
                     {# ATUALIZADO: url_for('auth.logout') #}
@@ -383,15 +387,6 @@
                                                     {% endif %}
                                                 </div>
                                                 {% endfor %}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="d-flex align-items-center ms-2 flex-shrink-0">
-                                        <button class="btn btn-sm btn-outline-danger p-1 me-1" onclick="window.excluirTarefa({{ tarefa.id }}, this)" title="Excluir Tarefa"><i class="bi bi-x-lg"></i></button>
-                                        <i class="bi bi-grip-vertical handle" style="cursor: grab;" title="Mover Tarefa"></i>
-                                    </div>
-                                </li>
-                                {% endfor %}
                             </ul>
                         </div>
                     </div>
@@ -765,7 +760,7 @@
         if (!comentario || !comentario.id) return '';
         const dataFormatada = formatDataComentario(comentario.data_criacao);
         let botaoExcluir = '';
-        if (comentario.usuario_cs === emailUsuarioLogado) {
+        if (comentario.usuario_cs == emailUsuarioLogado) {
             const urlExcluir = `{{ url_for('api.excluir_comentario', comentario_id=0) }}`.replace('/0', `/${comentario.id}`);
             botaoExcluir = `
                 <button class="btn btn-sm btn-link text-danger p-0 small mt-1"
