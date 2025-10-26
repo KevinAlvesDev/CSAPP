@@ -355,3 +355,89 @@ def reordenar_tarefas():
     except Exception as e:
         print(f"ERRO ao reordenar tarefas: {e}")
         return jsonify({'ok': False, 'error': f"Erro interno do servidor: {e}"}), 500
+
+@api_bp.route('/excluir_tarefas_modulo', methods=['POST'])
+@login_required
+def excluir_tarefas_modulo():
+    """Exclui todas as tarefas de um módulo (tarefa_pai) específico."""
+    usuario_cs_email = g.user_email
+    data = request.get_json()
+    impl_id = data.get('implantacao_id')
+    tarefa_pai = data.get('tarefa_pai') # O "Módulo"
+
+    if not all([impl_id, tarefa_pai]):
+        return jsonify({'ok': False, 'error': 'Dados inválidos (ID da implantação e Módulo são obrigatórios).'}), 400
+
+    # 1. Verificar Permissão
+    impl = query_db("SELECT id, nome_empresa, status FROM implantacoes WHERE id = %s AND usuario_cs = %s", (impl_id, usuario_cs_email), one=True)
+    if not impl:
+        return jsonify({'ok': False, 'error': 'Permissão negada ou implantação não encontrada.'}), 403
+
+    if impl.get('status') == 'finalizada':
+        return jsonify({'ok': False, 'error': 'Não é possível excluir tarefas de implantações finalizadas.'}), 400
+
+    # 2. Verificar R2
+    if not r2_client:
+        return jsonify({'ok': False, 'error': 'Serviço de armazenamento (R2) não configurado.'}), 500
+
+    try:
+        # 3. Buscar imagens de comentários ANTES de excluir as tarefas
+        comentarios_img = query_db(
+            """
+            SELECT c.imagem_url
+            FROM comentarios c
+            JOIN tarefas t ON c.tarefa_id = t.id
+            WHERE t.implantacao_id = %s AND t.tarefa_pai = %s AND c.imagem_url IS NOT NULL
+            """, (impl_id, tarefa_pai)
+        )
+        
+        public_url_base = current_app.config['CLOUDFLARE_PUBLIC_URL']
+        bucket_name = current_app.config['CLOUDFLARE_BUCKET_NAME']
+
+        # 4. Excluir imagens do R2
+        for c in comentarios_img:
+            imagem_url = c.get('imagem_url')
+            if imagem_url and public_url_base and imagem_url.startswith(public_url_base):
+                try:
+                    object_key = imagem_url.replace(f"{public_url_base}/", "")
+                    if object_key:
+                        r2_client.delete_object(Bucket=bucket_name, Key=object_key)
+                        print(f"Objeto R2 (módulo {tarefa_pai}) excluído: {object_key}")
+                except ClientError as e_delete:
+                    print(f"Aviso: Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete.response['Error']['Code']}")
+                except Exception as e_delete:
+                    print(f"Aviso: Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete}")
+        
+        # 5. Excluir Tarefas (ON DELETE CASCADE cuidará dos comentários no DB)
+        execute_db("DELETE FROM tarefas WHERE implantacao_id = %s AND tarefa_pai = %s", (impl_id, tarefa_pai))
+        
+        # 6. Logar
+        logar_timeline(impl_id, usuario_cs_email, 'modulo_excluido', f"Todas as tarefas do módulo '{tarefa_pai}' foram excluídas.")
+        
+        # 7. Recalcular Progresso e verificar Auto-Finalização
+        finalizada, log_finalizacao = auto_finalizar_implantacao(impl_id, usuario_cs_email)
+        novo_prog, _, _ = _get_progress(impl_id)
+        
+        # 8. Buscar Log para retornar à UI
+        nome = g.perfil.get('nome', usuario_cs_email)
+        log_exclusao = query_db(
+            "SELECT *, %s as usuario_nome FROM timeline_log "
+            "WHERE implantacao_id = %s AND tipo_evento = 'modulo_excluido' "
+            "ORDER BY id DESC LIMIT 1",
+            (nome, impl_id), one=True
+        )
+        if log_exclusao:
+            # Formata a data para JSON
+            log_exclusao['data_criacao'] = format_date_iso_for_json(log_exclusao.get('data_criacao'))
+
+        return jsonify({
+            'ok': True,
+            'log_exclusao_modulo': log_exclusao,
+            'novo_progresso': novo_prog,
+            'implantacao_finalizada': finalizada,
+            'log_finalizacao': log_finalizacao
+        })
+
+    except Exception as e:
+        print(f"ERRO ao excluir tarefas do módulo {tarefa_pai} (Impl. ID {impl_id}): {e}")
+        return jsonify({'ok': False, 'error': f"Erro interno do servidor: {e}"}), 500

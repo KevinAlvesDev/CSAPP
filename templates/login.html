@@ -18,6 +18,7 @@
             --accent-color: #007bff; 
             --shadow: 0 8px 15px rgba(0, 0, 0, 0.2); 
             --box-bg: #ffffff;
+            --accent-color-darker: #0056b3; /* Cor um pouco mais escura para o hover */
         } 
 
         body {
@@ -69,10 +70,12 @@
             font-weight: 600; 
             padding: 10px 30px; 
             font-size: 1.1rem; 
-            transition: opacity 0.2s; 
+            transition: background-color 0.2s, border-color 0.2s; /* Transição suave */
         }
+        /* CORREÇÃO DO HOVER: Usar cor mais escura em vez de opacidade */
         .btn-login:hover { 
-            opacity: 0.85; 
+            background-color: var(--accent-color-darker); 
+            border-color: var(--accent-color-darker);    
             color: white; 
         }
     </style>
@@ -81,7 +84,8 @@
 
     <div class="login-box">
         <h1 class="main-title">CS Onboarding</h1>
-        <p class="login-subtitle">PAC TO SOLUÇÕES</p>
+        {# CORREÇÃO DO TEXTO #}
+        <p class="login-subtitle">Pacto Soluções</p>
         <p class="lead mb-4" style="color: var(--main-text-color);">Gerencie suas implantações de forma eficiente.</p>
         
         {# Exibe mensagens flash #}
