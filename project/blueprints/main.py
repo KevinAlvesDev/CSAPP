@@ -354,20 +354,14 @@ def atualizar_detalhes_empresa():
 
     # Helper para converter string vazia ou de espaços em None (para salvar NULL no DB)
     def get_form_value(key):
-        # request.form.get retorna a string vazia ('') se o campo estiver no form e vazio
         value = request.form.get(key, '').strip()
-        
-        # Se for string vazia, retorna None.
         if value == "":
             return None
         return value
     
-    # Helper específico para os campos de Sim/Não que DEVEM ser salvos como string (Sim, Não, ou None)
+    # Helper específico para os campos de Sim/Não
     def get_boolean_value(key):
-        # Valor padrão 'Não definido' é o que deve vir do <select> quando nada é selecionado
         value = request.form.get(key, NAO_DEFINIDO_BOOL).strip()
-        
-        # Se for igual ao padrão "Não definido", ou vazio, salva como None (NULL no DB)
         if value == NAO_DEFINIDO_BOOL or value == "":
              return None 
         return value
@@ -375,61 +369,55 @@ def atualizar_detalhes_empresa():
     # Tratamento para campos numéricos que podem vir vazios
     alunos_ativos = request.form.get('alunos_ativos')
     try:
-        # Tenta converter para inteiro, se falhar ou se for None, usa 0
         alunos_ativos = int(alunos_ativos)
     except (ValueError, TypeError):
         alunos_ativos = 0
 
 
     try:
-        # Mapeamento e validação dos campos de data
-        # Data fields are set to None if empty string is passed
-        data_inicio_prod = get_form_value('data_inicio_producao')
-        data_final_impl = get_form_value('data_final_implantacao')
-
-        # Coleta dos NOVOS campos (USANDO O HELPER get_form_value ou get_boolean_value)
-        # Campos de texto e seleção sem valor padrão booleano
+        # Campos visíveis no formulário APÓS as remoções na UI
         campos = {
+            # Contatos e Responsáveis
             'responsavel_cliente': get_form_value('responsavel_cliente'),
             'cargo_responsavel': get_form_value('cargo_responsavel'),
             'telefone_responsavel': get_form_value('telefone_responsavel'),
             'email_responsavel': get_form_value('email_responsavel'),
-            'data_inicio_producao': data_inicio_prod,
-            'data_final_implantacao': data_final_impl,
-            'chave_oamd': get_form_value('chave_oamd'),
             
-            # NOVOS CAMPOS FINANCEIROS / IDENTIFICAÇÃO
-            'nivel_receita': get_form_value('nivel_receita'),
-            'valor_atribuido': get_form_value('valor_atribuido'),
-            'id_favorecido': get_form_value('id_favorecido'),
+            # Datas e Atributos (Incluindo Movidos)
+            'data_inicio_producao': get_form_value('data_inicio_producao'),
+            'data_final_implantacao': get_form_value('data_final_implantacao'),
+            'id_favorecido': get_form_value('id_favorecido'), # MOVIDO
+            'nivel_receita': get_form_value('nivel_receita'), # MOVIDO
+            'chave_oamd': get_form_value('chave_oamd'),
             'tela_apoio_link': get_form_value('tela_apoio_link'),
             
-            # NOVOS CAMPOS DE CONTATOS
-            'resp_estrategico_nome': get_form_value('resp_estrategico_nome'),
-            'resp_onb_nome': get_form_value('resp_onb_nome'),
-            'resp_estrategico_obs': get_form_value('resp_estrategico_obs'),
-            'contatos': get_form_value('contatos'),
-
-            # NOVOS CAMPOS OPERACIONAIS
+            # Configurações Operacionais
             'seguimento': get_form_value('seguimento'),
             'tipos_planos': get_form_value('tipos_planos'),
             'modalidades': get_form_value('modalidades'),
             'horarios_func': get_form_value('horarios_func'),
             'formas_pagamento': get_form_value('formas_pagamento'),
-            
-            # Campos Booleanos/Sim-Não
             'diaria': get_boolean_value('diaria'), 
             'freepass': get_boolean_value('freepass'), 
-            'alunos_ativos': alunos_ativos, # Já tratado
+            'alunos_ativos': alunos_ativos, 
             
-            # NOVOS CAMPOS DE SISTEMAS / INTEGRAÇÕES
+            # Sistemas e Integrações
             'sistema_anterior': get_form_value('sistema_anterior'),
             'importacao': get_boolean_value('importacao'), 
             'recorrencia_usa': get_form_value('recorrencia_usa'),
             'boleto': get_boolean_value('boleto'), 
             'nota_fiscal': get_boolean_value('nota_fiscal'), 
             'catraca': get_boolean_value('catraca'), 
-            'facial': get_boolean_value('facial'), 
+            'facial': get_boolean_value('facial'),
+            
+            # CAMPOS REMOVIDOS DA UI MAS MANTIDOS NO DB (Para não apagar dados existentes)
+            # Esses campos são submetidos via input hidden no base.html
+            'valor_atribuido': get_form_value('valor_atribuido'), 
+            'resp_estrategico_nome': get_form_value('resp_estrategico_nome'),
+            'resp_onb_nome': get_form_value('resp_onb_nome'),
+            'resp_estrategico_obs': get_form_value('resp_estrategico_obs'),
+            'contatos': get_form_value('contatos'),
+
         }
 
         # Construção dinâmica da query

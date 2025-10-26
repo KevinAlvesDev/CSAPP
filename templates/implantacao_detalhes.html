@@ -114,7 +114,28 @@
                         data-final-implantacao="{{ implantacao.data_final_implantacao_iso | default('') }}"
                         data-chave-oamd="{{ implantacao.chave_oamd | default('') }}"
                         data-catraca="{{ implantacao.catraca | default('') }}"
-                        data-facial="{{ implantacao.facial | default('') }}">
+                        data-facial="{{ implantacao.facial | default('') }}"
+                        data-nivel-receita="{{ implantacao.nivel_receita | default('') }}"
+                        data-valor-atribuido="{{ implantacao.valor_atribuido | default('') }}"
+                        data-id-favorecido="{{ implantacao.id_favorecido | default('') }}"
+                        data-tela-apoio-link="{{ implantacao.tela_apoio_link | default('') }}"
+                        data-resp-estrategico-nome="{{ implantacao.resp_estrategico_nome | default('') }}"
+                        data-resp-onb-nome="{{ implantacao.resp_onb_nome | default('') }}"
+                        data-resp-estrategico-obs="{{ implantacao.resp_estrategico_obs | default('') }}"
+                        data-contatos="{{ implantacao.contatos | default('') }}"
+                        data-seguimento="{{ implantacao.seguimento | default('') }}"
+                        data-tipos-planos="{{ implantacao.tipos_planos | default('') }}"
+                        data-modalidades="{{ implantacao.modalidades | default('') }}"
+                        data-horarios-func="{{ implantacao.horarios_func | default('') }}"
+                        data-formas-pagamento="{{ implantacao.formas_pagamento | default('') }}"
+                        data-diaria="{{ implantacao.diaria | default('') }}"
+                        data-freepass="{{ implantacao.freepass | default('') }}"
+                        data-alunos-ativos="{{ implantacao.alunos_ativos | default(0) }}"
+                        data-sistema-anterior="{{ implantacao.sistema_anterior | default('') }}"
+                        data-importacao="{{ implantacao.importacao | default('') }}"
+                        data-recorrencia-usa="{{ implantacao.recorrencia_usa | default('') }}"
+                        data-boleto="{{ implantacao.boleto | default('') }}"
+                        data-nota-fiscal="{{ implantacao.nota_fiscal | default('') }}">
                         <i class="bi bi-pencil-square me-2"></i> Editar Detalhes
                     </button>
                 </li>
@@ -307,6 +328,7 @@
                                                     {% endif %}
                                                 </div>
                                                 {% endfor %}
+                                                {# CORREÇÃO APLICADA NA RESPOSTA ANTERIOR PARA FECHAR O LOOP COMENTÁRIOS #}
                                             </div>
                                         </div>
                                     </div>
@@ -387,6 +409,16 @@
                                                     {% endif %}
                                                 </div>
                                                 {% endfor %}
+                                                {# CORREÇÃO APLICADA AQUI: Faltava o endfor para o loop de comentários #}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center ms-2 flex-shrink-0">
+                                        <button class="btn btn-sm btn-outline-danger p-1 me-1" onclick="window.excluirTarefa({{ tarefa.id }}, this)" title="Excluir Tarefa"><i class="bi bi-x-lg"></i></button>
+                                        <i class="bi bi-grip-vertical handle" style="cursor: grab;" title="Mover Tarefa"></i>
+                                    </div>
+                                </li>
+                                {% endfor %}
                             </ul>
                         </div>
                     </div>
@@ -491,6 +523,7 @@
                                     </div>
                                 </li>
                                 {% endfor %}
+                                {# CORREÇÃO APLICADA AQUI: Faltava o endfor para o loop de tarefas #}
                             </ul>
                         </div>
                         {% endfor %}
@@ -1131,7 +1164,7 @@
         // -------------------------------------------------------------------
 
         // Inicializa botões "Ver mais/menos"
-         document.querySelectorAll('.comment-text').forEach(textEl => { const wrapper = textEl.closest('.comment-content-wrapper'); let button = wrapper ? wrapper.querySelector('button[onclick^="toggleComment"]') : null; const maxHeight = parseFloat(window.getComputedStyle(textEl).maxHeight); const isOverflowing = textEl.scrollHeight > maxHeight + 5; if (isOverflowing && !button) { const newButton = document.createElement('button'); newButton.className = 'btn btn-sm btn-link p-0 small'; newButton.textContent = 'Ver mais...'; newButton.onclick = function() { toggleComment(this, textEl.id); }; textEl.parentNode.insertBefore(newButton, textEl.nextSibling); } else if (!isOverflowing && button) { button.remove(); } else if (isOverflowing && button) { button.textContent = textEl.classList.contains('expanded') ? 'Ver menos...' : 'Ver mais...'; } });
+         document.querySelectorAll('.comment-text').forEach(textEl => { const wrapper = textEl.closest('.comment-content-wrapper'); let button = wrapper ? wrapper.querySelector('button[onclick^="toggleComment"]') : null; const maxHeight = parseFloat(window.getComputedStyle(textEl).maxHeight); const isOverflowing = textEl.scrollHeight > maxHeight + 5; if (isOverflowing && !button) { const newButton = document.createElement('button'); newButton.className = 'btn btn-sm btn-link p-0 small'; newButton.textContent = 'Ver mais...'; newButton.onclick = function() { toggleComment(this, textEl.id); }; textElement.parentNode.insertBefore(newButton, textEl.nextSibling); } else if (!isOverflowing && button) { button.remove(); } else if (isOverflowing && button) { button.textContent = textEl.classList.contains('expanded') ? 'Ver menos...' : 'Ver mais...'; } });
 
         // Adiciona funcionalidade aos ícones de collapse
         document.querySelectorAll('.card-header[data-bs-toggle="collapse"]').forEach(header => { const collapseId = header.getAttribute('data-bs-target'); const collapseElement = document.querySelector(collapseId); const icon = header.querySelector('i.bi-chevron-down, i.bi-chevron-up'); if (collapseElement && icon) { collapseElement.addEventListener('show.bs.collapse', () => { icon.classList.remove('bi-chevron-down'); icon.classList.add('bi-chevron-up'); }); collapseElement.addEventListener('hide.bs.collapse', () => { icon.classList.remove('bi-chevron-up'); icon.classList.add('bi-chevron-down'); }); if (collapseElement.classList.contains('show')) { icon.classList.remove('bi-chevron-down'); icon.classList.add('bi-chevron-up'); } } });

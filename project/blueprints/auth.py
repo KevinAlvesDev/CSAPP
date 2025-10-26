@@ -66,8 +66,8 @@ def _sync_user_profile(user_email, user_name, auth0_user_id):
     except Exception as db_error:
         print(f"ERRO CRÍTICO ao sincronizar perfil {user_email}: {db_error}")
         flash("Erro ao sincronizar perfil do usuário com o banco de dados.", "warning")
-        # Não relança para não quebrar o fluxo de login por um erro de sync não crítico (exceto duplicação)
-        pass
+        # Re-lança para que o chamador saiba que a sincronização falhou criticamente
+        raise db_error 
 
 
 # --- Decoradores de Autenticação e Permissão ---
@@ -91,20 +91,26 @@ def login_required(f):
         # Carrega o perfil do usuário no 'g'
         g.perfil = query_db("SELECT * FROM perfil_usuario WHERE usuario = %s", (g.user_email,), one=True)
         
-        # Fallback e sincronização
+        # Fallback e sincronização (Corrigido para evitar loops e KeyError)
         if not g.perfil:
+            sincronizacao_ok = False
             try:
                 _sync_user_profile(g.user_email, g.user.get('name', g.user_email), g.user.get('sub'))
-                g.perfil = query_db("SELECT * FROM perfil_usuario WHERE usuario = %s", (g.user_email,), one=True)
+                sincronizacao_ok = True
             except ValueError as ve: # Pega o erro de usuário duplicado
                  flash(str(ve), "error") # Mostra "Usuário já cadastrado"
                  session.clear() # Limpa a sessão para evitar loop
                  return redirect(url_for('auth.login'))
             except Exception as e:
                  print(f"Erro no _sync_user_profile durante o fallback: {e}")
-                 # Continua com perfil vazio para não travar o usuário
+                 # Deixa sincronizacao_ok = False
+                 
+            # Recarrega o perfil APENAS se a sincronização não lançou exceção
+            if sincronizacao_ok:
+                 g.perfil = query_db("SELECT * FROM perfil_usuario WHERE usuario = %s", (g.user_email,), one=True)
                  
             if not g.perfil:
+                 # Cria um perfil placeholder BÁSICO para evitar KeyError nas rotas
                  g.perfil = {
                     'nome': g.user.get('name', g.user_email),
                     'usuario': g.user_email,

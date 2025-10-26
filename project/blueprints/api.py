@@ -86,17 +86,26 @@ def adicionar_comentario(tarefa_id):
     if not r2_client or not current_app.config['CLOUDFLARE_PUBLIC_URL']:
         return jsonify({'ok': False, 'error': 'Serviço de armazenamento R2 não está configurado.'}), 500
 
+    # 1. Verifica permissão e status da implantação (CORRIGIDO PARA O FLUXO DE NEGÓCIOS)
+    tarefa_info = query_db(
+        "SELECT i.usuario_cs, i.id as implantacao_id, t.tarefa_filho, i.status "
+        "FROM tarefas t JOIN implantacoes i ON t.implantacao_id = i.id "
+        "WHERE t.id = %s",
+        (tarefa_id,), one=True
+    )
+    if not tarefa_info or tarefa_info.get('usuario_cs') != usuario_cs_email:
+        return jsonify({'ok': False, 'error': 'Permissão negada.'}), 403
+        
+    if tarefa_info.get('status') in ['finalizada', 'parada']:
+        status_atual = tarefa_info.get('status')
+        return jsonify({'ok': False, 'error': f'Não é possível adicionar comentários a implantações com status "{status_atual}".'}), 400
+
     # Lida com o upload da imagem
     if 'imagem' in request.files:
         file = request.files.get('imagem')
         if file and file.filename and allowed_file(file.filename):
             try:
-                # Pega o ID da implantação para organizar a pasta
-                tarefa_info_temp = query_db("SELECT implantacao_id FROM tarefas WHERE id = %s", (tarefa_id,), one=True)
-                if not tarefa_info_temp:
-                    raise Exception("Tarefa não encontrada para associar imagem.")
-                
-                impl_id = tarefa_info_temp['implantacao_id']
+                impl_id = tarefa_info['implantacao_id']
                 
                 # Cria nome único
                 filename = secure_filename(file.filename)
@@ -127,16 +136,6 @@ def adicionar_comentario(tarefa_id):
         return jsonify({'ok': False, 'error': 'O comentário não pode estar vazio se não houver imagem.'}), 400
 
     try:
-        # Verifica permissão
-        tarefa = query_db(
-            "SELECT i.usuario_cs, i.id as implantacao_id, t.tarefa_filho "
-            "FROM tarefas t JOIN implantacoes i ON t.implantacao_id = i.id "
-            "WHERE t.id = %s",
-            (tarefa_id,), one=True
-        )
-        if not tarefa or tarefa.get('usuario_cs') != usuario_cs_email:
-            return jsonify({'ok': False, 'error': 'Permissão negada.'}), 403
-
         # Salva no DB
         agora = datetime.now()
         novo_id = execute_db(
@@ -147,10 +146,10 @@ def adicionar_comentario(tarefa_id):
             raise Exception("Falha ao salvar comentário e obter ID.")
 
         # Loga na timeline
-        detalhe = f"Comentário em '{tarefa['tarefa_filho']}':\n{texto}" if texto else f"Imagem adicionada em '{tarefa['tarefa_filho']}'."
+        detalhe = f"Comentário em '{tarefa_info['tarefa_filho']}':\n{texto}" if texto else f"Imagem adicionada em '{tarefa_info['tarefa_filho']}'."
         if texto and img_url:
-            detalhe = f"Comentário em '{tarefa['tarefa_filho']}':\n{texto}\n[Imagem Adicionada]"
-        logar_timeline(tarefa['implantacao_id'], usuario_cs_email, 'novo_comentario', detalhe)
+            detalhe = f"Comentário em '{tarefa_info['tarefa_filho']}':\n{texto}\n[Imagem Adicionada]"
+        logar_timeline(tarefa_info['implantacao_id'], usuario_cs_email, 'novo_comentario', detalhe)
         
         # Prepara resposta JSON
         nome = g.perfil.get('nome', usuario_cs_email)
@@ -158,7 +157,7 @@ def adicionar_comentario(tarefa_id):
             "SELECT *, %s as usuario_nome FROM timeline_log "
             "WHERE implantacao_id = %s AND tipo_evento = 'novo_comentario' "
             "ORDER BY id DESC LIMIT 1",
-            (nome, tarefa['implantacao_id']), one=True
+            (nome, tarefa_info['implantacao_id']), one=True
         )
         data_criacao_str = format_date_iso_for_json(agora)
         if log_com:
