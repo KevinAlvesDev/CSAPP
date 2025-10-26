@@ -1,4 +1,4 @@
-{# templates/_manage_users_content.html (COMPLETO E CORRIGIDO) #}
+{# templates/_manage_users_content.html (COMPLETO E ATUALIZADO) #}
 
 <div class="mb-4">
     <h5 class="card-title text-primary">Controle de Perfil de Acesso</h5>
@@ -11,9 +11,9 @@
         <thead>
             <tr class="table-light">
                 <th>Usuário (E-mail)</th>
-                <th>Nome / Cargo (Função)</th>
-                <th>Perfil de Acesso Atual</th>
-                <th>Implantações</th>
+                <th>Nome / Cargo</th> {# ALTERADO #}
+                <th>Perfil de Acesso</th> {# ALTERADO #}
+                <th>Total Implantações</th> {# ALTERADO #}
                 <th>Alterar Perfil de Acesso</th>
                 {# COLUNA EXCLUIR #}
                 <th>Excluir</th> 
@@ -47,7 +47,8 @@
                     {% endif %}
                 </td>
                 <td>
-                    <span title="Em Andamento / Finalizadas" class="text-nowrap">{{ user.impl_andamento_total or 0 }} / {{ user.impl_finalizadas or 0 }}</span>
+                    {# ALTERADO: Mostra a soma das implantações conhecidas pelo perfil #}
+                    <span class="text-nowrap">{{ (user.impl_andamento_total or 0) + (user.impl_finalizadas or 0) + (user.impl_paradas or 0) }}</span> 
                 </td>
                 <td>
                     <form method="POST" action="{{ url_for('management.update_user_perfil') }}" class="d-flex" 
