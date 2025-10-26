@@ -28,7 +28,8 @@ def analytics_dashboard():
         cs_email = g.user_email
     
     try:
-        global_metrics, cs_metrics_list = get_analytics_data(
+        # ATUALIZAÇÃO: Recebe 3 valores, incluindo a nova lista
+        global_metrics, cs_metrics_list, implantacoes_paradas_detalhadas = get_analytics_data(
             target_cs_email=cs_email, 
             target_status=status_filter,
             start_date=start_date,
@@ -51,6 +52,9 @@ def analytics_dashboard():
         # Ordena a lista de CSs por nome
         cs_metrics_list.sort(key=lambda x: x['nome'])
         
+        # ATUALIZAÇÃO: Ordena a nova lista de paradas por dias (mais tempo parado primeiro)
+        implantacoes_paradas_detalhadas.sort(key=lambda x: x.get('parada_dias', 0), reverse=True)
+        
         return render_template(
             'analytics.html',
             global_metrics=global_metrics,
@@ -63,7 +67,9 @@ def analytics_dashboard():
             current_end_date=end_date,
             user_info=g.user,
             user_perfil=user_perfil,
-            justificativas_parada=JUSTIFICATIVAS_PARADA
+            justificativas_parada=JUSTIFICATIVAS_PARADA,
+            # ATUALIZAÇÃO: Passa a nova lista para o template
+            implantacoes_paradas_detalhadas=implantacoes_paradas_detalhadas
         )
         
     except Exception as e:

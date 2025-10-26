@@ -13,9 +13,16 @@ app_root_dir = os.path.dirname(project_dir)
 # Define o caminho absoluto para a pasta de templates (APP-23-10/templates/)
 templates_dir = os.path.join(app_root_dir, 'templates')
 
+# NOVO: Define o caminho absoluto para a pasta static (APP-23-10/static/)
+static_dir = os.path.join(app_root_dir, 'static')
+
+# NOVO: PRINT DE DEBUG CRÍTICO
+print(f"DEBUG CRÍTICO: Flask está usando a pasta static em: {static_dir}")
+
 def create_app():
     """Application Factory Function"""
-    app = Flask(__name__, template_folder=templates_dir)
+    # NOVO: Adicionando explicitamente o static_folder
+    app = Flask(__name__, template_folder=templates_dir, static_folder=static_dir)
 
     # Carrega a configuração do config.py
     app.config.from_object(Config)
@@ -29,10 +36,12 @@ def create_app():
     # Configura o banco de dados (registra get_db, close_connection, init_db_command)
     init_db_app(app)
 
-    # Registra os Blueprints (rotas)
+    # --- Registro de Blueprints ---
+    # Importa e registra o Blueprint Auth
     from .blueprints.auth import auth_bp
     app.register_blueprint(auth_bp)
 
+    # Importa e registra o Blueprint Main
     from .blueprints.main import main_bp
     app.register_blueprint(main_bp)
 
@@ -67,9 +76,9 @@ def create_app():
 
     # Adiciona a pasta de uploads local como rota estática (para fallback)
     @app.route('/uploads/<path:filename>')
-    def uploaded_file(filename):
-        # A pasta de upload é definida em config.py
-        return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+    def serve_uploads(filename):
+        # A pasta 'uploads' está um nível acima de 'project' (APP-23-10/uploads)
+        uploads_dir = os.path.join(app_root_dir, 'uploads')
+        return send_from_directory(uploads_dir, filename)
 
-    print(f"Aplicação Flask criada com sucesso.")
     return app

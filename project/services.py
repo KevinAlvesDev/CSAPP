@@ -335,6 +335,9 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
     tma_dias_sum = 0
     motivos_parada_global = {}
     
+    # NOVO: Lista para detalhes de paradas
+    implantacoes_paradas_detalhadas = []
+    
     for impl in impl_list:
         impl_id = impl['id']
         cs_email = impl['usuario_cs']
@@ -377,11 +380,20 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
             # --- CÁLCULO DE TEMPO DE PARADA ---
             parada_dias = calculate_time_in_status(impl_id, 'parada')
             if parada_dias is not None:
-                metrics['parada_dias_total'] = parada_dias 
+                # ATUALIZAÇÃO: Acumula o tempo total parado (para o CS)
+                metrics['parada_dias_total'] += parada_dias 
             
             motivo = impl.get('motivo_parada') or 'Motivo Não Especificado'
             motivos_parada_global[motivo] = motivos_parada_global.get(motivo, 0) + 1
             metrics['motivos_parada'][motivo] = metrics['motivos_parada'].get(motivo, 0) + 1
+            
+            # NOVO: Adiciona à lista detalhada
+            implantacoes_paradas_detalhadas.append({
+                'nome_empresa': impl.get('nome_empresa'),
+                'motivo_parada': motivo,
+                'parada_dias': parada_dias if parada_dias is not None else 0,
+                'cs_nome': metrics.get('nome', cs_email)
+            })
             
         elif status == 'andamento':
             metrics['impl_andamento'] += 1
@@ -424,4 +436,5 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
         'motivos_parada': motivos_parada_global
     }
     
-    return global_metrics, list(final_cs_metrics.values())
+    # ATUALIZAÇÃO: Retorna a nova lista detalhada
+    return global_metrics, list(final_cs_metrics.values()), implantacoes_paradas_detalhadas

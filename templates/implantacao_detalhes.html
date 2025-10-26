@@ -328,7 +328,6 @@
                                                     {% endif %}
                                                 </div>
                                                 {% endfor %}
-                                                {# CORREÇÃO APLICADA NA RESPOSTA ANTERIOR PARA FECHAR O LOOP COMENTÁRIOS #}
                                             </div>
                                         </div>
                                     </div>
@@ -356,7 +355,16 @@
                     <div class="card metric-card mb-4 shadow-sm">
                         <div class="card-header header-bg d-flex justify-content-between align-items-center" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#collapse-obrig-{{ loop.index }}" aria-expanded="false">
                             <h5 class="mb-0 fs-6">{{ modulo }}</h5>
-                            <i class="bi bi-chevron-down"></i>
+                            <div>
+                                {# NOVO: Botão Marcar Todas para Módulo Obrigatório #}
+                                <button class="btn btn-outline-success btn-marcar-todas me-2" 
+                                        type="button" 
+                                        onclick="window.marcarTodasDoModulo(this, 'collapse-obrig-{{ loop.index }}')"
+                                        title="Marcar todas as tarefas deste módulo como concluídas">
+                                    <i class="bi bi-check-all"></i> Marcar Todas
+                                </button>
+                                <i class="bi bi-chevron-down"></i>
+                            </div>
                         </div>
                         <div id="collapse-obrig-{{ loop.index }}" class="collapse" data-modulo="{{ modulo }}">
                             <ul class="list-group list-group-flush list-group-sortable" id="sortable-list-obrig-{{ loop.index }}">
@@ -409,7 +417,6 @@
                                                     {% endif %}
                                                 </div>
                                                 {% endfor %}
-                                                {# CORREÇÃO APLICADA AQUI: Faltava o endfor para o loop de comentários #}
                                             </div>
                                         </div>
                                     </div>
@@ -523,7 +530,6 @@
                                     </div>
                                 </li>
                                 {% endfor %}
-                                {# CORREÇÃO APLICADA AQUI: Faltava o endfor para o loop de tarefas #}
                             </ul>
                         </div>
                         {% endfor %}
@@ -939,8 +945,8 @@
                     }
                     adicionarLogNaTimeline(data.log_tarefa);
                     if (data.implantacao_finalizada) {
+                        // REMOVIDO: alert('Parabéns! Todas as tarefas obrigatórias e de treinamento foram concluídas e a implantação foi finalizada automaticamente.');
                         adicionarLogNaTimeline(data.log_finalizacao);
-                        alert('Parabéns! Todas as tarefas obrigatórias e de treinamento foram concluídas e a implantação foi finalizada automaticamente.');
                         window.location.reload();
                     }
                 } else {
@@ -978,8 +984,8 @@
                         updateProgressBar(data.novo_progresso);
                     }
                     if (data.implantacao_finalizada) {
+                        // REMOVIDO: alert('Implantação finalizada automaticamente após exclusão da tarefa.');
                         adicionarLogNaTimeline(data.log_finalizacao);
-                        alert('Implantação finalizada automaticamente após exclusão da tarefa.');
                         // window.location.reload();
                     }
                 } else {
