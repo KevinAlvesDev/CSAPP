@@ -238,9 +238,11 @@ def init_db():
             usuario_cs VARCHAR(255) REFERENCES usuarios(usuario) ON DELETE SET NULL,
             nome_empresa TEXT NOT NULL,
             status VARCHAR(50) DEFAULT 'andamento' CHECK(status IN ('andamento', 'futura', 'finalizada', 'parada')),
-            tipo VARCHAR(50) DEFAULT 'agora' CHECK(tipo IN ('agora', 'futura')),
-            data_criacao {timestamp_type},
+            tipo VARCHAR(50) DEFAULT 'agora' CHECK(tipo IN ('agora', 'futura', 'modulo')),
+            data_criacao {timestamp_type}, -- Data de criação do registro
+            data_inicio_efetivo {timestamp_nullable_type} DEFAULT NULL, -- Data que iniciou de fato
             data_finalizacao {timestamp_nullable_type} DEFAULT NULL,
+            data_inicio_previsto {date_type} DEFAULT NULL,
             motivo_parada TEXT DEFAULT NULL,
             responsavel_cliente TEXT DEFAULT NULL,
             cargo_responsavel TEXT DEFAULT NULL,
@@ -249,8 +251,8 @@ def init_db():
             data_inicio_producao {date_type} DEFAULT NULL,
             data_final_implantacao {date_type} DEFAULT NULL,
             chave_oamd TEXT DEFAULT NULL,
-            catraca VARCHAR(20) DEFAULT 'Não definido', -- Aumentado e com Default
-            facial VARCHAR(20) DEFAULT 'Não definido', -- Aumentado e com Default
+            catraca VARCHAR(20) DEFAULT 'Não definido',
+            facial VARCHAR(20) DEFAULT 'Não definido',
             nivel_receita VARCHAR(100) DEFAULT NULL,
             valor_atribuido VARCHAR(100) DEFAULT NULL,
             id_favorecido VARCHAR(50) DEFAULT NULL,
@@ -260,14 +262,14 @@ def init_db():
             modalidades VARCHAR(100) DEFAULT NULL,
             horarios_func VARCHAR(100) DEFAULT NULL,
             formas_pagamento VARCHAR(100) DEFAULT NULL,
-            diaria VARCHAR(20) DEFAULT 'Não definido', -- Aumentado e com Default
-            freepass VARCHAR(20) DEFAULT 'Não definido', -- Aumentado e com Default
+            diaria VARCHAR(20) DEFAULT 'Não definido',
+            freepass VARCHAR(20) DEFAULT 'Não definido',
             alunos_ativos {integer_type} DEFAULT 0,
             sistema_anterior VARCHAR(100) DEFAULT NULL,
-            importacao VARCHAR(20) DEFAULT 'Não definido', -- Aumentado e com Default
+            importacao VARCHAR(20) DEFAULT 'Não definido',
             recorrencia_usa VARCHAR(100) DEFAULT NULL,
-            boleto VARCHAR(20) DEFAULT 'Não definido', -- Aumentado e com Default
-            nota_fiscal VARCHAR(20) DEFAULT 'Não definido', -- Aumentado e com Default
+            boleto VARCHAR(20) DEFAULT 'Não definido',
+            nota_fiscal VARCHAR(20) DEFAULT 'Não definido',
             resp_estrategico_nome VARCHAR(255) DEFAULT NULL,
             resp_onb_nome VARCHAR(255) DEFAULT NULL,
             resp_estrategico_obs TEXT DEFAULT NULL,
@@ -277,6 +279,8 @@ def init_db():
     print("- Tabela 'implantacoes' verificada/criada.")
     # Adiciona colunas faltantes a implantacoes (exemplos - liste todas as novas se necessário)
     impl_cols_to_check = {
+        'data_inicio_efetivo': f'{timestamp_nullable_type} DEFAULT NULL', # COLUNA ADICIONADA
+        'data_inicio_previsto': f'{date_type} DEFAULT NULL',
         'nivel_receita': 'VARCHAR(100) DEFAULT NULL', 'valor_atribuido': 'VARCHAR(100) DEFAULT NULL',
         'id_favorecido': 'VARCHAR(50) DEFAULT NULL', 'tela_apoio_link': f'{text_type} DEFAULT NULL',
         'seguimento': 'VARCHAR(100) DEFAULT NULL', 'tipos_planos': 'VARCHAR(100) DEFAULT NULL',
@@ -287,7 +291,7 @@ def init_db():
         'recorrencia_usa': 'VARCHAR(100) DEFAULT NULL', 'boleto': 'VARCHAR(20) DEFAULT \'Não definido\'',
         'nota_fiscal': 'VARCHAR(20) DEFAULT \'Não definido\'', 'resp_estrategico_nome': 'VARCHAR(255) DEFAULT NULL',
         'resp_onb_nome': 'VARCHAR(255) DEFAULT NULL', 'resp_estrategico_obs': f'{text_type} DEFAULT NULL',
-        'contatos': f'{text_type} DEFAULT NULL', 'catraca': 'VARCHAR(20) DEFAULT \'Não definido\'', # Verifique defaults antigos
+        'contatos': f'{text_type} DEFAULT NULL', 'catraca': 'VARCHAR(20) DEFAULT \'Não definido\'',
         'facial': 'VARCHAR(20) DEFAULT \'Não definido\''
     }
     for col, definition in impl_cols_to_check.items():
@@ -337,7 +341,7 @@ def init_db():
     """)
     print("- Tabela 'timeline_log' verificada/criada.")
 
-    # --- NOVA TABELA PARA GAMIFICAÇÃO ---
+    # --- TABELA PARA GAMIFICAÇÃO ---
     cur.execute(f"""
         CREATE TABLE IF NOT EXISTS gamificacao_metricas_mensais (
             id {pk_type},
@@ -362,7 +366,6 @@ def init_db():
             nao_envolvimento {integer_type} DEFAULT 0 CHECK(nao_envolvimento >= 0),
             desc_incompreensivel {integer_type} DEFAULT 0 CHECK(desc_incompreensivel >= 0),
             hora_extra {integer_type} DEFAULT 0 CHECK(hora_extra >= 0),
-            -- Campos Opcionais para Penalidades não mapeadas (adicionar se necessário no form)
             perda_sla_grupo {integer_type} DEFAULT 0 CHECK(perda_sla_grupo >= 0),
             finalizacao_incompleta {integer_type} DEFAULT 0 CHECK(finalizacao_incompleta >= 0),
             -- Métricas Calculadas (armazenadas opcionalmente)
@@ -381,16 +384,12 @@ def init_db():
         )
     """)
     print("- Tabela 'gamificacao_metricas_mensais' verificada/criada.")
-    # Adiciona colunas faltantes (se o schema evoluir)
     gamif_cols_to_check = {
         'perda_sla_grupo': f'{integer_type} DEFAULT 0 CHECK(perda_sla_grupo >= 0)',
         'finalizacao_incompleta': f'{integer_type} DEFAULT 0 CHECK(finalizacao_incompleta >= 0)'
-        # Adicione outras colunas aqui se forem criadas depois
     }
     for col, definition in gamif_cols_to_check.items():
          check_and_add_column(cur, 'gamificacao_metricas_mensais', col, definition, db)
-
-    # --- FIM DA NOVA TABELA ---
 
     # Índices (Criar se não existirem)
     cur.execute("CREATE INDEX IF NOT EXISTS idx_impl_usuario_cs ON implantacoes (usuario_cs)")

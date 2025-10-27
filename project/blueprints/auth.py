@@ -12,7 +12,7 @@ from sqlite3 import IntegrityError as Sqlite3IntegrityError
 
 from ..extensions import oauth
 from ..db import query_db, execute_db
-from ..constants import ADMIN_EMAIL, PERFIL_ADMIN, PERFIL_COLABORADOR, PERFIS_COM_GESTAO
+from ..constants import ADMIN_EMAIL, PERFIL_ADMIN, PERFIL_IMPLANTADOR, PERFIS_COM_GESTAO # <-- ALTERADO
 
 auth_bp = Blueprint('auth', __name__)
 

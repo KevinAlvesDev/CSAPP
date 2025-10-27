@@ -6,13 +6,15 @@
 <div class="container-fluid p-0">
     <header class="header-bg p-3 shadow-sm d-flex justify-content-end align-items-center position-relative">
         <h1 class="main-title mb-0 fs-4" style="position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap;">CS ONBOARDING DASHBOARD</h1>
-        
+
         <div class="d-flex align-items-center">
-            
+
+            {# Apenas usuários com permissão (Admin, Gerente, Coord) veem o botão #}
+            {% if g.perfil and g.perfil.perfil_acesso in PERFIS_COM_CRIACAO %}
             <button class="btn btn-success ms-3" data-bs-toggle="modal" data-bs-target="#novaImplantacaoModal" style="background-color: var(--accent-color); border-color: var(--accent-color);">
                 <i class="bi bi-plus-circle me-1"></i> Nova Implantação
             </button>
-            
+            {% endif %}
             <div class="dropdown ms-2">
                 <button class="btn btn-outline-secondary rounded-circle p-0" type="button" id="userMenuDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Menu" style="width: 40px; height: 40px; border: 2px solid var(--accent-color); overflow: hidden;">
                     {# g.perfil é injetado pelo decorator @login_required #}
@@ -22,11 +24,11 @@
                         <i class="bi bi-person-fill" style="font-size: 1.5rem; color: var(--accent-color);"></i>
                     {% endif %}
                 </button>
-                
+
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuDropdown">
                      <li><a class="dropdown-item" href="{{ url_for('profile.perfil') }}"><i class="bi bi-person-circle me-2"></i> Editar Perfil</a></li>
 
-                     {# Links Condicionais para Gestão #}
+                     {# Links Condicionais (Isto já esconde os links do Implantador) #}
                      {% if g.perfil and g.perfil.perfil_acesso in ['Administrador', 'Gerente', 'Coordenador'] %}
                           <li><a class="dropdown-item text-primary" href="#" data-bs-toggle="modal" data-bs-target="#modalGerenciarUsuarios"><i class="bi bi-people-fill me-2"></i> Usuários</a></li>
                          <li><a class="dropdown-item text-info" href="{{ url_for('analytics.analytics_dashboard') }}"><i class="bi bi-graph-up me-2"></i> Analytics Gerencial</a></li>
@@ -60,7 +62,7 @@
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
                         {{ message }}
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
@@ -80,432 +82,190 @@
         {# Conteúdo das Abas #}
         <div class="tab-content metric-card p-3" id="myTabContent" style="border-top: none;">
 
-            {# Aba Em Andamento - ATUALIZADA COM DIAS EM IMPLANTAÇÃO #}
+            {# Aba Em Andamento #}
             <div class="tab-pane fade show active" id="andamento" role="tabpanel" aria-labelledby="andamento-tab">
                 <h2 class="h5 mb-3">Clientes em Andamento</h2>
-                {% if not implantacoes_andamento %}
-                <div class="alert alert-info text-center" role="alert">
-                    Nenhuma implantação em andamento.
-                </div>
-                {% else %}
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle">
-                        <thead>
-                            <tr>
-                                <th scope="col">Empresa</th>
-                                <th scope="col">Dias em implantação</th>
-                                <th scope="col" style="width: 20%;">Progresso</th>
-                                <th scope="col">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for impl in implantacoes_andamento %}
-                            <tr>
-                                <td class="text-truncate" style="max-width: 200px;">
-                                    {# Link/Botão para abrir Modal Detalhes Empresa #}
-                                    <a href="#" class="btn-edit-empresa fw-bold text-decoration-none"
-                                       data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa"
-                                       data-id="{{ impl.id }}"
-                                       data-nome="{{ impl.nome_empresa }}"
-                                       data-responsavel="{{ impl.responsavel_cliente | default('') }}"
-                                       data-cargo="{{ impl.cargo_responsavel | default('') }}"
-                                       data-telefone="{{ impl.telefone_responsavel | default('') }}"
-                                       data-email="{{ impl.email_responsavel | default('') }}"
-                                       data-inicio-implantacao="{{ impl.data_criacao_iso | default('') }}"
-                                       data-inicio-producao="{{ impl.data_inicio_producao_iso | default('') }}"
-                                       data-final-implantacao="{{ impl.data_final_implantacao_iso | default('') }}"
-                                       data-chave-oamd="{{ impl.chave_oamd | default('') }}"
-                                       data-catraca="{{ impl.catraca | default('') }}"
-                                       data-facial="{{ impl.facial | default('') }}"
-                                       data-nivel-receita="{{ impl.nivel_receita | default('') }}"
-                                       data-valor-atribuido="{{ impl.valor_atribuido | default('') }}"
-                                       data-id-favorecido="{{ impl.id_favorecido | default('') }}"
-                                       data-tela-apoio-link="{{ impl.tela_apoio_link | default('') }}"
-                                       data-resp-estrategico-nome="{{ impl.resp_estrategico_nome | default('') }}"
-                                       data-resp-onb-nome="{{ impl.resp_onb_nome | default('') }}"
-                                       data-resp-estrategico-obs="{{ impl.resp_estrategico_obs | default('') }}"
-                                       data-contatos="{{ impl.contatos | default('') }}"
-                                       data-seguimento="{{ impl.seguimento | default('') }}"
-                                       data-tipos-planos="{{ impl.tipos_planos | default('') }}"
-                                       data-modalidades="{{ impl.modalidades | default('') }}"
-                                       data-horarios-func="{{ impl.horarios_func | default('') }}"
-                                       data-formas-pagamento="{{ impl.formas_pagamento | default('') }}"
-                                       data-diaria="{{ impl.diaria | default('') }}"
-                                       data-freepass="{{ impl.freepass | default('') }}"
-                                       data-alunos-ativos="{{ impl.alunos_ativos | default(0) }}"
-                                       data-sistema-anterior="{{ impl.sistema_anterior | default('') }}"
-                                       data-importacao="{{ impl.importacao | default('') }}"
-                                       data-recorrencia-usa="{{ impl.recorrencia_usa | default('') }}"
-                                       data-boleto="{{ impl.boleto | default('') }}"
-                                       data-nota-fiscal="{{ impl.nota_fiscal | default('') }}">
-                                        {{ impl.nome_empresa }}
-                                    </a>
-                                </td>
-                                <td class="text-nowrap">
-                                    <span class="badge bg-secondary text-white">{{ impl.dias_passados | int }} dias</span>
-                                </td>
-                                <td>
-                                    <div class="progress" style="height: 20px;">
-                                        <div class="progress-bar progress-bar-striped bg-warning text-dark" role="progressbar" style="width: {{ impl.progresso }}%;" aria-valuenow="{{ impl.progresso }}">{{ impl.progresso }}%</div>
-                                    </div>
-                                </td>
-                                <td>
-                                    {# ATUALIZADO: 'main.ver_implantacao' #}
-                                    <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary">Ver Detalhes</a>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% endif %}
+                {% if not implantacoes_andamento %} <div class="alert alert-info text-center" role="alert"> Nenhuma implantação em andamento. </div>
+                {% else %} <div class="table-responsive"> <table class="table table-hover align-middle"> <thead> <tr> <th scope="col">Empresa</th> <th scope="col">Dias</th> <th scope="col" style="width: 20%;">Progresso</th> <th scope="col">Ações</th> </tr> </thead> <tbody>
+                {% for impl in implantacoes_andamento %} <tr> <td class="text-truncate" style="max-width: 200px;">
+                    <a href="#" class="btn-edit-empresa fw-bold text-decoration-none"
+                       data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa"
+                       data-id="{{ impl.id }}"
+                       data-nome="{{ impl.nome_empresa }}"
+                       data-responsavel="{{ impl.responsavel_cliente | default('') }}"
+                       data-cargo="{{ impl.cargo_responsavel | default('') }}"
+                       data-telefone="{{ impl.telefone_responsavel | default('') }}"
+                       data-email="{{ impl.email_responsavel | default('') }}"
+                       data-inicio-implantacao="{{ impl.data_criacao_iso | default('') }}"
+                       data-inicio-efetivo="{{ impl.data_inicio_efetivo_iso | default('') }}"
+                       data-inicio-producao="{{ impl.data_inicio_producao_iso | default('') }}"
+                       data-final-implantacao="{{ impl.data_final_implantacao_iso | default('') }}"
+                       data-chave-oamd="{{ impl.chave_oamd | default('') }}"
+                       data-catraca="{{ impl.catraca | default('') }}"
+                       data-facial="{{ impl.facial | default('') }}"
+                       data-nivel-receita="{{ impl.nivel_receita | default('') }}"
+                       data-valor-atribuido="{{ impl.valor_atribuido | default('') }}"
+                       data-id-favorecido="{{ impl.id_favorecido | default('') }}"
+                       data-tela-apoio-link="{{ impl.tela_apoio_link | default('') }}"
+                       data-resp-estrategico-nome="{{ impl.resp_estrategico_nome | default('') }}"
+                       data-resp-onb-nome="{{ impl.resp_onb_nome | default('') }}"
+                       data-resp-estrategico-obs="{{ impl.resp_estrategico_obs | default('') }}"
+                       data-contatos="{{ impl.contatos | default('') }}"
+                       data-seguimento="{{ impl.seguimento | default('') }}"
+                       data-tipos-planos="{{ impl.tipos_planos | default('') }}"
+                       data-modalidades="{{ impl.modalidades | default('') }}"
+                       data-horarios-func="{{ impl.horarios_func | default('') }}"
+                       data-formas-pagamento="{{ impl.formas_pagamento | default('') }}"
+                       data-diaria="{{ impl.diaria | default('') }}"
+                       data-freepass="{{ impl.freepass | default('') }}"
+                       data-alunos-ativos="{{ impl.alunos_ativos | default(0) }}"
+                       data-sistema-anterior="{{ impl.sistema_anterior | default('') }}"
+                       data-importacao="{{ impl.importacao | default('') }}"
+                       data-recorrencia-usa="{{ impl.recorrencia_usa | default('') }}"
+                       data-boleto="{{ impl.boleto | default('') }}"
+                       data-nota-fiscal="{{ impl.nota_fiscal | default('') }}">
+                        {{ impl.nome_empresa }}
+                    </a>
+                </td> <td class="text-nowrap"> <span class="badge bg-secondary text-white">{{ impl.dias_passados | int }} dias</span> </td> <td> <div class="progress" style="height: 20px;"> <div class="progress-bar progress-bar-striped bg-warning text-dark" role="progressbar" style="width: {{ impl.progresso }}%;" aria-valuenow="{{ impl.progresso }}">{{ impl.progresso }}%</div> </div> </td> <td> <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary">Ver Detalhes</a> </td> </tr> {% endfor %} </tbody> </table> </div> {% endif %}
             </div>
 
             {# Aba Atrasadas #}
             <div class="tab-pane fade" id="atrasadas" role="tabpanel" aria-labelledby="atrasadas-tab">
                 <h2 class="h5 mb-3">Implantações Atrasadas (> 25 dias)</h2>
-                {% if not implantacoes_atrasadas %}
-                <div class="alert alert-info text-center" role="alert">
-                    Nenhuma implantação atrasada.
-                </div>
-                {% else %}
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle">
-                        <thead>
-                            <tr>
-                                <th scope="col">Empresa</th>
-                                <th scope="col">Dias</th>
-                                <th scope="col">Status</th>
-                                <th scope="col" style="width: 20%;">Progresso</th>
-                                <th scope="col">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for impl in implantacoes_atrasadas %}
-                            <tr>
-                                <td class="text-truncate" style="max-width: 200px;">
-                                     <a href="#" class="btn-edit-empresa fw-bold text-decoration-none" data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa"
-                                        data-id="{{ impl.id }}" data-nome="{{ impl.nome_empresa }}"
-                                        data-responsavel="{{ impl.responsavel_cliente | default('') }}" data-cargo="{{ impl.cargo_responsavel | default('') }}"
-                                        data-telefone="{{ impl.telefone_responsavel | default('') }}" data-email="{{ impl.email_responsavel | default('') }}"
-                                        data-inicio-implantacao="{{ impl.data_criacao_iso | default('') }}"
-                                        data-inicio-producao="{{ impl.data_inicio_producao_iso | default('') }}"
-                                        data-final-implantacao="{{ impl.data_final_implantacao_iso | default('') }}"
-                                        data-chave-oamd="{{ impl.chave_oamd | default('') }}" data-catraca="{{ impl.catraca | default('') }}" data-facial="{{ impl.facial | default('') }}"
-                                        data-nivel-receita="{{ impl.nivel_receita | default('') }}"
-                                        data-valor-atribuido="{{ impl.valor_atribuido | default('') }}"
-                                        data-id-favorecido="{{ impl.id_favorecido | default('') }}"
-                                        data-tela-apoio-link="{{ impl.tela_apoio_link | default('') }}"
-                                        data-resp-estrategico-nome="{{ impl.resp_estrategico_nome | default('') }}"
-                                        data-resp-onb-nome="{{ impl.resp_onb_nome | default('') }}"
-                                        data-resp-estrategico-obs="{{ impl.resp_estrategico_obs | default('') }}"
-                                        data-contatos="{{ impl.contatos | default('') }}"
-                                        data-seguimento="{{ impl.seguimento | default('') }}"
-                                        data-tipos-planos="{{ impl.tipos_planos | default('') }}"
-                                        data-modalidades="{{ impl.modalidades | default('') }}"
-                                        data-horarios-func="{{ impl.horarios_func | default('') }}"
-                                        data-formas-pagamento="{{ impl.formas_pagamento | default('') }}"
-                                        data-diaria="{{ impl.diaria | default('') }}"
-                                        data-freepass="{{ impl.freepass | default('') }}"
-                                        data-alunos-ativos="{{ impl.alunos_ativos | default(0) }}"
-                                        data-sistema-anterior="{{ impl.sistema_anterior | default('') }}"
-                                        data-importacao="{{ impl.importacao | default('') }}"
-                                        data-recorrencia-usa="{{ impl.recorrencia_usa | default('') }}"
-                                        data-boleto="{{ impl.boleto | default('') }}"
-                                        data-nota-fiscal="{{ impl.nota_fiscal | default('') }}">
-                                         {{ impl.nome_empresa }}
-                                     </a>
-                                </td>
-                                <td><span class="badge bg-danger">{{ impl.dias_passados | int }} dias</span></td>
-                                <td>
-                                    {% if impl.status == 'parada' %}
-                                        <span class="badge bg-danger">Parada</span>
-                                    {% else %}
-                                        <span class="badge bg-warning text-dark">Em Andamento</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <div class="progress" style="height: 20px;">
-                                        <div class="progress-bar progress-bar-striped bg-danger" role="progressbar" style="width: {{ impl.progresso }}%;" aria-valuenow="{{ impl.progresso }}">{{ impl.progresso }}%</div>
-                                    </div>
-                                </td>
-                                <td>
-                                    {# ATUALIZADO: 'main.ver_implantacao' #}
-                                    <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary">Ver Detalhes</a>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% endif %}
+                {% if not implantacoes_atrasadas %} <div class="alert alert-info text-center" role="alert"> Nenhuma implantação atrasada. </div>
+                {% else %} <div class="table-responsive"> <table class="table table-hover align-middle"> <thead> <tr> <th scope="col">Empresa</th> <th scope="col">Dias</th> <th scope="col">Status</th> <th scope="col" style="width: 20%;">Progresso</th> <th scope="col">Ações</th> </tr> </thead> <tbody>
+                {% for impl in implantacoes_atrasadas %} <tr> <td class="text-truncate" style="max-width: 200px;">
+                    <a href="#" class="btn-edit-empresa fw-bold text-decoration-none" data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa"
+                       data-id="{{ impl.id }}" data-nome="{{ impl.nome_empresa }}"
+                       data-responsavel="{{ impl.responsavel_cliente | default('') }}" data-cargo="{{ impl.cargo_responsavel | default('') }}"
+                       data-telefone="{{ impl.telefone_responsavel | default('') }}" data-email="{{ impl.email_responsavel | default('') }}"
+                       data-inicio-implantacao="{{ impl.data_criacao_iso | default('') }}"
+                       data-inicio-efetivo="{{ impl.data_inicio_efetivo_iso | default('') }}"
+                       data-inicio-producao="{{ impl.data_inicio_producao_iso | default('') }}"
+                       data-final-implantacao="{{ impl.data_final_implantacao_iso | default('') }}"
+                       data-chave-oamd="{{ impl.chave_oamd | default('') }}" data-catraca="{{ impl.catraca | default('') }}" data-facial="{{ impl.facial | default('') }}"
+                       data-nivel-receita="{{ impl.nivel_receita | default('') }}" data-valor-atribuido="{{ impl.valor_atribuido | default('') }}"
+                       data-id-favorecido="{{ impl.id_favorecido | default('') }}" data-tela-apoio-link="{{ impl.tela_apoio_link | default('') }}"
+                       data-resp-estrategico-nome="{{ impl.resp_estrategico_nome | default('') }}" data-resp-onb-nome="{{ impl.resp_onb_nome | default('') }}"
+                       data-resp-estrategico-obs="{{ impl.resp_estrategico_obs | default('') }}" data-contatos="{{ impl.contatos | default('') }}"
+                       data-seguimento="{{ impl.seguimento | default('') }}" data-tipos-planos="{{ impl.tipos_planos | default('') }}"
+                       data-modalidades="{{ impl.modalidades | default('') }}" data-horarios-func="{{ impl.horarios_func | default('') }}"
+                       data-formas-pagamento="{{ impl.formas_pagamento | default('') }}" data-diaria="{{ impl.diaria | default('') }}"
+                       data-freepass="{{ impl.freepass | default('') }}" data-alunos-ativos="{{ impl.alunos_ativos | default(0) }}"
+                       data-sistema-anterior="{{ impl.sistema_anterior | default('') }}" data-importacao="{{ impl.importacao | default('') }}"
+                       data-recorrencia-usa="{{ impl.recorrencia_usa | default('') }}" data-boleto="{{ impl.boleto | default('') }}"
+                       data-nota-fiscal="{{ impl.nota_fiscal | default('') }}">
+                         {{ impl.nome_empresa }}
+                     </a>
+                </td> <td><span class="badge bg-danger">{{ impl.dias_passados | int }} dias</span></td> <td> {% if impl.status == 'parada' %} <span class="badge bg-danger">Parada</span> {% else %} <span class="badge bg-warning text-dark">Em Andamento</span> {% endif %} </td> <td> <div class="progress" style="height: 20px;"> <div class="progress-bar progress-bar-striped bg-danger" role="progressbar" style="width: {{ impl.progresso }}%;" aria-valuenow="{{ impl.progresso }}">{{ impl.progresso }}%</div> </div> </td> <td> <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary">Ver Detalhes</a> </td> </tr> {% endfor %} </tbody> </table> </div> {% endif %}
             </div>
 
             {# Aba Futuras #}
             <div class="tab-pane fade" id="futuras" role="tabpanel" aria-labelledby="futuras-tab">
                 <h2 class="h5 mb-3">Implantações Futuras</h2>
-                {% if not implantacoes_futuras %}
-                <div class="alert alert-info text-center" role="alert">
-                    Nenhuma implantação futura cadastrada.
-                </div>
-                {% else %}
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle">
-                        <thead>
-                            <tr>
-                                <th scope="col">Empresa</th>
-                                <th scope="col">Status</th>
-                                <th scope="col">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for impl in implantacoes_futuras %}
-                            <tr>
-                                <td class="text-truncate" style="max-width: 200px;">
-                                    <a href="#" class="btn-edit-empresa fw-bold text-decoration-none" data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa"
-                                       data-id="{{ impl.id }}" data-nome="{{ impl.nome_empresa }}"
-                                       data-responsavel="{{ impl.responsavel_cliente | default('') }}" data-cargo="{{ impl.cargo_responsavel | default('') }}"
-                                       data-telefone="{{ impl.telefone_responsavel | default('') }}" data-email="{{ impl.email_responsavel | default('') }}"
-                                       data-inicio-implantacao="{{ impl.data_criacao_iso | default('') }}"
-                                       data-inicio-producao="{{ impl.data_inicio_producao_iso | default('') }}"
-                                       data-final-implantacao="{{ impl.data_final_implantacao_iso | default('') }}"
-                                       data-chave-oamd="{{ impl.chave_oamd | default('') }}" data-catraca="{{ impl.catraca | default('') }}" data-facial="{{ impl.facial | default('') }}"
-                                       data-nivel-receita="{{ impl.nivel_receita | default('') }}"
-                                       data-valor-atribuido="{{ impl.valor_atribuido | default('') }}"
-                                       data-id-favorecido="{{ impl.id_favorecido | default('') }}"
-                                       data-tela-apoio-link="{{ impl.tela_apoio_link | default('') }}"
-                                       data-resp-estrategico-nome="{{ impl.resp_estrategico_nome | default('') }}"
-                                       data-resp-onb-nome="{{ impl.resp_onb_nome | default('') }}"
-                                       data-resp-estrategico-obs="{{ impl.resp_estrategico_obs | default('') }}"
-                                       data-contatos="{{ impl.contatos | default('') }}"
-                                       data-seguimento="{{ impl.seguimento | default('') }}"
-                                       data-tipos-planos="{{ impl.tipos_planos | default('') }}"
-                                       data-modalidades="{{ impl.modalidades | default('') }}"
-                                       data-horarios-func="{{ impl.horarios_func | default('') }}"
-                                       data-formas-pagamento="{{ impl.formas_pagamento | default('') }}"
-                                       data-diaria="{{ impl.diaria | default('') }}"
-                                       data-freepass="{{ impl.freepass | default('') }}"
-                                       data-alunos-ativos="{{ impl.alunos_ativos | default(0) }}"
-                                       data-sistema-anterior="{{ impl.sistema_anterior | default('') }}"
-                                       data-importacao="{{ impl.importacao | default('') }}"
-                                       data-recorrencia-usa="{{ impl.recorrencia_usa | default('') }}"
-                                       data-boleto="{{ impl.boleto | default('') }}"
-                                       data-nota-fiscal="{{ impl.nota_fiscal | default('') }}">
-                                        {{ impl.nome_empresa }}
-                                    </a>
-                                </td>
-                                <td><span class="badge bg-info text-dark">Futura</span></td>
-                                <td>
-                                    {# ATUALIZADO: 'main.iniciar_implantacao' #}
-                                    <form method="POST" action="{{ url_for('main.iniciar_implantacao') }}" style="display:inline;">
-                                        <input type="hidden" name="implantacao_id" value="{{ impl.id }}">
-                                        <button type="submit" class="btn btn-sm btn-success">Iniciar Implantação</button>
-                                    </form>
-                                     {# ATUALIZADO: 'main.ver_implantacao' #}
-                                     <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary ms-1">Ver Detalhes</a>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% endif %}
+                {% if not implantacoes_futuras %} <div class="alert alert-info text-center" role="alert"> Nenhuma implantação futura. </div>
+                {% else %} <div class="table-responsive"> <table class="table table-hover align-middle"> <thead> <tr> <th scope="col">Empresa</th> <th scope="col">Status</th> <th scope="col">Início Previsto</th> <th scope="col">Ações</th> </tr> </thead> <tbody>
+                {% for impl in implantacoes_futuras %} <tr> <td class="text-truncate" style="max-width: 200px;">
+                    <a href="#" class="btn-edit-empresa fw-bold text-decoration-none" data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa"
+                       data-id="{{ impl.id }}" data-nome="{{ impl.nome_empresa }}"
+                       data-responsavel="{{ impl.responsavel_cliente | default('') }}" data-cargo="{{ impl.cargo_responsavel | default('') }}"
+                       data-telefone="{{ impl.telefone_responsavel | default('') }}" data-email="{{ impl.email_responsavel | default('') }}"
+                       data-inicio-implantacao="{{ impl.data_criacao_iso | default('') }}"
+                       data-inicio-efetivo="{{ impl.data_inicio_efetivo_iso | default('') }}"
+                       data-inicio-producao="{{ impl.data_inicio_producao_iso | default('') }}"
+                       data-final-implantacao="{{ impl.data_final_implantacao_iso | default('') }}"
+                       data-chave-oamd="{{ impl.chave_oamd | default('') }}" data-catraca="{{ impl.catraca | default('') }}" data-facial="{{ impl.facial | default('') }}"
+                       data-nivel-receita="{{ impl.nivel_receita | default('') }}" data-valor-atribuido="{{ impl.valor_atribuido | default('') }}"
+                       data-id-favorecido="{{ impl.id_favorecido | default('') }}" data-tela-apoio-link="{{ impl.tela_apoio_link | default('') }}"
+                       data-resp-estrategico-nome="{{ impl.resp_estrategico_nome | default('') }}" data-resp-onb-nome="{{ impl.resp_onb_nome | default('') }}"
+                       data-resp-estrategico-obs="{{ impl.resp_estrategico_obs | default('') }}" data-contatos="{{ impl.contatos | default('') }}"
+                       data-seguimento="{{ impl.seguimento | default('') }}" data-tipos-planos="{{ impl.tipos_planos | default('') }}"
+                       data-modalidades="{{ impl.modalidades | default('') }}" data-horarios-func="{{ impl.horarios_func | default('') }}"
+                       data-formas-pagamento="{{ impl.formas_pagamento | default('') }}" data-diaria="{{ impl.diaria | default('') }}"
+                       data-freepass="{{ impl.freepass | default('') }}" data-alunos-ativos="{{ impl.alunos_ativos | default(0) }}"
+                       data-sistema-anterior="{{ impl.sistema_anterior | default('') }}" data-importacao="{{ impl.importacao | default('') }}"
+                       data-recorrencia-usa="{{ impl.recorrencia_usa | default('') }}" data-boleto="{{ impl.boleto | default('') }}"
+                       data-nota-fiscal="{{ impl.nota_fiscal | default('') }}">
+                        {{ impl.nome_empresa }}
+                    </a>
+                </td> <td><span class="badge bg-info text-dark">Futura</span></td> <td> {% if impl.data_inicio_previsto %} <span class="badge bg-secondary">{{ impl.data_inicio_previsto_fmt_d }}</span> {% else %} <span class="text-muted small">N/A</span> {% endif %} </td> <td> <form method="POST" action="{{ url_for('main.iniciar_implantacao') }}" style="display:inline;"> <input type="hidden" name="implantacao_id" value="{{ impl.id }}"> <button type="submit" class="btn btn-sm btn-success">Iniciar</button> </form> <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary ms-1">Ver Detalhes</a> </td> </tr> {% endfor %} </tbody> </table> </div> {% endif %}
             </div>
 
             {# Aba Finalizadas #}
             <div class="tab-pane fade" id="finalizadas" role="tabpanel" aria-labelledby="finalizadas-tab">
                 <h2 class="h5 mb-3">Implantações Concluídas</h2>
-                {% if not implantacoes_finalizadas %}
-                <div class="alert alert-info text-center" role="alert">
-                    Nenhuma implantação finalizada.
-                </div>
-                {% else %}
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle">
-                        <thead>
-                            <tr>
-                                <th scope="col">Empresa</th>
-                                <th scope="col">Progresso</th>
-                                <th scope="col">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for impl in implantacoes_finalizadas %}
-                            <tr>
-                                <td class="text-truncate" style="max-width: 200px;">
-                                    <a href="#" class="btn-edit-empresa fw-bold text-decoration-none" data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa"
-                                       data-id="{{ impl.id }}" data-nome="{{ impl.nome_empresa }}"
-                                       data-responsavel="{{ impl.responsavel_cliente | default('') }}" data-cargo="{{ impl.cargo_responsavel | default('') }}"
-                                       data-telefone="{{ impl.telefone_responsavel | default('') }}" data-email="{{ impl.email_responsavel | default('') }}"
-                                       data-inicio-implantacao="{{ impl.data_criacao_iso | default('') }}"
-                                       data-inicio-producao="{{ impl.data_inicio_producao_iso | default('') }}"
-                                       data-final-implantacao="{{ impl.data_final_implantacao_iso | default('') }}"
-                                       data-chave-oamd="{{ impl.chave_oamd | default('') }}" data-catraca="{{ impl.catraca | default('') }}" data-facial="{{ impl.facial | default('') }}"
-                                       data-nivel-receita="{{ impl.nivel_receita | default('') }}"
-                                       data-valor-atribuido="{{ impl.valor_atribuido | default('') }}"
-                                       data-id-favorecido="{{ impl.id_favorecido | default('') }}"
-                                       data-tela-apoio-link="{{ impl.tela_apoio_link | default('') }}"
-                                       data-resp-estrategico-nome="{{ impl.resp_estrategico_nome | default('') }}"
-                                       data-resp-onb-nome="{{ impl.resp_onb_nome | default('') }}"
-                                       data-resp-estrategico-obs="{{ impl.resp_estrategico_obs | default('') }}"
-                                       data-contatos="{{ impl.contatos | default('') }}"
-                                       data-seguimento="{{ impl.seguimento | default('') }}"
-                                       data-tipos-planos="{{ impl.tipos_planos | default('') }}"
-                                       data-modalidades="{{ impl.modalidades | default('') }}"
-                                       data-horarios-func="{{ impl.horarios_func | default('') }}"
-                                       data-formas-pagamento="{{ impl.formas_pagamento | default('') }}"
-                                       data-diaria="{{ impl.diaria | default('') }}"
-                                       data-freepass="{{ impl.freepass | default('') }}"
-                                       data-alunos-ativos="{{ impl.alunos_ativos | default(0) }}"
-                                       data-sistema-anterior="{{ impl.sistema_anterior | default('') }}"
-                                       data-importacao="{{ impl.importacao | default('') }}"
-                                       data-recorrencia-usa="{{ impl.recorrencia_usa | default('') }}"
-                                       data-boleto="{{ impl.boleto | default('') }}"
-                                       data-nota-fiscal="{{ impl.nota_fiscal | default('') }}">
-                                        {{ impl.nome_empresa }}
-                                    </a>
-                                </td>
-                                <td>
-                                    <span class="badge bg-success">100% Concluída</span>
-                                </td>
-                                <td>
-                                    {# ATUALIZADO: 'main.ver_implantacao' #}
-                                    <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary">Ver Histórico</a>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% endif %}
+                {% if not implantacoes_finalizadas %} <div class="alert alert-info text-center" role="alert"> Nenhuma implantação finalizada. </div>
+                {% else %} <div class="table-responsive"> <table class="table table-hover align-middle"> <thead> <tr> <th scope="col">Empresa</th> <th scope="col">Progresso</th> <th scope="col">Ações</th> </tr> </thead> <tbody>
+                {% for impl in implantacoes_finalizadas %} <tr> <td class="text-truncate" style="max-width: 200px;">
+                    <a href="#" class="btn-edit-empresa fw-bold text-decoration-none" data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa"
+                       data-id="{{ impl.id }}" data-nome="{{ impl.nome_empresa }}"
+                       data-responsavel="{{ impl.responsavel_cliente | default('') }}" data-cargo="{{ impl.cargo_responsavel | default('') }}"
+                       data-telefone="{{ impl.telefone_responsavel | default('') }}" data-email="{{ impl.email_responsavel | default('') }}"
+                       data-inicio-implantacao="{{ impl.data_criacao_iso | default('') }}"
+                       data-inicio-efetivo="{{ impl.data_inicio_efetivo_iso | default('') }}"
+                       data-inicio-producao="{{ impl.data_inicio_producao_iso | default('') }}"
+                       data-final-implantacao="{{ impl.data_final_implantacao_iso | default('') }}"
+                       data-chave-oamd="{{ impl.chave_oamd | default('') }}" data-catraca="{{ impl.catraca | default('') }}" data-facial="{{ impl.facial | default('') }}"
+                       data-nivel-receita="{{ impl.nivel_receita | default('') }}" data-valor-atribuido="{{ impl.valor_atribuido | default('') }}"
+                       data-id-favorecido="{{ impl.id_favorecido | default('') }}" data-tela-apoio-link="{{ impl.tela_apoio_link | default('') }}"
+                       data-resp-estrategico-nome="{{ impl.resp_estrategico_nome | default('') }}" data-resp-onb-nome="{{ impl.resp_onb_nome | default('') }}"
+                       data-resp-estrategico-obs="{{ impl.resp_estrategico_obs | default('') }}" data-contatos="{{ impl.contatos | default('') }}"
+                       data-seguimento="{{ impl.seguimento | default('') }}" data-tipos-planos="{{ impl.tipos_planos | default('') }}"
+                       data-modalidades="{{ impl.modalidades | default('') }}" data-horarios-func="{{ impl.horarios_func | default('') }}"
+                       data-formas-pagamento="{{ impl.formas_pagamento | default('') }}" data-diaria="{{ impl.diaria | default('') }}"
+                       data-freepass="{{ impl.freepass | default('') }}" data-alunos-ativos="{{ impl.alunos_ativos | default(0) }}"
+                       data-sistema-anterior="{{ impl.sistema_anterior | default('') }}" data-importacao="{{ impl.importacao | default('') }}"
+                       data-recorrencia-usa="{{ impl.recorrencia_usa | default('') }}" data-boleto="{{ impl.boleto | default('') }}"
+                       data-nota-fiscal="{{ impl.nota_fiscal | default('') }}">
+                        {{ impl.nome_empresa }}
+                    </a>
+                </td> <td> <span class="badge bg-success">100% Concluída</span> </td> <td> <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary">Ver Histórico</a> <form method="POST" action="{{ url_for('main.reabrir_implantacao') }}" style="display:inline;" onsubmit="return confirm('Tem certeza?');"> <input type="hidden" name="implantacao_id" value="{{ impl.id }}"> <input type="hidden" name="redirect_to" value="dashboard"> <button type="submit" class="btn btn-sm btn-warning ms-1">Reabrir</button> </form> </td> </tr> {% endfor %} </tbody> </table> </div> {% endif %}
             </div>
 
             {# Aba Paradas #}
             <div class="tab-pane fade" id="paradas" role="tabpanel" aria-labelledby="paradas-tab">
                 <h2 class="h5 mb-3">Implantações Paradas</h2>
-                {% if not implantacoes_paradas %}
-                <div class="alert alert-info text-center" role="alert">
-                    Nenhuma implantação parada.
-                </div>
-                {% else %}
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle">
-                        <thead>
-                            <tr>
-                                <th scope="col">Empresa</th>
-                                <th scope="col">Motivo</th>
-                                <th scope="col">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for impl in implantacoes_paradas %}
-                            <tr>
-                                <td class="text-truncate" style="max-width: 200px;">
-                                    <a href="#" class="btn-edit-empresa fw-bold text-decoration-none" data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa"
-                                       data-id="{{ impl.id }}" data-nome="{{ impl.nome_empresa }}"
-                                       data-responsavel="{{ impl.responsavel_cliente | default('') }}" data-cargo="{{ impl.cargo_responsavel | default('') }}"
-                                       data-telefone="{{ impl.telefone_responsavel | default('') }}" data-email="{{ impl.email_responsavel | default('') }}"
-                                       data-inicio-implantacao="{{ impl.data_criacao_iso | default('') }}"
-                                       data-inicio-producao="{{ impl.data_inicio_producao_iso | default('') }}"
-                                       data-final-implantacao="{{ impl.data_final_implantacao_iso | default('') }}"
-                                       data-chave-oamd="{{ impl.chave_oamd | default('') }}" data-catraca="{{ impl.catraca | default('') }}" data-facial="{{ impl.facial | default('') }}"
-                                       data-nivel-receita="{{ impl.nivel_receita | default('') }}"
-                                       data-valor-atribuido="{{ impl.valor_atribuido | default('') }}"
-                                       data-id-favorecido="{{ impl.id_favorecido | default('') }}"
-                                       data-tela-apoio-link="{{ impl.tela_apoio_link | default('') }}"
-                                       data-resp-estrategico-nome="{{ impl.resp_estrategico_nome | default('') }}"
-                                       data-resp-onb-nome="{{ impl.resp_onb_nome | default('') }}"
-                                       data-resp-estrategico-obs="{{ impl.resp_estrategico_obs | default('') }}"
-                                       data-contatos="{{ impl.contatos | default('') }}"
-                                       data-seguimento="{{ impl.seguimento | default('') }}"
-                                       data-tipos-planos="{{ impl.tipos_planos | default('') }}"
-                                       data-modalidades="{{ impl.modalidades | default('') }}"
-                                       data-horarios-func="{{ impl.horarios_func | default('') }}"
-                                       data-formas-pagamento="{{ impl.formas_pagamento | default('') }}"
-                                       data-diaria="{{ impl.diaria | default('') }}"
-                                       data-freepass="{{ impl.freepass | default('') }}"
-                                       data-alunos-ativos="{{ impl.alunos_ativos | default(0) }}"
-                                       data-sistema-anterior="{{ impl.sistema_anterior | default('') }}"
-                                       data-importacao="{{ impl.importacao | default('') }}"
-                                       data-recorrencia-usa="{{ impl.recorrencia_usa | default('') }}"
-                                       data-boleto="{{ impl.boleto | default('') }}"
-                                       data-nota-fiscal="{{ impl.nota_fiscal | default('') }}">
-                                        {{ impl.nome_empresa }}
-                                    </a>
-                                </td>
-                                <td class="text-truncate" style="max-width: 200px;">{{ impl.motivo_parada | default('N/A') }}</td>
-                                <td>
-                                    {# ATUALIZADO: 'main.ver_implantacao' #}
-                                    <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary">Ver Detalhes</a>
-                                    {# Formulário para Retomar #}
-                                    {# ATUALIZADO: 'main.retomar_implantacao' #}
-                                    <form method="POST" action="{{ url_for('main.retomar_implantacao') }}" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja retomar esta implantação?');">
-                                        <input type="hidden" name="implantacao_id" value="{{ impl.id }}">
-                                        <input type="hidden" name="redirect_to" value="dashboard"> {# Redireciona de volta pro dashboard #}
-                                        <button type="submit" class="btn btn-sm btn-success ms-1">Retomar</button>
-                                    </form>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% endif %}
+                {% if not implantacoes_paradas %} <div class="alert alert-info text-center" role="alert"> Nenhuma implantação parada. </div>
+                {% else %} <div class="table-responsive"> <table class="table table-hover align-middle"> <thead> <tr> <th scope="col">Empresa</th> <th scope="col">Motivo</th> <th scope="col">Ações</th> </tr> </thead> <tbody>
+                {% for impl in implantacoes_paradas %} <tr> <td class="text-truncate" style="max-width: 200px;">
+                    <a href="#" class="btn-edit-empresa fw-bold text-decoration-none" data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa"
+                       data-id="{{ impl.id }}" data-nome="{{ impl.nome_empresa }}"
+                       data-responsavel="{{ impl.responsavel_cliente | default('') }}" data-cargo="{{ impl.cargo_responsavel | default('') }}"
+                       data-telefone="{{ impl.telefone_responsavel | default('') }}" data-email="{{ impl.email_responsavel | default('') }}"
+                       data-inicio-implantacao="{{ impl.data_criacao_iso | default('') }}"
+                       data-inicio-efetivo="{{ impl.data_inicio_efetivo_iso | default('') }}"
+                       data-inicio-producao="{{ impl.data_inicio_producao_iso | default('') }}"
+                       data-final-implantacao="{{ impl.data_final_implantacao_iso | default('') }}"
+                       data-chave-oamd="{{ impl.chave_oamd | default('') }}" data-catraca="{{ impl.catraca | default('') }}" data-facial="{{ impl.facial | default('') }}"
+                       data-nivel-receita="{{ impl.nivel_receita | default('') }}" data-valor-atribuido="{{ impl.valor_atribuido | default('') }}"
+                       data-id-favorecido="{{ impl.id_favorecido | default('') }}" data-tela-apoio-link="{{ impl.tela_apoio_link | default('') }}"
+                       data-resp-estrategico-nome="{{ impl.resp_estrategico_nome | default('') }}" data-resp-onb-nome="{{ impl.resp_onb_nome | default('') }}"
+                       data-resp-estrategico-obs="{{ impl.resp_estrategico_obs | default('') }}" data-contatos="{{ impl.contatos | default('') }}"
+                       data-seguimento="{{ impl.seguimento | default('') }}" data-tipos-planos="{{ impl.tipos_planos | default('') }}"
+                       data-modalidades="{{ impl.modalidades | default('') }}" data-horarios-func="{{ impl.horarios_func | default('') }}"
+                       data-formas-pagamento="{{ impl.formas_pagamento | default('') }}" data-diaria="{{ impl.diaria | default('') }}"
+                       data-freepass="{{ impl.freepass | default('') }}" data-alunos-ativos="{{ impl.alunos_ativos | default(0) }}"
+                       data-sistema-anterior="{{ impl.sistema_anterior | default('') }}" data-importacao="{{ impl.importacao | default('') }}"
+                       data-recorrencia-usa="{{ impl.recorrencia_usa | default('') }}" data-boleto="{{ impl.boleto | default('') }}"
+                       data-nota-fiscal="{{ impl.nota_fiscal | default('') }}">
+                        {{ impl.nome_empresa }}
+                    </a>
+                </td> <td class="text-truncate" style="max-width: 200px;">{{ impl.motivo_parada | default('N/A') }}</td> <td> <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary">Ver Detalhes</a> <form method="POST" action="{{ url_for('main.retomar_implantacao') }}" style="display:inline;" onsubmit="return confirm('Tem certeza?');"> <input type="hidden" name="implantacao_id" value="{{ impl.id }}"> <input type="hidden" name="redirect_to" value="dashboard"> <button type="submit" class="btn btn-sm btn-success ms-1">Retomar</button> </form> </td> </tr> {% endfor %} </tbody> </table> </div> {% endif %}
             </div>
 
         </div> {# Fim do tab-content #}
     </main>
 </div>
 
-{# Modal Nova Implantação (sem alterações) #}
-<div class="modal fade" id="novaImplantacaoModal" tabindex="-1" aria-labelledby="novaImplantacaoModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);">
-            <div class="modal-header header-bg">
-                <h5 class="modal-title" id="novaImplantacaoModalLabel" style="color: var(--body-color);">Nova Implantação</h5>
-                <button type="button" class="btn-close btn-close-dark" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            {# ATUALIZADO: 'main.criar_implantacao' #}
-            <form action="{{ url_for('main.criar_implantacao') }}" method="POST">
-                <div class="modal-body">
-                    {# NOVO: Mensagem de Erro de Permissão (Se o botão de modal estivesse sempre visível) #}
-                    {% if g.perfil.perfil_acesso == None or g.perfil.perfil_acesso == 'Visualizador' %}
-                    <div class="alert alert-warning">
-                        Seu perfil de acesso atual não tem permissão para criar novas implantações.
-                        Entre em contato com um administrador.
-                    </div>
-                    {% else %}
-                    <div class="mb-3">
-                        <label for="nomeEmpresa" class="form-label">Nome da Empresa</label>
-                        <input type="text" class="form-control" id="nomeEmpresa" name="nome_empresa" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Tipo de Implantação</label>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="tipo" id="tipoAgora" value="agora" checked>
-                            <label class="form-check-label" for="tipoAgora">
-                                Imediata (Começa agora)
-                            </label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="tipo" id="tipoFutura" value="futura">
-                            <label class="form-check-label" for="tipoFutura">
-                                Futura (Atrasar início)
-                            </label>
-                        </div>
-                    </div>
-                    {% endif %}
-                </div>
-                <div class="modal-footer header-bg">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    {% if g.perfil.perfil_acesso != None and g.perfil.perfil_acesso != 'Visualizador' %}
-                    <button type="submit" class="btn btn-primary" style="background-color: var(--accent-color); border-color: var(--accent-color);">Criar Implantação</button>
-                    {% endif %}
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+{# Modal Nova Implantação #}
+<div class="modal fade" id="novaImplantacaoModal" tabindex="-1"> <div class="modal-dialog"> <div class="modal-content"> <div class="modal-header header-bg"><h5 class="modal-title">Nova Implantação</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div> <form action="{{ url_for('main.criar_implantacao') }}" method="POST"> <div class="modal-body">
+    {# CORREÇÃO: Altera a verificação para PERFIS_COM_CRIACAO #}
+    {% if g.perfil.perfil_acesso in PERFIS_COM_CRIACAO %}
+    <div class="mb-3"> <label for="nomeEmpresa" class="form-label">Nome Empresa</label> <input type="text" class="form-control" id="nomeEmpresa" name="nome_empresa" required> </div> <div class="mb-3"> <label class="form-label">Tipo</label> <div class="form-check"> <input class="form-check-input" type="radio" name="tipo" id="tipoAgora" value="agora" checked onchange="toggleDataPrevista(this.value)"> <label class="form-check-label" for="tipoAgora"> Imediata (Completa) </label> </div> <div class="form-check"> <input class="form-check-input" type="radio" name="tipo" id="tipoFutura" value="futura" onchange="toggleDataPrevista(this.value)"> <label class="form-check-label" for="tipoFutura"> Futura (Completa Agendada) </label> </div> <div class="form-check"> <input class="form-check-input" type="radio" name="tipo" id="tipoModulo" value="modulo" onchange="toggleDataPrevista(this.value)"> <label class="form-check-label" for="tipoModulo"> Módulo (Em branco) </label> </div> </div> <div class="mb-3" id="campoDataPrevista" style="display: none;"> <label for="data_inicio_previsto" class="form-label">Início Previsto</label> <input type="date" class="form-control" id="data_inicio_previsto" name="data_inicio_previsto"> </div>
+    {% else %}
+    <div class="alert alert-warning"> Seu perfil de acesso ({{ g.perfil.perfil_acesso or 'Nenhum' }}) não tem permissão para criar novas implantações. </div>
+    {% endif %}
+</div> <div class="modal-footer header-bg"> <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button> {% if g.perfil.perfil_acesso in PERFIS_COM_CRIACAO %} <button type="submit" class="btn btn-primary">Criar</button> {% endif %} </div> </form> </div> </div> </div>
 
 {% endblock %}
 
@@ -514,42 +274,12 @@
 <script>
     // Memória da Aba Ativa (Dashboard)
     document.addEventListener('DOMContentLoaded', function () {
-        const tabSelector = '#myTab .nav-link';
-        const tabs = document.querySelectorAll(tabSelector);
-        const tabStorageKey = 'tabAtiva-dashboard'; // Chave única para o dashboard
-
-        tabs.forEach(tab => {
-            tab.addEventListener('shown.bs.tab', event => {
-                localStorage.setItem(tabStorageKey, event.target.id);
-            });
-        });
-
-        const abaAtivaId = localStorage.getItem(tabStorageKey);
-        if (abaAtivaId) {
-            const tabEl = document.getElementById(abaAtivaId);
-            if (tabEl) {
-                // Tenta mostrar a aba salva
-                try {
-                     new bootstrap.Tab(tabEl).show();
-                } catch (e) {
-                     console.warn("Não foi possível restaurar a aba ativa:", e);
-                     // Se der erro (ex: aba não existe mais), limpa a memória
-                     localStorage.removeItem(tabStorageKey);
-                     // Garante que a primeira aba ('andamento') esteja ativa
-                     const defaultTab = document.getElementById('andamento-tab');
-                     if(defaultTab) new bootstrap.Tab(defaultTab).show();
-                }
-            } else {
-                 // Se o ID salvo não corresponde a nenhum elemento, limpa
-                 localStorage.removeItem(tabStorageKey);
-                 const defaultTab = document.getElementById('andamento-tab');
-                 if(defaultTab) new bootstrap.Tab(defaultTab).show();
-            }
-        } else {
-            // Se não há aba salva, garante que a primeira ('andamento') está ativa
-            const defaultTab = document.getElementById('andamento-tab');
-            if(defaultTab) new bootstrap.Tab(defaultTab).show();
-        }
+        const tabSelector = '#myTab .nav-link'; const tabs = document.querySelectorAll(tabSelector); const tabStorageKey = 'tabAtiva-dashboard';
+        tabs.forEach(tab => { tab.addEventListener('shown.bs.tab', event => { localStorage.setItem(tabStorageKey, event.target.id); }); });
+        const abaAtivaId = localStorage.getItem(tabStorageKey); if (abaAtivaId) { const tabEl = document.getElementById(abaAtivaId); if (tabEl) { try { new bootstrap.Tab(tabEl).show(); } catch (e) { console.warn("Erro aba:", e); localStorage.removeItem(tabStorageKey); const defaultTab = document.getElementById('andamento-tab'); if(defaultTab) new bootstrap.Tab(defaultTab).show(); } } else { localStorage.removeItem(tabStorageKey); const defaultTab = document.getElementById('andamento-tab'); if(defaultTab) new bootstrap.Tab(defaultTab).show(); } } else { const defaultTab = document.getElementById('andamento-tab'); if(defaultTab) new bootstrap.Tab(defaultTab).show(); }
     });
+    // Script Modal Nova Implantação
+    function toggleDataPrevista(tipo) { const campoData = document.getElementById('campoDataPrevista'); const inputData = document.getElementById('data_inicio_previsto'); if (tipo === 'futura') { campoData.style.display = 'block'; inputData.required = true; } else { campoData.style.display = 'none'; inputData.required = false; inputData.value = ''; } }
+    document.getElementById('novaImplantacaoModal').addEventListener('show.bs.modal', function () { document.getElementById('tipoAgora').checked = true; toggleDataPrevista('agora'); });
 </script>
 {% endblock %}

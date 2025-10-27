@@ -11,7 +11,7 @@ from ..blueprints.auth import login_required
 from ..db import execute_db, query_db
 from ..extensions import r2_client
 from ..utils import allowed_file
-from ..constants import CARGOS_LIST, PERFIL_COLABORADOR # Importa PERFIL_COLABORADOR
+from ..constants import CARGOS_LIST, PERFIL_IMPLANTADOR # <-- ALTERADO
 
 profile_bp = Blueprint('profile', __name__)
 
@@ -32,28 +32,22 @@ def perfil():
             form_nome = request.form.get('nome', '').strip()
             form_cargo = request.form.get('cargo', '').strip()
             
-            # --- Lógica de Restrição ---
-            is_colaborador = current_perfil.get('perfil_acesso') == PERFIL_COLABORADOR
+            # --- Lógica de Restrição ATUALIZADA ---
+            is_implantador = current_perfil.get('perfil_acesso') == PERFIL_IMPLANTADOR # <-- ALTERADO
             
-            # DEFINE nome_to_save: Se não for colaborador, usa o valor do form.
-            # AJUSTE: Converte string vazia para None se for permitido alterar e estiver vazio.
-            if not is_colaborador:
+            # DEFINE nome_to_save: Se não for implantador, usa o valor do form.
+            if not is_implantador:
                  nome_to_save = form_nome if form_nome else None
             else:
                  nome_to_save = current_perfil.get('nome')
             
-            # Cargo só é salvo se não for colaborador.
+            # Cargo só é salvo se não for implantador.
             cargo_to_save = current_perfil.get('cargo') # Mantém o atual por padrão
-            if not is_colaborador:
-                # Se for vazio ("Selecione seu cargo..."), vira None.
+            if not is_implantador:
                 if not form_cargo: 
                     cargo_to_save = None
-                # Se não for vazio, verifica se é um cargo válido
                 elif form_cargo in CARGOS_LIST:
                     cargo_to_save = form_cargo
-                # Se for um valor inválido, mantém o valor anterior (ou None se o anterior era None)
-                # OBS: Como o HTML só permite valores de CARGOS_LIST ou "", isso deve ser seguro.
-                # Mantemos a lógica para o caso de injeção de valor inválido.
                 else:
                     cargo_to_save = current_perfil.get('cargo') 
             # --------------------------
@@ -116,9 +110,9 @@ def perfil():
                 (nome_to_save, cargo_to_save, foto_url_atual, usuario_cs_email)
             )
             
-            if is_colaborador and (request.form.get('nome', '').strip() != current_perfil.get('nome') or request.form.get('cargo', '').strip() != current_perfil.get('cargo')):
+            if is_implantador and (request.form.get('nome', '').strip() != current_perfil.get('nome') or request.form.get('cargo', '').strip() != current_perfil.get('cargo')):
                  # Verifica se a intenção era mudar (o form submetido é diferente do valor inicial)
-                 flash('Perfil atualizado. Nome e Cargo não podem ser alterados pelo perfil Colaborador.', 'warning')
+                 flash(f'Perfil atualizado. Nome e Cargo não podem ser alterados pelo perfil {PERFIL_IMPLANTADOR}.', 'warning') # <-- ALTERADO
             else:
                  flash('Perfil atualizado com sucesso!', 'success')
             
