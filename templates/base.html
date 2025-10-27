@@ -40,7 +40,6 @@
 
         /* CORREÇÃO DO CONTRASTE (PRIORIDADE): Garante que o texto do botão primário seja branco */
         .btn-primary, .btn-success {
-            /* Força a cor do texto para ser legível no fundo colorido */
             color: white !important;
         }
 
@@ -51,14 +50,22 @@
         .list-group-item .handle { color: var(--accent-color) !important; opacity: 0.6; transition: opacity 0.2s; cursor: grab !important; }
         .list-group-item .handle:hover { opacity: 1; }
         .card-header.header-bg h5, .card-header.header-bg .h5 { color: var(--body-color); }
-        
-        /* CORREÇÃO FORÇADA DO SCROLL (Último Recurso) */
+
+        /* SCROLL MODAL DETALHES EMPRESA */
         #modalDetalhesEmpresa .modal-content {
-            max-height: 95vh; /* Garante que o modal se encaixe na tela */
+            max-height: 95vh;
         }
         #modalDetalhesEmpresa .modal-body {
-            max-height: calc(95vh - 120px); /* Altura da viewport menos header e footer */
-            overflow-y: auto; /* Força o scroll no corpo do modal */
+            max-height: calc(95vh - 120px); /* Ajuste conforme header/footer do modal */
+            overflow-y: auto;
+        }
+        /* SCROLL MODAL USUÁRIOS */
+        #modalGerenciarUsuarios .modal-content {
+             max-height: 95vh;
+        }
+         #modalGerenciarUsuarios .modal-body {
+             max-height: calc(95vh - 120px); /* Ajuste conforme header/footer do modal */
+             overflow-y: auto;
         }
     </style>
     {% block head_extra %}{% endblock %}
@@ -67,9 +74,44 @@
 
     {# O conteúdo específico da página será inserido aqui pelo template filho #}
     {% block content %}
+    {# Este bloco será preenchido pelos templates filhos (dashboard.html, perfil.html, etc.) #}
+    {# Exemplo: Pode conter o header, sidebar, main content específico da página #}
+    <div class="container py-4">
+        <h1>Conteúdo Padrão (Substitua no template filho)</h1>
+        <p>Este é o conteúdo do `base.html`. Se você está vendo isso, o template filho não sobrescreveu o bloco `content`.</p>
+         {# Exemplo de Menu Dropdown que seria sobrescrito ou usado no header do filho #}
+         <div class="dropdown">
+            <button class="btn btn-secondary dropdown-toggle" type="button" id="userMenuDropdownBase" data-bs-toggle="dropdown" aria-expanded="false">
+                Menu Usuário (Base)
+            </button>
+            {# ========================================== #}
+            {# |||| BLOCO DO MENU DROPDOWN ATUALIZADO |||| #}
+            {# ========================================== #}
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuDropdownBase"> {# O ID pode variar #}
+                 <li><a class="dropdown-item" href="{{ url_for('profile.perfil') }}"><i class="bi bi-person-circle me-2"></i> Editar Perfil</a></li>
+
+                 {# Links Condicionais para Gestão #}
+                 {% if g.perfil and g.perfil.perfil_acesso in ['Administrador', 'Gerente', 'Coordenador'] %}
+                      <li><a class="dropdown-item text-primary" href="#" data-bs-toggle="modal" data-bs-target="#modalGerenciarUsuarios"><i class="bi bi-people-fill me-2"></i> Usuários</a></li>
+                     <li><a class="dropdown-item text-info" href="{{ url_for('analytics.analytics_dashboard') }}"><i class="bi bi-graph-up me-2"></i> Analytics Gerencial</a></li>
+                     {# Links Gamificação #}
+                     <li><a class="dropdown-item text-warning" href="{{ url_for('gamification.manage_gamification_metrics') }}"><i class="bi bi-pencil-square me-2"></i> Métricas Gamificação</a></li>
+                     <li><a class="dropdown-item text-success" href="{{ url_for('gamification.gamification_report') }}"><i class="bi bi-clipboard-data me-2"></i> Relatório Gamificação</a></li>
+                 {% endif %}
+                 {# Fim dos Links Condicionais #}
+
+                 <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalGamificacao"><i class="bi bi-trophy-fill me-2"></i> Critérios Gamificação</a></li>
+                 <li><hr class="dropdown-divider"></li>
+                 <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}"><i class="bi bi-box-arrow-right me-2"></i> Sair</a></li>
+            </ul>
+            {# ========================================== #}
+            {# |||| FIM DO BLOCO DO MENU ATUALIZADO |||| #}
+            {# ========================================== #}
+         </div>
+    </div>
     {% endblock %}
 
-    {# Modal Detalhes Empresa (REFORMULADO) #}
+    {# Modal Detalhes Empresa (Inalterado) #}
     <div class="modal fade" id="modalDetalhesEmpresa" tabindex="-1" aria-labelledby="modalDetalhesEmpresaLabel" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-scrollable"> <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);">
                 <div class="modal-header header-bg">
@@ -81,49 +123,33 @@
                         <input type="hidden" id="modal-implantacao_id" name="implantacao_id" value="">
                         <input type="hidden" name="redirect_to" id="modal-redirect_to" value="dashboard">
 
-                        
+
                         <h6 class="text-primary mb-3 border-bottom pb-1 mt-3">Contatos e Responsáveis</h6>
                         <div class="row">
                             <div class="col-md-4 mb-3"><label for="modal-responsavel_cliente" class="form-label">Resp. Cliente (Nome)</label><input type="text" class="form-control" id="modal-responsavel_cliente" name="responsavel_cliente"></div>
-                            {# CARGO RESP. CORRIGIDO: Agora usa a variável injetada 'cargos_responsavel' #}
                             <div class="col-md-4 mb-3">
                                 <label for="modal-cargo_responsavel" class="form-label">Cargo Resp.</label>
                                 <select class="form-select" id="modal-cargo_responsavel" name="cargo_responsavel">
                                     <option value="">Selecione...</option>
-                                    {% for cargo in cargos_responsavel %}
-                                        <option value="{{ cargo }}">{{ cargo }}</option>
-                                    {% endfor %}
+                                    {# Garante que a variável exista antes de iterar #}
+                                    {% if cargos_responsavel %}
+                                        {% for cargo in cargos_responsavel %}
+                                            <option value="{{ cargo }}">{{ cargo }}</option>
+                                        {% endfor %}
+                                    {% endif %}
                                 </select>
                             </div>
                             <div class="col-md-4 mb-3"><label for="modal-email_responsavel" class="form-label">E-mail Resp.</label><input type="email" class="form-control" id="modal-email_responsavel" name="email_responsavel"></div>
                         </div>
                         <div class="row">
                              <div class="col-md-4 mb-3"><label for="modal-telefone_responsavel" class="form-label">Telefone Resp.</label><input type="tel" class="form-control" id="modal-telefone_responsavel" name="telefone_responsavel" placeholder="(XX) XXXXX-XXXX" maxlength="15" oninput="formatarTelefone(this)"></div>
-                             {# CAMPOS REMOVIDOS (MANTIDOS HIDDEN PARA SUBMISSÃO, SE NECESSÁRIO NO BACKEND) #}
-                             <div class="col-md-4 mb-3 d-none">
-                                 <label for="modal-resp_estrategico_nome" class="form-label">Resp. Estratégico (Nome)</label>
-                                 <input type="hidden" id="modal-resp_estrategico_nome" name="resp_estrategico_nome">
-                             </div>
-                             <div class="col-md-4 mb-3 d-none">
-                                 <label for="modal-resp_onb_nome" class="form-label">Resp. Onb Treinamentos (Nome)</label>
-                                 <input type="hidden" id="modal-resp_onb_nome" name="resp_onb_nome">
-                             </div>
+                             {# CAMPOS REMOVIDOS (MANTIDOS HIDDEN PARA SUBMISSÃO) #}
+                             <div class="col-md-4 mb-3 d-none"><input type="hidden" id="modal-resp_estrategico_nome" name="resp_estrategico_nome"></div>
+                             <div class="col-md-4 mb-3 d-none"><input type="hidden" id="modal-resp_onb_nome" name="resp_onb_nome"></div>
                         </div>
-                        <div class="mb-3 d-none">
-                             {# CONTATOS DA ACADEMIA REMOVIDOS (MANTIDOS HIDDEN PARA SUBMISSÃO) #}
-                             <label for="modal-contatos" class="form-label">Contatos da Academia (Nomes/Cargos)</label>
-                             <textarea class="form-control" id="modal-contatos" name="contatos" rows="2" maxlength="8000"></textarea>
-                        </div>
-                        <div class="mb-3 d-none">
-                             {# OBS. RESP. ESTRATÉGICO / ONB REMOVIDOS (MANTIDOS HIDDEN PARA SUBMISSÃO) #}
-                             <label for="modal-resp_estrategico_obs" class="form-label">Obs. Resp. Estratégico/Onb (Telefones/Detalhes)</label>
-                             <textarea class="form-control" id="modal-resp_estrategico_obs" name="resp_estrategico_obs" rows="2" maxlength="8000" placeholder="Telefones, observações de contato..."></textarea>
-                        </div>
-                        {# VALOR ATRIBUÍDO REMOVIDO (MANTIDO HIDDEN PARA SUBMISSÃO) #}
-                        <div class="col-md-3 mb-3 d-none">
-                            <label for="modal-valor_atribuido" class="form-label">Valor Atribuído (R$)</label>
-                            <input type="hidden" id="modal-valor_atribuido" name="valor_atribuido">
-                        </div>
+                        <div class="mb-3 d-none"><textarea class="form-control d-none" id="modal-contatos" name="contatos" rows="1"></textarea></div>
+                        <div class="mb-3 d-none"><textarea class="form-control d-none" id="modal-resp_estrategico_obs" name="resp_estrategico_obs" rows="1"></textarea></div>
+                        <div class="col-md-3 mb-3 d-none"><input type="hidden" id="modal-valor_atribuido" name="valor_atribuido"></div>
 
 
                         <h6 class="text-primary mb-3 border-bottom pb-1 mt-4">Datas e Atributos de Sistema</h6>
@@ -134,70 +160,64 @@
                             <div class="col-md-3 mb-3"><label for="modal-data_final_implantacao" class="form-label">Fim da Implantação (Data)</label><input type="date" class="form-control" id="modal-data_final_implantacao" name="data_final_implantacao"></div>
                         </div>
                         <div class="row">
-                            {# CAMPOS MOVIDOS DA SEÇÃO FINANCEIRA #}
                             <div class="col-md-4 mb-3"><label for="modal-id_favorecido" class="form-label">ID Favorecido</label><input type="text" class="form-control" id="modal-id_favorecido" name="id_favorecido"></div>
                             <div class="col-md-4 mb-3"><label for="modal-nivel_receita" class="form-label">Nível de Receita (MRR)</label>
                                 <select class="form-select" id="modal-nivel_receita" name="nivel_receita">
                                     <option value="">Selecione o Nível...</option>
-                                    {% for nivel in NIVEIS_RECEITA %}
-                                        <option value="{{ nivel }}">{{ nivel }}</option>
-                                    {% endfor %}
+                                    {# Garante que a variável exista #}
+                                    {% if NIVEIS_RECEITA %}
+                                        {% for nivel in NIVEIS_RECEITA %}
+                                            <option value="{{ nivel }}">{{ nivel }}</option>
+                                        {% endfor %}
+                                    {% endif %}
                                 </select>
                             </div>
                             <div class="col-md-4 mb-3"><label for="modal-chave_oamd" class="form-label">Chave OAMD</label><input type="text" class="form-control" id="modal-chave_oamd" name="chave_oamd"></div>
                         </div>
                         <div class="row">
-                            {# TELA DE APOIO (LINK): Deixado em branco #}
                             <div class="col-md-12 mb-3"><label for="modal-tela_apoio_link" class="form-label">Tela de Apoio (Link)</label><input type="url" class="form-control" id="modal-tela_apoio_link" name="tela_apoio_link"></div>
                         </div>
 
                         <h6 class="text-primary mb-3 border-bottom pb-1 mt-4">Configurações e Detalhes Operacionais</h6>
                         <div class="row">
-                            <div class="col-md-4 mb-3"><label for="modal-seguimento" class="form-label">Seguimento</label><select class="form-select" id="modal-seguimento" name="seguimento"><option value="">Selecione...</option>{% for s in SEGUIMENTOS_LIST %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select></div>
-                            <div class="col-md-4 mb-3"><label for="modal-tipos_planos" class="form-label">Tipos de Planos</label><select class="form-select" id="modal-tipos_planos" name="tipos_planos"><option value="">Selecione...</option>{% for tp in TIPOS_PLANOS %}<option value="{{ tp }}">{{ tp }}</option>{% endfor %}</select></div>
-                            <div class="col-md-4 mb-3"><label for="modal-modalidades" class="form-label">Modalidades</label><select class="form-select" id="modal-modalidades" name="modalidades"><option value="">Selecione...</option>{% for m in MODALIDADES_LIST %}<option value="{{ m }}">{{ m }}</option>{% endfor %}</select></div>
+                            <div class="col-md-4 mb-3"><label for="modal-seguimento" class="form-label">Seguimento</label><select class="form-select" id="modal-seguimento" name="seguimento"><option value="">Selecione...</option>{% if SEGUIMENTOS_LIST %}{% for s in SEGUIMENTOS_LIST %}<option value="{{ s }}">{{ s }}</option>{% endfor %}{% endif %}</select></div>
+                            <div class="col-md-4 mb-3"><label for="modal-tipos_planos" class="form-label">Tipos de Planos</label><select class="form-select" id="modal-tipos_planos" name="tipos_planos"><option value="">Selecione...</option>{% if TIPOS_PLANOS %}{% for tp in TIPOS_PLANOS %}<option value="{{ tp }}">{{ tp }}</option>{% endfor %}{% endif %}</select></div>
+                            <div class="col-md-4 mb-3"><label for="modal-modalidades" class="form-label">Modalidades</label><select class="form-select" id="modal-modalidades" name="modalidades"><option value="">Selecione...</option>{% if MODALIDADES_LIST %}{% for m in MODALIDADES_LIST %}<option value="{{ m }}">{{ m }}</option>{% endfor %}{% endif %}</select></div>
                         </div>
                         <div class="row">
-                            <div class="col-md-6 mb-3"><label for="modal-horarios_func" class="form-label">Horários de Funcionamento</label><select class="form-select" id="modal-horarios_func" name="horarios_func"><option value="">Selecione...</option>{% for hf in HORARIOS_FUNCIONAMENTO %}<option value="{{ hf }}">{{ hf }}</option>{% endfor %}</select></div>
-                            <div class="col-md-6 mb-3"><label for="modal-formas_pagamento" class="form-label">Formas de Pagamento (Principais)</label><select class="form-select" id="modal-formas_pagamento" name="formas_pagamento"><option value="">Selecione...</option>{% for fp in FORMAS_PAGAMENTO %}<option value="{{ fp }}">{{ fp }}</option>{% endfor %}</select></div>
+                            <div class="col-md-6 mb-3"><label for="modal-horarios_func" class="form-label">Horários de Funcionamento</label><select class="form-select" id="modal-horarios_func" name="horarios_func"><option value="">Selecione...</option>{% if HORARIOS_FUNCIONAMENTO %}{% for hf in HORARIOS_FUNCIONAMENTO %}<option value="{{ hf }}">{{ hf }}</option>{% endfor %}{% endif %}</select></div>
+                            <div class="col-md-6 mb-3"><label for="modal-formas_pagamento" class="form-label">Formas de Pagamento (Principais)</label><select class="form-select" id="modal-formas_pagamento" name="formas_pagamento"><option value="">Selecione...</option>{% if FORMAS_PAGAMENTO %}{% for fp in FORMAS_PAGAMENTO %}<option value="{{ fp }}">{{ fp }}</option>{% endfor %}{% endif %}</select></div>
                         </div>
                         <div class="row">
-                            {# DIÁRIA - Mantém SIM_NAO_OPTIONS #}
                             <div class="col-md-3 mb-3"><label for="modal-diaria" class="form-label">Trabalha com Diária?</label><select class="form-select" id="modal-diaria" name="diaria">
-                                {% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}
+                                {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}{% endif %}
                             </select></div>
-                            {# FREEPASS - Mantém SIM_NAO_OPTIONS #}
                             <div class="col-md-3 mb-3"><label for="modal-freepass" class="form-label">Trabalha com Freepass?</label><select class="form-select" id="modal-freepass" name="freepass">
-                                {% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}
+                                {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}{% endif %}
                             </select></div>
                             <div class="col-md-6 mb-3"><label for="modal-alunos_ativos" class="form-label">Qtd. Alunos Ativos</label><input type="number" class="form-control" id="modal-alunos_ativos" name="alunos_ativos" min="0"></div>
                         </div>
 
                         <h6 class="text-primary mb-3 border-bottom pb-1 mt-4">Sistemas e Integrações</h6>
                         <div class="row">
-                            <div class="col-md-6 mb-3"><label for="modal-sistema_anterior" class="form-label">Qual o Sistema Anterior</label><select class="form-select" id="modal-sistema_anterior" name="sistema_anterior"><option value="">Selecione...</option>{% for sa in SISTEMAS_ANTERIORES %}<option value="{{ sa }}">{{ sa }}</option>{% endfor %}</select></div>
-                            <div class="col-md-6 mb-3"><label for="modal-recorrencia_usa" class="form-label">Usa Recorrência (Empresa)</label><select class="form-select" id="modal-recorrencia_usa" name="recorrencia_usa"><option value="">Selecione...</option>{% for ru in RECORRENCIA_USADA %}<option value="{{ ru }}">{{ ru }}</option>{% endfor %}</select></div>
+                            <div class="col-md-6 mb-3"><label for="modal-sistema_anterior" class="form-label">Qual o Sistema Anterior</label><select class="form-select" id="modal-sistema_anterior" name="sistema_anterior"><option value="">Selecione...</option>{% if SISTEMAS_ANTERIORES %}{% for sa in SISTEMAS_ANTERIORES %}<option value="{{ sa }}">{{ sa }}</option>{% endfor %}{% endif %}</select></div>
+                            <div class="col-md-6 mb-3"><label for="modal-recorrencia_usa" class="form-label">Usa Recorrência (Empresa)</label><select class="form-select" id="modal-recorrencia_usa" name="recorrencia_usa"><option value="">Selecione...</option>{% if RECORRENCIA_USADA %}{% for ru in RECORRENCIA_USADA %}<option value="{{ ru }}">{{ ru }}</option>{% endfor %}{% endif %}</select></div>
                         </div>
                         <div class="row">
-                            {# IMPORTAÇÃO - Mantém SIM_NAO_OPTIONS #}
                             <div class="col-md-3 mb-3"><label for="modal-importacao" class="form-label">Haverá Importação?</label><select class="form-select" id="modal-importacao" name="importacao">
-                                {% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}
+                                {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}{% endif %}
                             </select></div>
-                            {# BOLETO - Mantém SIM_NAO_OPTIONS #}
                             <div class="col-md-3 mb-3"><label for="modal-boleto" class="form-label">Boleto?</label><select class="form-select" id="modal-boleto" name="boleto">
-                                {% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}
+                                {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}{% endif %}
                             </select></div>
-                            {# NOTA FISCAL - Mantém SIM_NAO_OPTIONS #}
                             <div class="col-md-3 mb-3"><label for="modal-nota_fiscal" class="form-label">Nota Fiscal?</label><select class="form-select" id="modal-nota_fiscal" name="nota_fiscal">
-                                {% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}
+                                {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}{% endif %}
                             </select></div>
-                            {# CATRACA - Mantém SIM_NAO_OPTIONS #}
                             <div class="col-md-3 mb-3"><label for="modal-catraca" class="form-label">Catraca?</label><select class="form-select" id="modal-catraca" name="catraca">
-                                {% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}
+                                {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}{% endif %}
                             </select></div>
-                            {# FACIAL - Mantém SIM_NAO_OPTIONS #}
                             <div class="col-md-3 mb-3"><label for="modal-facial" class="form-label">Reconhecimento Facial?</label><select class="form-select" id="modal-facial" name="facial">
-                                {% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}
+                                {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}{% endif %}
                             </select></div>
                         </div>
                     </div>
@@ -207,6 +227,7 @@
         </div>
     </div>
 
+    {# Modal Gamificação (Critérios) (Inalterado) #}
     <div class="modal fade" id="modalGamificacao" tabindex="-1" aria-labelledby="modalGamificacaoLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);">
@@ -215,194 +236,22 @@
                     <button type="button" class="btn-close btn-close-dark" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    {# ... (Conteúdo do Modal Gamificação) ... #}
-                    <div class="card mb-3">
-                        <div class="card-header">
-                            Critérios de Elegibilidade
-                        </div>
-                        <div class="card-body">
-                            <p>Para participação, os critérios mínimos são:</p>
-                            <ul>
-                                <li>Nota de Qualidade (0 a 100): <strong>80%</strong></li>
-                                <li>Assiduidade: <strong>85%</strong></li>
-                                <li>Reuniões realizadas por dia: <strong>3</strong></li>
-                                <li>Planos de Sucesso em dia / em andamento: <strong>75%</strong></li>
-                                <li>Satisfação do Processo de implantação</li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div class="card mb-3">
-                        <div class="card-header">
-                            Regras Específicas
-                        </div>
-                        <div class="card-body">
-                            <ul>
-                                <li>Cargo Júnior: mínimo <strong>4 processos concluídos</strong>.</li>
-                                <li>Cargo Pleno: mínimo <strong>5 processos concluídos</strong>.</li>
-                                <li>Cargo Sênior: mínimo <strong>5 processos concluídos</strong>.</li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div class="card mb-3 border-danger">
-                        <div class="card-header bg-danger text-white">
-                            Situações que Impedem Participação
-                        </div>
-                        <div class="card-body">
-                            <ul>
-                                <li>Reclamação de atendimento: <strong>2 ocorrências</strong>.</li>
-                                <li>Perda de prazo combinado (interno e externo): <strong>3 ocorrências</strong>.</li>
-                                <li>Não preenchimento da tela de apoio, cx ou plano de sucesso: <strong>3 ocorrências</strong>.</li>
-                            </ul>
-                        </div>
-                    </div>
-
+                    {# ... Conteúdo estático dos critérios da gamificação ... #}
+                    <div class="card mb-3"><div class="card-header">Critérios de Elegibilidade</div><div class="card-body"><p>Para participação, os critérios mínimos são:</p><ul><li>Nota de Qualidade (0 a 100): <strong>80%</strong></li><li>Assiduidade: <strong>85%</strong></li><li>Reuniões realizadas por dia: <strong>3</strong> (Verificar como será medido)</li><li>Planos de Sucesso em dia / em andamento: <strong>75%</strong></li><li>Satisfação do Processo de implantação (Verificar como será medido)</li></ul></div></div>
+                    <div class="card mb-3"><div class="card-header">Regras Específicas (Impl. Finalizadas no Mês)</div><div class="card-body"><ul><li>Cargo Júnior: mínimo <strong>4</strong></li><li>Cargo Pleno: mínimo <strong>5</strong></li><li>Cargo Sênior: mínimo <strong>5</strong></li></ul></div></div>
+                    <div class="card mb-3 border-danger"><div class="card-header bg-danger text-white">Situações que Impedem Participação</div><div class="card-body"><ul><li>Reclamação de atendimento: <strong>2 ou mais</strong> ocorrências.</li><li>Perda de prazo combinado (interno e externo): <strong>3 ou mais</strong> ocorrências.</li><li>Não preenchimento da tela de apoio, cx ou plano de sucesso: <strong>3 ou mais</strong> ocorrências.</li></ul></div></div>
                     <h4 class="mt-4 mb-3">Tabela de Pontos</h4>
-
-                    <div class="card mb-3"><div class="card-header">Satisfação do Processo de implantação – Processo (0 a 100)</div>
-                        <div class="card-body p-0"><table class="table table-striped table-sm mb-0">
-                            <thead><tr><th>Nota</th><th>Pontos</th></tr></thead>
-                            <tbody>
-                                <tr><td>100%</td><td>25</td></tr>
-                                <tr><td>95%</td><td>17</td></tr>
-                                <tr><td>90%</td><td>15</td></tr>
-                                <tr><td>85%</td><td>14</td></tr>
-                                <tr><td>80%</td><td>12</td></tr>
-                            </tbody>
-                        </table></div>
-                    </div>
-
-                    <div class="card mb-3"><div class="card-header">Assiduidade</div>
-                        <div class="card-body p-0"><table class="table table-striped table-sm mb-0">
-                            <thead><tr><th>Nota</th><th>Pontos</th></tr></thead>
-                            <tbody>
-                                <tr><td>100%</td><td>30</td></tr>
-                                <tr><td>98%</td><td>20</td></tr>
-                                <tr><td>95%</td><td>15</td></tr>
-                                <tr><td>= ou < 85%</td><td>0</td></tr>
-                            </tbody>
-                        </table></div>
-                    </div>
-
-                    <div class="card mb-3"><div class="card-header">Tempo Médio de Implantação</div>
-                        <div class="card-body p-0"><table class="table table-striped table-sm mb-0">
-                            <thead><tr><th>Indicador</th><th>Pontos</th></tr></thead>
-                            <tbody>
-                                <tr><td>25 a 30 dias</td><td>45</td></tr>
-                                <tr><td>31 a 35 dias</td><td>32</td></tr>
-                                <tr><td>36 a 40 dias</td><td>24</td></tr>
-                                <tr><td>41 a 45 dias</td><td>16</td></tr>
-                                <tr><td>Acima de 46 dias</td><td>8</td></tr>
-                            </tbody>
-                        </table></div>
-                    </div>
-
-                    <div class="card mb-3"><div class="card-header">Reunião Realizadas por Dia</div>
-                        <div class="card-body p-0"><table class="table table-striped table-sm mb-0">
-                            <thead><tr><th>Quantidade</th><th>Pontos</th></tr></thead>
-                            <tbody>
-                                <tr><td>5</td><td>40</td></tr>
-                                <tr><td>4</td><td>35</td></tr>
-                                <tr><td>3</td><td>25</td></tr>
-                                <tr><td>2</td><td>10</td></tr>
-                            </tbody>
-                        </table></div>
-                    </div>
-
-                    <div class="card mb-3"><div class="card-header">Ações realizadas por dia</div>
-                        <div class="card-body p-0"><table class="table table-striped table-sm mb-0">
-                            <thead><tr><th>Quantidade</th><th>Pontos</th></tr></thead>
-                            <tbody>
-                                <tr><td>7</td><td>20</td></tr>
-                                <tr><td>6</td><td>15</td></tr>
-                            <tr><td>5</td><td>10</td></tr>
-                                <tr><td>4</td><td>5</td></tr>
-                                <tr><td>3</td><td>3</td></tr>
-                            </tbody>
-                        </table></div>
-                    </div>
-
-                    <div class="card mb-3"><div class="card-header">Planos de Sucesso em Dia / Em Andamento</div>
-                        <div class="card-body p-0"><table class="table table-striped table-sm mb-0">
-                            <thead><tr><th>Indicador</th><th>Pontos</th></tr></thead>
-                            <tbody>
-                                <tr><td>100%</td><td>45</td></tr>
-                                <tr><td>95%</td><td>35</td></tr>
-                                <tr><td>90%</td><td>30</td></tr>
-                                <tr><td>85%</td><td>20</td></tr>
-                                <tr><td>80%</td><td>10</td></tr>
-                            </tbody>
-                        </table></div>
-                    </div>
-
-                    <div class="card mb-3"><div class="card-header">Implantações / Planos Iniciados</div>
-                        <div class="card-body p-0"><table class="table table-striped table-sm mb-0">
-                            <thead><tr><th>Indicador</th><th>Pontos</th></tr></thead>
-                            <tbody>
-                                <tr><td>10</td><td>45</td></tr>
-                                <tr><td>9</td><td>32</td></tr>
-                                <tr><td>8</td><td>24</td></tr>
-                                <tr><td>7</td><td>16</td></tr>
-                                <tr><td>6</td><td>8</td></tr>
-                            </tbody>
-                        </table></div>
-                    </div>
-
-                    <div class="card mb-3"><div class="card-header">Avaliação de Qualidade</div>
-                        <div class="card-body p-0"><table class="table table-striped table-sm mb-0">
-                            <thead><tr><th>Nota</th><th>Pontos</th></tr></thead>
-                            <tbody>
-                                <tr><td>100%</td><td>55</td></tr>
-                                <tr><td>95%</td><td>40</td></tr>
-                                <tr><td>90%</td><td>30</td></tr>
-                                <tr><td>85%</td><td>15</td></tr>
-                                <tr><td>80%</td><td>0</td></tr>
-                                <tr><td>- 79%</td><td class="text-danger fw-bold">Eliminado</td></tr>
-                            </tbody>
-                        </table></div>
-                    </div>
-
-                    <h4 class="mt-4 text-success">Ganho de Pontos</h4>
-                    <ul class="list-group mb-3">
-                        <li class="list-group-item"><strong>Elogio de clientes:</strong> 15 pontos
-                            <br><small class="text-secondary">OBS: Para efeito de bonificação, será contabilizado apenas 1 por mês.</small>
-                        </li>
-                        <li class="list-group-item"><strong>Recomendações estratégicas:</strong> 1 ponto por recomendação.</li>
-                        <li class="list-group-item"><strong>Ajuda à Liderança:</strong> pontuação variável.</li>
-                        <li class="list-group-item"><strong>Novas certificações:</strong> 15 pontos.
-                            <br><small class="text-secondary">OBS: Contabilizado até 1 certificação por mês.</small>
-                        </li>
-                        <li class="list-group-item"><strong>Treinamentos Pacto (Participação):</strong> 15 pontos.</li>
-                        <li class="list-group-item"><strong>Treinamentos Pacto (Aplicação):</strong> 30 pontos.</li>
-                    </ul>
-
-                    <div class="card mb-3"><div class="card-header">Reuniões Presenciais / Visitas</div>
-                        <div class="card-body p-0"><table class="table table-striped table-sm mb-0">
-                            <thead><tr><th>Quantidade</th><th>Pontos</th></tr></thead>
-                            <tbody>
-                                <tr><td>Acima de 10</td><td>35</td></tr>
-                                <tr><td>7 – 10</td><td>30</td></tr>
-                                <tr><td>5 – 7</td><td>25</td></tr>
-                                <tr><td>3 – 5</td><td>20</td></tr>
-                                <tr><td>1 – 2</td><td>15</td></tr>
-                            </tbody>
-                        </table></div>
-                    </div>
-
-                    <h4 class="mt-4 text-danger">Perda de Pontos</h4>
-                    <ul class="list-group">
-                        <li class="list-group-item d-flex justify-content-between align-items-center">Reclamação de atendimento: <span class="badge bg-danger rounded-pill">- 50 pontos</span></li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">Perda de prazo combinado (interno e externo): <span class="badge bg-danger rounded-pill">- 10 pontos</span></li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">Descrição incompreensível: <span class="badge bg-danger rounded-pill">- 10 pontos</span></li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">Cancelamento por responsabilidade do implantador: <span class="badge bg-danger rounded-pill">- 100 pontos</span></li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">Não envolvimento de outras áreas quando necessário: <span class="badge bg-danger rounded-pill">- 10 pontos</span></li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">Não preenchimento da tela de apoio/CX: <span class="badge bg-danger rounded-pill">- 10 pontos</span></li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">Perda do prazo - SLA do grupo com o cliente: <span class="badge bg-danger rounded-pill">- 5 pontos</span></li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">Finalização de processos com informações incompletas: <span class="badge bg-danger rounded-pill">- 10 pontos</span></li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">Hora extra sem autorização: <span class="badge bg-danger rounded-pill">- 10 pontos</span></li>
-                    </ul>
-
+                    <div class="card mb-3"><div class="card-header">Satisfação do Processo de implantação – Processo (0 a 100)</div><div class="card-body p-0"><table class="table table-striped table-sm mb-0"><thead><tr><th>Nota</th><th>Pontos</th></tr></thead><tbody><tr><td>100%</td><td>25</td></tr><tr><td>95%</td><td>17</td></tr><tr><td>90%</td><td>15</td></tr><tr><td>85%</td><td>14</td></tr><tr><td>80%</td><td>12</td></tr></tbody></table></div></div>
+                    <div class="card mb-3"><div class="card-header">Assiduidade</div><div class="card-body p-0"><table class="table table-striped table-sm mb-0"><thead><tr><th>Nota</th><th>Pontos</th></tr></thead><tbody><tr><td>100%</td><td>30</td></tr><tr><td>98%</td><td>20</td></tr><tr><td>95%</td><td>15</td></tr><tr><td>= ou < 85%</td><td>0</td></tr></tbody></table></div></div>
+                    <div class="card mb-3"><div class="card-header">Tempo Médio de Implantação (Impl. Finalizadas no Mês)</div><div class="card-body p-0"><table class="table table-striped table-sm mb-0"><thead><tr><th>Indicador</th><th>Pontos</th></tr></thead><tbody><tr><td>25 a 30 dias</td><td>45</td></tr><tr><td>31 a 35 dias</td><td>32</td></tr><tr><td>36 a 40 dias</td><td>24</td></tr><tr><td>41 a 45 dias</td><td>16</td></tr><tr><td>Acima de 46 dias</td><td>8</td></tr></tbody></table></div></div>
+                    <div class="card mb-3"><div class="card-header">Reunião Realizadas por Dia (Média no Mês)</div><div class="card-body p-0"><table class="table table-striped table-sm mb-0"><thead><tr><th>Quantidade Média</th><th>Pontos</th></tr></thead><tbody><tr><td>>= 5</td><td>40</td></tr><tr><td>>= 4</td><td>35</td></tr><tr><td>>= 3</td><td>25</td></tr><tr><td>>= 2</td><td>10</td></tr></tbody></table></div></div>
+                    <div class="card mb-3"><div class="card-header">Ações realizadas por dia (Média no Mês)</div><div class="card-body p-0"><table class="table table-striped table-sm mb-0"><thead><tr><th>Quantidade Média</th><th>Pontos</th></tr></thead><tbody><tr><td>>= 7</td><td>20</td></tr><tr><td>>= 6</td><td>15</td></tr><tr><td>>= 5</td><td>10</td></tr><tr><td>>= 4</td><td>5</td></tr><tr><td>>= 3</td><td>3</td></tr></tbody></table></div></div>
+                    <div class="card mb-3"><div class="card-header">Planos de Sucesso em Dia / Em Andamento (%)</div><div class="card-body p-0"><table class="table table-striped table-sm mb-0"><thead><tr><th>Indicador</th><th>Pontos</th></tr></thead><tbody><tr><td>100%</td><td>45</td></tr><tr><td>95%</td><td>35</td></tr><tr><td>90%</td><td>30</td></tr><tr><td>85%</td><td>20</td></tr><tr><td>80%</td><td>10</td></tr></tbody></table></div></div>
+                    <div class="card mb-3"><div class="card-header">Implantações / Planos Iniciados (no Mês)</div><div class="card-body p-0"><table class="table table-striped table-sm mb-0"><thead><tr><th>Indicador</th><th>Pontos</th></tr></thead><tbody><tr><td>>= 10</td><td>45</td></tr><tr><td>9</td><td>32</td></tr><tr><td>8</td><td>24</td></tr><tr><td>7</td><td>16</td></tr><tr><td>6</td><td>8</td></tr></tbody></table></div></div>
+                    <div class="card mb-3"><div class="card-header">Avaliação de Qualidade (%)</div><div class="card-body p-0"><table class="table table-striped table-sm mb-0"><thead><tr><th>Nota</th><th>Pontos</th></tr></thead><tbody><tr><td>100%</td><td>55</td></tr><tr><td>95%</td><td>40</td></tr><tr><td>90%</td><td>30</td></tr><tr><td>85%</td><td>15</td></tr><tr><td>80%</td><td>0</td></tr><tr><td>< 80%</td><td class="text-danger fw-bold">Eliminado</td></tr></tbody></table></div></div>
+                    <h4 class="mt-4 text-success">Ganho de Pontos (Ocorrências no Mês)</h4><ul class="list-group mb-3"><li class="list-group-item"><strong>Elogio de clientes:</strong> +15 pontos (máx 1/mês)</li><li class="list-group-item"><strong>Recomendações estratégicas:</strong> +1 ponto por recomendação</li><li class="list-group-item"><strong>Ajuda à Liderança:</strong> pontuação variável</li><li class="list-group-item"><strong>Novas certificações:</strong> +15 pontos (máx 1/mês)</li><li class="list-group-item"><strong>Treinamentos Pacto (Participação):</strong> +15 pontos</li><li class="list-group-item"><strong>Treinamentos Pacto (Aplicação):</strong> +30 pontos</li></ul>
+                    <div class="card mb-3"><div class="card-header">Reuniões Presenciais / Visitas (no Mês)</div><div class="card-body p-0"><table class="table table-striped table-sm mb-0"><thead><tr><th>Quantidade</th><th>Pontos Bônus</th></tr></thead><tbody><tr><td>> 10</td><td>+35</td></tr><tr><td>7 – 10</td><td>+30</td></tr><tr><td>5 – 7</td><td>+25</td></tr><tr><td>3 – 5</td><td>+20</td></tr><tr><td>1 – 2</td><td>+15</td></tr></tbody></table></div></div>
+                    <h4 class="mt-4 text-danger">Perda de Pontos (Ocorrências no Mês)</h4><ul class="list-group"><li class="list-group-item d-flex justify-content-between align-items-center">Reclamação de atendimento: <span class="badge bg-danger rounded-pill">- 50 pontos</span></li><li class="list-group-item d-flex justify-content-between align-items-center">Perda de prazo combinado (int/ext): <span class="badge bg-danger rounded-pill">- 10 pontos</span></li><li class="list-group-item d-flex justify-content-between align-items-center">Descrição incompreensível: <span class="badge bg-danger rounded-pill">- 10 pontos</span></li><li class="list-group-item d-flex justify-content-between align-items-center">Cancelamento por resp. implantador: <span class="badge bg-danger rounded-pill">- 100 pontos</span></li><li class="list-group-item d-flex justify-content-between align-items-center">Não envolvimento outras áreas: <span class="badge bg-danger rounded-pill">- 10 pontos</span></li><li class="list-group-item d-flex justify-content-between align-items-center">Não preenchimento tela apoio/CX: <span class="badge bg-danger rounded-pill">- 10 pontos</span></li><li class="list-group-item d-flex justify-content-between align-items-center">Perda prazo - SLA grupo cliente: <span class="badge bg-danger rounded-pill">- 5 pontos</span></li><li class="list-group-item d-flex justify-content-between align-items-center">Finalização processos incompleta: <span class="badge bg-danger rounded-pill">- 10 pontos</span></li><li class="list-group-item d-flex justify-content-between align-items-center">Hora extra s/ autorização: <span class="badge bg-danger rounded-pill">- 10 pontos</span></li></ul>
                 </div>
                 <div class="modal-footer header-bg">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
@@ -410,8 +259,8 @@
             </div>
         </div>
     </div>
-    
-    {# NOVO: Modal Gerenciamento de Usuários (Carregado Via Rota) #}
+
+    {# Modal Gerenciamento de Usuários (Carregado Via Rota) (Inalterado) #}
     <div class="modal fade" id="modalGerenciarUsuarios" tabindex="-1" aria-labelledby="modalGerenciarUsuariosLabel" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);">
@@ -442,213 +291,132 @@
     <script>
         // Função de máscara de Telefone
         function formatarTelefone(input) {
-            // Remove tudo que não for dígito
-            let v = input.value.replace(/\D/g, '');
-
-            // Limita o tamanho para 11 dígitos (DDD + 9 dígitos)
-            v = v.substring(0, 11);
-
-            // Aplica a máscara (XX) XXXXX-XXXX
-            if (v.length > 10) {
-                // (XX) XXXXX-XXXX
-                v = v.replace(/^(\d{2})(\d{5})(\d{4}).*/, '($1) $2-$3');
-            } else if (v.length > 6) {
-                // (XX) XXXX-XXXX
-                v = v.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
-            } else if (v.length > 2) {
-                // (XX) XXXX
-                v = v.replace(/^(\d{2})(\d{0,5}).*/, '($1) $2');
-            } else if (v.length > 0) {
-                // (XX
-                v = v.replace(/^(\d{0,2}).*/, '($1');
-            }
-
+            let v = input.value.replace(/\D/g, '').substring(0, 11);
+            if (v.length > 10) v = v.replace(/^(\d{2})(\d{5})(\d{4}).*/, '($1) $2-$3');
+            else if (v.length > 6) v = v.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
+            else if (v.length > 2) v = v.replace(/^(\d{2})(\d{0,5}).*/, '($1) $2');
+            else if (v.length > 0) v = v.replace(/^(\d{0,2}).*/, '($1');
             input.value = v;
         }
 
-
-        // Lógica para popular o Modal Detalhes Empresa (CORRIGIDO)
+        // --- Lógica de Modais ---
         document.addEventListener('DOMContentLoaded', function() {
 
+            // --- Modal Detalhes Empresa ---
             const modalDetalhesEmpresa = document.getElementById('modalDetalhesEmpresa');
             if (modalDetalhesEmpresa) {
                 modalDetalhesEmpresa.addEventListener('show.bs.modal', function (event) {
                     const button = event.relatedTarget;
-                    // Extrai os dados dos atributos data-* do botão (CHAVES NOVAS/ATUALIZADAS)
-                    const id = button.getAttribute('data-id');
-                    const nome = button.getAttribute('data-nome');
-                    // Contatos e Responsáveis
-                    const responsavel = button.getAttribute('data-responsavel') || '';
-                    const cargo = button.getAttribute('data-cargo') || '';
-                    const telefone = button.getAttribute('data-telefone') || '';
-                    const email = button.getAttribute('data-email') || '';
-                    
-                    // VARIÁVEIS REMOVIDAS (MANTIDAS NO JS PARA GARANTIR QUE NÃO QUEBREM A EXTRAÇÃO EM OUTROS TEMPLATES)
-                    const respEstrategicoNome = button.getAttribute('data-resp-estrategico-nome') || '';
-                    const respOnbNome = button.getAttribute('data-resp-onb-nome') || '';
-                    const contatos = button.getAttribute('data-contatos') || '';
-                    const respEstrategicoObs = button.getAttribute('data-resp-estrategico-obs') || '';
-                    
-                    // Financeiro
-                    const valorAtribuido = button.getAttribute('data-valor-atribuido') || ''; // REMOVIDO NO HTML
-                    const idFavorecido = button.getAttribute('data-id-favorecido') || '';
-                    const nivelReceita = button.getAttribute('data-nivel-receita') || '';
-                    // Datas
-                    const dataCadastro = button.getAttribute('data-data-cadastro') || '';
-                    const inicioImplantacao = button.getAttribute('data-inicio-implantacao') || ''; // Readonly (Data Criação)
-                    const inicioProducao = button.getAttribute('data-inicio-producao') || '';     // YYYY-MM-DD
-                    const finalImplantacao = button.getAttribute('data-final-implantacao') || ''; // YYYY-MM-DD
-                    // Atributos de Sistema/Operacionais
-                    const chaveOamd = button.getAttribute('data-chave-oamd') || '';
-                    const telaApoioLink = button.getAttribute('data-tela-apoio-link') || '';
-                    const seguimento = button.getAttribute('data-seguimento') || '';
-                    const tiposPlanos = button.getAttribute('data-tipos-planos') || '';
-                    const modalidades = button.getAttribute('data-modalidades') || '';
-                    const horariosFunc = button.getAttribute('data-horarios-func') || '';
-                    const formasPagamento = button.getAttribute('data-formas-pagamento') || '';
-                    const diaria = button.getAttribute('data-diaria') || 'Não definido';
-                    const freepass = button.getAttribute('data-freepass') || 'Não definido';
-                    const alunosAtivos = button.getAttribute('data-alunos-ativos') || '';
-                    const sistemaAnterior = button.getAttribute('data-sistema-anterior') || '';
-                    const importacao = button.getAttribute('data-importacao') || 'Não definido';
-                    const recorrenciaUsa = button.getAttribute('data-recorrencia-usa') || '';
-                    const boleto = button.getAttribute('data-boleto') || 'Não definido';
-                    const notaFiscal = button.getAttribute('data-nota-fiscal') || 'Não definido';
-                    const catraca = button.getAttribute('data-catraca') || 'Não definido';
-                    const facial = button.getAttribute('data-facial') || 'Não definido';
+                    if (!button || !button.getAttribute('data-id')) return; // Sai se não for aberto por um botão com data-id
+
+                    // Helper para obter atributo e limpar 'null'/'undefined'/None
+                    const getData = (key, defaultVal = '') => {
+                        const val = button.getAttribute(`data-${key}`);
+                        return (val === 'null' || val === 'undefined' || val === null || val === 'None' || val === undefined) ? defaultVal : val;
+                    };
+
 
                     const modal = modalDetalhesEmpresa;
-                    
-                    // Helper para tratar a string 'null', 'undefined' ou 'None' vinda de data-attribute para ''
-                    const cleanVal = (val) => (val === 'null' || val === 'undefined' || val === null || val === 'None') ? '' : val;
+                    // Preenche os campos do formulário
+                    modal.querySelector('#modal-implantacao_id').value = getData('id');
+                    modal.querySelector('#modal-responsavel_cliente').value = getData('responsavel');
+                    modal.querySelector('#modal-cargo_responsavel').value = getData('cargo');
+                    modal.querySelector('#modal-telefone_responsavel').value = getData('telefone');
+                    modal.querySelector('#modal-email_responsavel').value = getData('email');
+                    modal.querySelector('#modal-data_cadastro').value = getData('inicio-implantacao'); // Usa data de criação aqui
+                    modal.querySelector('#modal-inicio_implantacao').value = getData('inicio-implantacao');
+                    modal.querySelector('#modal-data_inicio_producao').value = getData('inicio-producao');
+                    modal.querySelector('#modal-data_final_implantacao').value = getData('final-implantacao');
+                    modal.querySelector('#modal-id_favorecido').value = getData('id-favorecido');
+                    modal.querySelector('#modal-nivel_receita').value = getData('nivel-receita');
+                    modal.querySelector('#modal-chave_oamd').value = getData('chave-oamd');
+                    modal.querySelector('#modal-tela_apoio_link').value = getData('tela-apoio-link');
+                    modal.querySelector('#modal-seguimento').value = getData('seguimento');
+                    modal.querySelector('#modal-tipos_planos').value = getData('tipos-planos');
+                    modal.querySelector('#modal-modalidades').value = getData('modalidades');
+                    modal.querySelector('#modal-horarios_func').value = getData('horarios-func');
+                    modal.querySelector('#modal-formas_pagamento').value = getData('formas-pagamento');
+                    modal.querySelector('#modal-diaria').value = getData('diaria', 'Não definido');
+                    modal.querySelector('#modal-freepass').value = getData('freepass', 'Não definido');
+                    modal.querySelector('#modal-alunos_ativos').value = getData('alunos-ativos', '0');
+                    modal.querySelector('#modal-sistema_anterior').value = getData('sistema-anterior');
+                    modal.querySelector('#modal-recorrencia_usa').value = getData('recorrencia-usa');
+                    modal.querySelector('#modal-importacao').value = getData('importacao', 'Não definido');
+                    modal.querySelector('#modal-boleto').value = getData('boleto', 'Não definido');
+                    modal.querySelector('#modal-nota_fiscal').value = getData('nota-fiscal', 'Não definido');
+                    modal.querySelector('#modal-catraca').value = getData('catraca', 'Não definido');
+                    modal.querySelector('#modal-facial').value = getData('facial', 'Não definido');
 
-                    // Preenche os campos do formulário do modal (ATUALIZADO)
-                    modal.querySelector('#modal-implantacao_id').value = id;
-                    
-                    // Financeiro
-                    const nomeEmpresaInput = modal.querySelector('#modal-nome_empresa');
-                    if (nomeEmpresaInput) nomeEmpresaInput.value = nome;
-                    
-                    // VALOR ATRIBUÍDO (REMOVIDO DO HTML, MANTIDO NO INPUT HIDDEN PARA SUBMISSÃO)
+                    // Campos Hidden
                     const valorAtribuidoInput = modal.querySelector('#modal-valor_atribuido');
-                    if (valorAtribuidoInput) valorAtribuidoInput.value = cleanVal(valorAtribuido);
-                    
-                    // Contatos e Responsáveis
-                    modal.querySelector('#modal-responsavel_cliente').value = cleanVal(responsavel);
-                    modal.querySelector('#modal-cargo_responsavel').value = cleanVal(cargo); // SELECT
-                    modal.querySelector('#modal-telefone_responsavel').value = cleanVal(telefone);
-                    modal.querySelector('#modal-email_responsavel').value = cleanVal(email);
-                    
-                    // Campos removidos no HTML (MANTIDOS NO JS PARA SUBMISSÃO)
+                    if (valorAtribuidoInput) valorAtribuidoInput.value = getData('valor-atribuido');
                     const respEstrategicoNomeInput = modal.querySelector('#modal-resp_estrategico_nome');
-                    if (respEstrategicoNomeInput) respEstrategicoNomeInput.value = cleanVal(respEstrategicoNome);
+                    if (respEstrategicoNomeInput) respEstrategicoNomeInput.value = getData('resp-estrategico-nome');
                     const respOnbNomeInput = modal.querySelector('#modal-resp_onb_nome');
-                    if (respOnbNomeInput) respOnbNomeInput.value = cleanVal(respOnbNome);
+                    if (respOnbNomeInput) respOnbNomeInput.value = getData('resp-onb-nome');
                     const contatosInput = modal.querySelector('#modal-contatos');
-                    if (contatosInput) contatosInput.value = cleanVal(contatos);
+                    if (contatosInput) contatosInput.value = getData('contatos');
                     const respEstrategicoObsInput = modal.querySelector('#modal-resp_estrategico_obs');
-                    if (respEstrategicoObsInput) respEstrategicoObsInput.value = cleanVal(respEstrategicoObs);
+                    if (respEstrategicoObsInput) respEstrategicoObsInput.value = getData('resp-estrategico-obs');
 
-
-                    // Datas e Atributos de Sistema (INCLUINDO OS MOVIDOS)
-                    modal.querySelector('#modal-data_cadastro').value = cleanVal(inicioImplantacao); 
-                    modal.querySelector('#modal-inicio_implantacao').value = cleanVal(inicioImplantacao); 
-                    modal.querySelector('#modal-data_inicio_producao').value = cleanVal(inicioProducao);
-                    modal.querySelector('#modal-data_final_implantacao').value = cleanVal(finalImplantacao);
-                    
-                    // CAMPOS MOVIDOS
-                    modal.querySelector('#modal-id_favorecido').value = cleanVal(idFavorecido);
-                    modal.querySelector('#modal-nivel_receita').value = cleanVal(nivelReceita);
-                    
-                    modal.querySelector('#modal-chave_oamd').value = cleanVal(chaveOamd);
-                    modal.querySelector('#modal-tela_apoio_link').value = cleanVal(telaApoioLink);
-                    
-                    // Configurações Operacionais (SELECTS)
-                    modal.querySelector('#modal-seguimento').value = cleanVal(seguimento); // SELECT
-                    modal.querySelector('#modal-tipos_planos').value = cleanVal(tiposPlanos); // SELECT
-                    modal.querySelector('#modal-modalidades').value = cleanVal(modalidades); // SELECT
-                    modal.querySelector('#modal-horarios_func').value = cleanVal(horariosFunc); // SELECT
-                    modal.querySelector('#modal-formas_pagamento').value = cleanVal(formasPagamento); // SELECT
-                    
-                    // Campos Sim/Não (SELECTS)
-                    modal.querySelector('#modal-diaria').value = cleanVal(diaria); 
-                    modal.querySelector('#modal-freepass').value = cleanVal(freepass); 
-                    
-                    modal.querySelector('#modal-alunos_ativos').value = cleanVal(alunosAtivos);
-                    
-                    // Importação e Sistemas (SELECTS)
-                    modal.querySelector('#modal-sistema_anterior').value = cleanVal(sistemaAnterior); // SELECT
-                    modal.querySelector('#modal-recorrencia_usa').value = cleanVal(recorrenciaUsa); // SELECT
-                    
-                    // Campos Sim/Não (SELECTS)
-                    modal.querySelector('#modal-importacao').value = cleanVal(importacao); 
-                    modal.querySelector('#modal-boleto').value = cleanVal(boleto); 
-                    modal.querySelector('#modal-nota_fiscal').value = cleanVal(notaFiscal); 
-                    modal.querySelector('#modal-catraca').value = cleanVal(catraca); 
-                    modal.querySelector('#modal-facial').value = cleanVal(facial); 
-
-
-                    // Formata o telefone ao carregar o modal
                     formatarTelefone(modal.querySelector('#modal-telefone_responsavel'));
 
-                    // Define para onde o formulário deve redirecionar após salvar
+                    // Define redirecionamento
                     const modalRedirect = modal.querySelector('#modal-redirect_to');
-                    // Verifica pela ID 'main-content' que existe em ambas as páginas
-                    const isDetailsPage = document.querySelector('#main-content #checklist-area-treinamento');
+                    // Verifica pela presença de um ID único da página de detalhes
+                    const isDetailsPage = document.getElementById('checklist-area-treinamento');
                     modalRedirect.value = isDetailsPage ? 'detalhes' : 'dashboard';
                 });
             }
-        });
-        
-        // --- Lógica para carregar e REABRIR Modal Gerenciamento de Usuários ---
-        document.addEventListener('DOMContentLoaded', function() {
+
+            // --- Modal Gerenciamento de Usuários ---
             const modalGerenciarUsuarios = document.getElementById('modalGerenciarUsuarios');
-            const urlParams = new URLSearchParams(window.location.search);
-            const shouldOpenModal = urlParams.get('open_users_modal') === 'true'; // Novo parâmetro
-            
             if (modalGerenciarUsuarios) {
+                 const urlParams = new URLSearchParams(window.location.search);
+                 const shouldOpenModal = urlParams.get('open_users_modal') === 'true';
+
                 // Função para carregar o conteúdo via Fetch
                 const loadManagementContent = () => {
                     const contentDiv = document.getElementById('users-management-content');
-                    // Reconfigura o spinner antes de carregar
-                    contentDiv.innerHTML = `<div class="text-center py-5" id="users-loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div><p class="mt-2">Carregando lista de usuários...</p></div>`;
+                    const spinnerHTML = `<div class="text-center py-5" id="users-loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div><p class="mt-2">Carregando lista de usuários...</p></div>`;
+                    contentDiv.innerHTML = spinnerHTML; // Mostra spinner
 
-                    // Chama a rota do Flask para obter o HTML da tabela de usuários
                     fetch('{{ url_for("management.manage_users") }}')
                         .then(response => {
                             if (!response.ok) {
-                                // Se a resposta for 403 (Permissão Negada) ou outro erro
-                                return response.text().then(text => { 
-                                    const errorMessage = text.includes('Acesso negado') ? 'Acesso negado. Você não tem permissão para gerenciar usuários.' : `Falha ao carregar a lista de usuários. Status: ${response.status}`;
-                                    throw new Error(errorMessage) 
+                                // Tenta ler o corpo do erro para dar mais detalhes
+                                return response.text().then(text => {
+                                    throw new Error(text || `Erro ${response.status} ao carregar usuários.`);
                                 });
                             }
                             return response.text();
-                        })
-                        .then(html => {
-                            // Injeta o HTML retornado pela rota no corpo do modal
-                            contentDiv.innerHTML = html;
-                        })
+                         })
+                        .then(html => { contentDiv.innerHTML = html; })
                         .catch(error => {
                             console.error('Erro ao carregar gerenciamento de usuários:', error);
                             contentDiv.innerHTML = `<div class="alert alert-danger">Falha ao carregar a lista de usuários. Detalhes: ${error.message}</div>`;
                         });
                 };
-                
-                // 1. Ouve o evento de ABRIR o modal (manualmente)
-                modalGerenciarUsuarios.addEventListener('show.bs.modal', loadManagementContent);
-                
-                // 2. Lógica de Auto-abertura (se a página veio de um redirecionamento de POST)
+
+                // Ouve o evento 'shown.bs.modal' para carregar APÓS o modal estar visível
+                modalGerenciarUsuarios.addEventListener('shown.bs.modal', loadManagementContent);
+
+                // Lógica de Auto-abertura (se veio de um redirect POST)
                 if (shouldOpenModal) {
-                    const bsModal = new bootstrap.Modal(modalGerenciarUsuarios);
-                    bsModal.show();
-                    
-                    // Limpa o parâmetro da URL após a abertura para evitar reabrir em um refresh
-                    history.replaceState(null, document.title, window.location.pathname + window.location.hash);
+                    // Espera um pouco para garantir que o modal está pronto no DOM
+                    setTimeout(() => {
+                        const bsModal = bootstrap.Modal.getOrCreateInstance(modalGerenciarUsuarios);
+                        if (bsModal) {
+                            bsModal.show();
+                            // Limpa o parâmetro da URL
+                            const currentUrl = new URL(window.location);
+                            currentUrl.searchParams.delete('open_users_modal');
+                            history.replaceState(null, '', currentUrl.toString());
+                        }
+                    }, 100); // Pequeno delay
                 }
             }
-        });
-        
+        }); // Fim do DOMContentLoaded
     </script>
     {# Bloco para scripts extras específicos de cada página filha #}
     {% block scripts_extra %}{% endblock %}

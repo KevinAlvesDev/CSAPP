@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+
+{% block title %}Métricas Manuais de Gamificação{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    {# Header Padrão com menu dropdown #}
+    <header class="header-bg p-3 shadow-sm d-flex justify-content-end align-items-center position-relative">
+        <h1 class="main-title mb-0 fs-4" style="position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap;">MÉTRICAS MANUAIS - GAMIFICAÇÃO</h1>
+        <div class="d-flex align-items-center">
+             {# Links Rápidos #}
+             <a href="{{ url_for('gamification.gamification_report') }}" class="btn btn-outline-success me-3">
+                <i class="bi bi-clipboard-data me-1"></i> Ver Relatório
+            </a>
+            <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-primary me-3">
+                <i class="bi bi-arrow-left me-1"></i> Voltar ao Dashboard
+            </a>
+            {# Menu Dropdown #}
+            <div class="dropdown ms-2">
+                 <button class="btn btn-outline-secondary rounded-circle p-0" type="button" id="userMenuDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Menu" style="width: 40px; height: 40px; border: 2px solid var(--accent-color); overflow: hidden;">
+                     {% if g.perfil.foto_url %}
+                         <img src="{{ g.perfil.foto_url }}?v={{ range(1, 10000) | random }}" alt="Foto de Perfil" style="width: 100%; height: 100%; object-fit: cover;">
+                     {% else %}
+                         <i class="bi bi-person-fill" style="font-size: 1.5rem; color: var(--accent-color);"></i>
+                     {% endif %}
+                 </button>
+                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuDropdown">
+                     <li><a class="dropdown-item" href="{{ url_for('profile.perfil') }}"><i class="bi bi-person-circle me-2"></i> Editar Perfil</a></li>
+                     {% if g.perfil and g.perfil.perfil_acesso in ['Administrador', 'Gerente', 'Coordenador'] %}
+                         <li><a class="dropdown-item text-primary" href="#" data-bs-toggle="modal" data-bs-target="#modalGerenciarUsuarios"><i class="bi bi-people-fill me-2"></i> Usuários</a></li>
+                         <li><a class="dropdown-item text-info" href="{{ url_for('analytics.analytics_dashboard') }}"><i class="bi bi-graph-up me-2"></i> Analytics Gerencial</a></li>
+                         {# Links Gamificação #}
+                         <li><a class="dropdown-item text-warning active" href="{{ url_for('gamification.manage_gamification_metrics') }}"><i class="bi bi-pencil-square me-2"></i> Métricas Gamificação</a></li>
+                         <li><a class="dropdown-item text-success" href="{{ url_for('gamification.gamification_report') }}"><i class="bi bi-clipboard-data me-2"></i> Relatório Gamificação</a></li>
+                     {% endif %}
+                     <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalGamificacao"><i class="bi bi-trophy-fill me-2"></i> Critérios Gamificação</a></li>
+                     <li><hr class="dropdown-divider"></li>
+                     <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}"><i class="bi bi-box-arrow-right me-2"></i> Sair</a></li>
+                 </ul>
+            </div>
+        </div>
+    </header>
+
+    <main class="p-4" id="main-content">
+
+        {# Mensagens Flash #}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {# Filtro de Usuário e Período #}
+        <div class="metric-card p-3 rounded shadow-sm mb-4">
+            <h6 class="text-secondary mb-3 border-bottom pb-2">Selecionar Colaborador e Período</h6>
+            {# Formulário GET para selecionar o usuário/período #}
+            <form method="GET" action="{{ url_for('gamification.manage_gamification_metrics') }}" id="select-user-period-form">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label for="usuario_cs" class="form-label small text-secondary">Colaborador</label>
+                        <select id="usuario_cs" name="usuario_cs" class="form-select form-select-sm" required onchange="this.form.submit()">
+                            <option value="">-- Selecione um Colaborador --</option>
+                            {% for cs in all_cs %}
+                                {# Não mostra usuários sem nome #}
+                                {% if cs.nome %}
+                                <option value="{{ cs.usuario }}" {% if cs.usuario == selected_cs %}selected{% endif %}>
+                                    {{ cs.nome }}
+                                </option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="mes" class="form-label small text-secondary">Mês</label>
+                        <select id="mes" name="mes" class="form-select form-select-sm" {% if not selected_cs %}disabled{% endif %} onchange="this.form.submit()">
+                            {% for i in range(1, 13) %}
+                                <option value="{{ i }}" {% if i == selected_month %}selected{% endif %}>{{ "%02d"|format(i) }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="ano" class="form-label small text-secondary">Ano</label>
+                        <select id="ano" name="ano" class="form-select form-select-sm" {% if not selected_cs %}disabled{% endif %} onchange="this.form.submit()">
+                             {% for i in range(current_year, current_year - 5, -1) %}
+                                <option value="{{ i }}" {% if i == selected_year %}selected{% endif %}>{{ i }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                     <div class="col-md-3">
+                        {# Botão apenas visual ou para recarregar com JS se necessário #}
+                        <button type="submit" class="btn btn-secondary btn-sm w-100" {% if not selected_cs %}disabled{% endif %}>Carregar Dados</button>
+                     </div>
+                </div>
+            </form>
+        </div>
+
+        {# Formulário de Métricas Manuais (POST) #}
+        {% if selected_cs and metrics %} {# Garante que métricas (mesmo vazio) exista #}
+        <div class="metric-card p-4 rounded shadow-sm">
+            <h2 class="h5 mb-3">Inserir/Editar Métricas Manuais para <strong class="text-primary">{{ metrics.get('usuario_cs') }}</strong> - <strong class="text-primary">{{ "%02d"|format(selected_month) }}/{{ selected_year }}</strong></h2>
+            <form method="POST" action="{{ url_for('gamification.manage_gamification_metrics') }}">
+                {# Campos ocultos para enviar o contexto #}
+                <input type="hidden" name="usuario_cs" value="{{ selected_cs }}">
+                <input type="hidden" name="mes" value="{{ selected_month }}">
+                <input type="hidden" name="ano" value="{{ selected_year }}">
+
+                {# Usar 'm' como alias para o dicionário 'metrics' #}
+                {% set m = metrics or {} %} {# Garante que m não seja None #}
+
+                <div class="row g-3">
+                    {# Coluna 1 #}
+                    <div class="col-md-6">
+                        <h6 class="text-primary border-bottom pb-1 mb-3">Critérios de Avaliação</h6>
+                        <div class="mb-3 row">
+                            <label for="nota_qualidade" class="col-sm-6 col-form-label">Nota de Qualidade (%)</label>
+                            <div class="col-sm-6"><input type="number" class="form-control form-control-sm" id="nota_qualidade" name="nota_qualidade" min="0" max="100" value="{{ m.get('nota_qualidade', '') }}" placeholder="0-100"></div>
+                        </div>
+                        <div class="mb-3 row">
+                            <label for="assiduidade" class="col-sm-6 col-form-label">Assiduidade (%)</label>
+                            <div class="col-sm-6"><input type="number" class="form-control form-control-sm" id="assiduidade" name="assiduidade" min="0" max="100" value="{{ m.get('assiduidade', '') }}" placeholder="0-100"></div>
+                        </div>
+                        <div class="mb-3 row">
+                            <label for="planos_sucesso_perc" class="col-sm-6 col-form-label">Planos de Sucesso em Dia (%)</label>
+                            <div class="col-sm-6"><input type="number" class="form-control form-control-sm" id="planos_sucesso_perc" name="planos_sucesso_perc" min="0" max="100" value="{{ m.get('planos_sucesso_perc', '') }}" placeholder="0-100"></div>
+                        </div>
+                         <div class="mb-3 row">
+                            <label for="satisfacao_processo" class="col-sm-6 col-form-label">Satisfação Processo (%)</label>
+                            <div class="col-sm-6"><input type="number" class="form-control form-control-sm" id="satisfacao_processo" name="satisfacao_processo" min="0" max="100" value="{{ m.get('satisfacao_processo', '') }}" placeholder="0-100"></div>
+                        </div>
+                         <div class="mb-3 row">
+                            <label for="reunioes_presenciais" class="col-sm-6 col-form-label">Reuniões Presenciais (Nº)</label>
+                            <div class="col-sm-6"><input type="number" class="form-control form-control-sm" id="reunioes_presenciais" name="reunioes_presenciais" min="0" value="{{ m.get('reunioes_presenciais', 0) }}"></div>
+                        </div>
+
+                        <h6 class="text-success border-bottom pb-1 mb-3 mt-4">Bônus (Ocorrências no Mês)</h6>
+                         <div class="mb-3 row">
+                            <label for="elogios" class="col-sm-6 col-form-label">Elogios (Nº, máx 1 pontua)</label>
+                            <div class="col-sm-6"><input type="number" class="form-control form-control-sm" id="elogios" name="elogios" min="0" value="{{ m.get('elogios', 0) }}"></div>
+                        </div>
+                        <div class="mb-3 row">
+                            <label for="recomendacoes" class="col-sm-6 col-form-label">Recomendações Estratégicas (Nº)</label>
+                            <div class="col-sm-6"><input type="number" class="form-control form-control-sm" id="recomendacoes" name="recomendacoes" min="0" value="{{ m.get('recomendacoes', 0) }}"></div>
+                        </div>
+                         <div class="mb-3 row">
+                            <label for="certificacoes" class="col-sm-6 col-form-label">Certificações (Nº, máx 1 pontua)</label>
+                            <div class="col-sm-6"><input type="number" class="form-control form-control-sm" id="certificacoes" name="certificacoes" min="0" value="{{ m.get('certificacoes', 0) }}"></div>
+                        </div>
+                        <div class="mb-3 row">
+                            <label for="treinamentos_pacto_part" class="col-sm-6 col-form-label">Treinamentos Pacto (Particip.)</label>
+                            <div class="col-sm-6"><input type="number" class="form-control form-control-sm" id="treinamentos_pacto_part" name="treinamentos_pacto_part" min="0" value="{{ m.get('treinamentos_pacto_part', 0) }}"></div>
+                        </div>
+                        <div class="mb-3 row">
+                            <label for="treinamentos_pacto_aplic" class="col-sm-6 col-form-label">Treinamentos Pacto (Aplicação)</label>
+                            <div class="col-sm-6"><input type="number" class="form-control form-control-sm" id="treinamentos_pacto_aplic" name="treinamentos_pacto_aplic" min="0" value="{{ m.get('treinamentos_pacto_aplic', 0) }}"></div>
+                        </div>
+
+                    </div>
+
+                    {# Coluna 2 #}
+                    <div class="col-md-6">
+                         <h6 class="text-danger border-bottom pb-1 mb-3">Penalidades (Ocorrências no Mês)</h6>
+                         <div class="mb-3 row">
+                            <label for="reclamacoes" class="col-sm-7 col-form-label">Reclamação Atendimento (Nº)</label>
+                            <div class="col-sm-5"><input type="number" class="form-control form-control-sm" id="reclamacoes" name="reclamacoes" min="0" value="{{ m.get('reclamacoes', 0) }}"></div>
+                        </div>
+                         <div class="mb-3 row">
+                            <label for="perda_prazo" class="col-sm-7 col-form-label">Perda Prazo Combinado (Nº)</label>
+                            <div class="col-sm-5"><input type="number" class="form-control form-control-sm" id="perda_prazo" name="perda_prazo" min="0" value="{{ m.get('perda_prazo', 0) }}"></div>
+                        </div>
+                        <div class="mb-3 row">
+                            <label for="desc_incompreensivel" class="col-sm-7 col-form-label">Descrição Incompreensível (Nº)</label>
+                            <div class="col-sm-5"><input type="number" class="form-control form-control-sm" id="desc_incompreensivel" name="desc_incompreensivel" min="0" value="{{ m.get('desc_incompreensivel', 0) }}"></div>
+                        </div>
+                         <div class="mb-3 row">
+                            <label for="cancelamentos_resp" class="col-sm-7 col-form-label">Cancelamento por Resp. (Nº)</label>
+                            <div class="col-sm-5"><input type="number" class="form-control form-control-sm" id="cancelamentos_resp" name="cancelamentos_resp" min="0" value="{{ m.get('cancelamentos_resp', 0) }}"></div>
+                        </div>
+                        <div class="mb-3 row">
+                            <label for="nao_envolvimento" class="col-sm-7 col-form-label">Não Envolvimento Outras Áreas (Nº)</label>
+                            <div class="col-sm-5"><input type="number" class="form-control form-control-sm" id="nao_envolvimento" name="nao_envolvimento" min="0" value="{{ m.get('nao_envolvimento', 0) }}"></div>
+                        </div>
+                        <div class="mb-3 row">
+                            <label for="nao_preenchimento" class="col-sm-7 col-form-label">Não Preenchimento Apoio/CX (Nº)</label>
+                            <div class="col-sm-5"><input type="number" class="form-control form-control-sm" id="nao_preenchimento" name="nao_preenchimento" min="0" value="{{ m.get('nao_preenchimento', 0) }}"></div>
+                        </div>
+                         {# Adicionar aqui os inputs para 'perda_sla_grupo' e 'finalizacao_incompleta' se forem criados na tabela #}
+                         {# Exemplo:
+                         <div class="mb-3 row">
+                            <label for="perda_sla_grupo" class="col-sm-7 col-form-label">Perda SLA Grupo (Nº)</label>
+                            <div class="col-sm-5"><input type="number" class="form-control form-control-sm" id="perda_sla_grupo" name="perda_sla_grupo" min="0" value="{{ m.get('perda_sla_grupo', 0) }}"></div>
+                         </div>
+                         <div class="mb-3 row">
+                            <label for="finalizacao_incompleta" class="col-sm-7 col-form-label">Finalização Incompleta (Nº)</label>
+                            <div class="col-sm-5"><input type="number" class="form-control form-control-sm" id="finalizacao_incompleta" name="finalizacao_incompleta" min="0" value="{{ m.get('finalizacao_incompleta', 0) }}"></div>
+                         </div>
+                         #}
+                         <div class="mb-3 row">
+                            <label for="hora_extra" class="col-sm-7 col-form-label">Hora Extra s/ Autorização (Nº)</label>
+                            <div class="col-sm-5"><input type="number" class="form-control form-control-sm" id="hora_extra" name="hora_extra" min="0" value="{{ m.get('hora_extra', 0) }}"></div>
+                        </div>
+                        {# Data do Registro (Apenas informativo) #}
+                         {% if m.get('data_registro') %}
+                         <div class="mt-4 pt-3 border-top">
+                             <p class="small text-muted mb-0">Último registro salvo em: {{ m.data_registro | format_date_br(include_time=True) }} por {{ m.registrado_por or 'Desconhecido' }}</p>
+                         </div>
+                         {% endif %}
+                    </div>
+                </div>
+
+                <div class="text-end mt-4">
+                    <button type="submit" class="btn btn-primary btn-lg" style="background-color: var(--accent-color); border-color: var(--accent-color);">
+                        <i class="bi bi-save me-2"></i> Salvar Métricas Manuais
+                    </button>
+                </div>
+            </form>
+        </div>
+        {% else %}
+            <div class="alert alert-info">Selecione um colaborador e um período acima para inserir ou editar as métricas manuais.</div>
+        {% endif %}
+
+    </main>
+</div>
+{% endblock %}
