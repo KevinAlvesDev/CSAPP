@@ -28,10 +28,12 @@
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuDropdown">
                      <li><a class="dropdown-item" href="{{ url_for('profile.perfil') }}"><i class="bi bi-person-circle me-2"></i> Editar Perfil</a></li>
 
-                     {# Links Condicionais (Isto já esconde os links do Implantador) #}
+                     {# Links Condicionais (ESCONDIDOS DE IMPLANTADORES) #}
                      {% if g.perfil and g.perfil.perfil_acesso in ['Administrador', 'Gerente', 'Coordenador'] %}
                           <li><a class="dropdown-item text-primary" href="#" data-bs-toggle="modal" data-bs-target="#modalGerenciarUsuarios"><i class="bi bi-people-fill me-2"></i> Usuários</a></li>
-                         <li><a class="dropdown-item text-info" href="{{ url_for('analytics.analytics_dashboard') }}"><i class="bi bi-graph-up me-2"></i> Analytics Gerencial</a></li>
+                         
+                         {# O LINK "Analytics Gerencial" FOI REMOVIDO AQUI, pois o conteúdo está na página principal #}
+
                          {# Links Gamificação #}
                          <li><a class="dropdown-item text-warning" href="{{ url_for('gamification.manage_gamification_metrics') }}"><i class="bi bi-pencil-square me-2"></i> Métricas Gamificação</a></li>
                          <li><a class="dropdown-item text-success" href="{{ url_for('gamification.gamification_report') }}"><i class="bi bi-clipboard-data me-2"></i> Relatório Gamificação</a></li>
@@ -47,18 +49,7 @@
     </header>
     <main class="p-4" id="main-content">
 
-        {# Resumo Rápido (métricas) #}
-        <h2 class="h5 mb-3">Resumo Rápido</h2>
-        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-5 g-3 mb-4">
-            {% set m = metrics or {} %}
-            <div class="col"><div class="metric-card p-3 rounded shadow-sm text-center"><h6 class="text-secondary">Em Andamento</h6><h4 class="mb-0 text-primary">{{ m.impl_andamento_total | default(0) }}</h4></div></div>
-            <div class="col"><div class="metric-card p-3 rounded shadow-sm text-center"><h6 class="text-secondary">Atrasadas (> 25d)</h6><h4 class="mb-0 text-danger">{{ m.implantacoes_atrasadas | default(0) }}</h4></div></div>
-            <div class="col"><div class="metric-card p-3 rounded shadow-sm text-center"><h6 class="text-secondary">Futuras</h6><h4 class="mb-0 text-info">{{ m.implantacoes_futuras | default(0) }}</h4></div></div>
-            <div class="col"><div class="metric-card p-3 rounded shadow-sm text-center"><h6 class="text-secondary">Concluídas</h6><h4 class="mb-0 text-success">{{ m.impl_finalizadas | default(0) }}</h4></div></div>
-            <div class="col"><div class="metric-card p-3 rounded shadow-sm text-center"><h6 class="text-secondary">Paradas</h6><h4 class="mb-0 text-danger">{{ m.impl_paradas | default(0) }}</h4></div></div>
-        </div>
-
-        {# Mensagens Flash #}
+        {# Mensagens Flash (MOVIDO PARA O TOPO) #}
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -70,7 +61,48 @@
             {% endif %}
         {% endwith %}
 
-        {# Abas #}
+        {# --- FILTROS DA CARTEIRA (APENAS GESTÃO) --- #}
+        {% if is_manager %}
+        <div class="metric-card p-3 rounded shadow-sm mb-4">
+            <h6 class="text-secondary mb-3 border-bottom pb-2">Filtros da Carteira</h6>
+            <form method="GET" action="{{ url_for('main.dashboard') }}">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label for="cs_filter" class="form-label small text-secondary">Filtrar Colaborador CS</label>
+                        <select id="cs_filter" name="cs_filter" class="form-select form-select-sm" onchange="this.form.submit()">
+                            <option value="todos" {% if selected_cs_filter == 'todos' %}selected{% endif %}>
+                                -- Visualizar Toda a Carteira --
+                            </option>
+                            {% for cs in all_cs_users %}
+                                <option value="{{ cs.usuario }}" {% if cs.usuario == selected_cs_filter %}selected{% endif %}>
+                                    {{ cs.nome }} ({{ cs.usuario }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-primary btn-sm w-100" style="background-color: var(--accent-color); border-color: var(--accent-color);">
+                            Aplicar Filtro
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+        {% endif %}
+        {# --- FIM DO BLOCO DE FILTRO --- #}
+
+        {# Resumo Rápido (VISÍVEL PARA TODOS) #}
+        <h2 class="h5 mb-3">Resumo Rápido</h2>
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-5 g-3 mb-4">
+            {% set m = metrics or {} %}
+            <div class="col"><div class="metric-card p-3 rounded shadow-sm text-center"><h6 class="text-secondary">Em Andamento</h6><h4 class="mb-0 text-primary">{{ m.impl_andamento_total | default(0) }}</h4></div></div>
+            <div class="col"><div class="metric-card p-3 rounded shadow-sm text-center"><h6 class="text-secondary">Atrasadas (> 25d)</h6><h4 class="mb-0 text-danger">{{ m.implantacoes_atrasadas | default(0) }}</h4></div></div>
+            <div class="col"><div class="metric-card p-3 rounded shadow-sm text-center"><h6 class="text-secondary">Futuras</h6><h4 class="mb-0 text-info">{{ m.implantacoes_futuras | default(0) }}</h4></div></div>
+            <div class="col"><div class="metric-card p-3 rounded shadow-sm text-center"><h6 class="text-secondary">Concluídas</h6><h4 class="mb-0 text-success">{{ m.impl_finalizadas | default(0) }}</h4></div></div>
+            <div class="col"><div class="metric-card p-3 rounded shadow-sm text-center"><h6 class="text-secondary">Paradas</h6><h4 class="mb-0 text-danger">{{ m.impl_paradas | default(0) }}</h4></div></div>
+        </div>
+
+        {# Abas (VISÍVEL PARA TODOS) #}
         <ul class="nav nav-tabs" id="myTab" role="tablist">
             <li class="nav-item" role="presentation"><button class="nav-link active" id="andamento-tab" data-bs-toggle="tab" data-bs-target="#andamento" type="button" role="tab">Em Andamento</button></li>
             <li class="nav-item" role="presentation"><button class="nav-link" id="atrasadas-tab" data-bs-toggle="tab" data-bs-target="#atrasadas" type="button" role="tab">Atrasadas</button></li>
@@ -80,7 +112,7 @@
         </ul>
 
         {# Conteúdo das Abas #}
-        <div class="tab-content metric-card p-3" id="myTabContent" style="border-top: none;">
+        <div class="tab-content metric-card p-3 mb-5" id="myTabContent" style="border-top: none;">
 
             {# Aba Em Andamento #}
             <div class="tab-pane fade show active" id="andamento" role="tabpanel" aria-labelledby="andamento-tab">
@@ -254,10 +286,149 @@
             </div>
 
         </div> {# Fim do tab-content #}
+
+        {# --- NOVO: SEÇÕES DE ANALYTICS (APENAS SE GESTÃO) --- #}
+        {% if is_manager %}
+        
+        {# --- 1. Filtros Detalhados de Analytics (Status e Data) --- #}
+        <h2 class="h5 mb-3 mt-5">Filtros Detalhados (Ações e TMA)</h2>
+        <form method="GET" action="{{ url_for('main.dashboard') }}" class="metric-card p-4 rounded shadow-sm mb-4">
+             {# Campos Ocultos para Reter Filtro de CS #}
+            <input type="hidden" name="cs_filter" value="{{ selected_cs_filter }}">
+
+            <div class="row g-3 align-items-end">
+                
+                {# Filtro por Status #}
+                 <div class="col-md-3">
+                    <label for="status_filter" class="form-label small text-secondary">Status da Implantação</label>
+                    <select name="status_filter" id="status_filter" class="form-select form-select-sm">
+                        {% for option in status_options %}
+                            <option value="{{ option.value }}" {% if current_status_filter == option.value %}selected{% endif %}>
+                                {{ option.label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                {# Filtro de Data Inicial #}
+                <div class="col-md-3">
+                    <label for="start_date_prod" class="form-label small text-secondary">Data Inicial 🗓️</label>
+                    <input type="date" class="form-control form-control-sm" name="start_date" id="start_date_prod" value="{{ current_start_date | default('') }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="end_date_prod" class="form-label small text-secondary">Data Final 🗓️</label>
+                    <input type="date" class="form-control form-control-sm" name="end_date" id="end_date_prod" value="{{ current_end_date | default('') }}">
+                </div>
+                
+                {# Botão Aplicar #}
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-success btn-sm me-2 w-100">Atualizar Detalhes</button>
+                </div>
+            </div>
+        </form>
+
+        {# --- 2. Visão de Produtividade por Colaborador --- #}
+        <h2 class="h5 mb-3">Produtividade por Customer Success ({{ global_metrics.total_impl | default(0) }} Implantações)</h2>
+        {% if not cs_metrics %}
+            <div class="alert alert-info text-center" role="alert">Nenhum Customer Success encontrado com as implantações filtradas.</div>
+        {% else %}
+        <div class="table-responsive metric-card p-3 rounded shadow-sm mb-5">
+             <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr class="table-light">
+                        <th>CS / E-mail</th>
+                        <th class="text-center">Total de Impl.</th>
+                        <th class="text-center">Finalizadas</th>
+                        <th class="text-center text-primary">Ação Interna Concluída</th>
+                        <th class="text-center text-info">Reunião Concluída</th>
+                        <th class="text-center">TMA Médio (dias)</th>
+                        <th class="text-center text-danger">Tempo Parado Total (dias)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cs in cs_metrics %}
+                    <tr>
+                        <td>
+                            <strong>{{ cs.nome }}</strong>
+                            <small class="d-block text-muted">({{ cs.perfil }} - {{ cs.cargo }})</small>
+                        </td>
+                        <td class="text-center">{{ cs.impl_total }}</td>
+                        <td class="text-center">{{ cs.impl_finalizadas }}</td>
+                        <td class="text-center">{{ cs.prod_tags['Ação interna'] | default(0) }}</td>
+                        <td class="text-center">{{ cs.prod_tags['Reunião'] | default(0) }}</td>
+                        <td class="text-center">{{ cs.tma_medio }}</td>
+                        <td class="text-center">
+                            {% if cs.impl_paradas > 0 and cs.parada_dias_total > 0 %}
+                                <span class="badge bg-danger">{{ cs.parada_dias_total }}</span>
+                            {% elif cs.impl_paradas > 0 %}
+                                <span class="badge bg-danger">0</span>
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+             </table>
+        </div>
+        {% endif %}
+        
+        {# --- 3. Implantações Paradas (Detalhes) --- #}
+        <h2 class="h5 mb-3 mt-5">Implantações Paradas (Detalhes - {{ global_metrics.total_paradas | default(0) }} Registros)</h2>
+        <div class="row g-3">
+            <div class="col-md-12">
+                 <div class="metric-card p-3 rounded shadow-sm">
+                    <h6 class="text-secondary border-bottom pb-2 mb-3">Detalhes de Paralisação por Implantação</h6>
+                    
+                     {% if global_metrics.total_paradas == 0 %}
+                        <div class="alert alert-info small">Nenhuma implantação parada nos filtros atuais.</div>
+                     {% else %}
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover paradas-table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Empresa</th>
+                                        <th>Motivo da Parada</th>
+                                        <th class="text-center">CS Responsável</th>
+                                        <th class="text-center">Tempo Parado (dias)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for impl in implantacoes_paradas_detalhadas %}
+                                        <tr>
+                                            <td><strong>{{ impl.nome_empresa }}</strong></td>
+                                            <td>{{ impl.motivo_parada }}</td>
+                                            <td class="text-center">{{ impl.cs_nome }}</td>
+                                            <td class="text-center">
+                                                <span class="badge bg-danger">
+                                                    {{ impl.parada_dias }} dias
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                    
+                                    {% if not implantacoes_paradas_detalhadas %}
+                                         <tr>
+                                            <td colspan="4" class="text-center text-muted">
+                                                Nenhuma implantação parada encontrada para os filtros ativos.
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                     {% endif %}
+                 </div>
+            </div>
+        </div>
+
+        {% endif %}
+        {# --- FIM DAS SEÇÕES DE ANALYTICS --- #}
+
     </main>
 </div>
 
-{# Modal Nova Implantação #}
+{# Modal Nova Implantação e outros modais (Não alterados) #}
 <div class="modal fade" id="novaImplantacaoModal" tabindex="-1"> <div class="modal-dialog"> <div class="modal-content"> <div class="modal-header header-bg"><h5 class="modal-title">Nova Implantação</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div> <form action="{{ url_for('main.criar_implantacao') }}" method="POST"> <div class="modal-body">
     {# CORREÇÃO: Altera a verificação para PERFIS_COM_CRIACAO #}
     {% if g.perfil.perfil_acesso in PERFIS_COM_CRIACAO %}

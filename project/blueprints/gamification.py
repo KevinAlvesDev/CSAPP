@@ -142,9 +142,16 @@ def manage_gamification_metrics():
                      # Se não existe, cria um dicionário vazio para o template não falhar
                      metrics = {'usuario_cs': selected_cs, 'mes': selected_month, 'ano': selected_year}
 
+                # --- CORREÇÃO: Chamar o cálculo para exibir os pontos ---
+                # Garante que o cálculo seja executado se o usuário e o período forem válidos
+                score_details = calcular_pontuacao_gamificacao(selected_cs, selected_month, selected_year)
+                
+                # Atualiza o dicionário 'metrics' com os detalhes do score
+                metrics.update(score_details)
+                
             except Exception as e:
                 flash(f"Erro ao buscar métricas existentes: {e}", "error")
-                print(f"Erro GET /gamification/metrics (query): {e}")
+                print(f"Erro GET /gamification/metrics (query/calc): {e}")
                 metrics = {'usuario_cs': selected_cs, 'mes': selected_month, 'ano': selected_year} # Fallback
 
 
@@ -194,7 +201,6 @@ def manage_gamification_metrics():
                     # Se não for um inteiro válido, retorna None (ou lança erro?)
                     # Retornar None permite salvar campos vazios como NULL
                     # Lançar erro força o preenchimento correto
-                    # Vamos lançar erro para garantir a integridade dos tipos
                     raise ValueError(f"Valor inválido para {field_name}: '{value}'. Use apenas números inteiros.")
 
 
@@ -240,7 +246,7 @@ def manage_gamification_metrics():
                 """
                 args = list(manual_metrics.values()) + [registrado_por, current_timestamp, existing_record['id']]
                 execute_db(sql, tuple(args))
-                flash(f"Métricas manuais de {usuario_cs} para {mes:02d}/{ano} atualizadas com sucesso.", "success")
+                flash(f"Métricas manuais de {usuario_cs} para {mes:02d}/{ano} atualizadas com sucesso. A pontuação foi recalculada.", "success")
             else:
                 # INSERT
                 columns = ['usuario_cs', 'mes', 'ano', 'registrado_por', 'data_registro'] + list(manual_metrics.keys())
@@ -248,9 +254,9 @@ def manage_gamification_metrics():
                 sql = f"INSERT INTO gamificacao_metricas_mensais ({', '.join(columns)}) VALUES ({', '.join(values_placeholders)})"
                 args = [usuario_cs, mes, ano, registrado_por, current_timestamp] + list(manual_metrics.values())
                 execute_db(sql, tuple(args))
-                flash(f"Métricas manuais de {usuario_cs} para {mes:02d}/{ano} salvas com sucesso.", "success")
+                flash(f"Métricas manuais de {usuario_cs} para {mes:02d}/{ano} salvas com sucesso. A pontuação foi calculada.", "success")
 
-            # Redireciona de volta para o formulário com os mesmos filtros
+            # CORREÇÃO: Recalcula e redireciona para a visualização atualizada (que chamará o GET com os pontos)
             return redirect(url_for('gamification.manage_gamification_metrics', usuario_cs=usuario_cs, mes=mes, ano=ano))
 
         except ValueError as ve:

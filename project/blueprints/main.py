@@ -10,7 +10,8 @@ from botocore.exceptions import ClientError
 # Importações internas do projeto
 from ..blueprints.auth import login_required, permission_required 
 from ..db import query_db, execute_db, logar_timeline 
-from ..services import _get_progress
+# CORREÇÃO: Importa get_analytics_data
+from ..services import _get_progress, get_analytics_data 
 from ..constants import (
     MODULO_OBRIGATORIO, MODULO_PENDENCIAS, TAREFAS_TREINAMENTO_PADRAO,
     JUSTIFICATIVAS_PARADA, CARGOS_RESPONSAVEL, PERFIS_COM_CRIACAO,
@@ -20,17 +21,21 @@ from ..constants import (
     RECORRENCIA_USADA,
     NAO_DEFINIDO_BOOL,
     SIM_NAO_OPTIONS,
-    PERFIS_COM_GESTAO # ADICIONADO PARA TRANSFERÊNCIA (estava faltando no seu)
+    PERFIS_COM_GESTAO,
+    PERFIL_ADMIN, PERFIL_COORDENADOR, PERFIL_IMPLANTADOR # ADICIONADO PARA FILTRAGEM
 )
 # Garanta que o 'utils' seja importado
-from .. import utils
+from .. import utils # NOVO: Importa utils para manipulação de data/hora
 
 main_bp = Blueprint('main', __name__)
 
-# --- Helper para buscar usuários (usado em ver_implantacao) ---
+# --- Helper para buscar usuários (usado em ver_implantacao e no filtro do dashboard) ---
 def _get_all_cs_users():
-    """Busca todos os usuários com perfil que podem receber implantações."""
-    return query_db("SELECT usuario, nome FROM perfil_usuario WHERE perfil_acesso IS NOT NULL AND perfil_acesso != '' ORDER BY nome")
+    """Busca todos os usuários com perfil que podem receber implantações (Admin, Coordenador, Implantador)."""
+    return query_db(
+        "SELECT usuario, nome FROM perfil_usuario WHERE perfil_acesso IN (%s, %s, %s) ORDER BY nome", 
+        (PERFIL_ADMIN, PERFIL_COORDENADOR, PERFIL_IMPLANTADOR)
+    )
 
 # --- Rotas de Visualização ---
 
@@ -40,50 +45,139 @@ def home():
         return redirect(url_for('main.dashboard'))
     return render_template('login.html') #
 
-@main_bp.route('/dashboard')
+@main_bp.route('/dashboard', methods=['GET'])
 @login_required
 def dashboard():
     from ..services import get_dashboard_data #
     
     user_email = g.user_email #
     user_info = g.user #
+    user_perfil_acesso = g.perfil.get('perfil_acesso')
+    is_manager = user_perfil_acesso in PERFIS_COM_GESTAO 
+
+    # --- 1. Obter e Tratar Filtros ---
+    target_user_email = request.args.get('cs_filter') 
+    status_filter = request.args.get('status_filter') or None 
+    start_date = request.args.get('start_date') or None 
+    end_date = request.args.get('end_date') or None 
+
+    # Lógica de Escopo Principal: Se não for Gestor OU se o filtro for 'todos', zera o filtro de email
+    if not is_manager or (target_user_email == 'todos'):
+        target_user_email = None 
+    
+    # Se não for Gestor (Implantador), força o filtro a ser o email dele
+    if not is_manager:
+        target_user_email = user_email
+        status_filter = None 
+    
+    selected_cs_filter = target_user_email if target_user_email else 'todos'
+
     try:
-        dashboard_data, metrics = get_dashboard_data(user_email) #
+        # --- 2. Chamar Serviços ---
+        # A. Dados Principais do Dashboard (listas e métricas resumidas)
+        dashboard_data, metrics = get_dashboard_data(
+            user_email=user_email, 
+            user_perfil_acesso=user_perfil_acesso,
+            target_user_email=target_user_email # Passa o filtro (o próprio email se for Implantador)
+        )
         
-        perfil_data = g.perfil if g.perfil else {} #
+        # B. Dados de Analytics (Para as novas seções abaixo das abas)
+        global_metrics, cs_metrics_list, implantacoes_paradas_detalhadas = {}, [], []
+        
+        if is_manager: # Apenas gerencial precisa de dados de Analytics
+            global_metrics, cs_metrics_list, implantacoes_paradas_detalhadas = get_analytics_data(
+                target_cs_email=target_user_email, 
+                target_status=status_filter,       
+                start_date=start_date,             
+                end_date=end_date                  
+            )
+
+        perfil_data = g.perfil if g.perfil else {} 
         default_metrics = { 'nome': user_info.get('name', user_email), 'impl_andamento': 0, 'impl_finalizadas': 0, 'impl_paradas': 0, 'progresso_medio_carteira': 0, 'impl_andamento_total': 0, 'implantacoes_atrasadas': 0, 'implantacoes_futuras': 0 }
         final_metrics = {**default_metrics, **perfil_data, **metrics}
         
-        # --- CORREÇÃO APLICADA AQUI ---
-        # A lista PERFIS_COM_CRIACAO precisa ser passada para o template
-        # para que o {% if ... in PERFIS_COM_CRIACAO %} funcione.
+        # 3. Obter lista de usuários CS para o filtro
+        all_cs_users = _get_all_cs_users() if is_manager else []
+        
+        # Filtros de status para a UI do Analytics (copiado de analytics.py)
+        status_options = [
+            {'value': 'todas', 'label': 'Todas as Implantações'},
+            {'value': 'andamento', 'label': 'Em Andamento'},
+            {'value': 'atrasadas_status', 'label': 'Atrasadas (> 25d)'},
+            {'value': 'futura', 'label': 'Futuras'},
+            {'value': 'finalizada', 'label': 'Finalizadas'},
+            {'value': 'parada', 'label': 'Paradas'}
+        ]
+
+        # 4. Renderizar
         return render_template(
-            'dashboard.html', #
+            'dashboard.html', 
             user_info=user_info, 
             metrics=final_metrics, 
+            dashboard_data=dashboard_data, 
             implantacoes_andamento=dashboard_data.get('andamento', []), 
             implantacoes_futuras=dashboard_data.get('futuras', []), 
             implantacoes_finalizadas=dashboard_data.get('finalizadas', []), 
             implantacoes_paradas=dashboard_data.get('paradas', []), 
             implantacoes_atrasadas=dashboard_data.get('atrasadas', []), 
-            cargos_responsavel=CARGOS_RESPONSAVEL, #
-            PERFIS_COM_CRIACAO=PERFIS_COM_CRIACAO, # <-- LINHA ADICIONADA
-            NIVEIS_RECEITA=NIVEIS_RECEITA, #
-            SEGUIMENTOS_LIST=SEGUIMENTOS_LIST, #
-            TIPOS_PLANOS=TIPOS_PLANOS, #
-            MODALIDADES_LIST=MODALIDADES_LIST, #
-            HORARIOS_FUNCIONAMENTO=HORARIOS_FUNCIONAMENTO, #
-            FORMAS_PAGAMENTO=FORMAS_PAGAMENTO, #
-            SISTEMAS_ANTERIORES=SISTEMAS_ANTERIORES, #
-            RECORRENCIA_USADA=RECORRENCIA_USADA, #
-            SIM_NAO_OPTIONS=SIM_NAO_OPTIONS #
+
+            cargos_responsavel=CARGOS_RESPONSAVEL, 
+            PERFIS_COM_CRIACAO=PERFIS_COM_CRIACAO, 
+            NIVEIS_RECEITA=NIVEIS_RECEITA, 
+            SEGUIMENTOS_LIST=SEGUIMENTOS_LIST, 
+            TIPOS_PLANOS=TIPOS_PLANOS, 
+            MODALIDADES_LIST=MODALIDADES_LIST, 
+            HORARIOS_FUNCIONAMENTO=HORARIOS_FUNCIONAMENTO, 
+            FORMAS_PAGAMENTO=FORMAS_PAGAMENTO, 
+            SISTEMAS_ANTERIORES=SISTEMAS_ANTERIORES, 
+            RECORRENCIA_USADA=RECORRENCIA_USADA, 
+            SIM_NAO_OPTIONS=SIM_NAO_OPTIONS, 
+            is_manager=is_manager, 
+            all_cs_users=all_cs_users, 
+            selected_cs_filter=selected_cs_filter,
+            
+            # --- NOVOS DADOS DE ANALYTICS (Analytics Filter State) ---
+            status_options=status_options,
+            current_status_filter=status_filter,
+            current_start_date=start_date,
+            current_end_date=end_date,
+            
+            # --- NOVOS DADOS DE ANALYTICS (Metrics) ---
+            global_metrics=global_metrics, 
+            cs_metrics=cs_metrics_list, 
+            implantacoes_paradas_detalhadas=implantacoes_paradas_detalhadas,
+            JUSTIFICATIVAS_PARADA=JUSTIFICATIVAS_PARADA
         )
-        # --- FIM DA CORREÇÃO ---
         
     except Exception as e:
         print(f"ERRO ao carregar dashboard para {user_email}: {e}")
         flash("Erro ao carregar dados do dashboard.", "error")
-        return render_template('dashboard.html', user_info=user_info, metrics={}, implantacoes_andamento=[], implantacoes_futuras=[], implantacoes_finalizadas=[], implantacoes_paradas=[], implantacoes_atrasadas=[], cargos_responsavel=CARGOS_RESPONSAVEL, error="Falha ao carregar dados." ) #
+        
+        # Garante que as novas variáveis do template existam em caso de erro.
+        return render_template(
+            'dashboard.html', 
+            user_info=user_info, 
+            metrics={}, 
+            implantacoes_andamento=[], 
+            implantacoes_futuras=[], 
+            implantacoes_finalizadas=[], 
+            implantacoes_paradas=[], 
+            implantacoes_atrasadas=[], 
+            cargos_responsavel=CARGOS_RESPONSAVEL, 
+            error="Falha ao carregar dados.", 
+            is_manager=is_manager, 
+            all_cs_users=_get_all_cs_users() if is_manager else [], 
+            selected_cs_filter='todos',
+            # Variáveis Analytics mínimas
+            global_metrics={},
+            cs_metrics=[],
+            implantacoes_paradas_detalhadas=[],
+            status_options=[{'value': 'todas', 'label': 'Todas as Implantações'}],
+            current_status_filter=None,
+            current_start_date=None,
+            current_end_date=None,
+            JUSTIFICATIVAS_PARADA=JUSTIFICATIVAS_PARADA
+        ) 
 
 @main_bp.route('/implantacao/<int:impl_id>')
 @login_required
@@ -105,7 +199,7 @@ def ver_implantacao(impl_id):
             flash('Implantação não encontrada ou não pertence a você.', 'error')
             return redirect(url_for('main.dashboard'))
 
-        # Formatação de datas
+        # Formatação de datas (usando utils para BRT)
         implantacao['data_criacao_fmt_dt_hr'] = utils.format_date_br(implantacao.get('data_criacao'), True) #
         implantacao['data_criacao_fmt_d'] = utils.format_date_br(implantacao.get('data_criacao'), False) #
         implantacao['data_inicio_efetivo_fmt_d'] = utils.format_date_br(implantacao.get('data_inicio_efetivo'), False) #
@@ -121,7 +215,7 @@ def ver_implantacao(impl_id):
         progresso, _, _ = _get_progress(impl_id) #
 
         tarefas_raw = query_db("SELECT * FROM tarefas WHERE implantacao_id = %s ORDER BY tarefa_pai, ordem", (impl_id,)) #
-        comentarios_raw = query_db( """ SELECT c.*, COALESCE(p.nome, c.usuario_cs) as usuario_nome FROM comentarios c LEFT JOIN perfil_usuario p ON c.usuario_cs = p.usuario WHERE c.tarefa_id IN (SELECT id FROM tarefas WHERE implantacao_id = %s) ORDER BY c.data_criacao DESC """, (impl_id,) ) #
+        comentarios_raw = query_db( """ SELECT c.*, COALESCE(p.nome, tl.usuario_cs) as usuario_nome FROM comentarios c LEFT JOIN perfil_usuario p ON c.usuario_cs = p.usuario WHERE c.tarefa_id IN (SELECT id FROM tarefas WHERE implantacao_id = %s) ORDER BY c.data_criacao DESC """, (impl_id,) ) #
 
         comentarios_por_tarefa = {}
         for c in comentarios_raw:
@@ -209,7 +303,7 @@ def criar_implantacao():
         return redirect(url_for('main.dashboard'))
 
     try:
-        agora = datetime.now()
+        agora = utils.get_now_utc() # CORREÇÃO: Usa função centralizada
         status = 'futura' if tipo == 'futura' else 'andamento'
         # Define data_inicio_efetivo baseado no tipo
         data_inicio_efetivo = agora if tipo in ['agora', 'modulo'] else None
@@ -249,7 +343,7 @@ def iniciar_implantacao():
             flash('Operação negada. Implantação não é "futura" ou não pertence a você.', 'error')
             return redirect(request.referrer or url_for('main.dashboard'))
 
-        agora = datetime.now()
+        agora = utils.get_now_utc() # CORREÇÃO: Usa função centralizada
         execute_db( #
             "UPDATE implantacoes SET tipo = 'agora', status = 'andamento', data_inicio_efetivo = %s WHERE id = %s",
             (agora, implantacao_id)
@@ -292,8 +386,8 @@ def finalizar_implantacao():
             return redirect(dest_url)
 
         execute_db( #
-            "UPDATE implantacoes SET status = 'finalizada', data_finalizacao = CURRENT_TIMESTAMP WHERE id = %s",
-            (implantacao_id,)
+            "UPDATE implantacoes SET status = 'finalizada', data_finalizacao = %s WHERE id = %s", # Ajuste para usar placeholder
+            (utils.get_now_utc(), implantacao_id) # CORREÇÃO: Usa função centralizada
         )
         logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Implantação "{impl.get("nome_empresa", "N/A")}" finalizada manually.') #
         flash('Implantação finalizada com sucesso!', 'success')
@@ -325,8 +419,8 @@ def parar_implantacao():
             raise Exception('Operação negada. Implantação não está "em andamento".')
 
         execute_db( #
-            "UPDATE implantacoes SET status = 'parada', data_finalizacao = CURRENT_TIMESTAMP, motivo_parada = %s WHERE id = %s",
-            (motivo, implantacao_id)
+            "UPDATE implantacoes SET status = 'parada', data_finalizacao = %s, motivo_parada = %s WHERE id = %s", # Ajuste para usar placeholder
+            (utils.get_now_utc(), motivo, implantacao_id) # CORREÇÃO: Usa função centralizada
         )
         logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Implantação "{impl.get("nome_empresa", "N/A")}" parada. Motivo: {motivo}') #
         flash('Implantação marcada como "Parada".', 'success')

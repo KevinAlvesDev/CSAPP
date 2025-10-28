@@ -94,22 +94,21 @@ ADMIN_EMAIL = "kevinalveswp@gmail.com"
 # Cargos (Função na empresa, editável pelo usuário no perfil)
 CARGOS_LIST = ["Júnior", "Pleno", "Sênior", "Estagiário"] 
 
-# Perfis de Acesso (Permissão no sistema, editável apenas pelo Admin/Gerente/Coordenador)
+# Perfis de Acesso (Permissão no sistema, editável apenas pelo Admin/Coordenador)
 PERFIL_ADMIN = "Administrador"
-PERFIL_GERENTE = "Gerente"
+# PERFIL_GERENTE = "Gerente" # REMOVIDO
 PERFIL_COORDENADOR = "Coordenador"
-PERFIL_IMPLANTADOR = "Implantador" # <-- NOME ALTERADO
-PERFIL_VISUALIZADOR = "Visualizador"
-PERFIS_ACESSO_LIST = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR, PERFIL_IMPLANTADOR, PERFIL_VISUALIZADOR] # <-- LISTA ATUALIZADA
+PERFIL_IMPLANTADOR = "Implantador" 
+# PERFIL_VISUALIZADOR = "Visualizador" # REMOVIDO
+PERFIS_ACESSO_LIST = [PERFIL_ADMIN, PERFIL_COORDENADOR, PERFIL_IMPLANTADOR] # LISTA ATUALIZADA
 
-PERFIS_COM_GESTAO = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR] 
+PERFIS_COM_GESTAO = [PERFIL_ADMIN, PERFIL_COORDENADOR] # Perfis de Gestão (Admin e Coord)
 
-# Perfis que podem criar implantações (Exclui visualizador e perfis NULL)
-# <-- 'PERFIL_IMPLANTADOR' REMOVIDO DESTA LISTA
-PERFIS_COM_CRIACAO = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
+# Perfis que podem criar implantações (Admin e Coord)
+PERFIS_COM_CRIACAO = [PERFIL_ADMIN, PERFIL_COORDENADOR]
 
-# Perfis que podem ver a tela de Analytics (Gerentes e acima)
-PERFIS_COM_ANALYTICS = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
+# Perfis que podem ver a tela de Analytics (Coordenadores e acima)
+PERFIS_COM_ANALYTICS = [PERFIL_ADMIN, PERFIL_COORDENADOR]
 
 
 # NOVAS CONSTANTES PARA DETALHES DA EMPRESA

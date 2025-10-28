@@ -101,61 +101,90 @@
 
         {# Formulário de Métricas Manuais (POST) #}
         {% if selected_cs and metrics %} {# Garante que métricas (mesmo vazio) exista #}
+        {% set m = metrics or {} %} {# Garante que m não seja None #}
+        
         <div class="metric-card p-4 rounded shadow-sm">
-            <h2 class="h5 mb-3">Inserir/Editar Métricas Manuais para <strong class="text-primary">{{ metrics.get('usuario_cs') }}</strong> - <strong class="text-primary">{{ "%02d"|format(selected_month) }}/{{ selected_year }}</strong></h2>
+             <h2 class="h5 mb-3 d-flex justify-content-between align-items-center">
+                 <span>Inserir/Editar Métricas Manuais para <strong class="text-primary">{{ m.get('usuario_cs') }}</strong> - <strong class="text-primary">{{ "%02d"|format(selected_month) }}/{{ selected_year }}</strong></span>
+                 {# NOVO: Pontuação Final #}
+                 <span class="badge bg-primary fs-6 py-2 px-3">
+                     Pontuação Final: 
+                     {% if m.get('elegivel') %}
+                         <strong class="text-white">{{ m.get('pontuacao_final', 0) }} pts</strong>
+                     {% else %}
+                         <strong class="text-warning">NÃO ELEGÍVEL</strong>
+                     {% endif %}
+                 </span>
+             </h2>
+
+            {# Exibe motivo de inelegibilidade se houver #}
+            {% if not m.get('elegivel') and m.get('motivo_inelegibilidade') %}
+                <div class="alert alert-warning small"><strong>Inelegível:</strong> {{ m.motivo_inelegibilidade }}</div>
+            {% endif %}
+
             <form method="POST" action="{{ url_for('gamification.manage_gamification_metrics') }}">
                 {# Campos ocultos para enviar o contexto #}
                 <input type="hidden" name="usuario_cs" value="{{ selected_cs }}">
                 <input type="hidden" name="mes" value="{{ selected_month }}">
                 <input type="hidden" name="ano" value="{{ selected_year }}">
 
-                {# Usar 'm' como alias para o dicionário 'metrics' #}
-                {% set m = metrics or {} %} {# Garante que m não seja None #}
-
+                
                 <div class="row g-3">
                     {# Coluna 1 #}
                     <div class="col-md-6">
-                        <h6 class="text-primary border-bottom pb-1 mb-3">Critérios de Avaliação</h6>
+                        <h6 class="text-primary border-bottom pb-1 mb-3">Critérios de Avaliação (Pontos)</h6>
+                        
+                        {# Nota de Qualidade #}
                         <div class="mb-3 row">
-                            <label for="nota_qualidade" class="col-sm-6 col-form-label">Nota de Qualidade (%)</label>
+                            <label for="nota_qualidade" class="col-sm-6 col-form-label">Nota de Qualidade (%) <span class="badge bg-secondary ms-2" title="Pontuação Calculada">{{ m.detalhamento_pontos.get('Nota Qualidade', 'N/A') }}</span></label>
                             <div class="col-sm-6"><input type="number" class="form-control form-control-sm" id="nota_qualidade" name="nota_qualidade" min="0" max="100" value="{{ m.get('nota_qualidade', '') }}" placeholder="0-100"></div>
                         </div>
+                        {# Assiduidade #}
                         <div class="mb-3 row">
-                            <label for="assiduidade" class="col-sm-6 col-form-label">Assiduidade (%)</label>
+                            <label for="assiduidade" class="col-sm-6 col-form-label">Assiduidade (%) <span class="badge bg-secondary ms-2" title="Pontuação Calculada">{{ m.detalhamento_pontos.get('Assiduidade', 'N/A') }}</span></label>
                             <div class="col-sm-6"><input type="number" class="form-control form-control-sm" id="assiduidade" name="assiduidade" min="0" max="100" value="{{ m.get('assiduidade', '') }}" placeholder="0-100"></div>
                         </div>
+                        {# Planos de Sucesso #}
                         <div class="mb-3 row">
-                            <label for="planos_sucesso_perc" class="col-sm-6 col-form-label">Planos de Sucesso em Dia (%)</label>
+                            <label for="planos_sucesso_perc" class="col-sm-6 col-form-label">Planos de Sucesso em Dia (%) <span class="badge bg-secondary ms-2" title="Pontuação Calculada">{{ m.detalhamento_pontos.get('Planos Sucesso', 'N/A') }}</span></label>
                             <div class="col-sm-6"><input type="number" class="form-control form-control-sm" id="planos_sucesso_perc" name="planos_sucesso_perc" min="0" max="100" value="{{ m.get('planos_sucesso_perc', '') }}" placeholder="0-100"></div>
                         </div>
+                        {# Satisfação Processo #}
                          <div class="mb-3 row">
-                            <label for="satisfacao_processo" class="col-sm-6 col-form-label">Satisfação Processo (%)</label>
+                            <label for="satisfacao_processo" class="col-sm-6 col-form-label">Satisfação Processo (%) <span class="badge bg-secondary ms-2" title="Pontuação Calculada">{{ m.detalhamento_pontos.get('Satisfação Processo', 'N/A') }}</span></label>
                             <div class="col-sm-6"><input type="number" class="form-control form-control-sm" id="satisfacao_processo" name="satisfacao_processo" min="0" max="100" value="{{ m.get('satisfacao_processo', '') }}" placeholder="0-100"></div>
                         </div>
+                        
+                        {# Reuniões Presenciais #}
                          <div class="mb-3 row">
-                            <label for="reunioes_presenciais" class="col-sm-6 col-form-label">Reuniões Presenciais (Nº)</label>
+                            <label for="reunioes_presenciais" class="col-sm-6 col-form-label">Reuniões Presenciais (Nº) <span class="badge bg-success ms-2" title="Pontuação Calculada">{{ m.detalhamento_pontos.get('Bônus Reuniões Presenciais', 'N/A') }}</span></label>
                             <div class="col-sm-6"><input type="number" class="form-control form-control-sm" id="reunioes_presenciais" name="reunioes_presenciais" min="0" value="{{ m.get('reunioes_presenciais', 0) }}"></div>
                         </div>
 
                         <h6 class="text-success border-bottom pb-1 mb-3 mt-4">Bônus (Ocorrências no Mês)</h6>
+                         {# Elogios #}
                          <div class="mb-3 row">
-                            <label for="elogios" class="col-sm-6 col-form-label">Elogios (Nº, máx 1 pontua)</label>
+                            <label for="elogios" class="col-sm-6 col-form-label">Elogios (Nº, máx 1 pontua) <span class="badge bg-success ms-2" title="Pontuação Calculada">{{ m.detalhamento_pontos.get('Bônus Elogios', 'N/A') }}</span></label>
                             <div class="col-sm-6"><input type="number" class="form-control form-control-sm" id="elogios" name="elogios" min="0" value="{{ m.get('elogios', 0) }}"></div>
                         </div>
+                        {# Recomendações Estratégicas #}
                         <div class="mb-3 row">
-                            <label for="recomendacoes" class="col-sm-6 col-form-label">Recomendações Estratégicas (Nº)</label>
+                            <label for="recomendacoes" class="col-sm-6 col-form-label">Recomendações Estratégicas (Nº) <span class="badge bg-success ms-2" title="Pontuação Calculada">{{ m.detalhamento_pontos.get('Bônus Recomendações', 'N/A') }}</span></label>
                             <div class="col-sm-6"><input type="number" class="form-control form-control-sm" id="recomendacoes" name="recomendacoes" min="0" value="{{ m.get('recomendacoes', 0) }}"></div>
                         </div>
+                         {# Certificações #}
                          <div class="mb-3 row">
-                            <label for="certificacoes" class="col-sm-6 col-form-label">Certificações (Nº, máx 1 pontua)</label>
+                            <label for="certificacoes" class="col-sm-6 col-form-label">Certificações (Nº, máx 1 pontua) <span class="badge bg-success ms-2" title="Pontuação Calculada">{{ m.detalhamento_pontos.get('Bônus Certificações', 'N/A') }}</span></label>
                             <div class="col-sm-6"><input type="number" class="form-control form-control-sm" id="certificacoes" name="certificacoes" min="0" value="{{ m.get('certificacoes', 0) }}"></div>
                         </div>
+                        {# Treinamentos Pacto (Particip.) #}
                         <div class="mb-3 row">
-                            <label for="treinamentos_pacto_part" class="col-sm-6 col-form-label">Treinamentos Pacto (Particip.)</label>
+                            <label for="treinamentos_pacto_part" class="col-sm-6 col-form-label">Treinamentos Pacto (Particip.) <span class="badge bg-success ms-2" title="Pontuação Calculada">{{ m.detalhamento_pontos.get('Bônus Trein. Pacto (Part.)', 'N/A') }}</span></label>
                             <div class="col-sm-6"><input type="number" class="form-control form-control-sm" id="treinamentos_pacto_part" name="treinamentos_pacto_part" min="0" value="{{ m.get('treinamentos_pacto_part', 0) }}"></div>
                         </div>
+                        {# Treinamentos Pacto (Aplicação) #}
                         <div class="mb-3 row">
-                            <label for="treinamentos_pacto_aplic" class="col-sm-6 col-form-label">Treinamentos Pacto (Aplicação)</label>
+                            <label for="treinamentos_pacto_aplic" class="col-sm-6 col-form-label">Treinamentos Pacto (Aplicação) <span class="badge bg-success ms-2" title="Pontuação Calculada">{{ m.detalhamento_pontos.get('Bônus Trein. Pacto (Aplic.)', 'N/A') }}</span></label>
                             <div class="col-sm-6"><input type="number" class="form-control form-control-sm" id="treinamentos_pacto_aplic" name="treinamentos_pacto_aplic" min="0" value="{{ m.get('treinamentos_pacto_aplic', 0) }}"></div>
                         </div>
 
@@ -164,43 +193,49 @@
                     {# Coluna 2 #}
                     <div class="col-md-6">
                          <h6 class="text-danger border-bottom pb-1 mb-3">Penalidades (Ocorrências no Mês)</h6>
+                         {# Reclamações #}
                          <div class="mb-3 row">
-                            <label for="reclamacoes" class="col-sm-7 col-form-label">Reclamação Atendimento (Nº)</label>
+                            <label for="reclamacoes" class="col-sm-7 col-form-label">Reclamação Atendimento (Nº) <span class="badge bg-danger ms-2" title="Pontuação Calculada">{{ m.detalhamento_pontos.get('Penalidade Reclamação', 'N/A') }}</span></label>
                             <div class="col-sm-5"><input type="number" class="form-control form-control-sm" id="reclamacoes" name="reclamacoes" min="0" value="{{ m.get('reclamacoes', 0) }}"></div>
                         </div>
+                         {# Perda Prazo #}
                          <div class="mb-3 row">
-                            <label for="perda_prazo" class="col-sm-7 col-form-label">Perda Prazo Combinado (Nº)</label>
+                            <label for="perda_prazo" class="col-sm-7 col-form-label">Perda Prazo Combinado (Nº) <span class="badge bg-danger ms-2" title="Pontuação Calculada">{{ m.detalhamento_pontos.get('Penalidade Perda Prazo', 'N/A') }}</span></label>
                             <div class="col-sm-5"><input type="number" class="form-control form-control-sm" id="perda_prazo" name="perda_prazo" min="0" value="{{ m.get('perda_prazo', 0) }}"></div>
                         </div>
+                        {# Descrição Incompreensível #}
                         <div class="mb-3 row">
-                            <label for="desc_incompreensivel" class="col-sm-7 col-form-label">Descrição Incompreensível (Nº)</label>
+                            <label for="desc_incompreensivel" class="col-sm-7 col-form-label">Descrição Incompreensível (Nº) <span class="badge bg-danger ms-2" title="Pontuação Calculada">{{ m.detalhamento_pontos.get('Penalidade Desc. Incomp.', 'N/A') }}</span></label>
                             <div class="col-sm-5"><input type="number" class="form-control form-control-sm" id="desc_incompreensivel" name="desc_incompreensivel" min="0" value="{{ m.get('desc_incompreensivel', 0) }}"></div>
                         </div>
+                         {# Cancelamento por Resp. #}
                          <div class="mb-3 row">
-                            <label for="cancelamentos_resp" class="col-sm-7 col-form-label">Cancelamento por Resp. (Nº)</label>
+                            <label for="cancelamentos_resp" class="col-sm-7 col-form-label">Cancelamento por Resp. (Nº) <span class="badge bg-danger ms-2" title="Pontuação Calculada">{{ m.detalhamento_pontos.get('Penalidade Cancelamento Resp.', 'N/A') }}</span></label>
                             <div class="col-sm-5"><input type="number" class="form-control form-control-sm" id="cancelamentos_resp" name="cancelamentos_resp" min="0" value="{{ m.get('cancelamentos_resp', 0) }}"></div>
                         </div>
+                        {# Não Envolvimento Outras Áreas #}
                         <div class="mb-3 row">
-                            <label for="nao_envolvimento" class="col-sm-7 col-form-label">Não Envolvimento Outras Áreas (Nº)</label>
+                            <label for="nao_envolvimento" class="col-sm-7 col-form-label">Não Envolvimento Outras Áreas (Nº) <span class="badge bg-danger ms-2" title="Pontuação Calculada">{{ m.detalhamento_pontos.get('Penalidade Não Envolv.', 'N/A') }}</span></label>
                             <div class="col-sm-5"><input type="number" class="form-control form-control-sm" id="nao_envolvimento" name="nao_envolvimento" min="0" value="{{ m.get('nao_envolvimento', 0) }}"></div>
                         </div>
+                        {# Não Preenchimento Apoio/CX #}
                         <div class="mb-3 row">
-                            <label for="nao_preenchimento" class="col-sm-7 col-form-label">Não Preenchimento Apoio/CX (Nº)</label>
+                            <label for="nao_preenchimento" class="col-sm-7 col-form-label">Não Preenchimento Apoio/CX (Nº) <span class="badge bg-danger ms-2" title="Pontuação Calculada">{{ m.detalhamento_pontos.get('Penalidade Não Preench.', 'N/A') }}</span></label>
                             <div class="col-sm-5"><input type="number" class="form-control form-control-sm" id="nao_preenchimento" name="nao_preenchimento" min="0" value="{{ m.get('nao_preenchimento', 0) }}"></div>
                         </div>
-                         {# Adicionar aqui os inputs para 'perda_sla_grupo' e 'finalizacao_incompleta' se forem criados na tabela #}
-                         {# Exemplo:
+                         {# Perda SLA Grupo #}
                          <div class="mb-3 row">
-                            <label for="perda_sla_grupo" class="col-sm-7 col-form-label">Perda SLA Grupo (Nº)</label>
+                            <label for="perda_sla_grupo" class="col-sm-7 col-form-label">Perda SLA Grupo (Nº) <span class="badge bg-danger ms-2" title="Pontuação Calculada">{{ m.detalhamento_pontos.get('Penalidade SLA Grupo', 'N/A') }}</span></label>
                             <div class="col-sm-5"><input type="number" class="form-control form-control-sm" id="perda_sla_grupo" name="perda_sla_grupo" min="0" value="{{ m.get('perda_sla_grupo', 0) }}"></div>
                          </div>
+                         {# Finalização Incompleta #}
                          <div class="mb-3 row">
-                            <label for="finalizacao_incompleta" class="col-sm-7 col-form-label">Finalização Incompleta (Nº)</label>
+                            <label for="finalizacao_incompleta" class="col-sm-7 col-form-label">Finalização Incompleta (Nº) <span class="badge bg-danger ms-2" title="Pontuação Calculada">{{ m.detalhamento_pontos.get('Penalidade Finaliz. Incomp.', 'N/A') }}</span></label>
                             <div class="col-sm-5"><input type="number" class="form-control form-control-sm" id="finalizacao_incompleta" name="finalizacao_incompleta" min="0" value="{{ m.get('finalizacao_incompleta', 0) }}"></div>
                          </div>
-                         #}
+                         {# Hora Extra s/ Autorização #}
                          <div class="mb-3 row">
-                            <label for="hora_extra" class="col-sm-7 col-form-label">Hora Extra s/ Autorização (Nº)</label>
+                            <label for="hora_extra" class="col-sm-7 col-form-label">Hora Extra s/ Autorização (Nº) <span class="badge bg-danger ms-2" title="Pontuação Calculada">{{ m.detalhamento_pontos.get('Penalidade Hora Extra', 'N/A') }}</span></label>
                             <div class="col-sm-5"><input type="number" class="form-control form-control-sm" id="hora_extra" name="hora_extra" min="0" value="{{ m.get('hora_extra', 0) }}"></div>
                         </div>
                         {# Data do Registro (Apenas informativo) #}
