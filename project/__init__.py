@@ -37,44 +37,39 @@ def create_app():
     # Configura o banco de dados (registra get_db, close_connection, init_db_command)
     init_db_app(app)
 
-    # --- Registro de Blueprints ---
-    try:
-        from .blueprints.auth import auth_bp
-        app.register_blueprint(auth_bp)
-        print("Blueprint 'auth' registrado.")
-    except ImportError as e: print(f"ERRO ao importar/registrar 'auth': {e}")
+    # --- Registro de Blueprints (Blocos try/except removidos para garantir que erros de importação sejam visíveis e o registro seja forçado) ---
+    
+    # AUTH
+    from .blueprints.auth import auth_bp
+    app.register_blueprint(auth_bp)
+    print("Blueprint 'auth' registrado.")
 
-    try:
-        from .blueprints.main import main_bp
-        app.register_blueprint(main_bp)
-        print("Blueprint 'main' registrado.")
-    except ImportError as e: print(f"ERRO ao importar/registrar 'main': {e}")
+    # MAIN
+    from .blueprints.main import main_bp
+    app.register_blueprint(main_bp)
+    print("Blueprint 'main' registrado.")
 
-    try:
-        from .blueprints.profile import profile_bp
-        app.register_blueprint(profile_bp)
-        print("Blueprint 'profile' registrado.")
-    except ImportError as e: print(f"ERRO ao importar/registrar 'profile': {e}")
+    # PROFILE (O foco da correção)
+    from .blueprints.profile import profile_bp
+    app.register_blueprint(profile_bp)
+    print("Blueprint 'profile' registrado.")
 
-    try:
-        from .blueprints.api import api_bp
-        app.register_blueprint(api_bp)
-        print("Blueprint 'api' registrado.")
-    except ImportError as e: print(f"ERRO ao importar/registrar 'api': {e}")
+    # API
+    from .blueprints.api import api_bp
+    app.register_blueprint(api_bp)
+    print("Blueprint 'api' registrado.")
 
-    try:
-        from .blueprints.management import management_bp
-        app.register_blueprint(management_bp)
-        print("Blueprint 'management' registrado.")
-    except ImportError as e: print(f"ERRO ao importar/registrar 'management': {e}")
+    # MANAGEMENT
+    from .blueprints.management import management_bp
+    app.register_blueprint(management_bp)
+    print("Blueprint 'management' registrado.")
 
-    try:
-        from .blueprints.analytics import analytics_bp
-        app.register_blueprint(analytics_bp)
-        print("Blueprint 'analytics' registrado.")
-    except ImportError as e: print(f"ERRO ao importar/registrar 'analytics': {e}")
+    # ANALYTICS
+    from .blueprints.analytics import analytics_bp
+    app.register_blueprint(analytics_bp)
+    print("Blueprint 'analytics' registrado.")
 
-    # --- NOVO BLUEPRINT ---
+    # --- NOVO BLUEPRINT (MANTIDO o try/except pois não é essencial para o erro) ---
     try:
         from .blueprints.gamification import gamification_bp
         app.register_blueprint(gamification_bp)

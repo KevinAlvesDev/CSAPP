@@ -215,7 +215,16 @@ def ver_implantacao(impl_id):
         progresso, _, _ = _get_progress(impl_id) #
 
         tarefas_raw = query_db("SELECT * FROM tarefas WHERE implantacao_id = %s ORDER BY tarefa_pai, ordem", (impl_id,)) #
-        comentarios_raw = query_db( """ SELECT c.*, COALESCE(p.nome, tl.usuario_cs) as usuario_nome FROM comentarios c LEFT JOIN perfil_usuario p ON c.usuario_cs = p.usuario WHERE c.tarefa_id IN (SELECT id FROM tarefas WHERE implantacao_id = %s) ORDER BY c.data_criacao DESC """, (impl_id,) ) #
+        
+        # CORREÇÃO DA QUERY: Trocando tl.usuario_cs por c.usuario_cs na busca de comentários.
+        comentarios_raw = query_db( 
+            """ SELECT c.*, COALESCE(p.nome, c.usuario_cs) as usuario_nome 
+                FROM comentarios c 
+                LEFT JOIN perfil_usuario p ON c.usuario_cs = p.usuario 
+                WHERE c.tarefa_id IN (SELECT id FROM tarefas WHERE implantacao_id = %s) 
+                ORDER BY c.data_criacao DESC """, 
+            (impl_id,) 
+        ) #
 
         comentarios_por_tarefa = {}
         for c in comentarios_raw:

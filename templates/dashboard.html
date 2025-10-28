@@ -9,10 +9,14 @@
 
         <div class="d-flex align-items-center">
 
-            {# Apenas usuários com permissão (Admin, Gerente, Coord) veem o botão #}
+            {# Apenas usuários com permissão (Admin, Gerente, Coord) veem os botões #}
             {% if g.perfil and g.perfil.perfil_acesso in PERFIS_COM_CRIACAO %}
             <button class="btn btn-success ms-3" data-bs-toggle="modal" data-bs-target="#novaImplantacaoModal" style="background-color: var(--accent-color); border-color: var(--accent-color);">
                 <i class="bi bi-plus-circle me-1"></i> Nova Implantação
+            </button>
+            {# NOVO BOTÃO NOVO MÓDULO #}
+            <button class="btn btn-primary ms-2" data-bs-toggle="modal" data-bs-target="#novoModuloModal">
+                <i class="bi bi-box-fill me-1"></i> Novo Módulo
             </button>
             {% endif %}
             <div class="dropdown ms-2">
@@ -178,7 +182,7 @@
                        data-chave-oamd="{{ impl.chave_oamd | default('') }}" data-catraca="{{ impl.catraca | default('') }}" data-facial="{{ impl.facial | default('') }}"
                        data-nivel-receita="{{ impl.nivel_receita | default('') }}" data-valor-atribuido="{{ impl.valor_atribuido | default('') }}"
                        data-id-favorecido="{{ impl.id_favorecido | default('') }}" data-tela-apoio-link="{{ impl.tela_apoio_link | default('') }}"
-                       data-resp-estrategico-nome="{{ impl.resp_estrategico_nome | default('') }}" data-resp-onb-nome="{{ impl.resp_onb_nome | default('') }}"
+                       data-resp-estrategico-nome="{{ impl.resp-estrategico-nome | default('') }}" data-resp-onb-nome="{{ impl.resp_onb_nome | default('') }}"
                        data-resp-estrategico-obs="{{ impl.resp_estrategico_obs | default('') }}" data-contatos="{{ impl.contatos | default('') }}"
                        data-seguimento="{{ impl.seguimento | default('') }}" data-tipos-planos="{{ impl.tipos_planos | default('') }}"
                        data-modalidades="{{ impl.modalidades | default('') }}" data-horarios-func="{{ impl.horarios_func | default('') }}"
@@ -428,15 +432,29 @@
     </main>
 </div>
 
-{# Modal Nova Implantação e outros modais (Não alterados) #}
-<div class="modal fade" id="novaImplantacaoModal" tabindex="-1"> <div class="modal-dialog"> <div class="modal-content"> <div class="modal-header header-bg"><h5 class="modal-title">Nova Implantação</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div> <form action="{{ url_for('main.criar_implantacao') }}" method="POST"> <div class="modal-body">
+{# Modal Nova Implantação (COMPLETA - AGORA/FUTURA) #}
+<div class="modal fade" id="novaImplantacaoModal" tabindex="-1"> <div class="modal-dialog"> <div class="modal-content"> <div class="modal-header header-bg"><h5 class="modal-title">Nova Implantação (Completa)</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div> <form action="{{ url_for('main.criar_implantacao') }}" method="POST"> <div class="modal-body">
     {# CORREÇÃO: Altera a verificação para PERFIS_COM_CRIACAO #}
     {% if g.perfil.perfil_acesso in PERFIS_COM_CRIACAO %}
-    <div class="mb-3"> <label for="nomeEmpresa" class="form-label">Nome Empresa</label> <input type="text" class="form-control" id="nomeEmpresa" name="nome_empresa" required> </div> <div class="mb-3"> <label class="form-label">Tipo</label> <div class="form-check"> <input class="form-check-input" type="radio" name="tipo" id="tipoAgora" value="agora" checked onchange="toggleDataPrevista(this.value)"> <label class="form-check-label" for="tipoAgora"> Imediata (Completa) </label> </div> <div class="form-check"> <input class="form-check-input" type="radio" name="tipo" id="tipoFutura" value="futura" onchange="toggleDataPrevista(this.value)"> <label class="form-check-label" for="tipoFutura"> Futura (Completa Agendada) </label> </div> <div class="form-check"> <input class="form-check-input" type="radio" name="tipo" id="tipoModulo" value="modulo" onchange="toggleDataPrevista(this.value)"> <label class="form-check-label" for="tipoModulo"> Módulo (Em branco) </label> </div> </div> <div class="mb-3" id="campoDataPrevista" style="display: none;"> <label for="data_inicio_previsto" class="form-label">Início Previsto</label> <input type="date" class="form-control" id="data_inicio_previsto" name="data_inicio_previsto"> </div>
+    <div class="mb-3"> <label for="nomeEmpresa" class="form-label">Nome Empresa</label> <input type="text" class="form-control" id="nomeEmpresa" name="nome_empresa" required> </div> <div class="mb-3"> <label class="form-label">Tipo</label> <div class="form-check"> <input class="form-check-input" type="radio" name="tipo" id="tipoAgora" value="agora" checked onchange="toggleDataPrevista(this.value)"> <label class="form-check-label" for="tipoAgora"> Imediata (Completa) </label> </div> <div class="form-check"> <input class="form-check-input" type="radio" name="tipo" id="tipoFutura" value="futura" onchange="toggleDataPrevista(this.value)"> <label class="form-check-label" for="tipoFutura"> Futura (Completa Agendada) </label> </div> </div> <div class="mb-3" id="campoDataPrevista" style="display: none;"> <label for="data_inicio_previsto" class="form-label">Início Previsto</label> <input type="date" class="form-control" id="data_inicio_previsto" name="data_inicio_previsto"> </div>
     {% else %}
     <div class="alert alert-warning"> Seu perfil de acesso ({{ g.perfil.perfil_acesso or 'Nenhum' }}) não tem permissão para criar novas implantações. </div>
     {% endif %}
 </div> <div class="modal-footer header-bg"> <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button> {% if g.perfil.perfil_acesso in PERFIS_COM_CRIACAO %} <button type="submit" class="btn btn-primary">Criar</button> {% endif %} </div> </form> </div> </div> </div>
+
+{# NOVO: Modal Novo Módulo (EM BRANCO) #}
+<div class="modal fade" id="novoModuloModal" tabindex="-1"> <div class="modal-dialog"> <div class="modal-content"> <div class="modal-header header-bg"><h5 class="modal-title">Novo Módulo (Em Branco)</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div> <form action="{{ url_for('main.criar_implantacao') }}" method="POST"> <div class="modal-body">
+    {% if g.perfil.perfil_acesso in PERFIS_COM_CRIACAO %}
+    <div class="mb-3"> <label for="nomeEmpresaModulo" class="form-label">Nome Empresa</label> <input type="text" class="form-control" id="nomeEmpresaModulo" name="nome_empresa" required> </div>
+    {# Campo oculto para forçar tipo='modulo' #}
+    <input type="hidden" name="tipo" value="modulo">
+    {# Campo oculto para data_inicio_previsto (não aplicável para módulo, mas o back-end espera) #}
+    <input type="hidden" name="data_inicio_previsto" value="">
+    {% else %}
+    <div class="alert alert-warning"> Seu perfil de acesso ({{ g.perfil.perfil_acesso or 'Nenhum' }}) não tem permissão para criar novos módulos/implantações. </div>
+    {% endif %}
+</div> <div class="modal-footer header-bg"> <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button> {% if g.perfil.perfil_acesso in PERFIS_COM_CRIACAO %} <button type="submit" class="btn btn-primary">Criar Módulo</button> {% endif %} </div> </form> </div> </div> </div>
+{# FIM DO NOVO MODAL NOVO MÓDULO #}
 
 {% endblock %}
 
