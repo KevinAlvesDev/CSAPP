@@ -1,7 +1,7 @@
 # project/services.py
 
 from flask import current_app
-from .db import query_db, execute_db
+# REMOVIDAS: Linhas como 'from .db import query_db, execute_db, logar_timeline'
 from .constants import (
     CHECKLIST_OBRIGATORIO_ITEMS, MODULO_OBRIGATORIO,
     TAREFAS_TREINAMENTO_PADRAO, MODULO_PENDENCIAS,
@@ -9,8 +9,6 @@ from .constants import (
 )
 from .utils import format_date_iso_for_json
 
-# Importa logar_timeline do DB (para uso interno)
-from .db import logar_timeline
 # Importa timedelta, datetime e date para cálculo de data
 from datetime import datetime, timedelta, date
 import calendar # Adicionado para cálculo de gamificação
@@ -34,6 +32,8 @@ def _to_naive_datetime(dt):
 
 def _create_default_tasks(impl_id):
     """Cria as tarefas padrão (Obrigatórias e Treinamento) para uma nova implantação."""
+    # IMPORTAÇÃO LOCAL
+    from .db import execute_db 
     tasks_added = 0
     # Tarefas Obrigatórias
     for i, tarefa_nome in enumerate(CHECKLIST_OBRIGATORIO_ITEMS, 1):
@@ -58,6 +58,8 @@ def _get_progress(impl_id):
     Calcula o progresso de uma implantação (incluindo todas as tarefas, exceto pendências).
     CORREÇÃO DE BUG: Exclui MODULO_PENDENCIAS para que o progresso vá a 100% na finalização.
     """
+    # IMPORTAÇÃO LOCAL
+    from .db import query_db
     counts = query_db(
         "SELECT COUNT(*) as total, SUM(CASE WHEN concluida THEN 1 ELSE 0 END) as done "
         "FROM tarefas WHERE implantacao_id = %s AND tarefa_pai != %s", 
@@ -78,6 +80,9 @@ def auto_finalizar_implantacao(impl_id, usuario_cs_email):
     Verifica se todas as tarefas (exceto pendências) estão concluídas
     e, em caso afirmativo, finaliza a implantação.
     """
+    # IMPORTAÇÃO LOCAL
+    from .db import query_db, execute_db, logar_timeline
+
     pending_tasks = query_db(
         "SELECT COUNT(*) as total FROM tarefas "
         "WHERE implantacao_id = %s AND concluida = %s AND tarefa_pai != %s",
@@ -132,6 +137,8 @@ def get_dashboard_data(user_email, user_perfil_acesso, target_user_email=None):
     Para Administrador/Coordenador, busca todas as implantações ou filtra por target_user_email.
     Para outros perfis, busca apenas as implantações do user_email.
     """
+    # IMPORTAÇÃO LOCAL
+    from .db import query_db, execute_db
 
     # 1. Determinar o filtro de usuário na query
     # PERFIS_COM_GESTAO agora é [PERFIL_ADMIN, PERFIL_COORDENADOR]
@@ -323,6 +330,9 @@ def calculate_time_in_status(impl_id, status_target='parada'):
     Calcula o tempo (em dias) que uma implantação permaneceu em um status específico.
     Usado para calcular a duração da parada atual.
     """
+    # IMPORTAÇÃO LOCAL
+    from .db import query_db
+
     impl = query_db(
         "SELECT data_criacao, data_finalizacao, status FROM implantacoes WHERE id = %s",
         (impl_id,), one=True
@@ -357,6 +367,8 @@ def calculate_time_in_status(impl_id, status_target='parada'):
 
 def get_analytics_data(target_cs_email=None, target_status=None, start_date=None, end_date=None, target_paradas_cs=None):
     """Busca e processa dados de TODA a carteira (ou filtrada) para o módulo Gerencial."""
+    # IMPORTAÇÃO LOCAL
+    from .db import query_db
 
     query_impl = """
         SELECT i.*,
@@ -655,6 +667,8 @@ def calcular_pontuacao_gamificacao(usuario_cs, mes, ano):
     Calcula a pontuação da gamificação para um usuário em um mês/ano específico.
     CORREÇÃO DE BUG: Ajusta o filtro de data para garantir que todas as implantações do mês sejam contadas.
     """
+    # IMPORTAÇÃO LOCAL
+    from .db import query_db, execute_db
 
     # 1. Buscar Perfil e Métricas Manuais
     perfil = query_db("SELECT cargo FROM perfil_usuario WHERE usuario = %s", (usuario_cs,), one=True)
@@ -1021,6 +1035,8 @@ def calcular_pontuacao_gamificacao(usuario_cs, mes, ano):
 
     # 7. Opcional, mas recomendado: Atualizar o DB com os resultados calculados
     try:
+         # IMPORTAÇÃO LOCAL (necessária se query_db/execute_db não foram importados antes na função)
+         from .db import query_db, execute_db 
          existing_record_id = query_db(
              "SELECT id FROM gamificacao_metricas_mensais WHERE usuario_cs = %s AND mes = %s AND ano = %s",
              (usuario_cs, mes, ano), one=True
@@ -1059,3 +1075,60 @@ def calcular_pontuacao_gamificacao(usuario_cs, mes, ano):
 
 
     return resultado
+
+# --- FUNÇÃO DE MIGRAÇÃO PARA IMPLANTAÇÕES EXISTENTES ---
+def migrar_adicionar_definicao_carteira():
+    """
+    Adiciona a tarefa 'Definição de carteira' a todas as implantações existentes
+    que ainda não a possuem.
+    """
+    # IMPORTAÇÃO LOCAL
+    from .db import query_db, execute_db # , logar_timeline (comentado na função original)
+
+    try:
+        # Constantes da tarefa
+        MODULO_NOVO = "Definição de carteira"
+        TAREFA_NOVA = "Definição de carteira"
+        TAG_NOVA = "Ação interna"
+        ORDEM_NOVA = 1 # Primeira e única tarefa dentro deste módulo
+
+        # 1. Buscar IDs de todas as implantações
+        impl_ids = query_db("SELECT id FROM implantacoes")
+
+        if not impl_ids:
+            # Retorna 0, 0 se não houver implantações
+            return 0, 0
+
+        # 2. Iterar e Inserir
+        impl_migradas_count = 0
+        impl_total = len(impl_ids)
+
+        for impl in impl_ids:
+            impl_id = impl['id']
+            
+            # A. Verificar se a tarefa já existe para evitar duplicação
+            exists = query_db(
+                "SELECT 1 FROM tarefas WHERE implantacao_id = %s AND tarefa_pai = %s AND tarefa_filho = %s",
+                (impl_id, MODULO_NOVO, TAREFA_NOVA),
+                one=True
+            )
+            
+            if not exists:
+                # B. Inserir a nova tarefa
+                execute_db(
+                    """INSERT INTO tarefas (implantacao_id, tarefa_pai, tarefa_filho, ordem, tag) 
+                       VALUES (%s, %s, %s, %s, %s)""",
+                    (impl_id, MODULO_NOVO, TAREFA_NOVA, ORDEM_NOVA, TAG_NOVA)
+                )
+                impl_migradas_count += 1
+                
+                # C. (Opcional) Logar a ação na timeline
+                # Esta linha pode ser comentada para evitar flood no log se a migração for grande
+                # from .db import logar_timeline # Importaria aqui se fosse usar
+                # logar_timeline(impl_id, 'MIGRATION_SCRIPT', 'Tarefa Adicionada', f'Tarefa "{TAREFA_NOVA}" adicionada via script.')
+        
+        return impl_total, impl_migradas_count
+
+    except Exception as e:
+        print(f"ERRO CRÍTICO durante a migração de tarefas: {e}")
+        raise e
