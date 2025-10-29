@@ -177,7 +177,11 @@ def get_dashboard_data(user_email, user_perfil_acesso, target_user_email=None):
     metrics = {
         'impl_andamento_total': 0, 'implantacoes_atrasadas': 0,
         'implantacoes_futuras': 0, 'impl_finalizadas': 0, 'impl_paradas': 0,
-        'impl_finalizadas_mes_atual': 0 # NOVO: Métrica para alinhar com gamificação (mensal)
+        'impl_finalizadas_mes_atual': 0, # NOVO: Métrica para alinhar com gamificação (mensal)
+        # INICIO MODULO CARDS
+        'impl_modulo_andamento': 0,
+        'impl_modulo_finalizado': 0,
+        # FIM MODULO CARDS
     }
 
     # Otimização: Buscar todas as tarefas de uma vez
@@ -216,6 +220,7 @@ def get_dashboard_data(user_email, user_perfil_acesso, target_user_email=None):
              continue
 
         status = impl.get('status')
+        impl_type = impl.get('tipo') # Obtém o tipo
 
         # Formata datas para os modais
         impl['data_criacao_iso'] = format_date_iso_for_json(impl.get('data_criacao'), only_date=True)
@@ -242,6 +247,10 @@ def get_dashboard_data(user_email, user_perfil_acesso, target_user_email=None):
             if data_finalizacao_naive and data_finalizacao_naive >= primeiro_dia_mes_atual:
                 metrics['impl_finalizadas_mes_atual'] += 1 # Contagem do Mês Atual
             
+            # NOVO: Módulo Finalizado
+            if impl_type == 'modulo':
+                 metrics['impl_modulo_finalizado'] += 1
+
         elif status == 'parada':
             dashboard_data['paradas'].append(impl)
             metrics['impl_paradas'] += 1
@@ -276,6 +285,10 @@ def get_dashboard_data(user_email, user_perfil_acesso, target_user_email=None):
             else:
                  # Inclui no andamento mesmo se o cálculo de dias falhar (0)
                  dashboard_data['andamento'].append(impl)
+
+            # NOVO: Módulo em Andamento
+            if impl_type == 'modulo':
+                 metrics['impl_modulo_andamento'] += 1
 
             # Conta 'andamento' e 'atrasadas' no total em andamento
             metrics['impl_andamento_total'] += 1
@@ -342,7 +355,7 @@ def calculate_time_in_status(impl_id, status_target='parada'):
     return None # Não está no status alvo ou dados insuficientes
 
 
-def get_analytics_data(target_cs_email=None, target_status=None, start_date=None, end_date=None, target_tag=None):
+def get_analytics_data(target_cs_email=None, target_status=None, start_date=None, end_date=None, target_paradas_cs=None):
     """Busca e processa dados de TODA a carteira (ou filtrada) para o módulo Gerencial."""
 
     query_impl = """
@@ -357,7 +370,7 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
     is_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
     date_func = "date" if is_sqlite else "" # Função date() para SQLite
 
-    # Filtro por CS
+    # Filtro por CS (influencia as métricas de produtividade - cs_metrics)
     if target_cs_email:
         query_impl += " AND i.usuario_cs = %s "
         args_impl.append(target_cs_email)
@@ -400,9 +413,73 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
 
     query_impl += " ORDER BY i.nome_empresa "
 
-    # 1. Busca implantações filtradas
+    # 1. Busca implantações filtradas (principal para métricas)
     impl_list = query_db(query_impl, tuple(args_impl))
     impl_list = impl_list if impl_list is not None else [] # Garante lista
+
+    # --- NOVO: Query e processamento dedicado para Implantações Paradas Detalhadas ---
+    query_paradas = """
+        SELECT i.*,
+               p.nome as cs_nome, p.cargo as cs_cargo, p.perfil_acesso as cs_perfil
+        FROM implantacoes i
+        LEFT JOIN perfil_usuario p ON i.usuario_cs = p.usuario
+        WHERE i.status = 'parada'
+    """
+    args_paradas = []
+    
+    # Aplica o filtro de CS ESPECÍFICO para paradas
+    if target_paradas_cs and target_paradas_cs != 'todos':
+        query_paradas += " AND i.usuario_cs = %s "
+        args_paradas.append(target_paradas_cs)
+
+    # Aplica filtros de data à data de paralisação (data_finalizacao)
+    date_field_to_filter_paradas = "i.data_finalizacao"
+
+    if start_date:
+        query_paradas += f" AND {date_func}({date_field_to_filter_paradas}) >= {date_func}(%s) "
+        args_paradas.append(start_date)
+    
+    if end_date:
+        if not is_sqlite:
+            try:
+                end_date_obj_paradas = datetime.strptime(end_date, '%Y-%m-%d').date()
+                next_day_paradas = end_date_obj_paradas + timedelta(days=1)
+                query_paradas += f" AND {date_field_to_filter_paradas} < %s "
+                args_paradas.append(next_day_paradas.strftime('%Y-%m-%d'))
+            except ValueError:
+                query_paradas += f" AND {date_func}({date_field_to_filter_paradas}) <= {date_func}(%s) "
+                args_paradas.append(end_date)
+        else:
+             query_paradas += f" AND {date_func}({date_field_to_filter_paradas}) <= {date_func}(%s) "
+             args_paradas.append(end_date)
+
+    query_paradas += " ORDER BY i.nome_empresa "
+    paradas_raw = query_db(query_paradas, tuple(args_paradas))
+    paradas_raw = paradas_raw if paradas_raw is not None else []
+    
+    implantacoes_paradas_detalhadas = []
+    motivos_parada_global = {} # Recalculado separadamente
+    total_paradas_detalhes = 0
+    
+    for impl_parada in paradas_raw:
+        impl_id = impl_parada.get('id')
+        cs_email_impl = impl_parada.get('usuario_cs')
+        parada_dias = calculate_time_in_status(impl_id, 'parada')
+        motivo = impl_parada.get('motivo_parada') or 'Motivo Não Especificado'
+        
+        # Agregação global de motivos (usando APENAS a lista filtrada)
+        motivos_parada_global[motivo] = motivos_parada_global.get(motivo, 0) + 1
+        total_paradas_detalhes += 1
+
+        implantacoes_paradas_detalhadas.append({
+            'id': impl_id,
+            'nome_empresa': impl_parada.get('nome_empresa'),
+            'motivo_parada': motivo,
+            'parada_dias': parada_dias if parada_dias is not None else 0,
+            'cs_nome': impl_parada.get('cs_nome', cs_email_impl)
+        })
+    # --- FIM DO NOVO PROCESSAMENTO ---
+
 
     # --- 2. Busca e Filtro de Tarefas por Período/Tag (Para Produtividade) ---
     query_tasks = """
@@ -464,15 +541,12 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
     total_impl_global = 0
     total_finalizadas = 0
     total_andamento_global = 0
-    total_paradas = 0
+    # total_paradas = 0 # Removido, usando total_paradas_detalhes
     total_atrasadas_status = 0 # Contagem global de atrasadas (>25d)
     tma_dias_sum = 0
-    motivos_parada_global = {}
-    implantacoes_paradas_detalhadas = []
+    # motivos_parada_global = {} # Removido, usando o da lista detalhada
+    # implantacoes_paradas_detalhadas = [] # Removido, usando a lista separada
     agora = datetime.now() # Hora atual para cálculo de dias passados
-
-    # -- O filtro manual de 'atrasadas_status' foi removido daqui --
-    # -- O filtro SQL já deve ter cuidado disso se selecionado --
 
     for impl in impl_list:
         # Pula se impl for None ou não dict
@@ -516,23 +590,15 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
                 metrics['tma_sum'] += tma_dias
 
         elif status == 'parada':
-            total_paradas += 1
+            # total_paradas += 1 # Removido
             metrics['impl_paradas'] += 1
             parada_dias = calculate_time_in_status(impl_id, 'parada')
             if parada_dias is not None:
                 metrics['parada_dias_total'] += parada_dias
 
             motivo = impl.get('motivo_parada') or 'Motivo Não Especificado'
-            motivos_parada_global[motivo] = motivos_parada_global.get(motivo, 0) + 1
+            # motivos_parada_global[motivo] = motivos_parada_global.get(motivo, 0) + 1 # Removido
             metrics['motivos_parada'][motivo] = metrics['motivos_parada'].get(motivo, 0) + 1
-
-            implantacoes_paradas_detalhadas.append({
-                'id': impl_id,
-                'nome_empresa': impl.get('nome_empresa'),
-                'motivo_parada': motivo,
-                'parada_dias': parada_dias if parada_dias is not None else 0,
-                'cs_nome': metrics.get('nome', cs_email_impl)
-            })
 
         elif status == 'andamento':
             total_andamento_global += 1
@@ -574,10 +640,10 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
         'total_impl': total_impl_global,
         'total_finalizadas': total_finalizadas,
         'total_andamento': total_andamento_global,
-        'total_paradas': total_paradas,
+        'total_paradas': total_paradas_detalhes, # Usando o total da lista detalhada
         'total_atrasadas': total_atrasadas_status, # Usar a contagem feita no loop
         'global_tma': round(tma_dias_sum / total_finalizadas, 1) if total_finalizadas > 0 and tma_dias_sum is not None else 'N/A',
-        'motivos_parada': motivos_parada_global
+        'motivos_parada': motivos_parada_global # Usando o da lista detalhada
     }
 
     return global_metrics, final_cs_metrics_list, implantacoes_paradas_detalhadas
