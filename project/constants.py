@@ -96,22 +96,29 @@ ADMIN_EMAIL = "kevinalveswp@gmail.com"
 
 # Cargos (Função na empresa, editável pelo usuário no perfil)
 CARGOS_LIST = ["Júnior", "Pleno", "Sênior", "Estagiário"] 
+# CORREÇÃO: Adicionando a variável que o management.py espera
+CARGOS_LISTA_COMPLETA = CARGOS_LIST 
 
 # Perfis de Acesso (Permissão no sistema, editável apenas pelo Admin/Coordenador)
 PERFIL_ADMIN = "Administrador"
-# PERFIL_GERENTE = "Gerente" # REMOVIDO
+PERFIL_GERENTE = "Gerente" # CORREÇÃO: Adicionado de volta
 PERFIL_COORDENADOR = "Coordenador"
 PERFIL_IMPLANTADOR = "Implantador" 
-# PERFIL_VISUALIZADOR = "Visualizador" # REMOVIDO
-PERFIS_ACESSO_LIST = [PERFIL_ADMIN, PERFIL_COORDENADOR, PERFIL_IMPLANTADOR] # LISTA ATUALIZADA
 
-PERFIS_COM_GESTAO = [PERFIL_ADMIN, PERFIL_COORDENADOR] # Perfis de Gestão (Admin e Coord)
+# CORREÇÃO: Adicionando a variável que o management.py estava a tentar importar
+PERFIS_DE_ACESSO = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR, PERFIL_IMPLANTADOR]
+
+# Variável antiga (para o caso de outra parte do código a usar)
+PERFIS_ACESSO_LIST = [PERFIL_ADMIN, PERFIL_COORDENADOR, PERFIL_IMPLANTADOR] 
+
+# CORREÇÃO: Atualizando PERFIS_COM_GESTAO para incluir o Gerente
+PERFIS_COM_GESTAO = [PERFIL_ADMIN, PERFIL_COORDENADOR, PERFIL_GERENTE] 
 
 # Perfis que podem criar implantações (Admin e Coord)
 PERFIS_COM_CRIACAO = [PERFIL_ADMIN, PERFIL_COORDENADOR]
 
 # Perfis que podem ver a tela de Analytics (Coordenadores e acima)
-PERFIS_COM_ANALYTICS = [PERFIL_ADMIN, PERFIL_COORDENADOR]
+PERFIS_COM_ANALYTICS = [PERFIL_ADMIN, PERFIL_COORDENADOR, PERFIL_GERENTE] # CORREÇÃO: Adicionado Gerente
 
 
 # NOVAS CONSTANTES PARA DETALHES DA EMPRESA
