@@ -10,9 +10,6 @@ CHECKLIST_OBRIGATORIO_ITEMS = [
 MODULO_PENDENCIAS = "Pendências"
 
 TAREFAS_TREINAMENTO_PADRAO = {
-    "Definição de carteira": [
-        {'nome': "Definição de carteira", 'tag': "Ação interna"}
-    ],
     "Welcome": [
         {'nome': "Contato Inicial Whatsapp/Grupo", 'tag': "Ação interna"},
         {'nome': "Criar Banco de Dados", 'tag': "Ação interna"},
@@ -96,29 +93,23 @@ ADMIN_EMAIL = "kevinalveswp@gmail.com"
 
 # Cargos (Função na empresa, editável pelo usuário no perfil)
 CARGOS_LIST = ["Júnior", "Pleno", "Sênior", "Estagiário"] 
-# CORREÇÃO: Adicionando a variável que o management.py espera
-CARGOS_LISTA_COMPLETA = CARGOS_LIST 
 
-# Perfis de Acesso (Permissão no sistema, editável apenas pelo Admin/Coordenador)
+# Perfis de Acesso (Permissão no sistema, editável apenas pelo Admin/Gerente/Coordenador)
 PERFIL_ADMIN = "Administrador"
-PERFIL_GERENTE = "Gerente" # CORREÇÃO: Adicionado de volta
+PERFIL_GERENTE = "Gerente"
 PERFIL_COORDENADOR = "Coordenador"
-PERFIL_IMPLANTADOR = "Implantador" 
+PERFIL_IMPLANTADOR = "Implantador" # <-- NOME ALTERADO
+PERFIL_VISUALIZADOR = "Visualizador"
+PERFIS_ACESSO_LIST = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR, PERFIL_IMPLANTADOR, PERFIL_VISUALIZADOR] # <-- LISTA ATUALIZADA
 
-# CORREÇÃO: Adicionando a variável que o management.py estava a tentar importar
-PERFIS_DE_ACESSO = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR, PERFIL_IMPLANTADOR]
+PERFIS_COM_GESTAO = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR] 
 
-# Variável antiga (para o caso de outra parte do código a usar)
-PERFIS_ACESSO_LIST = [PERFIL_ADMIN, PERFIL_COORDENADOR, PERFIL_IMPLANTADOR] 
+# Perfis que podem criar implantações (Exclui visualizador e perfis NULL)
+# <-- 'PERFIL_IMPLANTADOR' REMOVIDO DESTA LISTA
+PERFIS_COM_CRIACAO = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
 
-# CORREÇÃO: Atualizando PERFIS_COM_GESTAO para incluir o Gerente
-PERFIS_COM_GESTAO = [PERFIL_ADMIN, PERFIL_COORDENADOR, PERFIL_GERENTE] 
-
-# Perfis que podem criar implantações (Admin e Coord)
-PERFIS_COM_CRIACAO = [PERFIL_ADMIN, PERFIL_COORDENADOR]
-
-# Perfis que podem ver a tela de Analytics (Coordenadores e acima)
-PERFIS_COM_ANALYTICS = [PERFIL_ADMIN, PERFIL_COORDENADOR, PERFIL_GERENTE] # CORREÇÃO: Adicionado Gerente
+# Perfis que podem ver a tela de Analytics (Gerentes e acima)
+PERFIS_COM_ANALYTICS = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
 
 
 # NOVAS CONSTANTES PARA DETALHES DA EMPRESA

@@ -7,7 +7,6 @@ from .constants import (
     CHECKLIST_OBRIGATORIO_ITEMS, MODULO_OBRIGATORIO,
     TAREFAS_TREINAMENTO_PADRAO
 )
-# A LINHA 'from .services import migrar_adicionar_definicao_carteira' FOI REMOVIDA DAQUI.
 
 # --- Camada de Acesso a Dados (DAO) ---
 
@@ -239,7 +238,7 @@ def init_db():
             usuario_cs VARCHAR(255) REFERENCES usuarios(usuario) ON DELETE SET NULL,
             nome_empresa TEXT NOT NULL,
             status VARCHAR(50) DEFAULT 'andamento' CHECK(status IN ('andamento', 'futura', 'finalizada', 'parada')),
-            tipo VARCHAR(50) DEFAULT 'agora', -- CHECK removido para resolver o erro 'modulo' em DBs antigos, validação deve ocorrer na aplicação.
+            tipo VARCHAR(50) DEFAULT 'agora' CHECK(tipo IN ('agora', 'futura', 'modulo')),
             data_criacao {timestamp_type}, -- Data de criação do registro
             data_inicio_efetivo {timestamp_nullable_type} DEFAULT NULL, -- Data que iniciou de fato
             data_finalizacao {timestamp_nullable_type} DEFAULT NULL,
@@ -417,23 +416,8 @@ def init_db_command():
     except Exception as e:
         click.echo(f'Erro ao inicializar o banco de dados: {e}', err=True)
 
-@click.command('migrate-db')
-def migrate_db_command():
-    """Comando do Flask para rodar migrações pendentes (ex: adicionar novas tarefas)."""
-    try:
-        # CORREÇÃO: Importação movida para dentro da função para evitar dependência circular
-        from .services import migrar_adicionar_definicao_carteira
-        
-        total, migrados = migrar_adicionar_definicao_carteira()
-        click.echo(f'Migração de tarefas concluída.')
-        click.echo(f'Implantações verificadas: {total}')
-        click.echo(f'Tarefas "Definição de carteira" adicionadas: {migrados}')
-    except Exception as e:
-        click.echo(f'Erro ao executar a migração: {e}', err=True)
-
 
 def init_app(app):
     """Registra as funções do DB com a instância da app Flask."""
     app.teardown_appcontext(close_connection)
     app.cli.add_command(init_db_command)
-    app.cli.add_command(migrate_db_command) # Novo comando de migração

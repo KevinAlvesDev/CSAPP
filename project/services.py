@@ -1,39 +1,24 @@
 # project/services.py
 
 from flask import current_app
-# REMOVIDAS: Linhas como 'from .db import query_db, execute_db, logar_timeline'
+from .db import query_db, execute_db
 from .constants import (
     CHECKLIST_OBRIGATORIO_ITEMS, MODULO_OBRIGATORIO,
     TAREFAS_TREINAMENTO_PADRAO, MODULO_PENDENCIAS,
-    PERFIL_ADMIN, PERFIL_COORDENADOR # PERFIL_GERENTE REMOVIDO
+    PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR
 )
 from .utils import format_date_iso_for_json
 
+# Importa logar_timeline do DB (para uso interno)
+from .db import logar_timeline
 # Importa timedelta, datetime e date para cálculo de data
 from datetime import datetime, timedelta, date
 import calendar # Adicionado para cálculo de gamificação
-
-# --- FUNÇÃO AUXILIAR PARA CORREÇÃO DE TIMEZONE ---
-def _to_naive_datetime(dt):
-    """
-    CORREÇÃO: Converte um objeto date/datetime para um datetime naive (sem tzinfo).
-    Garante que a subtração de datas seja sempre entre objetos do mesmo tipo (naive).
-    Retorna None se a entrada não for um tipo de data válido.
-    """
-    # 1. Se for apenas date (não datetime), converte para datetime no início do dia
-    if isinstance(dt, date) and not isinstance(dt, datetime):
-        return datetime.combine(dt, datetime.min.time())
-    # 2. Se for datetime (aware ou naive), remove o tzinfo, forçando naive
-    if isinstance(dt, datetime):
-        return dt.replace(tzinfo=None)
-    return None
 
 # --- Camada de Serviço (Business Logic) ---
 
 def _create_default_tasks(impl_id):
     """Cria as tarefas padrão (Obrigatórias e Treinamento) para uma nova implantação."""
-    # IMPORTAÇÃO LOCAL
-    from .db import execute_db 
     tasks_added = 0
     # Tarefas Obrigatórias
     for i, tarefa_nome in enumerate(CHECKLIST_OBRIGATORIO_ITEMS, 1):
@@ -54,16 +39,11 @@ def _create_default_tasks(impl_id):
     return tasks_added
 
 def _get_progress(impl_id):
-    """
-    Calcula o progresso de uma implantação (incluindo todas as tarefas, exceto pendências).
-    CORREÇÃO DE BUG: Exclui MODULO_PENDENCIAS para que o progresso vá a 100% na finalização.
-    """
-    # IMPORTAÇÃO LOCAL
-    from .db import query_db
+    """Calcula o progresso de uma implantação (incluindo todas as tarefas)."""
     counts = query_db(
         "SELECT COUNT(*) as total, SUM(CASE WHEN concluida THEN 1 ELSE 0 END) as done "
-        "FROM tarefas WHERE implantacao_id = %s AND tarefa_pai != %s", 
-        (impl_id, MODULO_PENDENCIAS),
+        "FROM tarefas WHERE implantacao_id = %s",
+        (impl_id,),
         one=True
     )
     # Garante que counts não seja None antes de acessar 'total' ou 'done'
@@ -80,9 +60,6 @@ def auto_finalizar_implantacao(impl_id, usuario_cs_email):
     Verifica se todas as tarefas (exceto pendências) estão concluídas
     e, em caso afirmativo, finaliza a implantação.
     """
-    # IMPORTAÇÃO LOCAL
-    from .db import query_db, execute_db, logar_timeline
-
     pending_tasks = query_db(
         "SELECT COUNT(*) as total FROM tarefas "
         "WHERE implantacao_id = %s AND concluida = %s AND tarefa_pai != %s",
@@ -130,39 +107,16 @@ def auto_finalizar_implantacao(impl_id, usuario_cs_email):
                  return True, None
     return False, None
 
-# --- FUNÇÃO ATUALIZADA: get_dashboard_data ---
-def get_dashboard_data(user_email, user_perfil_acesso, target_user_email=None):
-    """
-    Busca e processa dados do dashboard.
-    Para Administrador/Coordenador, busca todas as implantações ou filtra por target_user_email.
-    Para outros perfis, busca apenas as implantações do user_email.
-    """
-    # IMPORTAÇÃO LOCAL
-    from .db import query_db, execute_db
+# --- FUNÇÃO CORRIGIDA ---
+def get_dashboard_data(user_email):
+    """Busca e processa todos os dados APENAS para o dashboard do usuário logado."""
 
-    # 1. Determinar o filtro de usuário na query
-    # PERFIS_COM_GESTAO agora é [PERFIL_ADMIN, PERFIL_COORDENADOR]
-    is_manager = user_perfil_acesso in [PERFIL_ADMIN, PERFIL_COORDENADOR] 
-    
-    # Se for gestor e o filtro estiver vazio (ou 'todos'), buscar TUDO.
-    # Se não for gestor, ou se for gestor filtrando um usuário específico, aplicar o filtro.
-    if is_manager and not target_user_email:
-        # Administrador/Coordenador sem filtro: buscar TUDO
-        where_clause = "1=1"
-        args = []
-    else:
-        # Usuário normal: buscar APENAS o seu.
-        # OU Administrador/Coordenador com filtro
-        user_to_filter = target_user_email if target_user_email else user_email
-        where_clause = "usuario_cs = %s"
-        args = [user_to_filter]
-
-    # Query principal de implantações
+    # 1. Busca implantações do usuário
     impl_list = query_db(
-        f"""
+        """
         SELECT *
         FROM implantacoes
-        WHERE {where_clause}
+        WHERE usuario_cs = %s
         ORDER BY CASE status
                     WHEN 'andamento' THEN 1
                     WHEN 'parada' THEN 2
@@ -171,7 +125,7 @@ def get_dashboard_data(user_email, user_perfil_acesso, target_user_email=None):
                     ELSE 5
                  END, data_criacao DESC
         """,
-        tuple(args)
+        (user_email,)
     )
     # Garante que impl_list seja sempre uma lista
     impl_list = impl_list if impl_list is not None else []
@@ -183,12 +137,7 @@ def get_dashboard_data(user_email, user_perfil_acesso, target_user_email=None):
     }
     metrics = {
         'impl_andamento_total': 0, 'implantacoes_atrasadas': 0,
-        'implantacoes_futuras': 0, 'impl_finalizadas': 0, 'impl_paradas': 0,
-        'impl_finalizadas_mes_atual': 0, # NOVO: Métrica para alinhar com gamificação (mensal)
-        # INICIO MODULO CARDS
-        'impl_modulo_andamento': 0,
-        'impl_modulo_finalizado': 0,
-        # FIM MODULO CARDS
+        'implantacoes_futuras': 0, 'impl_finalizadas': 0, 'impl_paradas': 0
     }
 
     # Otimização: Buscar todas as tarefas de uma vez
@@ -211,10 +160,11 @@ def get_dashboard_data(user_email, user_perfil_acesso, target_user_email=None):
                      if impl_id_key not in tasks_by_impl:
                           tasks_by_impl[impl_id_key] = []
                      tasks_by_impl[impl_id_key].append(task)
+        # else: # Opcional: Log se nenhuma tarefa for encontrada
+        #     print(f"Nenhuma tarefa encontrada para impl_ids: {impl_ids}")
 
 
     agora = datetime.now() # Obter a hora atual uma vez
-    primeiro_dia_mes_atual = datetime(agora.year, agora.month, 1) # NOVO: Início do mês atual
 
     for impl in impl_list:
         # Pula se 'impl' for None ou não for um dicionário (segurança extra)
@@ -227,37 +177,22 @@ def get_dashboard_data(user_email, user_perfil_acesso, target_user_email=None):
              continue
 
         status = impl.get('status')
-        impl_type = impl.get('tipo') # Obtém o tipo
 
         # Formata datas para os modais
         impl['data_criacao_iso'] = format_date_iso_for_json(impl.get('data_criacao'), only_date=True)
         impl['data_inicio_producao_iso'] = format_date_iso_for_json(impl.get('data_inicio_producao'), only_date=True)
         impl['data_final_implantacao_iso'] = format_date_iso_for_json(impl.get('data_final_implantacao'), only_date=True)
 
-        # Novo: Chamada para a função _get_progress corrigida
-        impl['progresso'], total_tasks, done_tasks = _get_progress(impl_id)
+        # Calcula progresso usando os dados pré-buscados
+        impl_tasks = tasks_by_impl.get(impl_id, []) # Usa .get com default lista vazia
+        total_tasks = len(impl_tasks)
+        done_tasks = sum(1 for t in impl_tasks if t.get('concluida')) # Usa .get para segurança
+        impl['progresso'] = int(round((done_tasks / total_tasks) * 100)) if total_tasks > 0 else 0
 
         # Classifica a implantação
         if status == 'finalizada':
-            
-            # Conta todas as finalizadas (All-Time) - Mantém a métrica original do perfil para o Total Histórico
-            metrics['impl_finalizadas'] += 1 
-
-            # --- CORREÇÃO DE BUG CRÍTICO: MOSTRAR A LISTA ---
-            # Devemos adicionar a implantação à lista de exibição AQUI.
             dashboard_data['finalizadas'].append(impl)
-            
-            # --- CÁLCULO DA MÉTRICA SECUNDÁRIA (MENSAL) ---
-            data_finalizacao_obj = impl.get('data_finalizacao')
-            data_finalizacao_naive = _to_naive_datetime(data_finalizacao_obj)
-            
-            if data_finalizacao_naive and data_finalizacao_naive >= primeiro_dia_mes_atual:
-                metrics['impl_finalizadas_mes_atual'] += 1 # Contagem do Mês Atual
-            
-            # NOVO: Módulo Finalizado
-            if impl_type == 'modulo':
-                 metrics['impl_modulo_finalizado'] += 1
-
+            metrics['impl_finalizadas'] += 1
         elif status == 'parada':
             dashboard_data['paradas'].append(impl)
             metrics['impl_paradas'] += 1
@@ -265,24 +200,29 @@ def get_dashboard_data(user_email, user_perfil_acesso, target_user_email=None):
             dashboard_data['futuras'].append(impl)
             metrics['implantacoes_futuras'] += 1
         elif status == 'andamento': # Trata apenas 'andamento' aqui
-            # Cálculo de dias_passados em Python (CORREÇÃO DE BUG: Timezone e -1)
+            # Cálculo de dias_passados em Python
             dias_passados = 0
             data_criacao_obj = impl.get('data_criacao')
 
-            agora_naive = _to_naive_datetime(agora)
-            criacao_naive = _to_naive_datetime(data_criacao_obj)
-            
-            if agora_naive and criacao_naive:
-                try:
-                    dias_passados_delta = agora_naive - criacao_naive 
-                    # Garante que o contador seja 0 ou positivo
-                    dias_passados = dias_passados_delta.days if dias_passados_delta.days >= 0 else 0
-                except Exception as e:
-                    # CORREÇÃO DE BUG: Não retornar -1 (código de erro), retornar 0.
-                    print(f"AVISO: Erro de cálculo de dias para impl {impl_id}. Erro: {e}")
-                    dias_passados = 0 
-            else:
-                 dias_passados = 0 # Data de criação inválida ou nula
+            # Garante que seja um objeto datetime para a subtração
+            if data_criacao_obj:
+                if isinstance(data_criacao_obj, date) and not isinstance(data_criacao_obj, datetime):
+                     # Converte date para datetime no início do dia
+                     data_criacao_obj = datetime.combine(data_criacao_obj, datetime.min.time())
+
+                if isinstance(data_criacao_obj, datetime):
+                     # Ajuste para timezone-aware vs naive datetime comparison if necessary
+                     try:
+                         # Força ambos para naive se um for aware (simplificação)
+                         agora_naive = agora.replace(tzinfo=None) if agora.tzinfo else agora
+                         criacao_naive = data_criacao_obj.replace(tzinfo=None) if data_criacao_obj.tzinfo else data_criacao_obj
+
+                         dias_passados_delta = agora_naive - criacao_naive # Usa 'agora' ajustado
+                         dias_passados = dias_passados_delta.days if dias_passados_delta.days >= 0 else 0
+                     except TypeError as te:
+                         print(f"AVISO: Erro de tipo ao calcular dias passados para impl {impl_id}. Verifique timezones. Erro: {te}")
+                         dias_passados = -1 # Indica erro ou inconsistência
+
 
             impl['dias_passados'] = dias_passados # Adiciona o campo para o template
 
@@ -290,12 +230,8 @@ def get_dashboard_data(user_email, user_perfil_acesso, target_user_email=None):
                 dashboard_data['atrasadas'].append(impl)
                 metrics['implantacoes_atrasadas'] += 1
             else:
-                 # Inclui no andamento mesmo se o cálculo de dias falhar (0)
+                 # Inclui no andamento mesmo se o cálculo de dias falhar (-1)
                  dashboard_data['andamento'].append(impl)
-
-            # NOVO: Módulo em Andamento
-            if impl_type == 'modulo':
-                 metrics['impl_modulo_andamento'] += 1
 
             # Conta 'andamento' e 'atrasadas' no total em andamento
             metrics['impl_andamento_total'] += 1
@@ -304,9 +240,9 @@ def get_dashboard_data(user_email, user_perfil_acesso, target_user_email=None):
             print(f"AVISO: Implantação ID {impl_id} com status desconhecido ou nulo: '{status}'. Ignorando na categorização.")
 
 
-    # Atualiza o perfil com as métricas calculadas (APENAS se for a visão do próprio usuário)
-    # Note: impl_finalizadas agora é o total ALL-TIME. O campo impl_finalizadas_mes_atual é APENAS para o dashboard.
-    if impl_list and not is_manager and not target_user_email: 
+    # Atualiza o perfil com as métricas calculadas
+    # Garante que a escrita ocorra apenas se houver métricas (evita erro em usuário novo sem implantações)
+    if impl_list: # Verifica se a lista não está vazia
         try:
              rows_affected = execute_db(
                  """
@@ -322,7 +258,7 @@ def get_dashboard_data(user_email, user_perfil_acesso, target_user_email=None):
              print(f"AVISO: Falha ao atualizar métricas no perfil {user_email}: {update_err}")
 
     return dashboard_data, metrics
-# --- FIM DA FUNÇÃO get_dashboard_data ---
+# --- FIM DA FUNÇÃO CORRIGIDA ---
 
 
 def calculate_time_in_status(impl_id, status_target='parada'):
@@ -330,9 +266,6 @@ def calculate_time_in_status(impl_id, status_target='parada'):
     Calcula o tempo (em dias) que uma implantação permaneceu em um status específico.
     Usado para calcular a duração da parada atual.
     """
-    # IMPORTAÇÃO LOCAL
-    from .db import query_db
-
     impl = query_db(
         "SELECT data_criacao, data_finalizacao, status FROM implantacoes WHERE id = %s",
         (impl_id,), one=True
@@ -346,29 +279,29 @@ def calculate_time_in_status(impl_id, status_target='parada'):
         data_inicio_parada_obj = impl['data_finalizacao']
 
         # O DB retorna um objeto datetime ou date
-        # Usa a função auxiliar para garantir naive datetime (CORREÇÃO DE BUG: Timezone)
-        agora = datetime.now()
-        agora_naive = _to_naive_datetime(agora)
-        parada_naive = _to_naive_datetime(data_inicio_parada_obj)
-        
-        if agora_naive and parada_naive:
-            try:
-                delta = agora_naive - parada_naive
-                return max(0, int(delta.days)) # Retorna o número de dias
-            except TypeError as te:
-                 # CORREÇÃO: Não retorna erro de tipo, retorna None ou 0
-                 print(f"AVISO: Erro de tipo ao calcular tempo parado para impl {impl_id}. Verifique timezones. Erro: {te}")
-                 return None
+        if isinstance(data_inicio_parada_obj, date) and not isinstance(data_inicio_parada_obj, datetime):
+             data_inicio_parada_obj = datetime.combine(data_inicio_parada_obj, datetime.min.time())
+
+        if isinstance(data_inicio_parada_obj, datetime):
+             # Diferença entre agora e a data em que foi parada
+             agora = datetime.now()
+             # Trata timezones (simplificado: assume naive ou converte)
+             agora_naive = agora.replace(tzinfo=None) if agora.tzinfo else agora
+             parada_naive = data_inicio_parada_obj.replace(tzinfo=None) if data_inicio_parada_obj.tzinfo else data_inicio_parada_obj
+             try:
+                 delta = agora_naive - parada_naive
+                 return max(0, int(delta.days)) # Retorna o número de dias
+             except TypeError as te:
+                  print(f"AVISO: Erro de tipo ao calcular tempo parado para impl {impl_id}. Verifique timezones. Erro: {te}")
+                  return None
 
 
     # Poderia adicionar lógica para outros status se necessário
     return None # Não está no status alvo ou dados insuficientes
 
 
-def get_analytics_data(target_cs_email=None, target_status=None, start_date=None, end_date=None, target_paradas_cs=None):
+def get_analytics_data(target_cs_email=None, target_status=None, start_date=None, end_date=None, target_tag=None):
     """Busca e processa dados de TODA a carteira (ou filtrada) para o módulo Gerencial."""
-    # IMPORTAÇÃO LOCAL
-    from .db import query_db
 
     query_impl = """
         SELECT i.*,
@@ -382,7 +315,7 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
     is_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
     date_func = "date" if is_sqlite else "" # Função date() para SQLite
 
-    # Filtro por CS (influencia as métricas de produtividade - cs_metrics)
+    # Filtro por CS
     if target_cs_email:
         query_impl += " AND i.usuario_cs = %s "
         args_impl.append(target_cs_email)
@@ -425,73 +358,9 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
 
     query_impl += " ORDER BY i.nome_empresa "
 
-    # 1. Busca implantações filtradas (principal para métricas)
+    # 1. Busca implantações filtradas
     impl_list = query_db(query_impl, tuple(args_impl))
     impl_list = impl_list if impl_list is not None else [] # Garante lista
-
-    # --- NOVO: Query e processamento dedicado para Implantações Paradas Detalhadas ---
-    query_paradas = """
-        SELECT i.*,
-               p.nome as cs_nome, p.cargo as cs_cargo, p.perfil_acesso as cs_perfil
-        FROM implantacoes i
-        LEFT JOIN perfil_usuario p ON i.usuario_cs = p.usuario
-        WHERE i.status = 'parada'
-    """
-    args_paradas = []
-    
-    # Aplica o filtro de CS ESPECÍFICO para paradas
-    if target_paradas_cs and target_paradas_cs != 'todos':
-        query_paradas += " AND i.usuario_cs = %s "
-        args_paradas.append(target_paradas_cs)
-
-    # Aplica filtros de data à data de paralisação (data_finalizacao)
-    date_field_to_filter_paradas = "i.data_finalizacao"
-
-    if start_date:
-        query_paradas += f" AND {date_func}({date_field_to_filter_paradas}) >= {date_func}(%s) "
-        args_paradas.append(start_date)
-    
-    if end_date:
-        if not is_sqlite:
-            try:
-                end_date_obj_paradas = datetime.strptime(end_date, '%Y-%m-%d').date()
-                next_day_paradas = end_date_obj_paradas + timedelta(days=1)
-                query_paradas += f" AND {date_field_to_filter_paradas} < %s "
-                args_paradas.append(next_day_paradas.strftime('%Y-%m-%d'))
-            except ValueError:
-                query_paradas += f" AND {date_func}({date_field_to_filter_paradas}) <= {date_func}(%s) "
-                args_paradas.append(end_date)
-        else:
-             query_paradas += f" AND {date_func}({date_field_to_filter_paradas}) <= {date_func}(%s) "
-             args_paradas.append(end_date)
-
-    query_paradas += " ORDER BY i.nome_empresa "
-    paradas_raw = query_db(query_paradas, tuple(args_paradas))
-    paradas_raw = paradas_raw if paradas_raw is not None else []
-    
-    implantacoes_paradas_detalhadas = []
-    motivos_parada_global = {} # Recalculado separadamente
-    total_paradas_detalhes = 0
-    
-    for impl_parada in paradas_raw:
-        impl_id = impl_parada.get('id')
-        cs_email_impl = impl_parada.get('usuario_cs')
-        parada_dias = calculate_time_in_status(impl_id, 'parada')
-        motivo = impl_parada.get('motivo_parada') or 'Motivo Não Especificado'
-        
-        # Agregação global de motivos (usando APENAS a lista filtrada)
-        motivos_parada_global[motivo] = motivos_parada_global.get(motivo, 0) + 1
-        total_paradas_detalhes += 1
-
-        implantacoes_paradas_detalhadas.append({
-            'id': impl_id,
-            'nome_empresa': impl_parada.get('nome_empresa'),
-            'motivo_parada': motivo,
-            'parada_dias': parada_dias if parada_dias is not None else 0,
-            'cs_nome': impl_parada.get('cs_nome', cs_email_impl)
-        })
-    # --- FIM DO NOVO PROCESSAMENTO ---
-
 
     # --- 2. Busca e Filtro de Tarefas por Período/Tag (Para Produtividade) ---
     query_tasks = """
@@ -553,12 +422,15 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
     total_impl_global = 0
     total_finalizadas = 0
     total_andamento_global = 0
-    # total_paradas = 0 # Removido, usando total_paradas_detalhes
+    total_paradas = 0
     total_atrasadas_status = 0 # Contagem global de atrasadas (>25d)
     tma_dias_sum = 0
-    # motivos_parada_global = {} # Removido, usando o da lista detalhada
-    # implantacoes_paradas_detalhadas = [] # Removido, usando a lista separada
+    motivos_parada_global = {}
+    implantacoes_paradas_detalhadas = []
     agora = datetime.now() # Hora atual para cálculo de dias passados
+
+    # -- O filtro manual de 'atrasadas_status' foi removido daqui --
+    # -- O filtro SQL já deve ter cuidado disso se selecionado --
 
     for impl in impl_list:
         # Pula se impl for None ou não dict
@@ -576,7 +448,7 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
         metrics = cs_metrics[cs_email_impl]
         metrics['impl_total'] += 1
 
-        # Cálculo TMA em Python (CORREÇÃO DE BUG: Timezone)
+        # Cálculo TMA em Python
         tma_dias = None
         if status == 'finalizada':
             dt_criacao = impl.get('data_criacao')
@@ -602,15 +474,23 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
                 metrics['tma_sum'] += tma_dias
 
         elif status == 'parada':
-            # total_paradas += 1 # Removido
+            total_paradas += 1
             metrics['impl_paradas'] += 1
             parada_dias = calculate_time_in_status(impl_id, 'parada')
             if parada_dias is not None:
                 metrics['parada_dias_total'] += parada_dias
 
             motivo = impl.get('motivo_parada') or 'Motivo Não Especificado'
-            # motivos_parada_global[motivo] = motivos_parada_global.get(motivo, 0) + 1 # Removido
+            motivos_parada_global[motivo] = motivos_parada_global.get(motivo, 0) + 1
             metrics['motivos_parada'][motivo] = metrics['motivos_parada'].get(motivo, 0) + 1
+
+            implantacoes_paradas_detalhadas.append({
+                'id': impl_id,
+                'nome_empresa': impl.get('nome_empresa'),
+                'motivo_parada': motivo,
+                'parada_dias': parada_dias if parada_dias is not None else 0,
+                'cs_nome': metrics.get('nome', cs_email_impl)
+            })
 
         elif status == 'andamento':
             total_andamento_global += 1
@@ -652,10 +532,10 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
         'total_impl': total_impl_global,
         'total_finalizadas': total_finalizadas,
         'total_andamento': total_andamento_global,
-        'total_paradas': total_paradas_detalhes, # Usando o total da lista detalhada
+        'total_paradas': total_paradas,
         'total_atrasadas': total_atrasadas_status, # Usar a contagem feita no loop
         'global_tma': round(tma_dias_sum / total_finalizadas, 1) if total_finalizadas > 0 and tma_dias_sum is not None else 'N/A',
-        'motivos_parada': motivos_parada_global # Usando o da lista detalhada
+        'motivos_parada': motivos_parada_global
     }
 
     return global_metrics, final_cs_metrics_list, implantacoes_paradas_detalhadas
@@ -663,12 +543,7 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
 
 # --- FUNÇÃO PARA GAMIFICAÇÃO ---
 def calcular_pontuacao_gamificacao(usuario_cs, mes, ano):
-    """
-    Calcula a pontuação da gamificação para um usuário em um mês/ano específico.
-    CORREÇÃO DE BUG: Ajusta o filtro de data para garantir que todas as implantações do mês sejam contadas.
-    """
-    # IMPORTAÇÃO LOCAL
-    from .db import query_db, execute_db
+    """Calcula a pontuação da gamificação para um usuário em um mês/ano específico."""
 
     # 1. Buscar Perfil e Métricas Manuais
     perfil = query_db("SELECT cargo FROM perfil_usuario WHERE usuario = %s", (usuario_cs,), one=True)
@@ -710,15 +585,10 @@ def calcular_pontuacao_gamificacao(usuario_cs, mes, ano):
 
     # 2. Definir Período
     try:
-        primeiro_dia_obj = date(ano, mes, 1)
+        primeiro_dia = date(ano, mes, 1)
         ultimo_dia_mes = calendar.monthrange(ano, mes)[1]
-        
-        # O início é sempre 00:00:00 do primeiro dia do mês (limite inclusivo)
-        primeiro_dia_inclusivo = datetime.combine(primeiro_dia_obj, datetime.min.time())
-        
-        # NOVO: Define o limite superior como 00:00:00 do primeiro dia do PRÓXIMO mês (limite exclusivo)
-        fim_ultimo_dia_exclusivo = datetime.combine(primeiro_dia_obj + timedelta(days=ultimo_dia_mes), datetime.min.time())
-        
+        ultimo_dia = date(ano, mes, ultimo_dia_mes)
+        fim_ultimo_dia = datetime.combine(ultimo_dia, datetime.max.time())
         dias_no_mes = ultimo_dia_mes
     except ValueError:
         raise ValueError(f"Mês ({mes}) ou Ano ({ano}) inválido.")
@@ -730,9 +600,9 @@ def calcular_pontuacao_gamificacao(usuario_cs, mes, ano):
         """
         SELECT data_criacao, data_finalizacao FROM implantacoes
         WHERE usuario_cs = %s AND status = 'finalizada'
-        AND data_finalizacao >= %s AND data_finalizacao < %s -- CORREÇÃO: Usando < e limite exclusivo
+        AND data_finalizacao >= %s AND data_finalizacao <= %s
         """,
-        (usuario_cs, primeiro_dia_inclusivo, fim_ultimo_dia_exclusivo)
+        (usuario_cs, primeiro_dia, fim_ultimo_dia)
     )
     impl_finalizadas = impl_finalizadas if impl_finalizadas is not None else [] # Garante lista
     count_finalizadas = len(impl_finalizadas)
@@ -760,8 +630,8 @@ def calcular_pontuacao_gamificacao(usuario_cs, mes, ano):
 
     # b) Implantações Iniciadas
     impl_iniciadas = query_db(
-        "SELECT COUNT(*) as total FROM implantacoes WHERE usuario_cs = %s AND data_criacao >= %s AND data_criacao < %s", # Usando < para consistência
-        (usuario_cs, primeiro_dia_inclusivo, fim_ultimo_dia_exclusivo), one=True
+        "SELECT COUNT(*) as total FROM implantacoes WHERE usuario_cs = %s AND data_criacao >= %s AND data_criacao <= %s",
+        (usuario_cs, primeiro_dia, fim_ultimo_dia), one=True
     )
     count_iniciadas = impl_iniciadas.get('total', 0) if impl_iniciadas else 0
 
@@ -771,10 +641,10 @@ def calcular_pontuacao_gamificacao(usuario_cs, mes, ano):
          SELECT tag, COUNT(*) as total FROM tarefas
          WHERE implantacao_id IN (SELECT id FROM implantacoes WHERE usuario_cs = %s)
          AND concluida = TRUE AND tag IN ('Ação interna', 'Reunião')
-         AND data_conclusao >= %s AND data_conclusao < %s -- Usando < para consistência
+         AND data_conclusao >= %s AND data_conclusao <= %s
          GROUP BY tag
          """,
-         (usuario_cs, primeiro_dia_inclusivo, fim_ultimo_dia_exclusivo)
+         (usuario_cs, primeiro_dia, fim_ultimo_dia)
     )
     tarefas_concluidas = tarefas_concluidas if tarefas_concluidas is not None else [] # Garante lista
     count_acao_interna = 0
@@ -1035,8 +905,6 @@ def calcular_pontuacao_gamificacao(usuario_cs, mes, ano):
 
     # 7. Opcional, mas recomendado: Atualizar o DB com os resultados calculados
     try:
-         # IMPORTAÇÃO LOCAL (necessária se query_db/execute_db não foram importados antes na função)
-         from .db import query_db, execute_db 
          existing_record_id = query_db(
              "SELECT id FROM gamificacao_metricas_mensais WHERE usuario_cs = %s AND mes = %s AND ano = %s",
              (usuario_cs, mes, ano), one=True
@@ -1075,60 +943,3 @@ def calcular_pontuacao_gamificacao(usuario_cs, mes, ano):
 
 
     return resultado
-
-# --- FUNÇÃO DE MIGRAÇÃO PARA IMPLANTAÇÕES EXISTENTES ---
-def migrar_adicionar_definicao_carteira():
-    """
-    Adiciona a tarefa 'Definição de carteira' a todas as implantações existentes
-    que ainda não a possuem.
-    """
-    # IMPORTAÇÃO LOCAL
-    from .db import query_db, execute_db # , logar_timeline (comentado na função original)
-
-    try:
-        # Constantes da tarefa
-        MODULO_NOVO = "Definição de carteira"
-        TAREFA_NOVA = "Definição de carteira"
-        TAG_NOVA = "Ação interna"
-        ORDEM_NOVA = 1 # Primeira e única tarefa dentro deste módulo
-
-        # 1. Buscar IDs de todas as implantações
-        impl_ids = query_db("SELECT id FROM implantacoes")
-
-        if not impl_ids:
-            # Retorna 0, 0 se não houver implantações
-            return 0, 0
-
-        # 2. Iterar e Inserir
-        impl_migradas_count = 0
-        impl_total = len(impl_ids)
-
-        for impl in impl_ids:
-            impl_id = impl['id']
-            
-            # A. Verificar se a tarefa já existe para evitar duplicação
-            exists = query_db(
-                "SELECT 1 FROM tarefas WHERE implantacao_id = %s AND tarefa_pai = %s AND tarefa_filho = %s",
-                (impl_id, MODULO_NOVO, TAREFA_NOVA),
-                one=True
-            )
-            
-            if not exists:
-                # B. Inserir a nova tarefa
-                execute_db(
-                    """INSERT INTO tarefas (implantacao_id, tarefa_pai, tarefa_filho, ordem, tag) 
-                       VALUES (%s, %s, %s, %s, %s)""",
-                    (impl_id, MODULO_NOVO, TAREFA_NOVA, ORDEM_NOVA, TAG_NOVA)
-                )
-                impl_migradas_count += 1
-                
-                # C. (Opcional) Logar a ação na timeline
-                # Esta linha pode ser comentada para evitar flood no log se a migração for grande
-                # from .db import logar_timeline # Importaria aqui se fosse usar
-                # logar_timeline(impl_id, 'MIGRATION_SCRIPT', 'Tarefa Adicionada', f'Tarefa "{TAREFA_NOVA}" adicionada via script.')
-        
-        return impl_total, impl_migradas_count
-
-    except Exception as e:
-        print(f"ERRO CRÍTICO durante a migração de tarefas: {e}")
-        raise e

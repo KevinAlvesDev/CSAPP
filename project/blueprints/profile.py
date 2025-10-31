@@ -1,148 +1,130 @@
-from flask import (
-    Blueprint, request, g, jsonify, current_app, session
-)
-from werkzeug.security import check_password_hash, generate_password_hash
-from botocore.exceptions import ClientError
 import os
-import mimetypes
+import time
+from flask import (
+    Blueprint, render_template, request, flash, redirect, url_for, g, current_app
+)
+from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash
+from botocore.exceptions import ClientError, NoCredentialsError
 
-from ..db import query_db, execute_db
 from ..blueprints.auth import login_required
+from ..db import execute_db, query_db
 from ..extensions import r2_client
-from ..utils import get_now_utc
+from ..utils import allowed_file
+from ..constants import CARGOS_LIST, PERFIL_IMPLANTADOR # <-- ALTERADO
 
 profile_bp = Blueprint('profile', __name__)
 
-@profile_bp.route('/perfil', methods=['GET'])
+@profile_bp.route('/perfil', methods=['GET', 'POST'])
 @login_required
 def perfil():
-    """Retorna os dados do perfil do usuário logado."""
-    # g.perfil é carregado pelo decorator @login_required
-    if not g.perfil:
-        return jsonify(success=False, error="Perfil não encontrado."), 404
-        
-    return jsonify(success=True, perfil=g.perfil)
+    usuario_cs_email = g.user_email
+    current_perfil = g.perfil # Perfil carregado pelo @login_required
 
-
-@profile_bp.route('/perfil/atualizar', methods=['POST'])
-@login_required
-def atualizar_perfil():
-    """
-    Atualiza o perfil do usuário (nome, cargo, foto).
-    Espera 'multipart/form-data' por causa do upload da foto.
-    """
-    usuario_email = g.user_email
-    
-    # Dados do formulário (enviados como multipart/form-data)
-    nome = request.form.get('nome', '').strip()
-    cargo = request.form.get('cargo', '').strip()
-    foto_file = request.files.get('foto_url')
-
-    if not nome:
-        return jsonify(success=False, error="O nome é obrigatório."), 400
-
-    try:
-        current_profile = g.perfil
-        new_foto_url = current_profile.get('foto_url') # Mantém a URL antiga por padrão
-
-        # 1. Lógica de Upload da Foto (se enviada)
-        if foto_file and foto_file.filename != '':
-            if not r2_client:
-                 return jsonify(success=False, error="Serviço de armazenamento (R2) não configurado."), 500
-
-            bucket_name = current_app.config['CLOUDFLARE_BUCKET_NAME']
-            public_url_base = current_app.config['CLOUDFLARE_PUBLIC_URL']
+    if request.method == 'POST':
+        # Verifica se o R2 está configurado antes de tentar o upload
+        if not r2_client or not current_app.config['CLOUDFLARE_PUBLIC_URL']:
+            flash("Erro: Serviço de armazenamento (R2) não configurado. Não é possível alterar a foto.", "error")
+            return redirect(url_for('profile.perfil'))
             
-            safe_email = "".join(c if c.isalnum() else "_" for c in usuario_email)
-            timestamp = int(get_now_utc().timestamp())
-            original_filename = foto_file.filename
-            extension = os.path.splitext(original_filename)[1]
-            object_key = f"profile_photos/{safe_email}/{timestamp}{extension}"
-            content_type = mimetypes.guess_type(original_filename)[0] or 'application/octet-stream'
+        try:
+            # Pega os dados do formulário
+            form_nome = request.form.get('nome', '').strip()
+            form_cargo = request.form.get('cargo', '').strip()
+            
+            # --- Lógica de Restrição ATUALIZADA ---
+            is_implantador = current_perfil.get('perfil_acesso') == PERFIL_IMPLANTADOR # <-- ALTERADO
+            
+            # DEFINE nome_to_save: Se não for implantador, usa o valor do form.
+            if not is_implantador:
+                 nome_to_save = form_nome if form_nome else None
+            else:
+                 nome_to_save = current_perfil.get('nome')
+            
+            # Cargo só é salvo se não for implantador.
+            cargo_to_save = current_perfil.get('cargo') # Mantém o atual por padrão
+            if not is_implantador:
+                if not form_cargo: 
+                    cargo_to_save = None
+                elif form_cargo in CARGOS_LIST:
+                    cargo_to_save = form_cargo
+                else:
+                    cargo_to_save = current_perfil.get('cargo') 
+            # --------------------------
+            
+            foto_url_atual = current_perfil.get('foto_url')
 
-            try:
-                # 2. Excluir foto antiga do R2 (se existir e for do R2)
-                old_foto_url = current_profile.get('foto_url')
-                if old_foto_url and old_foto_url.startswith(public_url_base):
-                    old_key = old_foto_url.replace(f"{public_url_base}/", "")
+            # --- Lógica de Upload para R2 (original) ---
+            if 'foto_perfil' in request.files:
+                file = request.files['foto_perfil']
+                if file and file.filename and allowed_file(file.filename):
                     try:
-                        r2_client.delete_object(Bucket=bucket_name, Key=old_key)
-                        print(f"Foto de perfil antiga excluída: {old_key}")
-                    except ClientError as e_del:
-                        print(f"Aviso: Falha ao excluir foto antiga {old_key}. Erro: {e_del}")
+                        # Cria um nome de arquivo único
+                        nome_base, extensao = os.path.splitext(secure_filename(file.filename))
+                        email_hash = generate_password_hash(usuario_cs_email).split('$')[-1][:8]
+                        object_name = f"profile_pics/perfil_{email_hash}_{int(time.time())}{extensao}"
 
-                # 3. Fazer upload da nova foto
-                r2_client.upload_fileobj(
-                    foto_file,
-                    bucket_name,
-                    object_key,
-                    ExtraArgs={
-                        'ContentType': content_type,
-                        'ACL': 'public-read' # Garante que a imagem seja pública
-                    }
-                )
-                new_foto_url = f"{public_url_base}/{object_key}"
-                print(f"Nova foto de perfil carregada: {new_foto_url}")
+                        # Faz o upload para o R2
+                        file.seek(0)
+                        r2_client.upload_fileobj(
+                            file,
+                            current_app.config['CLOUDFLARE_BUCKET_NAME'],
+                            object_name,
+                            ExtraArgs={'ContentType': file.content_type}
+                        )
+                        
+                        # Constrói a URL pública
+                        nova_foto_url = f"{current_app.config['CLOUDFLARE_PUBLIC_URL']}/{object_name}"
+                        print(f"Upload R2 concluído: {nova_foto_url}")
 
-            except ClientError as e_upload:
-                print(f"Erro ao fazer upload para R2: {e_upload}")
-                return jsonify(success=False, error=f"Erro ao salvar a foto: {e_upload}"), 500
-            except Exception as e_upload:
-                 print(f"Erro inesperado no upload: {e_upload}")
-                 return jsonify(success=False, error=f"Erro inesperado ao salvar a foto: {e_upload}"), 500
+                        # --- Excluir foto ANTIGA do R2 ---
+                        if foto_url_atual and foto_url_atual != nova_foto_url:
+                            try:
+                                old_object_key = foto_url_atual.replace(f"{current_app.config['CLOUDFLARE_PUBLIC_URL']}/", "")
+                                if old_object_key and old_object_key != foto_url_atual:
+                                    print(f"Tentando excluir objeto R2 antigo: {old_object_key}")
+                                    r2_client.delete_object(
+                                        Bucket=current_app.config['CLOUDFLARE_BUCKET_NAME'], 
+                                        Key=old_object_key
+                                    )
+                                    print(f"Objeto R2 antigo excluído.")
+                            except Exception as e_delete:
+                                print(f"Aviso: Falha ao excluir foto antiga do R2. {e_delete}")
+                        
+                        foto_url_atual = nova_foto_url
 
-        # 4. Atualizar o banco de dados
-        execute_db(
-            "UPDATE perfil_usuario SET nome = %s, cargo = %s, foto_url = %s WHERE usuario = %s",
-            (nome, cargo, new_foto_url, usuario_email)
-        )
-        
-        # 5. Atualizar a sessão (g.perfil)
-        g.perfil['nome'] = nome
-        g.perfil['cargo'] = cargo
-        g.perfil['foto_url'] = new_foto_url
-        
-        if 'user' in session and session['user'].get('name') != nome:
-            session['user']['name'] = nome
+                    except (ClientError, NoCredentialsError) as e_upload:
+                        print(f"ERRO upload R2: {e_upload}")
+                        flash("Erro ao fazer upload da nova foto (credenciais/conexão R2?).", "error")
+                    except Exception as e_upload:
+                        print(f"ERRO upload R2: {e_upload}")
+                        flash("Erro ao fazer upload da nova foto.", "error")
+
+            # Atualiza o banco de dados com os valores corretos (respeitando a restrição)
+            execute_db(
+                """
+                UPDATE perfil_usuario 
+                SET nome = %s, cargo = %s, foto_url = %s 
+                WHERE usuario = %s
+                """,
+                (nome_to_save, cargo_to_save, foto_url_atual, usuario_cs_email)
+            )
             
-        return jsonify(
-            success=True, 
-            message="Perfil atualizado com sucesso!",
-            updated_profile=g.perfil # Retorna o perfil atualizado
-        )
+            if is_implantador and (request.form.get('nome', '').strip() != current_perfil.get('nome') or request.form.get('cargo', '').strip() != current_perfil.get('cargo')):
+                 # Verifica se a intenção era mudar (o form submetido é diferente do valor inicial)
+                 flash(f'Perfil atualizado. Nome e Cargo não podem ser alterados pelo perfil {PERFIL_IMPLANTADOR}.', 'warning') # <-- ALTERADO
+            else:
+                 flash('Perfil atualizado com sucesso!', 'success')
+            
+            # Recarrega o perfil para refletir a mudança no request atual
+            g.perfil = query_db("SELECT * FROM perfil_usuario WHERE usuario = %s", (usuario_cs_email,), one=True)
+            
+            return redirect(url_for('profile.perfil'))
+            
+        except Exception as e:
+            print(f"ERRO GERAL ao atualizar perfil para {usuario_cs_email}: {e}")
+            flash(f'Erro ao atualizar perfil: {e}', 'error')
+            return redirect(url_for('profile.perfil'))
 
-    except Exception as e:
-        print(f"Erro ao atualizar perfil para {usuario_email}: {e}")
-        return jsonify(success=False, error=f"Erro ao atualizar perfil: {e}"), 500
-
-# Esta rota provavelmente não é usada com Auth0, mas está aqui convertida
-@profile_bp.route('/perfil/atualizar_senha', methods=['POST'])
-@login_required
-def atualizar_senha():
-    usuario_email = g.user_email
-    data = request.json
-    senha_antiga = data.get('senha_antiga')
-    nova_senha = data.get('nova_senha')
-
-    if not senha_antiga or not nova_senha:
-        return jsonify(success=False, error="Senha antiga e nova são obrigatórias."), 400
-
-    try:
-        # Verifica se é usuário Auth0 (não pode trocar senha aqui)
-        is_auth0_user = session.get('user', {}).get('sub', '').startswith(('auth0|', 'google-oauth2|'))
-        if is_auth0_user:
-             return jsonify(success=False, error="Usuários autenticados via Google/Auth0 devem redefinir a senha na plataforma de origem."), 400
-
-        user_db = query_db("SELECT senha FROM usuarios WHERE usuario = %s", (usuario_email,), one=True)
-
-        if not user_db or not check_password_hash(user_db['senha'], senha_antiga):
-            return jsonify(success=False, error="Senha antiga incorreta."), 403
-
-        nova_senha_hash = generate_password_hash(nova_senha)
-        execute_db("UPDATE usuarios SET senha = %s WHERE usuario = %s", (nova_senha_hash, usuario_email))
-        
-        return jsonify(success=True, message="Senha atualizada com sucesso.")
-
-    except Exception as e:
-        print(f"Erro ao atualizar senha para {usuario_email}: {e}")
-        return jsonify(success=False, error=f"Erro ao atualizar senha: {e}"), 500
+    # Método GET
+    return render_template('perfil.html', user_info=g.user, perfil=current_perfil, cargos_list=CARGOS_LIST)

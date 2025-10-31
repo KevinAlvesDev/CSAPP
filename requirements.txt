@@ -12,7 +12,6 @@ cryptography==46.0.3
 customtkinter==5.2.2
 darkdetect==0.8.0
 Flask==3.1.2
-Flask-CORS==4.0.1  # <-- ADICIONADO PARA A API
 google-auth==2.41.1
 google-auth-httplib2==0.2.0
 google-auth-oauthlib==1.2.2
