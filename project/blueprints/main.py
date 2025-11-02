@@ -57,17 +57,22 @@ def dashboard():
         # --- CORREÇÃO APLICADA AQUI ---
         # A lista PERFIS_COM_CRIACAO precisa ser passada para o template
         # para que o {% if ... in PERFIS_COM_CRIACAO %} funcione.
+        
+        # Busca todos os usuários para os modais
+        all_cs_users = _get_all_cs_users()
+
         return render_template(
             'dashboard.html', #
             user_info=user_info, 
             metrics=final_metrics, 
             implantacoes_andamento=dashboard_data.get('andamento', []), 
+            implantacoes_novas=dashboard_data.get('novas', []), # Envia 'novas'
             implantacoes_futuras=dashboard_data.get('futuras', []), 
             implantacoes_finalizadas=dashboard_data.get('finalizadas', []), 
             implantacoes_paradas=dashboard_data.get('paradas', []), 
             implantacoes_atrasadas=dashboard_data.get('atrasadas', []), 
             cargos_responsavel=CARGOS_RESPONSAVEL, #
-            PERFIS_COM_CRIACAO=PERFIS_COM_CRIACAO, # <-- LINHA ADICIONADA
+            PERFIS_COM_CRIACAO=PERFIS_COM_CRIACAO, # 
             NIVEIS_RECEITA=NIVEIS_RECEITA, #
             SEGUIMENTOS_LIST=SEGUIMENTOS_LIST, #
             TIPOS_PLANOS=TIPOS_PLANOS, #
@@ -76,14 +81,15 @@ def dashboard():
             FORMAS_PAGAMENTO=FORMAS_PAGAMENTO, #
             SISTEMAS_ANTERIORES=SISTEMAS_ANTERIORES, #
             RECORRENCIA_USADA=RECORRENCIA_USADA, #
-            SIM_NAO_OPTIONS=SIM_NAO_OPTIONS #
+            SIM_NAO_OPTIONS=SIM_NAO_OPTIONS, #
+            all_cs_users=all_cs_users # Envia a lista de usuários para os modais
         )
         # --- FIM DA CORREÇÃO ---
         
     except Exception as e:
         print(f"ERRO ao carregar dashboard para {user_email}: {e}")
         flash("Erro ao carregar dados do dashboard.", "error")
-        return render_template('dashboard.html', user_info=user_info, metrics={}, implantacoes_andamento=[], implantacoes_futuras=[], implantacoes_finalizadas=[], implantacoes_paradas=[], implantacoes_atrasadas=[], cargos_responsavel=CARGOS_RESPONSAVEL, error="Falha ao carregar dados." ) #
+        return render_template('dashboard.html', user_info=user_info, metrics={}, implantacoes_andamento=[], implantacoes_novas=[], implantacoes_futuras=[], implantacoes_finalizadas=[], implantacoes_paradas=[], implantacoes_atrasadas=[], cargos_responsavel=CARGOS_RESPONSAVEL, error="Falha ao carregar dados.", all_cs_users=[], PERFIS_COM_CRIACAO=PERFIS_COM_CRIACAO ) #
 
 @main_bp.route('/implantacao/<int:impl_id>')
 @login_required
@@ -102,8 +108,20 @@ def ver_implantacao(impl_id):
         is_manager = user_perfil_acesso in PERFIS_COM_GESTAO #
         
         if not is_owner and not is_manager:
-            flash('Implantação não encontrada ou não pertence a você.', 'error')
+            # Se não for dono nem gerente, mas o status for 'nova', também não deve ver
+            if implantacao.get('status') == 'nova':
+                 flash('Esta implantação ainda não foi iniciada.', 'warning')
+            else:
+                flash('Implantação não encontrada ou não pertence a você.', 'error')
             return redirect(url_for('main.dashboard'))
+            
+        # --- BLOQUEIO PARA STATUS 'NOVA' ---
+        # Um implantador não deve acessar a página de detalhes de algo que ele ainda não iniciou.
+        if implantacao.get('status') == 'nova' and is_owner and not is_manager:
+             flash('Esta implantação está aguardando início. Use os botões "Iniciar" ou "Início Futuro" no dashboard.', 'warning')
+             return redirect(url_for('main.dashboard'))
+        # --- FIM DO BLOQUEIO ---
+
 
         # Formatação de datas
         implantacao['data_criacao_fmt_dt_hr'] = utils.format_date_br(implantacao.get('data_criacao'), True) #
@@ -198,41 +216,88 @@ def ver_implantacao(impl_id):
 def criar_implantacao():
     from ..services import _create_default_tasks #
     
-    usuario_cs_email = g.user_email #
+    usuario_criador = g.user_email # Quem está criando
     nome_empresa = request.form.get('nome_empresa', '').strip()
-    tipo = request.form.get('tipo', 'agora')
-    data_inicio_previsto_str = request.form.get('data_inicio_previsto')
-    data_inicio_previsto = data_inicio_previsto_str if tipo == 'futura' and data_inicio_previsto_str else None
+    usuario_atribuido = request.form.get('usuario_atribuido_cs', '').strip() or usuario_criador
+    
+    # --- AJUSTE 1 (Início) ---
+    # O tipo agora é 'completa' (para diferenciar de 'modulo')
+    tipo = 'completa'
+    # O status inicial é SEMPRE 'nova'
+    status = 'nova'
+    # As datas de início são NULAS até o implantador agir
+    data_inicio_previsto = None
+    data_inicio_efetivo = None
+    # --- AJUSTE 1 (Fim) ---
 
-    if not nome_empresa or tipo not in ['agora', 'futura', 'modulo']:
-        flash('Dados inválidos para criar implantação.', 'error')
+    if not nome_empresa:
+        flash('Nome da empresa é obrigatório.', 'error')
         return redirect(url_for('main.dashboard'))
+    
+    if not usuario_atribuido:
+         flash('Usuário a ser atribuído não foi selecionado.', 'error')
+         return redirect(url_for('main.dashboard'))
 
     try:
         agora = datetime.now()
-        status = 'futura' if tipo == 'futura' else 'andamento'
-        # Define data_inicio_efetivo baseado no tipo
-        data_inicio_efetivo = agora if tipo in ['agora', 'modulo'] else None
         
         implantacao_id = execute_db( #
             "INSERT INTO implantacoes (usuario_cs, nome_empresa, tipo, data_criacao, status, data_inicio_previsto, data_inicio_efetivo) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-            (usuario_cs_email, nome_empresa, tipo, agora, status, data_inicio_previsto, data_inicio_efetivo)
+            (usuario_atribuido, nome_empresa, tipo, agora, status, data_inicio_previsto, data_inicio_efetivo)
         )
         if not implantacao_id:
             raise Exception("Falha ao obter ID da nova implantação.")
 
-        logar_timeline(implantacao_id, usuario_cs_email, 'implantacao_criada', f'Implantação "{nome_empresa}" ({tipo.capitalize()}) criada.') #
+        logar_timeline(implantacao_id, usuario_criador, 'implantacao_criada', f'Implantação "{nome_empresa}" ({tipo.capitalize()}) criada e atribuída a {usuario_atribuido}.') #
         
         tasks_added = 0
-        if tipo in ['agora', 'futura']: # Não cria tarefas se for 'modulo'
+        # Cria tarefas padrão para 'completa' (mas não para 'modulo')
+        if tipo == 'completa': 
             tasks_added = _create_default_tasks(implantacao_id) #
             
         flash(f'Implantação "{nome_empresa}" criada com {tasks_added} tarefas padrão.', 'success')
-        return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
+        # --- AJUSTE 1 (Redirecionamento) ---
+        # Redireciona para o dashboard, não para os detalhes
+        return redirect(url_for('main.dashboard'))
 
     except Exception as e:
-        print(f"ERRO ao criar implantação por {usuario_cs_email}: {e}")
+        print(f"ERRO ao criar implantação por {usuario_criador}: {e}")
         flash(f'Erro ao criar implantação: {e}.', 'error')
+        return redirect(url_for('main.dashboard'))
+
+@main_bp.route('/criar_implantacao_modulo', methods=['POST'])
+@login_required
+@permission_required(PERFIS_COM_CRIACAO)
+def criar_implantacao_modulo():
+    usuario_criador = g.user_email # Quem está criando
+    nome_empresa = request.form.get('nome_empresa_modulo', '').strip()
+    usuario_atribuido = request.form.get('usuario_atribuido_cs_modulo', '').strip()
+    tipo = 'modulo'
+    # O status inicial é SEMPRE 'nova'
+    status = 'nova' 
+
+    if not nome_empresa or not usuario_atribuido:
+        flash('Nome da empresa e implantador atribuído são obrigatórios.', 'error')
+        return redirect(url_for('main.dashboard'))
+
+    try:
+        agora = datetime.now()
+        # Status 'nova' e tipo 'modulo', sem data de início efetivo ou previsto
+        implantacao_id = execute_db(
+            "INSERT INTO implantacoes (usuario_cs, nome_empresa, tipo, data_criacao, status, data_inicio_previsto, data_inicio_efetivo) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            (usuario_atribuido, nome_empresa, tipo, agora, status, None, None)
+        )
+        if not implantacao_id:
+            raise Exception("Falha ao obter ID da nova implantação de módulo.")
+
+        logar_timeline(implantacao_id, usuario_criador, 'implantacao_criada', f'Implantação de Módulo "{nome_empresa}" criada e atribuída a {usuario_atribuido}.')
+        
+        flash(f'Implantação de Módulo "{nome_empresa}" criada e atribuída a {usuario_atribuido}.', 'success')
+        return redirect(url_for('main.dashboard'))
+
+    except Exception as e:
+        print(f"ERRO ao criar implantação de módulo por {usuario_criador}: {e}")
+        flash(f'Erro ao criar implantação de módulo: {e}.', 'error')
         return redirect(url_for('main.dashboard'))
 
 @main_bp.route('/iniciar_implantacao', methods=['POST'])
@@ -240,28 +305,93 @@ def criar_implantacao():
 def iniciar_implantacao():
     usuario_cs_email = g.user_email #
     implantacao_id = request.form.get('implantacao_id')
+    
+    # O 'redirect_to' é usado em caso de falha. Em caso de sucesso, sempre vai para 'ver_implantacao'
+    redirect_to_fallback = request.form.get('redirect_to', 'dashboard')
+    dest_url_fallback = url_for('main.dashboard')
+    if redirect_to_fallback == 'detalhes':
+        dest_url_fallback = url_for('main.ver_implantacao', impl_id=implantacao_id)
+        
     try:
         impl = query_db( #
-            "SELECT usuario_cs, nome_empresa, tipo FROM implantacoes WHERE id = %s",
+            "SELECT usuario_cs, nome_empresa, status, tipo FROM implantacoes WHERE id = %s",
             (implantacao_id,), one=True
         )
-        if not impl or impl.get('usuario_cs') != usuario_cs_email or impl.get('tipo') != 'futura':
-            flash('Operação negada. Implantação não é "futura" ou não pertence a você.', 'error')
-            return redirect(request.referrer or url_for('main.dashboard'))
+        
+        # O usuário deve ser o dono
+        if not impl or impl.get('usuario_cs') != usuario_cs_email:
+             flash('Operação negada. Implantação não pertence a você.', 'error')
+             return redirect(request.referrer or dest_url_fallback)
+             
+        # Só pode iniciar se estiver 'nova' ou 'futura'
+        if impl.get('status') not in ['nova', 'futura']:
+            flash(f'Operação negada. Implantação com status "{impl.get("status")}" não pode ser iniciada.', 'error')
+            return redirect(request.referrer or dest_url_fallback)
 
         agora = datetime.now()
+        
+        # Define o tipo para 'completa' se for 'futura' (pois 'futura' só vem de 'completa')
+        # ou mantém 'modulo' se for 'modulo'.
+        # Se for 'nova' e tipo 'completa', mantém 'completa'.
+        novo_tipo = impl.get('tipo')
+        if novo_tipo == 'futura': # Tipo 'futura' era um erro de lógica antigo
+            novo_tipo = 'completa' 
+        
         execute_db( #
-            "UPDATE implantacoes SET tipo = 'agora', status = 'andamento', data_inicio_efetivo = %s WHERE id = %s",
-            (agora, implantacao_id)
+            "UPDATE implantacoes SET tipo = %s, status = 'andamento', data_inicio_efetivo = %s, data_inicio_previsto = NULL WHERE id = %s",
+            (novo_tipo, agora, implantacao_id)
         )
         logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Implantação "{impl.get("nome_empresa", "N/A")}" iniciada.') #
         flash('Implantação iniciada com sucesso!', 'success')
+        
+        # Após iniciar, sempre vai para a página de detalhes
         return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
 
     except Exception as e:
         print(f"Erro ao iniciar implantação ID {implantacao_id}: {e}")
         flash('Erro ao iniciar implantação.', 'error')
         return redirect(url_for('main.dashboard'))
+
+# --- AJUSTE 1: NOVA ROTA ADICIONADA ---
+@main_bp.route('/agendar_implantacao', methods=['POST'])
+@login_required
+def agendar_implantacao():
+    usuario_cs_email = g.user_email
+    implantacao_id = request.form.get('implantacao_id')
+    data_prevista = request.form.get('data_inicio_previsto')
+
+    if not data_prevista:
+        flash('A data de início previsto é obrigatória.', 'error')
+        return redirect(url_for('main.dashboard'))
+
+    try:
+        impl = query_db(
+            "SELECT usuario_cs, nome_empresa, status FROM implantacoes WHERE id = %s",
+            (implantacao_id,), one=True
+        )
+
+        if not impl or impl.get('usuario_cs') != usuario_cs_email:
+            flash('Operação negada. Implantação não pertence a você.', 'error')
+            return redirect(url_for('main.dashboard'))
+
+        if impl.get('status') != 'nova':
+            flash('Apenas implantações "Novas" podem ser agendadas.', 'warning')
+            return redirect(url_for('main.dashboard'))
+
+        execute_db(
+            "UPDATE implantacoes SET status = 'futura', data_inicio_previsto = %s WHERE id = %s",
+            (data_prevista, implantacao_id)
+        )
+        logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Início da implantação "{impl.get("nome_empresa")}" agendado para {data_prevista}.')
+        flash(f'Implantação "{impl.get("nome_empresa")}" movida para "Futuras" com início em {data_prevista}.', 'success')
+
+    except Exception as e:
+        print(f"Erro ao agendar implantação ID {implantacao_id}: {e}")
+        flash(f'Erro ao agendar implantação: {e}', 'error')
+    
+    return redirect(url_for('main.dashboard'))
+# --- FIM DA NOVA ROTA ---
+
 
 @main_bp.route('/finalizar_implantacao', methods=['POST'])
 @login_required
@@ -438,9 +568,19 @@ def atualizar_detalhes_empresa():
         return value
     
     try:
-        alunos_ativos = int(request.form.get('alunos_ativos'))
+        alunos_ativos_str = request.form.get('alunos_ativos', '0').strip()
+        alunos_ativos = int(alunos_ativos_str) if alunos_ativos_str else 0
     except (ValueError, TypeError):
         alunos_ativos = 0
+
+    # *** INÍCIO DA ALTERAÇÃO ***
+    # Coleta valores dos campos de lista (que agora são tags)
+    # request.form.getlist() pega todos os valores de um campo com o mesmo nome
+    # O 'or None' garante que um campo vazio seja salvo como NULL
+    modalidades_val = ','.join(request.form.getlist('modalidades')) or None
+    horarios_val = ','.join(request.form.getlist('horarios_func')) or None
+    formas_pagamento_val = ','.join(request.form.getlist('formas_pagamento')) or None
+    # *** FIM DA ALTERAÇÃO ***
 
     try:
         campos = {
@@ -456,9 +596,13 @@ def atualizar_detalhes_empresa():
             'tela_apoio_link': get_form_value('tela_apoio_link'),
             'seguimento': get_form_value('seguimento'),
             'tipos_planos': get_form_value('tipos_planos'),
-            'modalidades': get_form_value('modalidades'),
-            'horarios_func': get_form_value('horarios_func'),
-            'formas_pagamento': get_form_value('formas_pagamento'),
+            
+            # *** INÍCIO DA ALTERAÇÃO ***
+            'modalidades': modalidades_val,
+            'horarios_func': horarios_val,
+            'formas_pagamento': formas_pagamento_val,
+            # *** FIM DA ALTERAÇÃO ***
+            
             'diaria': get_boolean_value('diaria'), 
             'freepass': get_boolean_value('freepass'), 
             'alunos_ativos': alunos_ativos, 

@@ -1,0 +1,26 @@
+/* Estilos CSS específicos desta página (Timeline, Comentários, etc.) */
+.timeline-list { list-style-type: none; padding-left: 0; }
+.timeline-item { display: flex; padding: 12px 0; border-bottom: 1px solid var(--input-border); }
+.timeline-item:last-child { border-bottom: none; }
+.timeline-icon { flex-shrink: 0; width: 40px; height: 40px; background-color: var(--input-border); color: var(--accent-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-right: 15px; }
+.timeline-content { flex-grow: 1; min-width: 0; }
+.timeline-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.timeline-usuario { font-weight: 600; color: var(--body-color); }
+.timeline-data { font-size: 0.8rem; color: #8b949e; flex-shrink: 0; padding-left: 10px; }
+body.light-mode .timeline-data { color: #555; }
+.timeline-detalhes { font-size: 0.9rem; margin-bottom: 0; color: var(--body-color); opacity: 0.9; white-space: pre-wrap; word-break: break-word; }
+.comment-text { max-height: 100px; overflow: hidden; transition: max-height 0.3s ease-out; white-space: pre-wrap; word-break: break-word; }
+.comment-text.expanded { max-height: 2000px; /* Ajuste conforme necessário */ transition: max-height 0.5s ease-in; }
+.comment-image { max-height: 200px; width: auto; cursor: zoom-in; display: block; /* Garante que seja bloco */ margin-top: 5px; /* Espaçamento */ }
+.task-tag { font-size: 0.75em; vertical-align: middle; }
+.task-label-container { display: flex; align-items: center; flex-grow: 1; min-width: 0; }
+.task-label-container .form-check-label { margin-right: 0.5rem; word-break: break-word; }
+.task-label-container .task-tag { margin-left: auto; flex-shrink: 0; }
+.list-group-flush .list-group-item:last-child { border-bottom-width: 0; }
+/* Adiciona estilo para feedback de salvamento/carregamento nos botões */
+.btn .spinner-border-sm { vertical-align: text-bottom; }
+/* Estilo para o botão Marcar Todas */
+.btn-marcar-todas {
+    font-size: 0.8rem;
+    padding: 0.2rem 0.5rem;
+}

@@ -5,7 +5,8 @@ from .db import query_db, execute_db
 from .constants import (
     CHECKLIST_OBRIGATORIO_ITEMS, MODULO_OBRIGATORIO,
     TAREFAS_TREINAMENTO_PADRAO, MODULO_PENDENCIAS,
-    PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR
+    PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR,
+    NIVEIS_RECEITA # Importa NIVEIS_RECEITA
 )
 from .utils import format_date_iso_for_json
 
@@ -137,7 +138,15 @@ def get_dashboard_data(user_email):
     }
     metrics = {
         'impl_andamento_total': 0, 'implantacoes_atrasadas': 0,
-        'implantacoes_futuras': 0, 'impl_finalizadas': 0, 'impl_paradas': 0
+        'implantacoes_futuras': 0, 'impl_finalizadas': 0, 'impl_paradas': 0,
+        # REQ 3: Adiciona totais de valor para o dashboard
+        'total_valor_andamento': 0.0,
+        'total_valor_atrasadas': 0.0,
+        'total_valor_futuras': 0.0,
+        'total_valor_finalizadas': 0.0,
+        'total_valor_paradas': 0.0,
+        # REQ 5: Adiciona contagem de novas (status 'andamento' com < 2 dias)
+        'impl_novas': 0
     }
 
     # Otimização: Buscar todas as tarefas de uma vez
@@ -182,6 +191,8 @@ def get_dashboard_data(user_email):
         impl['data_criacao_iso'] = format_date_iso_for_json(impl.get('data_criacao'), only_date=True)
         impl['data_inicio_producao_iso'] = format_date_iso_for_json(impl.get('data_inicio_producao'), only_date=True)
         impl['data_final_implantacao_iso'] = format_date_iso_for_json(impl.get('data_final_implantacao'), only_date=True)
+        # REQ 1 & 2: Garantir que valores multiple sejam passados (assumindo que já estão corretos no DB)
+        # (Nenhuma mudança aqui, pois a query é `SELECT *`)
 
         # Calcula progresso usando os dados pré-buscados
         impl_tasks = tasks_by_impl.get(impl_id, []) # Usa .get com default lista vazia
@@ -189,61 +200,71 @@ def get_dashboard_data(user_email):
         done_tasks = sum(1 for t in impl_tasks if t.get('concluida')) # Usa .get para segurança
         impl['progresso'] = int(round((done_tasks / total_tasks) * 100)) if total_tasks > 0 else 0
 
+        # REQ 3: Converte valor_atribuido para float
+        try:
+            impl_valor = float(impl.get('valor_atribuido', 0.0))
+        except (ValueError, TypeError):
+            impl_valor = 0.0
+        # Armazena o valor float para garantir consistência (embora o template formate)
+        impl['valor_atribuido'] = impl_valor
+
+
+        # Cálculo de dias_passados em Python (usado para Atrasadas e Novas)
+        dias_passados = 0
+        data_criacao_obj = impl.get('data_criacao')
+        if data_criacao_obj:
+            if isinstance(data_criacao_obj, date) and not isinstance(data_criacao_obj, datetime):
+                 data_criacao_obj = datetime.combine(data_criacao_obj, datetime.min.time())
+            if isinstance(data_criacao_obj, datetime):
+                 try:
+                     agora_naive = agora.replace(tzinfo=None) if agora.tzinfo else agora
+                     criacao_naive = data_criacao_obj.replace(tzinfo=None) if data_criacao_obj.tzinfo else data_criacao_obj
+                     dias_passados_delta = agora_naive - criacao_naive
+                     dias_passados = dias_passados_delta.days if dias_passados_delta.days >= 0 else 0
+                 except TypeError as te:
+                     print(f"AVISO: Erro de tipo ao calcular dias passados para impl {impl_id}. Verifique timezones. Erro: {te}")
+                     dias_passados = -1
+        impl['dias_passados'] = dias_passados # Adiciona o campo para o template
+
         # Classifica a implantação
         if status == 'finalizada':
             dashboard_data['finalizadas'].append(impl)
             metrics['impl_finalizadas'] += 1
+            metrics['total_valor_finalizadas'] += impl_valor
         elif status == 'parada':
             dashboard_data['paradas'].append(impl)
             metrics['impl_paradas'] += 1
+            metrics['total_valor_paradas'] += impl_valor
         elif status == 'futura' or impl.get('tipo') == 'futura': # Mantém tipo futura como segurança
             dashboard_data['futuras'].append(impl)
             metrics['implantacoes_futuras'] += 1
-        elif status == 'andamento': # Trata apenas 'andamento' aqui
-            # Cálculo de dias_passados em Python
-            dias_passados = 0
-            data_criacao_obj = impl.get('data_criacao')
+            metrics['total_valor_futuras'] += impl_valor
+        elif status == 'andamento':
+            metrics['impl_andamento_total'] += 1 # Conta 'andamento' e 'atrasadas' no total
 
-            # Garante que seja um objeto datetime para a subtração
-            if data_criacao_obj:
-                if isinstance(data_criacao_obj, date) and not isinstance(data_criacao_obj, datetime):
-                     # Converte date para datetime no início do dia
-                     data_criacao_obj = datetime.combine(data_criacao_obj, datetime.min.time())
-
-                if isinstance(data_criacao_obj, datetime):
-                     # Ajuste para timezone-aware vs naive datetime comparison if necessary
-                     try:
-                         # Força ambos para naive se um for aware (simplificação)
-                         agora_naive = agora.replace(tzinfo=None) if agora.tzinfo else agora
-                         criacao_naive = data_criacao_obj.replace(tzinfo=None) if data_criacao_obj.tzinfo else data_criacao_obj
-
-                         dias_passados_delta = agora_naive - criacao_naive # Usa 'agora' ajustado
-                         dias_passados = dias_passados_delta.days if dias_passados_delta.days >= 0 else 0
-                     except TypeError as te:
-                         print(f"AVISO: Erro de tipo ao calcular dias passados para impl {impl_id}. Verifique timezones. Erro: {te}")
-                         dias_passados = -1 # Indica erro ou inconsistência
-
-
-            impl['dias_passados'] = dias_passados # Adiciona o campo para o template
+            # REQ 5: Classifica como 'Novas' (ex: < 2 dias)
+            if dias_passados >= 0 and dias_passados < 2:
+                 metrics['impl_novas'] += 1
+                 # Nota: Elas ainda são "Em Andamento", então continuam para a próxima checagem
 
             if dias_passados > 25:
                 dashboard_data['atrasadas'].append(impl)
                 metrics['implantacoes_atrasadas'] += 1
+                metrics['total_valor_atrasadas'] += impl_valor
             else:
                  # Inclui no andamento mesmo se o cálculo de dias falhar (-1)
                  dashboard_data['andamento'].append(impl)
+                 metrics['total_valor_andamento'] += impl_valor # Soma o valor das 'em andamento' (não atrasadas)
 
-            # Conta 'andamento' e 'atrasadas' no total em andamento
-            metrics['impl_andamento_total'] += 1
         else:
-            # Caso para status desconhecido ou None
             print(f"AVISO: Implantação ID {impl_id} com status desconhecido ou nulo: '{status}'. Ignorando na categorização.")
 
 
     # Atualiza o perfil com as métricas calculadas
-    # Garante que a escrita ocorra apenas se houver métricas (evita erro em usuário novo sem implantações)
-    if impl_list: # Verifica se a lista não está vazia
+    if impl_list:
         try:
+             # Atualiza métricas incluindo a nova contagem 'impl_novas' (se o DB tiver a coluna)
+             # Vamos assumir que 'impl_novas' NÃO está no DB 'perfil_usuario' e não tentar salvar
              rows_affected = execute_db(
                  """
                  UPDATE perfil_usuario
@@ -301,244 +322,245 @@ def calculate_time_in_status(impl_id, status_target='parada'):
 
 
 def get_analytics_data(target_cs_email=None, target_status=None, start_date=None, end_date=None, target_tag=None):
-    """Busca e processa dados de TODA a carteira (ou filtrada) para o módulo Gerencial."""
+    """
+    Busca e processa dados de TODA a carteira (ou filtrada) para o módulo Gerencial.
+    FUNÇÃO COMPLETAMENTE REFEITA PARA ATENDER AO NOVO LAYOUT DE ANALYTICS.
+    """
 
-    query_impl = """
-        SELECT i.*,
-               p.nome as cs_nome, p.cargo as cs_cargo, p.perfil_acesso as cs_perfil
+    # --- 1. PREPARAÇÃO DOS FILTROS ---
+    base_query = """
         FROM implantacoes i
         LEFT JOIN perfil_usuario p ON i.usuario_cs = p.usuario
         WHERE 1=1
     """
-    args_impl = []
-
+    base_args = []
+    
     is_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
     date_func = "date" if is_sqlite else "" # Função date() para SQLite
 
     # Filtro por CS
     if target_cs_email:
-        query_impl += " AND i.usuario_cs = %s "
-        args_impl.append(target_cs_email)
+        base_query += " AND i.usuario_cs = %s "
+        base_args.append(target_cs_email)
 
     # Filtro por Status
     if target_status and target_status != 'todas':
         if target_status == 'atrasadas_status':
-             # Ajuste para PostgreSQL >= ou SQLite JULIANDAY/date()
              if is_sqlite:
-                 query_impl += " AND i.status = 'andamento' AND date(i.data_criacao) <= date('now', '-26 days') " # <= -26 para pegar > 25
+                 base_query += " AND i.status = 'andamento' AND date(i.data_criacao) <= date('now', '-26 days') "
              else: # PostgreSQL
-                 query_impl += " AND i.status = 'andamento' AND i.data_criacao <= NOW() - INTERVAL '26 days' " # <= 26 dias atrás para pegar > 25
+                 base_query += " AND i.status = 'andamento' AND i.data_criacao <= NOW() - INTERVAL '26 days' "
         else:
-            query_impl += " AND i.status = %s "
-            args_impl.append(target_status)
+            base_query += " AND i.status = %s "
+            base_args.append(target_status)
 
-    # Filtro de Data para Implantações Finalizadas/Criadas
-    # Aplica a data_criacao se não for 'finalizada', senão aplica a data_finalizacao
-    date_field_to_filter = "i.data_finalizacao" if target_status == 'finalizada' else "i.data_criacao"
+    # Filtro de Data (período)
+    # Aplica o filtro de data na DATA DE CRIAÇÃO (início da implantação)
+    date_field_to_filter = "i.data_criacao"
 
     if start_date:
-        query_impl += f" AND {date_func}({date_field_to_filter}) >= {date_func}(%s) "
-        args_impl.append(start_date)
+        base_query += f" AND {date_func}({date_field_to_filter}) >= {date_func}(%s) "
+        base_args.append(start_date)
     if end_date:
-        # Para PostgreSQL, ajustar para incluir o dia inteiro (< próximo dia)
         if not is_sqlite:
             try:
                 end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
                 next_day = end_date_obj + timedelta(days=1)
-                query_impl += f" AND {date_field_to_filter} < %s "
-                args_impl.append(next_day.strftime('%Y-%m-%d'))
+                base_query += f" AND {date_field_to_filter} < %s "
+                base_args.append(next_day.strftime('%Y-%m-%d'))
             except ValueError:
-                 print(f"AVISO: Formato de end_date inválido ({end_date}). Usando <=.")
-                 query_impl += f" AND {date_func}({date_field_to_filter}) <= {date_func}(%s) "
-                 args_impl.append(end_date)
-        else: # SQLite usa <=
-             query_impl += f" AND {date_func}({date_field_to_filter}) <= {date_func}(%s) "
-             args_impl.append(end_date)
-
-
-    query_impl += " ORDER BY i.nome_empresa "
-
-    # 1. Busca implantações filtradas
-    impl_list = query_db(query_impl, tuple(args_impl))
-    impl_list = impl_list if impl_list is not None else [] # Garante lista
-
-    # --- 2. Busca e Filtro de Tarefas por Período/Tag (Para Produtividade) ---
-    query_tasks = """
-        SELECT i.usuario_cs, t.tag
-        FROM tarefas t
-        JOIN implantacoes i ON t.implantacao_id = i.id
-        WHERE t.concluida = TRUE AND t.tag IN ('Ação interna', 'Reunião')
-        AND t.data_conclusao IS NOT NULL
-    """
-    args_tasks = []
-
-    # Filtro de Data para Tarefas Concluídas
-    if start_date:
-        query_tasks += f" AND {date_func}(t.data_conclusao) >= {date_func}(%s) "
-        args_tasks.append(start_date)
-    if end_date:
-        if not is_sqlite:
-            try:
-                end_date_obj_task = datetime.strptime(end_date, '%Y-%m-%d').date()
-                next_day_task = end_date_obj_task + timedelta(days=1)
-                query_tasks += " AND t.data_conclusao < %s "
-                args_tasks.append(next_day_task.strftime('%Y-%m-%d'))
-            except ValueError:
-                query_tasks += f" AND {date_func}(t.data_conclusao) <= {date_func}(%s) "
-                args_tasks.append(end_date)
+                 base_query += f" AND {date_func}({date_field_to_filter}) <= {date_func}(%s) "
+                 base_args.append(end_date)
         else: # SQLite
-            query_tasks += f" AND {date_func}(t.data_conclusao) <= {date_func}(%s) "
-            args_tasks.append(end_date)
+             base_query += f" AND {date_func}({date_field_to_filter}) <= {date_func}(%s) "
+             base_args.append(end_date)
 
-    if target_cs_email:
-        query_tasks += " AND i.usuario_cs = %s "
-        args_tasks.append(target_cs_email)
+    # --- 2. EXECUÇÃO DA QUERY PRINCIPAL (BASE) ---
+    # Busca todos os dados filtrados de uma vez
+    full_filtered_list = query_db(f"SELECT i.*, p.nome as cs_nome {base_query}", tuple(base_args))
+    full_filtered_list = full_filtered_list if full_filtered_list is not None else []
 
-    tasks_data = query_db(query_tasks, tuple(args_tasks))
-    tasks_data = tasks_data if tasks_data is not None else [] # Garante lista
-
-    # --- 3. Processamento e Agregação ---
-    all_cs_profiles = query_db("SELECT usuario, nome, cargo, perfil_acesso FROM perfil_usuario")
-    all_cs_profiles = all_cs_profiles if all_cs_profiles is not None else [] # Garante lista
-
-    cs_metrics = {p['usuario']: {
-        'email': p['usuario'], 'nome': p['nome'] or p['usuario'], 'cargo': p['cargo'] or 'N/A',
-        'perfil': p['perfil_acesso'] or 'Nenhum',
-        'impl_total': 0, 'impl_andamento': 0, 'impl_finalizadas': 0, 'impl_paradas': 0,
-        'tma_sum': 0, 'progresso_medio': 0, 'tma_medio': 'N/A', 'motivos_parada': {},
-        'prod_tags': {'Ação interna': 0, 'Reunião': 0}, # Inicializa contadores
-        'parada_dias_total': 0, 'impl_atrasadas_count': 0 # Adiciona contador de atrasadas por CS
-    } for p in all_cs_profiles if p and p.get('usuario')} # Garante que p e usuario existam
-
-    # Agregação de tarefas concluídas por tag e CS (baseado nos filtros de data)
-    for row in tasks_data:
-        cs_email_task = row.get('usuario_cs')
-        if cs_email_task in cs_metrics:
-            tag = row.get('tag')
-            if tag in cs_metrics[cs_email_task]['prod_tags']:
-                cs_metrics[cs_email_task]['prod_tags'][tag] += 1
-
-    # Agregações Globais e por Implantação (TMA, Status, Atraso)
-    total_impl_global = 0
+    # --- 3. CÁLCULO DOS KPIs (CARDS) ---
+    total_clientes = len(full_filtered_list)
     total_finalizadas = 0
-    total_andamento_global = 0
-    total_paradas = 0
-    total_atrasadas_status = 0 # Contagem global de atrasadas (>25d)
-    tma_dias_sum = 0
-    motivos_parada_global = {}
-    implantacoes_paradas_detalhadas = []
-    agora = datetime.now() # Hora atual para cálculo de dias passados
+    total_andamento = 0
+    total_futuras = 0
+    total_sem_previsao = 0
+    tma_soma_dias = 0
 
-    # -- O filtro manual de 'atrasadas_status' foi removido daqui --
-    # -- O filtro SQL já deve ter cuidado disso se selecionado --
-
-    for impl in impl_list:
-        # Pula se impl for None ou não dict
-        if not impl or not isinstance(impl, dict): continue
-
-        impl_id = impl.get('id')
-        cs_email_impl = impl.get('usuario_cs')
+    for impl in full_filtered_list:
         status = impl.get('status')
-
-        # Ignora implantações sem CS associado ou sem ID
-        if not impl_id or not cs_email_impl or cs_email_impl not in cs_metrics:
-            continue
-
-        total_impl_global += 1 # Conta apenas implantações válidas e com CS
-        metrics = cs_metrics[cs_email_impl]
-        metrics['impl_total'] += 1
-
-        # Cálculo TMA em Python
-        tma_dias = None
         if status == 'finalizada':
+            total_finalizadas += 1
+            # Cálculo TMA em Python
             dt_criacao = impl.get('data_criacao')
             dt_finalizacao = impl.get('data_finalizacao')
             if dt_criacao and dt_finalizacao:
-                # Conversão segura para datetime
                 if isinstance(dt_criacao, date) and not isinstance(dt_criacao, datetime): dt_criacao = datetime.combine(dt_criacao, datetime.min.time())
                 if isinstance(dt_finalizacao, date) and not isinstance(dt_finalizacao, datetime): dt_finalizacao = datetime.combine(dt_finalizacao, datetime.min.time())
-                # Cálculo se ambos são datetime
                 if isinstance(dt_criacao, datetime) and isinstance(dt_finalizacao, datetime):
-                     # Trata timezone (simplificado)
                      criacao_naive = dt_criacao.replace(tzinfo=None) if dt_criacao.tzinfo else dt_criacao
                      final_naive = dt_finalizacao.replace(tzinfo=None) if dt_finalizacao.tzinfo else dt_finalizacao
                      try:
                          delta = final_naive - criacao_naive
-                         tma_dias = max(0, delta.days)
-                     except TypeError: pass # Ignora erro de timezone
-
-            total_finalizadas += 1
-            metrics['impl_finalizadas'] += 1
-            if tma_dias is not None:
-                tma_dias_sum += tma_dias
-                metrics['tma_sum'] += tma_dias
-
-        elif status == 'parada':
-            total_paradas += 1
-            metrics['impl_paradas'] += 1
-            parada_dias = calculate_time_in_status(impl_id, 'parada')
-            if parada_dias is not None:
-                metrics['parada_dias_total'] += parada_dias
-
-            motivo = impl.get('motivo_parada') or 'Motivo Não Especificado'
-            motivos_parada_global[motivo] = motivos_parada_global.get(motivo, 0) + 1
-            metrics['motivos_parada'][motivo] = metrics['motivos_parada'].get(motivo, 0) + 1
-
-            implantacoes_paradas_detalhadas.append({
-                'id': impl_id,
-                'nome_empresa': impl.get('nome_empresa'),
-                'motivo_parada': motivo,
-                'parada_dias': parada_dias if parada_dias is not None else 0,
-                'cs_nome': metrics.get('nome', cs_email_impl)
-            })
+                         tma_soma_dias += max(0, delta.days)
+                     except TypeError: pass
 
         elif status == 'andamento':
-            total_andamento_global += 1
-            metrics['impl_andamento'] += 1
+            total_andamento += 1
+        elif status == 'futura':
+            total_futuras += 1
+            if not impl.get('data_inicio_previsto'):
+                total_sem_previsao += 1
+        # 'parada' é contada no total, mas não tem card próprio
 
-            # Cálculo de Dias Passados para Atraso
+    media_tma = round(tma_soma_dias / total_finalizadas, 1) if total_finalizadas > 0 else 0
+
+    kpi_cards = {
+        'total_clientes': total_clientes,
+        'total_finalizadas': total_finalizadas,
+        'total_andamento': total_andamento,
+        'total_futuras': total_futuras,
+        'total_sem_previsao': total_sem_previsao,
+        'media_tma': media_tma
+    }
+
+    # --- 4. DADOS PARA GRÁFICOS (BASEADOS NA LISTA FILTRADA) ---
+
+    # a) Nível Clientes (MRR)
+    chart_nivel_receita = {level: 0 for level in NIVEIS_RECEITA}
+    chart_nivel_receita['Não Definido'] = 0
+    for impl in full_filtered_list:
+        nivel = impl.get('nivel_receita')
+        if nivel and nivel in chart_nivel_receita:
+            chart_nivel_receita[nivel] += 1
+        else:
+            chart_nivel_receita['Não Definido'] += 1
+
+    # b) Status Clientes
+    chart_status_clientes = {
+        'Em Andamento': total_andamento, # Já calculado
+        'Finalizadas': total_finalizadas, # Já calculado
+        'Futuras': total_futuras, # Já calculado
+        'Paradas': 0,
+        'Atrasadas': 0 # Precisa recalcular
+    }
+    agora = datetime.now()
+    for impl in full_filtered_list:
+        status = impl.get('status')
+        if status == 'parada':
+            chart_status_clientes['Paradas'] += 1
+        elif status == 'andamento':
+            # Verifica Atrasadas (lógica duplicada de get_dashboard_data, mas necessária aqui)
             data_criacao_obj = impl.get('data_criacao')
             dias_passados = 0
             if data_criacao_obj:
-                 if isinstance(data_criacao_obj, date) and not isinstance(data_criacao_obj, datetime): data_criacao_obj = datetime.combine(data_criacao_obj, datetime.min.time())
-                 if isinstance(data_criacao_obj, datetime):
-                     agora_naive = agora.replace(tzinfo=None) if agora.tzinfo else agora
-                     criacao_naive = data_criacao_obj.replace(tzinfo=None) if data_criacao_obj.tzinfo else data_criacao_obj
+                if isinstance(data_criacao_obj, date) and not isinstance(data_criacao_obj, datetime): data_criacao_obj = datetime.combine(data_criacao_obj, datetime.min.time())
+                if isinstance(data_criacao_obj, datetime):
                      try:
+                         agora_naive = agora.replace(tzinfo=None) if agora.tzinfo else agora
+                         criacao_naive = data_criacao_obj.replace(tzinfo=None) if data_criacao_obj.tzinfo else data_criacao_obj
                          dias_passados_delta = agora_naive - criacao_naive
                          dias_passados = dias_passados_delta.days if dias_passados_delta.days >= 0 else 0
-                     except TypeError: dias_passados = -1 # Erro de timezone
-
+                     except TypeError: dias_passados = -1
             if dias_passados > 25:
-                total_atrasadas_status += 1
-                metrics['impl_atrasadas_count'] += 1 # Conta atrasadas por CS
+                chart_status_clientes['Atrasadas'] += 1
 
 
-    # Finalização das Métricas do CS
-    # Filtra CSs que não têm implantações nos filtros atuais, a menos que nenhum CS tenha sido selecionado
-    final_cs_metrics_list = []
-    for email, metrics_data in cs_metrics.items():
-        if metrics_data['impl_total'] > 0 or not target_cs_email: # Mostra todos se nenhum filtro de CS
-            if metrics_data['impl_finalizadas'] > 0 and metrics_data['tma_sum'] is not None:
-                metrics_data['tma_medio'] = round(metrics_data['tma_sum'] / metrics_data['impl_finalizadas'], 1)
-            else:
-                metrics_data['tma_medio'] = 'N/A'
-            # Progresso médio não está sendo calculado aqui, manter 0 ou remover
-            metrics_data['progresso_medio'] = 0
-            final_cs_metrics_list.append(metrics_data)
+    # c) Ranking Implantação por Colaborador
+    ranking_colaborador = {}
+    for impl in full_filtered_list:
+        nome_cs = impl.get('cs_nome') or impl.get('usuario_cs') or 'Sem Implantador'
+        ranking_colaborador[nome_cs] = ranking_colaborador.get(nome_cs, 0) + 1
+    # Ordena
+    ranking_colaborador_sorted = sorted(ranking_colaborador.items(), key=lambda item: item[1], reverse=True)
 
-    # Finalização das Métricas Globais
-    global_metrics = {
-        'total_impl': total_impl_global,
-        'total_finalizadas': total_finalizadas,
-        'total_andamento': total_andamento_global,
-        'total_paradas': total_paradas,
-        'total_atrasadas': total_atrasadas_status, # Usar a contagem feita no loop
-        'global_tma': round(tma_dias_sum / total_finalizadas, 1) if total_finalizadas > 0 and tma_dias_sum is not None else 'N/A',
-        'motivos_parada': motivos_parada_global
+
+    # --- 5. DADOS PARA GRÁFICO (RANKING POR PERÍODO - MENSAL) ---
+    # Este gráfico ignora os filtros de DATA (start/end) mas respeita os filtros de CS e STATUS
+    
+    current_year = datetime.now().year
+    
+    query_periodo = f"""
+        SELECT 
+            { 'strftime("%m", data_finalizacao)' if is_sqlite else 'EXTRACT(MONTH FROM data_finalizacao)' } as mes, 
+            COUNT(id) as total
+        {base_query}
+        AND i.status = 'finalizada'
+        AND { 'strftime("%Y", data_finalizacao)' if is_sqlite else 'EXTRACT(YEAR FROM data_finalizacao)' } = %s
+        GROUP BY mes
+    """
+    args_periodo = list(base_args)
+    args_periodo.append(str(current_year)) # Adiciona o ano atual ao final dos args
+    
+    # Se o filtro de status for 'finalizada', ele já está nos base_args
+    # Se for 'todas', precisamos garantir que estamos buscando finalizadas
+    # Se for outro (ex: 'andamento'), a query acima não retornará nada (correto)
+    if target_status and target_status not in ['todas', 'finalizada']:
+         # Se o filtro principal era 'andamento', 'parada', etc, o ranking mensal de finalizadas deve ser 0
+         ranking_periodo_raw = []
+    elif target_status == 'todas' and "i.status = %s" in base_query:
+         # Se o filtro era 'todas', mas base_query foi modificado (não deveria), ajustamos
+         # Esta lógica está complexa. Simplificação:
+         # O Ranking por Período é SEMPRE de finalizadas no ano atual, respeitando o filtro de CS.
+         
+        query_periodo_cs_only = "WHERE 1=1"
+        args_periodo_cs_only = [str(current_year)]
+
+        if target_cs_email:
+            query_periodo_cs_only += " AND i.usuario_cs = %s "
+            args_periodo_cs_only.insert(0, target_cs_email) # Adiciona email no início
+
+        query_periodo = f"""
+            SELECT 
+                { 'strftime("%m", data_finalizacao)' if is_sqlite else 'EXTRACT(MONTH FROM data_finalizacao)' } as mes, 
+                COUNT(id) as total
+            FROM implantacoes i
+            {query_periodo_cs_only}
+            AND i.status = 'finalizada'
+            AND { 'strftime("%Y", data_finalizacao)' if is_sqlite else 'EXTRACT(YEAR FROM data_finalizacao)' } = %s
+            GROUP BY mes
+        """
+        ranking_periodo_raw = query_db(query_periodo, tuple(args_periodo_cs_only))
+    else:
+        # Se o filtro já era 'finalizada' ou 'atrasadas' (que não retorna nada), usamos a query original
+        ranking_periodo_raw = query_db(query_periodo, tuple(args_periodo))
+
+
+    ranking_periodo_raw = ranking_periodo_raw if ranking_periodo_raw is not None else []
+    
+    chart_ranking_periodo = {str(i).zfill(2): 0 for i in range(1, 13)}
+    for row in ranking_periodo_raw:
+        mes_key = str(int(row['mes'])).zfill(2) # Garante formato '01', '02'
+        if mes_key in chart_ranking_periodo:
+            chart_ranking_periodo[mes_key] = row['total']
+
+    # --- 6. MONTAGEM DOS DADOS DE RETORNO ---
+    analytics_data = {
+        'kpi_cards': kpi_cards,
+        'implantacoes_lista_detalhada': full_filtered_list,
+        'chart_data': {
+            'nivel_receita': {
+                'labels': list(chart_nivel_receita.keys()),
+                'data': list(chart_nivel_receita.values())
+            },
+            'status_clientes': {
+                'labels': list(chart_status_clientes.keys()),
+                'data': list(chart_status_clientes.values())
+            },
+            'ranking_colaborador': {
+                'labels': [item[0] for item in ranking_colaborador_sorted],
+                'data': [item[1] for item in ranking_colaborador_sorted]
+            },
+            'ranking_periodo': {
+                'labels': ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+                'data': list(chart_ranking_periodo.values()) # Já está na ordem 01-12
+            }
+        }
     }
-
-    return global_metrics, final_cs_metrics_list, implantacoes_paradas_detalhadas
+    
+    # Retorna o dicionário completo (o antigo retorno de 3 itens foi removido)
+    return analytics_data
 
 
 # --- FUNÇÃO PARA GAMIFICAÇÃO ---

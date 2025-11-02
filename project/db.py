@@ -237,8 +237,13 @@ def init_db():
             id {pk_type},
             usuario_cs VARCHAR(255) REFERENCES usuarios(usuario) ON DELETE SET NULL,
             nome_empresa TEXT NOT NULL,
-            status VARCHAR(50) DEFAULT 'andamento' CHECK(status IN ('andamento', 'futura', 'finalizada', 'parada')),
-            tipo VARCHAR(50) DEFAULT 'agora' CHECK(tipo IN ('agora', 'futura', 'modulo')),
+            
+            -- ==== CORREÇÃO 1: 'nova' foi adicionado e 'nova' é o novo default ====
+            status VARCHAR(50) DEFAULT 'nova' CHECK(status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada')),
+            
+            -- ==== CORREÇÃO 2: 'completa' e 'modulo' são os tipos. 'completa' é o novo default ====
+            tipo VARCHAR(50) DEFAULT 'completa' CHECK(tipo IN ('completa', 'modulo')),
+            
             data_criacao {timestamp_type}, -- Data de criação do registro
             data_inicio_efetivo {timestamp_nullable_type} DEFAULT NULL, -- Data que iniciou de fato
             data_finalizacao {timestamp_nullable_type} DEFAULT NULL,

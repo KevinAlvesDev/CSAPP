@@ -6,82 +6,106 @@
     <title>{% block title %}CS Onboarding{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <style>
-        /* CSS do Tema e Layout */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
-        :root {
-            --body-bg: #f5f5f5; --body-color: #333; --container-bg: #ffffff;
-            --card-bg: #ffffff; --input-bg: #ffffff; --input-border: #ccc;
-            --input-color: #333; --accent-color: #007bff; --accent-color-rgb: 0, 123, 255;
-            --shadow: 0 4px 15px rgba(0, 0, 0, 0.1); --header-bg: #ffffff;
-            --header-border: #eee; --sidebar-bg: #e9ecef; --table-bg: var(--card-bg);
-            --table-border-color: var(--input-border); --table-hover-bg: rgba(0, 0, 0, 0.05);
-        }
-         body { font-family: 'Inter', sans-serif; background-color: var(--body-bg); color: var(--body-color); min-height: 100vh; overflow-x: hidden; transition: background-color 0.3s, color 0.3s; }
-        .header-bg { background-color: var(--header-bg); border-bottom: 1px solid var(--header-border); }
-        .main-title { color: var(--accent-color); font-weight: 800; }
-        .metric-card, .card { background-color: var(--card-bg); border: 1px solid var(--input-border); transition: background-color 0.3s, border 0.3s; }
-        .form-control, .form-select { background-color: var(--input-bg); color: var(--input-color); border-color: var(--input-border); transition: all 0.3s; }
-        .form-control:focus, .form-select:focus { border-color: var(--accent-color); box-shadow: 0 0 0 0.25rem rgba(var(--accent-color-rgb), 0.25); background-color: var(--input-bg); color: var(--input-color); }
-        /* Estilo crucial para campos desabilitados no modal */
-        .form-control:disabled, .form-select:disabled, input:read-only:disabled {
-             background-color: #e9ecef !important; /* Cor de fundo cinza claro */
-             opacity: 0.7; /* Leve transparência */
-             cursor: not-allowed; /* Cursor indicando não permitido */
-             color: #6c757d; /* Cor do texto mais apagada */
-         }
-        .list-group-item { background-color: var(--card-bg); color: var(--body-color); border-color: var(--input-border); }
-        .sidebar-bg { background-color: var(--sidebar-bg) !important; }
-        .sidebar-info-list li, .sidebar-info-list strong { color: var(--body-color) !important; }
-        .nav-tabs { border-bottom-color: var(--input-border); }
-        .nav-tabs .nav-link { background-color: transparent; border-color: transparent; color: var(--body-color); opacity: 0.7; }
-        .nav-tabs .nav-link.active { background-color: var(--card-bg); color: var(--accent-color); border-color: var(--input-border) var(--input-border) var(--card-bg); opacity: 1; font-weight: 600; }
-        .nav-tabs .nav-link:hover { border-color: transparent; opacity: 1; }
-        .table { color: var(--body-color); background-color: var(--table-bg); border-color: var(--table-border-color); }
-        .table th, .table td { border-color: var(--table-border-color); vertical-align: middle; }
-        .table-hover > tbody > tr:hover > * { color: var(--body-color); background-color: var(--table-hover-bg); }
-        .table thead th { color: var(--body-color); }
-        .btn-primary, .btn-success { color: white !important; }
-        .table a { color: var(--accent-color); }
-        .table a:hover { color: #0056b3; }
-        .list-group-item .handle { color: var(--accent-color) !important; opacity: 0.6; transition: opacity 0.2s; cursor: grab !important; }
-        .list-group-item .handle:hover { opacity: 1; }
-        .card-header.header-bg h5, .card-header.header-bg .h5 { color: var(--body-color); }
-        #modalDetalhesEmpresa .modal-content, #modalGerenciarUsuarios .modal-content { max-height: 95vh; }
-        #modalDetalhesEmpresa .modal-body, #modalGerenciarUsuarios .modal-body { max-height: calc(95vh - 120px); overflow-y: auto; }
-    </style>
+    
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     {% block head_extra %}{% endblock %}
 </head>
 <body>
 
+    {# O conteúdo da página (como dashboard.html ou implantacao_detalhes.html) será injetado aqui #}
     {% block content %}
-    {# Conteúdo Padrão #}
     <div class="container py-4">
         <h1>Conteúdo Padrão</h1> <p>Substitua no template filho.</p>
-         <div class="dropdown">
-            <button class="btn btn-secondary dropdown-toggle" type="button" id="userMenuDropdownBase" data-bs-toggle="dropdown" aria-expanded="false">Menu Usuário (Base)</button>
-            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuDropdownBase">
-                 <li><a class="dropdown-item" href="{{ url_for('profile.perfil') }}"><i class="bi bi-person-circle me-2"></i> Editar Perfil</a></li>
-                 {% if g.perfil and g.perfil.perfil_acesso in ['Administrador', 'Gerente', 'Coordenador'] %}
-                      <li><a class="dropdown-item text-primary" href="#" data-bs-toggle="modal" data-bs-target="#modalGerenciarUsuarios"><i class="bi bi-people-fill me-2"></i> Usuários</a></li>
-                     <li><a class="dropdown-item text-info" href="{{ url_for('analytics.analytics_dashboard') }}"><i class="bi bi-graph-up me-2"></i> Analytics Gerencial</a></li>
-                     <li><a class="dropdown-item text-warning" href="{{ url_for('gamification.manage_gamification_metrics') }}"><i class="bi bi-pencil-square me-2"></i> Métricas Gamificação</a></li>
-                     <li><a class="dropdown-item text-success" href="{{ url_for('gamification.gamification_report') }}"><i class="bi bi-clipboard-data me-2"></i> Relatório Gamificação</a></li>
-                 {% endif %}
-                 <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalGamificacao"><i class="bi bi-trophy-fill me-2"></i> Critérios Gamificação</a></li>
-                 <li><hr class="dropdown-divider"></li>
-                 <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}"><i class="bi bi-box-arrow-right me-2"></i> Sair</a></li>
-            </ul>
-         </div>
     </div>
     {% endblock %}
 
+    <div class="offcanvas offcanvas-end user-sidebar-bg" tabindex="-1" id="userProfileSidebar" aria-labelledby="userProfileSidebarLabel">
+        <div class="offcanvas-header header-bg d-flex justify-content-between align-items-center">
+            
+            <div class="d-flex align-items-center">
+                <div class="user-profile-btn-sidebar">
+                    {% if g.perfil.foto_url %}
+                        <img src="{{ g.perfil.foto_url }}?v={{ range(1, 10000) | random }}" alt="Foto">
+                    {% else %}
+                        <i class="bi bi-person-fill"></i>
+                    {% endif %}
+                </div>
+                <h5 class="offcanvas-title ms-2" id="userProfileSidebarLabel"><span class="nav-link-text">{{ g.perfil.nome or g.user_email }}</span></h5>
+            </div>
+
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="toggleSidebarMinify" title="Minimizar Menu">
+                <i class="bi bi-arrows-angle-contract"></i>
+            </button>
+        </div>
+        
+        <div class="offcanvas-body" id="userSidebarBody">
+            <ul class="nav flex-column user-sidebar-nav">
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('profile.perfil') }}">
+                        <i class="bi bi-person-circle me-2"></i>
+                        <span class="nav-link-text">Editar Perfil</span>
+                    </a>
+                </li>
+
+                 {# Links Condicionais (Gestão) #}
+                 {% if g.perfil and g.perfil.perfil_acesso in ['Administrador', 'Gerente', 'Coordenador'] %}
+                    <li class="nav-item">
+                        <a class="nav-link text-primary" href="#" data-bs-toggle="modal" data-bs-target="#modalGerenciarUsuarios">
+                            <i class="bi bi-people-fill me-2"></i>
+                            <span class="nav-link-text">Usuários</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-info" href="{{ url_for('analytics.analytics_dashboard') }}">
+                            <i class="bi bi-graph-up me-2"></i>
+                            <span class="nav-link-text">Analytics Gerencial</span>
+                        </a>
+                    </li>
+                    <li class="nav-item nav-item-divider"><hr></li>
+                    <li class="nav-item-header"><span class="nav-link-text">Gamificação</span></li>
+                    <li class="nav-item">
+                        <a class="nav-link text-warning" href="{{ url_for('gamification.manage_gamification_metrics') }}">
+                            <i class="bi bi-pencil-square me-2"></i>
+                            <span class="nav-link-text">Métricas Gamificação</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-success" href="{{ url_for('gamification.gamification_report') }}">
+                            <i class="bi bi-clipboard-data me-2"></i>
+                            <span class="nav-link-text">Relatório Gamificação</span>
+                        </a>
+                    </li>
+                 {% endif %}
+                 {# Fim dos Links Condicionais #}
+
+                <li class="nav-item nav-item-divider"><hr></li>
+
+                <li class="nav-item">
+                     <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#modalGamificacao">
+                        <i class="bi bi-trophy-fill me-2"></i>
+                        <span class="nav-link-text">Critérios Gamificação</span>
+                    </a>
+                </li>
+                
+                <li class="nav-item nav-item-divider"><hr></li>
+
+                <li class="nav-item mt-auto">
+                    <a class="nav-link text-danger" href="{{ url_for('auth.logout') }}">
+                        <i class="bi bi-box-arrow-right me-2"></i>
+                        <span class="nav-link-text">Sair</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
     {# Modal Detalhes Empresa #}
     <div class="modal fade" id="modalDetalhesEmpresa" tabindex="-1" aria-labelledby="modalDetalhesEmpresaLabel" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-scrollable"> <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);">
                 <div class="modal-header header-bg">
                     <h5 class="modal-title" id="modalDetalhesEmpresaLabel" style="color: var(--body-color);">Detalhes da Empresa</h5>
-                    <button type="button" class="btn-close btn-close-dark" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form action="{{ url_for('main.atualizar_detalhes_empresa') }}" method="POST">
                     <div class="modal-body">
@@ -101,8 +125,6 @@
                         </div>
                         <div class="mb-3 d-none"><textarea class="form-control d-none" id="modal-contatos" name="contatos" rows="1"></textarea></div>
                         <div class="mb-3 d-none"><textarea class="form-control d-none" id="modal-resp_estrategico_obs" name="resp_estrategico_obs" rows="1"></textarea></div>
-                        <div class="col-md-3 mb-3 d-none"><input type="hidden" id="modal-valor_atribuido" name="valor_atribuido"></div>
-
                         <h6 class="text-primary mb-3 border-bottom pb-1 mt-4">Datas e Atributos de Sistema</h6>
                         <div class="row">
                             <div class="col-md-3 mb-3"> <label for="modal-data_cadastro" class="form-label">Data de Cadastro</label> <input type="text" class="form-control" id="modal-data_cadastro" readonly disabled> </div>
@@ -111,9 +133,10 @@
                             <div class="col-md-3 mb-3"><label for="modal-data_final_implantacao" class="form-label">Fim da Implantação (Data)</label><input type="date" class="form-control" id="modal-data_final_implantacao" name="data_final_implantacao"></div>
                         </div>
                         <div class="row">
-                            <div class="col-md-4 mb-3"><label for="modal-id_favorecido" class="form-label">ID Favorecido</label><input type="text" class="form-control" id="modal-id_favorecido" name="id_favorecido"></div>
-                            <div class="col-md-4 mb-3"><label for="modal-nivel_receita" class="form-label">Nível de Receita (MRR)</label> <select class="form-select" id="modal-nivel_receita" name="nivel_receita"> <option value="">Selecione...</option> {% if NIVEIS_RECEITA %} {% for nivel in NIVEIS_RECEITA %} <option value="{{ nivel }}">{{ nivel }}</option> {% endfor %} {% endif %} </select> </div>
-                            <div class="col-md-4 mb-3"><label for="modal-chave_oamd" class="form-label">Chave OAMD</label><input type="text" class="form-control" id="modal-chave_oamd" name="chave_oamd"></div>
+                            <div class="col-md-3 mb-3"><label for="modal-id_favorecido" class="form-label">ID Favorecido</label><input type="text" class="form-control" id="modal-id_favorecido" name="id_favorecido"></div>
+                            <div class="col-md-3 mb-3"><label for="modal-nivel_receita" class="form-label">Nível de Receita (MRR)</label> <select class="form-select" id="modal-nivel_receita" name="nivel_receita"> <option value="">Selecione...</option> {% if NIVEIS_RECEITA %} {% for nivel in NIVEIS_RECEITA %} <option value="{{ nivel }}">{{ nivel }}</option> {% endfor %} {% endif %} </select> </div>
+                            <div class="col-md-3 mb-3"><label for="modal-valor_atribuido" class="form-label">Valor Atribuído (R$)</label><input type="number" step="0.01" class="form-control" id="modal-valor_atribuido" name="valor_atribuido" placeholder="0.00"></div>
+                            <div class="col-md-3 mb-3"><label for="modal-chave_oamd" class="form-label">Chave OAMD</label><input type="text" class="form-control" id="modal-chave_oamd" name="chave_oamd"></div>
                         </div>
                         <div class="row">
                             <div class="col-md-12 mb-3"><label for="modal-tela_apoio_link" class="form-label">Tela de Apoio (Link)</label><input type="url" class="form-control" id="modal-tela_apoio_link" name="tela_apoio_link"></div>
@@ -123,12 +146,13 @@
                         <div class="row">
                             <div class="col-md-4 mb-3"><label for="modal-seguimento" class="form-label">Seguimento</label><select class="form-select" id="modal-seguimento" name="seguimento"><option value="">Selecione...</option>{% if SEGUIMENTOS_LIST %}{% for s in SEGUIMENTOS_LIST %}<option value="{{ s }}">{{ s }}</option>{% endfor %}{% endif %}</select></div>
                             <div class="col-md-4 mb-3"><label for="modal-tipos_planos" class="form-label">Tipos de Planos</label><select class="form-select" id="modal-tipos_planos" name="tipos_planos"><option value="">Selecione...</option>{% if TIPOS_PLANOS %}{% for tp in TIPOS_PLANOS %}<option value="{{ tp }}">{{ tp }}</option>{% endfor %}{% endif %}</select></div>
-                            <div class="col-md-4 mb-3"><label for="modal-modalidades" class="form-label">Modalidades</label><select class="form-select" id="modal-modalidades" name="modalidades"><option value="">Selecione...</option>{% if MODALIDADES_LIST %}{% for m in MODALIDADES_LIST %}<option value="{{ m }}">{{ m }}</option>{% endfor %}{% endif %}</select></div>
+                            
+                            <div class="col-md-4 mb-3"><label for="modal-modalidades" class="form-label">Modalidades</label><select class="form-select" id="modal-modalidades" name="modalidades" multiple><option value="">Selecione...</option>{% if MODALIDADES_LIST %}{% for m in MODALIDADES_LIST %}<option value="{{ m }}">{{ m }}</option>{% endfor %}{% endif %}</select></div>
                         </div>
                         <div class="row">
-                            <div class="col-md-6 mb-3"><label for="modal-horarios_func" class="form-label">Horários</label><select class="form-select" id="modal-horarios_func" name="horarios_func"><option value="">Selecione...</option>{% if HORARIOS_FUNCIONAMENTO %}{% for hf in HORARIOS_FUNCIONAMENTO %}<option value="{{ hf }}">{{ hf }}</option>{% endfor %}{% endif %}</select></div>
-                            <div class="col-md-6 mb-3"><label for="modal-formas_pagamento" class="form-label">Pagamento</label><select class="form-select" id="modal-formas_pagamento" name="formas_pagamento"><option value="">Selecione...</option>{% if FORMAS_PAGAMENTO %}{% for fp in FORMAS_PAGAMENTO %}<option value="{{ fp }}">{{ fp }}</option>{% endfor %}{% endif %}</select></div>
-                        </div>
+                            <div class="col-md-6 mb-3"><label for="modal-horarios_func" class="form-label">Horários</label><select class="form-select" id="modal-horarios_func" name="horarios_func" multiple><option value="">Selecione...</option>{% if HORARIOS_FUNCIONAMENTO %}{% for hf in HORARIOS_FUNCIONAMENTO %}<option value="{{ hf }}">{{ hf }}</option>{% endfor %}{% endif %}</select></div>
+                            <div class="col-md-6 mb-3"><label for="modal-formas_pagamento" class="form-label">Pagamento</label><select class="form-select" id="modal-formas_pagamento" name="formas_pagamento" multiple><option value="">Selecione...</option>{% if FORMAS_PAGAMENTO %}{% for fp in FORMAS_PAGAMENTO %}<option value="{{ fp }}">{{ fp }}</option>{% endfor %}{% endif %}</select></div>
+                            </div>
                         <div class="row">
                             <div class="col-md-3 mb-3"><label for="modal-diaria" class="form-label">Diária?</label><select class="form-select" id="modal-diaria" name="diaria"> {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}{% endif %} </select></div>
                             <div class="col-md-3 mb-3"><label for="modal-freepass" class="form-label">Freepass?</label><select class="form-select" id="modal-freepass" name="freepass"> {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}{% endif %} </select></div>
@@ -156,7 +180,12 @@
 
     {# Modal Gamificação (Critérios) #}
     <div class="modal fade" id="modalGamificacao" tabindex="-1" aria-labelledby="modalGamificacaoLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-scrollable"> <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);"> <div class="modal-header header-bg"> <h5 class="modal-title" id="modalGamificacaoLabel" style="color: var(--body-color);">Gamificação - Critérios e Pontuação</h5> <button type="button" class="btn-close btn-close-dark" data-bs-dismiss="modal" aria-label="Close"></button> </div> <div class="modal-body">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable"> <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title" id="modalGamificacaoLabel" style="color: var(--body-color);">Gamificação - Critérios e Pontuação</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
             <div class="card mb-3"><div class="card-header">Critérios de Elegibilidade</div><div class="card-body"><p>Para participação, os critérios mínimos são:</p><ul><li>Nota de Qualidade (0 a 100): <strong>80%</strong></li><li>Assiduidade: <strong>85%</strong></li><li>Reuniões realizadas por dia: <strong>3</strong> (Verificar como será medido)</li><li>Planos de Sucesso em dia / em andamento: <strong>75%</strong></li><li>Satisfação do Processo de implantação (Verificar como será medido)</li></ul></div></div>
             <div class="card mb-3"><div class="card-header">Regras Específicas (Impl. Finalizadas no Mês)</div><div class="card-body"><ul><li>Cargo Júnior: mínimo <strong>4</strong></li><li>Cargo Pleno: mínimo <strong>5</strong></li><li>Cargo Sênior: mínimo <strong>5</strong></li></ul></div></div>
             <div class="card mb-3 border-danger"><div class="card-header bg-danger text-white">Situações que Impedem Participação</div><div class="card-body"><ul><li>Reclamação de atendimento: <strong>2 ou mais</strong> ocorrências.</li><li>Perda de prazo combinado (interno e externo): <strong>3 ou mais</strong> ocorrências.</li><li>Não preenchimento da tela de apoio, cx ou plano de sucesso: <strong>3 ou mais</strong> ocorrências.</li></ul></div></div>
@@ -178,11 +207,31 @@
 
     {# Modal Gerenciamento de Usuários #}
     <div class="modal fade" id="modalGerenciarUsuarios" tabindex="-1" aria-labelledby="modalGerenciarUsuariosLabel" aria-hidden="true">
-        <div class="modal-dialog modal-xl modal-dialog-scrollable"> <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);"> <div class="modal-header header-bg"> <h5 class="modal-title" id="modalGerenciarUsuariosLabel" style="color: var(--body-color);">Gerenciamento de Usuários</h5> <button type="button" class="btn-close btn-close-dark" data-bs-dismiss="modal" aria-label="Close"></button> </div> <div class="modal-body"> <div id="users-management-content"> <div class="text-center py-5" id="users-loading-spinner"> <div class="spinner-border text-primary" role="status"> <span class="visually-hidden">Carregando...</span> </div> <p class="mt-2">Carregando lista de usuários...</p> </div> </div> </div> <div class="modal-footer header-bg"> <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button> </div> </div> </div>
+        <div class="modal-dialog modal-xl modal-dialog-scrollable"> <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title" id="modalGerenciarUsuariosLabel" style="color: var(--body-color);">Gerenciamento de Usuários</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="users-management-content">
+                    <div class="text-center py-5" id="users-loading-spinner">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Carregando...</span>
+                        </div>
+                        <p class="mt-2">Carregando lista de usuários...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer header-bg">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div> </div>
     </div>
 
     {# Scripts Essenciais #}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
     <script>
         // Função de máscara de Telefone
         function formatarTelefone(input) {
@@ -194,8 +243,48 @@
             input.value = v;
         }
 
+        // Helper function to set multiple select values (NÃO MAIS USADA PELOS CAMPOS DE TAG, MAS MANTIDA)
+        const setMultipleSelect = (selectElement, dataValue) => {
+            if (!selectElement) return;
+            // Reset all options
+            Array.from(selectElement.options).forEach(opt => opt.selected = false);
+            
+            // Get values. Assume comma-separated string or single value.
+            // Trata o caso de dataValue ser null, undefined ou string vazia
+            const values = (typeof dataValue === 'string' && dataValue) 
+                           ? dataValue.split(',').map(s => s.trim()).filter(s => s.length > 0) 
+                           : [];
+            
+            if (values.length > 0) {
+                let hasSelection = false;
+                Array.from(selectElement.options).forEach(opt => {
+                    if (values.includes(opt.value)) {
+                        opt.selected = true;
+                        hasSelection = true;
+                    }
+                });
+                // Fallback se os valores não baterem (ex: "Selecione...")
+                if (!hasSelection && selectElement.options.length > 0 && selectElement.options[0].value === "") {
+                     selectElement.options[0].selected = true;
+                }
+            } else {
+                // Select the default "Selecione..." if available (value="")
+                if (selectElement.options.length > 0 && selectElement.options[0].value === "") {
+                     selectElement.options[0].selected = true;
+                }
+            }
+        };
+
         document.addEventListener('DOMContentLoaded', function() {
-            // --- Modal Detalhes Empresa (JAVASCRIPT ATUALIZADO COM CONSOLE LOG) ---
+            
+            // *** INÍCIO DA ALTERAÇÃO (Gerenciador de instâncias Tom-Select) ***
+            // Isso é necessário para destruir e recriar os campos
+            // de tag toda vez que o modal é aberto.
+            let tomSelectInstances = {};
+            // *** FIM DA ALTERAÇÃO ***
+
+
+            // --- Modal Detalhes Empresa (JAVASCRIPT ATUALIZADO) ---
             const modalDetalhesEmpresa = document.getElementById('modalDetalhesEmpresa');
             if (modalDetalhesEmpresa) {
                 modalDetalhesEmpresa.addEventListener('show.bs.modal', function (event) {
@@ -205,7 +294,7 @@
                     const getData = (key, defaultVal = '') => { const val = button.getAttribute(`data-${key}`); return (val === 'null' || val === 'undefined' || val === null || val === 'None' || val === undefined || val === '') ? defaultVal : val; };
                     const modal = modalDetalhesEmpresa;
 
-                    // Popula campos normais (código omitido por brevidade)
+                    // Popula campos normais
                     modal.querySelector('#modal-implantacao_id').value = getData('id');
                     modal.querySelector('#modal-responsavel_cliente').value = getData('responsavel');
                     modal.querySelector('#modal-cargo_responsavel').value = getData('cargo');
@@ -219,9 +308,72 @@
                     modal.querySelector('#modal-tela_apoio_link').value = getData('tela-apoio-link');
                     modal.querySelector('#modal-seguimento').value = getData('seguimento');
                     modal.querySelector('#modal-tipos_planos').value = getData('tipos-planos');
-                    modal.querySelector('#modal-modalidades').value = getData('modalidades');
-                    modal.querySelector('#modal-horarios_func').value = getData('horarios-func');
-                    modal.querySelector('#modal-formas_pagamento').value = getData('formas-pagamento');
+                    
+                    // *** INÍCIO DA ALTERAÇÃO (Substitui setMultipleSelect por Tom-Select) ***
+                    
+                    /**
+                     * Inicializa um campo <select> como um input de "tagging" usando Tom-Select.
+                     * @param {string} selector - O seletor CSS para o elemento <select>.
+                     * @param {string} dataValue - A string de valores separados por vírgula (do data- attribute).
+                     */
+                    const initializeTagInput = (selector, dataValue) => {
+                        const selectElement = modal.querySelector(selector);
+                        if (!selectElement) return;
+
+                        // Destruir instância anterior do Tom-Select, se existir
+                        if (tomSelectInstances[selector]) {
+                            tomSelectInstances[selector].destroy();
+                        }
+                        
+                        // Limpa o conteúdo do select para evitar duplicatas ao reabrir
+                        // (Exceto o primeiro option "Selecione...")
+                        // Comentado - TomSelect lida bem com isso, mas é boa prática
+                        // Array.from(selectElement.options).forEach((opt, index) => {
+                        //     if (opt.value !== "" && !opt.disabled) {
+                        //         // opt.remove(); // Causa problemas se as options não forem recarregadas
+                        //     }
+                        // });
+
+                        // Pega os valores salvos (do banco)
+                        const values = (typeof dataValue === 'string' && dataValue)
+                            ? dataValue.split(',').map(s => s.trim()).filter(s => s.length > 0)
+                            : [];
+
+                        // Inicializa o Tom-Select
+                        const tomSelect = new TomSelect(selectElement, {
+                            create: true,       // Permite criar novas tags
+                            persist: false,     // Não adiciona novas tags à lista <option>
+                            delimiter: ',',
+                            items: []           // Inicia vazio, vamos preencher abaixo
+                        });
+
+                        // Adiciona as opções que vieram do banco (mesmo que não existam na lista <option>)
+                        // Isso garante que tags antigas/criadas apareçam
+                        values.forEach(value => {
+                            if (!tomSelect.options.hasOwnProperty(value)) {
+                                tomSelect.addOption({ value: value, text: value });
+                            }
+                        });
+                        
+                        // Define os valores selecionados
+                        tomSelect.setValue(values);
+
+                        // Salva a instância para referência futura
+                        tomSelectInstances[selector] = tomSelect;
+                    };
+
+                    // Remove as chamadas antigas de setMultipleSelect
+                    // setMultipleSelect(modal.querySelector('#modal-modalidades'), getData('modalidades'));
+                    // setMultipleSelect(modal.querySelector('#modal-horarios_func'), getData('horarios-func'));
+                    // setMultipleSelect(modal.querySelector('#modal-formas_pagamento'), getData('formas-pagamento'));
+
+                    // Adiciona as novas chamadas de inicialização do Tom-Select
+                    initializeTagInput('#modal-modalidades', getData('modalidades'));
+                    initializeTagInput('#modal-horarios_func', getData('horarios-func'));
+                    initializeTagInput('#modal-formas_pagamento', getData('formas-pagamento'));
+
+                    // *** FIM DA ALTERAÇÃO ***
+
                     modal.querySelector('#modal-diaria').value = getData('diaria', 'Não definido');
                     modal.querySelector('#modal-freepass').value = getData('freepass', 'Não definido');
                     modal.querySelector('#modal-alunos_ativos').value = getData('alunos-ativos', '0');
@@ -232,23 +384,23 @@
                     modal.querySelector('#modal-nota_fiscal').value = getData('nota-fiscal', 'Não definido');
                     modal.querySelector('#modal-catraca').value = getData('catraca', 'Não definido');
                     modal.querySelector('#modal-facial').value = getData('facial', 'Não definido');
-                    const valorAtribuidoInput = modal.querySelector('#modal-valor_atribuido'); if (valorAtribuidoInput) valorAtribuidoInput.value = getData('valor-atribuido');
+                    
+                    // Campo 'valor_atribuido' agora é populado no input visível
+                    const valorAtribuidoInput = modal.querySelector('#modal-valor_atribuido'); if (valorAtribuidoInput) valorAtribuidoInput.value = getData('valor-atribuido', '0.00');
+                    
                     const respEstrategicoNomeInput = modal.querySelector('#modal-resp_estrategico_nome'); if (respEstrategicoNomeInput) respEstrategicoNomeInput.value = getData('resp-estrategico-nome');
                     const respOnbNomeInput = modal.querySelector('#modal-resp_onb_nome'); if (respOnbNomeInput) respOnbNomeInput.value = getData('resp-onb-nome');
                     const contatosInput = modal.querySelector('#modal-contatos'); if (contatosInput) contatosInput.value = getData('contatos');
                     const respEstrategicoObsInput = modal.querySelector('#modal-resp_estrategico_obs'); if (respEstrategicoObsInput) respEstrategicoObsInput.value = getData('resp-estrategico-obs');
 
-                    // --- DEBUG CONSOLE LOG ADICIONADO ---
                     const inicioEfetivoValueFromAttr = getData('inicio-efetivo');
-                    console.log("DEBUG JS: Value read from data-inicio-efetivo:", inicioEfetivoValueFromAttr);
-                    // --- FIM DEBUG ---
 
                     // --- Popula campos de data readonly ---
                     const dataCadastroInput = modal.querySelector('#modal-data_cadastro');
                     if(dataCadastroInput) dataCadastroInput.value = getData('inicio-implantacao'); // Usa data_criacao_iso
 
                     const inicioEfetivoInput = modal.querySelector('#modal-inicio_efetivo');
-                    // Usa o valor lido (com debug log acima)
+                    // Usa o valor lido
                     if(inicioEfetivoInput) inicioEfetivoInput.value = inicioEfetivoValueFromAttr;
                     // --- Fim da população de datas ---
 
@@ -262,7 +414,7 @@
             if (modalGerenciarUsuarios) {
                  const urlParams = new URLSearchParams(window.location.search);
                  const shouldOpenModal = urlParams.get('open_users_modal') === 'true';
-                const loadManagementContent = () => { /* ... (código inalterado) ... */
+                const loadManagementContent = () => {
                     const contentDiv = document.getElementById('users-management-content'); const spinnerHTML = `<div class="text-center py-5" id="users-loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div><p class="mt-2">Carregando lista de usuários...</p></div>`; contentDiv.innerHTML = spinnerHTML;
                     fetch('{{ url_for("management.manage_users") }}')
                         .then(response => { if (!response.ok) { return response.text().then(text => { throw new Error(text || `Erro ${response.status} ao carregar usuários.`); }); } return response.text(); })
@@ -272,6 +424,47 @@
                 modalGerenciarUsuarios.addEventListener('shown.bs.modal', loadManagementContent);
                 if (shouldOpenModal) { setTimeout(() => { const bsModal = bootstrap.Modal.getOrCreateInstance(modalGerenciarUsuarios); if (bsModal) { bsModal.show(); const currentUrl = new URL(window.location); currentUrl.searchParams.delete('open_users_modal'); history.replaceState(null, '', currentUrl.toString()); } }, 100); }
             }
+
+            // --- AJUSTE 5: Lógica da Nova Sidebar de Perfil ---
+            const userSidebar = document.getElementById('userProfileSidebar');
+            const userSidebarBody = document.getElementById('userSidebarBody');
+            const toggleMinifyBtn = document.getElementById('toggleSidebarMinify');
+            const sidebarMinifyKey = 'userSidebarMinimized';
+
+            // Função para aplicar o estado (minimizado ou não)
+            function setSidebarMinified(isMinified) {
+                if (!userSidebar || !userSidebarBody || !toggleMinifyBtn) return;
+                
+                if (isMinified) {
+                    userSidebar.classList.add('minimized');
+                    userSidebarBody.classList.add('minimized');
+                    toggleMinifyBtn.innerHTML = '<i class="bi bi-arrows-angle-expand"></i>';
+                    toggleMinifyBtn.title = 'Maximizar Menu';
+                    localStorage.setItem(sidebarMinifyKey, 'true');
+                } else {
+                    userSidebar.classList.remove('minimized');
+                    userSidebarBody.classList.remove('minimized');
+                    toggleMinifyBtn.innerHTML = '<i class="bi bi-arrows-angle-contract"></i>';
+                    toggleMinifyBtn.title = 'Minimizar Menu';
+                    localStorage.setItem(sidebarMinifyKey, 'false');
+                }
+            }
+
+            // Adiciona o listener ao botão de minimizar
+            if (toggleMinifyBtn) {
+                toggleMinifyBtn.addEventListener('click', () => {
+                    const isCurrentlyMinified = userSidebar.classList.contains('minimized');
+                    setSidebarMinified(!isCurrentlyMinified);
+                });
+            }
+
+            // Aplica o estado salvo ao carregar a página
+            if (localStorage.getItem(sidebarMinifyKey) === 'true') {
+                setSidebarMinified(true);
+            } else {
+                setSidebarMinified(false);
+            }
+            // --- Fim AJUSTE 5 ---
         });
     </script>
     {% block scripts_extra %}{% endblock %}

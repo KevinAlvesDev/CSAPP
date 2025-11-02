@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, g, flash, redirect, url_for, reque
 from ..blueprints.auth import permission_required
 from ..services import get_analytics_data
 from ..db import query_db
-from ..constants import PERFIS_COM_ANALYTICS, PERFIS_COM_GESTAO, JUSTIFICATIVAS_PARADA
+from ..constants import PERFIS_COM_ANALYTICS, PERFIS_COM_GESTAO
 
 analytics_bp = Blueprint('analytics', __name__)
 
@@ -28,13 +28,13 @@ def analytics_dashboard():
         cs_email = g.user_email
     
     try:
-        # ATUALIZAÇÃO: Recebe 3 valores, incluindo a nova lista
-        global_metrics, cs_metrics_list, implantacoes_paradas_detalhadas = get_analytics_data(
+        # ATUALIZAÇÃO: Recebe o novo dicionário único com todos os dados
+        analytics_data = get_analytics_data(
             target_cs_email=cs_email, 
             target_status=status_filter,
             start_date=start_date,
             end_date=end_date,
-            target_tag=None # Tag filter é tratado no frontend agora
+            target_tag=None 
         )
         
         all_cs = get_all_customer_success()
@@ -49,16 +49,14 @@ def analytics_dashboard():
             {'value': 'parada', 'label': 'Paradas'}
         ]
         
-        # Ordena a lista de CSs por nome
-        cs_metrics_list.sort(key=lambda x: x['nome'])
-        
-        # ATUALIZAÇÃO: Ordena a nova lista de paradas por dias (mais tempo parado primeiro)
-        implantacoes_paradas_detalhadas.sort(key=lambda x: x.get('parada_dias', 0), reverse=True)
-        
         return render_template(
             'analytics.html',
-            global_metrics=global_metrics,
-            cs_metrics=cs_metrics_list,
+            # Novos dados para o template
+            kpi_cards=analytics_data.get('kpi_cards', {}),
+            implantacoes_lista_detalhada=analytics_data.get('implantacoes_lista_detalhada', []),
+            chart_data=analytics_data.get('chart_data', {}),
+            
+            # Filtros e dados antigos ainda necessários
             all_cs=all_cs,
             status_options=status_options,
             current_cs_email=cs_email,
@@ -66,13 +64,13 @@ def analytics_dashboard():
             current_start_date=start_date,
             current_end_date=end_date,
             user_info=g.user,
-            user_perfil=user_perfil,
-            justificativas_parada=JUSTIFICATIVAS_PARADA,
-            # ATUALIZAÇÃO: Passa a nova lista para o template
-            implantacoes_paradas_detalhadas=implantacoes_paradas_detalhadas
+            user_perfil=user_perfil
+            
+            # Itens removidos (não mais retornados separadamente pelo service)
+            # global_metrics, cs_metrics, implantacoes_paradas_detalhadas
         )
         
     except Exception as e:
         print(f"ERRO ao carregar dashboard de analytics: {e}")
-        flash("Erro interno ao carregar os dados de relatórios.", "error")
+        flash(f"Erro interno ao carregar os dados de relatórios: {e}", "error")
         return redirect(url_for('main.dashboard'))

@@ -1,83 +1,59 @@
 {% extends "base.html" %}
 
-{% block title %}Analytics Gerencial{% endblock %}
+{% block title %}Dashboard Gerencial{% endblock %}
 
 {% block head_extra %}
-<style>
-    /* Estilos específicos para o dashboard gerencial */
-    .metric-card-small {
-        min-height: 100px; /* Garante tamanho uniforme */
-    }
-    .filter-inline-form {
-        border-bottom: 1px solid var(--input-border);
-        padding-bottom: 15px;
-    }
-    .date-filter-group {
-        display: flex;
-        align-items: center;
-        gap: 5px;
-    }
-    .date-filter-group input {
-        width: 150px; /* Ajusta a largura dos campos de data */
-    }
-    /* Novo estilo para a lista/tabela detalhada de paradas */
-    .paradas-table th, .paradas-table td {
-        font-size: 0.9rem;
-    }
-</style>
+    {# Adiciona a biblioteca Chart.js para os novos gráficos #}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        .chart-container {
+            position: relative;
+            height: 350px;
+            width: 100%;
+        }
+    </style>
 {% endblock %}
+
 
 {% block content %}
 <div class="container-fluid p-0">
-    <header class="header-bg p-3 shadow-sm d-flex justify-content-between align-items-center position-relative">
-        <h1 class="main-title mb-0 fs-4" style="position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap;">DASHBOARD GERENCIAL</h1>
+    <header class="header-bg p-3 d-flex justify-content-between align-items-center">
+        <h1 class="main-title mb-0 fs-4">CS ONBOARDING DASHBOARD GERENCIAL</h1>
         
-    <div class="d-flex align-items-center ms-auto"> 
-            
-            {# Botão Voltar ao Dashboard (para UX) #}
-            <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-primary me-3">
-                <i class="bi bi-arrow-left me-1"></i> Voltar ao Dashboard
+        <div class="d-flex align-items-center">
+             <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-primary me-3">
+                <i class="bi bi-arrow-left me-1"></i> Dashboard Pessoal
             </a>
-            
-            {# Menu Dropdown do Usuário #}
             <div class="dropdown ms-2">
-                <button class="btn btn-outline-secondary rounded-circle p-0" type="button" id="userMenuDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Menu" style="width: 40px; height: 40px; border: 2px solid var(--accent-color); overflow: hidden;">
+                <button class="btn btn-outline-secondary rounded-circle p-0 user-profile-btn" type="button" id="userMenuDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Menu">
                     {% if g.perfil.foto_url %}
-                        <img src="{{ g.perfil.foto_url }}" alt="Foto de Perfil" style="width: 100%; height: 100%; object-fit: cover;">
+                        <img src="{{ g.perfil.foto_url }}?v={{ range(1, 10000) | random }}" alt="Foto de Perfil" style="width: 100%; height: 100%; object-fit: cover;">
                     {% else %}
                         <i class="bi bi-person-fill" style="font-size: 1.5rem; color: var(--accent-color);"></i>
                     {% endif %}
                 </button>
-                
+
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuDropdown">
                      <li><a class="dropdown-item" href="{{ url_for('profile.perfil') }}"><i class="bi bi-person-circle me-2"></i> Editar Perfil</a></li>
-
-                     {# Links Condicionais para Gestão #}
                      {% if g.perfil and g.perfil.perfil_acesso in ['Administrador', 'Gerente', 'Coordenador'] %}
                           <li><a class="dropdown-item text-primary" href="#" data-bs-toggle="modal" data-bs-target="#modalGerenciarUsuarios"><i class="bi bi-people-fill me-2"></i> Usuários</a></li>
-                         <li><a class="dropdown-item text-info" href="{{ url_for('analytics.analytics_dashboard') }}"><i class="bi bi-graph-up me-2"></i> Analytics Gerencial</a></li>
-                         {# Links Gamificação #}
+                         <li><a class="dropdown-item text-info disabled" href="{{ url_for('analytics.analytics_dashboard') }}"><i class="bi bi-graph-up me-2"></i> Analytics Gerencial</a></li>
                          <li><a class="dropdown-item text-warning" href="{{ url_for('gamification.manage_gamification_metrics') }}"><i class="bi bi-pencil-square me-2"></i> Métricas Gamificação</a></li>
                          <li><a class="dropdown-item text-success" href="{{ url_for('gamification.gamification_report') }}"><i class="bi bi-clipboard-data me-2"></i> Relatório Gamificação</a></li>
                      {% endif %}
-                     {# Fim dos Links Condicionais #}
-
                      <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalGamificacao"><i class="bi bi-trophy-fill me-2"></i> Critérios Gamificação</a></li>
                      <li><hr class="dropdown-divider"></li>
                      <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}"><i class="bi bi-box-arrow-right me-2"></i> Sair</a></li>
                 </ul>
-                </div>
-            
+            </div>
         </div>
     </header>
-    
+
     <main class="p-4" id="main-content">
-        
-        {# Mensagens Flash #}
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
                         {{ message }}
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
@@ -85,214 +61,280 @@
             {% endif %}
         {% endwith %}
 
-        {# --- FILTROS DE VISÃO (CS e STATUS) --- #}
-        <form method="GET" action="{{ url_for('analytics.analytics_dashboard') }}" class="metric-card p-4 rounded shadow-sm mb-4 filter-inline-form">
-            <h2 class="h5 mb-3">Filtros da Carteira</h2>
-            
-            {# Campos Ocultos para Reter Filtro de Data #}
-            <input type="hidden" name="start_date" value="{{ current_start_date | default('') }}">
-            <input type="hidden" name="end_date" value="{{ current_end_date | default('') }}">
-
-            <div class="row g-3 align-items-end">
-                
-                {# Filtro por CS #}
-                <div class="col-md-4">
-                    <label for="cs_email" class="form-label small text-secondary">Customer Success</label>
-                    <select name="cs_email" id="cs_email" class="form-select form-select-sm">
-                        <option value="">-- Todos os CS --</option>
-                        {% for cs in all_cs %}
-                            <option value="{{ cs.usuario }}" {% if current_cs_email == cs.usuario %}selected{% endif %}>
-                                {{ cs.nome }} ({{ cs.perfil_acesso }})
-                            </option>
-                        {% endfor %}
-                    </select>
+        <div class="metric-card p-3 mb-4">
+            <form method="GET" action="{{ url_for('analytics.analytics_dashboard') }}" id="analytics-filter-form">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label for="cs_email_filter" class="form-label small">Filtrar por Colaborador</label>
+                        <select class="form-select" id="cs_email_filter" name="cs_email">
+                            <option value="">Todos os CS</option>
+                            {% for cs in all_cs %}
+                                <option value="{{ cs.usuario }}" {% if cs.usuario == current_cs_email %}selected{% endif %}>
+                                    {{ cs.nome }} ({{ cs.perfil_acesso or 'N/A' }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="status_filter" class="form-label small">Filtrar por Status</label>
+                        <select class="form-select" id="status_filter" name="status_filter">
+                            {% for opt in status_options %}
+                                <option value="{{ opt.value }}" {% if opt.value == current_status_filter %}selected{% endif %}>
+                                    {{ opt.label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                         <label for="start_date_filter" class="form-label small">Período (Início)</label>
+                         <input type="date" class="form-control" id="start_date_filter" name="start_date" value="{{ current_start_date or '' }}">
+                    </div>
+                    <div class="col-md-2">
+                         <label for="end_date_filter" class="form-label small">Período (Fim)</label>
+                         <input type="date" class="form-control" id="end_date_filter" name="end_date" value="{{ current_end_date or '' }}">
+                    </div>
+                    <div class="col-md-2 d-flex">
+                        <button type="submit" class="btn btn-primary w-100 me-2"><i class="bi bi-funnel-fill me-1"></i> Filtrar</button>
+                        <a href="{{ url_for('analytics.analytics_dashboard') }}" class="btn btn-outline-secondary" title="Limpar Filtros"><i class="bi bi-x-lg"></i></a>
+                    </div>
                 </div>
-                
-                {# Filtro por Status #}
-                 <div class="col-md-4">
-                    <label for="status_filter" class="form-label small text-secondary">Status da Implantação</label>
-                    <select name="status_filter" id="status_filter" class="form-select form-select-sm">
-                        {% for option in status_options %}
-                            <option value="{{ option.value }}" {% if current_status_filter == option.value %}selected{% endif %}>
-                                {{ option.label }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                
-                {# Botão Aplicar #}
-                <div class="col-md-4">
-                    <button type="submit" class="btn btn-primary btn-sm me-2">Aplicar Filtros</button>
-                    {% if current_cs_email or current_status_filter != 'todas' or current_start_date or current_end_date %}
-                         <a href="{{ url_for('analytics.analytics_dashboard') }}" class="btn btn-sm btn-outline-danger">Limpar Tudo</a>
-                    {% endif %}
-                </div>
-            </div>
-        </form>
-        
-        {# --- MÉTRICAS DA CARTEIRA (Visão Geral) --- #}
-        <h2 class="h5 mb-3">Carteira do CS ({{ global_metrics.total_impl | default(0) }} Implantações Filtradas)</h2>
-        <div class="row row-cols-1 row-cols-md-3 row-cols-lg-5 g-3 mb-5">
-            {# Total de Impl. #}
-            <div class="col"><div class="metric-card metric-card-small p-3 rounded shadow-sm text-center"><h6 class="text-secondary">Total de implantações</h6><h4 class="mb-0 text-primary">{{ global_metrics.total_impl | default(0) }}</h4></div></div>
-            {# Em Andamento #}
-            <div class="col"><div class="metric-card metric-card-small p-3 rounded shadow-sm text-center"><h6 class="text-secondary">Em Andamento</h6><h4 class="mb-0 text-warning text-dark">{{ global_metrics.total_andamento | default(0) }}</h4></div></div>
-            {# Finalizadas #}
-            <div class="col"><div class="metric-card metric-card-small p-3 rounded shadow-sm text-center"><h6 class="text-secondary">Finalizadas</h6><h4 class="mb-0 text-success">{{ global_metrics.total_finalizadas | default(0) }}</h4></div></div>
-            {# TMA Médio #}
-            <div class="col"><div class="metric-card metric-card-small p-3 rounded shadow-sm text-center"><h6 class="text-secondary">TMA Médio (dias)</h6><h4 class="mb-0 text-primary">{{ global_metrics.global_tma | default('N/A') }}</h4></div></div>
-            {# Implantações paradas #}
-            <div class="col"><div class="metric-card metric-card-small p-3 rounded shadow-sm text-center"><h6 class="text-secondary">Implantações paradas</h6><h4 class="mb-0 text-danger">{{ global_metrics.total_paradas | default(0) }}</h4></div></div>
+            </form>
         </div>
 
-        {# --- VISÃO POR COLABORADOR (PRODUTIVIDADE POR PERÍODO) --- #}
-        <h2 class="h5 mb-3">Produtividade por Customer Success</h2>
-        
-        {# FORMULÁRIO DE FILTRO DE DATA (INLINE) - AGORA COM CAMPO CS #}
-        <form method="GET" action="{{ url_for('analytics.analytics_dashboard') }}" class="metric-card p-3 rounded shadow-sm mb-4">
-            <h6 class="text-secondary mb-3 border-bottom pb-2">Filtrar Ações Concluídas por Período</h6>
-            
-            {# Campos Ocultos para Reter Filtro de Status #}
-            <input type="hidden" name="status_filter" value="{{ current_status_filter | default('todas') }}">
+        <div class="row row-cols-1 row-cols-md-3 row-cols-lg-6 g-3 mb-4">
+            {% set k = kpi_cards %}
+            <div class="col"><div class="metric-card p-3 text-center"><h6 class="text-secondary">Clientes (Filtro)</h6><h4 class="mb-0 text-primary">{{ k.total_clientes | default(0) }}</h4></div></div>
+            <div class="col"><div class="metric-card p-3 text-center"><h6 class="text-secondary">Impl. Finalizadas</h6><h4 class="mb-0 text-success">{{ k.total_finalizadas | default(0) }}</h4></div></div>
+            <div class="col"><div class="metric-card p-3 text-center"><h6 class="text-secondary">Impl. Em Andamento</h6><h4 class="mb-0 text-warning">{{ k.total_andamento | default(0) }}</h4></div></div>
+            <div class="col"><div class="metric-card p-3 text-center"><h6 class="text-secondary">Impl. Futuras</h6><h4 class="mb-0 text-info">{{ k.total_futuras | default(0) }}</h4></div></div>
+            <div class="col"><div class="metric-card p-3 text-center"><h6 class="text-secondary">Impl. Sem Previsão</h6><h4 class="mb-0 text-danger">{{ k.total_sem_previsao | default(0) }}</h4></div></div>
+            <div class="col"><div class="metric-card p-3 text-center"><h6 class="text-secondary">Média Implantação</h6><h4 class="mb-0 text-primary">{{ k.media_tma | default(0) }}d</h4></div></div>
+        </div>
 
-            <div class="row g-3 align-items-end">
-                
-                {# Filtro de CS (para filtrar a tabela de produtividade) #}
-                <div class="col-md-3">
-                    <label for="cs_email_prod" class="form-label small text-secondary">CS (Produtividade)</label>
-                    <select name="cs_email" id="cs_email_prod" class="form-select form-select-sm">
-                        <option value="">-- Todos os CS --</option>
-                        {% for cs in all_cs %}
-                            <option value="{{ cs.usuario }}" {% if current_cs_email == cs.usuario %}selected{% endif %}>
-                                {{ cs.nome }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div class="col-md-3">
-                    <label for="start_date_prod" class="form-label small text-secondary">Data Inicial 🗓️</label>
-                    <input type="date" class="form-control form-control-sm" name="start_date" id="start_date_prod" value="{{ current_start_date | default('') }}">
-                </div>
-                <div class="col-md-3">
-                    <label for="end_date_prod" class="form-label small text-secondary">Data Final 🗓️</label>
-                    <input type="date" class="form-control form-control-sm" name="end_date" id="end_date_prod" value="{{ current_end_date | default('') }}">
-                </div>
-                <div class="col-md-3">
-                    <button type="submit" class="btn btn-success btn-sm w-100">Atualizar Produtividade</button>
+        <div class="row g-3 mb-4">
+            <div class="col-lg-6">
+                <div class="metric-card p-3 h-100">
+                    <h5 class="mb-3 border-bottom pb-2">Nível Clientes em Implantação (MRR)</h5>
+                    <div class="chart-container">
+                        <canvas id="chartNivelReceita"></canvas>
+                    </div>
                 </div>
             </div>
-        </form>
-
-        {% if not cs_metrics %}
-            <div class="alert alert-info text-center" role="alert">Nenhum Customer Success encontrado com as implantações filtradas.</div>
-        {% else %}
-        <div class="table-responsive metric-card p-3 rounded shadow-sm">
-             <table class="table table-hover align-middle mb-0">
-                <thead>
-                    <tr class="table-light">
-                        <th>CS / E-mail</th>
-                        <th class="text-center">Total de Implantações</th>
-                        <th class="text-center">Em Andamento</th>
-                        <th class="text-center">Finalizadas</th>
-                        
-                        {# COLUNAS SEPARADAS PARA PRODUTIVIDADE #}
-                        <th class="text-center text-primary">Ação Interna Concluída</th>
-                        <th class="text-center text-info">Reunião Concluída</th>
-
-                        <th class="text-center">TMA Médio (dias)</th>
-                        {# TEMPO PARADO #}
-                        <th class="text-center text-danger">Tempo Parado Atual (dias)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for cs in cs_metrics %}
-                    <tr>
-                        <td>
-                            <strong>{{ cs.nome }}</strong>
-                            <small class="d-block text-muted">({{ cs.perfil }} - {{ cs.cargo }})</small>
-                            <small class="d-block text-secondary">{{ cs.email }}</small>
-                        </td>
-                        <td class="text-center">{{ cs.impl_total }}</td>
-                        <td class="text-center">{{ cs.impl_andamento }}</td>
-                        <td class="text-center">{{ cs.impl_finalizadas }}</td>
-                        
-                        {# DADOS SEPARADOS PARA PRODUTIVIDADE #}
-                        <td class="text-center">{{ cs.prod_tags['Ação interna'] | default(0) }}</td>
-                        <td class="text-center">{{ cs.prod_tags['Reunião'] | default(0) }}</td>
-                        
-                        <td class="text-center">{{ cs.tma_medio }}</td>
-                        {# DADOS DE TEMPO PARADO #}
-                        <td class="text-center">
-                            {# ATUALIZAÇÃO: Usa o acumulado 'parada_dias_total' do CS #}
-                            {% if cs.impl_paradas > 0 and cs.parada_dias_total > 0 %}
-                                <span class="badge bg-danger">{{ cs.parada_dias_total }}</span>
-                            {% elif cs.impl_paradas > 0 %}
-                                <span class="badge bg-danger">0</span> {# Parada hoje #}
-                            {% else %}
-                                N/A
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-             </table>
+            <div class="col-lg-6">
+                <div class="metric-card p-3 h-100">
+                    <h5 class="mb-3 border-bottom pb-2">Status Clientes Implantação</h5>
+                     <div class="chart-container">
+                        <canvas id="chartStatusClientes"></canvas>
+                    </div>
+                </div>
+            </div>
         </div>
-        {% endif %}
-        
-        {# --- SEÇÃO REFORMULADA: IMPLANTAÇÕES PARADAS (DETALHES) --- #}
-        <h2 class="h5 mb-3 mt-5">Implantações paradas ({{ global_metrics.total_paradas | default(0) }} Registros)</h2>
-        <p class="small text-secondary">Detalhes de cada implantação com o tempo de paralisação, aplicando os filtros ativos.</p>
-        <div class="row g-3">
-            <div class="col-md-12">
-                 <div class="metric-card p-3 rounded shadow-sm">
-                    <h6 class="text-secondary border-bottom pb-2 mb-3">Detalhes das Implantações Paradas</h6>
-                    
-                     {% if global_metrics.total_paradas == 0 %}
-                        <div class="alert alert-info small">Nenhuma implantação parada nos filtros atuais.</div>
-                     {% else %}
-                        <div class="table-responsive">
-                            <table class="table table-striped table-hover paradas-table mb-0">
-                                <thead>
-                                    <tr>
-                                        <th>Empresa</th>
-                                        <th>Motivo da Parada</th>
-                                        <th class="text-center">CS Responsável</th>
-                                        <th class="text-center">Tempo Parado (dias)</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {# ATUALIZAÇÃO: Loop sobre a nova lista detalhada #}
-                                    {% for impl in implantacoes_paradas_detalhadas %}
-                                        <tr>
-                                            <td><strong>{{ impl.nome_empresa }}</strong></td>
-                                            <td>{{ impl.motivo_parada }}</td>
-                                            <td class="text-center">{{ impl.cs_nome }}</td>
-                                            <td class="text-center">
-                                                <span class="badge bg-danger">
-                                                    {{ impl.parada_dias }} dias
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    {% endfor %}
-                                    
-                                    {% if not implantacoes_paradas_detalhadas %}
-                                         <tr>
-                                            <td colspan="4" class="text-center text-muted">
-                                                Nenhuma implantação parada encontrada para os filtros atuais.
-                                            </td>
-                                        </tr>
+
+        <div class="metric-card p-3 mt-4">
+             <h5 class="mb-3 border-bottom pb-2">Lista Detalhada de Implantações</h5>
+             {% if not implantacoes_lista_detalhada %}
+                <div class="alert alert-light text-center small py-2">Nenhum cliente encontrado para os filtros selecionados.</div>
+             {% else %}
+                 <div class="table-responsive" style="max-height: 450px; overflow-y: auto;">
+                    <table class="table table-sm table-hover align-middle caption-top">
+                        <caption class="small text-muted">Listando {{ implantacoes_lista_detalhada | length }} implantações (ordenadas por nome da empresa).</caption>
+                        <thead class="table-light" style="position: sticky; top: 0;">
+                            <tr>
+                                <th scope="col">Empresa</th>
+                                <th scope="col">Implantador</th>
+                                <th scope="col">Início da Implantação</th>
+                                <th scope="col">Início em Produção</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Ações</th>
+                            </tr>
+                        </thead>
+                         <tbody>
+                            {% for impl in implantacoes_lista_detalhada %}
+                            <tr>
+                                <td class="text-truncate" style="max-width: 200px;">{{ impl.nome_empresa | default('N/A') }}</td>
+                                <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome | default('N/A') }}</td>
+                                <td>{{ impl.data_criacao | format_date_br(include_time=False) }}</td>
+                                <td>{{ impl.data_inicio_producao | format_date_br(include_time=False) }}</td>
+                                <td>
+                                    {% if impl.status == 'finalizada' %} <span class="badge bg-success">Concluído</span>
+                                    {% elif impl.status == 'parada' %} <span class="badge bg-danger">Parada</span>
+                                    {% elif impl.status == 'futura' %} <span class="badge bg-info text-dark">Futura</span>
+                                    {% else %} <span class="badge bg-warning text-dark">Em Andamento</span>
                                     {% endif %}
-                                </tbody>
-                            </table>
-                        </div>
-                     {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-outline-primary py-0 px-2">Ver</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                         </tbody>
+                    </table>
                  </div>
+             {% endif %}
+        </div>
+
+        <div class="metric-card p-3 mt-4">
+             <h5 class="mb-3 border-bottom pb-2">Ranking Implantação por Colaborador</h5>
+             <p class="small text-muted">Total de implantações (baseado nos filtros) por colaborador.</p>
+             <div class="chart-container">
+                <canvas id="chartRankingColaborador"></canvas>
             </div>
-            
-            {# Card "Justificativas Padrão" REMOVIDO #}
+        </div>
+        
+        <div class="metric-card p-3 mt-4">
+             <h5 class="mb-3 border-bottom pb-2">Ranking Implantação por Período</h5>
+             <p class="small text-muted">Total de implantações <span class="fw-bold text-success">finalizadas</span> no ano corrente, agrupadas por mês (respeita o filtro de Colaborador).</p>
+             <div class="chart-container">
+                <canvas id="chartRankingPeriodo"></canvas>
+            </div>
         </div>
 
     </main>
 </div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+    // Passa os dados do Flask (convertidos para JSON) para o JavaScript
+    const chartData = {{ chart_data | tojson | safe }};
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const ctxNivel = document.getElementById('chartNivelReceita');
+        const ctxStatus = document.getElementById('chartStatusClientes');
+        const ctxRankingColab = document.getElementById('chartRankingColaborador');
+        const ctxRankingPeriodo = document.getElementById('chartRankingPeriodo');
+        
+        const barColors = [
+            'rgba(54, 162, 235, 0.7)', // Blue
+            'rgba(255, 99, 132, 0.7)', // Red
+            'rgba(255, 206, 86, 0.7)', // Yellow
+            'rgba(75, 192, 192, 0.7)', // Green
+            'rgba(153, 102, 255, 0.7)', // Purple
+            'rgba(255, 159, 64, 0.7)', // Orange
+            'rgba(100, 100, 100, 0.7)'  // Gray
+        ];
+        
+        const statusColors = {
+            'Em Andamento': 'rgba(255, 206, 86, 0.7)', // Yellow
+            'Finalizadas': 'rgba(75, 192, 192, 0.7)', // Green
+            'Futuras': 'rgba(54, 162, 235, 0.7)', // Blue
+            'Paradas': 'rgba(255, 99, 132, 0.7)', // Red
+            'Atrasadas': 'rgba(217, 0, 0, 0.7)' // Dark Red
+        };
+
+        // 1. Gráfico Nível Clientes (MRR)
+        if (ctxNivel && chartData.nivel_receita) {
+            new Chart(ctxNivel, {
+                type: 'bar',
+                data: {
+                    labels: chartData.nivel_receita.labels,
+                    datasets: [{
+                        label: 'Qtd. Clientes',
+                        data: chartData.nivel_receita.data,
+                        backgroundColor: barColors,
+                        borderColor: barColors.map(c => c.replace('0.7', '1')),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y', // Gráfico de barras horizontal
+                    scales: {
+                        x: { beginAtZero: true, stacked: true },
+                        y: { stacked: true }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        // 2. Gráfico Status Clientes
+        if (ctxStatus && chartData.status_clientes) {
+             const statusData = chartData.status_clientes;
+             const backgroundColorsStatus = statusData.labels.map(label => statusColors[label] || 'rgba(100, 100, 100, 0.7)');
+
+            new Chart(ctxStatus, {
+                type: 'bar', // Mudado para 'bar' para melhor visualização
+                data: {
+                    labels: statusData.labels,
+                    datasets: [{
+                        label: 'Qtd. Clientes',
+                        data: statusData.data,
+                        backgroundColor: backgroundColorsStatus,
+                        borderColor: backgroundColorsStatus.map(c => c.replace('0.7', '1')),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true }
+                    },
+                    plugins: {
+                        legend: { display: false } // Esconde a legenda
+                    }
+                }
+            });
+        }
+        
+        // 3. Gráfico Ranking por Colaborador
+        if (ctxRankingColab && chartData.ranking_colaborador) {
+            new Chart(ctxRankingColab, {
+                type: 'bar',
+                data: {
+                    labels: chartData.ranking_colaborador.labels,
+                    datasets: [{
+                        label: 'Total Implantações',
+                        data: chartData.ranking_colaborador.data,
+                        backgroundColor: 'rgba(75, 192, 192, 0.7)', // Green
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        // 4. Gráfico Ranking por Período
+        if (ctxRankingPeriodo && chartData.ranking_periodo) {
+            new Chart(ctxRankingPeriodo, {
+                type: 'bar',
+                data: {
+                    labels: chartData.ranking_periodo.labels, // Jan, Fev, Mar...
+                    datasets: [{
+                        label: 'Impl. Finalizadas',
+                        data: chartData.ranking_periodo.data,
+                        backgroundColor: 'rgba(153, 102, 255, 0.7)', // Purple
+                        borderColor: 'rgba(153, 102, 255, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+    });
+</script>
 {% endblock %}
