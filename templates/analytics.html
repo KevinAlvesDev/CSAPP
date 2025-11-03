@@ -24,28 +24,14 @@
              <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-primary me-3">
                 <i class="bi bi-arrow-left me-1"></i> Dashboard Pessoal
             </a>
-            <div class="dropdown ms-2">
-                <button class="btn btn-outline-secondary rounded-circle p-0 user-profile-btn" type="button" id="userMenuDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Menu">
-                    {% if g.perfil.foto_url %}
-                        <img src="{{ g.perfil.foto_url }}?v={{ range(1, 10000) | random }}" alt="Foto de Perfil" style="width: 100%; height: 100%; object-fit: cover;">
-                    {% else %}
-                        <i class="bi bi-person-fill" style="font-size: 1.5rem; color: var(--accent-color);"></i>
-                    {% endif %}
-                </button>
-
-                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuDropdown">
-                     <li><a class="dropdown-item" href="{{ url_for('profile.perfil') }}"><i class="bi bi-person-circle me-2"></i> Editar Perfil</a></li>
-                     {% if g.perfil and g.perfil.perfil_acesso in ['Administrador', 'Gerente', 'Coordenador'] %}
-                          <li><a class="dropdown-item text-primary" href="#" data-bs-toggle="modal" data-bs-target="#modalGerenciarUsuarios"><i class="bi bi-people-fill me-2"></i> Usuários</a></li>
-                         <li><a class="dropdown-item text-info disabled" href="{{ url_for('analytics.analytics_dashboard') }}"><i class="bi bi-graph-up me-2"></i> Analytics Gerencial</a></li>
-                         <li><a class="dropdown-item text-warning" href="{{ url_for('gamification.manage_gamification_metrics') }}"><i class="bi bi-pencil-square me-2"></i> Métricas Gamificação</a></li>
-                         <li><a class="dropdown-item text-success" href="{{ url_for('gamification.gamification_report') }}"><i class="bi bi-clipboard-data me-2"></i> Relatório Gamificação</a></li>
-                     {% endif %}
-                     <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalGamificacao"><i class="bi bi-trophy-fill me-2"></i> Critérios Gamificação</a></li>
-                     <li><hr class="dropdown-divider"></li>
-                     <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}"><i class="bi bi-box-arrow-right me-2"></i> Sair</a></li>
-                </ul>
-            </div>
+            
+            <button class="btn btn-outline-secondary rounded-circle p-0 user-profile-btn ms-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#userProfileSidebar" aria-controls="userProfileSidebar" title="Menu">
+                {% if g.perfil.foto_url %}
+                    <img src="{{ g.perfil.foto_url }}?v={{ range(1, 10000) | random }}" alt="Foto de Perfil" style="width: 100%; height: 100%; object-fit: cover;">
+                {% else %}
+                    <i class="bi bi-person-fill" style="font-size: 1.5rem; color: var(--accent-color);"></i>
+                {% endif %}
+            </button>
         </div>
     </header>
 
@@ -101,16 +87,18 @@
             </form>
         </div>
 
-        <div class="row row-cols-1 row-cols-md-3 row-cols-lg-6 g-3 mb-4">
+        <div class="row row-cols-1 row-cols-md-3 row-cols-lg-3 g-3 mb-4">
             {% set k = kpi_cards %}
             <div class="col"><div class="metric-card p-3 text-center"><h6 class="text-secondary">Clientes (Filtro)</h6><h4 class="mb-0 text-primary">{{ k.total_clientes | default(0) }}</h4></div></div>
-            <div class="col"><div class="metric-card p-3 text-center"><h6 class="text-secondary">Impl. Finalizadas</h6><h4 class="mb-0 text-success">{{ k.total_finalizadas | default(0) }}</h4></div></div>
+            <div class="col"><div class="metric-card p-3 text-center"><h6 class="text-secondary">Impl. Novas</h6><h4 class="mb-0 text-dark">{{ k.total_novas | default(0) }}</h4></div></div>
             <div class="col"><div class="metric-card p-3 text-center"><h6 class="text-secondary">Impl. Em Andamento</h6><h4 class="mb-0 text-warning">{{ k.total_andamento | default(0) }}</h4></div></div>
+            <div class="col"><div class="metric-card p-3 text-center"><h6 class="text-secondary">Impl. Atrasadas</h6><h4 class="mb-0 text-danger">{{ k.total_atrasadas | default(0) }}</h4></div></div>
             <div class="col"><div class="metric-card p-3 text-center"><h6 class="text-secondary">Impl. Futuras</h6><h4 class="mb-0 text-info">{{ k.total_futuras | default(0) }}</h4></div></div>
+            <div class="col"><div class="metric-card p-3 text-center"><h6 class="text-secondary">Impl. Paradas</h6><h4 class="mb-0 text-danger">{{ k.total_paradas | default(0) }}</h4></div></div>
+            <div class="col"><div class="metric-card p-3 text-center"><h6 class="text-secondary">Impl. Finalizadas</h6><h4 class="mb-0 text-success">{{ k.total_finalizadas | default(0) }}</h4></div></div>
             <div class="col"><div class="metric-card p-3 text-center"><h6 class="text-secondary">Impl. Sem Previsão</h6><h4 class="mb-0 text-danger">{{ k.total_sem_previsao | default(0) }}</h4></div></div>
             <div class="col"><div class="metric-card p-3 text-center"><h6 class="text-secondary">Média Implantação</h6><h4 class="mb-0 text-primary">{{ k.media_tma | default(0) }}d</h4></div></div>
         </div>
-
         <div class="row g-3 mb-4">
             <div class="col-lg-6">
                 <div class="metric-card p-3 h-100">
@@ -159,6 +147,7 @@
                                     {% if impl.status == 'finalizada' %} <span class="badge bg-success">Concluído</span>
                                     {% elif impl.status == 'parada' %} <span class="badge bg-danger">Parada</span>
                                     {% elif impl.status == 'futura' %} <span class="badge bg-info text-dark">Futura</span>
+                                    {% elif impl.status == 'nova' %} <span class="badge bg-dark">Nova</span>
                                     {% else %} <span class="badge bg-warning text-dark">Em Andamento</span>
                                     {% endif %}
                                 </td>
@@ -189,7 +178,39 @@
             </div>
         </div>
 
-    </main>
+        <div class="metric-card p-3 mt-4">
+             <h5 class="mb-3 border-bottom pb-2">Implantações Paradas</h5>
+             {% if not implantacoes_paradas_lista %}
+                <div class="alert alert-light text-center small py-2">Nenhuma implantação parada encontrada para os filtros selecionados.</div>
+             {% else %}
+                 <div class="table-responsive" style="max-height: 450px; overflow-y: auto;">
+                    <table class="table table-sm table-hover align-middle caption-top">
+                        <caption class="small text-muted">Listando {{ implantacoes_paradas_lista | length }} implantações paradas.</caption>
+                        <thead class="table-light" style="position: sticky; top: 0;">
+                            <tr>
+                                <th scope="col">Empresa</th>
+                                <th scope="col">Motivo da Parada</th>
+                                <th scope="col">Dias Parada</th>
+                                <th scope="col">Ações</th>
+                            </tr>
+                        </thead>
+                         <tbody>
+                            {% for impl in implantacoes_paradas_lista %}
+                            <tr>
+                                <td class="text-truncate" style="max-width: 250px;">{{ impl.nome_empresa | default('N/A') }}</td>
+                                <td class="text-truncate" style="max-width: 300px;">{{ impl.motivo_parada | default('N/A') }}</td>
+                                <td><span class="badge bg-danger">{{ impl.dias_parada | int }} dias</span></td>
+                                <td>
+                                    <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-outline-primary py-0 px-2">Ver</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                         </tbody>
+                    </table>
+                 </div>
+             {% endif %}
+        </div>
+        </main>
 </div>
 {% endblock %}
 
@@ -215,6 +236,7 @@
         ];
         
         const statusColors = {
+            'Novas': 'rgba(108, 117, 125, 0.7)', // AJUSTE 1: Cor 'Dark' (Cinza)
             'Em Andamento': 'rgba(255, 206, 86, 0.7)', // Yellow
             'Finalizadas': 'rgba(75, 192, 192, 0.7)', // Green
             'Futuras': 'rgba(54, 162, 235, 0.7)', // Blue
@@ -223,6 +245,7 @@
         };
 
         // 1. Gráfico Nível Clientes (MRR)
+        // INÍCIO DA CORREÇÃO: Gráfico MRR revertido para barras horizontais
         if (ctxNivel && chartData.nivel_receita) {
             new Chart(ctxNivel, {
                 type: 'bar',
@@ -239,10 +262,10 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    indexAxis: 'y', // Gráfico de barras horizontal
+                    indexAxis: 'y', // <-- CORRIGIDO: Gráfico na horizontal (barras deitadas)
                     scales: {
-                        x: { beginAtZero: true, stacked: true },
-                        y: { stacked: true }
+                        x: { beginAtZero: true }, // Eixo X (Valores / Quantidade)
+                        y: { beginAtZero: true }  // Eixo Y (Categorias / Nomenclatura)
                     },
                     plugins: {
                         legend: { display: false }
@@ -250,14 +273,16 @@
                 }
             });
         }
+        // FIM DA CORREÇÃO
 
         // 2. Gráfico Status Clientes
+        // (Sem alteração necessária, o código já suporta todos os status)
         if (ctxStatus && chartData.status_clientes) {
              const statusData = chartData.status_clientes;
              const backgroundColorsStatus = statusData.labels.map(label => statusColors[label] || 'rgba(100, 100, 100, 0.7)');
 
             new Chart(ctxStatus, {
-                type: 'bar', // Mudado para 'bar' para melhor visualização
+                type: 'bar', 
                 data: {
                     labels: statusData.labels,
                     datasets: [{
@@ -275,7 +300,7 @@
                         y: { beginAtZero: true }
                     },
                     plugins: {
-                        legend: { display: false } // Esconde a legenda
+                        legend: { display: false } 
                     }
                 }
             });

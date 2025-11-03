@@ -10,6 +10,11 @@ CHECKLIST_OBRIGATORIO_ITEMS = [
 MODULO_PENDENCIAS = "Pendências"
 
 TAREFAS_TREINAMENTO_PADRAO = {
+    # AJUSTE 4: NOVO MÓDULO ADICIONADO
+    "Definição de carteira": [
+        {'nome': "Definição de carteira", 'tag': "Ação interna"}
+    ],
+    # FIM DO AJUSTE 4
     "Welcome": [
         {'nome': "Contato Inicial Whatsapp/Grupo", 'tag': "Ação interna"},
         {'nome': "Criar Banco de Dados", 'tag': "Ação interna"},
@@ -112,13 +117,15 @@ PERFIS_COM_CRIACAO = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
 PERFIS_COM_ANALYTICS = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
 
 
-# NOVAS CONSTANTES PARA DETALHES DA EMPRESA
+# INÍCIO DA CORREÇÃO (Dropdown "Nível de Receita")
 NIVEIS_RECEITA = [
-    "Diamante (MRR > R$ 2.000,00)",
-    "Platina (MRR R$ 1.000,00 - R$ 2.000,00)",
-    "Ouro (MRR R$ 500,00 - R$ 1.000,00)",
-    "Prata (MRR < R$ 500,00)"
+    "Prata (MRR go grupo abaixo de R$699,99)",
+    "Ouro (MRR go grupo entre R$700,00 a R$999,99)",
+    "Platina (MRR go grupo entre R$1.000,00 a R$1999,99)",
+    "Diamante (MRR go grupo acima de R$2000,00)",
+    "Grandes contas"
 ]
+# FIM DA CORREÇÃO
 
 SEGUIMENTOS_LIST = [
     "Natação", "Estúdio/Boutique", "Pilates", "Cross", "Low Cost", 

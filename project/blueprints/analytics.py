@@ -37,11 +37,16 @@ def analytics_dashboard():
             target_tag=None 
         )
         
+        # --- CORREÇÃO (WORKAROUND) REMOVIDA ---
+        # A variável 'analytics_data' agora é o dicionário completo
+        # e não mais uma tupla.
+        
         all_cs = get_all_customer_success()
         
         # Filtros de status para a UI
         status_options = [
             {'value': 'todas', 'label': 'Todas as Implantações'},
+            {'value': 'nova', 'label': 'Novas'}, # AJUSTE 1: ADICIONADO
             {'value': 'andamento', 'label': 'Em Andamento'},
             {'value': 'atrasadas_status', 'label': 'Atrasadas (> 25d)'},
             {'value': 'futura', 'label': 'Futuras'},
@@ -51,10 +56,12 @@ def analytics_dashboard():
         
         return render_template(
             'analytics.html',
-            # Novos dados para o template
+            # Novos dados para o template (agora acessados corretamente)
             kpi_cards=analytics_data.get('kpi_cards', {}),
             implantacoes_lista_detalhada=analytics_data.get('implantacoes_lista_detalhada', []),
             chart_data=analytics_data.get('chart_data', {}),
+            # AJUSTE 6: Passa a nova lista de paradas para o template
+            implantacoes_paradas_lista=analytics_data.get('implantacoes_paradas_lista', []),
             
             # Filtros e dados antigos ainda necessários
             all_cs=all_cs,
@@ -65,9 +72,6 @@ def analytics_dashboard():
             current_end_date=end_date,
             user_info=g.user,
             user_perfil=user_perfil
-            
-            # Itens removidos (não mais retornados separadamente pelo service)
-            # global_metrics, cs_metrics, implantacoes_paradas_detalhadas
         )
         
     except Exception as e:
