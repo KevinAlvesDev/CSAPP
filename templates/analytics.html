@@ -5,6 +5,9 @@
 {% block head_extra %}
     {# Adiciona a biblioteca Chart.js para os novos gráficos #}
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    
     <style>
         .chart-container {
             position: relative;
@@ -220,6 +223,10 @@
     const chartData = {{ chart_data | tojson | safe }};
 
     document.addEventListener('DOMContentLoaded', function () {
+    
+        // Registra o plugin de rótulos (datalabels)
+        Chart.register(ChartDataLabels);
+
         const ctxNivel = document.getElementById('chartNivelReceita');
         const ctxStatus = document.getElementById('chartStatusClientes');
         const ctxRankingColab = document.getElementById('chartRankingColaborador');
@@ -236,7 +243,7 @@
         ];
         
         const statusColors = {
-            'Novas': 'rgba(108, 117, 125, 0.7)', // AJUSTE 1: Cor 'Dark' (Cinza)
+            'Novas': 'rgba(108, 117, 125, 0.7)', 
             'Em Andamento': 'rgba(255, 206, 86, 0.7)', // Yellow
             'Finalizadas': 'rgba(75, 192, 192, 0.7)', // Green
             'Futuras': 'rgba(54, 162, 235, 0.7)', // Blue
@@ -245,7 +252,7 @@
         };
 
         // 1. Gráfico Nível Clientes (MRR)
-        // INÍCIO DA CORREÇÃO: Gráfico MRR revertido para barras horizontais
+        // (Mantido como horizontal)
         if (ctxNivel && chartData.nivel_receita) {
             new Chart(ctxNivel, {
                 type: 'bar',
@@ -262,27 +269,49 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    indexAxis: 'y', // <-- CORRIGIDO: Gráfico na horizontal (barras deitadas)
+                    indexAxis: 'y', // Gráfico na horizontal
                     scales: {
                         x: { beginAtZero: true }, // Eixo X (Valores / Quantidade)
                         y: { beginAtZero: true }  // Eixo Y (Categorias / Nomenclatura)
                     },
                     plugins: {
-                        legend: { display: false }
+                        legend: { display: false },
+                        
+                        // INÍCIO DA CORREÇÃO: Lógica para rótulos não serem cortados
+                        datalabels: {
+                            anchor: 'end', // O número fica no final da barra
+                            
+                            // Define dinamicamente o alinhamento
+                            align: function(context) {
+                                const maxValue = context.chart.scales.x.max;
+                                const value = context.dataset.data[context.dataIndex];
+                                // Se a barra for > 90% do gráfico, move o número para a esquerda
+                                return value > maxValue * 0.9 ? 'left' : 'right';
+                            },
+                            
+                            offset: 8, // Adiciona um preenchimento
+                            color: '#333',
+                            font: {
+                                weight: 'bold'
+                            },
+                            formatter: (value) => {
+                                return value > 0 ? value : null; // Só mostra se for > 0
+                            }
+                        }
+                        // FIM DA CORREÇÃO
                     }
                 }
             });
         }
-        // FIM DA CORREÇÃO
 
         // 2. Gráfico Status Clientes
-        // (Sem alteração necessária, o código já suporta todos os status)
+        // (Alterado para 'pie' e com rótulos)
         if (ctxStatus && chartData.status_clientes) {
              const statusData = chartData.status_clientes;
              const backgroundColorsStatus = statusData.labels.map(label => statusColors[label] || 'rgba(100, 100, 100, 0.7)');
 
             new Chart(ctxStatus, {
-                type: 'bar', 
+                type: 'pie', // Tipo pizza
                 data: {
                     labels: statusData.labels,
                     datasets: [{
@@ -296,11 +325,24 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    scales: {
-                        y: { beginAtZero: true }
-                    },
                     plugins: {
-                        legend: { display: false } 
+                        legend: { display: true }, // Mostra a legenda
+                        
+                        // Configuração do plugin de rótulos
+                        datalabels: {
+                            color: '#FFFFFF', // Cor do texto (branco)
+                            textAlign: 'center',
+                            font: {
+                                weight: 'bold',
+                                size: 14,
+                            },
+                            formatter: (value, context) => {
+                                if (value <= 0) {
+                                    return null; 
+                                }
+                                return value; // Retorna o número
+                            }
+                        }
                     }
                 }
             });
@@ -327,7 +369,18 @@
                         y: { beginAtZero: true }
                     },
                     plugins: {
-                        legend: { display: false }
+                        legend: { display: false },
+                        datalabels: {
+                            anchor: 'end',
+                            align: 'top',
+                            color: '#333',
+                            font: {
+                                weight: 'bold'
+                            },
+                            formatter: (value) => {
+                                return value > 0 ? value : null;
+                            }
+                        }
                     }
                 }
             });
@@ -354,7 +407,18 @@
                         y: { beginAtZero: true }
                     },
                     plugins: {
-                        legend: { display: false }
+                        legend: { display: false },
+                        datalabels: {
+                            anchor: 'end',
+                            align: 'top',
+                            color: '#333',
+                            font: {
+                                weight: 'bold'
+                            },
+                            formatter: (value) => {
+                                return value > 0 ? value : null;
+                            }
+                        }
                     }
                 }
             });
