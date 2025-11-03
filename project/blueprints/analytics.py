@@ -8,7 +8,9 @@ analytics_bp = Blueprint('analytics', __name__)
 
 def get_all_customer_success():
     """Busca a lista de todos os CS com nome e e-mail para o filtro."""
-    return query_db("SELECT usuario, nome, perfil_acesso FROM perfil_usuario WHERE perfil_acesso IS NOT NULL AND perfil_acesso != '' ORDER BY nome", ())
+    # Garante que a query retorne uma lista vazia em vez de None se falhar
+    result = query_db("SELECT usuario, nome, perfil_acesso FROM perfil_usuario WHERE perfil_acesso IS NOT NULL AND perfil_acesso != '' ORDER BY nome", ())
+    return result if result is not None else []
 
 @analytics_bp.route('/analytics')
 @permission_required(PERFIS_COM_ANALYTICS)
@@ -17,36 +19,44 @@ def analytics_dashboard():
     
     user_perfil = g.perfil.get('perfil_acesso')
     
-    # Captura parâmetros de filtro
+    # --- Filtros Principais (Gráficos e Listas de Implantações) ---
     cs_email = request.args.get('cs_email', None)
     status_filter = request.args.get('status_filter', 'todas')
     start_date = request.args.get('start_date') or None
     end_date = request.args.get('end_date') or None
     
+    # --- INÍCIO AJUSTE 2: Captura dos Filtros de Produtividade ---
+    task_cs_email = request.args.get('task_cs_email', None)
+    task_start_date = request.args.get('task_start_date') or None
+    task_end_date = request.args.get('task_end_date') or None
+    # --- FIM AJUSTE 2 ---
+    
     # Se o usuário não for gerencial, ele só pode ver os próprios dados
     if user_perfil not in PERFIS_COM_GESTAO:
         cs_email = g.user_email
+        task_cs_email = g.user_email # Restringe o filtro de tarefas a ele mesmo também
     
     try:
-        # ATUALIZAÇÃO: Recebe o novo dicionário único com todos os dados
+        # ATUALIZAÇÃO: Passa os novos filtros para a função de serviço
         analytics_data = get_analytics_data(
             target_cs_email=cs_email, 
             target_status=status_filter,
             start_date=start_date,
             end_date=end_date,
-            target_tag=None 
+            target_tag=None,
+            # --- INÍCIO AJUSTE 2 ---
+            task_cs_email=task_cs_email,
+            task_start_date=task_start_date,
+            task_end_date=task_end_date
+            # --- FIM AJUSTE 2 ---
         )
-        
-        # --- CORREÇÃO (WORKAROUND) REMOVIDA ---
-        # A variável 'analytics_data' agora é o dicionário completo
-        # e não mais uma tupla.
         
         all_cs = get_all_customer_success()
         
         # Filtros de status para a UI
         status_options = [
             {'value': 'todas', 'label': 'Todas as Implantações'},
-            {'value': 'nova', 'label': 'Novas'}, # AJUSTE 1: ADICIONADO
+            {'value': 'nova', 'label': 'Novas'},
             {'value': 'andamento', 'label': 'Em Andamento'},
             {'value': 'atrasadas_status', 'label': 'Atrasadas (> 25d)'},
             {'value': 'futura', 'label': 'Futuras'},
@@ -54,16 +64,29 @@ def analytics_dashboard():
             {'value': 'parada', 'label': 'Paradas'}
         ]
         
+        # --- INÍCIO AJUSTE 2: Define os valores atuais dos filtros de tarefas ---
+        # Usa os valores recebidos da função de serviço (que contêm os defaults)
+        current_task_cs_email = task_cs_email
+        current_task_start_date = task_start_date or analytics_data.get('default_task_start_date')
+        current_task_end_date = task_end_date or analytics_data.get('default_task_end_date')
+        # --- FIM AJUSTE 2 ---
+
         return render_template(
             'analytics.html',
-            # Novos dados para o template (agora acessados corretamente)
+            # Dados principais
             kpi_cards=analytics_data.get('kpi_cards', {}),
             implantacoes_lista_detalhada=analytics_data.get('implantacoes_lista_detalhada', []),
             chart_data=analytics_data.get('chart_data', {}),
-            # AJUSTE 6: Passa a nova lista de paradas para o template
             implantacoes_paradas_lista=analytics_data.get('implantacoes_paradas_lista', []),
             
-            # Filtros e dados antigos ainda necessários
+            # --- INÍCIO AJUSTE 2: Passa novos dados para o template ---
+            task_summary_data=analytics_data.get('task_summary_data', []),
+            current_task_cs_email=current_task_cs_email,
+            current_task_start_date=current_task_start_date,
+            current_task_end_date=current_task_end_date,
+            # --- FIM AJUSTE 2 ---
+
+            # Filtros e dados antigos
             all_cs=all_cs,
             status_options=status_options,
             current_cs_email=cs_email,

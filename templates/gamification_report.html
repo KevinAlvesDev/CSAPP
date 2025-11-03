@@ -1,165 +1,187 @@
 {% extends "base.html" %}
 
-{% block title %}Relatório de Gamificação{% endblock %}
-
-{% block head_extra %}
-<style>
-    .score-badge { font-size: 1.1em; }
-    .details-list { font-size: 0.85em; list-style-type: none; padding-left: 0; }
-    .details-list li { border-bottom: 1px dotted #eee; padding: 2px 0; }
-    .details-list li:last-child { border-bottom: none; }
-    .details-list strong { min-width: 200px; display: inline-block;} /* Alinha os valores */
-</style>
-{% endblock %}
+{% block title %}Relatório - Gamificação{% endblock %}
 
 {% block content %}
 <div class="container-fluid p-0">
-    {# Header Padrão com menu dropdown #}
-    <header class="header-bg p-3 shadow-sm d-flex justify-content-end align-items-center position-relative">
-        <h1 class="main-title mb-0 fs-4" style="position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap;">RELATÓRIO DE GAMIFICAÇÃO</h1>
+    <header class="header-bg p-3 d-flex justify-content-between align-items-center">
+        <h1 class="main-title mb-0 fs-4">RELATÓRIO DE GAMIFICAÇÃO</h1>
+        
         <div class="d-flex align-items-center">
-             {# Links Rápidos #}
-             <a href="{{ url_for('gamification.manage_gamification_metrics') }}" class="btn btn-outline-warning me-3">
-                <i class="bi bi-pencil-square me-1"></i> Inserir Métricas Manuais
-            </a>
-            <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-primary me-3">
+             <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary me-3">
                 <i class="bi bi-arrow-left me-1"></i> Voltar ao Dashboard
             </a>
-            {# Menu Dropdown #}
-            <div class="dropdown ms-2">
-                 <button class="btn btn-outline-secondary rounded-circle p-0" type="button" id="userMenuDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Menu" style="width: 40px; height: 40px; border: 2px solid var(--accent-color); overflow: hidden;">
-                     {% if g.perfil.foto_url %}
-                         <img src="{{ g.perfil.foto_url }}?v={{ range(1, 10000) | random }}" alt="Foto de Perfil" style="width: 100%; height: 100%; object-fit: cover;">
-                     {% else %}
-                         <i class="bi bi-person-fill" style="font-size: 1.5rem; color: var(--accent-color);"></i>
-                     {% endif %}
-                 </button>
-                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuDropdown">
-                     <li><a class="dropdown-item" href="{{ url_for('profile.perfil') }}"><i class="bi bi-person-circle me-2"></i> Editar Perfil</a></li>
-                     {% if g.perfil and g.perfil.perfil_acesso in ['Administrador', 'Gerente', 'Coordenador'] %}
-                         <li><a class="dropdown-item text-primary" href="#" data-bs-toggle="modal" data-bs-target="#modalGerenciarUsuarios"><i class="bi bi-people-fill me-2"></i> Usuários</a></li>
-                         <li><a class="dropdown-item text-info" href="{{ url_for('analytics.analytics_dashboard') }}"><i class="bi bi-graph-up me-2"></i> Analytics Gerencial</a></li>
-                         {# Links Gamificação #}
-                         <li><a class="dropdown-item text-warning" href="{{ url_for('gamification.manage_gamification_metrics') }}"><i class="bi bi-pencil-square me-2"></i> Métricas Gamificação</a></li>
-                         <li><a class="dropdown-item text-success active" href="{{ url_for('gamification.gamification_report') }}"><i class="bi bi-clipboard-data me-2"></i> Relatório Gamificação</a></li>
-                     {% endif %}
-                     <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalGamificacao"><i class="bi bi-trophy-fill me-2"></i> Critérios Gamificação</a></li>
-                     <li><hr class="dropdown-divider"></li>
-                     <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}"><i class="bi bi-box-arrow-right me-2"></i> Sair</a></li>
-                 </ul>
-            </div>
+             <a href="{{ url_for('gamification.manage_gamification_metrics') }}" class="btn btn-outline-primary me-3">
+                <i class="bi bi-pencil-square me-1"></i> Lançar Métricas
+            </a>
+            
+            <button class="btn btn-outline-secondary rounded-circle p-0 user-profile-btn ms-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#userProfileSidebar" aria-controls="userProfileSidebar" title="Menu">
+                {% if g.perfil.foto_url %}
+                    <img src="{{ g.perfil.foto_url }}?v={{ range(1, 10000) | random }}" alt="Foto de Perfil" style="width: 100%; height: 100%; object-fit: cover;">
+                {% else %}
+                    <i class="bi bi-person-fill" style="font-size: 1.5rem; color: var(--accent-color);"></i>
+                {% endif %}
+            </button>
+
         </div>
     </header>
 
     <main class="p-4" id="main-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
 
-        {# Filtro de Mês/Ano #}
+        {# Formulário de Filtro #}
         <div class="metric-card p-3 rounded shadow-sm mb-4">
-            <h6 class="text-secondary mb-3 border-bottom pb-2">Selecionar Período</h6>
-            <form method="GET" action="{{ url_for('gamification.gamification_report') }}">
+            <h5 class="mb-3 border-bottom pb-2">Filtrar Relatório</h5>
+            <form method="GET" action="{{ url_for('gamification.gamification_report') }}" id="report-filter-form">
                 <div class="row g-3 align-items-end">
                     <div class="col-md-4">
-                        <label for="mes" class="form-label small text-secondary">Mês</label>
-                        <select id="mes" name="mes" class="form-select form-select-sm">
+                        <label for="cs_email_filter" class="form-label small">Colaborador</label>
+                        <select class="form-select" id="cs_email_filter" name="cs_email">
+                            <option value="">-- Todos os Colaboradores --</option>
+                            {% for cs in all_cs_users %}
+                                <option value="{{ cs.usuario }}" {% if cs.usuario == current_cs_email %}selected{% endif %}>
+                                    {{ cs.nome }} ({{ cs.cargo or 'N/A' }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label for="mes_filter" class="form-label small">Mês</label>
+                        <select class="form-select" id="mes_filter" name="mes" required>
                             {% for i in range(1, 13) %}
-                                <option value="{{ i }}" {% if i == selected_month %}selected{% endif %}>{{ "%02d"|format(i) }}</option>
+                                <option value="{{ i }}" {% if i == selected_month %}selected{% endif %}>
+                                    {{ ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"][i-1] }}
+                                </option>
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="col-md-4">
-                        <label for="ano" class="form-label small text-secondary">Ano</label>
-                        <select id="ano" name="ano" class="form-select form-select-sm">
-                            {% for i in range(current_year, current_year - 5, -1) %}
-                                <option value="{{ i }}" {% if i == selected_year %}selected{% endif %}>{{ i }}</option>
-                            {% endfor %}
+                    
+                    <div class="col-md-3">
+                        <label for="ano_filter" class="form-label small">Ano</label>
+                        <select class="form-select" id="ano_filter" name="ano" required>
+                            {% if current_year %}
+                                {% for i in range(current_year, current_year - 5, -1) %}
+                                    <option value="{{ i }}" {% if i == selected_year %}selected{% endif %}>{{ i }}</option>
+                                {% endfor %}
+                            {% else %}
+                                <option value="{{ selected_year }}" selected>{{ selected_year }}</option>
+                            {% endif %}
                         </select>
                     </div>
-                    <div class="col-md-4">
-                        <button type="submit" class="btn btn-primary btn-sm w-100">
-                            <i class="bi bi-search me-1"></i> Ver Relatório
-                        </button>
+
+                    <div class="col-md-2 d-flex">
+                        <button type="submit" class="btn btn-primary w-100 me-2"><i class="bi bi-funnel-fill me-1"></i> Filtrar</button>
+                        <a href="{{ url_for('gamification.gamification_report') }}" class="btn btn-outline-secondary" title="Limpar Filtros"><i class="bi bi-x-lg"></i></a>
                     </div>
                 </div>
             </form>
         </div>
 
-        {# Exibe erros de cálculo, se houver #}
-        {% if calculation_errors %}
-            <div class="alert alert-warning alert-dismissible fade show" role="alert">
-                <strong>Atenção:</strong> Ocorreram erros ao calcular a pontuação para alguns usuários:
-                <ul>
-                    {% for user, error in calculation_errors.items() %}
-                        <li><strong>{{ user }}:</strong> {{ error }}</li>
-                    {% endfor %}
-                </ul>
-                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        {% endif %}
-
         {# Tabela de Resultados #}
         <div class="metric-card p-3 rounded shadow-sm">
-             <h2 class="h5 mb-3">Pontuação de Gamificação - {{ "%02d"|format(selected_month) }}/{{ selected_year }}</h2>
-             {% if not report_data %}
-                <div class="alert alert-info">Nenhum colaborador encontrado ou dados de gamificação calculados para este período. Verifique se as <a href="{{ url_for('gamification.manage_gamification_metrics') }}">métricas manuais</a> foram inseridas.</div>
-             {% else %}
-             <div class="table-responsive">
+            <h2 class="h5 mb-3">Pontuação de Gamificação - {{ "%02d"|format(selected_month) }}/{{ selected_year }}</h2>
+            
+            <div class="table-responsive">
                 <table class="table table-hover align-middle">
-                    <thead>
-                        <tr class="table-light">
-                            <th>Colaborador</th>
-                            <th class="text-center">Status</th>
-                            <th class="text-center">Pontuação Final</th>
-                            <th class="text-center">Impl. Finalizadas (Mês)</th>
-                            <th>Detalhes Pontuação</th>
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col">#</th>
+                            <th scope="col">Colaborador</th>
+                            <th scope="col">Cargo</th>
+                            <th scope="col">Impl. Finalizadas (Mês)</th>
+                            <th scope="col">TMA Médio (Mês)</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Pontuação Final</th>
+                            <th scope="col">Detalhes</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for item in report_data %}
-                        <tr class="{{ 'table-danger' if not item.elegivel }}">
-                            <td><strong>{{ item.nome }}</strong><br><small class="text-muted">{{ item.usuario_cs }}</small></td>
-                            <td class="text-center">
-                                {% if item.elegivel %}
-                                    <span class="badge bg-success">Elegível</span>
-                                {% else %}
-                                    <span class="badge bg-danger" title="{{ item.motivo_inelegibilidade | default('Motivo não especificado') }}">Não Elegível</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-center">
-                                {% if item.elegivel %}
-                                    <span class="badge bg-primary score-badge">{{ item.pontuacao_final }}</span>
-                                {% else %}
-                                    <span class="text-muted">-</span>
-                                {% endif %}
-                            </td>
-                             <td class="text-center">{{ item.impl_finalizadas_mes | default(0) }}</td>
+                        {% if not report_data %}
+                            <tr>
+                                <td colspan="8" class="text-center text-muted p-4">
+                                    Nenhum dado encontrado para os filtros selecionados.
+                                    <br>
+                                    <small>Certifique-se de que as <a href="{{ url_for('gamification.manage_gamification_metrics') }}">métricas manuais</a> foram preenchidas para este período.</small>
+                                </td>
+                            </tr>
+                        {% endif %}
+
+                        {% for data in report_data | selectattr('elegivel') | sort(attribute='pontuacao_final', reverse=true) %}
+                        <tr class="table-light">
+                            <td>{{ loop.index }}</td>
+                            <td><strong>{{ data.usuario_nome }}</strong></td>
+                            <td>{{ data.cargo }}</td>
+                            <td>{{ data.impl_finalizadas_mes }}</td>
+                            <td>{{ data.tma_medio_mes }} dias</td>
+                            <td><span class="badge bg-success fs-6">Elegível</span></td>
+                            <td><strong class="fs-5 text-success">{{ data.pontuacao_final }} pts</strong></td>
                             <td>
-                                {% if item.elegivel and item.detalhamento_pontos %}
-                                    <button class="btn btn-sm btn-outline-secondary py-0 px-1" type="button" data-bs-toggle="collapse" data-bs-target="#details-{{ loop.index }}" aria-expanded="false" title="Ver detalhes do cálculo">
-                                        <i class="bi bi-list-nested"></i>
-                                    </button>
-                                    <div class="collapse mt-2" id="details-{{ loop.index }}">
-                                        <ul class="details-list">
-                                        {% for criterio, valor in item.detalhamento_pontos.items() %}
-                                            <li><strong>{{ criterio }}:</strong> {{ valor }}</li>
-                                        {% else %}
-                                            <li>Nenhum detalhe disponível.</li>
+                                <button class="btn btn-sm btn-outline-primary py-0 px-2" type="button" data-bs-toggle="collapse" data-bs-target="#details-{{ loop.index }}" aria-expanded="false">
+                                    Ver Detalhes
+                                </button>
+                            </td>
+                        </tr>
+                        <tr class="collapse" id="details-{{ loop.index }}">
+                            <td colspan="8" class="p-0">
+                                <div class="p-3 bg-light">
+                                    <h6 class="text-success">Detalhamento de Pontos (Elegível)</h6>
+                                    <ul class="list-group list-group-flush">
+                                        {% for key, value in data.detalhamento_pontos.items() %}
+                                            <li class="list-group-item bg-light d-flex justify-content-between align-items-center py-1">
+                                                <span class="small">{{ key }}</span>
+                                                <span class="badge 
+                                                    {% if 'Penalidade' in key %}bg-danger
+                                                    {% elif 'Bônus' in key %}bg-success
+                                                    {% else %}bg-primary{% endif %}
+                                                    rounded-pill">
+                                                    {{ value }}
+                                                </span>
+                                            </li>
                                         {% endfor %}
-                                        </ul>
-                                    </div>
-                                {% elif not item.elegivel %}
-                                    <small class="text-danger">Motivo: {{ item.motivo_inelegibilidade | default('N/A') }}</small>
-                                {% else %}
-                                     <span class="text-muted">N/A</span>
-                                {% endif %}
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        
+                        {% for data in report_data | selectattr('elegivel', 'false') %}
+                        <tr class="table-light opacity-75">
+                            <td>-</td>
+                            <td>{{ data.usuario_nome }}</td>
+                            <td>{{ data.cargo }}</td>
+                            <td>{{ data.impl_finalizadas_mes }}</td>
+                            <td>{{ data.tma_medio_mes }} dias</td>
+                            <td><span class="badge bg-danger fs-6">Não Elegível</span></td>
+                            <td><strong class="fs-5 text-danger">{{ data.pontuacao_final }} pts</strong></td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-danger py-0 px-2" type="button" data-bs-toggle="collapse" data-bs-target="#details-ne-{{ loop.index }}" aria-expanded="false">
+                                    Ver Motivo
+                                </button>
+                            </td>
+                        </tr>
+                        <tr class="collapse" id="details-ne-{{ loop.index }}">
+                            <td colspan="8" class="p-0">
+                                <div class="p-3 bg-light">
+                                    <h6 class="text-danger">Motivos da Inelegibilidade</h6>
+                                    <p class="mb-0">{{ data.motivo_inelegibilidade | default('Motivo não especificado ou erro no cálculo.') }}</p>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
-             </div>
-             {% endif %}
+            </div>
         </div>
-
     </main>
 </div>
 {% endblock %}

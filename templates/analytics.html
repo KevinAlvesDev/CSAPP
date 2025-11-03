@@ -51,7 +51,13 @@
         {% endwith %}
 
         <div class="metric-card p-3 mb-4">
+             <h5 class="mb-3 border-bottom pb-2">Filtros Principais (Gráficos e Listas)</h5>
             <form method="GET" action="{{ url_for('analytics.analytics_dashboard') }}" id="analytics-filter-form">
+                {# Salva os filtros de produtividade (Ajuste 2) para que eles não se percam ao submeter este form #}
+                <input type="hidden" name="task_cs_email" value="{{ current_task_cs_email | default('') }}">
+                <input type="hidden" name="task_start_date" value="{{ current_task_start_date | default('') }}">
+                <input type="hidden" name="task_end_date" value="{{ current_task_end_date | default('') }}">
+
                 <div class="row g-2 align-items-end">
                     <div class="col-md-3">
                         <label for="cs_email_filter" class="form-label small">Filtrar por Colaborador</label>
@@ -167,7 +173,7 @@
 
         <div class="metric-card p-3 mt-4">
              <h5 class="mb-3 border-bottom pb-2">Ranking Implantação por Colaborador</h5>
-             <p class="small text-muted">Total de implantações (baseado nos filtros) por colaborador.</p>
+             <p class="small text-muted">Total de implantações (baseado nos filtros principais) por colaborador.</p>
              <div class="chart-container">
                 <canvas id="chartRankingColaborador"></canvas>
             </div>
@@ -175,7 +181,7 @@
         
         <div class="metric-card p-3 mt-4">
              <h5 class="mb-3 border-bottom pb-2">Ranking Implantação por Período</h5>
-             <p class="small text-muted">Total de implantações <span class="fw-bold text-success">finalizadas</span> no ano corrente, agrupadas por mês (respeita o filtro de Colaborador).</p>
+             <p class="small text-muted">Total de implantações <span class="fw-bold text-success">finalizadas</span> no ano corrente, agrupadas por mês (respeita o filtro principal de Colaborador).</p>
              <div class="chart-container">
                 <canvas id="chartRankingPeriodo"></canvas>
             </div>
@@ -212,6 +218,69 @@
                     </table>
                  </div>
              {% endif %}
+        </div>
+
+        <div class="metric-card p-3 mt-4">
+            <h5 class="mb-3 border-bottom pb-2">Relatório de Produtividade (Tarefas Concluídas)</h5>
+            <form method="GET" action="{{ url_for('analytics.analytics_dashboard') }}" id="task-filter-form">
+                {# Salva os filtros principais para que eles não se percam ao submeter este form #}
+                <input type="hidden" name="cs_email" value="{{ current_cs_email | default('') }}">
+                <input type="hidden" name="status_filter" value="{{ current_status_filter | default('todas') }}">
+                <input type="hidden" name="start_date" value="{{ current_start_date | default('') }}">
+                <input type="hidden" name="end_date" value="{{ current_end_date | default('') }}">
+
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-4">
+                        <label for="task_cs_email_filter" class="form-label small">Filtrar por Colaborador</label>
+                        <select class="form-select" id="task_cs_email_filter" name="task_cs_email">
+                            <option value="">Todos os CS</option>
+                            {% for cs in all_cs %}
+                                <option value="{{ cs.usuario }}" {% if cs.usuario == current_task_cs_email %}selected{% endif %}>
+                                    {{ cs.nome }} ({{ cs.perfil_acesso or 'N/A' }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                         <label for="task_start_date_filter" class="form-label small">Período (Início)</label>
+                         <input type="date" class="form-control" id="task_start_date_filter" name="task_start_date" value="{{ current_task_start_date or '' }}">
+                    </div>
+                    <div class="col-md-3">
+                         <label for="task_end_date_filter" class="form-label small">Período (Fim)</label>
+                         <input type="date" class="form-control" id="task_end_date_filter" name="task_end_date" value="{{ current_task_end_date or '' }}">
+                    </div>
+                    <div class="col-md-2 d-flex">
+                        <button type="submit" class="btn btn-primary w-100 me-2"><i class="bi bi-funnel-fill me-1"></i> Filtrar</button>
+                    </div>
+                </div>
+            </form>
+
+            <div class="table-responsive mt-3">
+                <table class="table table-sm table-hover align-middle caption-top">
+                    <caption class="small text-muted">Exibindo tarefas concluídas de 'Ação interna' e 'Reunião' para o período selecionado.</caption>
+                    <thead class="table-light">
+                        <tr>
+                            <th>Usuário</th>
+                            <th class="text-center">Ação interna (Total)</th>
+                            <th class="text-center">Reunião (Total)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if not task_summary_data %}
+                        <tr>
+                            <td colspan="3" class="text-center text-muted small py-3">Nenhuma tarefa concluída encontrada para os filtros selecionados.</td>
+                        </tr>
+                        {% endif %}
+                        {% for task_row in task_summary_data %}
+                        <tr>
+                            <td>{{ task_row.cs_nome }}</td>
+                            <td class="text-center">{{ task_row['Ação interna'] | default(0) }}</td>
+                            <td class="text-center">{{ task_row['Reunião'] | default(0) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
         </main>
 </div>
@@ -277,7 +346,7 @@
                     plugins: {
                         legend: { display: false },
                         
-                        // INÍCIO DA CORREÇÃO: Lógica para rótulos não serem cortados
+                        // Lógica para rótulos não serem cortados
                         datalabels: {
                             anchor: 'end', // O número fica no final da barra
                             
@@ -286,7 +355,7 @@
                                 const maxValue = context.chart.scales.x.max;
                                 const value = context.dataset.data[context.dataIndex];
                                 // Se a barra for > 90% do gráfico, move o número para a esquerda
-                                return value > maxValue * 0.9 ? 'left' : 'right';
+                                return (value > maxValue * 0.9 && maxValue > 1) ? 'left' : 'right';
                             },
                             
                             offset: 8, // Adiciona um preenchimento
@@ -298,17 +367,20 @@
                                 return value > 0 ? value : null; // Só mostra se for > 0
                             }
                         }
-                        // FIM DA CORREÇÃO
                     }
                 }
             });
         }
 
         // 2. Gráfico Status Clientes
-        // (Alterado para 'pie' e com rótulos)
+        // (Alterado para 'pie' e com rótulos em %)
         if (ctxStatus && chartData.status_clientes) {
              const statusData = chartData.status_clientes;
              const backgroundColorsStatus = statusData.labels.map(label => statusColors[label] || 'rgba(100, 100, 100, 0.7)');
+             
+             // --- INÍCIO AJUSTE 1: Calcula o total para % ---
+             const total = statusData.data.reduce((acc, value) => acc + value, 0);
+             // --- FIM AJUSTE 1 ---
 
             new Chart(ctxStatus, {
                 type: 'pie', // Tipo pizza
@@ -328,7 +400,7 @@
                     plugins: {
                         legend: { display: true }, // Mostra a legenda
                         
-                        // Configuração do plugin de rótulos
+                        // --- INÍCIO AJUSTE 1: Configuração para mostrar % ---
                         datalabels: {
                             color: '#FFFFFF', // Cor do texto (branco)
                             textAlign: 'center',
@@ -337,12 +409,16 @@
                                 size: 14,
                             },
                             formatter: (value, context) => {
-                                if (value <= 0) {
+                                if (value <= 0 || total <= 0) {
                                     return null; 
                                 }
-                                return value; // Retorna o número
+                                // Calcula a porcentagem
+                                const percentage = (value / total) * 100;
+                                // Retorna a % formatada
+                                return percentage.toFixed(0) + '%'; 
                             }
                         }
+                        // --- FIM AJUSTE 1 ---
                     }
                 }
             });
@@ -355,7 +431,7 @@
                 data: {
                     labels: chartData.ranking_colaborador.labels,
                     datasets: [{
-                        label: 'Total Implantações',
+                        label: 'Total Implantações (Filtro)',
                         data: chartData.ranking_colaborador.data,
                         backgroundColor: 'rgba(75, 192, 192, 0.7)', // Green
                         borderColor: 'rgba(75, 192, 192, 1)',
@@ -393,7 +469,7 @@
                 data: {
                     labels: chartData.ranking_periodo.labels, // Jan, Fev, Mar...
                     datasets: [{
-                        label: 'Impl. Finalizadas',
+                        label: 'Impl. Finalizadas (Ano Corrente)',
                         data: chartData.ranking_periodo.data,
                         backgroundColor: 'rgba(153, 102, 255, 0.7)', // Purple
                         borderColor: 'rgba(153, 102, 255, 1)',

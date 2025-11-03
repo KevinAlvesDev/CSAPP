@@ -1,22 +1,21 @@
 import os
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, g, session 
 from werkzeug.middleware.proxy_fix import ProxyFix
 from .config import Config
 from .extensions import oauth, r2_client, init_extensions
-from .db import init_app as init_db_app
-from . import utils # Para registrar os filtros do Jinja2
+from .db import init_app as init_db_app, query_db 
+from . import utils 
 
-# Define o caminho absoluto para o diretório do projeto (APP-23-10/project/)
+# --- INÍCIO AJUSTE 3 (REVISADO) ---
+# Importa as constantes de perfil
+from .constants import PERFIS_COM_GESTAO
+# --- FIM AJUSTE 3 (REVISADO) ---
+
 project_dir = os.path.dirname(os.path.abspath(__file__))
-# Define o caminho absoluto para a pasta raiz da aplicação (APP-23-10/)
 app_root_dir = os.path.dirname(project_dir)
-# Define o caminho absoluto para a pasta de templates (APP-23-10/templates/)
 templates_dir = os.path.join(app_root_dir, 'templates')
-
-# Define o caminho absoluto para a pasta static (APP-23-10/static/)
 static_dir = os.path.join(app_root_dir, 'static')
 
-# PRINT DE DEBUG
 print(f"DEBUG: Flask usará pasta static em: {static_dir}")
 print(f"DEBUG: Flask usará pasta templates em: {templates_dir}")
 
@@ -25,17 +24,64 @@ def create_app():
     """Application Factory Function"""
     app = Flask(__name__, template_folder=templates_dir, static_folder=static_dir)
 
-    # Carrega a configuração do config.py
     app.config.from_object(Config)
-
-    # Corrige o proxy para o Gunicorn/Heroku/outros proxies
     app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
-
-    # Inicializa extensões (OAuth, Boto3/R2)
     init_extensions(app)
-
-    # Configura o banco de dados (registra get_db, close_connection, init_db_command)
     init_db_app(app)
+    
+    # --- INÍCIO AJUSTE 3 (REVISADO) ---
+    # Importa a função do blueprint de gamificação *APÓS* a criação do app
+    # para evitar importação circular.
+    try:
+        from .blueprints.gamification import _get_all_gamification_rules_grouped
+    except ImportError:
+        print("AVISO: Falha ao importar _get_all_gamification_rules_grouped. Pode ser o primeiro init-db.")
+        # Define uma função placeholder se a importação falhar (ex: durante o init-db inicial)
+        def _get_all_gamification_rules_grouped():
+            print("USANDO PLACEHOLDER: _get_all_gamification_rules_grouped")
+            return {}
+    # --- FIM AJUSTE 3 (REVISADO) ---
+
+
+    @app.before_request
+    def before_request_func():
+        """
+        Executado antes de cada request.
+        Carrega usuário, perfil e, se for gestor, as regras da gamificação.
+        """
+        g.user = session.get('user')
+        g.user_email = g.user.get('email') if g.user else None
+        
+        g.PERFIS_COM_GESTAO = PERFIS_COM_GESTAO
+        g.is_manager = False
+        g.gamification_rules = {} 
+        
+        if g.user_email:
+            session.permanent = True
+            session.modified = True   
+            
+            g.perfil = query_db("SELECT * FROM perfil_usuario WHERE usuario = %s", (g.user_email,), one=True)
+            
+            if not g.perfil:
+                 g.perfil = {
+                    'nome': g.user.get('name', g.user_email),
+                    'usuario': g.user_email,
+                    'foto_url': None,
+                    'cargo': None,
+                    'perfil_acesso': None 
+                }
+            
+            if g.perfil.get('perfil_acesso') in g.PERFIS_COM_GESTAO:
+                g.is_manager = True
+                try:
+                    g.gamification_rules = _get_all_gamification_rules_grouped()
+                except Exception as e:
+                    print(f"AVISO: Falha ao pré-carregar regras de gamificação para gestor: {e}")
+                    g.gamification_rules = {}
+            
+        else:
+            g.perfil = None 
+
 
     # --- Registro de Blueprints ---
     try:
@@ -74,38 +120,32 @@ def create_app():
         print("Blueprint 'analytics' registrado.")
     except ImportError as e: print(f"ERRO ao importar/registrar 'analytics': {e}")
 
-    # --- NOVO BLUEPRINT ---
     try:
         from .blueprints.gamification import gamification_bp
         app.register_blueprint(gamification_bp)
         print("Blueprint 'gamification' registrado com sucesso.")
     except ImportError as e:
         print(f"ERRO CRÍTICO: Falha ao importar/registrar Blueprint 'gamification'. Erro: {e}")
-    # --- FIM NOVO BLUEPRINT ---
 
 
-    # Registra filtros de template (ex: format_date_br)
-    # Isso torna as funções de utils.py disponíveis no HTML
+    # Registra filtros de template
     @app.template_filter('format_date_br')
     def format_date_br_filter(dt_obj, include_time=False):
-        # Adiciona verificação para evitar erro se dt_obj for None
         if dt_obj is None:
-            return 'N/A' # Ou '', dependendo do desejado
+            return 'N/A' 
         return utils.format_date_br(dt_obj, include_time)
 
-    # Adiciona a pasta de uploads local como rota estática (para fallback)
+    # Adiciona a pasta de uploads local como rota estática
     @app.route('/uploads/<path:filename>')
     def serve_uploads(filename):
-        # A pasta 'uploads' está um nível acima de 'project' (APP-23-10/uploads)
         uploads_dir = os.path.join(app_root_dir, 'uploads')
-        # Verifica se o diretório existe para evitar erros 500
         if not os.path.isdir(uploads_dir):
              from flask import abort
              print(f"AVISO: Diretório de uploads não encontrado: {uploads_dir}")
              return abort(404)
         return send_from_directory(uploads_dir, filename)
 
-    # Rota para favicon (opcional, mas evita erros 404 no log)
+    # Rota para favicon
     @app.route('/favicon.ico')
     def favicon():
         return send_from_directory(os.path.join(app.root_path, 'static', 'images'),

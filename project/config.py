@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+from datetime import timedelta # <-- ADICIONADO
 
 load_dotenv() # Carrega variáveis do .env
 
@@ -8,6 +9,13 @@ class Config:
     SECRET_KEY = os.environ.get("FLASK_SECRET_KEY")
     if not SECRET_KEY:
         raise ValueError("FLASK_SECRET_KEY não definida.")
+
+    # --- INÍCIO DA MELHORIA 1 ---
+    # Define as sessões como permanentes
+    PERMANENT_SESSION = True 
+    # Define o tempo de inatividade (ex: 8 horas)
+    PERMANENT_SESSION_LIFETIME = timedelta(hours=8) 
+    # --- FIM DA MELHORIA 1 ---
 
     # Configuração da Pasta de Upload LOCAL (Fallback)
     UPLOAD_FOLDER = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'uploads')

@@ -72,67 +72,64 @@ def _sync_user_profile(user_email, user_name, auth0_user_id):
 
 # --- Decoradores de Autenticação e Permissão ---
 
+# --- INÍCIO DA MELHORIA 1 ---
 def login_required(f):
-    """Decorator para proteger rotas que exigem login."""
+    """
+    Decorator para proteger rotas que exigem login.
+    Assume que @app.before_request (em __init__.py) já carregou g.user e g.perfil.
+    """
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if 'user' not in session:
+        # g.user_email foi carregado em @app.before_request
+        if not g.user_email:
             flash('Login necessário para acessar esta página.', 'info')
             return redirect(url_for('auth.login'))
         
-        g.user = session.get('user')
-        g.user_email = g.user.get('email') if g.user else None
-        
-        if not g.user_email:
-            flash("Sessão inválida ou email não encontrado.", "warning")
-            session.clear()
-            return redirect(url_for('auth.logout'))
-        
-        # Carrega o perfil do usuário no 'g'
-        g.perfil = query_db("SELECT * FROM perfil_usuario WHERE usuario = %s", (g.user_email,), one=True)
-        
-        # Fallback e sincronização (Corrigido para evitar loops e KeyError)
-        if not g.perfil:
-            sincronizacao_ok = False
+        # O @app.before_request criou g.perfil (do DB ou um placeholder).
+        # Se 'perfil_acesso' for None, significa que o perfil ainda não
+        # foi totalmente sincronizado (é um placeholder de 1º login).
+        # Vamos tentar sincronizar agora.
+        if g.perfil.get('perfil_acesso') is None:
             try:
+                # Tenta a sincronização (que pode criar o perfil)
                 _sync_user_profile(g.user_email, g.user.get('name', g.user_email), g.user.get('sub'))
-                sincronizacao_ok = True
+                
+                # Recarrega o g.perfil após a tentativa de sincronização
+                g.perfil = query_db("SELECT * FROM perfil_usuario WHERE usuario = %s", (g.user_email,), one=True)
+
+                # Se AINDA ASSIM não encontrar (improvável), mantém o placeholder
+                if not g.perfil:
+                     g.perfil = {
+                        'nome': g.user.get('name', g.user_email),
+                        'usuario': g.user_email,
+                        'foto_url': None,
+                        'cargo': None,
+                        'perfil_acesso': None
+                    }
+            
             except ValueError as ve: # Pega o erro de usuário duplicado
                  flash(str(ve), "error") # Mostra "Usuário já cadastrado"
                  session.clear() # Limpa a sessão para evitar loop
                  return redirect(url_for('auth.login'))
             except Exception as e:
-                 print(f"Erro no _sync_user_profile durante o fallback: {e}")
-                 # Deixa sincronizacao_ok = False
-                 
-            # Recarrega o perfil APENAS se a sincronização não lançou exceção
-            if sincronizacao_ok:
-                 g.perfil = query_db("SELECT * FROM perfil_usuario WHERE usuario = %s", (g.user_email,), one=True)
-                 
-            if not g.perfil:
-                 # Cria um perfil placeholder BÁSICO para evitar KeyError nas rotas
-                 g.perfil = {
-                    'nome': g.user.get('name', g.user_email),
-                    'usuario': g.user_email,
-                    'foto_url': None,
-                    'cargo': None,
-                    'perfil_acesso': None
-                }
+                 print(f"Erro no _sync_user_profile durante o fallback do @login_required: {e}")
+                 # Mantém o perfil placeholder e continua
         
-        # --- DEBUG CRÍTICO AQUI ---
+        # O debug print foi mantido pois é útil
         perfil_acesso_debug = g.perfil.get('perfil_acesso') if g.perfil else 'NÃO CARREGADO'
         print(f"\n[DEBUG] Usuário logado: {g.user_email}, Perfil de Acesso: {perfil_acesso_debug}, Rota: {request.path}\n")
-        # ---------------------------
-
+        
         return f(*args, **kwargs)
     return decorated_function
-    
+# --- FIM DA MELHORIA 1 ---
+
 def permission_required(required_profiles):
     """Decorator para proteger rotas por Perfil de Acesso."""
     def decorator(f):
         @wraps(f)
         @login_required
         def decorated_function(*args, **kwargs):
+            # g.perfil já foi carregado (pelo before_request ou pelo login_required)
             user_perfil = g.perfil.get('perfil_acesso') if g.perfil else None
             
             # Se o perfil for NULL (None), o acesso é negado para rotas protegidas
@@ -170,6 +167,12 @@ def callback():
             raise Exception("Informação do usuário inválida recebida do Auth0.")
         
         session['user'] = userinfo
+        
+        # --- INÍCIO DA MELHORIA 1 ---
+        # Define a sessão como permanente IMEDIATAMENTE no login
+        session.permanent = True
+        # --- FIM DA MELHORIA 1 ---
+
         user_email = userinfo.get('email')
         user_name = userinfo.get('name', user_email)
         auth0_user_id = userinfo.get('sub')

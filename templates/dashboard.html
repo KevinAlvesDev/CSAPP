@@ -29,8 +29,33 @@
     </header>
     <main class="p-4" id="main-content">
 
+        {% if is_manager %}
+        <div class="metric-card p-3 rounded shadow-sm mb-4">
+            <h6 class="text-secondary mb-3 border-bottom pb-2">Filtrar Dashboard</h6>
+            <form method="GET" action="{{ url_for('main.dashboard') }}" id="cs-filter-form">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-10">
+                        <label for="cs_filter" class="form-label small text-secondary">Filtrar por Implantador</label>
+                        <select id="cs_filter" name="cs_filter" class="form-select" onchange="this.form.submit()">
+                            <option value="">-- Ver Todos os Implantadores --</option>
+                            {% if all_cs_users %}
+                                {% for cs in all_cs_users %}
+                                    <option value="{{ cs.usuario }}" {% if cs.usuario == current_cs_filter %}selected{% endif %}>
+                                        {{ cs.nome }} ({{ cs.usuario }})
+                                    </option>
+                                {% endfor %}
+                            {% endif %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary w-100">Limpar Filtro</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+        {% endif %}
         {# Resumo Rápido (métricas) #}
-        <h2 class="h5 mb-3">Resumo Rápido</h2>
+        <h2 class="h5 mb-3">Resumo Rápido {% if current_cs_filter and is_manager %}(Filtrado){% endif %}</h2>
         <div class="row row-cols-1 row-cols-md-3 row-cols-lg-6 g-3 mb-4">
             {% set m = metrics or {} %}
             <div class="col"><div class="metric-card p-3 text-center"><h6 class="text-secondary">Novas</h6><h4 class="mb-0 text-dark">{{ m.impl_novas | default(0) }}</h4></div></div>

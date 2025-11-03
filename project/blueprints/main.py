@@ -30,7 +30,9 @@ main_bp = Blueprint('main', __name__)
 # --- Helper para buscar usuários (usado em ver_implantacao) ---
 def _get_all_cs_users():
     """Busca todos os usuários com perfil que podem receber implantações."""
-    return query_db("SELECT usuario, nome FROM perfil_usuario WHERE perfil_acesso IS NOT NULL AND perfil_acesso != '' ORDER BY nome")
+    # Garante que a query retorne uma lista vazia em vez de None se falhar
+    result = query_db("SELECT usuario, nome FROM perfil_usuario WHERE perfil_acesso IS NOT NULL AND perfil_acesso != '' ORDER BY nome")
+    return result if result is not None else []
 
 # --- Rotas de Visualização ---
 
@@ -47,18 +49,30 @@ def dashboard():
     
     user_email = g.user_email #
     user_info = g.user #
+    
+    # --- INÍCIO AJUSTE 4 ---
+    perfil_acesso = g.perfil.get('perfil_acesso') if g.get('perfil') else None
+    is_manager = perfil_acesso in PERFIS_COM_GESTAO
+    
+    # Pega o filtro da URL
+    current_cs_filter = request.args.get('cs_filter', None)
+    
+    # Se não for manager, o filtro não deve ser aplicado/mostrado
+    # A lógica de serviço já garante que ele só veja o dele
+    if not is_manager:
+        current_cs_filter = None
+    # --- FIM AJUSTE 4 ---
+
     try:
-        dashboard_data, metrics = get_dashboard_data(user_email) #
+        # --- AJUSTE 4: Passa o filtro para a função de serviço ---
+        dashboard_data, metrics = get_dashboard_data(user_email, filtered_cs_email=current_cs_filter) #
         
         perfil_data = g.perfil if g.perfil else {} #
         default_metrics = { 'nome': user_info.get('name', user_email), 'impl_andamento': 0, 'impl_finalizadas': 0, 'impl_paradas': 0, 'progresso_medio_carteira': 0, 'impl_andamento_total': 0, 'implantacoes_atrasadas': 0, 'implantacoes_futuras': 0 }
         final_metrics = {**default_metrics, **perfil_data, **metrics}
         
-        # --- CORREÇÃO APLICADA AQUI ---
-        # A lista PERFIS_COM_CRIACAO precisa ser passada para o template
-        # para que o {% if ... in PERFIS_COM_CRIACAO %} funcione.
-        
-        # Busca todos os usuários para os modais
+        # --- AJUSTE 4: Busca todos os usuários para os modais E para o filtro ---
+        # (Chamada movida para ser usada em ambos os casos, sucesso e erro)
         all_cs_users = _get_all_cs_users()
 
         return render_template(
@@ -82,14 +96,32 @@ def dashboard():
             SISTEMAS_ANTERIORES=SISTEMAS_ANTERIORES, #
             RECORRENCIA_USADA=RECORRENCIA_USADA, #
             SIM_NAO_OPTIONS=SIM_NAO_OPTIONS, #
-            all_cs_users=all_cs_users # Envia a lista de usuários para os modais
+            all_cs_users=all_cs_users, # Usado para modais E para o novo filtro
+            
+            # --- INÍCIO AJUSTE 4: Passa os dados do filtro para o template ---
+            is_manager=is_manager,
+            current_cs_filter=current_cs_filter
+            # --- FIM AJUSTE 4 ---
         )
-        # --- FIM DA CORREÇÃO ---
         
     except Exception as e:
         print(f"ERRO ao carregar dashboard para {user_email}: {e}")
         flash("Erro ao carregar dados do dashboard.", "error")
-        return render_template('dashboard.html', user_info=user_info, metrics={}, implantacoes_andamento=[], implantacoes_novas=[], implantacoes_futuras=[], implantacoes_finalizadas=[], implantacoes_paradas=[], implantacoes_atrasadas=[], cargos_responsavel=CARGOS_RESPONSAVEL, error="Falha ao carregar dados.", all_cs_users=[], PERFIS_COM_CRIACAO=PERFIS_COM_CRIACAO ) #
+        
+        # --- AJUSTE 4: Garante que as variáveis existam mesmo em caso de erro ---
+        perfil_acesso_erro = g.perfil.get('perfil_acesso') if g.get('perfil') else None
+        is_manager_erro = perfil_acesso_erro in PERFIS_COM_GESTAO
+        current_cs_filter_erro = request.args.get('cs_filter', None)
+        if not is_manager_erro:
+            current_cs_filter_erro = None
+
+        return render_template('dashboard.html', user_info=user_info, metrics={}, 
+                             implantacoes_andamento=[], implantacoes_novas=[], 
+                             implantacoes_futuras=[], implantacoes_finalizadas=[], 
+                             implantacoes_paradas=[], implantacoes_atrasadas=[], 
+                             cargos_responsavel=CARGOS_RESPONSAVEL, error="Falha ao carregar dados.", 
+                             all_cs_users=[], PERFIS_COM_CRIACAO=PERFIS_COM_CRIACAO,
+                             is_manager=is_manager_erro, current_cs_filter=current_cs_filter_erro) #
 
 @main_bp.route('/implantacao/<int:impl_id>')
 @login_required
