@@ -1,7 +1,11 @@
 from flask import Blueprint, render_template, request, flash, redirect, url_for, g
 from ..blueprints.auth import permission_required
 from ..db import query_db, execute_db
-from ..services import calcular_pontuacao_gamificacao
+# --- ALTERAÇÃO ---
+# Trocamos a chamada de 'calcular_pontuacao_gamificacao' 
+# pela nova função de busca em massa 'get_gamification_report_data'
+from ..services import get_gamification_report_data
+# --- FIM DA ALTERAÇÃO ---
 from ..constants import PERFIS_COM_GESTAO
 from datetime import datetime, timedelta 
 from collections import OrderedDict 
@@ -193,80 +197,28 @@ def gamification_report():
     
     hoje = datetime.now()
     
-    # --- INÍCIO DA ALTERAÇÃO (AJUSTE MÊS ATUAL) ---
-    # A lógica antiga usava o mês passado como padrão.
-    # primeiro_dia_mes = hoje.replace(day=1)
-    # ultimo_dia_mes_passado = primeiro_dia_mes - timedelta(days=1) 
-    # default_mes = int(request.args.get('mes', ultimo_dia_mes_passado.month))
-    # default_ano = int(request.args.get('ano', ultimo_dia_mes_passado.year))
-
-    # A nova lógica usa o mês atual como padrão.
+    # --- ALTERAÇÃO (AJUSTE MÊS ATUAL) ---
     default_mes = int(request.args.get('mes', hoje.month))
     default_ano = int(request.args.get('ano', hoje.year))
     # --- FIM DA ALTERAÇÃO ---
-
-    report_data = []
     
     target_cs_email = request.args.get('cs_email')
     
-    users_to_process = []
-    if target_cs_email:
-        users_to_process = [user for user in all_cs_users if user.get('usuario') == target_cs_email]
-    else:
-        users_to_process = all_cs_users
-
-    for user in users_to_process:
-        user_email = user.get('usuario')
-        if not user_email:
-            continue
-            
-        try:
-            resultado = calcular_pontuacao_gamificacao(user_email, default_mes, default_ano)
-            
-            report_data.append({
-                'usuario_nome': user.get('nome', user_email),
-                'cargo': user.get('cargo', 'N/A'),
-                'usuario_cs': user_email,
-                'mes': default_mes,
-                'ano': default_ano,
-                'elegivel': resultado.get('elegivel', False),
-                'pontuacao_final': resultado.get('pontuacao_final', 0),
-                'motivo_inelegibilidade': resultado.get('motivo_inelegibilidade'),
-                'detalhamento_pontos': resultado.get('detalhamento_pontos', {}),
-                'tma_medio_mes': resultado.get('tma_medio_mes', 'N/A'),
-                'impl_finalizadas_mes': resultado.get('impl_finalizadas_mes', 0),
-                'status_calculo': 'Calculado/Atualizado'
-            })
-
-        except ValueError as ve:
-             report_data.append({
-                'usuario_nome': user.get('nome', user_email),
-                'cargo': user.get('cargo', 'N/A'),
-                'usuario_cs': user_email,
-                'mes': default_mes,
-                'ano': default_ano,
-                'elegivel': False,
-                'pontuacao_final': 0,
-                'motivo_inelegibilidade': f'Erro ao calcular: {ve}',
-                'detalhamento_pontos': {},
-                'status_calculo': 'Erro'
-            })
-        except Exception as e:
-            print(f"Erro ao processar gamificação para {user_email}: {e}")
-            report_data.append({
-                'usuario_nome': user.get('nome', user_email),
-                'cargo': user.get('cargo', 'N/A'),
-                'usuario_cs': user_email,
-                'mes': default_mes,
-                'ano': default_ano,
-                'elegivel': False,
-                'pontuacao_final': 0,
-                'motivo_inelegibilidade': f'Erro interno no sistema: {e}',
-                'detalhamento_pontos': {},
-                'status_calculo': 'Erro Crítico'
-            })
-
-    report_data_sorted = sorted(report_data, key=lambda x: x['pontuacao_final'], reverse=True)
+    # --- INÍCIO DA ALTERAÇÃO (N+1) ---
+    # A lógica de loop foi movida para 'get_gamification_report_data'
+    
+    try:
+        report_data_sorted = get_gamification_report_data(
+            default_mes, 
+            default_ano, 
+            target_cs_email,
+            all_cs_users_list=all_cs_users # Passa a lista de usuários para evitar re-query
+        )
+    except Exception as e:
+        print(f"ERRO CRÍTICO ao gerar relatório de gamificação: {e}")
+        flash(f"Erro ao gerar relatório: {e}", "error")
+        report_data_sorted = []
+    # --- FIM DA ALTERAÇÃO (N+1) ---
 
     return render_template(
         'gamification_report.html',

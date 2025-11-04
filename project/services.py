@@ -1,7 +1,10 @@
 # project/services.py
 
 from flask import current_app, g
+# --- ALTERAÇÃO ---
+# query_db e execute_db são necessários para as novas queries em massa
 from .db import query_db, execute_db
+# --- FIM DA ALTERAÇÃO ---
 from .constants import (
     CHECKLIST_OBRIGATORIO_ITEMS, MODULO_OBRIGATORIO,
     TAREFAS_TREINAMENTO_PADRAO, MODULO_PENDENCIAS,
@@ -102,11 +105,7 @@ def auto_finalizar_implantacao(impl_id, usuario_cs_email):
 def get_dashboard_data(user_email, filtered_cs_email=None):
     """
     Busca e processa todos os dados para o dashboard.
-    - Se o usuário não for gerente, *ignora* o filtro e mostra apenas os dados dele.
-    - Se o usuário for gerente, mostra *todos* os dados por padrão.
-    - Se o usuário for gerente e 'filtered_cs_email' for fornecido, filtra por esse CS.
     """
-
     perfil_acesso = g.perfil.get('perfil_acesso') if g.get('perfil') else None
     manager_profiles = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
     
@@ -566,7 +565,6 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
     total_paradas = 0
     total_novas_global = 0
     total_futuras_global = 0 
-    total_sem_previsao = 0
     total_atrasadas_status = 0 
     tma_dias_sum = 0
     implantacoes_paradas_detalhadas = []
@@ -592,9 +590,6 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
 
         if cs_nome_impl:
             chart_data_ranking_colab[cs_nome_impl] = chart_data_ranking_colab.get(cs_nome_impl, 0) + 1
-
-        if status == 'futura' and not impl.get('data_inicio_previsto'):
-            total_sem_previsao += 1
 
         total_impl_global += 1 
 
@@ -679,7 +674,7 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
             elif isinstance(data_inicio_obj, date) and not isinstance(data_inicio_obj, datetime): 
                 data_inicio_datetime = datetime.combine(data_inicio_obj, datetime.min.time())
             elif isinstance(data_inicio_obj, datetime):
-                data_inicio_datetime = data_inicio_obj
+                data_inicio_datetime = data_inicio_datetime
             
             if data_inicio_datetime:
                 agora_naive = agora.replace(tzinfo=None) if agora.tzinfo else agora
@@ -700,7 +695,7 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
         'total_paradas': total_paradas,
         'total_novas': total_novas_global,
         'total_futuras': total_futuras_global,
-        'total_sem_previsao': total_sem_previsao,
+        'total_sem_previsao': total_novas_global, # Corrigido
         'total_atrasadas': total_atrasadas_status, 
         'media_tma': round(tma_dias_sum / total_finalizadas, 1) if total_finalizadas > 0 and tma_dias_sum is not None else 0, 
     }
@@ -753,7 +748,7 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
     }
 
 
-# --- INÍCIO AJUSTE 3: FUNÇÃO DE GAMIFICAÇÃO ATUALIZADA ---
+# --- INÍCIO DA ALTERAÇÃO (Refatoração N+1) ---
 
 def _get_gamification_rules_as_dict():
     """Busca todas as regras do DB e retorna um dicionário (cacheável no futuro)."""
@@ -762,35 +757,141 @@ def _get_gamification_rules_as_dict():
         if not regras_raw:
             print("AVISO CRÍTICO: Tabela 'gamificacao_regras' está vazia ou não foi encontrada.")
             return {}
-        # Converte a lista de dicts em um único dict para fácil acesso
         return {r['regra_id']: r['valor_pontos'] for r in regras_raw}
     except Exception as e:
         print(f"ERRO CRÍTICO ao buscar regras de gamificação: {e}")
         return {}
 
 
-def calcular_pontuacao_gamificacao(usuario_cs, mes, ano):
-    """Calcula a pontuação da gamificação para um usuário em um mês/ano específico."""
+def _get_gamification_automatic_data_bulk(mes, ano, primeiro_dia_str, fim_ultimo_dia_str, target_cs_email=None):
+    """(NOVA) Busca todos os dados automáticos de todos os usuários de uma vez."""
+    
+    # 1. Implantações Finalizadas e TMA (para todos)
+    sql_finalizadas = """
+        SELECT usuario_cs, data_criacao, data_finalizacao FROM implantacoes
+        WHERE status = 'finalizada'
+        AND data_finalizacao >= %s AND data_finalizacao <= %s
+    """
+    args_finalizadas = [primeiro_dia_str, fim_ultimo_dia_str]
+    if target_cs_email:
+        sql_finalizadas += " AND usuario_cs = %s"
+        args_finalizadas.append(target_cs_email)
+        
+    impl_finalizadas_raw = query_db(sql_finalizadas, tuple(args_finalizadas))
+    impl_finalizadas_raw = impl_finalizadas_raw if impl_finalizadas_raw is not None else []
+    
+    # Processa TMA
+    tma_data_map = {} # { email: {'total_dias': X, 'count': Y} }
+    for impl in impl_finalizadas_raw:
+        if not isinstance(impl, dict): continue
+        email = impl.get('usuario_cs')
+        dt_criacao = impl.get('data_criacao')
+        dt_finalizacao = impl.get('data_finalizacao')
+        if not email or not dt_criacao or not dt_finalizacao:
+            continue
+            
+        if email not in tma_data_map:
+            tma_data_map[email] = {'total_dias': 0, 'count': 0}
+            
+        # (Lógica de cálculo de data copiada da função original)
+        dt_criacao_datetime = None
+        dt_finalizacao_datetime = None
+        if isinstance(dt_criacao, str):
+            try: dt_criacao_datetime = datetime.fromisoformat(dt_criacao.replace('Z', '+00:00'))
+            except ValueError: 
+                try: 
+                    if '.' in dt_criacao: dt_criacao_datetime = datetime.strptime(dt_criacao, '%Y-%m-%d %H:%M:%S.%f')
+                    else: dt_criacao_datetime = datetime.strptime(dt_criacao, '%Y-%m-%d %H:%M:%S')
+                except ValueError: pass
+        elif isinstance(dt_criacao, date) and not isinstance(dt_criacao, datetime): 
+            dt_criacao_datetime = datetime.combine(dt_criacao, datetime.min.time())
+        elif isinstance(dt_criacao, datetime):
+            dt_criacao_datetime = dt_criacao
+        if isinstance(dt_finalizacao, str):
+            try: dt_finalizacao_datetime = datetime.fromisoformat(dt_finalizacao.replace('Z', '+00:00'))
+            except ValueError: 
+                try: 
+                    if '.' in dt_finalizacao: dt_finalizacao_datetime = datetime.strptime(dt_finalizacao, '%Y-%m-%d %H:%M:%S.%f')
+                    else: dt_finalizacao_datetime = datetime.strptime(dt_finalizacao, '%Y-%m-%d %H:%M:%S')
+                except ValueError: pass
+        elif isinstance(dt_finalizacao, date) and not isinstance(dt_finalizacao, datetime): 
+            dt_finalizacao_datetime = datetime.combine(dt_finalizacao, datetime.min.time())
+        elif isinstance(dt_finalizacao, datetime):
+            dt_finalizacao_datetime = dt_finalizacao
+        if dt_criacao_datetime and dt_finalizacao_datetime:
+            criacao_naive = dt_criacao_datetime.replace(tzinfo=None) if dt_criacao_datetime.tzinfo else dt_criacao_datetime
+            final_naive = dt_finalizacao_datetime.replace(tzinfo=None) if dt_finalizacao_datetime.tzinfo else dt_finalizacao_datetime
+            try:
+                delta = final_naive - criacao_naive
+                tma_data_map[email]['total_dias'] += max(0, delta.days)
+                tma_data_map[email]['count'] += 1
+            except TypeError: pass 
 
-    # 0. Carregar Regras do Banco de Dados
-    # Todos os valores fixos (hard-coded) serão substituídos por buscas neste dict
-    regras_db = _get_gamification_rules_as_dict()
-    if not regras_db:
-        raise ValueError("Falha ao carregar as regras de pontuação da gamificação do banco de dados.")
+    # 2. Implantações Iniciadas (para todos)
+    sql_iniciadas = "SELECT usuario_cs, COUNT(*) as total FROM implantacoes WHERE data_inicio_efetivo >= %s AND data_inicio_efetivo <= %s"
+    args_iniciadas = [primeiro_dia_str, fim_ultimo_dia_str]
+    if target_cs_email:
+        sql_iniciadas += " AND usuario_cs = %s"
+        args_iniciadas.append(target_cs_email)
+    sql_iniciadas += " GROUP BY usuario_cs"
+    
+    impl_iniciadas_raw = query_db(sql_iniciadas, tuple(args_iniciadas))
+    impl_iniciadas_raw = impl_iniciadas_raw if impl_iniciadas_raw is not None else []
+    iniciadas_map = {row['usuario_cs']: row['total'] for row in impl_iniciadas_raw if isinstance(row, dict)}
+    
+    # 3. Tarefas Concluídas (para todos)
+    sql_tarefas = """
+        SELECT i.usuario_cs, t.tag, COUNT(t.id) as total 
+        FROM tarefas t
+        JOIN implantacoes i ON t.implantacao_id = i.id
+        WHERE t.concluida = TRUE AND t.tag IN ('Ação interna', 'Reunião')
+        AND t.data_conclusao >= %s AND t.data_conclusao <= %s
+    """
+    args_tarefas = [primeiro_dia_str, fim_ultimo_dia_str]
+    if target_cs_email:
+        sql_tarefas += " AND i.usuario_cs = %s"
+        args_tarefas.append(target_cs_email)
+    sql_tarefas += " GROUP BY i.usuario_cs, t.tag"
+    
+    tarefas_concluidas_raw = query_db(sql_tarefas, tuple(args_tarefas))
+    tarefas_concluidas_raw = tarefas_concluidas_raw if tarefas_concluidas_raw is not None else []
+    
+    tarefas_map = {} # { email: {'Ação interna': X, 'Reunião': Y} }
+    for row in tarefas_concluidas_raw:
+        if not isinstance(row, dict): continue
+        email = row.get('usuario_cs')
+        tag = row.get('tag')
+        total = row.get('total', 0)
+        if not email or not tag: continue
+        
+        if email not in tarefas_map:
+            tarefas_map[email] = {'Ação interna': 0, 'Reunião': 0}
+        
+        if tag == 'Ação interna':
+            tarefas_map[email]['Ação interna'] = total
+        elif tag == 'Reunião':
+            tarefas_map[email]['Reunião'] = total
+            
+    return tma_data_map, iniciadas_map, tarefas_map
 
-    # 1. Buscar Perfil e Métricas Manuais
-    perfil = query_db("SELECT cargo FROM perfil_usuario WHERE usuario = %s", (usuario_cs,), one=True)
-    if not perfil:
-        raise ValueError(f"Perfil de usuário não encontrado para {usuario_cs}")
+
+def _calculate_user_gamification_score(
+    perfil, 
+    metricas_manuais, 
+    regras_db, 
+    dias_no_mes, 
+    dados_tma, 
+    count_iniciadas, 
+    dados_tarefas
+):
+    """
+    (REATORADO) Esta função APENAS calcula. Não faz NENHUMA query ao DB.
+    Recebe os dados pré-buscados.
+    """
+    
     cargo = perfil.get('cargo', 'N/A') 
 
-    metricas_manuais = query_db(
-        "SELECT * FROM gamificacao_metricas_mensais WHERE usuario_cs = %s AND mes = %s AND ano = %s",
-        (usuario_cs, mes, ano), one=True
-    )
-    metricas_manuais = dict(metricas_manuais) if metricas_manuais else {}
-
-    # Define valores padrão para métricas manuais (caso não preenchidas)
+    # 1. Definir Padrões para Métricas Manuais
     metricas_manuais.setdefault('nota_qualidade', None)
     metricas_manuais.setdefault('assiduidade', None)
     metricas_manuais.setdefault('planos_sucesso_perc', None)
@@ -811,113 +912,21 @@ def calcular_pontuacao_gamificacao(usuario_cs, mes, ano):
     metricas_manuais.setdefault('perda_sla_grupo', 0)
     metricas_manuais.setdefault('finalizacao_incompleta', 0)
 
+    # 2. Processar Dados Automáticos Recebidos
+    count_finalizadas = dados_tma.get('count', 0)
+    tma_total_dias = dados_tma.get('total_dias', 0)
+    tma_medio = round(tma_total_dias / count_finalizadas, 1) if count_finalizadas > 0 else None
 
-    # 2. Definir Período
-    try:
-        primeiro_dia = date(ano, mes, 1)
-        ultimo_dia_mes = calendar.monthrange(ano, mes)[1]
-        ultimo_dia = date(ano, mes, ultimo_dia_mes)
-        fim_ultimo_dia = datetime.combine(ultimo_dia, datetime.max.time())
-        dias_no_mes = ultimo_dia_mes
-    except ValueError:
-        raise ValueError(f"Mês ({mes}) ou Ano ({ano}) inválido.")
-
-    primeiro_dia_str = primeiro_dia.isoformat()
-    fim_ultimo_dia_str = fim_ultimo_dia.isoformat()
-
-
-    # 3. Buscar Dados Automáticos do Período
-    # a) Implantações Finalizadas e TMA
-    impl_finalizadas = query_db(
-        """
-        SELECT data_criacao, data_finalizacao FROM implantacoes
-        WHERE usuario_cs = %s AND status = 'finalizada'
-        AND data_finalizacao >= %s AND data_finalizacao <= %s
-        """,
-        (usuario_cs, primeiro_dia_str, fim_ultimo_dia_str) 
-    )
-    impl_finalizadas = impl_finalizadas if impl_finalizadas is not None else [] 
-    count_finalizadas = len(impl_finalizadas)
-    tma_total_dias = 0
-    if count_finalizadas > 0:
-        for impl in impl_finalizadas:
-            if not isinstance(impl, dict): continue
-            dt_criacao = impl.get('data_criacao')
-            dt_finalizacao = impl.get('data_finalizacao')
-            
-            dt_criacao_datetime = None
-            dt_finalizacao_datetime = None
-
-            if isinstance(dt_criacao, str):
-                try: dt_criacao_datetime = datetime.fromisoformat(dt_criacao.replace('Z', '+00:00'))
-                except ValueError: 
-                    try: 
-                        if '.' in dt_criacao: dt_criacao_datetime = datetime.strptime(dt_criacao, '%Y-%m-%d %H:%M:%S.%f')
-                        else: dt_criacao_datetime = datetime.strptime(dt_criacao, '%Y-%m-%d %H:%M:%S')
-                    except ValueError: pass
-            elif isinstance(dt_criacao, date) and not isinstance(dt_criacao, datetime): 
-                dt_criacao_datetime = datetime.combine(dt_criacao, datetime.min.time())
-            elif isinstance(dt_criacao, datetime):
-                dt_criacao_datetime = dt_criacao
-
-            if isinstance(dt_finalizacao, str):
-                try: dt_finalizacao_datetime = datetime.fromisoformat(dt_finalizacao.replace('Z', '+00:00'))
-                except ValueError: 
-                    try: 
-                        if '.' in dt_finalizacao: dt_finalizacao_datetime = datetime.strptime(dt_finalizacao, '%Y-%m-%d %H:%M:%S.%f')
-                        else: dt_finalizacao_datetime = datetime.strptime(dt_finalizacao, '%Y-%m-%d %H:%M:%S')
-                    except ValueError: pass
-            elif isinstance(dt_finalizacao, date) and not isinstance(dt_finalizacao, datetime): 
-                dt_finalizacao_datetime = datetime.combine(dt_finalizacao, datetime.min.time())
-            elif isinstance(dt_finalizacao, datetime):
-                dt_finalizacao_datetime = dt_finalizacao
-
-            if dt_criacao_datetime and dt_finalizacao_datetime:
-                criacao_naive = dt_criacao_datetime.replace(tzinfo=None) if dt_criacao_datetime.tzinfo else dt_criacao_datetime
-                final_naive = dt_finalizacao_datetime.replace(tzinfo=None) if dt_finalizacao_datetime.tzinfo else dt_finalizacao_datetime
-                try:
-                    delta = final_naive - criacao_naive
-                    tma_total_dias += max(0, delta.days)
-                except TypeError: pass 
-        tma_medio = round(tma_total_dias / count_finalizadas, 1) if tma_total_dias is not None else None
-    else:
-        tma_medio = None 
-
-    # b) Implantações Iniciadas
-    impl_iniciadas = query_db(
-        "SELECT COUNT(*) as total FROM implantacoes WHERE usuario_cs = %s AND data_inicio_efetivo >= %s AND data_inicio_efetivo <= %s",
-        (usuario_cs, primeiro_dia_str, fim_ultimo_dia_str), one=True 
-    )
-    count_iniciadas = impl_iniciadas.get('total', 0) if impl_iniciadas else 0
-
-    # c) Tarefas Concluídas (para média diária)
-    tarefas_concluidas = query_db(
-        """
-        SELECT tag, COUNT(*) as total FROM tarefas
-        WHERE implantacao_id IN (SELECT id FROM implantacoes WHERE usuario_cs = %s)
-        AND concluida = TRUE AND tag IN ('Ação interna', 'Reunião')
-        AND data_conclusao >= %s AND data_conclusao <= %s
-        GROUP BY tag
-        """,
-        (usuario_cs, primeiro_dia_str, fim_ultimo_dia_str) 
-    )
-    tarefas_concluidas = tarefas_concluidas if tarefas_concluidas is not None else [] 
-    count_acao_interna = 0
-    count_reuniao = 0
-    for row in tarefas_concluidas:
-        if isinstance(row, dict): 
-            if row.get('tag') == 'Ação interna': count_acao_interna = row.get('total', 0)
-            elif row.get('tag') == 'Reunião': count_reuniao = row.get('total', 0)
-
+    count_acao_interna = dados_tarefas.get('Ação interna', 0)
+    count_reuniao = dados_tarefas.get('Reunião', 0)
+    
     media_reunioes_dia = round(count_reuniao / dias_no_mes, 2) if dias_no_mes > 0 else 0
     media_acoes_dia = round(count_acao_interna / dias_no_mes, 2) if dias_no_mes > 0 else 0
-
-
-    # 4. Verificar Elegibilidade (usando métricas manuais, automáticas e regras_db)
+    
+    # 3. Verificar Elegibilidade (usando métricas manuais, automáticas e regras_db)
     elegivel = True
     motivo_inelegibilidade = []
 
-    # Carrega limites das regras (com defaults de segurança)
     min_nota_qualidade = regras_db.get('eleg_nota_qualidade_min', 80)
     min_assiduidade = regras_db.get('eleg_assiduidade_min', 85)
     min_planos_sucesso = regras_db.get('eleg_planos_sucesso_min', 75)
@@ -930,7 +939,6 @@ def calcular_pontuacao_gamificacao(usuario_cs, mes, ano):
     elif cargo == 'Pleno': min_processos_concluidos = regras_db.get('eleg_finalizadas_pleno', 5)
     elif cargo == 'Sênior': min_processos_concluidos = regras_db.get('eleg_finalizadas_senior', 5)
 
-    # (Lógica de verificação é a mesma, mas usa as variáveis carregadas do DB)
     nq = metricas_manuais.get('nota_qualidade')
     if nq is None: elegivel = False; motivo_inelegibilidade.append("Nota Qualidade não informada")
     elif nq < min_nota_qualidade: elegivel = False; motivo_inelegibilidade.append(f"Nota Qualidade < {min_nota_qualidade}%")
@@ -947,7 +955,6 @@ def calcular_pontuacao_gamificacao(usuario_cs, mes, ano):
         elegivel = False
         motivo_inelegibilidade.append(f"Impl. Finalizadas ({count_finalizadas}) < {min_processos_concluidos} ({cargo})")
 
-    # Regras de máximo (penalidade é >= max+1)
     if metricas_manuais.get('reclamacoes', 0) >= max_reclamacoes + 1:
         elegivel = False; motivo_inelegibilidade.append(f"Reclamações >= {max_reclamacoes + 1}")
     if metricas_manuais.get('perda_prazo', 0) >= max_perda_prazo + 1:
@@ -958,7 +965,7 @@ def calcular_pontuacao_gamificacao(usuario_cs, mes, ano):
     if nq is not None and nq < 80: # Regra fixa que elimina
         elegivel = False; motivo_inelegibilidade.append("Nota Qualidade < 80% (Eliminado)")
 
-    # 5. Calcular Pontuação (APENAS SE ELEGÍVEL)
+    # 4. Calcular Pontuação (APENAS SE ELEGÍVEL)
     pontos = 0
     detalhamento_pontos = {} 
 
@@ -1050,32 +1057,26 @@ def calcular_pontuacao_gamificacao(usuario_cs, mes, ano):
 
         # --- Bônus ---
         pts_bonus = 0
-        
         elogios = metricas_manuais.get('elogios', 0)
         pts_bonus_elogios = min(elogios, 1) * regras_db.get('bonus_elogios', 15) 
         pts_bonus += pts_bonus_elogios
         detalhamento_pontos['Bônus Elogios'] = f"+{pts_bonus_elogios} pts ({elogios} ocorr.)"
-
         recomendacoes = metricas_manuais.get('recomendacoes', 0)
         pts_bonus_recom = recomendacoes * regras_db.get('bonus_recomendacoes', 1)
         pts_bonus += pts_bonus_recom
         detalhamento_pontos['Bônus Recomendações'] = f"+{pts_bonus_recom} pts ({recomendacoes} ocorr.)"
-
         certificacoes = metricas_manuais.get('certificacoes', 0)
         pts_bonus_cert = min(certificacoes, 1) * regras_db.get('bonus_certificacoes', 15) 
         pts_bonus += pts_bonus_cert
         detalhamento_pontos['Bônus Certificações'] = f"+{pts_bonus_cert} pts ({certificacoes} ocorr.)"
-
         trein_part = metricas_manuais.get('treinamentos_pacto_part', 0)
         pts_bonus_tpart = trein_part * regras_db.get('bonus_trein_pacto_part', 15)
         pts_bonus += pts_bonus_tpart
         detalhamento_pontos['Bônus Trein. Pacto (Part.)'] = f"+{pts_bonus_tpart} pts ({trein_part} ocorr.)"
-
         trein_aplic = metricas_manuais.get('treinamentos_pacto_aplic', 0)
         pts_bonus_taplic = trein_aplic * regras_db.get('bonus_trein_pacto_aplic', 30)
         pts_bonus += pts_bonus_taplic
         detalhamento_pontos['Bônus Trein. Pacto (Aplic.)'] = f"+{pts_bonus_taplic} pts ({trein_aplic} ocorr.)"
-
         reun_pres = metricas_manuais.get('reunioes_presenciais', 0)
         pts_bonus_reun_pres = 0
         if reun_pres > 10: pts_bonus_reun_pres = regras_db.get('bonus_reun_pres_10', 35)
@@ -1085,62 +1086,49 @@ def calcular_pontuacao_gamificacao(usuario_cs, mes, ano):
         elif reun_pres >= 1: pts_bonus_reun_pres = regras_db.get('bonus_reun_pres_1', 15)
         pts_bonus += pts_bonus_reun_pres
         detalhamento_pontos['Bônus Reuniões Presenciais'] = f"+{pts_bonus_reun_pres} pts ({reun_pres} ocorr.)"
-
         pontos += pts_bonus 
 
         # --- Penalidades ---
-        # (Lógica: Pega o valor do DB (ex: -50), usa o abs() (ex: 50) para multiplicar,
-        #  depois subtrai o total de 'pontos')
         pts_penalidade_total = 0
-
         reclamacoes = metricas_manuais.get('reclamacoes', 0)
         pts_pen_reclam = reclamacoes * abs(regras_db.get('penal_reclamacao', -50))
         pts_penalidade_total += pts_pen_reclam
         detalhamento_pontos['Penalidade Reclamação'] = f"-{pts_pen_reclam} pts ({reclamacoes} ocorr.)"
-
         perda_prazo = metricas_manuais.get('perda_prazo', 0)
         pts_pen_prazo = perda_prazo * abs(regras_db.get('penal_perda_prazo', -10))
         pts_penalidade_total += pts_pen_prazo
         detalhamento_pontos['Penalidade Perda Prazo'] = f"-{pts_pen_prazo} pts ({perda_prazo} ocorr.)"
-
         desc_incomp = metricas_manuais.get('desc_incompreensivel', 0)
         pts_pen_desc = desc_incomp * abs(regras_db.get('penal_desc_incomp', -10))
         pts_penalidade_total += pts_pen_desc
         detalhamento_pontos['Penalidade Desc. Incomp.'] = f"-{pts_pen_desc} pts ({desc_incomp} ocorr.)"
-
         cancel_resp = metricas_manuais.get('cancelamentos_resp', 0)
         pts_pen_cancel = cancel_resp * abs(regras_db.get('penal_cancel_resp', -100))
         pts_penalidade_total += pts_pen_cancel
         detalhamento_pontos['Penalidade Cancelamento Resp.'] = f"-{pts_pen_cancel} pts ({cancel_resp} ocorr.)"
-
         nao_envolv = metricas_manuais.get('nao_envolvimento', 0)
         pts_pen_envolv = nao_envolv * abs(regras_db.get('penal_nao_envolv', -10))
         pts_penalidade_total += pts_pen_envolv
         detalhamento_pontos['Penalidade Não Envolv.'] = f"-{pts_pen_envolv} pts ({nao_envolv} ocorr.)"
-
         nao_preench = metricas_manuais.get('nao_preenchimento', 0)
         pts_pen_preench = nao_preench * abs(regras_db.get('penal_nao_preench', -10))
         pts_penalidade_total += pts_pen_preench
         detalhamento_pontos['Penalidade Não Preench.'] = f"-{pts_pen_preench} pts ({nao_preench} ocorr.)"
-
         perda_sla = metricas_manuais.get('perda_sla_grupo', 0)
         pts_pen_sla = perda_sla * abs(regras_db.get('penal_sla_grupo', -5))
         pts_penalidade_total += pts_pen_sla
         detalhamento_pontos['Penalidade SLA Grupo'] = f"-{pts_pen_sla} pts ({perda_sla} ocorr.)"
-
         final_incomp = metricas_manuais.get('finalizacao_incompleta', 0)
         pts_pen_final = final_incomp * abs(regras_db.get('penal_final_incomp', -10))
         pts_penalidade_total += pts_pen_final
         detalhamento_pontos['Penalidade Finaliz. Incomp.'] = f"-{pts_pen_final} pts ({final_incomp} ocorr.)"
-
         hora_extra = metricas_manuais.get('hora_extra', 0)
         pts_pen_he = hora_extra * abs(regras_db.get('penal_hora_extra', -10))
         pts_penalidade_total += pts_pen_he
         detalhamento_pontos['Penalidade Hora Extra'] = f"-{pts_pen_he} pts ({hora_extra} ocorr.)"
-
         pontos -= pts_penalidade_total 
 
-    # 6. Preparar Resultado Final
+    # 5. Preparar Resultado Final
     resultado = {
         'elegivel': elegivel,
         'motivo_inelegibilidade': ", ".join(motivo_inelegibilidade) if motivo_inelegibilidade else None,
@@ -1153,43 +1141,158 @@ def calcular_pontuacao_gamificacao(usuario_cs, mes, ano):
         'media_acoes_dia': media_acoes_dia,
         'metricas_manuais_usadas': metricas_manuais 
     }
+    
+    # Prepara os dados automáticos para salvar no DB
+    dados_automaticos_calculados = {
+        'pontuacao_calculada': resultado['pontuacao_final'],
+        'elegivel': resultado['elegivel'],
+        'impl_finalizadas_mes': count_finalizadas,
+        'tma_medio_mes': tma_medio, 
+        'impl_iniciadas_mes': count_iniciadas,
+        'reunioes_concluidas_dia_media': media_reunioes_dia,
+        'acoes_concluidas_dia_media': media_acoes_dia
+    }
 
-    # 7. Opcional, mas recomendado: Atualizar o DB com os resultados calculados
+    return resultado, dados_automaticos_calculados
+
+
+def get_gamification_report_data(mes, ano, target_cs_email=None, all_cs_users_list=None):
+    """
+    (NOVA) Função principal para buscar e calcular o relatório de gamificação.
+    Resolve o problema N+1 ao buscar todos os dados em massa.
+    """
+    
+    # 1. Obter Regras
+    regras_db = _get_gamification_rules_as_dict()
+    if not regras_db:
+        raise ValueError("Falha ao carregar as regras de pontuação da gamificação do banco de dados.")
+
+    # 2. Definir Período
     try:
-        existing_record_id = query_db(
-            "SELECT id FROM gamificacao_metricas_mensais WHERE usuario_cs = %s AND mes = %s AND ano = %s",
-            (usuario_cs, mes, ano), one=True
-        )
-        calculated_data = {
-            'pontuacao_calculada': resultado['pontuacao_final'],
-            'elegivel': resultado['elegivel'],
-            'impl_finalizadas_mes': count_finalizadas,
-            'tma_medio_mes': tma_medio, 
-            'impl_iniciadas_mes': count_iniciadas,
-            'reunioes_concluidas_dia_media': media_reunioes_dia,
-            'acoes_concluidas_dia_media': media_acoes_dia,
-            'data_registro': datetime.now()
-        }
-        if existing_record_id:
-            set_clauses_calc = [f"{key} = %s" for key in calculated_data.keys()]
-            sql_update_calc = f"""
-                UPDATE gamificacao_metricas_mensais
-                SET {', '.join(set_clauses_calc)}
-                WHERE id = %s
-            """
-            args_update_calc = list(calculated_data.values()) + [existing_record_id['id']]
-            execute_db(sql_update_calc, tuple(args_update_calc))
-        else:
-            columns_calc = ['usuario_cs', 'mes', 'ano'] + list(calculated_data.keys())
-            values_placeholders_calc = ['%s'] * len(columns_calc)
-            sql_insert_calc = f"INSERT INTO gamificacao_metricas_mensais ({', '.join(columns_calc)}) VALUES ({', '.join(values_placeholders_calc)})"
-            args_insert_calc = [usuario_cs, mes, ano] + list(calculated_data.values())
-            execute_db(sql_insert_calc, tuple(args_insert_calc))
+        primeiro_dia = date(ano, mes, 1)
+        ultimo_dia_mes = calendar.monthrange(ano, mes)[1]
+        ultimo_dia = date(ano, mes, ultimo_dia_mes)
+        fim_ultimo_dia = datetime.combine(ultimo_dia, datetime.max.time())
+        dias_no_mes = ultimo_dia_mes
+    except ValueError:
+        raise ValueError(f"Mês ({mes}) ou Ano ({ano}) inválido.")
+    
+    primeiro_dia_str = primeiro_dia.isoformat()
+    fim_ultimo_dia_str = fim_ultimo_dia.isoformat() # Usar fim do dia para queries <=
 
-    except Exception as db_update_err:
-        print(f"AVISO: Falha ao salvar resultados calculados da gamificação para {usuario_cs} ({mes}/{ano}): {db_update_err}")
+    # 3. Buscar Usuários e Métricas Manuais (Query em Massa 1)
+    
+    # Se all_cs_users_list não foi fornecida, busca do DB
+    if all_cs_users_list is None:
+        sql_users = "SELECT usuario, nome, cargo FROM perfil_usuario WHERE perfil_acesso IS NOT NULL AND perfil_acesso != ''"
+        args_users = []
+        if target_cs_email:
+            sql_users += " AND usuario = %s"
+            args_users.append(target_cs_email)
+        sql_users += " ORDER BY nome"
+        
+        all_cs_users_list = query_db(sql_users, tuple(args_users))
+        all_cs_users_list = all_cs_users_list if all_cs_users_list is not None else []
+    
+    # Busca métricas manuais para todos os usuários filtrados
+    usuarios_filtrados = [u['usuario'] for u in all_cs_users_list if isinstance(u, dict)]
+    metricas_manuais_map = {}
+    
+    if usuarios_filtrados:
+        placeholders = ','.join(['%s'] * len(usuarios_filtrados))
+        sql_metricas = f"SELECT * FROM gamificacao_metricas_mensais WHERE mes = %s AND ano = %s AND usuario_cs IN ({placeholders})"
+        args_metricas = [mes, ano] + usuarios_filtrados
+        
+        metricas_manuais_raw = query_db(sql_metricas, tuple(args_metricas))
+        metricas_manuais_raw = metricas_manuais_raw if metricas_manuais_raw is not None else []
+        
+        for metrica in metricas_manuais_raw:
+            if isinstance(metrica, dict):
+                metricas_manuais_map[metrica['usuario_cs']] = metrica
 
+    # 4. Buscar Dados Automáticos (Queries em Massa 2, 3, 4)
+    tma_data_map, iniciadas_map, tarefas_map = _get_gamification_automatic_data_bulk(
+        mes, ano, primeiro_dia_str, fim_ultimo_dia_str, target_cs_email
+    )
 
-    return resultado
+    # 5. Iterar, Calcular e Salvar
+    report_data = []
+    
+    for user_profile in all_cs_users_list:
+        if not isinstance(user_profile, dict): continue
+        user_email = user_profile.get('usuario')
+        if not user_email: continue
+            
+        try:
+            # Pega os dados pré-buscados para este usuário
+            metricas_manuais = metricas_manuais_map.get(user_email, {})
+            dados_tma = tma_data_map.get(user_email, {})
+            count_iniciadas = iniciadas_map.get(user_email, 0)
+            dados_tarefas = tarefas_map.get(user_email, {})
+            
+            # Chama a função de CÁLCULO (sem queries)
+            resultado, dados_automaticos_calculados = _calculate_user_gamification_score(
+                user_profile,
+                metricas_manuais,
+                regras_db,
+                dias_no_mes,
+                dados_tma,
+                count_iniciadas,
+                dados_tarefas
+            )
+            
+            # Adiciona ao relatório
+            report_data.append({
+                'usuario_nome': user_profile.get('nome', user_email),
+                'cargo': user_profile.get('cargo', 'N/A'),
+                'usuario_cs': user_email,
+                'mes': mes,
+                'ano': ano,
+                'status_calculo': 'Calculado/Atualizado',
+                **resultado # Adiciona chaves: 'elegivel', 'pontuacao_final', 'motivo_inelegibilidade', etc.
+            })
 
-# --- FIM AJUSTE 3 ---
+            # 6. Salvar os resultados calculados no DB (a lógica que estava no final da função antiga)
+            try:
+                # Combina métricas manuais (se existirem) com os dados automáticos calculados
+                dados_para_salvar = {
+                    **dados_automaticos_calculados,
+                    'data_registro': datetime.now()
+                }
+                
+                existing_record_id = metricas_manuais.get('id')
+                
+                if existing_record_id:
+                    # Atualiza o registro existente
+                    set_clauses_calc = [f"{key} = %s" for key in dados_para_salvar.keys()]
+                    sql_update_calc = f"UPDATE gamificacao_metricas_mensais SET {', '.join(set_clauses_calc)} WHERE id = %s"
+                    args_update_calc = list(dados_para_salvar.values()) + [existing_record_id]
+                    execute_db(sql_update_calc, tuple(args_update_calc))
+                
+                elif metricas_manuais:
+                    # Se existia métrica manual mas sem ID (improvável, mas seguro)
+                    print(f"AVISO: Métrica manual para {user_email} não tinha ID. Ignorando salvamento automático.")
+                
+            except Exception as db_update_err:
+                print(f"AVISO: Falha ao salvar resultados calculados da gamificação para {user_email} ({mes}/{ano}): {db_update_err}")
+
+        except Exception as e:
+            print(f"Erro ao processar gamificação (loop) para {user_email}: {e}")
+            report_data.append({
+                'usuario_nome': user_profile.get('nome', user_email),
+                'cargo': user_profile.get('cargo', 'N/A'),
+                'usuario_cs': user_email,
+                'mes': mes,
+                'ano': ano,
+                'elegivel': False,
+                'pontuacao_final': 0,
+                'motivo_inelegibilidade': f'Erro interno no sistema: {e}',
+                'detalhamento_pontos': {},
+                'status_calculo': 'Erro Crítico'
+            })
+
+    # 7. Ordenar e Retornar
+    report_data_sorted = sorted(report_data, key=lambda x: x['pontuacao_final'], reverse=True)
+    return report_data_sorted
+
+# --- FIM DA ALTERAÇÃO (Refatoração N+1) ---
