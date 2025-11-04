@@ -75,6 +75,9 @@ def manage_gamification_metrics():
     
     all_cs_users = _get_all_cs_users_for_gamification()
     
+    # --- Busca as regras para a UI ---
+    regras_agrupadas = _get_all_gamification_rules_grouped()
+    
     target_cs_email = request.args.get('cs_email')
     
     hoje = datetime.now()
@@ -98,7 +101,7 @@ def manage_gamification_metrics():
         )
     
     if not metricas_atuais:
-        metricas_atuais = {}
+        metricas_atuais = {} # Garante que é um dict para o template
 
 
     if request.method == 'POST':
@@ -176,7 +179,9 @@ def manage_gamification_metrics():
         current_mes=target_mes,
         current_ano=target_ano,
         metricas_atuais=metricas_atuais,
-        current_year=hoje.year
+        current_year=hoje.year,
+        # Passa as regras para o template
+        regras_agrupadas=regras_agrupadas
     )
 
 @gamification_bp.route('/report')
@@ -187,11 +192,18 @@ def gamification_report():
     all_cs_users = _get_all_cs_users_for_gamification()
     
     hoje = datetime.now()
-    primeiro_dia_mes = hoje.replace(day=1)
-    ultimo_dia_mes_passado = primeiro_dia_mes - timedelta(days=1) 
     
-    default_mes = int(request.args.get('mes', ultimo_dia_mes_passado.month))
-    default_ano = int(request.args.get('ano', ultimo_dia_mes_passado.year))
+    # --- INÍCIO DA ALTERAÇÃO (AJUSTE MÊS ATUAL) ---
+    # A lógica antiga usava o mês passado como padrão.
+    # primeiro_dia_mes = hoje.replace(day=1)
+    # ultimo_dia_mes_passado = primeiro_dia_mes - timedelta(days=1) 
+    # default_mes = int(request.args.get('mes', ultimo_dia_mes_passado.month))
+    # default_ano = int(request.args.get('ano', ultimo_dia_mes_passado.year))
+
+    # A nova lógica usa o mês atual como padrão.
+    default_mes = int(request.args.get('mes', hoje.month))
+    default_ano = int(request.args.get('ano', hoje.year))
+    # --- FIM DA ALTERAÇÃO ---
 
     report_data = []
     
@@ -261,11 +273,7 @@ def gamification_report():
         report_data=report_data_sorted,
         all_cs_users=all_cs_users,
         current_cs_email=target_cs_email,
-        
-        # --- INÍCIO DA CORREÇÃO ---
-        selected_month=default_mes,  # Corrigido de current_mes
-        selected_year=default_ano,   # Corrigido de current_ano
-        # --- FIM DA CORREÇÃO ---
-        
+        selected_month=default_mes,
+        selected_year=default_ano,
         current_year=hoje.year 
     )
