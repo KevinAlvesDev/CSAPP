@@ -128,7 +128,11 @@
                         <h6 class="text-primary mb-3 border-bottom pb-1 mt-4">Datas e Atributos de Sistema</h6>
                         <div class="row">
                             <div class="col-md-3 mb-3"> <label for="modal-data_cadastro" class="form-label">Data de Cadastro</label> <input type="text" class="form-control" id="modal-data_cadastro" readonly disabled> </div>
-                            <div class="col-md-3 mb-3"> <label for="modal-inicio_efetivo" class="form-label">Início Efetivo</label> <input type="text" class="form-control" id="modal-inicio_efetivo" readonly disabled> </div>
+                            
+                            <div class="col-md-3 mb-3"> 
+                                <label for="modal-inicio_efetivo" class="form-label">Início Efetivo (Editável)</label> 
+                                <input type="date" class="form-control" id="modal-inicio_efetivo" name="data_inicio_efetivo"> 
+                            </div>
                             <div class="col-md-3 mb-3"><label for="modal-data_inicio_producao" class="form-label">Início Produção (Data)</label><input type="date" class="form-control" id="modal-data_inicio_producao" name="data_inicio_producao"></div>
                             <div class="col-md-3 mb-3"><label for="modal-data_final_implantacao" class="form-label">Fim da Implantação (Data)</label><input type="date" class="form-control" id="modal-data_final_implantacao" name="data_final_implantacao"></div>
                         </div>
@@ -465,7 +469,12 @@
                     const respOnbNomeInput = modal.querySelector('#modal-resp_onb_nome'); if (respOnbNomeInput) respOnbNomeInput.value = getData('resp-onb-nome');
                     const contatosInput = modal.querySelector('#modal-contatos'); if (contatosInput) contatosInput.value = getData('contatos');
                     const respEstrategicoObsInput = modal.querySelector('#modal-resp_estrategico_obs'); if (respEstrategicoObsInput) respEstrategicoObsInput.value = getData('resp-estrategico-obs');
-                    const inicioEfetivoValueFromAttr = getData('inicio-efetivo');
+                    
+                    // --- ALTERAÇÃO AQUI ---
+                    // O campo agora é 'date', então usamos o 'data-inicio-efetivo-iso'
+                    const inicioEfetivoValueFromAttr = getData('inicio-efetivo-iso');
+                    // --- FIM DA ALTERAÇÃO ---
+
                     const dataCadastroInput = modal.querySelector('#modal-data_cadastro');
                     if(dataCadastroInput) dataCadastroInput.value = getData('inicio-implantacao');
                     const inicioEfetivoInput = modal.querySelector('#modal-inicio_efetivo');

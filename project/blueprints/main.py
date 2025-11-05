@@ -622,6 +622,12 @@ def atualizar_detalhes_empresa():
             'email_responsavel': get_form_value('email_responsavel'),
             'data_inicio_producao': get_form_value('data_inicio_producao'),
             'data_final_implantacao': get_form_value('data_final_implantacao'),
+            
+            # --- INÍCIO DA ALTERAÇÃO ---
+            # Adiciona o campo data_inicio_efetivo ao update
+            'data_inicio_efetivo': get_form_value('data_inicio_efetivo'),
+            # --- FIM DA ALTERAÇÃO ---
+
             'id_favorecido': get_form_value('id_favorecido'),
             'nivel_receita': get_form_value('nivel_receita'),
             'chave_oamd': get_form_value('chave_oamd'),
