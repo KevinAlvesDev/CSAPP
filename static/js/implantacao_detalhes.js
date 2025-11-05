@@ -1,144 +1,698 @@
-// static/js/implantacao_detalhes.js
+/*
+* =================================================================================
+* Funções AJAX para a página de detalhes da implantação (implantacao_detalhes.html)
+* =================================================================================
+*/
 
-// --- Funções Helper para UI ---
-// (Estas funções não precisam de dados do Flask)
-function formatDataComentario(dataStr) { if (!dataStr) return ''; try { const dateObj = new Date(dataStr.replace(' ', 'T') + 'Z'); if (isNaN(dateObj.getTime())) throw new Error("Inválida"); const day = String(dateObj.getDate()).padStart(2, '0'); const month = String(dateObj.getMonth() + 1).padStart(2, '0'); const year = dateObj.getFullYear(); return `${day}/${month}/${year}`; } catch (e) { console.error("Erro data:", dataStr, e); return 'Inválida'; } }
-function formatDataLog(dataStr) { if (!dataStr) return ''; try { const dateObj = new Date(dataStr.replace(' ', 'T') + 'Z'); if (isNaN(dateObj.getTime())) throw new Error("Inválida"); return dateObj.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(',', ' às'); } catch (e) { console.error("Erro data log:", dataStr, e); return 'Inválida'; } }
-function toggleComment(button, elementId) { const textElement = document.getElementById(elementId); if (!textElement) return; const isExpanded = textElement.classList.toggle('expanded'); button.textContent = isExpanded ? 'Ver menos...' : 'Ver mais...'; }
-function criarTimelineItemHTML(log) { if (!log || !log.data_criacao) return ''; let iconClass = 'bi-info-circle-fill'; if (log.tipo_evento === 'novo_comentario') iconClass = 'bi-chat-left-text-fill'; else if (log.tipo_evento?.includes('tarefa')) iconClass = 'bi-check-circle-fill'; else if (log.tipo_evento?.includes('status') || log.tipo_evento?.includes('implantacao') || log.tipo_evento?.includes('detalhes')) iconClass = 'bi-flag-fill'; else if (log.tipo_evento === 'modulo_excluido') iconClass = 'bi-trash-fill'; const dataFormatada = formatDataLog(log.data_criacao); const detalhesHTML = (log.detalhes || '').replace(/\n/g, '<br>'); return `<li class="timeline-item"><div class="timeline-icon"><i class="bi ${iconClass}"></i></div><div class="timeline-content"><div class="timeline-header"><span class="timeline-usuario">${log.usuario_nome || 'Sistema'}</span><span class="timeline-data">${dataFormatada}</span></div><p class="timeline-detalhes">${detalhesHTML}</p></div></li>`; }
-function adicionarLogNaTimeline(log) { if (!log) return; const timelineList = document.querySelector('#timeline-content .timeline-list'); if (!timelineList) return; const noTimelineMsg = document.getElementById('no-timeline-msg'); if (noTimelineMsg) noTimelineMsg.remove(); const logHTML = criarTimelineItemHTML(log); if (logHTML) timelineList.insertAdjacentHTML('afterbegin', logHTML); }
-function criarComentarioHTML(comentario, emailUsuarioLogado, urls) { if (!comentario || !comentario.id) return ''; const dataFormatada = formatDataComentario(comentario.data_criacao); let botaoExcluir = ''; if (comentario.usuario_cs == emailUsuarioLogado) { const urlExcluir = urls.delComentario + comentario.id; botaoExcluir = `<button class="btn btn-sm btn-link text-danger p-0 small mt-1" onclick="window.excluirComentario(${comentario.id}, '${urlExcluir}', this)">Excluir</button>`; } let textoHTML = `<p class="mb-1 small comment-text" id="comment-text-${comentario.id}">${comentario.texto || ''}</p>`; if (comentario.texto && comentario.texto.length > 200) { textoHTML += `<button class="btn btn-sm btn-link p-0 small" onclick="toggleComment(this, 'comment-text-${comentario.id}')">Ver mais...</button>`; } let imagemHTML = ''; if (comentario.imagem_url) { imagemHTML = `<a href="${comentario.imagem_url}" target="_blank" title="Ampliar"><img src="${comentario.imagem_url}" class="img-fluid rounded mt-1 comment-image"></a>`; } return `<div class="list-group-item list-group-item-action py-1 px-2" id="comentario-${comentario.id}"><div class="d-flex w-100 justify-content-between align-items-center mb-1"><strong class="mb-0 small"><i class="bi bi-person-fill me-1"></i> ${comentario.usuario_nome || comentario.usuario_cs}</strong><small class="text-secondary">${dataFormatada}</small></div><div class="comment-content-wrapper">${textoHTML}${imagemHTML}</div>${botaoExcluir}</div>`; }
-function updateProgressBar(progress) { const progressBar = document.querySelector('#main-content .progress-bar'); if (progressBar) { const progressNum = parseInt(progress) || 0; progressBar.style.width = progressNum + '%'; progressBar.setAttribute('aria-valuenow', progressNum); progressBar.textContent = progressNum + '%'; } }
+/**
+ * Pega o CSRF token (se você estiver usando WTForms ou Flask-SeaSurf)
+ * Você pode remover isso se não estiver usando CSRF por AJAX.
+ */
+function getCsrfToken() {
+    const token = document.querySelector('meta[name="csrf-token"]');
+    return token ? token.getAttribute('content') : '';
+}
 
-// --- Funções de Ação (Adaptadas para ler URLs do objeto CONFIG) ---
-function adicionarComentario(tarefaId, button, CONFIG) { 
-    const endpointUrl = CONFIG.endpoints.addComentario + tarefaId;
-    const form = button.closest('.comment-form'); const textarea = form.querySelector('textarea'); const fileInput = form.querySelector('input[type="file"]'); const comentarioTexto = textarea.value.trim(); const file = fileInput.files.length > 0 ? fileInput.files[0] : null; if (comentarioTexto === '' && !file) { alert('Comentário vazio sem imagem.'); return; } if (file) { const allowedTypes = ['image/png', 'image/jpeg', 'image/gif']; if (!allowedTypes.includes(file.type)) { alert('Tipo de arquivo não permitido.'); fileInput.value = null; return; } } const originalBtnHTML = button.innerHTML; button.disabled = true; button.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Salvando...'; const formData = new FormData(form); fetch(endpointUrl, { method: 'POST', body: formData }).then(response => response.json()).then(data => { if (data.ok && data.comentario) { const commentList = document.getElementById('comment-list-' + tarefaId); const noCommentMsg = document.getElementById('no-comment-' + tarefaId); if (noCommentMsg) noCommentMsg.remove(); const comentarioHTML = criarComentarioHTML(data.comentario, CONFIG.emailUsuarioLogado, CONFIG.endpoints); if (comentarioHTML) { commentList.insertAdjacentHTML('beforeend', comentarioHTML); commentList.scrollTop = commentList.scrollHeight; } textarea.value = ''; fileInput.value = null; adicionarLogNaTimeline(data.log_comentario); } else { throw new Error(data.error || 'Erro desconhecido.'); } }).catch(error => { console.error('Erro:', error); alert(`Erro: ${error.message}`); }).finally(() => { button.innerHTML = originalBtnHTML; button.disabled = false; }); }
-function excluirComentario(comentarioId, endpointUrl, button) { if (!confirm('Excluir este comentário?')) return; const comentarioElement = button.closest('.list-group-item'); if (comentarioElement) comentarioElement.style.opacity = '0.5'; fetch(endpointUrl, { method: 'POST' }).then(response => response.json()).then(data => { if (data.ok) { if (comentarioElement) comentarioElement.remove(); const listElement = button.closest('.list-group'); if(listElement && listElement.children.length === 0){ const tarefaIdGuess = listElement.id.split('-')[2]; listElement.innerHTML = `<div class="list-group-item ... fst-italic" id="no-comment-${tarefaIdGuess}"> Nenhum comentário. </div>`; } adicionarLogNaTimeline(data.log_exclusao); } else { throw new Error(data.error || 'Erro.'); } }).catch(error => { console.error('Erro:', error); alert(`Erro: ${error.message}`); if (comentarioElement) comentarioElement.style.opacity = '1'; }); }
-function toggleTarefa(tarefaId, checkbox, CONFIG) { 
-    const label = checkbox.closest('li').querySelector('label.form-check-label'); const isChecked = checkbox.checked; checkbox.disabled = true; 
-    const endpointUrl = CONFIG.endpoints.toggleTarefa + tarefaId;
-    fetch(endpointUrl, { method: 'POST' }).then(response => response.json()).then(data => { if (data.ok) { if (data.novo_status === 1) { label.classList.add('text-decoration-line-through', 'text-success'); } else { label.classList.remove('text-decoration-line-through', 'text-success'); } if (data.novo_progresso !== undefined) { updateProgressBar(data.novo_progresso); } adicionarLogNaTimeline(data.log_tarefa); if (data.implantacao_finalizada) { adicionarLogNaTimeline(data.log_finalizacao); window.location.reload(); } } else { checkbox.checked = !isChecked; throw new Error(data.error || 'Erro.'); } }).catch(error => { console.error('Erro:', error); alert(`Erro: ${error.message}`); checkbox.checked = !isChecked; }).finally(() => { checkbox.disabled = false; }); }
-function excluirTarefa(tarefaId, button, CONFIG) { 
-    if (!confirm('Excluir tarefa e comentários?')) return; 
-    const endpointUrl = CONFIG.endpoints.delTarefa + tarefaId;
-    button.disabled = true; button.innerHTML = '<span class="spinner-border spinner-border-sm"></span>'; const listItem = button.closest('.list-group-item'); if (listItem) listItem.style.opacity = '0.5'; fetch(endpointUrl, { method: 'POST' }).then(response => response.json()).then(data => { if (data.ok) { if(listItem) listItem.remove(); adicionarLogNaTimeline(data.log_exclusao); if (data.novo_progresso !== undefined) updateProgressBar(data.novo_progresso); if (data.implantacao_finalizada) { adicionarLogNaTimeline(data.log_finalizacao); window.location.reload(); } } else { throw new Error(data.error || 'Erro.'); } }).catch(error => { console.error('Erro:', error); alert(`Erro: ${error.message}`); button.innerHTML = '<i class="bi bi-x-lg"></i>'; button.disabled = false; if (listItem) listItem.style.opacity = '1'; }); }
-function excluirTodasDoModulo(button, moduloNome, CONFIG) { 
-    if (!confirm(`EXCLUIR TODAS as tarefas do módulo "${moduloNome}"? Irreversível!`)) return; 
-    const endpointUrl = CONFIG.endpoints.delModulo;
-    const cardElement = button.closest('.card'); const originalBtnHTML = button.innerHTML; button.disabled = true; button.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Excluindo...`; if (cardElement) cardElement.style.opacity = '0.5'; fetch(endpointUrl, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ implantacao_id: CONFIG.implantacaoId, tarefa_pai: moduloNome }) }).then(response => response.json()).then(data => { if (data.ok) { if (cardElement) { const taskList = cardElement.querySelector('.list-group-sortable'); if (taskList) { taskList.innerHTML = ''; const noTaskMsg = document.createElement('div'); noTaskMsg.className = 'list-group-item text-center small text-muted fst-italic'; noTaskMsg.textContent = 'Nenhuma tarefa. Use "Adicionar Tarefa".'; taskList.appendChild(noTaskMsg); } } adicionarLogNaTimeline(data.log_exclusao_modulo); if (data.novo_progresso !== undefined) updateProgressBar(data.novo_progresso); if (data.implantacao_finalizada) { adicionarLogNaTimeline(data.log_finalizacao); window.location.reload(); } } else { throw new Error(data.error || 'Erro.'); } }).catch(error => { console.error('Erro:', error); alert(`Erro: ${error.message}`); }).finally(() => { button.innerHTML = originalBtnHTML; button.disabled = false; if (cardElement) cardElement.style.opacity = '1'; }); }
-function marcarTodasDoModulo(button, collapseId, CONFIG) { 
-    const collapseElement = document.getElementById(collapseId); if (!collapseElement) return; const bsCollapse = bootstrap.Collapse.getOrCreateInstance(collapseElement); bsCollapse.show(); setTimeout(() => { const checkboxesNaoMarcadas = Array.from(collapseElement.querySelectorAll('.task-checkbox:not(:checked)')); if (checkboxesNaoMarcadas.length === 0) { alert('Todas já concluídas.'); return; } if (!confirm(`Marcar ${checkboxesNaoMarcadas.length} tarefa(s) como concluída(s)?`)) return; const originalBtnHTML = button.innerHTML; button.disabled = true; button.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Marcando...`; let promises = []; let errors = []; let ultimaFinalizada = false; let ultimoLogTarefa = null; let ultimoLogFinalizacao = null; let ultimoProgresso = null; checkboxesNaoMarcadas.forEach(checkbox => { const tarefaId = parseInt(checkbox.closest('li').dataset.id); if (isNaN(tarefaId)) return; 
-    const endpointUrl = CONFIG.endpoints.toggleTarefa + tarefaId;
-    checkbox.disabled = true; const promise = fetch(endpointUrl, { method: 'POST' }).then(response => response.json()).then(data => { if (data.ok) { const label = checkbox.closest('li').querySelector('label.form-check-label'); checkbox.checked = true; if(label) label.classList.add('text-decoration-line-through', 'text-success'); ultimoProgresso = data.novo_progresso; ultimoLogTarefa = data.log_tarefa; if(data.implantacao_finalizada) { ultimaFinalizada = true; ultimoLogFinalizacao = data.log_finalizacao; } return { success: true }; } else { throw new Error(data.error || 'Erro'); } }).catch(error => { console.error(`Erro ${tarefaId}:`, error); errors.push(tarefaId); checkbox.checked = false; const label = checkbox.closest('li').querySelector('label.form-check-label'); if(label) label.classList.remove('text-decoration-line-through', 'text-success'); return { success: false }; }).finally(() => { checkbox.disabled = false; }); promises.push(promise); }); Promise.all(promises).then(() => { button.innerHTML = originalBtnHTML; button.disabled = false; if (ultimoProgresso !== null) updateProgressBar(ultimoProgresso); if (ultimoLogTarefa) adicionarLogNaTimeline(ultimoLogTarefa); if (ultimaFinalizada) { if (ultimoLogFinalizacao) adicionarLogNaTimeline(ultimoLogFinalizacao); window.location.reload(); return; } if (errors.length > 0) alert(`Falha ao marcar ${errors.length} tarefa(s).`); }); }, 300); }
-
-// --- Inicialização da Página ---
-document.addEventListener('DOMContentLoaded', function() {
+/**
+ * Função helper para mostrar/esconder spinners de botões
+ * @param {HTMLElement} button - O elemento do botão
+ * @param {boolean} show - True para mostrar spinner, false para esconder
+ */
+function toggleButtonSpinner(button, show) {
+    if (!button) return;
+    const buttonText = button.querySelector('.button-text');
+    const spinner = button.querySelector('.spinner-border');
     
-    // 1. LÊ AS CONFIGURAÇÕES DO JINJA2 A PARTIR DA TAG <main>
-    const mainContent = document.getElementById('main-content');
-    if (!mainContent) {
-        console.error("Elemento #main-content não encontrado. A página de detalhes não funcionará.");
+    if (show) {
+        button.disabled = true;
+        if (buttonText) buttonText.style.display = 'none';
+        if (spinner) spinner.style.display = 'inline-block';
+    } else {
+        button.disabled = false;
+        if (buttonText) buttonText.style.display = 'inline-block';
+        if (spinner) spinner.style.display = 'none';
+    }
+}
+
+/**
+ * Função helper para atualizar o log da timeline (usado por várias funções)
+ * @param {object} logData - O objeto de log vindo da API
+ */
+function atualizarTimeline(logData) {
+    if (!logData) return;
+    
+    const timelineContainer = document.getElementById('timeline-container');
+    if (!timelineContainer) return;
+
+    // Formata a data (a API deve retornar 'data_criacao' em formato ISO)
+    let dataFormatada = 'agora';
+    if (logData.data_criacao) {
+        try {
+            const dataObj = new Date(logData.data_criacao);
+            dataFormatada = dataObj.toLocaleString('pt-BR', { 
+                day: '2-digit', 
+                month: '2-digit', 
+                year: 'numeric', 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+        } catch (e) { console.warn("Formato de data inválido no log da timeline."); }
+    }
+
+    // Cria o novo HTML do log
+    const logHtml = `
+        <li class="timeline-item">
+            <div class="timeline-info">
+                <strong>${logData.usuario_nome || logData.usuario_cs || 'Sistema'}</strong>
+                <span class="text-muted small">${dataFormatada}</span>
+            </div>
+            <div class="timeline-body">
+                <span class="badge ${logData.tipo_evento || 'log-default'}">${logData.tipo_evento || 'LOG'}</span>
+                <p class="mt-1 mb-0">${logData.detalhes.replace(/\n/g, '<br>') || ''}</p>
+            </div>
+        </li>
+    `;
+    
+    timelineContainer.insertAdjacentHTML('afterbegin', logHtml);
+}
+
+/**
+ * Atualiza o progresso da barra principal
+ * @param {number} novoProgresso - Valor de 0 a 100
+ */
+function atualizarBarraProgresso(novoProgresso) {
+    const progressBar = document.getElementById('main-progress-bar');
+    const progressText = document.getElementById('main-progress-text');
+    if (progressBar) {
+        progressBar.style.width = novoProgresso + '%';
+        progressBar.setAttribute('aria-valuenow', novoProgresso);
+    }
+    if (progressText) {
+        progressText.textContent = Math.round(novoProgresso) + '%';
+    }
+}
+
+/**
+ * Lida com o resultado de uma implantação finalizada (ex: toggle de tarefa)
+ * @param {object} logFinalizacao - O log da timeline vindo da API
+ */
+function handleImplantacaoFinalizada(logFinalizacao) {
+    if (logFinalizacao) {
+        // --- ATUALIZAÇÃO: Usa showToast ---
+        showToast('Implantação finalizada automaticamente!', 'success');
+        
+        // Atualiza o status na UI
+        const statusBadge = document.getElementById('status-badge');
+        if (statusBadge) {
+            statusBadge.className = 'badge bg-success';
+            statusBadge.textContent = 'Finalizada';
+        }
+        
+        // Atualiza a timeline
+        atualizarTimeline(logFinalizacao);
+        
+        // Desativa todos os botões de ação (ex: pausar, etc.)
+        document.querySelectorAll('.action-button').forEach(btn => btn.disabled = true);
+        
+        // Oculta área de adicionar tarefas/comentários
+        document.getElementById('add-task-form-container')?.remove();
+        document.querySelectorAll('.comment-form-container').forEach(form => form.remove());
+    }
+}
+
+
+// =================================================================================
+// FUNÇÕES DE AÇÃO (AJAX)
+// =================================================================================
+
+/**
+ * (Ação) Atualiza o status (Pausar, Iniciar, etc.)
+ * Usado pelo modal 'pararImplantacaoModal' e botões 'iniciar-agora', etc.
+ */
+function ajaxAtualizarStatus(implantacaoId, novoStatus, motivoParada = '') {
+    const url = `/implantacao/${implantacaoId}/atualizar-status`;
+    const button = document.getElementById(`btn-parar-implantacao`); // Assume que o ID é estático
+    
+    toggleButtonSpinner(button, true);
+
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            // 'X-CSRFToken': getCsrfToken() // Descomente se usar CSRF
+        },
+        body: JSON.stringify({
+            novo_status: novoStatus,
+            motivo_parada: motivoParada
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        toggleButtonSpinner(button, false);
+        if (data.ok) {
+            // Recarrega a página para refletir todas as mudanças de status
+            window.location.reload();
+        } else {
+            // --- ATUALIZAÇÃO: Substitui alert por showToast ---
+            showToast('Erro ao atualizar status: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        toggleButtonSpinner(button, false);
+        // --- ATUALIZAÇÃO: Substitui alert por showToast ---
+        showToast('Erro de rede: ' + error.message, 'error');
+        console.error('Erro de rede:', error);
+    });
+}
+
+/**
+ * (Ação) Marca ou desmarca uma tarefa como concluída
+ * @param {HTMLElement} checkbox - O input checkbox que foi clicado
+ * @param {number} tarefaId - O ID da tarefa
+ */
+function ajaxToggleTarefa(checkbox, tarefaId) {
+    const url = `/api/toggle_tarefa/${tarefaId}`;
+    const label = checkbox.closest('label');
+    const spinner = label ? label.querySelector('.task-spinner') : null;
+    const checkIcon = label ? label.querySelector('.check-icon') : null;
+
+    // Mostra spinner e esconde ícone
+    if (spinner) spinner.style.display = 'inline-block';
+    if (checkIcon) checkIcon.style.display = 'none';
+    checkbox.disabled = true;
+
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            // 'X-CSRFToken': getCsrfToken() 
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Esconde spinner e mostra ícone
+        if (spinner) spinner.style.display = 'none';
+        if (checkIcon) checkIcon.style.display = 'block';
+        checkbox.disabled = false;
+
+        if (data.ok) {
+            // Atualiza o progresso
+            atualizarBarraProgresso(data.novo_progresso);
+            // Atualiza a timeline
+            atualizarTimeline(data.log_tarefa);
+            // Verifica se a implantação foi finalizada
+            handleImplantacaoFinalizada(data.log_finalizacao);
+        } else {
+            // Reverte o checkbox se deu erro
+            checkbox.checked = !checkbox.checked;
+            // --- ATUALIZAÇÃO: Substitui alert por showToast ---
+            showToast(data.error, 'error');
+        }
+    })
+    .catch(error => {
+        // Esconde spinner e mostra ícone
+        if (spinner) spinner.style.display = 'none';
+        if (checkIcon) checkIcon.style.display = 'block';
+        checkbox.disabled = false;
+        
+        // Reverte o checkbox
+        checkbox.checked = !checkbox.checked;
+        
+        // --- ATUALIZAÇÃO: Substitui alert por showToast ---
+        showToast('Erro de rede: ' + error.message, 'error');
+        console.error('Erro de rede:', error);
+    });
+}
+
+/**
+ * (Ação) Adiciona um novo comentário a uma tarefa
+ * @param {HTMLFormElement} form - O formulário de comentário
+ */
+function ajaxAdicionarComentario(form) {
+    const tarefaId = form.dataset.tarefaId;
+    if (!tarefaId) return;
+    
+    const url = `/api/adicionar_comentario/${tarefaId}`;
+    const button = form.querySelector('button[type="submit"]');
+    const formData = new FormData(form);
+
+    toggleButtonSpinner(button, true);
+
+    fetch(url, {
+        method: 'POST',
+        body: formData,
+        // headers: { 'X-CSRFToken': getCsrfToken() } // FormData não usa Content-Type
+    })
+    .then(response => response.json())
+    .then(data => {
+        toggleButtonSpinner(button, false);
+        if (data.ok) {
+            // Limpa o formulário
+            form.reset();
+            const preview = form.querySelector('.comment-image-preview');
+            if (preview) preview.innerHTML = '';
+            
+            // Adiciona o comentário à lista na UI
+            const commentList = document.getElementById(`comment-list-${tarefaId}`);
+            if (commentList) {
+                // Formata a data (a API deve retornar 'data_criacao' em formato ISO)
+                let dataFormatada = 'agora';
+                if (data.comentario.data_criacao) {
+                    try {
+                        const dataObj = new Date(data.comentario.data_criacao);
+                        dataFormatada = dataObj.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                    } catch(e) {}
+                }
+
+                const imgHtml = data.comentario.imagem_url ? 
+                    `<a href="${data.comentario.imagem_url}" target="_blank" class="comment-image-link">
+                        <img src="${data.comentario.imagem_url}" alt="Imagem do Comentário" class="comment-image">
+                     </a>` : '';
+                
+                const commentHtml = `
+                    <div class="comment-item" id="comment-${data.comentario.id}">
+                        <div class="comment-header">
+                            <strong>${data.comentario.usuario_nome || data.comentario.usuario_cs}</strong>
+                            <span class="text-muted small">${dataFormatada}</span>
+                            <button class="btn btn-sm btn-outline-danger p-0 px-1 float-end" onclick="ajaxExcluirComentario(${data.comentario.id})">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                        <div class="comment-body">
+                            <p>${data.comentario.texto.replace(/\n/g, '<br>')}</p>
+                            ${imgHtml}
+                        </div>
+                    </div>
+                `;
+                commentList.insertAdjacentHTML('beforeend', commentHtml);
+            }
+            
+            // Atualiza a timeline
+            atualizarTimeline(data.log_comentario);
+            
+        } else {
+            // --- ATUALIZAÇÃO: Substitui alert por showToast ---
+            showToast(data.error, 'error');
+        }
+    })
+    .catch(error => {
+        toggleButtonSpinner(button, false);
+        // --- ATUALIZAÇÃO: Substitui alert por showToast ---
+        showToast('Erro de rede: ' + error.message, 'error');
+        console.error('Erro de rede:', error);
+    });
+}
+
+/**
+ * (Ação) Exclui um comentário
+ * @param {number} comentarioId - O ID do comentário
+ */
+function ajaxExcluirComentario(comentarioId) {
+    // --- ATENÇÃO: confirm() mantido intencionalmente ---
+    // A substituição ideal para 'confirm' é um Modal Bootstrap,
+    // que é uma alteração mais complexa.
+    if (!confirm('Tem certeza que deseja excluir este comentário?')) {
         return;
     }
-    const CONFIG = {
-        implantacaoId: parseInt(mainContent.dataset.implantacaoId, 10),
-        emailUsuarioLogado: mainContent.dataset.emailUsuarioLogado,
-        endpoints: {
-            reordenar: mainContent.dataset.urlReordenar,
-            toggleTarefa: mainContent.dataset.urlToggleTarefa,
-            addComentario: mainContent.dataset.urlAdicionarComentario,
-            delComentario: mainContent.dataset.urlExcluirComentario,
-            delTarefa: mainContent.dataset.urlExcluirTarefa,
-            delModulo: mainContent.dataset.urlExcluirModulo
+
+    const url = `/api/excluir_comentario/${comentarioId}`;
+    
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            // 'X-CSRFToken': getCsrfToken() 
         }
-    };
-    if (!CONFIG.implantacaoId) {
-         console.error("data-implantacao-id não encontrado no #main-content.");
-         return;
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.ok) {
+            // Remove o comentário da UI
+            const commentElement = document.getElementById(`comment-${comentarioId}`);
+            if (commentElement) {
+                commentElement.remove();
+            }
+            // Atualiza a timeline
+            atualizarTimeline(data.log_exclusao);
+            
+        } else {
+            // --- ATUALIZAÇÃO: Substitui alert por showToast ---
+            showToast(data.error, 'error');
+        }
+    })
+    .catch(error => {
+        // --- ATUALIZAÇÃO: Substitui alert por showToast ---
+        showToast('Erro de rede: ' + error.message, 'error');
+        console.error('Erro de rede:', error);
+    });
+}
+
+/**
+ * (Ação) Exclui uma tarefa
+ * @param {number} tarefaId - O ID da tarefa
+ * @param {HTMLElement} linkElement - O elemento <a> que foi clicado
+ */
+function ajaxExcluirTarefa(tarefaId, linkElement) {
+    // --- ATENÇÃO: confirm() mantido intencionalmente ---
+    if (!confirm('Tem certeza que deseja excluir esta tarefa? (Comentários e imagens associadas serão perdidos)')) {
+        return;
+    }
+    
+    const url = `/api/excluir_tarefa/${tarefaId}`;
+    
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            // 'X-CSRFToken': getCsrfToken() 
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.ok) {
+            // Remove a tarefa da UI
+            const taskElement = linkElement.closest('.task-item');
+            if (taskElement) {
+                taskElement.remove();
+            }
+            // Atualiza o progresso
+            atualizarBarraProgresso(data.novo_progresso);
+            // Atualiza a timeline
+            atualizarTimeline(data.log_exclusao);
+            // Verifica se a implantação foi finalizada
+            handleImplantacaoFinalizada(data.log_finalizacao);
+            
+        } else {
+            // --- ATUALIZAÇÃO: Substitui alert por showToast ---
+            showToast(data.error, 'error');
+        }
+    })
+    .catch(error => {
+        // --- ATUALIZAÇÃO: Substitui alert por showToast ---
+        showToast('Erro de rede: ' + error.message, 'error');
+        console.error('Erro de rede:', error);
+    });
+}
+
+/**
+ * (Ação) Adiciona uma nova tarefa
+ * @param {HTMLFormElement} form - O formulário de adicionar tarefa
+ */
+function ajaxAdicionarTarefa(form) {
+    const implantacaoId = form.dataset.implantacaoId;
+    if (!implantacaoId) return;
+
+    const url = `/implantacao/${implantacaoId}/adicionar-tarefa`;
+    const button = form.querySelector('button[type="submit"]');
+    const formData = new FormData(form);
+
+    toggleButtonSpinner(button, true);
+
+    fetch(url, {
+        method: 'POST',
+        body: formData,
+        // headers: { 'X-CSRFToken': getCsrfToken() } 
+    })
+    .then(response => response.json())
+    .then(data => {
+        toggleButtonSpinner(button, false);
+        if (data.ok) {
+            // Recarrega a página para refletir a nova tarefa e módulo
+            window.location.reload();
+        } else {
+            // --- ATUALIZAÇÃO: Substitui alert por showToast ---
+            showToast(data.error, 'error');
+        }
+    })
+    .catch(error => {
+        toggleButtonSpinner(button, false);
+        // --- ATUALIZAÇÃO: Substitui alert por showToast ---
+        showToast('Erro de rede: ' + error.message, 'error');
+        console.error('Erro de rede:', error);
+    });
+}
+
+/**
+ * (Ação) Reordena tarefas (via drag-and-drop do SortableJS)
+ * @param {string} moduloNome - O nome do módulo (tarefa_pai)
+ * @param {Array} novaOrdemIds - Array de IDs na nova ordem
+ * @param {number} implantacaoId - O ID da implantação
+ */
+function ajaxReordenarTarefas(moduloNome, novaOrdemIds, implantacaoId) {
+    const url = `/api/reordenar_tarefas`;
+    
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            // 'X-CSRFToken': getCsrfToken() 
+        },
+        body: JSON.stringify({
+            implantacao_id: implantacaoId,
+            tarefa_pai: moduloNome,
+            ordem: novaOrdemIds
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.ok) {
+            // Loga na timeline (o re-drag é permitido)
+            atualizarTimeline(data.log_reordenar);
+        } else {
+            // --- ATUALIZAÇÃO: Substitui alert por showToast ---
+            showToast('Erro ao reordenar tarefas: ' + data.error, 'error');
+            // Recarrega a página para reverter a ordem visual
+            window.location.reload();
+        }
+    })
+    .catch(error => {
+        // --- ATUALIZAÇÃO: Substitui alert por showToast ---
+        showToast('Erro de rede ao reordenar: ' + error.message, 'error');
+        console.error('Erro de rede:', error);
+        window.location.reload();
+    });
+}
+
+/**
+ * (Ação) Exclui todas as tarefas de um módulo
+ * @param {string} moduloNome - O nome do módulo (tarefa_pai)
+ * @param {number} implantacaoId - O ID da implantação
+ */
+function ajaxExcluirModulo(moduloNome, implantacaoId) {
+    // --- ATENÇÃO: confirm() mantido intencionalmente ---
+    if (!confirm(`Tem certeza que deseja excluir TODO o módulo '${moduloNome}'?\n\n(Todas as tarefas, comentários e imagens deste módulo serão perdidos!)`)) {
+        return;
     }
 
-    // 2. ATRIBUI OS EVENTOS (LISTENERS) AOS BOTÕES
-    // (Esta é a parte que substitui os onclicks inline)
-    document.body.addEventListener('click', function(event) {
-        const target = event.target;
-        
-        // Botão Salvar Comentário
-        const saveCommentButton = target.closest('.comment-form button[type="button"]');
-        if (saveCommentButton) {
-            const tarefaId = parseInt(target.closest('li[data-id]').dataset.id);
-            if(tarefaId) window.adicionarComentario(tarefaId, saveCommentButton, CONFIG);
-            return; 
+    const url = `/api/excluir_tarefas_modulo`;
+    
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            // 'X-CSRFToken': getCsrfToken() 
+        },
+        body: JSON.stringify({
+            implantacao_id: implantacaoId,
+            tarefa_pai: moduloNome
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.ok) {
+            // Remove o módulo da UI
+            const moduloElement = document.getElementById(`modulo-${moduloNome.replace(/[^a-zA-Z0-9]/g, '-')}`);
+            if (moduloElement) {
+                moduloElement.remove();
+            }
+            // Atualiza o progresso
+            atualizarBarraProgresso(data.novo_progresso);
+            // Atualiza a timeline
+            atualizarTimeline(data.log_exclusao_modulo);
+            // Verifica se a implantação foi finalizada
+            handleImplantacaoFinalizada(data.log_finalizacao);
+            
+        } else {
+            // --- ATUALIZAÇÃO: Substitui alert por showToast ---
+            showToast('Erro ao excluir módulo: ' + (data.error || 'Erro desconhecido'), 'error');
         }
+    })
+    .catch(error => {
+        // --- ATUALIZAÇÃO: Substitui alert por showToast ---
+        showToast('Erro de rede ao excluir módulo: ' + error.message, 'error');
+        console.error('Erro de rede:', error);
+    });
+}
 
-        // Botão Excluir Tarefa
-        const deleteTaskButton = target.closest('button[title="Excluir Tarefa"]');
-        if (deleteTaskButton) {
-            const tarefaId = parseInt(target.closest('li[data-id]').dataset.id);
-            if(tarefaId) window.excluirTarefa(tarefaId, deleteTaskButton, CONFIG);
-            return;
-        }
+/**
+ * (Ação) Salva os detalhes da empresa (Modal 'detalhesEmpresaModal')
+ * @param {HTMLFormElement} form - O formulário do modal
+ */
+function ajaxSalvarDetalhesEmpresa(form) {
+    const implantacaoId = form.dataset.implantacaoId;
+    if (!implantacaoId) return;
 
-        // Botão Marcar Todas
-        const markAllButton = target.closest('button[title="Marcar todas"]');
-        if (markAllButton) {
-             const collapseId = markAllButton.closest('.card-header').getAttribute('data-bs-target').substring(1);
-             if(collapseId) window.marcarTodasDoModulo(markAllButton, collapseId, CONFIG);
-             return;
-        }
+    const url = `/implantacao/${implantacaoId}/salvar-detalhes-empresa`;
+    const button = form.querySelector('button[type="submit"]');
+    const formData = new FormData(form);
 
-        // Botão Excluir Todas
-        const deleteAllButton = target.closest('button[title="Excluir todas"]');
-        if (deleteAllButton) {
-             const moduloNome = deleteAllButton.closest('.card-header').nextElementSibling.dataset.modulo;
-             if(moduloNome) window.excluirTodasDoModulo(deleteAllButton, moduloNome, CONFIG);
-             return;
-        }
+    toggleButtonSpinner(button, true);
 
-        // Botão "Ver mais..." (comentário)
-        const toggleCommentButton = target.closest('button[onclick^="toggleComment"]');
-        if (toggleCommentButton) {
-            // Este ainda usa o onclick inline, pois é gerado dinamicamente.
-            // A função global 'toggleComment' lida com isso.
-            return;
+    fetch(url, {
+        method: 'POST',
+        body: formData,
+        // headers: { 'X-CSRFToken': getCsrfToken() } 
+    })
+    .then(response => response.json())
+    .then(data => {
+        toggleButtonSpinner(button, false);
+        if (data.ok) {
+            // --- ATUALIZAÇÃO: Substitui alert por showToast ---
+            showToast('Detalhes salvos com sucesso!', 'success');
+            
+            // Fecha o modal
+            const modalElement = document.getElementById('detalhesEmpresaModal');
+            const modalInstance = bootstrap.Modal.getInstance(modalElement);
+            if (modalInstance) {
+                modalInstance.hide();
+            }
+            
+            // Atualiza os campos na página principal (se necessário)
+            // (Esta parte pode ser complexa e 'window.location.reload()' pode ser mais fácil)
+            if (data.log_detalhes) {
+                atualizarTimeline(data.log_detalhes);
+            }
+            
+            // Simplesmente recarrega para ver as mudanças
+            window.location.reload();
+            
+        } else {
+            // --- ATUALIZAÇÃO: Substitui alert por showToast ---
+            showToast(data.error, 'error');
         }
-        
-        // Botão Excluir Comentário
-        const deleteCommentButton = target.closest('button[onclick^="window.excluirComentario"]');
-        if (deleteCommentButton) {
-            // Este também usa onclick inline gerado dinamicamente.
-            return;
+    })
+    .catch(error => {
+        toggleButtonSpinner(button, false);
+        // --- ATUALIZAÇÃO: Substitui alert por showToast ---
+        showToast('Erro de rede: ' + error.message, 'error');
+        console.error('Erro de rede:', error);
+    });
+}
+
+
+// =================================================================================
+// EVENT LISTENERS (Inicialização)
+// =================================================================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // --- Listener para formulário de Adicionar Tarefa ---
+    const addTaskForm = document.getElementById('add-task-form');
+    if (addTaskForm) {
+        addTaskForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            ajaxAdicionarTarefa(this);
+        });
+    }
+
+    // --- Listeners para formulários de Adicionar Comentário ---
+    const commentForms = document.querySelectorAll('.comment-form');
+    commentForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            ajaxAdicionarComentario(this);
+        });
+
+        // Listener para preview de imagem no comentário
+        const imageInput = form.querySelector('input[type="file"]');
+        const previewContainer = form.querySelector('.comment-image-preview');
+        if (imageInput && previewContainer) {
+            imageInput.addEventListener('change', function() {
+                previewContainer.innerHTML = ''; // Limpa previews antigos
+                if (this.files && this.files[0]) {
+                    const file = this.files[0];
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        img.classList.add('comment-image-preview-thumb');
+                        
+                        const removeBtn = document.createElement('span');
+                        removeBtn.classList.add('remove-preview-btn');
+                        removeBtn.innerHTML = '&times;';
+                        removeBtn.onclick = () => {
+                            imageInput.value = ''; // Limpa o input
+                            previewContainer.innerHTML = ''; // Limpa o preview
+                        };
+
+                        previewContainer.appendChild(img);
+                        previewContainer.appendChild(removeBtn);
+                    }
+                    reader.readAsDataURL(file);
+                }
+            });
         }
     });
-    
-    // Listener separado para Checkbox (evento 'change')
-    document.body.addEventListener('change', function(event) {
-        const target = event.target;
-        // Toggle Tarefa (Checkbox)
-        if (target.classList.contains('task-checkbox')) {
-            const tarefaId = parseInt(target.closest('li[data-id]').dataset.id);
-            if(tarefaId) window.toggleTarefa(tarefaId, target, CONFIG);
-        }
-    });
 
-
-    // 3. INICIALIZA FUNCIONALIDADES DA PÁGINA (Sortable, Tabs)
-    // (Atribui as funções à 'window' para que os 'onclick' gerados dinamicamente funcionem)
-    window.toggleTarefa = toggleTarefa; 
-    window.adicionarComentario = adicionarComentario; 
-    window.excluirComentario = excluirComentario; 
-    window.toggleComment = toggleComment; 
-    window.excluirTarefa = excluirTarefa; 
-    window.marcarTodasDoModulo = marcarTodasDoModulo; 
-    window.excluirTodasDoModulo = excluirTodasDoModulo;
+    // --- Listener para o botão de salvar no modal 'pararImplantacaoModal' ---
+    const saveStopButton = document.getElementById('btn-salvar-parada');
+    if (saveStopButton) {
+        saveStopButton.addEventListener('click', function() {
+            const implantacaoId = this.dataset.implantacaoId;
+            const motivo = document.getElementById('motivo_parada_input').value;
+            if (!motivo) {
+                 // --- ATUALIZAÇÃO: Substitui alert por showToast ---
+                showToast('Por favor, selecione um motivo para a parada.', 'warning');
+                return;
+            }
+            ajaxAtualizarStatus(implantacaoId, 'parada', motivo);
+        });
+    }
     
-    document.querySelectorAll('.list-group-sortable').forEach(listEl => { const moduloContainer = listEl.closest('.collapse, .card'); let modulo = moduloContainer?.dataset.modulo; if (!modulo && moduloContainer?.classList.contains('card')) { const header = moduloContainer.querySelector('.card-header'); const collapseTarget = header?.getAttribute('data-bs-target'); if (collapseTarget) { const collapseElement = document.querySelector(collapseTarget); if(collapseElement) modulo = collapseElement.dataset.modulo; } if (!modulo) { const headerText = header?.querySelector('h5')?.textContent.trim(); if (headerText) modulo = headerText; } } if (!modulo) { console.warn("Módulo não encontrado:", listEl); return; } new Sortable(listEl, { animation: 150, handle: '.handle', ghostClass: 'bg-secondary', onEnd: function (evt) { const novaOrdemIds = Array.from(evt.to.children).map(item => parseInt(item.dataset.id)); fetch(CONFIG.endpoints.reordenar, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ implantacao_id: CONFIG.implantacaoId, tarefa_pai: modulo, ordem: novaOrdemIds }) }).then(r => r.json()).then(d => { if (d.ok) adicionarLogNaTimeline(d.log_reordenar); else throw new Error(d.error); }).catch(e => alert('Erro salvar ordem.')); }, }); });
-    const tabSelector = '#detalhesTab .nav-link'; const tabPaneSelector = '#detalhesTabContent .tab-pane'; const tabs = document.querySelectorAll(tabSelector); const panes = document.querySelectorAll(tabPaneSelector); const tabStorageKey = `tabAtiva-implantacao-${CONFIG.implantacaoId}`;
-    function activateTabById(buttonId) { const targetButton = document.getElementById(buttonId); const targetPaneId = targetButton?.getAttribute('data-bs-target'); if (!targetButton || !targetPaneId) { console.warn(`[ActivateTab] Botão/painel não encontrado: ${buttonId}`); return false; } const targetPane = document.querySelector(targetPaneId); if (!targetPane) { console.warn(`[ActivateTab] Painel não encontrado: ${targetPaneId}`); return false; } console.log(`[ActivateTab] Ativando: ${buttonId}`); tabs.forEach(t => t.classList.remove('active')); panes.forEach(p => p.classList.remove('active', 'show')); targetButton.classList.add('active'); targetPane.classList.add('active', 'show'); localStorage.setItem(tabStorageKey, buttonId); return true; }
-    tabs.forEach(tab => { tab.addEventListener('shown.bs.tab', event => { console.log('[Tab Event] shown:', event.target.id); localStorage.setItem(tabStorageKey, event.target.id); if (window.location.hash) { console.log('[Tab Event] Limpando hash'); history.pushState("", document.title, window.location.pathname + window.location.search); } }); });
-    let activated = false; const urlHash = window.location.hash; console.log('[Init] Hash:', urlHash); if (urlHash) { let hashId = urlHash.substring(1); let buttonIdToActivate = null; if (hashId.endsWith('-content')) { buttonIdToActivate = hashId.replace('-content', '-tab'); } else { const directButton = document.getElementById(hashId); if (directButton && directButton.matches(tabSelector)) { buttonIdToActivate = hashId; } } if (buttonIdToActivate) { console.log('[Init] Ativando via hash:', buttonIdToActivate); if (activateTabById(buttonIdToActivate)) { activated = true; console.log('[Init] Limpando hash pós ativação.'); history.pushState("", document.title, window.location.pathname + window.location.search); } else { history.pushState("", document.title, window.location.pathname + window.location.search); } } else { console.warn('[Init] Hash inválido.'); history.pushState("", document.title, window.location.pathname + window.location.search); } }
-    if (!activated) { const savedTabId = localStorage.getItem(tabStorageKey); console.log('[Init] Restaurando via localStorage:', savedTabId); if (savedTabId) { if (!activateTabById(savedTabId)) { localStorage.removeItem(tabStorageKey); } else { activated = true; } } }
-    if (!activated) { const firstTabButton = document.querySelector(tabSelector); if (firstTabButton) { console.log('[Init Fallback] Ativando padrão:', firstTabButton.id); activateTabById(firstTabButton.id); } else { console.error("[Init Fallback] Nenhuma aba!"); } }
-    document.querySelectorAll('.comment-text').forEach(textEl => { const wrapper = textEl.closest('.comment-content-wrapper'); let button = wrapper ? wrapper.querySelector('button[onclick^="toggleComment"]') : null; const maxHeight = parseFloat(window.getComputedStyle(textEl).maxHeight); const isOverflowing = textEl.scrollHeight > maxHeight + 5; if (isOverflowing && !button) { const newButton = document.createElement('button'); newButton.className = 'btn btn-sm btn-link p-0 small'; newButton.textContent = 'Ver mais...'; newButton.onclick = function() { toggleComment(this, textEl.id); }; textElement.parentNode.insertBefore(newButton, textEl.nextSibling); } else if (!isOverflowing && button) { button.remove(); } else if (isOverflowing && button) { button.textContent = textEl.classList.contains('expanded') ? 'Ver menos...' : 'Ver mais...'; } });
-    document.querySelectorAll('.card-header[data-bs-toggle="collapse"]').forEach(header => { const collapseId = header.getAttribute('data-bs-target'); const collapseElement = document.querySelector(collapseId); const icon = header.querySelector('i.bi-chevron-down, i.bi-chevron-up'); if (collapseElement && icon) { collapseElement.addEventListener('show.bs.collapse', () => { icon.classList.replace('bi-chevron-down','bi-chevron-up'); }); collapseElement.addEventListener('hide.bs.collapse', () => { icon.classList.replace('bi-chevron-up','bi-chevron-down'); }); if (collapseElement.classList.contains('show')) { icon.classList.replace('bi-chevron-down','bi-chevron-up'); } } });
+    // --- Listener para o botão de salvar no modal 'detalhesEmpresaModal' ---
+    const saveDetalhesForm = document.getElementById('detalhes-empresa-form');
+    if (saveDetalhesForm) {
+        saveDetalhesForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            ajaxSalvarDetalhesEmpresa(this);
+        });
+    }
+
+    // --- Inicialização do Drag-and-Drop (SortableJS) ---
+    // (A biblioteca SortableJS precisa estar importada no seu <head> ou <body>)
+    if (typeof Sortable !== 'undefined') {
+        const taskLists = document.querySelectorAll('.task-list');
+        taskLists.forEach(list => {
+            new Sortable(list, {
+                group: 'tarefas', // Permite arrastar entre listas
+                animation: 150,
+                handle: '.drag-handle', // Define o ícone de arrastar
+                ghostClass: 'sortable-ghost', // Classe CSS para o "fantasma"
+                chosenClass: 'sortable-chosen', // Classe CSS para o item escolhido
+                dragClass: 'sortable-drag', // Classe CSS para o item sendo arrastado
+                
+                // Chamado ao soltar um item
+                onEnd: function (evt) {
+                    const itemEl = evt.item; // O item arrastado
+                    const toList = evt.to; // A lista de destino
+                    const moduloNome = toList.dataset.moduloNome;
+                    const implantacaoId = toList.dataset.implantacaoId;
+
+                    if (!moduloNome || !implantacaoId) {
+                        console.error("Dados do módulo ou implantação não encontrados na lista.");
+                        return;
+                    }
+
+                    // Pega a nova ordem dos IDs
+                    const novaOrdemIds = Array.from(toList.children).map(el => el.dataset.tarefaId);
+                    
+                    // Envia a nova ordem para o backend
+                    ajaxReordenarTarefas(moduloNome, novaOrdemIds, implantacaoId);
+                }
+            });
+        });
+    } else {
+        console.warn("Biblioteca SortableJS não encontrada. Drag-and-drop não será ativado.");
+    }
+    
 });
