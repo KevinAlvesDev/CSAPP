@@ -1,14 +1,15 @@
 from flask import Blueprint, render_template, request, flash, redirect, url_for, g
 from ..blueprints.auth import permission_required
 from ..db import query_db, execute_db
-# --- ALTERAÇÃO ---
-# Trocamos a chamada de 'calcular_pontuacao_gamificacao' 
-# pela nova função de busca em massa 'get_gamification_report_data'
-from ..services import get_gamification_report_data
-# --- FIM DA ALTERAÇÃO ---
+
+# --- CORREÇÃO: Imports movidos daqui ---
+# from ..domain.gamification_service import get_gamification_report_data, _get_gamification_automatic_data_bulk
+# --- FIM CORREÇÃO ---
+
 from ..constants import PERFIS_COM_GESTAO
 from datetime import datetime, timedelta 
 from collections import OrderedDict 
+import calendar 
 
 gamification_bp = Blueprint('gamification', __name__, url_prefix='/gamification')
 
@@ -77,6 +78,10 @@ def save_gamification_rules_from_modal():
 def manage_gamification_metrics():
     """Rota para gestores inserirem/atualizarem as métricas manuais de um CS."""
     
+    # --- INÍCIO DA CORREÇÃO (Mover import para dentro da função) ---
+    from ..domain.gamification_service import _get_gamification_automatic_data_bulk
+    # --- FIM DA CORREÇÃO ---
+    
     all_cs_users = _get_all_cs_users_for_gamification()
     
     # --- Busca as regras para a UI ---
@@ -97,13 +102,60 @@ def manage_gamification_metrics():
 
     
     metricas_atuais = None
+    metricas_automaticas = {}
+    
     if target_cs_email:
+        # 1. Busca métricas manuais (existente)
         metricas_atuais = query_db(
             "SELECT * FROM gamificacao_metricas_mensais WHERE usuario_cs = %s AND mes = %s AND ano = %s",
             (target_cs_email, target_mes, target_ano),
             one=True
         )
-    
+        
+        # (Buscar métricas automáticas para visualização)
+        try:
+            # Definir Período
+            primeiro_dia = datetime(target_ano, target_mes, 1)
+            dias_no_mes = calendar.monthrange(target_ano, target_mes)[1]
+            ultimo_dia = datetime(target_ano, target_mes, dias_no_mes)
+            fim_ultimo_dia = datetime.combine(ultimo_dia, datetime.max.time())
+            
+            primeiro_dia_str = primeiro_dia.isoformat()
+            fim_ultimo_dia_str = fim_ultimo_dia.isoformat()
+
+            # Chamar a função bulk (filtrando para 1 user)
+            tma_data_map, iniciadas_map, tarefas_map = _get_gamification_automatic_data_bulk(
+                target_mes, target_ano, primeiro_dia_str, fim_ultimo_dia_str, target_cs_email
+            )
+            
+            # Processar os resultados para este user
+            dados_tma = tma_data_map.get(target_cs_email, {})
+            count_iniciadas = iniciadas_map.get(target_cs_email, 0)
+            dados_tarefas = tarefas_map.get(target_cs_email, {})
+
+            # Calcular valores
+            count_finalizadas = dados_tma.get('count', 0)
+            tma_total_dias = dados_tma.get('total_dias', 0)
+            tma_medio = round(tma_total_dias / count_finalizadas, 1) if count_finalizadas > 0 else 0.0
+
+            count_acao_interna = dados_tarefas.get('Ação interna', 0)
+            count_reuniao = dados_tarefas.get('Reunião', 0)
+            
+            media_reunioes_dia = round(count_reuniao / dias_no_mes, 2) if dias_no_mes > 0 else 0.0
+            media_acoes_dia = round(count_acao_interna / dias_no_mes, 2) if dias_no_mes > 0 else 0.0
+
+            metricas_automaticas = {
+                'tma_medio_mes': f"{tma_medio} dias" if tma_medio > 0 else "N/A",
+                'impl_iniciadas_mes': count_iniciadas,
+                'reunioes_concluidas_dia_media': f"{media_reunioes_dia:.2f}",
+                'acoes_concluidas_dia_media': f"{media_acoes_dia:.2f}"
+            }
+            
+        except Exception as e_auto:
+            print(f"Erro ao calcular métricas automáticas para {target_cs_email}: {e_auto}")
+            flash(f"Erro ao buscar dados automáticos: {e_auto}", "warning")
+
+
     if not metricas_atuais:
         metricas_atuais = {} # Garante que é um dict para o template
 
@@ -183,8 +235,8 @@ def manage_gamification_metrics():
         current_mes=target_mes,
         current_ano=target_ano,
         metricas_atuais=metricas_atuais,
+        metricas_automaticas=metricas_automaticas,
         current_year=hoje.year,
-        # Passa as regras para o template
         regras_agrupadas=regras_agrupadas
     )
 
@@ -193,32 +245,30 @@ def manage_gamification_metrics():
 def gamification_report():
     """Rota para exibir o relatório de pontuação da gamificação."""
     
+    # --- INÍCIO DA CORREÇÃO (Mover import para dentro da função) ---
+    from ..domain.gamification_service import get_gamification_report_data
+    # --- FIM DA CORREÇÃO ---
+    
     all_cs_users = _get_all_cs_users_for_gamification()
     
     hoje = datetime.now()
     
-    # --- ALTERAÇÃO (AJUSTE MÊS ATUAL) ---
     default_mes = int(request.args.get('mes', hoje.month))
     default_ano = int(request.args.get('ano', hoje.year))
-    # --- FIM DA ALTERAÇÃO ---
     
     target_cs_email = request.args.get('cs_email')
-    
-    # --- INÍCIO DA ALTERAÇÃO (N+1) ---
-    # A lógica de loop foi movida para 'get_gamification_report_data'
     
     try:
         report_data_sorted = get_gamification_report_data(
             default_mes, 
             default_ano, 
             target_cs_email,
-            all_cs_users_list=all_cs_users # Passa a lista de usuários para evitar re-query
+            all_cs_users_list=all_cs_users 
         )
     except Exception as e:
         print(f"ERRO CRÍTICO ao gerar relatório de gamificação: {e}")
         flash(f"Erro ao gerar relatório: {e}", "error")
         report_data_sorted = []
-    # --- FIM DA ALTERAÇÃO (N+1) ---
 
     return render_template(
         'gamification_report.html',

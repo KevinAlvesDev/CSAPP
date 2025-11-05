@@ -157,7 +157,7 @@
                                     <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_atribuido|float) if impl.valor_atribuido else 'N/A' }}</td>
                                     <td class="text-nowrap">
                                         {% if impl.usuario_cs == g.user_email %}
-                                        <form method="POST" action="{{ url_for('main.iniciar_implantacao') }}" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja iniciar esta implantação agora?');">
+                                        <form method="POST" action="{{ url_for('actions.iniciar_implantacao') }}" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja iniciar esta implantação agora?');">
                                             <input type="hidden" name="implantacao_id" value="{{ impl.id }}">
                                             <input type="hidden" name="redirect_to" value="dashboard">
                                             <button type="submit" class="btn btn-sm btn-success" title="Iniciar Agora">
@@ -323,7 +323,7 @@
                 <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_atribuido|float) if impl.valor_atribuido else 'N/A' }}</td> 
                 <td class="text-nowrap">
                     {% if impl.usuario_cs == g.user_email %}
-                    <form method="POST" action="{{ url_for('main.iniciar_implantacao') }}" style="display:inline;"> 
+                    <form method="POST" action="{{ url_for('actions.iniciar_implantacao') }}" style="display:inline;"> 
                         <input type="hidden" name="implantacao_id" value="{{ impl.id }}"> 
                         <button type="submit" class="btn btn-sm btn-success">Iniciar</button> 
                     </form> 
@@ -369,7 +369,7 @@
                 <td class="text-nowrap"> 
                     <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary">Ver Histórico</a> 
                     {% if impl.usuario_cs == g.user_email %}
-                    <form method="POST" action="{{ url_for('main.reabrir_implantacao') }}" style="display:inline;" onsubmit="return confirm('Tem certeza?');"> 
+                    <form method="POST" action="{{ url_for('actions.reabrir_implantacao') }}" style="display:inline;" onsubmit="return confirm('Tem certeza?');"> 
                         <input type="hidden" name="implantacao_id" value="{{ impl.id }}"> 
                         <input type="hidden" name="redirect_to" value="dashboard"> 
                         <button type="submit" class="btn btn-sm btn-warning ms-1">Reabrir</button> 
@@ -415,7 +415,7 @@
                 <td class="text-nowrap"> 
                     <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary">Ver Detalhes</a> 
                     {% if impl.usuario_cs == g.user_email %}
-                    <form method="POST" action="{{ url_for('main.retomar_implantacao') }}" style="display:inline;" onsubmit="return confirm('Tem certeza?');"> 
+                    <form method="POST" action="{{ url_for('actions.retomar_implantacao') }}" style="display:inline;" onsubmit="return confirm('Tem certeza?');"> 
                         <input type="hidden" name="implantacao_id" value="{{ impl.id }}"> 
                         <input type="hidden" name="redirect_to" value="dashboard"> 
                         <button type="submit" class="btn btn-sm btn-success ms-1">Retomar</button> 
@@ -435,7 +435,7 @@
                 <h5 class="modal-title">Nova Implantação</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ url_for('main.criar_implantacao') }}" method="POST">
+            <form action="{{ url_for('actions.criar_implantacao') }}" method="POST">
                 <div class="modal-body">
                     {% if g.perfil.perfil_acesso in PERFIS_COM_CRIACAO %}
                     <div class="mb-3">
@@ -475,7 +475,7 @@
                 <h5 class="modal-title">Implantar Novo Módulo</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ url_for('main.criar_implantacao_modulo') }}" method="POST">
+            <form action="{{ url_for('actions.criar_implantacao_modulo') }}" method="POST">
                 <div class="modal-body">
                     {% if g.perfil.perfil_acesso in PERFIS_COM_CRIACAO %}
                     <p>Isso criará uma nova implantação do tipo "Módulo" e a definirá como "Nova" para o implantador selecionado.</p>
@@ -516,7 +516,7 @@
                 <h5 class="modal-title" id="agendarInicioModalLabel">Agendar Início Futuro</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ url_for('main.agendar_implantacao') }}" method="POST">
+            <form action="{{ url_for('actions.agendar_implantacao') }}" method="POST">
                 <div class="modal-body">
                     <p>Selecione a data de início previsto para a implantação: <strong id="agendarNomeEmpresa"></strong></p>
                     <input type="hidden" name="implantacao_id" id="agendarImplId" value="">

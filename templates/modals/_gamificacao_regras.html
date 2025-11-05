@@ -1,0 +1,114 @@
+{# templates/modals/_gamificacao_regras.html #}
+{# Este ficheiro contém o HTML do modal "Critérios Gamificação", extraído de base.html #}
+
+<div class="modal fade" id="modalGamificacao" tabindex="-1" aria-labelledby="modalGamificacaoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable"> 
+        <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);">
+        
+        {# g.is_manager e g.gamification_rules vêm do __init__.py #}
+        
+        {# Apenas 'Administrador' pode editar #}
+        {% if g.perfil and g.perfil.perfil_acesso == 'Administrador' %}
+
+            {# 1. MODO GESTOR: Formulário de Edição #}
+            <form action="{{ url_for('gamification.save_gamification_rules_from_modal') }}" method="POST">
+                <div class="modal-header header-bg">
+                    <h5 class="modal-title" id="modalGamificacaoLabel" style="color: var(--body-color);">
+                        <i class="bi bi-pencil-square me-2"></i> Editar Pontos da Gamificação
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    {% if not g.gamification_rules %}
+                        <div class="alert alert-warning">Nenhuma regra de gamificação encontrada no banco de dados. (Execute 'flask init-db')</div>
+                    {% endif %}
+
+                    {% for categoria, regras in g.gamification_rules.items() %}
+                        <h5 class="mt-3 mb-3 text-primary border-bottom pb-2">{{ categoria }}</h5>
+                        
+                        {% for regra in regras %}
+                        <div class="row mb-2">
+                            <label for="regra-{{ regra.regra_id }}" class="col-md-7 col-form-label text-md-end">
+                                {{ regra.descricao }}
+                            </label>
+                            <div class="col-md-5">
+                                <div class="input-group">
+                                    <input type="number" 
+                                           class="form-control" 
+                                           id="regra-{{ regra.regra_id }}" 
+                                           name="regra-{{ regra.regra_id }}" 
+                                           value="{{ regra.valor_pontos }}"
+                                           step="1"
+                                           required>
+                                    
+                                    {% set suffix = 'pontos' %}
+                                    {% if regra.tipo_valor == 'percentual' %}{% set suffix = '%' %}
+                                    {% elif regra.tipo_valor == 'quantidade' %}{% set suffix = 'unid.' %}
+                                    {% elif regra.tipo_valor == 'dias' %}{% set suffix = 'dias' %}
+                                    {% elif regra.tipo_valor == 'penalidade' %}{% set suffix = 'pontos (negativos)' %}
+                                    {% endif %}
+                                    
+                                    <span class="input-group-text" style="min-width: 130px;">{{ suffix }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% endfor %}
+                </div>
+                <div class="modal-footer header-bg"> 
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i> Salvar Pontos</button> 
+                </div>
+            </form>
+
+        {% else %}
+            {# 2. MODO PADRÃO (INCLUINDO GERENTES/COORD): Visualização (Estático) #}
+            <div class="modal-header header-bg">
+                <h5 class="modal-title" id="modalGamificacaoLabel" style="color: var(--body-color);">Gamificação - Critérios e Pontuação</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                {# Mostra as regras do DB de forma estática se não for admin #}
+                {% if not g.gamification_rules %}
+                    <div class="alert alert-info">Carregando regras...</div>
+                {% endif %}
+
+                {% for categoria, regras in g.gamification_rules.items() %}
+                    <div class="card mb-3">
+                        <div class="card-header 
+                            {% if categoria == 'Penalidades' %}bg-danger text-white
+                            {% elif 'Bônus' in categoria %}bg-success text-white
+                            {% elif categoria == 'Elegibilidade' %}bg-warning text-dark
+                            {% endif %}"
+                        >
+                            {{ categoria }}
+                        </div>
+                        <ul class="list-group list-group-flush">
+                            {% for regra in regras %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>{{ regra.descricao }}</span>
+                                    
+                                    {% set suffix = 'pts' %}
+                                    {% if regra.tipo_valor == 'percentual' %}{% set suffix = '%' %}
+                                    {% elif regra.tipo_valor == 'quantidade' %}{% set suffix = ' (limite)' %}
+                                    {% elif regra.tipo_valor == 'dias' %}{% set suffix = ' dias' %}
+                                    {% elif regra.tipo_valor == 'penalidade' %}{% set suffix = ' pts' %}
+                                    {% endif %}
+
+                                    <strong class="text-nowrap ms-3">
+                                        {{ regra.valor_pontos }}{{ suffix }}
+                                    </strong>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endfor %}
+             </div> 
+             <div class="modal-footer header-bg"> 
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button> 
+             </div>
+        {% endif %}
+
+        </div> 
+    </div>
+</div>

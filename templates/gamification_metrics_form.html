@@ -96,120 +96,115 @@
                 <script>
                     const pontosRegrasManuais = {};
                 </script>
-
-                <div class="row g-3">
-                    
-                    <div class="col-12"><h6 class="text-primary mt-2">Métricas de Performance (%)</h6></div>
-                    <div class="col-md-3">
-                        <label for="nota_qualidade" class="form-label">Nota de Qualidade (0-100)</label>
-                        {# --- INÍCIO DA CORREÇÃO (Adiciona metric-input e data-regra-id) --- #}
+                
+                <h6 class="text-primary mt-3">Métricas de Performance (%)</h6>
+                
+                <div class="row mb-3 align-items-center">
+                    <label for="nota_qualidade" class="col-md-7 col-form-label text-md-end">Nota de Qualidade (0-100)</label>
+                    <div class="col-md-5">
                         <input type="number" class="form-control metric-input" id="nota_qualidade" name="nota_qualidade" min="0" max="100" step="0.1" value="{{ metricas_atuais.nota_qualidade if metricas_atuais.nota_qualidade is not none }}" data-regra-id="pts_qualidade">
-                        {# --- FIM DA CORREÇÃO --- #}
                     </div>
-                    <div class="col-md-3">
-                        <label for="assiduidade" class="form-label">Assiduidade (0-100)</label>
-                        {# --- INÍCIO DA CORREÇÃO (Adiciona metric-input e data-regra-id) --- #}
+                </div>
+
+                <div class="row mb-3 align-items-center">
+                    <label for="assiduidade" class="col-md-7 col-form-label text-md-end">Assiduidade (0-100)</label>
+                    <div class="col-md-5">
                         <input type="number" class="form-control metric-input" id="assiduidade" name="assiduidade" min="0" max="100" step="0.1" value="{{ metricas_atuais.assiduidade if metricas_atuais.assiduidade is not none }}" data-regra-id="pts_assiduidade">
-                        {# --- FIM DA CORREÇÃO --- #}
                     </div>
-                    <div class="col-md-3">
-                        <label for="planos_sucesso_perc" class="form-label">Planos de Sucesso (0-100)</label>
-                        {# --- INÍCIO DA CORREÇÃO (Adiciona metric-input e data-regra-id) --- #}
+                </div>
+
+                <div class="row mb-3 align-items-center">
+                    <label for="planos_sucesso_perc" class="col-md-7 col-form-label text-md-end">Planos de Sucesso (0-100)</label>
+                    <div class="col-md-5">
                         <input type="number" class="form-control metric-input" id="planos_sucesso_perc" name="planos_sucesso_perc" min="0" max="100" step="0.1" value="{{ metricas_atuais.planos_sucesso_perc if metricas_atuais.planos_sucesso_perc is not none }}" data-regra-id="pts_planos">
-                        {# --- FIM DA CORREÇÃO --- #}
                     </div>
-                    <div class="col-md-3">
-                        <label for="satisfacao_processo" class="form-label">Satisfação do Processo (0-100)</label>
-                        {# --- INÍCIO DA CORREÇÃO (Adiciona metric-input e data-regra-id) --- #}
+                </div>
+
+                <div class="row mb-3 align-items-center">
+                    <label for="satisfacao_processo" class="col-md-7 col-form-label text-md-end">Satisfação do Processo (0-100)</label>
+                    <div class="col-md-5">
                         <input type="number" class="form-control metric-input" id="satisfacao_processo" name="satisfacao_processo" min="0" max="100" step="0.1" value="{{ metricas_atuais.satisfacao_processo if metricas_atuais.satisfacao_processo is not none }}" data-regra-id="pts_satisfacao">
-                        {# --- FIM DA CORREÇÃO --- #}
                     </div>
+                </div>
+
+                {# Script de Pontos de Performance (Mantido) #}
+                <script>
+                    // Pontos: Qualidade
+                    pontosRegrasManuais['pts_qualidade'] = {
+                        100: {{ regras_agrupadas['Pontos: Qualidade'] | selectattr('regra_id', 'equalto', 'pts_qualidade_100') | map(attribute='valor_pontos') | first | default(0) }},
+                        95: {{ regras_agrupadas['Pontos: Qualidade'] | selectattr('regra_id', 'equalto', 'pts_qualidade_95') | map(attribute='valor_pontos') | first | default(0) }},
+                        90: {{ regras_agrupadas['Pontos: Qualidade'] | selectattr('regra_id', 'equalto', 'pts_qualidade_90') | map(attribute='valor_pontos') | first | default(0) }},
+                        85: {{ regras_agrupadas['Pontos: Qualidade'] | selectattr('regra_id', 'equalto', 'pts_qualidade_85') | map(attribute='valor_pontos') | first | default(0) }},
+                        80: {{ regras_agrupadas['Pontos: Qualidade'] | selectattr('regra_id', 'equalto', 'pts_qualidade_80') | map(attribute='valor_pontos') | first | default(0) }}
+                    };
+                    // Pontos: Assiduidade
+                    pontosRegrasManuais['pts_assiduidade'] = {
+                        100: {{ regras_agrupadas['Pontos: Assiduidade'] | selectattr('regra_id', 'equalto', 'pts_assiduidade_100') | map(attribute='valor_pontos') | first | default(0) }},
+                        98: {{ regras_agrupadas['Pontos: Assiduidade'] | selectattr('regra_id', 'equalto', 'pts_assiduidade_98') | map(attribute='valor_pontos') | first | default(0) }},
+                        95: {{ regras_agrupadas['Pontos: Assiduidade'] | selectattr('regra_id', 'equalto', 'pts_assiduidade_95') | map(attribute='valor_pontos') | first | default(0) }}
+                    };
+                    // Pontos: Planos Sucesso
+                    pontosRegrasManuais['pts_planos'] = {
+                        100: {{ regras_agrupadas['Pontos: Planos Sucesso'] | selectattr('regra_id', 'equalto', 'pts_planos_100') | map(attribute='valor_pontos') | first | default(0) }},
+                        95: {{ regras_agrupadas['Pontos: Planos Sucesso'] | selectattr('regra_id', 'equalto', 'pts_planos_95') | map(attribute='valor_pontos') | first | default(0) }},
+                        90: {{ regras_agrupadas['Pontos: Planos Sucesso'] | selectattr('regra_id', 'equalto', 'pts_planos_90') | map(attribute='valor_pontos') | first | default(0) }},
+                        85: {{ regras_agrupadas['Pontos: Planos Sucesso'] | selectattr('regra_id', 'equalto', 'pts_planos_85') | map(attribute='valor_pontos') | first | default(0) }},
+                        80: {{ regras_agrupadas['Pontos: Planos Sucesso'] | selectattr('regra_id', 'equalto', 'pts_planos_80') | map(attribute='valor_pontos') | first | default(0) }}
+                    };
+                    // Pontos: Satisfação
+                    pontosRegrasManuais['pts_satisfacao'] = {
+                        100: {{ regras_agrupadas['Pontos: Satisfação'] | selectattr('regra_id', 'equalto', 'pts_satisfacao_100') | map(attribute='valor_pontos') | first | default(0) }},
+                        95: {{ regras_agrupadas['Pontos: Satisfação'] | selectattr('regra_id', 'equalto', 'pts_satisfacao_95') | map(attribute='valor_pontos') | first | default(0) }},
+                        90: {{ regras_agrupadas['Pontos: Satisfação'] | selectattr('regra_id', 'equalto', 'pts_satisfacao_90') | map(attribute='valor_pontos') | first | default(0) }},
+                        85: {{ regras_agrupadas['Pontos: Satisfação'] | selectattr('regra_id', 'equalto', 'pts_satisfacao_85') | map(attribute='valor_pontos') | first | default(0) }},
+                        80: {{ regras_agrupadas['Pontos: Satisfação'] | selectattr('regra_id', 'equalto', 'pts_satisfacao_80') | map(attribute='valor_pontos') | first | default(0) }}
+                    };
+                </script>
+
+                <hr class="my-3">
+                <h6 class="text-info">Métricas Automáticas (Cálculo do Sistema)</h6>
+                <p class="text-muted small" style="margin-top: -5px;">Estes campos são apenas para visualização e não podem ser editados.</p>
+
+                <div class="row mb-3 align-items-center">
+                    <label for="auto_tma_medio_mes" class="col-md-7 col-form-label text-md-end">Tempo Médio de Implantação (TMA)</label>
+                    <div class="col-md-5">
+                        <input type="text" class="form-control" id="auto_tma_medio_mes" value="{{ metricas_automaticas.tma_medio_mes | default('N/A') }}" readonly disabled>
+                    </div>
+                </div>
+
+                <div class="row mb-3 align-items-center">
+                    <label for="auto_impl_iniciadas_mes" class="col-md-7 col-form-label text-md-end">Implantações / Planos Iniciados</label>
+                    <div class="col-md-5">
+                        <input type="text" class="form-control" id="auto_impl_iniciadas_mes" value="{{ metricas_automaticas.impl_iniciadas_mes | default(0) }}" readonly disabled>
+                    </div>
+                </div>
+
+                <div class="row mb-3 align-items-center">
+                    <label for="auto_acoes_concluidas_dia_media" class="col-md-7 col-form-label text-md-end">Ações realizadas por dia (Média)</label>
+                    <div class="col-md-5">
+                        <input type="text" class="form-control" id="auto_acoes_concluidas_dia_media" value="{{ metricas_automaticas.acoes_concluidas_dia_media | default('0.00') }}" readonly disabled>
+                    </div>
+                </div>
+
+                <div class="row mb-3 align-items-center">
+                    <label for="auto_reunioes_concluidas_dia_media" class="col-md-7 col-form-label text-md-end">Reuniões Realizadas por Dia (Média)</label>
+                    <div class="col-md-5">
+                        <input type="text" class="form-control" id="auto_reunioes_concluidas_dia_media" value="{{ metricas_automaticas.reunioes_concluidas_dia_media | default('0.00') }}" readonly disabled>
+                    </div>
+                </div>
+                {# Campos de Bônus (Layout de Lista) #}
+                {% if regras_agrupadas['Bônus'] or regras_agrupadas['Bônus: Reuniões Pres.'] %}
+                    <hr class="my-3"><h6 class="text-success">Métricas de Bônus (Ocorrências)</h6>
                     
-                    {# --- INÍCIO DA CORREÇÃO (Adiciona o mapeamento das regras de performance ao JS) --- #}
-                    <script>
-                        // Pontos: Qualidade
-                        pontosRegrasManuais['pts_qualidade'] = {
-                            100: {{ regras_agrupadas['Pontos: Qualidade'] | selectattr('regra_id', 'equalto', 'pts_qualidade_100') | map(attribute='valor_pontos') | first | default(0) }},
-                            95: {{ regras_agrupadas['Pontos: Qualidade'] | selectattr('regra_id', 'equalto', 'pts_qualidade_95') | map(attribute='valor_pontos') | first | default(0) }},
-                            90: {{ regras_agrupadas['Pontos: Qualidade'] | selectattr('regra_id', 'equalto', 'pts_qualidade_90') | map(attribute='valor_pontos') | first | default(0) }},
-                            85: {{ regras_agrupadas['Pontos: Qualidade'] | selectattr('regra_id', 'equalto', 'pts_qualidade_85') | map(attribute='valor_pontos') | first | default(0) }},
-                            80: {{ regras_agrupadas['Pontos: Qualidade'] | selectattr('regra_id', 'equalto', 'pts_qualidade_80') | map(attribute='valor_pontos') | first | default(0) }}
-                        };
-                        
-                        // Pontos: Assiduidade
-                        pontosRegrasManuais['pts_assiduidade'] = {
-                            100: {{ regras_agrupadas['Pontos: Assiduidade'] | selectattr('regra_id', 'equalto', 'pts_assiduidade_100') | map(attribute='valor_pontos') | first | default(0) }},
-                            98: {{ regras_agrupadas['Pontos: Assiduidade'] | selectattr('regra_id', 'equalto', 'pts_assiduidade_98') | map(attribute='valor_pontos') | first | default(0) }},
-                            95: {{ regras_agrupadas['Pontos: Assiduidade'] | selectattr('regra_id', 'equalto', 'pts_assiduidade_95') | map(attribute='valor_pontos') | first | default(0) }}
-                        };
-
-                        // Pontos: Planos Sucesso
-                        pontosRegrasManuais['pts_planos'] = {
-                            100: {{ regras_agrupadas['Pontos: Planos Sucesso'] | selectattr('regra_id', 'equalto', 'pts_planos_100') | map(attribute='valor_pontos') | first | default(0) }},
-                            95: {{ regras_agrupadas['Pontos: Planos Sucesso'] | selectattr('regra_id', 'equalto', 'pts_planos_95') | map(attribute='valor_pontos') | first | default(0) }},
-                            90: {{ regras_agrupadas['Pontos: Planos Sucesso'] | selectattr('regra_id', 'equalto', 'pts_planos_90') | map(attribute='valor_pontos') | first | default(0) }},
-                            85: {{ regras_agrupadas['Pontos: Planos Sucesso'] | selectattr('regra_id', 'equalto', 'pts_planos_85') | map(attribute='valor_pontos') | first | default(0) }},
-                            80: {{ regras_agrupadas['Pontos: Planos Sucesso'] | selectattr('regra_id', 'equalto', 'pts_planos_80') | map(attribute='valor_pontos') | first | default(0) }}
-                        };
-
-                        // Pontos: Satisfação
-                        pontosRegrasManuais['pts_satisfacao'] = {
-                            100: {{ regras_agrupadas['Pontos: Satisfação'] | selectattr('regra_id', 'equalto', 'pts_satisfacao_100') | map(attribute='valor_pontos') | first | default(0) }},
-                            95: {{ regras_agrupadas['Pontos: Satisfação'] | selectattr('regra_id', 'equalto', 'pts_satisfacao_95') | map(attribute='valor_pontos') | first | default(0) }},
-                            90: {{ regras_agrupadas['Pontos: Satisfação'] | selectattr('regra_id', 'equalto', 'pts_satisfacao_90') | map(attribute='valor_pontos') | first | default(0) }},
-                            85: {{ regras_agrupadas['Pontos: Satisfação'] | selectattr('regra_id', 'equalto', 'pts_satisfacao_85') | map(attribute='valor_pontos') | first | default(0) }},
-                            80: {{ regras_agrupadas['Pontos: Satisfação'] | selectattr('regra_id', 'equalto', 'pts_satisfacao_80') | map(attribute='valor_pontos') | first | default(0) }}
-                        };
-                    </script>
-                    {# --- FIM DA CORREÇÃO --- #}
-
-
-                    {# Campos de Bônus (Itera sobre regras_agrupadas) #}
-                    {% if regras_agrupadas['Bônus'] or regras_agrupadas['Bônus: Reuniões Pres.'] %}
-                        <div class="col-12"><hr class="my-3"><h6 class="text-success">Métricas de Bônus (Ocorrências)</h6></div>
-                        
-                        {# Loop Bônus Padrão #}
-                        {% if regras_agrupadas['Bônus'] %}
-                            {% for regra in regras_agrupadas['Bônus'] %}
-                                {% set field_name = regra.regra_id | replace('bonus_', '') %}
-                                <div class="col-md-4">
-                                    <label for="{{ field_name }}" class="form-label">{{ regra.descricao }}</label>
+                    {# Loop Bônus Padrão #}
+                    {% if regras_agrupadas['Bônus'] %}
+                        {% for regra in regras_agrupadas['Bônus'] %}
+                            {% set field_name = regra.regra_id | replace('bonus_', '') %}
+                            <div class="row mb-3 align-items-center">
+                                <label for="{{ field_name }}" class="col-md-7 col-form-label text-md-end">{{ regra.descricao }}</label>
+                                <div class="col-md-5">
                                     <input type="number" class="form-control metric-input" id="{{ field_name }}" name="{{ field_name }}" min="0" value="{{ metricas_atuais[field_name] | default(0) }}" data-regra-id="{{ regra.regra_id }}">
                                 </div>
-                                <script>
-                                    pontosRegrasManuais['{{ regra.regra_id }}'] = {{ regra.valor_pontos }};
-                                </script>
-                            {% endfor %}
-                        {% endif %}
-
-                        {# Loop Bônus: Reuniões Presenciais #}
-                        {% if regras_agrupadas['Bônus: Reuniões Pres.'] %}
-                            {% set field_name = 'reunioes_presenciais' %}
-                            <div class="col-md-4">
-                                <label for="{{ field_name }}" class="form-label">Bônus: Reuniões Presenciais (Ocorr.)</label>
-                                <input type="number" class="form-control metric-input" id="{{ field_name }}" name="{{ field_name }}" min="0" value="{{ metricas_atuais[field_name] | default(0) }}" data-regra-id="bonus_reun_pres">
-                            </div>
-                            <script>
-                                pontosRegrasManuais['bonus_reun_pres'] = {
-                                    10: {{ regras_agrupadas['Bônus: Reuniões Pres.'] | selectattr('regra_id', 'equalto', 'bonus_reun_pres_10') | map(attribute='valor_pontos') | first | default(0) }},
-                                    7: {{ regras_agrupadas['Bônus: Reuniões Pres.'] | selectattr('regra_id', 'equalto', 'bonus_reun_pres_7') | map(attribute='valor_pontos') | first | default(0) }},
-                                    5: {{ regras_agrupadas['Bônus: Reuniões Pres.'] | selectattr('regra_id', 'equalto', 'bonus_reun_pres_5') | map(attribute='valor_pontos') | first | default(0) }},
-                                    3: {{ regras_agrupadas['Bônus: Reuniões Pres.'] | selectattr('regra_id', 'equalto', 'bonus_reun_pres_3') | map(attribute='valor_pontos') | first | default(0) }},
-                                    1: {{ regras_agrupadas['Bônus: Reuniões Pres.'] | selectattr('regra_id', 'equalto', 'bonus_reun_pres_1') | map(attribute='valor_pontos') | first | default(0) }}
-                                };
-                            </script>
-                        {% endif %}
-                    {% endif %}
-
-                    {# Campos de Penalidade (Itera sobre regras_agrupadas) #}
-                    {% if regras_agrupadas['Penalidades'] %}
-                        <div class="col-12"><hr class="my-3"><h6 class="text-danger">Métricas de Penalidade (Ocorrências)</h6></div>
-                        
-                        {% for regra in regras_agrupadas['Penalidades'] %}
-                            {% set field_name = regra.regra_id | replace('penal_', '') %}
-                            <div class="col-md-4">
-                                <label for="{{ field_name }}" class="form-label">{{ regra.descricao }}</label>
-                                <input type="number" class="form-control metric-input" id="{{ field_name }}" name="{{ field_name }}" min="0" value="{{ metricas_atuais[field_name] | default(0) }}" data-regra-id="{{ regra.regra_id }}">
                             </div>
                             <script>
                                 pontosRegrasManuais['{{ regra.regra_id }}'] = {{ regra.valor_pontos }};
@@ -217,18 +212,63 @@
                         {% endfor %}
                     {% endif %}
 
+                    {# Loop Bônus: Reuniões Presenciais #}
+                    {% if regras_agrupadas['Bônus: Reuniões Pres.'] %}
+                        {% set field_name = 'reunioes_presenciais' %}
+                        <div class="row mb-3 align-items-center">
+                            <label for="{{ field_name }}" class="col-md-7 col-form-label text-md-end">Bônus: Reuniões Presenciais (Ocorr.)</label>
+                            <div class="col-md-5">
+                                <input type="number" class="form-control metric-input" id="{{ field_name }}" name="{{ field_name }}" min="0" value="{{ metricas_atuais[field_name] | default(0) }}" data-regra-id="bonus_reun_pres">
+                            </div>
+                        </div>
+                        <script>
+                            pontosRegrasManuais['bonus_reun_pres'] = {
+                                10: {{ regras_agrupadas['Bônus: Reuniões Pres.'] | selectattr('regra_id', 'equalto', 'bonus_reun_pres_10') | map(attribute='valor_pontos') | first | default(0) }},
+                                7: {{ regras_agrupadas['Bônus: Reuniões Pres.'] | selectattr('regra_id', 'equalto', 'bonus_reun_pres_7') | map(attribute='valor_pontos') | first | default(0) }},
+                                5: {{ regras_agrupadas['Bônus: Reuniões Pres.'] | selectattr('regra_id', 'equalto', 'bonus_reun_pres_5') | map(attribute='valor_pontos') | first | default(0) }},
+                                3: {{ regras_agrupadas['Bônus: Reuniões Pres.'] | selectattr('regra_id', 'equalto', 'bonus_reun_pres_3') | map(attribute='valor_pontos') | first | default(0) }},
+                                1: {{ regras_agrupadas['Bônus: Reuniões Pres.'] | selectattr('regra_id', 'equalto', 'bonus_reun_pres_1') | map(attribute='valor_pontos') | first | default(0) }}
+                            };
+                        </script>
+                    {% endif %}
+                {% endif %}
 
-                    <div class="col-12"><hr class="my-3"></div>
-                    <div class="col-md-6 offset-md-6">
-                        {# --- CORREÇÃO: Título alterado para refletir o que é calculado --- #}
-                        <label for="total_pontos_manuais" class="form-label fs-5">Total de Pontos (Performance + Bônus/Penal.)</label>
-                        <input type="text" class="form-control form-control-lg fs-4 fw-bold" id="total_pontos_manuais" name="total_pontos_manuais" value="0 pts" readonly disabled style="background-color: var(--input-border) !important; color: var(--body-color) !important;">
+
+                {# Campos de Penalidade (Layout de Lista) #}
+                {% if regras_agrupadas['Penalidades'] %}
+                    <hr class="my-3"><h6 class="text-danger">Métricas de Penalidade (Ocorrências)</h6>
+                    
+                    {% for regra in regras_agrupadas['Penalidades'] %}
+                        {% set field_name = regra.regra_id | replace('penal_', '') %}
+                        <div class="row mb-3 align-items-center">
+                            <label for="{{ field_name }}" class="col-md-7 col-form-label text-md-end">{{ regra.descricao }}</label>
+                            <div class="col-md-5">
+                                <input type="number" class="form-control metric-input" id="{{ field_name }}" name="{{ field_name }}" min="0" value="{{ metricas_atuais[field_name] | default(0) }}" data-regra-id="{{ regra.regra_id }}">
+                            </div>
+                        </div>
+                        <script>
+                            pontosRegrasManuais['{{ regra.regra_id }}'] = {{ regra.valor_pontos }};
+                        </script>
+                    {% endfor %}
+                {% endif %}
+
+
+                <hr class="my-3">
+                
+                {# Total (Layout de Lista) #}
+                <div class="row mb-3 align-items-center justify-content-end">
+                    <label for="total_pontos_manuais" class="col-md-7 col-form-label text-md-end fs-5">Total de Pontos (Performance + Bônus/Penal.)</label>
+                    <div class="col-md-5">
+                        <input type="text" class="form-control form-control-lg fs-4 fw-bold" id="total_pontos_manuais" name="total_pontos_manuais" value="0 pts" readonly disabled style="background-color: var(--input-border) !important; color: var(--body-color) !imptant;">
                     </div>
+                </div>
 
-                    <div class="col-12 text-end mt-4">
+                <div class="row mt-4">
+                    <div class="col-md-12 text-end">
                         <button type="submit" class="btn btn-primary btn-lg"><i class="bi bi-save me-1"></i> Salvar Métricas</button>
                     </div>
                 </div>
+
             </form>
         </div>
         {% else %}
@@ -238,14 +278,14 @@
         {% endif %}
     </main>
 </div>
+
 {% endblock %}
 
 
-{# --- INÍCIO DA CORREÇÃO (Lógica de JS atualizada) --- #}
+{# Scripts de cálculo (sem alteração) #}
 {% block scripts_extra %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Agora seleciona TODOS os inputs que afetam pontos
         const inputs = document.querySelectorAll('.metric-input');
         const totalDisplay = document.getElementById('total_pontos_manuais');
 
@@ -259,17 +299,16 @@
             
             inputs.forEach(input => {
                 const regraId = input.dataset.regraId;
-                // Usamos parseFloat para os campos de % e parseInt para os de ocorrência
                 const valorInput = (input.step === '0.1') ? parseFloat(input.value) : parseInt(input.value);
                 
                 if (isNaN(valorInput) || valorInput === 0) {
-                    return; // Pula se não for um número válido ou for zero
+                    return; 
                 }
 
                 const regraPontos = pontosRegrasManuais[regraId];
                 if (!regraPontos) {
                     console.warn(`Regra não encontrada no mapa JS: ${regraId}`);
-                    return; // Pula se a regra não estiver no mapa
+                    return; 
                 }
 
                 if (typeof regraPontos === 'number') {
@@ -338,4 +377,3 @@
     });
 </script>
 {% endblock %}
-{# --- FIM DA CORREÇÃO --- #}

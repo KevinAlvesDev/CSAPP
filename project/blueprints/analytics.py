@@ -1,6 +1,8 @@
 from flask import Blueprint, render_template, g, flash, redirect, url_for, request
 from ..blueprints.auth import permission_required
-from ..services import get_analytics_data
+# --- INÍCIO DA ALTERAÇÃO (ETAPA 2) ---
+from ..domain.analytics_service import get_analytics_data
+# --- FIM DA ALTERAÇÃO ---
 from ..db import query_db
 from ..constants import PERFIS_COM_ANALYTICS, PERFIS_COM_GESTAO
 

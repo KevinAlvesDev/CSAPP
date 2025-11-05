@@ -9,12 +9,12 @@ from ..blueprints.auth import login_required
 # CORREÇÃO: logar_timeline agora vem do db.py
 from ..db import query_db, execute_db, logar_timeline 
 from ..extensions import r2_client
-# CORREÇÃO: logar_timeline removido dos imports do services
-from ..services import auto_finalizar_implantacao, _get_progress 
-from ..utils import allowed_file, format_date_iso_for_json
 # --- INÍCIO DA CORREÇÃO ---
-from ..constants import PERFIS_COM_GESTAO
+# Importa do 'services.py' geral, pois a refatoração do domain não foi concluída
+from ..services import auto_finalizar_implantacao, _get_progress 
 # --- FIM DA CORREÇÃO ---
+from ..utils import allowed_file, format_date_iso_for_json
+from ..constants import PERFIS_COM_GESTAO
 
 api_bp = Blueprint('api', __name__, url_prefix='/api') # Prefixo /api
 
@@ -32,13 +32,11 @@ def toggle_tarefa(tarefa_id):
             """, (tarefa_id,), one=True
         )
         
-        # --- INÍCIO DA CORREÇÃO ---
         is_owner = tarefa.get('usuario_cs') == usuario_cs_email
         is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
 
         if not tarefa or not (is_owner or is_manager):
             return jsonify({'ok': False, 'error': 'Permissão negada.'}), 403
-        # --- FIM DA CORREÇÃO ---
             
         if tarefa.get('status') in ['finalizada', 'parada', 'futura']:
             return jsonify({'ok': False, 'error': f'Não é possível alterar tarefas de implantações com status "{tarefa.get("status")}".'}), 400
@@ -104,13 +102,11 @@ def adicionar_comentario(tarefa_id):
         (tarefa_id,), one=True
     )
 
-    # --- INÍCIO DA CORREÇÃO ---
     is_owner = tarefa_info.get('usuario_cs') == usuario_cs_email
     is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
     
     if not tarefa_info or not (is_owner or is_manager):
         return jsonify({'ok': False, 'error': 'Permissão negada.'}), 403
-    # --- FIM DA CORREÇÃO ---
         
     if tarefa_info.get('status') in ['finalizada', 'parada']:
         status_atual = tarefa_info.get('status')
@@ -216,14 +212,12 @@ def excluir_comentario(comentario_id):
             """, (comentario_id,), one=True
         )
         
-        # --- INÍCIO DA CORREÇÃO ---
         is_comment_owner = comentario.get('usuario_cs') == usuario_cs_email
         is_impl_owner = comentario.get('implantacao_owner') == usuario_cs_email
         is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
         
         if not comentario or not (is_comment_owner or is_impl_owner or is_manager):
             return jsonify({'ok': False, 'error': 'Permissão negada.'}), 403
-        # --- FIM DA CORREÇÃO ---
 
         # Exclui imagem do R2
         imagem_url = comentario.get('imagem_url')
@@ -280,13 +274,11 @@ def excluir_tarefa(tarefa_id):
             """, (tarefa_id,), one=True
         )
 
-        # --- INÍCIO DA CORREÇÃO ---
         is_owner = tarefa.get('usuario_cs') == usuario_cs_email
         is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
         
         if not tarefa or not (is_owner or is_manager):
             return jsonify({'ok': False, 'error': 'Permissão negada.'}), 403
-        # --- FIM DA CORREÇÃO ---
             
         impl_id = tarefa['impl_id']
         nome_tarefa = tarefa['tarefa_filho']
@@ -320,6 +312,7 @@ def excluir_tarefa(tarefa_id):
         finalizada, log_finalizacao = auto_finalizar_implantacao(impl_id, usuario_cs_email)
         novo_prog, _, _ = _get_progress(impl_id)
         
+        # Prepara resposta
         nome = g.perfil.get('nome', usuario_cs_email)
         log_exclusao = query_db(
             "SELECT *, %s as usuario_nome FROM timeline_log "
@@ -355,14 +348,12 @@ def reordenar_tarefas():
         if not all([impl_id, tarefa_pai, isinstance(nova_ordem_ids, list)]):
             return jsonify({'ok': False, 'error': 'Dados inválidos.'}), 400
             
-        # --- INÍCIO DA CORREÇÃO ---
         impl = query_db("SELECT id, usuario_cs FROM implantacoes WHERE id = %s", (impl_id,), one=True)
         is_owner = impl and impl.get('usuario_cs') == usuario_cs_email
         is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
         
         if not (is_owner or is_manager):
             return jsonify({'ok': False, 'error': 'Permissão negada.'}), 403
-        # --- FIM DA CORREÇÃO ---
         
         # Atualiza a ordem no DB em um loop
         for index, tarefa_id in enumerate(nova_ordem_ids, 1):
@@ -402,14 +393,12 @@ def excluir_tarefas_modulo():
         return jsonify({'ok': False, 'error': 'Dados inválidos (ID da implantação e Módulo são obrigatórios).'}), 400
 
     # 1. Verificar Permissão
-    # --- INÍCIO DA CORREÇÃO ---
     impl = query_db("SELECT id, nome_empresa, status, usuario_cs FROM implantacoes WHERE id = %s", (impl_id,), one=True)
     is_owner = impl and impl.get('usuario_cs') == usuario_cs_email
     is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
     
     if not (is_owner or is_manager):
         return jsonify({'ok': False, 'error': 'Permissão negada ou implantação não encontrada.'}), 403
-    # --- FIM DA CORREÇÃO ---
 
     if impl.get('status') == 'finalizada':
         return jsonify({'ok': False, 'error': 'Não é possível excluir tarefas de implantações finalizadas.'}), 400
