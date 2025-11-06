@@ -153,7 +153,15 @@ def login():
     session.clear()
     redirect_uri = url_for('auth.callback', _external=True)
     auth0 = oauth.create_client('auth0')
-    return auth0.authorize_redirect(redirect_uri=redirect_uri)
+    
+    # --- INÍCIO DA CORREÇÃO ---
+    # Adiciona o parâmetro prompt="login" para forçar a tela de login
+    # e permitir a troca de contas.
+    return auth0.authorize_redirect(
+        redirect_uri=redirect_uri,
+        prompt="login" 
+    )
+    # --- FIM DA CORREÇÃO ---
 
 @auth_bp.route('/callback')
 def callback():
