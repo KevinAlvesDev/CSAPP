@@ -73,16 +73,18 @@ body.dark-mode .timeline-data { color: #888; }
     background-color: var(--table-hover-bg);
 }
 
-/* --- INÍCIO DA CORREÇÃO (FONTE QUADRADA) --- */
+/* --- ESTILO REVERTIDO (Fonte Bodoni elegante) --- */
 .module-header h5 {
     color: var(--accent-color);
-    font-weight: 700; /* Reduzido de 800 */
-    font-size: 1.1rem; /* Levemente maior que o padrão */
+    font-family: var(--font-serif-display); /* Aplica Bodoni */
+    font-weight: 700; /* Peso de negrito */
+    font-size: 1.25rem; /* Tamanho maior */
     margin-bottom: 0;
-    text-transform: none; /* REMOVIDO o uppercase */
-    letter-spacing: normal; /* REMOVIDO o letter-spacing */
+    text-transform: none; /* Sem uppercase */
+    letter-spacing: 0.5px; /* Espaçamento de destaque */
 }
-/* --- FIM DA CORREÇÃO --- */
+/* --- FIM DA REVERSÃO --- */
+
 
 .module-header .btn {
     opacity: 0.8;

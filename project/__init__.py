@@ -8,9 +8,7 @@ from . import db # Importa o módulo db
 
 from .domain.gamification_service import _get_all_gamification_rules_grouped
 
-# --- INÍCIO DA CORREÇÃO 3: Importar os filtros de template ---
 from .utils import format_date_br, format_date_iso_for_json
-# --- FIM DA CORREÇÃO 3 ---
 
 # Importa constantes para o 'g'
 from .constants import PERFIS_COM_GESTAO, PERFIL_ADMIN
@@ -25,10 +23,9 @@ def create_app():
     # 1. Carrega a configuração (config.py)
     app.config.from_object(Config)
 
-    # --- INÍCIO DA CORREÇÃO 3: Registrar os filtros no Jinja2 ---
+    # Registrar os filtros no Jinja2
     app.jinja_env.filters['format_date_br'] = format_date_br
     app.jinja_env.filters['format_date_iso'] = format_date_iso_for_json
-    # --- FIM DA CORREÇÃO 3 ---
 
     # 2. Inicializa extensões
     Session(app) # Inicializa o Flask-Session
@@ -69,6 +66,8 @@ def create_app():
 
     @app.before_request
     def load_logged_in_user():
+        # --- Lógica de Tema REMOVIDA ---
+        
         g.user_email = session.get('user', {}).get('email')
         g.user = session.get('user')
         
@@ -108,12 +107,13 @@ def create_app():
     # Error Handlers
     @app.errorhandler(404)
     def page_not_found(e):
-        return render_template('dashboard.html'), 404 # Redireciona para o dashboard em 404
+        flash("Página não encontrada. Redirecionando para o Dashboard.", "warning")
+        return redirect(url_for('main.dashboard'))
 
     @app.errorhandler(500)
     def internal_server_error(e):
         print(f"ERRO 500: {e}")
-        flash("Ocorreu um erro interno no servidor.", "error")
-        return render_template('dashboard.html'), 500 # Redireciona para o dashboard
+        flash("Ocorreu um erro interno no servidor. Redirecionando para o Dashboard.", "error")
+        return redirect(url_for('main.dashboard'))
     
     return app

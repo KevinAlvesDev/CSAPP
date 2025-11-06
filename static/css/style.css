@@ -1,6 +1,6 @@
 /* app2/CSAPP/static/css/style.css */
 
-/* --- Fonte Moderna (Inter) --- */
+/* --- Fonte (Mantida da última alteração) --- */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
 
 :root {
@@ -49,31 +49,7 @@ body {
     --user-sidebar-border: #dee2e6;
 }
 
-/* --- DARK MODE (Agressivo) --- */
-body.dark-mode {
-    --body-bg: #111315; /* Mais escuro (quase preto) */
-    --body-color: #e3e3e3;
-    --container-bg: #1c1e20; /* Cards levemente mais claros */
-    --card-bg: #1c1e20;
-    --input-bg: #2a2c2e;
-    --input-border: #3a3c3e;
-    --input-color: #f0f0f0;
-    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
-    --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
-    
-    --header-bg: #1c1e20;
-    --header-border: transparent;
-    --sidebar-bg: #1c1e20;
-    --table-border-color: #3a3c3e;
-    --table-header-bg: #2a2c2e;
-    --table-hover-bg: rgba(var(--accent-color-rgb), 0.1); 
-    --bs-progress-bg: #3a3c3e;
-
-    --user-sidebar-bg: #1c1e20;
-    --user-sidebar-link-hover: #2a2c2e;
-    --user-sidebar-border: #303234;
-}
-/* --- FIM DO DARK MODE --- */
+/* --- FIM DO DARK MODE (Removido) --- */
 
 
 body {
@@ -112,12 +88,6 @@ body {
     box-shadow: var(--shadow-hover); /* Sombra de "destaque" */
 }
 
-/* Dark mode hover shadow */
-body.dark-mode .metric-card:hover, 
-body.dark-mode .card:hover {
-    box-shadow: var(--shadow-hover);
-}
-
 .form-control, .form-select {
     background-color: var(--input-bg);
     color: var(--input-color);
@@ -137,22 +107,6 @@ body.dark-mode .card:hover {
      cursor: not-allowed;
      color: #6c757d;
  }
-body.dark-mode .form-control,
-body.dark-mode .form-select {
-    background-color: var(--input-bg);
-    border-color: var(--input-border);
-}
-body.dark-mode .form-control:focus,
-body.dark-mode .form-select:focus {
-    background-color: var(--container-bg);
-}
-body.dark-mode .form-control:disabled, 
-body.dark-mode .form-select:disabled, 
-body.dark-mode input:read-only:disabled {
-     background-color: #3a3a3c !important;
-     opacity: 0.7;
-     color: #8e8e93;
- }
 
 .list-group-item {
     background-color: var(--card-bg);
@@ -169,9 +123,6 @@ body.dark-mode input:read-only:disabled {
     background-color: var(--sidebar-bg) !important;
     border-right: 1px solid var(--input-border); /* Sidebar volta a ter borda */
     transition: background-color 0.3s, border-color 0.3s;
-}
-body.dark-mode .sidebar-bg {
-    border-right: 1px solid var(--input-border);
 }
 
 .sidebar-info-list li, .sidebar-info-list strong {
@@ -219,11 +170,6 @@ body.dark-mode .sidebar-bg {
     background-color: var(--table-header-bg);
     border-bottom: 2px solid var(--table-border-color);
 }
-body.dark-mode .table thead th {
-    background-color: var(--table-header-bg);
-    color: var(--body-color);
-}
-
 
 .btn {
     border-radius: var(--border-radius-sm);
@@ -275,16 +221,6 @@ body.dark-mode .table thead th {
 .modal-footer {
     border-top: 1px solid var(--input-border);
 }
-body.dark-mode .modal-header .btn-close {
-    filter: invert(1) grayscale(100%) brightness(200%);
-}
-body.dark-mode .modal-body {
-    background-color: var(--body-bg);
-}
-body.dark-mode .modal-content {
-    background-color: var(--card-bg);
-}
-
 
 .alert {
     border-radius: var(--border-radius-sm);
@@ -324,9 +260,6 @@ body.dark-mode .modal-content {
 
 .user-sidebar-bg .offcanvas-header {
     padding: 1rem;
-    border-bottom: 1px solid var(--input-border);
-}
-body.dark-mode .user-sidebar-bg .offcanvas-header {
     border-bottom: 1px solid var(--input-border);
 }
 
@@ -456,10 +389,6 @@ body.dark-mode .user-sidebar-bg .offcanvas-header {
     background-color: var(--bs-danger);
     color: white;
 }
-body.dark-mode .metric-card.card-outline-danger .table thead th {
-    background-color: var(--bs-danger);
-    color: white;
-}
 
 .kpi-grid {
     display: grid;
@@ -476,14 +405,7 @@ body.dark-mode .metric-card.card-outline-danger .table thead th {
     color: var(--body-color);
     transition: background-color 0.3s, border-color 0.3s;
 }
-body.dark-mode .card-header {
-    background-color: var(--card-bg);
-    border-bottom-color: var(--input-border);
-}
 
 .card-body > .table-responsive {
-    margin: -1.25rem;
-}
-body.dark-mode .card-body > .table-responsive {
     margin: -1.25rem;
 }

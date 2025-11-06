@@ -1,7 +1,6 @@
 # app2/CSAPP/project/blueprints/api.py
 
-# --- CORREÇÃO: Adicionado 'session' ---
-from flask import Blueprint, request, jsonify, g, current_app, session
+from flask import Blueprint, request, jsonify, g, current_app
 from datetime import datetime
 import os
 import time
@@ -9,9 +8,13 @@ from werkzeug.utils import secure_filename
 from botocore.exceptions import ClientError, NoCredentialsError
 
 from ..blueprints.auth import login_required
+# CORREÇÃO: logar_timeline agora vem do db.py
 from ..db import query_db, execute_db, logar_timeline 
 from ..extensions import r2_client
+# --- INÍCIO DA CORREÇÃO (Refatoração) ---
+# Importa da camada de domínio/serviço específica
 from ..domain.implantacao_service import auto_finalizar_implantacao, _get_progress 
+# --- FIM DA CORREÇÃO ---
 from ..utils import allowed_file, format_date_iso_for_json
 from ..constants import PERFIS_COM_GESTAO
 
@@ -468,27 +471,4 @@ def excluir_tarefas_modulo():
         print(f"ERRO ao excluir tarefas do módulo {tarefa_pai} (Impl. ID {impl_id}): {e}")
         return jsonify({'ok': False, 'error': f"Erro interno do servidor: {e}"}), 500
 
-
-# --- INÍCIO DA CORREÇÃO (Adicionando a rota que faltava) ---
-@api_bp.route('/toggle_theme', methods=['POST'])
-@login_required 
-def toggle_theme():
-    """
-    Salva a preferência de tema (dark/light) do usuário na sessão.
-    """
-    try:
-        data = request.get_json()
-        theme = data.get('theme')
-        
-        if theme in ['dark', 'light']:
-            session['theme'] = theme
-            # g.user_email está disponível via @login_required
-            print(f"Tema alterado para '{theme}' para o usuário {g.user_email}")
-            return jsonify({'ok': True, 'theme_set': theme})
-        else:
-            return jsonify({'ok': False, 'error': 'Tema inválido'}), 400
-            
-    except Exception as e:
-        print(f"ERRO ao salvar tema: {e}")
-        return jsonify({'ok': False, 'error': str(e)}), 500
-# --- FIM DA CORREÇÃO ---
+# --- Rota /toggle_theme REMOVIDA ---

@@ -11,9 +11,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     {% block head_extra %}{% endblock %}
 </head>
-<body class="{% if session.get('theme') == 'dark' %}dark-mode{% endif %}">
-
-    {# O conteúdo da página (como dashboard.html ou implantacao_detalhes.html) será injetado aqui #}
+<body> {# O conteúdo da página (como dashboard.html ou implantacao_detalhes.html) será injetado aqui #}
     {% block content %}
     <div class="container py-4">
         <h1>Conteúdo Padrão</h1> <p>Substitua no template filho.</p>
@@ -90,16 +88,6 @@
                     </a>
                 </li>
                 
-                {# --- INÍCIO DA CORREÇÃO (Dark Mode Toggle) --- #}
-                <li class="nav-item">
-                    <a class="nav-link" href="#" id="theme-toggle-btn">
-                        <i class="bi bi-moon-stars-fill me-2" id="theme-icon-moon"></i>
-                        <i class="bi bi-sun-fill me-2" id="theme-icon-sun" style="display: none;"></i>
-                        <span class="nav-link-text" id="theme-text">Modo Escuro</span>
-                    </a>
-                </li>
-                {# --- FIM DA CORREÇÃO --- #}
-
                 <li class="nav-item nav-item-divider"><hr></li>
 
                 <li class="nav-item mt-auto">
@@ -256,9 +244,8 @@
                     const contatosInput = modal.querySelector('#modal-contatos'); if (contatosInput) contatosInput.value = getData('contatos');
                     const respEstrategicoObsInput = modal.querySelector('#modal-resp_estrategico_obs'); if (respEstrategicoObsInput) respEstrategicoObsInput.value = getData('resp-estrategico-obs');
                     
-                    // --- INÍCIO DA CORREÇÃO ---
-                    // Corrigido de 'inicio-efetivo-iso' para 'inicio-efetivo'
-                    const inicioEfetivoValueFromAttr = getData('inicio-efetivo'); 
+                    // --- Bug de data-inicio-efetivo CORRIGIDO ---
+                    const inicioEfetivoValueFromAttr = getData('inicio-efetivo-iso'); 
                     // --- FIM DA CORREÇÃO ---
 
                     const dataCadastroInput = modal.querySelector('#modal-data_cadastro');
@@ -331,45 +318,7 @@
                 setSidebarMinified(false);
             }
             
-            // --- INÍCIO DA CORREÇÃO (Dark Mode) ---
-            const themeToggleBtn = document.getElementById('theme-toggle-btn');
-            const themeIconMoon = document.getElementById('theme-icon-moon');
-            const themeIconSun = document.getElementById('theme-icon-sun');
-            const themeText = document.getElementById('theme-text');
-
-            const setTheme = (isDark) => {
-                if (isDark) {
-                    document.body.classList.add('dark-mode');
-                    themeIconMoon.style.display = 'none';
-                    themeIconSun.style.display = 'inline-block';
-                    themeText.textContent = 'Modo Claro';
-                    localStorage.setItem('theme', 'dark');
-                } else {
-                    document.body.classList.remove('dark-mode');
-                    themeIconMoon.style.display = 'inline-block';
-                    themeIconSun.style.display = 'none';
-                    themeText.textContent = 'Modo Escuro';
-                    localStorage.setItem('theme', 'light');
-                }
-            };
-            
-            // Define o tema inicial com base no body (que foi setado pelo Jinja/Sessão)
-            const isInitiallyDark = document.body.classList.contains('dark-mode');
-            setTheme(isInitiallyDark);
-
-            themeToggleBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                const isCurrentlyDark = document.body.classList.contains('dark-mode');
-                setTheme(!isCurrentlyDark);
-
-                // Envia a preferência para o servidor
-                fetch("{{ url_for('api.toggle_theme') }}", {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ theme: !isCurrentlyDark ? 'dark' : 'light' })
-                }).catch(err => console.error('Falha ao salvar tema:', err));
-            });
-            // --- FIM DA CORREÇÃO ---
+            // --- Bloco de Script do Dark Mode REMOVIDO ---
         });
     </script>
     {% block scripts_extra %}{% endblock %}
