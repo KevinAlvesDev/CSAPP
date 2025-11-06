@@ -1,32 +1,35 @@
 # app2/CSAPP/project/__init__.py
 import os
 from flask import Flask, session, g, render_template, request, flash, redirect, url_for
-from flask_session import Session # Importa a Session
+from flask_session import Session
+# --- INÍCIO DA CORREÇÃO (ProxyFix) ---
+from werkzeug.middleware.proxy_fix import ProxyFix
+# --- FIM DA CORREÇÃO ---
 from .config import Config
 from .extensions import oauth, init_r2
-# --- CORREÇÃO: Removidas importações do topo que dependem do app ---
-# from . import db (REMOVIDO)
-# from .domain.gamification_service import _get_all_gamification_rules_grouped (REMOVIDO)
-# from .utils import format_date_br, format_date_iso_for_json (REMOVIDO)
-# from .constants import PERFIS_COM_GESTAO, PERFIL_ADMIN (REMOVIDO)
-# from .db import query_db (REMOVIDO)
+from . import db
+from .domain.gamification_service import _get_all_gamification_rules_grouped
+from .utils import format_date_br, format_date_iso_for_json
+from .constants import PERFIS_COM_GESTAO, PERFIL_ADMIN
+from .db import query_db
 
 
 def create_app():
     app = Flask(__name__,
                 static_folder='../static', 
                 template_folder='../templates')
+
+    # --- INÍCIO DA CORREÇÃO (ProxyFix) ---
+    # Isto informa ao Flask para confiar nos cabeçalhos X-Forwarded-Proto
+    # enviados pelo Railway/Render, fazendo com que url_for(_external=True)
+    # use 'httpss' em vez de 'http'.
+    app.wsgi_app = ProxyFix(
+        app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1
+    )
+    # --- FIM DA CORREÇÃO ---
     
     # 1. Carrega a configuração (config.py)
     app.config.from_object(Config)
-
-    # --- INÍCIO DA CORREÇÃO: Mover importações para dentro do create_app ---
-    from . import db # Importa o módulo db
-    from .domain.gamification_service import _get_all_gamification_rules_grouped
-    from .utils import format_date_br, format_date_iso_for_json
-    from .constants import PERFIS_COM_GESTAO, PERFIL_ADMIN
-    from .db import query_db
-    # --- FIM DA CORREÇÃO ---
 
     # Registrar os filtros no Jinja2
     app.jinja_env.filters['format_date_br'] = format_date_br
@@ -71,8 +74,6 @@ def create_app():
 
     @app.before_request
     def load_logged_in_user():
-        # --- Lógica de Tema REMOVIDA ---
-        
         g.user_email = session.get('user', {}).get('email')
         g.user = session.get('user')
         
@@ -81,12 +82,9 @@ def create_app():
             try:
                 g.perfil = query_db("SELECT * FROM perfil_usuario WHERE usuario = %s", (g.user_email,), one=True)
             except Exception as e:
-                # Se o DB não estiver pronto (ex: no 1º init_db), não quebre
                 print(f"ALERTA: Falha ao buscar perfil no before_request para {g.user_email}: {e}")
-                g.perfil = None # Garante que é None em caso de falha no DB
+                g.perfil = None 
         
-        # Se o perfil não foi encontrado no DB (ou não estava logado),
-        # cria um placeholder
         if g.perfil is None:
              g.perfil = {
                 'nome': g.user.get('name', g.user_email) if g.user else 'Visitante',
@@ -96,18 +94,15 @@ def create_app():
                 'perfil_acesso': None
             }
         
-        # Injeta constantes globais no 'g' para uso nos templates
-        # (Lê do app.config, que é seguro)
         g.R2_CONFIGURED = app.config.get('R2_CONFIGURADO', False)
         g.PERFIS_COM_GESTAO = PERFIS_COM_GESTAO
         g.PERFIL_ADMIN = PERFIL_ADMIN
 
-        # Carregar regras de gamificação globalmente
         try:
             g.gamification_rules = _get_all_gamification_rules_grouped()
         except Exception as e:
             print(f"ALERTA: Falha ao carregar regras de gamificação no before_request: {e}")
-            g.gamification_rules = {} # Define como vazio para evitar que o template quebre
+            g.gamification_rules = {} 
     
     # Error Handlers
     @app.errorhandler(404)
