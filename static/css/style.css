@@ -1,24 +1,29 @@
 /* CSS do Tema e Layout */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
 :root {
-    --body-bg: #f8f9fa; /* Light gray background */
-    --body-color: #343a40; /* Darker text for better contrast */
+    /* Tema Claro (Padrão) */
+    
+    /* --- ALTERAÇÕES DE REFINAMENTO --- */
+    --body-bg: #f8f9fa; 
+    --body-color: #212529; /* Um pouco mais escuro que o anterior */
     --container-bg: #ffffff;
     --card-bg: #ffffff;
     --input-bg: #ffffff;
-    --input-border: #dee2e6; /* Lighter border for inputs */
-    --input-color: #495057;
-    --accent-color: #007bff; /* Primary blue */
-    --accent-color-rgb: 0, 123, 255;
-    --shadow: 0 2px 8px rgba(0, 0, 0, 0.08); /* Softer shadow */
+    --input-border: #dee2e6;
+    --input-color: #212529;
+    --accent-color: #0d6efd; /* Azul padrão moderno do Bootstrap 5 */
+    --accent-color-rgb: 13, 110, 253;
+    --shadow: 0 4px 12px rgba(0, 0, 0, 0.05); /* Sombra mais suave e difusa */
     --header-bg: #ffffff;
-    --header-border: #e9ecef; /* Lighter header border */
-    --sidebar-bg: #f8f9fa; /* Lighter sidebar */
+    --header-border: #e9ecef;
+    --sidebar-bg: #f8f9fa;
     --table-bg: var(--card-bg);
-    --table-border-color: #e9ecef; /* Lighter table borders */
-    --table-hover-bg: rgba(0, 123, 255, 0.05); /* Light blue hover for tables */
+    --table-border-color: #e9ecef;
+    --table-header-bg: #f8f9fa; /* Um pouco mais claro que o anterior */
+    --table-hover-bg: rgba(var(--accent-color-rgb), 0.05); 
     --border-radius-sm: 0.25rem;
-    --border-radius-md: 0.5rem;
+    --border-radius-md: 0.375rem; /* Raio de borda padrão do BS5 */
+    /* --- FIM DAS ALTERAÇÕES --- */
 
     /* AJUSTE 5: Variáveis da nova sidebar */
     --user-sidebar-bg: #ffffff;
@@ -27,6 +32,81 @@
     --user-sidebar-link-hover: #f1f3f5;
     --user-sidebar-border: #dee2e6;
 }
+
+/* --- INÍCIO DA IMPLEMENTAÇÃO DO DARK MODE --- */
+body.dark-mode {
+    --body-bg: #1c1c1e; /* Fundo principal escuro */
+    --body-color: #e0e0e0; /* Texto principal claro */
+    --container-bg: #2c2c2e; /* Fundo dos cards/containers */
+    --card-bg: #2c2c2e;
+    --input-bg: #3a3a3c; /* Fundo de inputs */
+    --input-border: #4a4a4c; /* Borda de inputs */
+    --input-color: #f0f0f0; /* Texto de inputs */
+    --shadow: 0 4px 12px rgba(0, 0, 0, 0.15); /* Sombra mais escura */
+    --header-bg: #2c2c2e; /* Fundo do header */
+    --header-border: #3a3a3c; /* Borda do header */
+    --sidebar-bg: #2c2c2e; /* Sidebar de detalhes */
+    --table-bg: var(--card-bg);
+    --table-border-color: #3a3a3c; /* Borda da tabela */
+    --table-header-bg: #3a3a3c; /* Fundo cabeçalho tabela */
+    --table-hover-bg: rgba(var(--accent-color-rgb), 0.15); /* Hover azulado escuro */
+
+    /* --- CORREÇÃO DA BARRA DE PROGRESSO --- */
+    --bs-progress-bg: #4a4a4c; /* Define o "trilho" para um cinza visível */
+    /* --- FIM DA CORREÇÃO --- */
+
+    --user-sidebar-bg: #2c2c2e;
+    --user-sidebar-link-hover: #3a3a3c;
+    --user-sidebar-border: #3a3a3c;
+}
+
+/* Ajustes finos para o Dark Mode */
+body.dark-mode .form-control:focus,
+body.dark-mode .form-select:focus {
+    background-color: var(--input-bg);
+    color: var(--input-color);
+}
+
+body.dark-mode .form-control:disabled, 
+body.dark-mode .form-select:disabled, 
+body.dark-mode input:read-only:disabled {
+     background-color: #3a3a3c !important;
+     opacity: 0.7;
+     color: #8e8e93;
+ }
+
+body.dark-mode .nav-tabs .nav-link {
+    color: var(--body-color);
+    opacity: 0.8;
+}
+body.dark-mode .nav-tabs .nav-link.active {
+    background-color: var(--card-bg);
+    color: var(--accent-color);
+    border-color: var(--input-border) var(--input-border) var(--card-bg);
+}
+body.dark-mode .nav-tabs .nav-link:hover {
+    border-color: var(--input-border) var(--input-border) var(--card-bg);
+    opacity: 1;
+}
+
+body.dark-mode .table thead th {
+    background-color: var(--table-header-bg);
+    color: var(--body-color);
+}
+
+body.dark-mode .list-group-item {
+    background-color: var(--card-bg);
+    color: var(--body-color);
+    border: 1px solid var(--input-border);
+}
+
+/* Cor do texto do botão de fechar (X) em modais escuros */
+body.dark-mode .modal-header .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+/* --- FIM DA IMPLEMENTAÇÃO DO DARK MODE --- */
+
+
 body {
     font-family: 'Inter', sans-serif;
     background-color: var(--body-bg);
@@ -136,7 +216,7 @@ body {
 }
 .table thead th {
     color: var(--body-color);
-    background-color: #e9ecef; /* Light header for tables */
+    background-color: var(--table-header-bg); /* Alterado para usar variável */
     border-bottom: 2px solid var(--table-border-color);
 }
 .btn-primary, .btn-success {
@@ -355,4 +435,67 @@ body {
 .user-sidebar-bg.minimized .nav-item-header {
     display: none; /* Esconde divisórias e headers */
 }
-/* --- Fim AJUSTE 5 --- */
+/* --- ADIÇÃO DE ESTILO (PÁGINA ANALYTICS) --- */
+
+/* Destaca um cartão de métrica como "alerta" ou "perigo" */
+.metric-card.card-outline-danger {
+    border-color: var(--bs-danger);
+    border-width: 1px;
+}
+
+/* Garante que o cabeçalho da tabela dentro de um cartão de perigo tenha a cor correta */
+.metric-card.card-outline-danger .table thead th {
+    background-color: var(--bs-danger);
+    color: white;
+}
+
+body.dark-mode .metric-card.card-outline-danger .table thead th {
+    background-color: var(--bs-danger);
+    color: white;
+}
+/* --- ADIÇÃO DE ESTILO (MODERNIZAÇÃO GERAL DE CARDS) --- */
+        
+/* Remove a borda padrão do card-header e aplica nosso fundo */
+.card-header {
+    background-color: var(--sidebar-bg);
+    border-bottom: 1px solid var(--header-border);
+    padding: 0.75rem 1.25rem; /* Padding padrão do BS */
+    font-weight: 600; /* Deixa o título do card com mais destaque */
+}
+
+/* Remove o padding do card-body se o filho for uma tabela responsiva */
+.card-body > .table-responsive {
+    margin: -1.25rem; /* Compensa o padding do card-body */
+}
+body.dark-mode .card-body > .table-responsive {
+    margin: -1.25rem; /* Ajuste para dark mode */
+}
+/* --- FIM DA ADIÇÃO --- */
+
+
+/* --- ADIÇÃO DE ESTILO (PÁGINA ANALYTICS) --- */
+
+/* Destaca um cartão de métrica como "alerta" ou "perigo" */
+.metric-card.card-outline-danger {
+    border-color: var(--bs-danger);
+    border-width: 1px;
+}
+
+/* Garante que o cabeçalho da tabela dentro de um cartão de perigo tenha a cor correta */
+.metric-card.card-outline-danger .table thead th {
+    background-color: var(--bs-danger);
+    color: white;
+}
+
+body.dark-mode .metric-card.card-outline-danger .table thead th {
+    background-color: var(--bs-danger);
+    color: white;
+}
+
+/* Layout da grelha de KPIs */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem; /* Espaçamento após os KPIs */
+}

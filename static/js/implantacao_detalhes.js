@@ -26,7 +26,15 @@ function excluirTarefa(tarefaId, button, CONFIG) {
 function excluirTodasDoModulo(button, moduloNome, CONFIG) { 
     if (!confirm(`EXCLUIR TODAS as tarefas do módulo "${moduloNome}"? Irreversível!`)) return; 
     const endpointUrl = CONFIG.endpoints.delModulo;
-    const cardElement = button.closest('.card'); const originalBtnHTML = button.innerHTML; button.disabled = true; button.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Excluindo...`; if (cardElement) cardElement.style.opacity = '0.5'; fetch(endpointUrl, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ implantacao_id: CONFIG.implantacaoId, tarefa_pai: moduloNome }) }).then(response => response.json()).then(data => { if (data.ok) { if (cardElement) { const taskList = cardElement.querySelector('.list-group-sortable'); if (taskList) { taskList.innerHTML = ''; const noTaskMsg = document.createElement('div'); noTaskMsg.className = 'list-group-item text-center small text-muted fst-italic'; noTaskMsg.textContent = 'Nenhuma tarefa. Use "Adicionar Tarefa".'; taskList.appendChild(noTaskMsg); } } adicionarLogNaTimeline(data.log_exclusao_modulo); if (data.novo_progresso !== undefined) updateProgressBar(data.novo_progresso); if (data.implantacao_finalizada) { adicionarLogNaTimeline(data.log_finalizacao); window.location.reload(); } } else { throw new Error(data.error || 'Erro.'); } }).catch(error => { console.error('Erro:', error); alert(`Erro: ${error.message}`); }).finally(() => { button.innerHTML = originalBtnHTML; button.disabled = false; if (cardElement) cardElement.style.opacity = '1'; }); }
+    const cardElement = button.closest('.module-header'); // Procura o .module-header
+    const collapseElement = cardElement ? cardElement.nextElementSibling : null; // Pega o .collapse
+    const originalBtnHTML = button.innerHTML; button.disabled = true; button.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Excluindo...`; 
+    
+    // Aplica opacidade ao cabeçalho E ao conteúdo
+    if (cardElement) cardElement.style.opacity = '0.5';
+    if (collapseElement) collapseElement.style.opacity = '0.5';
+
+    fetch(endpointUrl, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ implantacao_id: CONFIG.implantacaoId, tarefa_pai: moduloNome }) }).then(response => response.json()).then(data => { if (data.ok) { if (collapseElement) { const taskList = collapseElement.querySelector('.list-group-sortable'); if (taskList) { taskList.innerHTML = ''; const noTaskMsg = document.createElement('div'); noTaskMsg.className = 'list-group-item text-center small text-muted fst-italic'; noTaskMsg.textContent = 'Nenhuma tarefa. Use "Adicionar Tarefa".'; taskList.appendChild(noTaskMsg); } } adicionarLogNaTimeline(data.log_exclusao_modulo); if (data.novo_progresso !== undefined) updateProgressBar(data.novo_progresso); if (data.implantacao_finalizada) { adicionarLogNaTimeline(data.log_finalizacao); window.location.reload(); } } else { throw new Error(data.error || 'Erro.'); } }).catch(error => { console.error('Erro:', error); alert(`Erro: ${error.message}`); }).finally(() => { button.innerHTML = originalBtnHTML; button.disabled = false; if (cardElement) cardElement.style.opacity = '1'; if (collapseElement) collapseElement.style.opacity = '1'; }); }
 function marcarTodasDoModulo(button, collapseId, CONFIG) { 
     const collapseElement = document.getElementById(collapseId); if (!collapseElement) return; const bsCollapse = bootstrap.Collapse.getOrCreateInstance(collapseElement); bsCollapse.show(); setTimeout(() => { const checkboxesNaoMarcadas = Array.from(collapseElement.querySelectorAll('.task-checkbox:not(:checked)')); if (checkboxesNaoMarcadas.length === 0) { alert('Todas já concluídas.'); return; } if (!confirm(`Marcar ${checkboxesNaoMarcadas.length} tarefa(s) como concluída(s)?`)) return; const originalBtnHTML = button.innerHTML; button.disabled = true; button.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Marcando...`; let promises = []; let errors = []; let ultimaFinalizada = false; let ultimoLogTarefa = null; let ultimoLogFinalizacao = null; let ultimoProgresso = null; checkboxesNaoMarcadas.forEach(checkbox => { const tarefaId = parseInt(checkbox.closest('li').dataset.id); if (isNaN(tarefaId)) return; 
     const endpointUrl = CONFIG.endpoints.toggleTarefa + tarefaId;
@@ -82,7 +90,10 @@ document.addEventListener('DOMContentLoaded', function() {
         // Botão Marcar Todas
         const markAllButton = target.closest('button[title="Marcar todas"]');
         if (markAllButton) {
-             const collapseId = markAllButton.closest('.card-header').getAttribute('data-bs-target').substring(1);
+             // --- INÍCIO DA CORREÇÃO ---
+             event.stopPropagation(); // Impede o clique de "borbulhar" para o .module-header
+             // --- FIM DA CORREÇÃO ---
+             const collapseId = markAllButton.closest('.module-header').getAttribute('data-bs-target').substring(1);
              if(collapseId) window.marcarTodasDoModulo(markAllButton, collapseId, CONFIG);
              return;
         }
@@ -90,7 +101,10 @@ document.addEventListener('DOMContentLoaded', function() {
         // Botão Excluir Todas
         const deleteAllButton = target.closest('button[title="Excluir todas"]');
         if (deleteAllButton) {
-             const moduloNome = deleteAllButton.closest('.card-header').nextElementSibling.dataset.modulo;
+             // --- INÍCIO DA CORREÇÃO ---
+             event.stopPropagation(); // Impede o clique de "borbulhar" para o .module-header
+             // --- FIM DA CORREÇÃO ---
+             const moduloNome = deleteAllButton.closest('.module-header').nextElementSibling.dataset.modulo;
              if(moduloNome) window.excluirTodasDoModulo(deleteAllButton, moduloNome, CONFIG);
              return;
         }
@@ -140,5 +154,5 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!activated) { const savedTabId = localStorage.getItem(tabStorageKey); console.log('[Init] Restaurando via localStorage:', savedTabId); if (savedTabId) { if (!activateTabById(savedTabId)) { localStorage.removeItem(tabStorageKey); } else { activated = true; } } }
     if (!activated) { const firstTabButton = document.querySelector(tabSelector); if (firstTabButton) { console.log('[Init Fallback] Ativando padrão:', firstTabButton.id); activateTabById(firstTabButton.id); } else { console.error("[Init Fallback] Nenhuma aba!"); } }
     document.querySelectorAll('.comment-text').forEach(textEl => { const wrapper = textEl.closest('.comment-content-wrapper'); let button = wrapper ? wrapper.querySelector('button[onclick^="toggleComment"]') : null; const maxHeight = parseFloat(window.getComputedStyle(textEl).maxHeight); const isOverflowing = textEl.scrollHeight > maxHeight + 5; if (isOverflowing && !button) { const newButton = document.createElement('button'); newButton.className = 'btn btn-sm btn-link p-0 small'; newButton.textContent = 'Ver mais...'; newButton.onclick = function() { toggleComment(this, textEl.id); }; textElement.parentNode.insertBefore(newButton, textEl.nextSibling); } else if (!isOverflowing && button) { button.remove(); } else if (isOverflowing && button) { button.textContent = textEl.classList.contains('expanded') ? 'Ver menos...' : 'Ver mais...'; } });
-    document.querySelectorAll('.card-header[data-bs-toggle="collapse"]').forEach(header => { const collapseId = header.getAttribute('data-bs-target'); const collapseElement = document.querySelector(collapseId); const icon = header.querySelector('i.bi-chevron-down, i.bi-chevron-up'); if (collapseElement && icon) { collapseElement.addEventListener('show.bs.collapse', () => { icon.classList.replace('bi-chevron-down','bi-chevron-up'); }); collapseElement.addEventListener('hide.bs.collapse', () => { icon.classList.replace('bi-chevron-up','bi-chevron-down'); }); if (collapseElement.classList.contains('show')) { icon.classList.replace('bi-chevron-down','bi-chevron-up'); } } });
+    document.querySelectorAll('.module-header[data-bs-toggle="collapse"]').forEach(header => { const collapseId = header.getAttribute('data-bs-target'); const collapseElement = document.querySelector(collapseId); const icon = header.querySelector('i.bi-chevron-down, i.bi-chevron-up'); if (collapseElement && icon) { collapseElement.addEventListener('show.bs.collapse', () => { icon.classList.replace('bi-chevron-down','bi-chevron-up'); }); collapseElement.addEventListener('hide.bs.collapse', () => { icon.classList.replace('bi-chevron-up','bi-chevron-down'); }); if (collapseElement.classList.contains('show')) { icon.classList.replace('bi-chevron-down','bi-chevron-up'); } } });
 });

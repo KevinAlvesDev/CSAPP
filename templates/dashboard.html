@@ -234,7 +234,7 @@
                     </a>
                 </td> 
                 <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or impl.usuario_cs }}</td>
-                <td class="text-nowrap"> <span class="badge bg-secondary text-white">{{ impl.dias_passados | int }} dias</span> </td> <td> <div class="progress" style="height: 20px;"> <div class="progress-bar progress-bar-striped bg-warning text-dark" role="progressbar" style="width: {{ impl.progresso }}%;" aria-valuenow="{{ impl.progresso }}">{{ impl.progresso }}%</div> </div> </td> <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_atribuido|float) if impl.valor_atribuido else 'N/A' }}</td> <td> <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary">Ver Detalhes</a> </td> </tr> {% endfor %} </tbody> </table> </div> {% endif %}
+                <td class="text-nowrap"> <span class="badge bg-secondary text-white">{{ impl.dias_passados | int }} dias</span> </td> <td> <div class="progress" style="height: 20px;"> <div class="progress-bar progress-bar-striped bg-warning text-dark" role="progressbar" style="width: {{ impl.progresso }}%;" aria-valuenow="{{ impl.progresso }}">{{ impl.progresso }}%</div> </div> </td> <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_atribuido|float) if impl.valor_atribuido else 'N/A' }}</td> <td> <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver Detalhes</a> </td> </tr> {% endfor %} </tbody> </table> </div> {% endif %}
             </div>
 
             {# Aba Atrasadas #}
@@ -270,7 +270,7 @@
                      </a>
                 </td>
                 <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or impl.usuario_cs }}</td>
-                <td><span class="badge bg-danger">{{ impl.dias_passados | int }} dias</span></td> <td> {% if impl.status == 'parada' %} <span class="badge bg-danger">Parada</span> {% else %} <span class="badge bg-warning text-dark">Em Andamento</span> {% endif %} </td> <td> <div class="progress" style="height: 20px;"> <div class="progress-bar progress-bar-striped bg-danger" role="progressbar" style="width: {{ impl.progresso }}%;" aria-valuenow="{{ impl.progresso }}">{{ impl.progresso }}%</div> </div> </td> <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_atribuido|float) if impl.valor_atribuido else 'N/A' }}</td> <td> <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary">Ver Detalhes</a> </td> </tr> {% endfor %} </tbody> </table> </div> {% endif %}
+                <td><span class="badge bg-danger">{{ impl.dias_passados | int }} dias</span></td> <td> {% if impl.status == 'parada' %} <span class="badge bg-danger">Parada</span> {% else %} <span class="badge bg-warning text-dark">Em Andamento</span> {% endif %} </td> <td> <div class="progress" style="height: 20px;"> <div class="progress-bar progress-bar-striped bg-danger" role="progressbar" style="width: {{ impl.progresso }}%;" aria-valuenow="{{ impl.progresso }}">{{ impl.progresso }}%</div> </div> </td> <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_atribuido|float) if impl.valor_atribuido else 'N/A' }}</td> <td> <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver Detalhes</a> </td> </tr> {% endfor %} </tbody> </table> </div> {% endif %}
             </div>
 
             {# Aba Futuras #}
@@ -325,10 +325,10 @@
                     {% if impl.usuario_cs == g.user_email %}
                     <form method="POST" action="{{ url_for('actions.iniciar_implantacao') }}" style="display:inline;"> 
                         <input type="hidden" name="implantacao_id" value="{{ impl.id }}"> 
-                        <button type="submit" class="btn btn-sm btn-success">Iniciar</button> 
+                        <button type="submit" class="btn btn-sm btn-success"><i class="bi bi-play-circle me-1"></i> Iniciar</button> 
                     </form> 
                     {% endif %}
-                    <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary ms-1">Ver Detalhes</a> 
+                    <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary ms-1"><i class="bi bi-eye me-1"></i> Ver Detalhes</a> 
                 </td> </tr> {% endfor %} </tbody> </table> </div> {% endif %}
             </div>
 
@@ -367,12 +367,12 @@
                 <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or impl.usuario_cs }}</td>
                 <td> <span class="badge bg-success">100% Concluída</span> </td> <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_atribuido|float) if impl.valor_atribuido else 'N/A' }}</td> 
                 <td class="text-nowrap"> 
-                    <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary">Ver Histórico</a> 
+                    <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver Histórico</a> 
                     {% if impl.usuario_cs == g.user_email %}
                     <form method="POST" action="{{ url_for('actions.reabrir_implantacao') }}" style="display:inline;" onsubmit="return confirm('Tem certeza?');"> 
                         <input type="hidden" name="implantacao_id" value="{{ impl.id }}"> 
                         <input type="hidden" name="redirect_to" value="dashboard"> 
-                        <button type="submit" class="btn btn-sm btn-warning ms-1">Reabrir</button> 
+                        <button type="submit" class="btn btn-sm btn-warning ms-1"><i class="bi bi-folder-symlink me-1"></i> Reabrir</button> 
                     </form> 
                     {% endif %}
                 </td> </tr> {% endfor %} </tbody> </table> </div> {% endif %}
@@ -413,12 +413,12 @@
                 <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or impl.usuario_cs }}</td>
                 <td class="text-truncate" style="max-width: 200px;">{{ impl.motivo_parada | default('N/A') }}</td> <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_atribuido|float) if impl.valor_atribuido else 'N/A' }}</td> 
                 <td class="text-nowrap"> 
-                    <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary">Ver Detalhes</a> 
+                    <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver Detalhes</a> 
                     {% if impl.usuario_cs == g.user_email %}
                     <form method="POST" action="{{ url_for('actions.retomar_implantacao') }}" style="display:inline;" onsubmit="return confirm('Tem certeza?');"> 
                         <input type="hidden" name="implantacao_id" value="{{ impl.id }}"> 
                         <input type="hidden" name="redirect_to" value="dashboard"> 
-                        <button type="submit" class="btn btn-sm btn-success ms-1">Retomar</button> 
+                        <button type="submit" class="btn btn-sm btn-success ms-1"><i class="bi bi-play-fill me-1"></i> Retomar</button> 
                     </form> 
                     {% endif %}
                 </td> </tr> {% endfor %} </tbody> </table> </div> {% endif %}
