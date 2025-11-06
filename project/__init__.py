@@ -7,11 +7,12 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 # --- FIM DA CORREÇÃO ---
 from .config import Config
 from .extensions import oauth, init_r2
-from . import db
-from .domain.gamification_service import _get_all_gamification_rules_grouped
-from .utils import format_date_br, format_date_iso_for_json
-from .constants import PERFIS_COM_GESTAO, PERFIL_ADMIN
-from .db import query_db
+# --- CORREÇÃO: Removidas importações do topo que dependem do app ---
+# from . import db (REMOVIDO)
+# from .domain.gamification_service import _get_all_gamification_rules_grouped (REMOVIDO)
+# from .utils import format_date_br, format_date_iso_for_json (REMOVIDO)
+# from .constants import PERFIS_COM_GESTAO, PERFIL_ADMIN (REMOVIDO)
+# from .db import query_db (REMOVIDO)
 
 
 def create_app():
@@ -30,6 +31,14 @@ def create_app():
     
     # 1. Carrega a configuração (config.py)
     app.config.from_object(Config)
+
+    # --- INÍCIO DA CORREÇÃO: Mover importações para dentro do create_app ---
+    from . import db # Importa o módulo db
+    from .domain.gamification_service import _get_all_gamification_rules_grouped
+    from .utils import format_date_br, format_date_iso_for_json
+    from .constants import PERFIS_COM_GESTAO, PERFIL_ADMIN
+    from .db import query_db
+    # --- FIM DA CORREÇÃO ---
 
     # Registrar os filtros no Jinja2
     app.jinja_env.filters['format_date_br'] = format_date_br
@@ -94,7 +103,7 @@ def create_app():
                 'perfil_acesso': None
             }
         
-        g.R2_CONFIGURED = app.config.get('R2_CONFIGURADO', False)
+        g.R2_CONFIGURED = app.config.get('R2_CONFIGURED', False)
         g.PERFIS_COM_GESTAO = PERFIS_COM_GESTAO
         g.PERFIL_ADMIN = PERFIL_ADMIN
 
