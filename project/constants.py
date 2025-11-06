@@ -28,7 +28,7 @@ SIM_NAO_OPTIONS = [NAO_DEFINIDO_BOOL, "Sim", "Não"]
 ADMIN_EMAIL = "kevinalveswp@gmail.com" 
 
 # Cargos (Função na empresa, editável pelo usuário no perfil)
-CARGOS_LIST = ["Júnior", "Pleno", "Sênior", "Estagiário"] 
+CARGOS_LIST = ["Júnior", "Pleno", "Sênior"] 
 
 # Perfis de Acesso (Permissão no sistema, editável apenas pelo Admin/Gerente/Coordenador)
 PERFIL_ADMIN = "Administrador"

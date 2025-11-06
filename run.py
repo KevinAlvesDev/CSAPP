@@ -24,18 +24,28 @@ except Exception as e:
 # -----------------------------------------------------------------------
 
 
+# --- INÍCIO DA CORREÇÃO (Auto-criação do DB) ---
+# Move a inicialização do DB para fora do 'if __name__ == "__main__"'
+# Isso garante que o Gunicorn (produção) execute este bloco ao iniciar.
+if app:
+    with app.app_context():
+        from project.db import init_db
+        try:
+            # Esta função agora vai rodar em produção
+            init_db() 
+            print("Verificação do banco de dados (init_db) concluída.")
+        except Exception as e:
+            print(f"AVISO: Falha ao inicializar o esquema do banco de dados (init_db): {e}")
+# --- FIM DA CORREÇÃO ---
+
+
 if __name__ == '__main__':
     print("Iniciando app Flask a partir de run.py...")
 
     if app is None:
         exit(1)
 
-    with app.app_context():
-        from project.db import init_db
-        try:
-            init_db()
-        except Exception as e:
-            print(f"AVISO: Falha ao inicializar o esquema do banco de dados (init_db): {e}")
+    # A verificação do DB já foi movida para cima e não precisa estar aqui
 
     from project.extensions import r2_client
     if not r2_client:
