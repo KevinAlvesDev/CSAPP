@@ -148,3 +148,37 @@ def ver_implantacao(impl_id):
         print(f"ERRO ao carregar detalhes da implantação ID {impl_id}: {e}")
         flash("Erro ao carregar detalhes da implantação.", "error")
         return redirect(url_for('main.dashboard'))
+
+
+# --- INÍCIO DA ROTA SECRETA PARA PROMOVER ADMIN ---
+#
+# Esta é uma rota de emergência. Depois de usá-la 1 vez, 
+# é recomendado removê-la do código.
+#
+@main_bp.route('/@_SECURE_PROMOTE_ME_@') # Rota secreta
+@login_required # Garante que estamos logados
+def promote_me_to_admin():
+    user_email = g.user_email
+    
+    if not user_email:
+        flash("Você precisa estar logado para usar esta função.", "error")
+        return redirect(url_for('main.home'))
+        
+    try:
+        # Força a atualização do perfil do usuário logado
+        execute_db(
+            "UPDATE perfil_usuario SET perfil_acesso = %s WHERE usuario = %s",
+            ('Administrador', user_email)
+        )
+        flash(f"SUCESSO! O usuário {user_email} foi promovido a Administrador.", "success")
+        print(f"SUCESSO: O usuário {user_email} foi promovido a Administrador pela rota secreta.")
+        
+        # Atualiza o 'g.perfil' para a sessão atual
+        g.perfil = query_db("SELECT * FROM perfil_usuario WHERE usuario = %s", (user_email,), one=True)
+        
+    except Exception as e:
+        flash(f"ERRO ao tentar se promover: {e}", "error")
+        print(f"ERRO: Falha ao promover {user_email} pela rota secreta: {e}")
+        
+    return redirect(url_for('main.dashboard'))
+# --- FIM DA ROTA SECRETA ---

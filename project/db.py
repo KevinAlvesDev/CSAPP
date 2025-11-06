@@ -86,15 +86,11 @@ def execute_db(query, args=()):
         cursor.execute(query, args)
         conn.commit()
         
-        # Correção para PostgreSQL: Tenta retornar o ID se for um INSERT
         try:
             if query.strip().upper().startswith("INSERT") and db_type == 'postgres':
-                # PostgreSQL precisa de 'RETURNING id' para funcionar como lastrowid
-                # Mas para uma solução simples, vamos apenas retornar True.
-                # Para obter o ID no postgres, a query precisaria ser "INSERT ... RETURNING id"
                 pass 
         except Exception:
-            pass # Ignora erros se a query não for INSERT
+            pass 
 
         if cursor.lastrowid: # Funciona bem para SQLite
             return cursor.lastrowid
@@ -319,6 +315,7 @@ def init_db():
             # --- Sintaxe SQLite (como estava antes) ---
             print("Executando init_db para SQLite...")
             
+            # (O código original para criar tabelas SQLite permanece aqui)
             # Tabela de Implantações (SQLite)
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS implantacoes (
