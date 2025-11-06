@@ -2,18 +2,12 @@ import os
 from flask import Flask, session, g, render_template, request, flash, redirect, url_for
 from flask_session import Session # Importa o Session
 from .config import Config
-from .extensions import oauth, init_r2 # <-- IMPORTA A NOVA FUNÇÃO init_r2
+from .extensions import oauth, init_r2
 from . import db # Importa o módulo db
 
-# Importa os blueprints
-from .blueprints.main import main_bp
-from .blueprints.auth import auth_bp
-from .blueprints.api import api_bp
-from .blueprints.implantacao_actions import implantacao_actions_bp
-from .blueprints.profile import profile_bp
-from .blueprints.management import management_bp
-from .blueprints.analytics import analytics_bp
-from .blueprints.gamification import gamification_bp
+# --- INÍCIO DA CORREÇÃO ---
+# NÃO importe os blueprints aqui no topo.
+# --- FIM DA CORREÇÃO ---
 
 # Importa constantes para o 'g'
 from .constants import PERFIS_COM_GESTAO, PERFIL_ADMIN
@@ -31,9 +25,21 @@ def create_app():
     # 2. Inicializa extensões
     Session(app) # Inicializa o Flask-Session
     oauth.init_app(app)
-    init_r2(app) # <-- ADICIONA A INICIALIZAÇÃO DO R2 AQUI
+    init_r2(app) 
     db.init_app(app)
     
+    # --- INÍCIO DA CORREÇÃO ---
+    # Importa os blueprints AQUI, depois de tudo estar configurado
+    from .blueprints.main import main_bp
+    from .blueprints.auth import auth_bp
+    from .blueprints.api import api_bp
+    from .blueprints.implantacao_actions import implantacao_actions_bp
+    from .blueprints.profile import profile_bp
+    from .blueprints.management import management_bp
+    from .blueprints.analytics import analytics_bp
+    from .blueprints.gamification import gamification_bp
+    # --- FIM DA CORREÇÃO ---
+
     # 3. Registra os Blueprints
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
@@ -54,6 +60,7 @@ def create_app():
             try:
                 g.perfil = query_db("SELECT * FROM perfil_usuario WHERE usuario = %s", (g.user_email,), one=True)
             except Exception as e:
+                # Se o DB não estiver pronto (ex: no 1º init_db), não quebre
                 print(f"ALERTA: Falha ao buscar perfil no before_request para {g.user_email}: {e}")
                 g.perfil = None # Garante que é None em caso de falha no DB
         
