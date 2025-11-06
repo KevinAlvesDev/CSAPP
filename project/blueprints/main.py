@@ -1,14 +1,14 @@
 import os
 from flask import (
     Blueprint, render_template, request, flash, redirect, url_for, g, session,
-    current_app, send_from_directory
+    current_app, send_from_directory, jsonify # <-- ADICIONADO jsonify
 )
 # collections.OrderedDict e datetime removidos (não são mais necessários aqui)
 # botocore.exceptions.ClientError removido (não é mais necessário aqui)
 
 # Importações internas do projeto
 from ..blueprints.auth import login_required, permission_required 
-from ..db import query_db, execute_db, logar_timeline # <-- query_db/execute_db/logar_timeline não são mais usados aqui, mas mantidos por _get_all_cs_users (por enquanto)
+from ..db import query_db, execute_db, logar_timeline, get_db_connection # <-- ADICIONADO get_db_connection
 # --- INÍCIO DA CORREÇÃO (Refatoração Passo 2) ---
 # Importa dos novos arquivos de serviço no domínio
 from ..domain.dashboard_service import get_dashboard_data
@@ -182,3 +182,53 @@ def promote_me_to_admin():
         
     return redirect(url_for('main.dashboard'))
 # --- FIM DA ROTA SECRETA ---
+
+
+# --- INÍCIO DA ROTA SECRETA PARA VERIFICAR O BANCO ---
+
+@main_bp.route('/@_CHECK_DB_TABLES_@')
+@login_required 
+def check_db_tables():
+    """
+    Rota secreta para verificar todas as tabelas no banco de dados
+    e o status do usuário admin.
+    """
+    # Apenas o admin pode ver isto
+    if g.user_email != 'suporte01.cs@gmail.com':
+        flash("Acesso negado.", "error")
+        return redirect(url_for('main.dashboard'))
+
+    conn, db_type = None, None
+    tables = []
+    response_data = {}
+    
+    try:
+        # 1. Verificar as tabelas
+        conn, db_type = get_db_connection()
+        cursor = conn.cursor()
+        
+        if db_type == 'postgres':
+            cursor.execute("SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename;")
+            tables = [row['tablename'] for row in cursor.fetchall()]
+        else: # sqlite
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;")
+            tables = [row['name'] for row in cursor.fetchall()]
+        
+        # 2. Verificar o status exato do usuário no banco
+        status_check = query_db("SELECT usuario, perfil_acesso FROM perfil_usuario WHERE usuario = %s", ('suporte01.cs@gmail.com',), one=True)
+        
+        response_data = {
+            "status": "SUCESSO",
+            "db_type_detectado": db_type,
+            "tabelas_encontradas": tables,
+            "verificacao_usuario_admin": status_check
+        }
+
+    except Exception as e:
+        response_data = {"status": "ERRO", "message": str(e)}
+    finally:
+        if conn:
+            conn.close()
+            
+    return jsonify(response_data)
+# --- FIM DA ROTA SECRETA PARA VERIFICAR O BANCO ---
