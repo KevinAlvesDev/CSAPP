@@ -1,158 +1,88 @@
 import os
-from flask import Flask, send_from_directory, g, session 
-from werkzeug.middleware.proxy_fix import ProxyFix
+from flask import Flask, session, g, render_template, request, flash, redirect, url_for
+from flask_session import Session # Importa o Session
 from .config import Config
-from .extensions import oauth, r2_client, init_extensions
-from .db import init_app as init_db_app, query_db 
-from . import utils 
+from .extensions import oauth, init_r2 # <-- IMPORTA A NOVA FUNÇÃO init_r2
+from . import db # Importa o módulo db
 
-# Importa as constantes de perfil
-from .constants import PERFIS_COM_GESTAO
+# Importa os blueprints
+from .blueprints.main import main_bp
+from .blueprints.auth import auth_bp
+from .blueprints.api import api_bp
+from .blueprints.implantacao_actions import implantacao_actions_bp
+from .blueprints.profile import profile_bp
+from .blueprints.management import management_bp
+from .blueprints.analytics import analytics_bp
+from .blueprints.gamification import gamification_bp
 
-# --- INÍCIO DA CORREÇÃO (IMPORTAÇÃO CIRCULAR) ---
-# A função de lógica de negócio agora é importada da camada de domínio,
-# o que é seguro e não causa ciclos.
-from .domain.gamification_service import _get_all_gamification_rules_grouped
-# --- FIM DA CORREÇÃO ---
-
-project_dir = os.path.dirname(os.path.abspath(__file__))
-app_root_dir = os.path.dirname(project_dir)
-templates_dir = os.path.join(app_root_dir, 'templates')
-static_dir = os.path.join(app_root_dir, 'static')
-
-print(f"DEBUG: Flask usará pasta static em: {static_dir}")
-print(f"DEBUG: Flask usará pasta templates em: {templates_dir}")
+# Importa constantes para o 'g'
+from .constants import PERFIS_COM_GESTAO, PERFIL_ADMIN
+from .db import query_db # Para o before_request
 
 
 def create_app():
-    """Application Factory Function"""
-    app = Flask(__name__, template_folder=templates_dir, static_folder=static_dir)
-
-    app.config.from_object(Config)
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
-    init_extensions(app)
-    init_db_app(app)
+    app = Flask(__name__,
+                static_folder='../static', 
+                template_folder='../templates')
     
-    # A importação de _get_all_gamification_rules_grouped foi movida para o topo.
+    # 1. Carrega a configuração (config.py)
+    app.config.from_object(Config)
 
+    # 2. Inicializa extensões
+    Session(app) # Inicializa o Flask-Session
+    oauth.init_app(app)
+    init_r2(app) # <-- ADICIONA A INICIALIZAÇÃO DO R2 AQUI
+    db.init_app(app)
+    
+    # 3. Registra os Blueprints
+    app.register_blueprint(main_bp)
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(api_bp)
+    app.register_blueprint(implantacao_actions_bp)
+    app.register_blueprint(profile_bp)
+    app.register_blueprint(management_bp)
+    app.register_blueprint(analytics_bp)
+    app.register_blueprint(gamification_bp)
 
     @app.before_request
-    def before_request_func():
-        """
-        Executado antes de cada request.
-        Carrega usuário, perfil e, se for gestor, as regras da gamificação.
-        """
-        
-        # --- O 'try...except ImportError' foi removido daqui ---
-        
+    def load_logged_in_user():
+        g.user_email = session.get('user', {}).get('email')
         g.user = session.get('user')
-        g.user_email = g.user.get('email') if g.user else None
         
-        g.PERFIS_COM_GESTAO = PERFIS_COM_GESTAO
-        g.is_manager = False
-        g.gamification_rules = {} 
-        
+        g.perfil = None 
         if g.user_email:
-            session.permanent = True
-            session.modified = True   
-            
-            g.perfil = query_db("SELECT * FROM perfil_usuario WHERE usuario = %s", (g.user_email,), one=True)
-            
-            if not g.perfil:
-                 g.perfil = {
-                    'nome': g.user.get('name', g.user_email),
-                    'usuario': g.user_email,
-                    'foto_url': None,
-                    'cargo': None,
-                    'perfil_acesso': None 
-                }
-            
-            if g.perfil.get('perfil_acesso') in g.PERFIS_COM_GESTAO:
-                g.is_manager = True
-                try:
-                    # A função agora é importada globalmente e está disponível
-                    g.gamification_rules = _get_all_gamification_rules_grouped()
-                except Exception as e:
-                    print(f"AVISO: Falha ao pré-carregar regras de gamificação para gestor: {e}")
-                    g.gamification_rules = {}
-            
-        else:
-            g.perfil = None 
+            try:
+                g.perfil = query_db("SELECT * FROM perfil_usuario WHERE usuario = %s", (g.user_email,), one=True)
+            except Exception as e:
+                print(f"ALERTA: Falha ao buscar perfil no before_request para {g.user_email}: {e}")
+                g.perfil = None # Garante que é None em caso de falha no DB
+        
+        # Se o perfil não foi encontrado no DB (ou não estava logado),
+        # cria um placeholder
+        if g.perfil is None:
+             g.perfil = {
+                'nome': g.user.get('name', g.user_email) if g.user else 'Visitante',
+                'usuario': g.user_email,
+                'foto_url': None,
+                'cargo': None,
+                'perfil_acesso': None
+            }
+        
+        # Injeta constantes globais no 'g' para uso nos templates
+        # (Lê do app.config, que é seguro)
+        g.R2_CONFIGURED = app.config.get('R2_CONFIGURADO', False)
+        g.PERFIS_COM_GESTAO = PERFIS_COM_GESTAO
+        g.PERFIL_ADMIN = PERFIL_ADMIN
+    
+    # Error Handlers
+    @app.errorhandler(404)
+    def page_not_found(e):
+        return render_template('dashboard.html'), 404 # Redireciona para o dashboard em 404
 
-
-    # --- Registro de Blueprints ---
-    try:
-        from .blueprints.auth import auth_bp
-        app.register_blueprint(auth_bp)
-        print("Blueprint 'auth' registrado.")
-    except ImportError as e: print(f"ERRO ao importar/registrar 'auth': {e}")
-
-    try:
-        from .blueprints.main import main_bp
-        app.register_blueprint(main_bp)
-        print("Blueprint 'main' registrado.")
-    except ImportError as e: print(f"ERRO ao importar/registrar 'main': {e}")
-
-    try:
-        from .blueprints.implantacao_actions import actions_bp
-        app.register_blueprint(actions_bp)
-        print("Blueprint 'actions' (Implantacao Actions) registrado.")
-    except ImportError as e: print(f"ERRO ao importar/registrar 'actions': {e}")
-
-    try:
-        from .blueprints.profile import profile_bp
-        app.register_blueprint(profile_bp)
-        print("Blueprint 'profile' registrado.")
-    except ImportError as e: print(f"ERRO ao importar/registrar 'profile': {e}")
-
-    try:
-        from .blueprints.api import api_bp
-        app.register_blueprint(api_bp)
-        print("Blueprint 'api' registrado.")
-    except ImportError as e: print(f"ERRO ao importar/registrar 'api': {e}")
-
-    try:
-        from .blueprints.management import management_bp
-        app.register_blueprint(management_bp)
-        print("Blueprint 'management' registrado.")
-    except ImportError as e: print(f"ERRO ao importar/registrar 'management': {e}")
-
-    try:
-        from .blueprints.analytics import analytics_bp
-        app.register_blueprint(analytics_bp)
-        print("Blueprint 'analytics' registrado.")
-    except ImportError as e: print(f"ERRO ao importar/registrar 'analytics': {e}")
-
-    try:
-        from .blueprints.gamification import gamification_bp
-        app.register_blueprint(gamification_bp)
-        print("Blueprint 'gamification' registrado com sucesso.")
-    except ImportError as e:
-        print(f"ERRO CRÍTICO: Falha ao importar/registrar Blueprint 'gamification'. Erro: {e}")
-
-
-    # Registra filtros de template
-    @app.template_filter('format_date_br')
-    def format_date_br_filter(dt_obj, include_time=False):
-        if dt_obj is None:
-            return 'N/A' 
-        return utils.format_date_br(dt_obj, include_time)
-
-    # Adiciona a pasta de uploads local como rota estática
-    @app.route('/uploads/<path:filename>')
-    def serve_uploads(filename):
-        uploads_dir = os.path.join(app_root_dir, 'uploads')
-        if not os.path.isdir(uploads_dir):
-             from flask import abort
-             print(f"AVISO: Diretório de uploads não encontrado: {uploads_dir}")
-             return abort(404)
-        return send_from_directory(uploads_dir, filename)
-
-    # Rota para favicon
-    @app.route('/favicon.ico')
-    def favicon():
-        return send_from_directory(os.path.join(app.root_path, 'static', 'images'),
-                               'favicon.ico', mimetype='image/vnd.microsoft.icon')
-
-
+    @app.errorhandler(500)
+    def internal_server_error(e):
+        print(f"ERRO 500: {e}")
+        flash("Ocorreu um erro interno no servidor.", "error")
+        return render_template('dashboard.html'), 500 # Redireciona para o dashboard
+    
     return app
