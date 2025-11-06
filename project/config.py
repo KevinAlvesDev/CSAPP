@@ -1,3 +1,4 @@
+# app2/CSAPP/project/config.py
 import os
 from dotenv import load_dotenv
 
@@ -41,16 +42,20 @@ class Config:
     R2_ENDPOINT_URL = os.environ.get('CLOUDFLARE_ENDPOINT_URL')
     R2_ACCESS_KEY_ID = os.environ.get('CLOUDFLARE_ACCESS_KEY_ID')
     R2_SECRET_ACCESS_KEY = os.environ.get('CLOUDFLARE_SECRET_ACCESS_KEY')
-    R2_BUCKET_NAME = os.environ.get('CLOUDFLARE_BUCKET_NAME')
-    R2_PUBLIC_URL_BASE = os.environ.get('CLOUDFLARE_PUBLIC_URL') # .env usa PUBLIC_URL
     
+    # --- INÍCIO DA CORREÇÃO ---
+    # O nome da variável no config deve ser o mesmo que o código usa.
+    CLOUDFLARE_BUCKET_NAME = os.environ.get('CLOUDFLARE_BUCKET_NAME')
+    CLOUDFLARE_PUBLIC_URL = os.environ.get('CLOUDFLARE_PUBLIC_URL')
+    # --- FIM DA CORREÇÃO ---
+
     # Verifica se todas as variáveis R2 necessárias estão presentes
     R2_CONFIGURADO = all([
         R2_ENDPOINT_URL,
         R2_ACCESS_KEY_ID, 
         R2_SECRET_ACCESS_KEY, 
-        R2_BUCKET_NAME, 
-        R2_PUBLIC_URL_BASE
+        CLOUDFLARE_BUCKET_NAME, # <-- Corrigido aqui
+        CLOUDFLARE_PUBLIC_URL
     ])
     
     if not R2_CONFIGURADO:

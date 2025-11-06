@@ -1,75 +1,121 @@
-/* Estilos CSS específicos desta página (Timeline, Comentários, etc.) */
+/* app2/CSAPP/static/css/implantacao_detalhes.css */
+
+/* --- Estilos da Timeline (Fluidificados) --- */
 .timeline-list { list-style-type: none; padding-left: 0; }
-.timeline-item { display: flex; padding: 12px 0; border-bottom: 1px solid var(--input-border); }
+.timeline-item { 
+    display: flex; 
+    padding: 12px 8px; /* Adiciona padding lateral */
+    border-bottom: 1px solid var(--input-border); 
+    border-radius: var(--border-radius-sm); /* Arredonda o item */
+    transition: background-color 0.2s ease, padding-left 0.2s ease; /* Transição fluida */
+}
 .timeline-item:last-child { border-bottom: none; }
-.timeline-icon { flex-shrink: 0; width: 40px; height: 40px; background-color: var(--input-border); color: var(--accent-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-right: 15px; }
+.timeline-item:hover {
+    background-color: var(--table-hover-bg); /* Destaque */
+    padding-left: 12px; /* Indentação fluida */
+}
+.timeline-icon { 
+    flex-shrink: 0; 
+    width: 40px; 
+    height: 40px; 
+    background-color: var(--input-border); 
+    color: var(--accent-color); 
+    border-radius: 50%; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    font-size: 1.2rem; 
+    margin-right: 15px; 
+    transition: all 0.2s ease-in-out;
+}
+.timeline-item:hover .timeline-icon {
+    transform: scale(1.1);
+    background-color: var(--accent-color);
+    color: white;
+}
 .timeline-content { flex-grow: 1; min-width: 0; }
 .timeline-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
 .timeline-usuario { font-weight: 600; color: var(--body-color); }
 .timeline-data { font-size: 0.8rem; color: #8b949e; flex-shrink: 0; padding-left: 10px; }
-body.dark-mode .timeline-data { color: #888; } /* Ajuste dark mode */
+body.dark-mode .timeline-data { color: #888; }
 .timeline-detalhes { font-size: 0.9rem; margin-bottom: 0; color: var(--body-color); opacity: 0.9; white-space: pre-wrap; word-break: break-word; }
+
+/* --- Estilos de Comentários e Tarefas (Fluidificados) --- */
 .comment-text { max-height: 100px; overflow: hidden; transition: max-height 0.3s ease-out; white-space: pre-wrap; word-break: break-word; }
-.comment-text.expanded { max-height: 2000px; /* Ajuste conforme necessário */ transition: max-height 0.5s ease-in; }
-.comment-image { max-height: 200px; width: auto; cursor: zoom-in; display: block; /* Garante que seja bloco */ margin-top: 5px; border-radius: var(--border-radius-sm); } /* Raio de borda */
+.comment-text.expanded { max-height: 2000px; transition: max-height 0.5s ease-in; }
+.comment-image { max-height: 200px; width: auto; cursor: zoom-in; display: block; margin-top: 5px; border-radius: var(--border-radius-sm); }
 .task-tag { font-size: 0.75em; vertical-align: middle; }
 .task-label-container { display: flex; align-items: center; flex-grow: 1; min-width: 0; }
 .task-label-container .form-check-label { margin-right: 0.5rem; word-break: break-word; }
 .task-label-container .task-tag { margin-left: auto; flex-shrink: 0; }
 .list-group-flush .list-group-item:last-child { border-bottom-width: 0; }
-/* Adiciona estilo para feedback de salvamento/carregamento nos botões */
 .btn .spinner-border-sm { vertical-align: text-bottom; }
-/* Estilo para o botão Marcar Todas */
 .btn-marcar-todas {
     font-size: 0.8rem;
     padding: 0.2rem 0.5rem;
 }
 
-/* --- INÍCIO DAS NOVAS REGRAS DE ESTILO --- */
+/* --- REGRAS DE ESTILO (Agressivas) --- */
 
-/* 1. Novo Cabeçalho do Módulo */
+/* 1. Novo Cabeçalho do Módulo (Destaque) */
 .module-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.75rem 0.25rem; /* Menos padding vertical */
-    border-bottom: 2px solid var(--header-border); /* Linha de fundo sólida */
-    margin-top: 1.5rem;
+    padding: 0.75rem 0.5rem;
+    border-bottom: 2px solid var(--accent-color); /* Borda de destaque */
+    margin-top: 2rem; /* Mais espaço */
     margin-bottom: 0.5rem;
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: background-color 0.2s ease-in-out;
 }
 .module-header:hover {
     background-color: var(--table-hover-bg);
 }
+
+/* --- INÍCIO DA CORREÇÃO (FONTE QUADRADA) --- */
 .module-header h5 {
     color: var(--accent-color);
-    font-weight: 700;
+    font-weight: 700; /* Reduzido de 800 */
+    font-size: 1.1rem; /* Levemente maior que o padrão */
     margin-bottom: 0;
+    text-transform: none; /* REMOVIDO o uppercase */
+    letter-spacing: normal; /* REMOVIDO o letter-spacing */
 }
+/* --- FIM DA CORREÇÃO --- */
+
 .module-header .btn {
     opacity: 0.8;
+    transition: opacity 0.2s;
 }
 .module-header:hover .btn {
     opacity: 1;
 }
 
-/* 2. Lista de Tarefas (Itens mais limpos) */
+/* 2. Lista de Tarefas (Minimalista e Fluida) */
 .tasks-list-group {
-    padding-left: 0.5rem; /* Leve indentação */
+    padding-left: 0.5rem;
 }
 .tasks-list-group .list-group-item {
-    background-color: transparent; /* Remove fundo do item */
-    border: none; /* Remove borda do item */
-    border-bottom: 1px solid var(--input-border); /* Apenas separador inferior */
-    padding: 1rem 0.5rem; /* Ajusta padding */
-    border-radius: 0; /* Remove raio de borda */
+    background-color: transparent;
+    border: none;
+    border-bottom: 1px solid var(--input-border);
+    padding: 1rem 0.5rem;
+    border-radius: 0;
+    transition: background-color 0.2s ease;
+}
+.tasks-list-group .list-group-item:hover {
+    background-color: var(--table-hover-bg);
 }
 .tasks-list-group .list-group-item:last-child {
     border-bottom: none;
 }
 .tasks-list-group .list-group-item .handle {
     opacity: 0.4;
+    transition: opacity 0.2s;
+}
+.tasks-list-group .list-group-item:hover .handle {
+    opacity: 1;
 }
 
 /* 3. Área de Comentário Refinada */
@@ -84,28 +130,36 @@ body.dark-mode .timeline-data { color: #888; } /* Ajuste dark mode */
     min-width: 200px;
 }
 .comment-form input[type="file"] {
-    flex-basis: 200px; /* Base para o input de ficheiro */
+    flex-basis: 200px;
     flex-grow: 1;
 }
 .comment-form button[type="button"] {
     flex-shrink: 0;
-    height: 31px; /* Alinha com inputs .form-control-sm */
+    height: 31px;
     padding: 0.2rem 0.75rem;
 }
 .comment-list-wrapper {
-    background-color: var(--sidebar-bg); /* Fundo ligeiramente diferente */
+    background-color: var(--sidebar-bg);
     border-radius: var(--border-radius-sm);
     border: 1px solid var(--input-border);
+    transition: background-color 0.3s;
 }
 .comment-list-wrapper .list-group-item {
     background-color: transparent;
     border: none;
     border-bottom: 1px solid var(--input-border);
+    transition: background-color 0.2s;
+}
+.comment-list-wrapper .list-group-item:hover {
+    background-color: var(--table-bg);
 }
 .comment-list-wrapper .list-group-item:last-child {
     border-bottom: none;
 }
 body.dark-mode .comment-list-wrapper {
-    background-color: #1c1c1e; /* Fundo mais escuro no dark mode */
+    background-color: #111315; /* Fundo mais escuro */
+}
+body.dark-mode .comment-list-wrapper .list-group-item:hover {
+    background-color: var(--body-bg);
 }
 /* --- FIM DAS NOVAS REGRAS DE ESTILO --- */

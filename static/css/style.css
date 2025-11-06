@@ -1,72 +1,151 @@
-/* CSS do Tema e Layout */
+/* app2/CSAPP/static/css/style.css */
+
+/* --- Fonte Moderna (Inter) --- */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+
 :root {
-    /* Tema Claro (Padrão) */
-    
-    /* --- ALTERAÇÕES DE REFINAMENTO --- */
-    --body-bg: #f8f9fa; 
-    --body-color: #212529; /* Um pouco mais escuro que o anterior */
+  /* --- INÍCIO DA CORREÇÃO (FONTE) --- */
+  /* 1. Define a fonte "Bodoni" como a fonte de destaque (serifada) */
+  --font-serif-display: "Bodoni 72", "Bodoni MT", Georgia, serif;
+  
+  /* 2. Define a fonte "Inter" como a fonte principal (sem serifa) */
+  --bs-font-sans-serif: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  /* --- FIM DA CORREÇÃO --- */
+}
+
+body {
+    font-family: var(--bs-font-sans-serif); /* Aplica a fonte "Inter" ao corpo */
+}
+
+:root {
+    /* Tema Claro (Agressivo/Moderno) */
+    --body-bg: #f7f9fc;
+    --body-color: #1a1a1a;
     --container-bg: #ffffff;
     --card-bg: #ffffff;
-    --input-bg: #ffffff;
+    --input-bg: #f8f9fa; /* Fundo de input sutilmente diferente */
     --input-border: #dee2e6;
     --input-color: #212529;
-    --accent-color: #0d6efd; /* Azul padrão moderno do Bootstrap 5 */
+    --accent-color: #0d6efd;
     --accent-color-rgb: 13, 110, 253;
-    --shadow: 0 4px 12px rgba(0, 0, 0, 0.05); /* Sombra mais suave e difusa */
+    /* Sombra de "destaque" (multi-camada, mais suave) */
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+    --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    
     --header-bg: #ffffff;
-    --header-border: #e9ecef;
+    --header-border: transparent; /* Minimalista: sem borda */
     --sidebar-bg: #f8f9fa;
     --table-bg: var(--card-bg);
     --table-border-color: #e9ecef;
-    --table-header-bg: #f8f9fa; /* Um pouco mais claro que o anterior */
-    --table-hover-bg: rgba(var(--accent-color-rgb), 0.05); 
-    --border-radius-sm: 0.25rem;
-    --border-radius-md: 0.375rem; /* Raio de borda padrão do BS5 */
-    /* --- FIM DAS ALTERAÇÕES --- */
+    --table-header-bg: #f8f9fa;
+    --table-hover-bg: rgba(var(--accent-color-rgb), 0.04);
+    --border-radius-sm: 0.375rem; /* 6px */
+    --border-radius-md: 0.5rem;   /* 8px */
 
-    /* AJUSTE 5: Variáveis da nova sidebar */
     --user-sidebar-bg: #ffffff;
     --user-sidebar-width: 280px;
-    --user-sidebar-width-minimized: 60px; /* Largura minimizada */
+    --user-sidebar-width-minimized: 60px;
     --user-sidebar-link-hover: #f1f3f5;
     --user-sidebar-border: #dee2e6;
 }
 
-/* --- INÍCIO DA IMPLEMENTAÇÃO DO DARK MODE --- */
+/* --- DARK MODE (Agressivo) --- */
 body.dark-mode {
-    --body-bg: #1c1c1e; /* Fundo principal escuro */
-    --body-color: #e0e0e0; /* Texto principal claro */
-    --container-bg: #2c2c2e; /* Fundo dos cards/containers */
-    --card-bg: #2c2c2e;
-    --input-bg: #3a3a3c; /* Fundo de inputs */
-    --input-border: #4a4a4c; /* Borda de inputs */
-    --input-color: #f0f0f0; /* Texto de inputs */
-    --shadow: 0 4px 12px rgba(0, 0, 0, 0.15); /* Sombra mais escura */
-    --header-bg: #2c2c2e; /* Fundo do header */
-    --header-border: #3a3a3c; /* Borda do header */
-    --sidebar-bg: #2c2c2e; /* Sidebar de detalhes */
-    --table-bg: var(--card-bg);
-    --table-border-color: #3a3a3c; /* Borda da tabela */
-    --table-header-bg: #3a3a3c; /* Fundo cabeçalho tabela */
-    --table-hover-bg: rgba(var(--accent-color-rgb), 0.15); /* Hover azulado escuro */
+    --body-bg: #111315; /* Mais escuro (quase preto) */
+    --body-color: #e3e3e3;
+    --container-bg: #1c1e20; /* Cards levemente mais claros */
+    --card-bg: #1c1e20;
+    --input-bg: #2a2c2e;
+    --input-border: #3a3c3e;
+    --input-color: #f0f0f0;
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+    --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
+    
+    --header-bg: #1c1e20;
+    --header-border: transparent;
+    --sidebar-bg: #1c1e20;
+    --table-border-color: #3a3c3e;
+    --table-header-bg: #2a2c2e;
+    --table-hover-bg: rgba(var(--accent-color-rgb), 0.1); 
+    --bs-progress-bg: #3a3c3e;
 
-    /* --- CORREÇÃO DA BARRA DE PROGRESSO --- */
-    --bs-progress-bg: #4a4a4c; /* Define o "trilho" para um cinza visível */
-    /* --- FIM DA CORREÇÃO --- */
+    --user-sidebar-bg: #1c1e20;
+    --user-sidebar-link-hover: #2a2c2e;
+    --user-sidebar-border: #303234;
+}
+/* --- FIM DO DARK MODE --- */
 
-    --user-sidebar-bg: #2c2c2e;
-    --user-sidebar-link-hover: #3a3a3c;
-    --user-sidebar-border: #3a3a3c;
+
+body {
+    background-color: var(--body-bg);
+    color: var(--body-color);
+    min-height: 100vh;
+    overflow-x: hidden;
+    transition: background-color 0.3s, color 0.3s;
+    line-height: 1.6;
+}
+.header-bg {
+    background-color: var(--header-bg);
+    border-bottom: 1px solid var(--header-border);
+    box-shadow: var(--shadow);
+    transition: background-color 0.3s, border-color 0.3s;
 }
 
-/* Ajustes finos para o Dark Mode */
-body.dark-mode .form-control:focus,
-body.dark-mode .form-select:focus {
+/* --- INÍCIO DA CORREÇÃO (FONTE) --- */
+.main-title {
+    color: var(--accent-color);
+    font-family: var(--font-serif-display); /* Aplica Bodoni ao título principal */
+    font-weight: 700; /* Bodoni fica melhor em negrito */
+    letter-spacing: 0.5px; /* Destaque */
+}
+/* --- FIM DA CORREÇÃO --- */
+
+.metric-card, .card {
+    background-color: var(--card-bg);
+    border: none; /* AGRESSIVO: Remove todas as bordas dos cards */
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow);
+    transition: all 0.25s ease-in-out;
+}
+.metric-card:hover, .card:hover {
+    transform: translateY(-4px); /* "Lift" mais agressivo */
+    box-shadow: var(--shadow-hover); /* Sombra de "destaque" */
+}
+
+/* Dark mode hover shadow */
+body.dark-mode .metric-card:hover, 
+body.dark-mode .card:hover {
+    box-shadow: var(--shadow-hover);
+}
+
+.form-control, .form-select {
     background-color: var(--input-bg);
     color: var(--input-color);
+    border: 1px solid var(--input-border);
+    border-radius: var(--border-radius-sm);
+    transition: all 0.3s;
 }
-
+.form-control:focus, .form-select:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 0.25rem rgba(var(--accent-color-rgb), 0.25);
+    background-color: var(--container-bg); /* Fundo mais claro no focus */
+    color: var(--input-color);
+}
+.form-control:disabled, .form-select:disabled, input:read-only:disabled {
+     background-color: #e9ecef !important;
+     opacity: 0.8;
+     cursor: not-allowed;
+     color: #6c757d;
+ }
+body.dark-mode .form-control,
+body.dark-mode .form-select {
+    background-color: var(--input-bg);
+    border-color: var(--input-border);
+}
+body.dark-mode .form-control:focus,
+body.dark-mode .form-select:focus {
+    background-color: var(--container-bg);
+}
 body.dark-mode .form-control:disabled, 
 body.dark-mode .form-select:disabled, 
 body.dark-mode input:read-only:disabled {
@@ -75,140 +154,61 @@ body.dark-mode input:read-only:disabled {
      color: #8e8e93;
  }
 
-body.dark-mode .nav-tabs .nav-link {
-    color: var(--body-color);
-    opacity: 0.8;
-}
-body.dark-mode .nav-tabs .nav-link.active {
-    background-color: var(--card-bg);
-    color: var(--accent-color);
-    border-color: var(--input-border) var(--input-border) var(--card-bg);
-}
-body.dark-mode .nav-tabs .nav-link:hover {
-    border-color: var(--input-border) var(--input-border) var(--card-bg);
-    opacity: 1;
-}
-
-body.dark-mode .table thead th {
-    background-color: var(--table-header-bg);
-    color: var(--body-color);
-}
-
-body.dark-mode .list-group-item {
-    background-color: var(--card-bg);
-    color: var(--body-color);
-    border: 1px solid var(--input-border);
-}
-
-/* Cor do texto do botão de fechar (X) em modais escuros */
-body.dark-mode .modal-header .btn-close {
-    filter: invert(1) grayscale(100%) brightness(200%);
-}
-/* --- FIM DA IMPLEMENTAÇÃO DO DARK MODE --- */
-
-
-body {
-    font-family: 'Inter', sans-serif;
-    background-color: var(--body-bg);
-    color: var(--body-color);
-    min-height: 100vh;
-    overflow-x: hidden;
-    transition: background-color 0.3s, color 0.3s;
-    line-height: 1.6; /* Improved readability */
-}
-.header-bg {
-    background-color: var(--header-bg);
-    border-bottom: 1px solid var(--header-border);
-    box-shadow: var(--shadow); /* Apply shadow to header */
-}
-.main-title {
-    color: var(--accent-color);
-    font-weight: 800;
-}
-.metric-card, .card {
-    background-color: var(--card-bg);
-    border: 1px solid var(--input-border);
-    border-radius: var(--border-radius-md); /* Rounded corners for cards */
-    box-shadow: var(--shadow); /* Apply shadow to cards */
-    transition: all 0.3s ease-in-out;
-}
-.metric-card:hover, .card:hover {
-    transform: translateY(-2px); /* Subtle lift on hover */
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12); /* Slightly more pronounced shadow on hover */
-}
-.form-control, .form-select {
-    background-color: var(--input-bg);
-    color: var(--input-color);
-    border-color: var(--input-border);
-    border-radius: var(--border-radius-sm); /* Rounded corners for inputs */
-    transition: all 0.3s;
-}
-.form-control:focus, .form-select:focus {
-    border-color: var(--accent-color);
-    box-shadow: 0 0 0 0.25rem rgba(var(--accent-color-rgb), 0.25);
-    background-color: var(--input-bg);
-    color: var(--input-color);
-}
-/* Estilo crucial para campos desabilitados no modal */
-.form-control:disabled, .form-select:disabled, input:read-only:disabled {
-     background-color: #e9ecef !important; /* Cor de fundo cinza claro */
-     opacity: 0.8; /* Slightly less transparent */
-     cursor: not-allowed;
-     color: #6c757d;
- }
 .list-group-item {
     background-color: var(--card-bg);
     color: var(--body-color);
-    border: 1px solid var(--input-border); /* Explicit border */
-    border-radius: var(--border-radius-sm); /* Rounded corners */
-    margin-bottom: 0.25rem; /* Small gap between items */
+    border: 1px solid var(--input-border);
+    border-radius: var(--border-radius-sm);
+    margin-bottom: 0.25rem;
+    transition: background-color 0.3s, color 0.3s;
 }
 .list-group-item:last-child {
     margin-bottom: 0;
 }
 .sidebar-bg {
     background-color: var(--sidebar-bg) !important;
-    border-right: 1px solid var(--header-border); /* Add a subtle right border */
+    border-right: 1px solid var(--input-border); /* Sidebar volta a ter borda */
+    transition: background-color 0.3s, border-color 0.3s;
 }
+body.dark-mode .sidebar-bg {
+    border-right: 1px solid var(--input-border);
+}
+
 .sidebar-info-list li, .sidebar-info-list strong {
     color: var(--body-color) !important;
 }
-.nav-tabs {
-    border-bottom: 1px solid var(--input-border);
-}
-.nav-tabs .nav-link {
-    background-color: transparent;
-    border: 1px solid transparent;
-    border-top-left-radius: var(--border-radius-sm);
-    border-top-right-radius: var(--border-radius-sm);
-    color: var(--body-color);
-    opacity: 0.8;
-    margin-right: 0.25rem; /* Small gap between tabs */
+
+/* --- ESTILO DAS ABAS (NAV-PILLS) MODERNAS --- */
+.nav-pills .nav-link {
+    color: #6c757d; /* Cor inativa */
+    font-weight: 600;
     transition: all 0.2s ease-in-out;
 }
-.nav-tabs .nav-link.active {
-    background-color: var(--card-bg);
-    color: var(--accent-color);
-    border-color: var(--input-border) var(--input-border) var(--card-bg);
-    opacity: 1;
-    font-weight: 600;
+.nav-pills .nav-link.active {
+    background-color: var(--accent-color);
+    color: white;
+    box-shadow: 0 2px 4px rgba(var(--accent-color-rgb), 0.3);
 }
-.nav-tabs .nav-link:hover {
-    border-color: var(--input-border) var(--input-border) var(--card-bg);
-    opacity: 1;
+.nav-pills .nav-link:hover:not(.active) {
     color: var(--accent-color);
 }
+/* --- FIM DO ESTILO DAS ABAS --- */
+
+
 .table {
     color: var(--body-color);
     background-color: var(--table-bg);
-    border: 1px solid var(--table-border-color); /* Overall table border */
-    border-radius: var(--border-radius-md); /* Rounded corners for table */
-    overflow: hidden; /* Ensures rounded corners are visible */
+    border: none; /* Tabela sem borda */
+    border-radius: var(--border-radius-md);
+    overflow: hidden;
 }
 .table th, .table td {
     border-color: var(--table-border-color);
     vertical-align: middle;
-    padding: 0.75rem; /* More breathing room */
+    padding: 0.75rem;
+}
+.table-hover > tbody > tr {
+    transition: background-color 0.15s ease-out;
 }
 .table-hover > tbody > tr:hover > * {
     color: var(--body-color);
@@ -216,22 +216,32 @@ body {
 }
 .table thead th {
     color: var(--body-color);
-    background-color: var(--table-header-bg); /* Alterado para usar variável */
+    background-color: var(--table-header-bg);
     border-bottom: 2px solid var(--table-border-color);
 }
-.btn-primary, .btn-success {
-    color: white !important;
-    border-radius: var(--border-radius-sm);
-    box-shadow: var(--shadow);
-    transition: all 0.2s ease-in-out;
+body.dark-mode .table thead th {
+    background-color: var(--table-header-bg);
+    color: var(--body-color);
 }
-.btn-primary:hover, .btn-success:hover {
-    transform: translateY(-1px);
+
+
+.btn {
+    border-radius: var(--border-radius-sm);
+    transition: all 0.2s ease-in-out;
+    font-weight: 600; /* Destaque em todos os botões */
+}
+.btn-primary, .btn-success, .btn-info {
+    color: white !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+.btn-primary:hover, .btn-success:hover, .btn-info:hover {
+    transform: translateY(-2px); /* "Lift" agressivo */
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 .table a {
     color: var(--accent-color);
     text-decoration: none;
+    font-weight: 600;
 }
 .table a:hover {
     color: #0056b3;
@@ -251,26 +261,31 @@ body {
 }
 #modalDetalhesEmpresa .modal-content, #modalGerenciarUsuarios .modal-content, #modalGamificacao .modal-content {
     max-height: 95vh;
-    border-radius: var(--border-radius-md); /* Rounded modal corners */
+    border-radius: var(--border-radius-md);
     box-shadow: var(--shadow);
+    border: none;
 }
 #modalDetalhesEmpresa .modal-body, #modalGerenciarUsuarios .modal-body, #modalGamificacao .modal-body {
     max-height: calc(95vh - 120px);
     overflow-y: auto;
 }
 .modal-header {
-    border-bottom: 1px solid var(--header-border);
+    border-bottom: 1px solid var(--input-border);
 }
 .modal-footer {
-    border-top: 1px solid var(--header-border);
+    border-top: 1px solid var(--input-border);
+}
+body.dark-mode .modal-header .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+body.dark-mode .modal-body {
+    background-color: var(--body-bg);
+}
+body.dark-mode .modal-content {
+    background-color: var(--card-bg);
 }
 
-/* AJUSTE 4: Remove o filtro que tornava o 'btn-close' invisível */
-.btn-close-dark {
-    /* filter: invert(1) grayscale(100%) brightness(200%); (REMOVIDO) */
-    /* O Bootstrap 5.3+ lida com a cor do botão de fechar. 
-       Remover esta regra restaura o comportamento padrão (preto ou branco dependendo do data-bs-theme). */
-}
+
 .alert {
     border-radius: var(--border-radius-sm);
 }
@@ -282,6 +297,11 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: all 0.2s ease-in-out;
+}
+.user-profile-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 10px rgba(var(--accent-color-rgb), 0.5);
 }
 .user-profile-btn img {
     width: 100%; 
@@ -293,25 +313,26 @@ body {
     color: var(--accent-color);
 }
 
-
-/* --- AJUSTE 5: Estilos da Nova Sidebar de Perfil --- */
 .user-sidebar-bg {
     background-color: var(--user-sidebar-bg);
     border-left: 1px solid var(--user-sidebar-border);
     box-shadow: -4px 0 15px rgba(0, 0, 0, 0.05);
-    transition: width 0.3s ease-in-out;
-    width: var(--user-sidebar-width); /* Largura padrão */
-    color: var(--body-color); /* Garante cor do texto */
+    transition: width 0.3s ease-in-out, background-color 0.3s;
+    width: var(--user-sidebar-width);
+    color: var(--body-color);
 }
 
 .user-sidebar-bg .offcanvas-header {
     padding: 1rem;
-    border-bottom: 1px solid var(--header-border);
+    border-bottom: 1px solid var(--input-border);
+}
+body.dark-mode .user-sidebar-bg .offcanvas-header {
+    border-bottom: 1px solid var(--input-border);
 }
 
 .user-sidebar-bg .offcanvas-body {
-    padding: 0; /* Remove padding do body para a lista tomar conta */
-    overflow-y: hidden; /* Desabilita scroll do body */
+    padding: 0;
+    overflow-y: hidden;
     transition: width 0.3s ease-in-out;
 }
 
@@ -325,7 +346,7 @@ body {
     justify-content: center;
     background-color: var(--accent-color);
     color: white;
-    flex-shrink: 0; /* Impede que encolha */
+    flex-shrink: 0;
 }
 .user-profile-btn-sidebar img {
     width: 100%;
@@ -336,9 +357,8 @@ body {
     font-size: 1.5rem;
 }
 
-/* Lista de Navegação da Sidebar */
 .user-sidebar-nav {
-    height: 100%; /* Ocupa altura total do body */
+    height: 100%;
     display: flex;
     flex-direction: column;
     padding-top: 0.5rem;
@@ -354,7 +374,7 @@ body {
     padding: 0.5rem 1rem 0.25rem;
     font-size: 0.75rem;
     font-weight: 700;
-    color: #6c757d; /* Cor de cabeçalho (cinza) */
+    color: #6c757d;
     text-transform: uppercase;
     white-space: nowrap;
 }
@@ -366,12 +386,13 @@ body {
     color: var(--body-color);
     border-radius: var(--border-radius-sm);
     margin: 0.1rem 0.5rem;
-    white-space: nowrap; /* Impede que o texto quebre linha */
+    white-space: nowrap;
     transition: background-color 0.2s, color 0.2s;
+    font-weight: 500;
 }
 .user-sidebar-nav .nav-link i {
     font-size: 1.25rem;
-    width: 30px; /* Largura fixa para o ícone */
+    width: 30px;
     flex-shrink: 0;
     text-align: center;
     transition: font-size 0.2s;
@@ -386,116 +407,83 @@ body {
     transition: opacity 0.3s ease-in-out;
 }
 
-/* Estilos da Sidebar Minimizada */
 .user-sidebar-bg.minimized {
     width: var(--user-sidebar-width-minimized);
 }
-
 .user-sidebar-bg.minimized .offcanvas-header {
     padding: 1rem 0.5rem;
     justify-content: center !important;
 }
-
 .user-sidebar-bg.minimized .offcanvas-header .d-flex {
-    display: none !important; /* Esconde o header com foto e nome */
+    display: none !important;
 }
 .user-sidebar-bg.minimized .offcanvas-header #toggleSidebarMinify {
-    display: block; /* Garante que o botão de toggle ainda apareça */
+    display: block;
     margin-left: auto;
     margin-right: auto;
 }
-
 .user-sidebar-bg.minimized .offcanvas-body {
-    overflow-y: visible; /* Permite tooltips */
+    overflow-y: visible;
     padding-top: 0.5rem;
 }
-
 .user-sidebar-nav .nav-link-text {
     transition: opacity 0.2s ease-out;
 }
-
 .user-sidebar-bg.minimized .nav-link-text {
     opacity: 0;
     width: 0;
     overflow: hidden;
-    pointer-events: none; /* Não interage com o mouse */
+    pointer-events: none;
 }
-
 .user-sidebar-bg.minimized .nav-link {
     margin: 0.1rem 0.3rem;
-    justify-content: center; /* Centraliza o ícone */
+    justify-content: center;
     padding: 0.75rem;
 }
 .user-sidebar-bg.minimized .nav-link i {
-    font-size: 1.4rem; /* Ícones um pouco maiores no modo minimizado */
+    font-size: 1.4rem;
     width: auto;
 }
-
 .user-sidebar-bg.minimized .nav-item-divider,
 .user-sidebar-bg.minimized .nav-item-header {
-    display: none; /* Esconde divisórias e headers */
+    display: none;
 }
-/* --- ADIÇÃO DE ESTILO (PÁGINA ANALYTICS) --- */
 
-/* Destaca um cartão de métrica como "alerta" ou "perigo" */
 .metric-card.card-outline-danger {
-    border-color: var(--bs-danger);
-    border-width: 1px;
+    border: 1px solid var(--bs-danger); /* Mantém a borda vermelha */
 }
-
-/* Garante que o cabeçalho da tabela dentro de um cartão de perigo tenha a cor correta */
 .metric-card.card-outline-danger .table thead th {
     background-color: var(--bs-danger);
     color: white;
 }
-
-body.dark-mode .metric-card.card-outline-danger .table thead th {
-    background-color: var(--bs-danger);
-    color: white;
-}
-/* --- ADIÇÃO DE ESTILO (MODERNIZAÇÃO GERAL DE CARDS) --- */
-        
-/* Remove a borda padrão do card-header e aplica nosso fundo */
-.card-header {
-    background-color: var(--sidebar-bg);
-    border-bottom: 1px solid var(--header-border);
-    padding: 0.75rem 1.25rem; /* Padding padrão do BS */
-    font-weight: 600; /* Deixa o título do card com mais destaque */
-}
-
-/* Remove o padding do card-body se o filho for uma tabela responsiva */
-.card-body > .table-responsive {
-    margin: -1.25rem; /* Compensa o padding do card-body */
-}
-body.dark-mode .card-body > .table-responsive {
-    margin: -1.25rem; /* Ajuste para dark mode */
-}
-/* --- FIM DA ADIÇÃO --- */
-
-
-/* --- ADIÇÃO DE ESTILO (PÁGINA ANALYTICS) --- */
-
-/* Destaca um cartão de métrica como "alerta" ou "perigo" */
-.metric-card.card-outline-danger {
-    border-color: var(--bs-danger);
-    border-width: 1px;
-}
-
-/* Garante que o cabeçalho da tabela dentro de um cartão de perigo tenha a cor correta */
-.metric-card.card-outline-danger .table thead th {
-    background-color: var(--bs-danger);
-    color: white;
-}
-
 body.dark-mode .metric-card.card-outline-danger .table thead th {
     background-color: var(--bs-danger);
     color: white;
 }
 
-/* Layout da grelha de KPIs */
 .kpi-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     gap: 1rem;
-    margin-bottom: 1.5rem; /* Espaçamento após os KPIs */
+    margin-bottom: 1.5rem;
+}
+
+.card-header {
+    background-color: var(--card-bg); /* Alinhado com o fundo do card */
+    border-bottom: 1px solid var(--input-border);
+    padding: 0.75rem 1.25rem;
+    font-weight: 700; /* Mais destaque */
+    color: var(--body-color);
+    transition: background-color 0.3s, border-color 0.3s;
+}
+body.dark-mode .card-header {
+    background-color: var(--card-bg);
+    border-bottom-color: var(--input-border);
+}
+
+.card-body > .table-responsive {
+    margin: -1.25rem;
+}
+body.dark-mode .card-body > .table-responsive {
+    margin: -1.25rem;
 }

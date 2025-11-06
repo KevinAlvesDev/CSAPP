@@ -1,3 +1,4 @@
+# app2/CSAPP/project/blueprints/implantacao_actions.py
 import os
 from flask import (
     Blueprint, request, flash, redirect, url_for, g, current_app
@@ -31,14 +32,14 @@ from ..constants import (
 from .. import utils
 from ..extensions import r2_client # Necessário para excluir_implantacao
 
-# --- Este é o novo Blueprint para AÇÕES ---
-actions_bp = Blueprint('actions', __name__)
+# --- CORREÇÃO: Renomeado de 'actions_bp' para 'implantacao_actions_bp' ---
+implantacao_actions_bp = Blueprint('actions', __name__)
 
 
 # --- Rotas de Ação (POST de Formulários) ---
 # (Movidas de main.py)
 
-@actions_bp.route('/criar_implantacao', methods=['POST'])
+@implantacao_actions_bp.route('/criar_implantacao', methods=['POST'])
 @login_required
 @permission_required(PERFIS_COM_CRIACAO) #
 def criar_implantacao():
@@ -93,7 +94,7 @@ def criar_implantacao():
         flash(f'Erro ao criar implantação: {e}.', 'error')
         return redirect(url_for('main.dashboard'))
 
-@actions_bp.route('/criar_implantacao_modulo', methods=['POST'])
+@implantacao_actions_bp.route('/criar_implantacao_modulo', methods=['POST'])
 @login_required
 @permission_required(PERFIS_COM_CRIACAO)
 def criar_implantacao_modulo():
@@ -128,7 +129,7 @@ def criar_implantacao_modulo():
         flash(f'Erro ao criar implantação de módulo: {e}.', 'error')
         return redirect(url_for('main.dashboard'))
 
-@actions_bp.route('/iniciar_implantacao', methods=['POST'])
+@implantacao_actions_bp.route('/iniciar_implantacao', methods=['POST'])
 @login_required
 def iniciar_implantacao():
     usuario_cs_email = g.user_email #
@@ -180,7 +181,7 @@ def iniciar_implantacao():
         flash('Erro ao iniciar implantação.', 'error')
         return redirect(url_for('main.dashboard'))
 
-@actions_bp.route('/agendar_implantacao', methods=['POST'])
+@implantacao_actions_bp.route('/agendar_implantacao', methods=['POST'])
 @login_required
 def agendar_implantacao():
     usuario_cs_email = g.user_email
@@ -219,7 +220,7 @@ def agendar_implantacao():
     return redirect(url_for('main.dashboard'))
 
 
-@actions_bp.route('/finalizar_implantacao', methods=['POST'])
+@implantacao_actions_bp.route('/finalizar_implantacao', methods=['POST'])
 @login_required
 def finalizar_implantacao():
     usuario_cs_email = g.user_email #
@@ -260,7 +261,7 @@ def finalizar_implantacao():
 
     return redirect(dest_url)
 
-@actions_bp.route('/parar_implantacao', methods=['POST'])
+@implantacao_actions_bp.route('/parar_implantacao', methods=['POST'])
 @login_required
 def parar_implantacao():
     usuario_cs_email = g.user_email #
@@ -293,7 +294,7 @@ def parar_implantacao():
 
     return redirect(dest_url)
 
-@actions_bp.route('/retomar_implantacao', methods=['POST'])
+@implantacao_actions_bp.route('/retomar_implantacao', methods=['POST'])
 @login_required
 def retomar_implantacao():
     usuario_cs_email = g.user_email #
@@ -326,7 +327,7 @@ def retomar_implantacao():
 
     return redirect(dest_url)
 
-@actions_bp.route('/reabrir_implantacao', methods=['POST'])
+@implantacao_actions_bp.route('/reabrir_implantacao', methods=['POST'])
 @login_required
 def reabrir_implantacao():
     usuario_cs_email = g.user_email #
@@ -363,7 +364,7 @@ def reabrir_implantacao():
 
     return redirect(dest_url)
 
-@actions_bp.route('/atualizar_detalhes_empresa', methods=['POST'])
+@implantacao_actions_bp.route('/atualizar_detalhes_empresa', methods=['POST'])
 @login_required
 def atualizar_detalhes_empresa():
     usuario_cs_email = g.user_email #
@@ -461,7 +462,7 @@ def atualizar_detalhes_empresa():
         flash(f'Erro ao atualizar detalhes: {e}', 'error')
     return redirect(dest_url)
 
-@actions_bp.route('/transferir_implantacao', methods=['POST'])
+@implantacao_actions_bp.route('/transferir_implantacao', methods=['POST'])
 @login_required
 @permission_required(PERFIS_COM_GESTAO) #
 def transferir_implantacao():
@@ -488,7 +489,7 @@ def transferir_implantacao():
         flash(f'Erro ao transferir implantação: {e}', 'error')
     return redirect(dest_url)
 
-@actions_bp.route('/excluir_implantacao', methods=['POST'])
+@implantacao_actions_bp.route('/excluir_implantacao', methods=['POST'])
 @login_required
 def excluir_implantacao():
     usuario_cs_email = g.user_email #
@@ -525,7 +526,7 @@ def excluir_implantacao():
         flash('Erro ao excluir implantação.', 'error')
     return redirect(url_for('main.dashboard'))
 
-@actions_bp.route('/adicionar_tarefa', methods=['POST'])
+@implantacao_actions_bp.route('/adicionar_tarefa', methods=['POST'])
 @login_required
 def adicionar_tarefa():
     usuario_cs_email = g.user_email #

@@ -1,3 +1,4 @@
+# app2/CSAPP/project/__init__.py
 import os
 from flask import Flask, session, g, render_template, request, flash, redirect, url_for
 from flask_session import Session # Importa a Session
@@ -5,9 +6,11 @@ from .config import Config
 from .extensions import oauth, init_r2
 from . import db # Importa o módulo db
 
-# --- INÍCIO DA CORREÇÃO ---
-# NÃO importe os blueprints aqui no topo.
-# --- FIM DA CORREÇÃO ---
+from .domain.gamification_service import _get_all_gamification_rules_grouped
+
+# --- INÍCIO DA CORREÇÃO 3: Importar os filtros de template ---
+from .utils import format_date_br, format_date_iso_for_json
+# --- FIM DA CORREÇÃO 3 ---
 
 # Importa constantes para o 'g'
 from .constants import PERFIS_COM_GESTAO, PERFIL_ADMIN
@@ -22,13 +25,28 @@ def create_app():
     # 1. Carrega a configuração (config.py)
     app.config.from_object(Config)
 
+    # --- INÍCIO DA CORREÇÃO 3: Registrar os filtros no Jinja2 ---
+    app.jinja_env.filters['format_date_br'] = format_date_br
+    app.jinja_env.filters['format_date_iso'] = format_date_iso_for_json
+    # --- FIM DA CORREÇÃO 3 ---
+
     # 2. Inicializa extensões
     Session(app) # Inicializa o Flask-Session
     oauth.init_app(app)
     init_r2(app) 
     db.init_app(app)
     
-    # --- INÍCIO DA CORREÇÃO ---
+    # Registrar o cliente Auth0
+    oauth.register(
+        name='auth0',
+        client_id=app.config['AUTH0_CLIENT_ID'],
+        client_secret=app.config['AUTH0_CLIENT_SECRET'],
+        authorize_url=f"https://{app.config['AUTH0_DOMAIN']}/authorize",
+        access_token_url=f"https://{app.config['AUTH0_DOMAIN']}/oauth/token",
+        server_metadata_url=f"https://{app.config['AUTH0_DOMAIN']}/.well-known/openid-configuration",
+        client_kwargs={'scope': 'openid profile email'},
+    )
+
     # Importa os blueprints AQUI, depois de tudo estar configurado
     from .blueprints.main import main_bp
     from .blueprints.auth import auth_bp
@@ -38,7 +56,6 @@ def create_app():
     from .blueprints.management import management_bp
     from .blueprints.analytics import analytics_bp
     from .blueprints.gamification import gamification_bp
-    # --- FIM DA CORREÇÃO ---
 
     # 3. Registra os Blueprints
     app.register_blueprint(main_bp)
@@ -80,6 +97,13 @@ def create_app():
         g.R2_CONFIGURED = app.config.get('R2_CONFIGURADO', False)
         g.PERFIS_COM_GESTAO = PERFIS_COM_GESTAO
         g.PERFIL_ADMIN = PERFIL_ADMIN
+
+        # Carregar regras de gamificação globalmente
+        try:
+            g.gamification_rules = _get_all_gamification_rules_grouped()
+        except Exception as e:
+            print(f"ALERTA: Falha ao carregar regras de gamificação no before_request: {e}")
+            g.gamification_rules = {} # Define como vazio para evitar que o template quebre
     
     # Error Handlers
     @app.errorhandler(404)

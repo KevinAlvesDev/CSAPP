@@ -1,3 +1,4 @@
+# app2/CSAPP/project/db.py
 import sqlite3
 import psycopg2
 from psycopg2.extras import DictCursor
@@ -21,12 +22,10 @@ def get_db_connection():
             base_dir = os.path.abspath(os.path.dirname(os.path.dirname(__file__))) 
             db_path = os.path.join(base_dir, 'dashboard_simples.db')
 
-            if not os.path.exists(db_path):
-                raise ValueError(f"Arquivo do banco de dados SQLite não encontrado em: {db_path}")
-
+            # O sqlite3.connect() cria o arquivo .db se ele não existir.
             conn = sqlite3.connect(db_path)
             conn.row_factory = sqlite3.Row 
-            print(f"Conectado ao SQLite: {db_path}")
+            print(f"Conectado ao SQLite: {db_path} (Arquivo será criado se não existir)")
             return conn, 'sqlite'
         except sqlite3.Error as e:
             print(f"ERRO SQLite (ao conectar): {e}")
@@ -128,8 +127,7 @@ def logar_timeline(implantacao_id, usuario_cs, tipo_evento, detalhe):
         if conn:
             conn.close()
 
-# --- INÍCIO DA CORREÇÃO (init_db) ---
-# Esta função agora cria as tabelas em PostgreSQL ou SQLite
+
 def init_db():
     """Inicializa o schema do banco de dados (SQLite ou PostgreSQL)."""
     conn, db_type = None, None
@@ -315,7 +313,6 @@ def init_db():
             # --- Sintaxe SQLite (como estava antes) ---
             print("Executando init_db para SQLite...")
             
-            # (O código original para criar tabelas SQLite permanece aqui)
             # Tabela de Implantações (SQLite)
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS implantacoes (
@@ -476,6 +473,118 @@ def init_db():
             );
             """)
 
+        # --- INÍCIO DA CORREÇÃO: Popular a tabela gamificacao_regras ---
+        # Verifica se a tabela está vazia
+        if db_type == 'postgres':
+            cursor.execute("SELECT COUNT(*) as c FROM gamificacao_regras;")
+        else: # sqlite
+            cursor.execute("SELECT COUNT(*) as c FROM gamificacao_regras;")
+        
+        count_result = cursor.fetchone()
+        count = count_result[0] if isinstance(count_result, (tuple, list)) else count_result['c']
+
+        if count == 0:
+            print("Populando a tabela 'gamificacao_regras' com os valores padrão...")
+            
+            regras = [
+                # Elegibilidade
+                ('eleg_nota_qualidade_min', 'Elegibilidade', 'Nota Qualidade (Mín %)', 80, 'percentual'),
+                ('eleg_assiduidade_min', 'Elegibilidade', 'Assiduidade (Mín %)', 85, 'percentual'),
+                ('eleg_planos_sucesso_min', 'Elegibilidade', 'Planos de Sucesso (Mín %)', 75, 'percentual'),
+                ('eleg_reclamacoes_max', 'Elegibilidade', 'Reclamações (Máx)', 1, 'quantidade'),
+                ('eleg_perda_prazo_max', 'Elegibilidade', 'Perda de Prazo (Máx)', 2, 'quantidade'),
+                ('eleg_nao_preenchimento_max', 'Elegibilidade', 'Não Preenchimento (Máx)', 2, 'quantidade'),
+                ('eleg_finalizadas_junior', 'Elegibilidade', 'Impl. Finalizadas (Mín Júnior)', 4, 'quantidade'),
+                ('eleg_finalizadas_pleno', 'Elegibilidade', 'Impl. Finalizadas (Mín Pleno)', 5, 'quantidade'),
+                ('eleg_finalizadas_senior', 'Elegibilidade', 'Impl. Finalizadas (Mín Sênior)', 5, 'quantidade'),
+                ('eleg_reunioes_min', 'Elegibilidade', 'Média Reuniões/Dia (Mín)', 3, 'quantidade'),
+
+                # Pontos: Satisfação
+                ('pts_satisfacao_100', 'Pontos: Satisfação', 'Satisfação >= 100%', 25, 'pontos'),
+                ('pts_satisfacao_95', 'Pontos: Satisfação', 'Satisfação 95-99%', 17, 'pontos'),
+                ('pts_satisfacao_90', 'Pontos: Satisfação', 'Satisfação 90-94%', 15, 'pontos'),
+                ('pts_satisfacao_85', 'Pontos: Satisfação', 'Satisfação 85-89%', 14, 'pontos'),
+                ('pts_satisfacao_80', 'Pontos: Satisfação', 'Satisfação 80-84%', 12, 'pontos'),
+                
+                # (Assiduidade)
+                ('pts_assiduidade_100', 'Pontos: Assiduidade', 'Assiduidade >= 100%', 30, 'pontos'),
+                ('pts_assiduidade_98', 'Pontos: Assiduidade', 'Assiduidade 98-99%', 20, 'pontos'),
+                ('pts_assiduidade_95', 'Pontos: Assiduidade', 'Assiduidade 95-97%', 15, 'pontos'),
+
+                # (TMA)
+                ('pts_tma_30', 'Pontos: TMA', 'TMA <= 30 dias', 45, 'pontos'),
+                ('pts_tma_35', 'Pontos: TMA', 'TMA 31-35 dias', 32, 'pontos'),
+                ('pts_tma_40', 'Pontos: TMA', 'TMA 36-40 dias', 24, 'pontos'),
+                ('pts_tma_45', 'Pontos: TMA', 'TMA 41-45 dias', 16, 'pontos'),
+                ('pts_tma_46_mais', 'Pontos: TMA', 'TMA >= 46 dias', 8, 'pontos'),
+                
+                # (Reuniões/Dia)
+                ('pts_reunioes_5', 'Pontos: Reuniões/Dia', 'Média Reuniões >= 5', 35, 'pontos'),
+                ('pts_reunioes_4', 'Pontos: Reuniões/Dia', 'Média Reuniões >= 4', 30, 'pontos'),
+                ('pts_reunioes_3', 'Pontos: Reuniões/Dia', 'Média Reuniões >= 3', 25, 'pontos'),
+                ('pts_reunioes_2', 'Pontos: Reuniões/Dia', 'Média Reuniões >= 2', 15, 'pontos'),
+
+                # (Ações/Dia)
+                ('pts_acoes_5', 'Pontos: Ações/Dia', 'Média Ações >= 5', 15, 'pontos'),
+                ('pts_acoes_4', 'Pontos: Ações/Dia', 'Média Ações >= 4', 10, 'pontos'),
+                ('pts_acoes_3', 'Pontos: Ações/Dia', 'Média Ações >= 3', 7, 'pontos'),
+                ('pts_acoes_2', 'Pontos: Ações/Dia', 'Média Ações >= 2', 5, 'pontos'),
+
+                # (Planos de Sucesso)
+                ('pts_planos_100', 'Pontos: Planos Sucesso', 'Planos Sucesso >= 100%', 45, 'pontos'),
+                ('pts_planos_95', 'Pontos: Planos Sucesso', 'Planos Sucesso 95-99%', 35, 'pontos'),
+                ('pts_planos_90', 'Pontos: Planos Sucesso', 'Planos Sucesso 90-94%', 30, 'pontos'),
+                ('pts_planos_85', 'Pontos: Planos Sucesso', 'Planos Sucesso 85-89%', 20, 'pontos'),
+                ('pts_planos_80', 'Pontos: Planos Sucesso', 'Planos Sucesso 80-84%', 10, 'pontos'),
+
+                # (Impl. Iniciadas)
+                ('pts_iniciadas_10', 'Pontos: Impl. Iniciadas', 'Impl. Iniciadas >= 10', 25, 'pontos'),
+                ('pts_iniciadas_9', 'Pontos: Impl. Iniciadas', 'Impl. Iniciadas >= 9', 20, 'pontos'),
+                ('pts_iniciadas_8', 'Pontos: Impl. Iniciadas', 'Impl. Iniciadas >= 8', 18, 'pontos'),
+                ('pts_iniciadas_7', 'Pontos: Impl. Iniciadas', 'Impl. Iniciadas >= 7', 14, 'pontos'),
+                ('pts_iniciadas_6', 'Pontos: Impl. Iniciadas', 'Impl. Iniciadas >= 6', 10, 'pontos'),
+
+                # (Qualidade)
+                ('pts_qualidade_100', 'Pontos: Qualidade', 'Nota Qualidade >= 100%', 55, 'pontos'),
+                ('pts_qualidade_95', 'Pontos: Qualidade', 'Nota Qualidade 95-99%', 40, 'pontos'),
+                ('pts_qualidade_90', 'Pontos: Qualidade', 'Nota Qualidade 90-94%', 30, 'pontos'),
+                ('pts_qualidade_85', 'Pontos: Qualidade', 'Nota Qualidade 85-89%', 15, 'pontos'),
+                ('pts_qualidade_80', 'Pontos: Qualidade', 'Nota Qualidade 80-84%', 0, 'pontos'),
+
+                # (Bônus)
+                ('bonus_elogios', 'Bônus', 'Elogio (Máx 1)', 15, 'pontos'),
+                ('bonus_recomendacoes', 'Bônus', 'Recomendação (por ocorrência)', 1, 'pontos'),
+                ('bonus_certificacoes', 'Bônus', 'Certificação (Máx 1)', 15, 'pontos'),
+                ('bonus_trein_pacto_part', 'Bônus', 'Treinamento Pacto (Participou)', 15, 'pontos'),
+                ('bonus_trein_pacto_aplic', 'Bônus', 'Treinamento Pacto (Aplicou)', 30, 'pontos'),
+                
+                # (Bônus Reuniões Presenciais)
+                ('bonus_reun_pres_10', 'Bônus: Reuniões Pres.', 'Reuniões Presenciais >= 10', 35, 'pontos'),
+                ('bonus_reun_pres_7', 'Bônus: Reuniões Pres.', 'Reuniões Presenciais >= 7', 30, 'pontos'),
+                ('bonus_reun_pres_5', 'Bônus: Reuniões Pres.', 'Reuniões Presenciais >= 5', 25, 'pontos'),
+                ('bonus_reun_pres_3', 'Bônus: Reuniões Pres.', 'Reuniões Presenciais >= 3', 20, 'pontos'),
+                ('bonus_reun_pres_1', 'Bônus: Reuniões Pres.', 'Reuniões Presenciais >= 1', 15, 'pontos'),
+
+                # (Penalidades)
+                ('penal_reclamacao', 'Penalidades', 'Reclamação (por ocorrência)', -50, 'penalidade'),
+                ('penal_perda_prazo', 'Penalidades', 'Perda de Prazo (por ocorrência)', -10, 'penalidade'),
+                ('penal_desc_incomp', 'Penalidades', 'Descrição Incompreensível (por ocorrência)', -10, 'penalidade'),
+                ('penal_cancel_resp', 'Penalidades', 'Cancelamento por Resp. (por ocorrência)', -100, 'penalidade'),
+                ('penal_nao_envolv', 'Penalidades', 'Não Envolvimento (por ocorrência)', -10, 'penalidade'),
+                ('penal_nao_preench', 'Penalidades', 'Não Preenchimento (por ocorrência)', -10, 'penalidade'),
+                ('penal_sla_grupo', 'Penalidades', 'Perda SLA Grupo (por ocorrência)', -5, 'penalidade'),
+                ('penal_final_incomp', 'Penalidades', 'Finalização Incompleta (por ocorrência)', -10, 'penalidade'),
+                ('penal_hora_extra', 'Penalidades', 'Hora Extra (por ocorrência)', -10, 'penalidade'),
+            ]
+            
+            sql_insert = "INSERT INTO gamificacao_regras (regra_id, categoria, descricao, valor_pontos, tipo_valor) VALUES (%s, %s, %s, %s, %s)"
+            if db_type == 'sqlite':
+                sql_insert = sql_insert.replace('%s', '?')
+            
+            for regra in regras:
+                cursor.execute(sql_insert, regra)
+        # --- FIM DA CORREÇÃO ---
+
         conn.commit()
         print(f"Banco de dados ({db_type}) inicializado/verificado com sucesso.")
         
@@ -486,4 +595,3 @@ def init_db():
     finally:
         if conn:
             conn.close()
-# --- FIM DA CORREÇÃO ---

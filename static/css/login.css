@@ -1,4 +1,4 @@
-/* Estilos baseados nas cores da arte */
+/* app2/CSAPP/static/css/login.css */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
 
 :root {
@@ -7,10 +7,12 @@
     --bg-end: #66a3ff;
     --main-text-color: #0b1f48;
     --accent-color: #007bff;
-    --shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* Sombra mais suave */
-    --box-bg: rgba(255, 255, 255, 0.9); /* Branco semitransparente */
-    --accent-color-darker: #0056b3; /* Cor um pouco mais escura para o hover */
-    --border-radius-md: 0.5rem; /* Consistent with style.css */
+    /* ATUALIZADO: Sombra alinhada com style.css */
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+    --box-bg: rgba(255, 255, 255, 0.9);
+    --accent-color-darker: #0056b3;
+    /* ATUALIZADO: Raio de borda alinhado com style.css */
+    --border-radius-md: 0.5rem; 
 }
 
 /* --- INÍCIO DA MELHORIA VISUAL --- */
@@ -27,15 +29,10 @@ body {
     align-items: center;
     min-height: 100vh;
     
-    /* background-image: url('{{ url_for('static', filename='images/teladelogin.jpg', v=range(1, 10000) | random) }}'); (REMOVIDO) */
-    
-    /* Novo fundo animado */
     background: linear-gradient(-45deg, var(--bg-start), var(--bg-end), #4a90e2, #007bff);
     background-size: 400% 400%;
     animation: gradientAnimation 15s ease infinite;
-
     color: var(--main-text-color);
-    /* background-color: #f5f5f5; (Removido) */
 }
 
 .login-box {
@@ -43,7 +40,7 @@ body {
     padding: 40px;
     background-color: var(--box-bg);
     border-radius: var(--border-radius-md); 
-    box-shadow: var(--shadow);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Sombra de destaque */
     max-width: 400px;
     width: 90%;
     z-index: 10;
@@ -75,11 +72,13 @@ body {
     font-weight: 600;
     padding: 10px 30px;
     font-size: 1.1rem;
-    transition: background-color 0.2s, border-color 0.2s;
-    border-radius: var(--border-radius-md); /* Add border-radius to button */
+    transition: all 0.2s ease-in-out; /* Transição fluida */
+    border-radius: var(--border-radius-md);
 }
 .btn-login:hover {
     background-color: var(--accent-color-darker);
     border-color: var(--accent-color-darker);
     color: white;
+    transform: translateY(-3px); /* "Lift" agressivo */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); /* Sombra de destaque */
 }
