@@ -9,9 +9,9 @@ from ..blueprints.auth import login_required
 # CORREÇÃO: logar_timeline agora vem do db.py
 from ..db import query_db, execute_db, logar_timeline 
 from ..extensions import r2_client
-# --- INÍCIO DA CORREÇÃO ---
-# Importa do 'services.py' geral, pois a refatoração do domain não foi concluída
-from ..services import auto_finalizar_implantacao, _get_progress 
+# --- INÍCIO DA CORREÇÃO (Refatoração) ---
+# Importa da camada de domínio/serviço específica
+from ..domain.implantacao_service import auto_finalizar_implantacao, _get_progress 
 # --- FIM DA CORREÇÃO ---
 from ..utils import allowed_file, format_date_iso_for_json
 from ..constants import PERFIS_COM_GESTAO

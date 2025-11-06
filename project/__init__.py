@@ -9,6 +9,12 @@ from . import utils
 # Importa as constantes de perfil
 from .constants import PERFIS_COM_GESTAO
 
+# --- INÍCIO DA CORREÇÃO (IMPORTAÇÃO CIRCULAR) ---
+# A função de lógica de negócio agora é importada da camada de domínio,
+# o que é seguro e não causa ciclos.
+from .domain.gamification_service import _get_all_gamification_rules_grouped
+# --- FIM DA CORREÇÃO ---
+
 project_dir = os.path.dirname(os.path.abspath(__file__))
 app_root_dir = os.path.dirname(project_dir)
 templates_dir = os.path.join(app_root_dir, 'templates')
@@ -27,10 +33,7 @@ def create_app():
     init_extensions(app)
     init_db_app(app)
     
-    # --- INÍCIO DA CORREÇÃO (REMOVER IMPORT CIRCULAR) ---
-    # A importação de _get_all_gamification_rules_grouped foi MOVIDA
-    # daqui de cima para DENTRO da função 'before_request_func'
-    # --- FIM DA CORREÇÃO ---
+    # A importação de _get_all_gamification_rules_grouped foi movida para o topo.
 
 
     @app.before_request
@@ -40,17 +43,7 @@ def create_app():
         Carrega usuário, perfil e, se for gestor, as regras da gamificação.
         """
         
-        # --- INÍCIO DA CORREÇÃO (MOVER IMPORT PARA CÁ) ---
-        # Importa a função aqui para quebrar o ciclo de importação
-        try:
-            from .blueprints.gamification import _get_all_gamification_rules_grouped
-        except ImportError:
-            print("AVISO: Falha ao importar _get_all_gamification_rules_grouped. (before_request)")
-            # Define uma função placeholder se a importação falhar
-            def _get_all_gamification_rules_grouped():
-                print("USANDO PLACEHOLDER: _get_all_gamification_rules_grouped")
-                return {}
-        # --- FIM DA CORREÇÃO ---
+        # --- O 'try...except ImportError' foi removido daqui ---
         
         g.user = session.get('user')
         g.user_email = g.user.get('email') if g.user else None
@@ -77,7 +70,7 @@ def create_app():
             if g.perfil.get('perfil_acesso') in g.PERFIS_COM_GESTAO:
                 g.is_manager = True
                 try:
-                    # Agora a função é chamada após ter sido importada localmente
+                    # A função agora é importada globalmente e está disponível
                     g.gamification_rules = _get_all_gamification_rules_grouped()
                 except Exception as e:
                     print(f"AVISO: Falha ao pré-carregar regras de gamificação para gestor: {e}")

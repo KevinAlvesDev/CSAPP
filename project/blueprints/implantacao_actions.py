@@ -8,9 +8,16 @@ from botocore.exceptions import ClientError
 # Importações internas do projeto
 from ..blueprints.auth import login_required, permission_required 
 from ..db import query_db, execute_db, logar_timeline 
-from ..services import _get_progress
+# Importa dos novos arquivos de serviço no domínio
+from ..domain.implantacao_service import _get_progress, _create_default_tasks
+
+# --- INÍCIO DA CORREÇÃO (Refatoração Passo 4) ---
+# Importa as definições de tarefas do novo arquivo
+from ..task_definitions import (
+    MODULO_OBRIGATORIO, MODULO_PENDENCIAS, TAREFAS_TREINAMENTO_PADRAO
+)
+# Importa as constantes restantes do arquivo constants
 from ..constants import (
-    MODULO_OBRIGATORIO, MODULO_PENDENCIAS, TAREFAS_TREINAMENTO_PADRAO,
     JUSTIFICATIVAS_PARADA, CARGOS_RESPONSAVEL, PERFIS_COM_CRIACAO,
     NIVEIS_RECEITA, SEGUIMENTOS_LIST, TIPOS_PLANOS, MODALIDADES_LIST,
     HORARIOS_FUNCIONAMENTO, FORMAS_PAGAMENTO, SISTEMAS_ANTERIORES,
@@ -19,6 +26,8 @@ from ..constants import (
     SIM_NAO_OPTIONS,
     PERFIS_COM_GESTAO
 )
+# --- FIM DA CORREÇÃO ---
+
 from .. import utils
 from ..extensions import r2_client # Necessário para excluir_implantacao
 
@@ -33,7 +42,7 @@ actions_bp = Blueprint('actions', __name__)
 @login_required
 @permission_required(PERFIS_COM_CRIACAO) #
 def criar_implantacao():
-    from ..services import _create_default_tasks #
+    # A importação de _create_default_tasks foi movida para o topo do arquivo
     
     usuario_criador = g.user_email # Quem está criando
     nome_empresa = request.form.get('nome_empresa', '').strip()

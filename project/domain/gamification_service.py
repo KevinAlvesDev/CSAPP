@@ -5,6 +5,7 @@ from flask import current_app
 from ..db import query_db, execute_db
 from datetime import datetime, timedelta, date 
 import calendar 
+from collections import OrderedDict # <-- ADICIONADO
 
 # --- CORREÇÃO: Linha de auto-importação removida ---
 # (A linha "from ..domain.gamification_service import ..." foi removida daqui)
@@ -22,6 +23,22 @@ def _get_gamification_rules_as_dict():
     except Exception as e:
         print(f"ERRO CRÍTICO ao buscar regras de gamificação: {e}")
         return {}
+
+# --- FUNÇÃO MOVIDA PARA CÁ (DE blueprints/gamification.py) ---
+def _get_all_gamification_rules_grouped():
+    """Busca todas as regras de gamificação e as agrupa por categoria."""
+    regras = query_db("SELECT * FROM gamificacao_regras ORDER BY categoria, id")
+    if not regras:
+        return {}
+    
+    regras_agrupadas = OrderedDict()
+    for regra in regras:
+        categoria = regra['categoria']
+        if categoria not in regras_agrupadas:
+            regras_agrupadas[categoria] = []
+        regras_agrupadas[categoria].append(regra)
+    return regras_agrupadas
+# --- FIM DA FUNÇÃO MOVIDA ---
 
 
 def _get_gamification_automatic_data_bulk(mes, ano, primeiro_dia_str, fim_ultimo_dia_str, target_cs_email=None):

@@ -2,9 +2,15 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for,
 from ..blueprints.auth import permission_required
 from ..db import query_db, execute_db
 
-# --- CORREÇÃO: Imports movidos daqui ---
-# from ..domain.gamification_service import get_gamification_report_data, _get_gamification_automatic_data_bulk
-# --- FIM CORREÇÃO ---
+# --- INÍCIO DA CORREÇÃO (Refatoração) ---
+# Importa as funções de serviço/domínio no topo do arquivo.
+# Isto é seguro agora que a lógica não está mais neste arquivo.
+from ..domain.gamification_service import (
+    _get_all_gamification_rules_grouped,
+    get_gamification_report_data, 
+    _get_gamification_automatic_data_bulk
+)
+# --- FIM DA CORREÇÃO ---
 
 from ..constants import PERFIS_COM_GESTAO
 from datetime import datetime, timedelta 
@@ -18,19 +24,10 @@ def _get_all_cs_users_for_gamification():
     result = query_db("SELECT usuario, nome, cargo FROM perfil_usuario WHERE perfil_acesso IS NOT NULL AND perfil_acesso != '' ORDER BY nome", ())
     return result if result is not None else []
 
-def _get_all_gamification_rules_grouped():
-    """Busca todas as regras de gamificação e as agrupa por categoria."""
-    regras = query_db("SELECT * FROM gamificacao_regras ORDER BY categoria, id")
-    if not regras:
-        return {}
-    
-    regras_agrupadas = OrderedDict()
-    for regra in regras:
-        categoria = regra['categoria']
-        if categoria not in regras_agrupadas:
-            regras_agrupadas[categoria] = []
-        regras_agrupadas[categoria].append(regra)
-    return regras_agrupadas
+# --- FUNÇÃO REMOVIDA ---
+# A função _get_all_gamification_rules_grouped() foi movida 
+# para project/domain/gamification_service.py
+# --- FIM DA REMOÇÃO ---
 
 @gamification_bp.route('/save-rules-modal', methods=['POST'])
 @permission_required(PERFIS_COM_GESTAO)
@@ -78,13 +75,12 @@ def save_gamification_rules_from_modal():
 def manage_gamification_metrics():
     """Rota para gestores inserirem/atualizarem as métricas manuais de um CS."""
     
-    # --- INÍCIO DA CORREÇÃO (Mover import para dentro da função) ---
-    from ..domain.gamification_service import _get_gamification_automatic_data_bulk
-    # --- FIM DA CORREÇÃO ---
+    # A importação de _get_gamification_automatic_data_bulk foi movida para o topo.
     
     all_cs_users = _get_all_cs_users_for_gamification()
     
     # --- Busca as regras para a UI ---
+    # Agora usa a função importada do serviço
     regras_agrupadas = _get_all_gamification_rules_grouped()
     
     target_cs_email = request.args.get('cs_email')
@@ -245,9 +241,7 @@ def manage_gamification_metrics():
 def gamification_report():
     """Rota para exibir o relatório de pontuação da gamificação."""
     
-    # --- INÍCIO DA CORREÇÃO (Mover import para dentro da função) ---
-    from ..domain.gamification_service import get_gamification_report_data
-    # --- FIM DA CORREÇÃO ---
+    # A importação de get_gamification_report_data foi movida para o topo.
     
     all_cs_users = _get_all_cs_users_for_gamification()
     
