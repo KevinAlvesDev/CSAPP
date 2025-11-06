@@ -1,6 +1,6 @@
 import os
 from flask import Flask, session, g, render_template, request, flash, redirect, url_for
-from flask_session import Session # Importa o Session
+from flask_session import Session # Importa a Session
 from .config import Config
 from .extensions import oauth, init_r2
 from . import db # Importa o módulo db
