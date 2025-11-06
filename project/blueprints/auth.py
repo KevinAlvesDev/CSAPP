@@ -1,3 +1,5 @@
+# app2/CSAPP/project/blueprints/auth.py
+
 from functools import wraps
 from flask import (
     Blueprint, redirect, url_for, session, render_template, g, flash, 
@@ -5,14 +7,14 @@ from flask import (
 )
 from werkzeug.security import generate_password_hash
 from urllib.parse import urlencode
-# NOVO: Importar exceções específicas do DB, se possível (exemplo genérico)
 from psycopg2 import IntegrityError as Psycopg2IntegrityError
 from sqlite3 import IntegrityError as Sqlite3IntegrityError
 
+# --- CORREÇÃO: 'oauth' REMOVIDO do topo ---
+# from ..extensions import oauth (REMOVIDO DAQUI)
 
-from ..extensions import oauth
 from ..db import query_db, execute_db
-from ..constants import ADMIN_EMAIL, PERFIL_ADMIN, PERFIL_IMPLANTADOR, PERFIS_COM_GESTAO # <-- ALTERADO
+from ..constants import ADMIN_EMAIL, PERFIL_ADMIN, PERFIL_IMPLANTADOR, PERFIS_COM_GESTAO
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -72,7 +74,6 @@ def _sync_user_profile(user_email, user_name, auth0_user_id):
 
 # --- Decoradores de Autenticação e Permissão ---
 
-# --- INÍCIO DA MELHORIA 1 ---
 def login_required(f):
     """
     Decorator para proteger rotas que exigem login.
@@ -121,7 +122,6 @@ def login_required(f):
         
         return f(*args, **kwargs)
     return decorated_function
-# --- FIM DA MELHORIA 1 ---
 
 def permission_required(required_profiles):
     """Decorator para proteger rotas por Perfil de Acesso."""
@@ -150,23 +150,30 @@ def permission_required(required_profiles):
 @auth_bp.route('/login')
 def login():
     """Redireciona o usuário para a página de login do Auth0."""
+    # --- CORREÇÃO: Importa 'oauth' aqui ---
+    from ..extensions import oauth
+    
     session.clear()
     redirect_uri = url_for('auth.callback', _external=True)
+    
+    # Esta linha agora usa o 'oauth' importado dentro da função
     auth0 = oauth.create_client('auth0')
     
-    # --- INÍCIO DA CORREÇÃO ---
     # Adiciona o parâmetro prompt="login" para forçar a tela de login
     # e permitir a troca de contas.
     return auth0.authorize_redirect(
         redirect_uri=redirect_uri,
         prompt="login" 
     )
-    # --- FIM DA CORREÇÃO ---
 
 @auth_bp.route('/callback')
 def callback():
     """Manipula o retorno do Auth0 após o login."""
+    # --- CORREÇÃO: Importa 'oauth' aqui ---
+    from ..extensions import oauth
+    
     try:
+        # Esta linha agora usa o 'oauth' importado dentro da função
         auth0 = oauth.create_client('auth0')
         token = auth0.authorize_access_token()
         userinfo = token.get('userinfo')
@@ -176,10 +183,8 @@ def callback():
         
         session['user'] = userinfo
         
-        # --- INÍCIO DA MELHORIA 1 ---
         # Define a sessão como permanente IMEDIATAMENTE no login
         session.permanent = True
-        # --- FIM DA MELHORIA 1 ---
 
         user_email = userinfo.get('email')
         user_name = userinfo.get('name', user_email)
