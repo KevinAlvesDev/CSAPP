@@ -1,17 +1,12 @@
-# app2/CSAPP/project/db.py
+# project/db.py
 import sqlite3
 import psycopg2
 from psycopg2.extras import DictCursor
 from flask import current_app, g
 from datetime import datetime
 import os
-
-def init_app(app):
-    """
-    Registra funções no app Flask (como teardown).
-    Esta função é necessária para o create_app() em __init__.py.
-    """
-    pass
+import click
+from flask.cli import with_appcontext
 
 def get_db_connection():
     """Retorna uma conexão com o banco de dados (SQLite ou PostgreSQL)."""
@@ -25,7 +20,7 @@ def get_db_connection():
             # O sqlite3.connect() cria o arquivo .db se ele não existir.
             conn = sqlite3.connect(db_path)
             conn.row_factory = sqlite3.Row 
-            print(f"Conectado ao SQLite: {db_path} (Arquivo será criado se não existir)")
+            # print(f"Conectado ao SQLite: {db_path}") # Comentado para reduzir log
             return conn, 'sqlite'
         except sqlite3.Error as e:
             print(f"ERRO SQLite (ao conectar): {e}")
@@ -40,7 +35,7 @@ def get_db_connection():
              raise ValueError("Configuração de produção: DATABASE_URL não definida.")
         try:
             conn = psycopg2.connect(database_url, cursor_factory=DictCursor)
-            print("Conectado ao PostgreSQL.")
+            # print("Conectado ao PostgreSQL.") # Comentado para reduzir log
             return conn, 'postgres'
         except psycopg2.Error as e:
             print(f"ERRO PostgreSQL (ao conectar): {e}")
@@ -139,7 +134,6 @@ def init_db():
             # --- Sintaxe PostgreSQL ---
             print("Executando init_db para PostgreSQL...")
             
-            # 1. Tabela usuarios
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS usuarios (
                 usuario VARCHAR(255) PRIMARY KEY,
@@ -147,7 +141,6 @@ def init_db():
             );
             """)
 
-            # 2. Tabela perfil_usuario
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS perfil_usuario (
                 usuario VARCHAR(255) PRIMARY KEY REFERENCES usuarios(usuario) ON DELETE CASCADE,
@@ -165,7 +158,6 @@ def init_db():
             );
             """)
 
-            # 3. Tabela implantacoes
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS implantacoes (
                 id SERIAL PRIMARY KEY,
@@ -214,7 +206,6 @@ def init_db():
             );
             """)
 
-            # 4. Tabela tarefas
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS tarefas (
                 id SERIAL PRIMARY KEY,
@@ -228,7 +219,6 @@ def init_db():
             );
             """)
 
-            # 5. Tabela comentarios
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS comentarios (
                 id SERIAL PRIMARY KEY,
@@ -240,7 +230,6 @@ def init_db():
             );
             """)
             
-            # 6. Tabela timeline_log
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS timeline_log (
                 id SERIAL PRIMARY KEY,
@@ -252,7 +241,6 @@ def init_db():
             );
             """)
 
-            # 7. Tabela gamificacao_regras
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS gamificacao_regras (
                 id SERIAL PRIMARY KEY,
@@ -264,7 +252,6 @@ def init_db():
             );
             """)
 
-            # 8. Tabela gamificacao_metricas_mensais
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS gamificacao_metricas_mensais (
                 id SERIAL PRIMARY KEY,
@@ -303,7 +290,6 @@ def init_db():
             );
             """)
             
-            # Criar Índices (Opcional, mas bom para performance)
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_impl_usuario_cs ON implantacoes (usuario_cs);")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_impl_status ON implantacoes (status);")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_tarefas_implantacao_id ON tarefas (implantacao_id);")
@@ -313,10 +299,9 @@ def init_db():
 
         
         elif db_type == 'sqlite':
-            # --- Sintaxe SQLite (como estava antes) ---
+            # --- Sintaxe SQLite ---
             print("Executando init_db para SQLite...")
             
-            # Tabela de Implantações (SQLite)
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS implantacoes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -365,7 +350,6 @@ def init_db():
             );
             """)
             
-            # Tabela de Tarefas (SQLite)
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS tarefas (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -379,7 +363,6 @@ def init_db():
             );
             """)
             
-            # Tabela de Comentários (SQLite)
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS comentarios (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -391,7 +374,6 @@ def init_db():
             );
             """)
             
-            # Tabela de Log da Timeline (SQLite)
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS timeline_log (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -403,7 +385,6 @@ def init_db():
             );
             """)
 
-            # Tabela de Perfil de Usuário (SQLite)
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS perfil_usuario (
                 usuario VARCHAR(255) PRIMARY KEY REFERENCES usuarios(usuario) ON DELETE CASCADE,
@@ -421,7 +402,6 @@ def init_db():
             );
             """)
             
-            # Tabela de Usuários (SQLite)
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS usuarios (
                 usuario VARCHAR(255) PRIMARY KEY, 
@@ -429,7 +409,6 @@ def init_db():
             );
             """)
 
-            # Tabelas de Gamificação (SQLite)
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS gamificacao_regras (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -479,21 +458,15 @@ def init_db():
             );
             """)
 
-        # --- INÍCIO DA CORREÇÃO: Popular a tabela gamificacao_regras ---
-        # Verifica se a tabela está vazia
-        if db_type == 'postgres':
-            cursor.execute("SELECT COUNT(*) as c FROM gamificacao_regras;")
-        else: # sqlite
-            cursor.execute("SELECT COUNT(*) as c FROM gamificacao_regras;")
-        
+        # Popula regras de gamificação se vazio (Comum a ambos os DBs)
+        sql_check = "SELECT COUNT(*) as c FROM gamificacao_regras"
+        cursor.execute(sql_check)
         count_result = cursor.fetchone()
         count = count_result[0] if isinstance(count_result, (tuple, list)) else count_result['c']
 
         if count == 0:
-            print("Populando a tabela 'gamificacao_regras' com os valores padrão...")
-            
-            regras = [
-                # Elegibilidade
+             print("Populando 'gamificacao_regras' com os valores padrão...")
+             regras = [
                 ('eleg_nota_qualidade_min', 'Elegibilidade', 'Nota Qualidade (Mín %)', 80, 'percentual'),
                 ('eleg_assiduidade_min', 'Elegibilidade', 'Assiduidade (Mín %)', 85, 'percentual'),
                 ('eleg_planos_sucesso_min', 'Elegibilidade', 'Planos de Sucesso (Mín %)', 75, 'percentual'),
@@ -504,74 +477,52 @@ def init_db():
                 ('eleg_finalizadas_pleno', 'Elegibilidade', 'Impl. Finalizadas (Mín Pleno)', 5, 'quantidade'),
                 ('eleg_finalizadas_senior', 'Elegibilidade', 'Impl. Finalizadas (Mín Sênior)', 5, 'quantidade'),
                 ('eleg_reunioes_min', 'Elegibilidade', 'Média Reuniões/Dia (Mín)', 3, 'quantidade'),
-
-                # Pontos: Satisfação
                 ('pts_satisfacao_100', 'Pontos: Satisfação', 'Satisfação >= 100%', 25, 'pontos'),
                 ('pts_satisfacao_95', 'Pontos: Satisfação', 'Satisfação 95-99%', 17, 'pontos'),
                 ('pts_satisfacao_90', 'Pontos: Satisfação', 'Satisfação 90-94%', 15, 'pontos'),
                 ('pts_satisfacao_85', 'Pontos: Satisfação', 'Satisfação 85-89%', 14, 'pontos'),
                 ('pts_satisfacao_80', 'Pontos: Satisfação', 'Satisfação 80-84%', 12, 'pontos'),
-                
-                # (Assiduidade)
                 ('pts_assiduidade_100', 'Pontos: Assiduidade', 'Assiduidade >= 100%', 30, 'pontos'),
                 ('pts_assiduidade_98', 'Pontos: Assiduidade', 'Assiduidade 98-99%', 20, 'pontos'),
                 ('pts_assiduidade_95', 'Pontos: Assiduidade', 'Assiduidade 95-97%', 15, 'pontos'),
-
-                # (TMA)
                 ('pts_tma_30', 'Pontos: TMA', 'TMA <= 30 dias', 45, 'pontos'),
                 ('pts_tma_35', 'Pontos: TMA', 'TMA 31-35 dias', 32, 'pontos'),
                 ('pts_tma_40', 'Pontos: TMA', 'TMA 36-40 dias', 24, 'pontos'),
                 ('pts_tma_45', 'Pontos: TMA', 'TMA 41-45 dias', 16, 'pontos'),
                 ('pts_tma_46_mais', 'Pontos: TMA', 'TMA >= 46 dias', 8, 'pontos'),
-                
-                # (Reuniões/Dia)
                 ('pts_reunioes_5', 'Pontos: Reuniões/Dia', 'Média Reuniões >= 5', 35, 'pontos'),
                 ('pts_reunioes_4', 'Pontos: Reuniões/Dia', 'Média Reuniões >= 4', 30, 'pontos'),
                 ('pts_reunioes_3', 'Pontos: Reuniões/Dia', 'Média Reuniões >= 3', 25, 'pontos'),
                 ('pts_reunioes_2', 'Pontos: Reuniões/Dia', 'Média Reuniões >= 2', 15, 'pontos'),
-
-                # (Ações/Dia)
                 ('pts_acoes_5', 'Pontos: Ações/Dia', 'Média Ações >= 5', 15, 'pontos'),
                 ('pts_acoes_4', 'Pontos: Ações/Dia', 'Média Ações >= 4', 10, 'pontos'),
                 ('pts_acoes_3', 'Pontos: Ações/Dia', 'Média Ações >= 3', 7, 'pontos'),
                 ('pts_acoes_2', 'Pontos: Ações/Dia', 'Média Ações >= 2', 5, 'pontos'),
-
-                # (Planos de Sucesso)
                 ('pts_planos_100', 'Pontos: Planos Sucesso', 'Planos Sucesso >= 100%', 45, 'pontos'),
                 ('pts_planos_95', 'Pontos: Planos Sucesso', 'Planos Sucesso 95-99%', 35, 'pontos'),
                 ('pts_planos_90', 'Pontos: Planos Sucesso', 'Planos Sucesso 90-94%', 30, 'pontos'),
                 ('pts_planos_85', 'Pontos: Planos Sucesso', 'Planos Sucesso 85-89%', 20, 'pontos'),
                 ('pts_planos_80', 'Pontos: Planos Sucesso', 'Planos Sucesso 80-84%', 10, 'pontos'),
-
-                # (Impl. Iniciadas)
                 ('pts_iniciadas_10', 'Pontos: Impl. Iniciadas', 'Impl. Iniciadas >= 10', 25, 'pontos'),
                 ('pts_iniciadas_9', 'Pontos: Impl. Iniciadas', 'Impl. Iniciadas >= 9', 20, 'pontos'),
                 ('pts_iniciadas_8', 'Pontos: Impl. Iniciadas', 'Impl. Iniciadas >= 8', 18, 'pontos'),
                 ('pts_iniciadas_7', 'Pontos: Impl. Iniciadas', 'Impl. Iniciadas >= 7', 14, 'pontos'),
                 ('pts_iniciadas_6', 'Pontos: Impl. Iniciadas', 'Impl. Iniciadas >= 6', 10, 'pontos'),
-
-                # (Qualidade)
                 ('pts_qualidade_100', 'Pontos: Qualidade', 'Nota Qualidade >= 100%', 55, 'pontos'),
                 ('pts_qualidade_95', 'Pontos: Qualidade', 'Nota Qualidade 95-99%', 40, 'pontos'),
                 ('pts_qualidade_90', 'Pontos: Qualidade', 'Nota Qualidade 90-94%', 30, 'pontos'),
                 ('pts_qualidade_85', 'Pontos: Qualidade', 'Nota Qualidade 85-89%', 15, 'pontos'),
                 ('pts_qualidade_80', 'Pontos: Qualidade', 'Nota Qualidade 80-84%', 0, 'pontos'),
-
-                # (Bônus)
                 ('bonus_elogios', 'Bônus', 'Elogio (Máx 1)', 15, 'pontos'),
                 ('bonus_recomendacoes', 'Bônus', 'Recomendação (por ocorrência)', 1, 'pontos'),
                 ('bonus_certificacoes', 'Bônus', 'Certificação (Máx 1)', 15, 'pontos'),
                 ('bonus_trein_pacto_part', 'Bônus', 'Treinamento Pacto (Participou)', 15, 'pontos'),
                 ('bonus_trein_pacto_aplic', 'Bônus', 'Treinamento Pacto (Aplicou)', 30, 'pontos'),
-                
-                # (Bônus Reuniões Presenciais)
                 ('bonus_reun_pres_10', 'Bônus: Reuniões Pres.', 'Reuniões Presenciais >= 10', 35, 'pontos'),
                 ('bonus_reun_pres_7', 'Bônus: Reuniões Pres.', 'Reuniões Presenciais >= 7', 30, 'pontos'),
                 ('bonus_reun_pres_5', 'Bônus: Reuniões Pres.', 'Reuniões Presenciais >= 5', 25, 'pontos'),
                 ('bonus_reun_pres_3', 'Bônus: Reuniões Pres.', 'Reuniões Presenciais >= 3', 20, 'pontos'),
                 ('bonus_reun_pres_1', 'Bônus: Reuniões Pres.', 'Reuniões Presenciais >= 1', 15, 'pontos'),
-
-                # (Penalidades)
                 ('penal_reclamacao', 'Penalidades', 'Reclamação (por ocorrência)', -50, 'penalidade'),
                 ('penal_perda_prazo', 'Penalidades', 'Perda de Prazo (por ocorrência)', -10, 'penalidade'),
                 ('penal_desc_incomp', 'Penalidades', 'Descrição Incompreensível (por ocorrência)', -10, 'penalidade'),
@@ -581,15 +532,12 @@ def init_db():
                 ('penal_sla_grupo', 'Penalidades', 'Perda SLA Grupo (por ocorrência)', -5, 'penalidade'),
                 ('penal_final_incomp', 'Penalidades', 'Finalização Incompleta (por ocorrência)', -10, 'penalidade'),
                 ('penal_hora_extra', 'Penalidades', 'Hora Extra (por ocorrência)', -10, 'penalidade'),
-            ]
-            
-            sql_insert = "INSERT INTO gamificacao_regras (regra_id, categoria, descricao, valor_pontos, tipo_valor) VALUES (%s, %s, %s, %s, %s)"
-            if db_type == 'sqlite':
-                sql_insert = sql_insert.replace('%s', '?')
-            
-            for regra in regras:
-                cursor.execute(sql_insert, regra)
-        # --- FIM DA CORREÇÃO ---
+             ]
+             sql_insert = "INSERT INTO gamificacao_regras (regra_id, categoria, descricao, valor_pontos, tipo_valor) VALUES (%s, %s, %s, %s, %s)"
+             if db_type == 'sqlite':
+                 sql_insert = sql_insert.replace('%s', '?')
+             for regra in regras:
+                 cursor.execute(sql_insert, regra)
 
         conn.commit()
         print(f"Banco de dados ({db_type}) inicializado/verificado com sucesso.")
@@ -601,3 +549,16 @@ def init_db():
     finally:
         if conn:
             conn.close()
+
+# --- COMANDOS FLASK CLI ---
+
+@click.command('init-db')
+@with_appcontext
+def init_db_command():
+    """Cria as tabelas do banco de dados via linha de comando."""
+    init_db()
+    click.echo('Inicialização do banco de dados concluída.')
+
+def init_app(app):
+    """Registra o comando init-db na aplicação."""
+    app.cli.add_command(init_db_command)
