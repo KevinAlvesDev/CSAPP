@@ -90,11 +90,14 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
             query_impl += " AND i.status = 'nova' "
         elif target_status == 'futura': 
             query_impl += " AND i.status = 'futura' "
+        elif target_status == 'cancelada':
+             query_impl += " AND i.status = 'cancelada' "
         else:
             query_impl += " AND i.status = %s "
             args_impl.append(target_status)
 
-    date_field_to_filter = "i.data_finalizacao" if target_status == 'finalizada' else "i.data_criacao"
+    # Para canceladas, usamos a data_finalizacao como referência de filtro de data
+    date_field_to_filter = "i.data_finalizacao" if target_status in ['finalizada', 'cancelada'] else "i.data_criacao"
 
     if start_date:
         query_impl += f" AND {date_func}({date_field_to_filter}) >= {date_func}(%s) "
@@ -263,7 +266,8 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
     total_paradas = 0
     total_novas_global = 0
     total_futuras_global = 0 
-    total_atrasadas_status = 0 
+    total_atrasadas_status = 0
+    total_canceladas_global = 0 # NOVO CONTADOR
     tma_dias_sum = 0
     implantacoes_paradas_detalhadas = []
     
@@ -352,6 +356,9 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
             
         elif status == 'futura': 
             total_futuras_global += 1
+            
+        elif status == 'cancelada': # NOVO BLOCO
+            total_canceladas_global += 1
 
         elif status == 'andamento':
             total_andamento_global += 1
@@ -393,7 +400,8 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
         'total_paradas': total_paradas,
         'total_novas': total_novas_global,
         'total_futuras': total_futuras_global,
-        'total_sem_previsao': total_novas_global, # Corrigido
+        'total_canceladas': total_canceladas_global, # NOVO KPI
+        'total_sem_previsao': total_novas_global, 
         'total_atrasadas': total_atrasadas_status, 
         'media_tma': round(tma_dias_sum / total_finalizadas, 1) if total_finalizadas > 0 and tma_dias_sum is not None else 0, 
     }
@@ -404,7 +412,8 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
         'Finalizadas': total_finalizadas,
         'Paradas': total_paradas,
         'Futuras': total_futuras_global,
-        'Atrasadas': total_atrasadas_status
+        'Atrasadas': total_atrasadas_status,
+        'Canceladas': total_canceladas_global # NOVO DADO PARA O GRÁFICO
     }
     
     ranking_colab_data = sorted(

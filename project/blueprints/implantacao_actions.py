@@ -1,10 +1,12 @@
 # app2/CSAPP/project/blueprints/implantacao_actions.py
 import os
+import time
 from flask import (
     Blueprint, request, flash, redirect, url_for, g, current_app
 )
 from datetime import datetime
 from botocore.exceptions import ClientError
+from werkzeug.utils import secure_filename
 
 # Importações internas do projeto
 from ..blueprints.auth import login_required, permission_required 
@@ -567,3 +569,75 @@ def adicionar_tarefa():
         print(f"Erro ao adicionar tarefa para implantação ID {implantacao_id}: {e}")
         flash(f'Erro ao adicionar tarefa: {e}', 'error')
     return redirect(dest_url)
+
+@implantacao_actions_bp.route('/cancelar_implantacao', methods=['POST'])
+@login_required
+def cancelar_implantacao():
+    usuario_cs_email = g.user_email
+    implantacao_id = request.form.get('implantacao_id')
+    data_cancelamento = request.form.get('data_cancelamento')
+    motivo = request.form.get('motivo_cancelamento', '').strip()
+    
+    # Verifica R2 antes de tudo, pois o arquivo é obrigatório
+    if not r2_client:
+         flash('Erro: Serviço de armazenamento R2 não configurado. Não é possível fazer upload do comprovante obrigatório.', 'error')
+         return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
+
+    # Validação de campos obrigatórios
+    if not all([implantacao_id, data_cancelamento, motivo]):
+        flash('Todos os campos (Data, Motivo Resumo) são obrigatórios para cancelar.', 'error')
+        return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
+        
+    file = request.files.get('comprovante_cancelamento')
+    if not file or file.filename == '':
+        flash('O upload do print do e-mail de cancelamento é obrigatório.', 'error')
+        return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
+
+    try:
+        impl = query_db("SELECT usuario_cs, nome_empresa, status FROM implantacoes WHERE id = %s", (implantacao_id,), one=True)
+        
+        # Permissões (Dono ou Gestor)
+        is_owner = impl and impl.get('usuario_cs') == usuario_cs_email
+        is_manager = g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
+        
+        if not (is_owner or is_manager):
+             flash('Permissão negada para cancelar esta implantação.', 'error')
+             return redirect(url_for('main.dashboard'))
+             
+        if impl.get('status') in ['finalizada', 'cancelada']:
+             flash(f'Implantação já está {impl.get("status")}.', 'warning')
+             return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
+
+        # Processo de Upload do Comprovante
+        comprovante_url = None
+        if file and utils.allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            nome_base, extensao = os.path.splitext(filename)
+            nome_unico = f"cancel_proof_{implantacao_id}_{int(time.time())}{extensao}"
+            object_name = f"comprovantes_cancelamento/{nome_unico}"
+            
+            r2_client.upload_fileobj(
+                file,
+                current_app.config['CLOUDFLARE_BUCKET_NAME'],
+                object_name,
+                ExtraArgs={'ContentType': file.content_type}
+            )
+            comprovante_url = f"{current_app.config['CLOUDFLARE_PUBLIC_URL']}/{object_name}"
+        else:
+             flash('Tipo de arquivo inválido para o comprovante.', 'error')
+             return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
+
+        # Atualiza DB
+        execute_db(
+            "UPDATE implantacoes SET status = 'cancelada', data_cancelamento = %s, motivo_cancelamento = %s, comprovante_cancelamento_url = %s, data_finalizacao = CURRENT_TIMESTAMP WHERE id = %s",
+            (data_cancelamento, motivo, comprovante_url, implantacao_id)
+        )
+        
+        logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Implantação CANCELADA.\nMotivo: {motivo}\nData inf.: {utils.format_date_br(data_cancelamento)}')
+        flash('Implantação cancelada com sucesso.', 'success')
+        return redirect(url_for('main.dashboard'))
+
+    except Exception as e:
+        print(f"Erro ao cancelar implantação ID {implantacao_id}: {e}")
+        flash(f'Erro ao cancelar implantação: {e}', 'error')
+        return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))

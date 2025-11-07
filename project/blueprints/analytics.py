@@ -63,7 +63,9 @@ def analytics_dashboard():
             {'value': 'atrasadas_status', 'label': 'Atrasadas (> 25d)'},
             {'value': 'futura', 'label': 'Futuras'},
             {'value': 'finalizada', 'label': 'Finalizadas'},
-            {'value': 'parada', 'label': 'Paradas'}
+            {'value': 'parada', 'label': 'Paradas'},
+            # NOVA OPÇÃO DE FILTRO
+            {'value': 'cancelada', 'label': 'Canceladas'}
         ]
         
         # --- INÍCIO AJUSTE 2: Define os valores atuais dos filtros de tarefas ---

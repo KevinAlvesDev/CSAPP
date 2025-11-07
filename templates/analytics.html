@@ -110,6 +110,10 @@
             <div class="metric-card p-3 text-center"><h6 class="text-secondary">Impl. Atrasadas</h6><h4 class="mb-0 text-danger">{{ k.total_atrasadas | default(0) }}</h4></div>
             <div class="metric-card p-3 text-center"><h6 class="text-secondary">Impl. Futuras</h6><h4 class="mb-0 text-info">{{ k.total_futuras | default(0) }}</h4></div>
             <div class="metric-card p-3 text-center"><h6 class="text-secondary">Impl. Paradas</h6><h4 class="mb-0 text-danger">{{ k.total_paradas | default(0) }}</h4></div>
+            
+            {# NOVO CARD DE CANCELADAS #}
+            <div class="metric-card p-3 text-center" style="background-color: #f8d7da;"><h6 class="text-secondary">Impl. Canceladas</h6><h4 class="mb-0 text-dark">{{ k.total_canceladas | default(0) }}</h4></div>
+            
             <div class="metric-card p-3 text-center"><h6 class="text-secondary">Impl. Finalizadas</h6><h4 class="mb-0 text-success">{{ k.total_finalizadas | default(0) }}</h4></div>
             <div class="metric-card p-3 text-center"><h6 class="text-secondary">Impl. Sem Previsão</h6><h4 class="mb-0 text-danger">{{ k.total_sem_previsao | default(0) }}</h4></div>
             <div class="metric-card p-3 text-center"><h6 class="text-secondary">Média Implantação</h6><h4 class="mb-0 text-primary">{{ k.media_tma | default(0) }}d</h4></div>
@@ -174,6 +178,8 @@
                                         {% elif impl.status == 'parada' %} <span class="badge bg-danger">Parada</span>
                                         {% elif impl.status == 'futura' %} <span class="badge bg-info text-dark">Futura</span>
                                         {% elif impl.status == 'nova' %} <span class="badge bg-dark">Nova</span>
+                                        {# NOVO BADGE #}
+                                        {% elif impl.status == 'cancelada' %} <span class="badge bg-secondary text-white">Cancelada</span>
                                         {% else %} <span class="badge bg-warning text-dark">Em Andamento</span>
                                         {% endif %}
                                     </td>
@@ -382,7 +388,8 @@
             'Finalizadas': 'rgba(75, 192, 192, 0.7)', // Green
             'Futuras': 'rgba(54, 162, 235, 0.7)', // Blue
             'Paradas': 'rgba(255, 99, 132, 0.7)', // Red
-            'Atrasadas': 'rgba(217, 0, 0, 0.7)' // Dark Red
+            'Atrasadas': 'rgba(217, 0, 0, 0.7)', // Dark Red
+            'Canceladas': 'rgba(0, 0, 0, 0.6)' // Dark Gray/Blackish for Canceled
         };
 
         // 1. Gráfico Nível Clientes (MRR)
