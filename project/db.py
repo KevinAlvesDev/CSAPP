@@ -17,10 +17,12 @@ def get_db_connection():
             base_dir = os.path.abspath(os.path.dirname(os.path.dirname(__file__))) 
             db_path = os.path.join(base_dir, 'dashboard_simples.db')
 
-            # O sqlite3.connect() cria o arquivo .db se ele não existir.
-            conn = sqlite3.connect(db_path)
+            # --- CORREÇÃO CRÍTICA PARA BLOQUEIO DO SQLITE ---
+            # Define isolation_level=None para autocommit. Isso resolve o erro "cannot commit"
+            # e os bloqueios de transação persistentes no SQLite local.
+            conn = sqlite3.connect(db_path, isolation_level=None) 
+            # ------------------------------------------------
             conn.row_factory = sqlite3.Row 
-            # print(f"Conectado ao SQLite: {db_path}") # Comentado para reduzir log
             return conn, 'sqlite'
         except sqlite3.Error as e:
             print(f"ERRO SQLite (ao conectar): {e}")
@@ -35,7 +37,6 @@ def get_db_connection():
              raise ValueError("Configuração de produção: DATABASE_URL não definida.")
         try:
             conn = psycopg2.connect(database_url, cursor_factory=DictCursor)
-            # print("Conectado ao PostgreSQL.") # Comentado para reduzir log
             return conn, 'postgres'
         except psycopg2.Error as e:
             print(f"ERRO PostgreSQL (ao conectar): {e}")
@@ -43,11 +44,10 @@ def get_db_connection():
 
 def query_db(query, args=(), one=False):
     """
-    Executa uma query SELECT ou MUTATION (INSERT/UPDATE/DELETE com commit).
-    Se for uma mutação com RETURNING, retorna o resultado e commita.
+    Executa uma query SELECT ou MUTATION (INSERT/UPDATE/DELETE com commit)
+    e retorna o resultado. Inclui rollback em caso de erro.
     """
     conn, db_type = None, None
-    # Verifica se a query é uma operação de modificação de dados
     is_mutation = query.strip().upper().startswith(("INSERT", "UPDATE", "DELETE")) 
     
     try:
@@ -59,10 +59,10 @@ def query_db(query, args=(), one=False):
             
         cursor.execute(query, args)
         
-        # --- CORREÇÃO CRÍTICA: Se for mutação, faz o commit ---
+        # --- COMMIT DE PERSISTÊNCIA ---
         if is_mutation:
-            conn.commit()
-        # -----------------------------------------------------
+            conn.commit() 
+        # -----------------------------
 
         if one:
             result = cursor.fetchone()
@@ -72,6 +72,10 @@ def query_db(query, args=(), one=False):
             return [dict(row) for row in results] if results else []
             
     except Exception as e:
+        # --- ROLLBACK FORÇADO ---
+        if conn:
+             conn.rollback() 
+        # ------------------------
         print(f"ERRO DE QUERY: {e}\nQuery: {query}\nArgs: {args}")
         return None 
     finally:

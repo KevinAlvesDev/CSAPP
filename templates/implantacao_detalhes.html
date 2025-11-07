@@ -90,7 +90,7 @@
                     <li class="list-group-item"> <button class="btn btn-sm btn-link text-warning text-decoration-none p-0" data-bs-toggle="modal" data-bs-target="#modalReabrir"> <i class="bi bi-folder-symlink me-2"></i> Reabrir </button> </li>
                 {% endif %}
 
-                {# NOVO BOTÃO DE CANCELAR #}
+                {# BOTÃO DE CANCELAR #}
                 {% if implantacao.status not in ['finalizada', 'cancelada'] %}
                 <li class="list-group-item"> 
                     <button class="btn btn-sm btn-link text-dark text-decoration-none p-0" data-bs-toggle="modal" data-bs-target="#modalCancelar"> 
@@ -340,7 +340,42 @@
 {# --- Modais (Finalizar, Parar, Retomar, Reabrir, Add Tarefa, Transferir, Excluir) --- #}
 {# (Todos os url_for() aqui foram atualizados de 'main.' para 'actions.') #}
 {# Modal Finalizar #} <div class="modal fade" id="modalFinalizar" tabindex="-1"> <div class="modal-dialog"> <div class="modal-content"> <div class="modal-header header-bg"><h5 class="modal-title">Finalizar</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div> <form action="{{ url_for('actions.finalizar_implantacao') }}" method="POST"> <div class="modal-body"> <p>Tem certeza?</p> <p class="small text-warning">Só permitido se tarefas obrig./trein. concluídas.</p> <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}"> <input type="hidden" name="redirect_to" value="detalhes"> </div> <div class="modal-footer header-bg"> <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button> <button type="submit" class="btn btn-success">Confirmar</button> </div> </form> </div> </div> </div>
-{# Modal Parar #} <div class="modal fade" id="modalParar" tabindex="-1"> <div class="modal-dialog"> <div class="modal-content"> <div class="modal-header header-bg"><h5 class="modal-title">Parar</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div> <form action="{{ url_for('actions.parar_implantacao') }}" method="POST"> <div class="modal-body"> <p>Tem certeza?</p> <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}"> <div class="mb-3"> <label for="motivo_parada" class="form-label">Motivo (Obrigatório)</label> <select class="form-select" id="motivo_parada" name="motivo_parada" required> <option value="">Selecione...</option> {% for motivo in justificativas_parada %} <option value="{{ motivo }}">{{ motivo }}</option> {% endfor %} </select> </div> </div> <div class="modal-footer header-bg"> <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button> <button type="submit" class="btn btn-danger">Parar</button> </div> </form> </div> </div> </div>
+
+{# Modal Parar (ATUALIZADO COM CAMPO DATA) #} 
+<div class="modal fade" id="modalParar" tabindex="-1"> 
+    <div class="modal-dialog"> 
+        <div class="modal-content"> 
+            <div class="modal-header header-bg"><h5 class="modal-title">Parar</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div> 
+            <form action="{{ url_for('actions.parar_implantacao') }}" method="POST"> 
+                <div class="modal-body"> 
+                    <p>Tem certeza?</p> 
+                    <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}"> 
+                    
+                    {# NOVO CAMPO: DATA RETROATIVA DE PARADA #}
+                    <div class="mb-3"> 
+                        <label for="data_parada" class="form-label fw-bold">Data da Parada (Início Retroativo) <span class="text-danger">*</span></label> 
+                        <input type="date" class="form-control" id="data_parada" name="data_parada" required>
+                    </div>
+
+                    <div class="mb-3"> 
+                        <label for="motivo_parada" class="form-label">Motivo (Obrigatório)</label> 
+                        <select class="form-select" id="motivo_parada" name="motivo_parada" required> 
+                            <option value="">Selecione...</option> 
+                            {% for motivo in justificativas_parada %} 
+                                <option value="{{ motivo }}">{{ motivo }}</option> 
+                            {% endfor %} 
+                        </select> 
+                    </div> 
+                </div> 
+                <div class="modal-footer header-bg"> 
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button> 
+                    <button type="submit" class="btn btn-danger">Parar</button> 
+                </div> 
+            </form> 
+        </div> 
+    </div> 
+</div>
+
 {# Modal Retomar #} <div class="modal fade" id="modalRetomar" tabindex="-1"> <div class="modal-dialog"> <div class="modal-content"> <div class="modal-header header-bg"><h5 class="modal-title">Retomar</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div> <form action="{{ url_for('actions.retomar_implantacao') }}" method="POST"> <div class="modal-body"> <p>Tem certeza?</p> <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}"> <input type="hidden" name="redirect_to" value="detalhes"> </div> <div class="modal-footer header-bg"> <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button> <button type="submit" class="btn btn-primary">Retomar</button> </div> </form> </div> </div> </div>
 {# Modal Reabrir #} <div class="modal fade" id="modalReabrir" tabindex="-1"> <div class="modal-dialog"> <div class="modal-content"> <div class="modal-header header-bg"><h5 class="modal-title">Reabrir</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div> <form action="{{ url_for('actions.reabrir_implantacao') }}" method="POST"> <div class="modal-body"> <p>Tem certeza? Voltará para "Em Andamento".</p> <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}"> <input type="hidden" name="redirect_to" value="detalhes"> </div> <div class="modal-footer header-bg"> <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button> <button type="submit" class="btn btn-warning">Reabrir</button> </div> </form> </div> </div> </div>
 {# Modal Adicionar Tarefa #} <div class="modal fade" id="adicionarTarefaModal" tabindex="-1"> <div class="modal-dialog"> <div class="modal-content"> <div class="modal-header header-bg"><h5 class="modal-title">Adicionar Tarefa</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div> <form action="{{ url_for('actions.adicionar_tarefa') }}" method="POST"> <div class="modal-body"> <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}"> <div class="mb-3"> <label for="add-tarefa-filho-modal" class="form-label">Nome</label> <input type="text" class="form-control" id="add-tarefa-filho-modal" name="tarefa_filho" required> </div> <div class="mb-3"> <label for="add-tarefa-pai-modal" class="form-label">Módulo</label> <select class="form-select" id="add-tarefa-pai-modal" name="tarefa_pai" required> <option value="">Selecione...</option> {% for modulo in todos_modulos %} <option value="{{ modulo }}">{{ modulo }}</option> {% endfor %} <option value="Outros">Outros (Novo)</option> </select> </div> <div class="mb-3"> <label for="add-tarefa-tag-modal" class="form-label">Tag</label> <select class="form-select" id="add-tarefa-tag-modal" name="tag"> <option value="">Sem Tag</option> <option value="Ação interna">Ação interna</option> <option value="Reunião">Reunião</option> <option value="Outro">Outro</option> </select> </div> </div> <div class="modal-footer header-bg"> <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button> <button type="submit" class="btn btn-primary">Adicionar</button> </div> </form> </div> </div> </div>

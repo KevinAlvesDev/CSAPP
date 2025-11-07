@@ -282,29 +282,39 @@ def finalizar_implantacao():
 @implantacao_actions_bp.route('/parar_implantacao', methods=['POST'])
 @login_required
 def parar_implantacao():
-    usuario_cs_email = g.user_email #
+    usuario_cs_email = g.user_email
     implantacao_id = request.form.get('implantacao_id')
     motivo = request.form.get('motivo_parada', '').strip()
+    # --- NOVO CAMPO RETROATIVO ---
+    data_parada = request.form.get('data_parada')
+    # ------------------------------
     dest_url = url_for('main.ver_implantacao', impl_id=implantacao_id)
 
     if not motivo:
         flash('O motivo da parada é obrigatório.', 'error')
         return redirect(dest_url)
+    
+    # --- NOVA VALIDAÇÃO ---
+    if not data_parada:
+        flash('A data da parada é obrigatória.', 'error')
+        return redirect(dest_url)
+    # ------------------------------
 
     try:
-        impl = query_db( #
+        impl = query_db( 
             "SELECT usuario_cs, nome_empresa, status FROM implantacoes WHERE id = %s",
             (implantacao_id,), one=True
         )
         if not impl or impl.get('usuario_cs') != usuario_cs_email or impl.get('status') != 'andamento':
             raise Exception('Operação negada. Implantação não está "em andamento".')
 
-        execute_db( #
-            "UPDATE implantacoes SET status = 'parada', data_finalizacao = CURRENT_TIMESTAMP, motivo_parada = %s WHERE id = %s",
-            (motivo, implantacao_id)
+        # --- UPDATE CORRIGIDO: Usa data_parada retroativa ---
+        execute_db(
+            "UPDATE implantacoes SET status = 'parada', data_finalizacao = %s, motivo_parada = %s WHERE id = %s",
+            (data_parada, motivo, implantacao_id)
         )
-        logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Implantação "{impl.get("nome_empresa", "N/A")}" parada. Motivo: {motivo}') #
-        flash('Implantação marcada como "Parada".', 'success')
+        logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Implantação "{impl.get("nome_empresa", "N/A")}" parada retroativamente em {data_parada}. Motivo: {motivo}')
+        flash('Implantação marcada como "Parada" com data retroativa.', 'success')
 
     except Exception as e:
         print(f"Erro ao parar implantação ID {implantacao_id}: {e}")
@@ -602,6 +612,7 @@ def cancelar_implantacao():
     # Validação de campos obrigatórios
     if not all([implantacao_id, data_cancelamento, motivo]):
         flash('Todos os campos (Data, Motivo Resumo) são obrigatórios para cancelar.', 'error')
+         # A URL de redirecionamento é construída aqui para garantir que o erro seja exibido.
         return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
         
     file = request.files.get('comprovante_cancelamento')

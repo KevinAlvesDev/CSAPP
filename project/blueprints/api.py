@@ -10,6 +10,7 @@ from botocore.exceptions import ClientError, NoCredentialsError
 from ..blueprints.auth import login_required
 # CORREÇÃO: logar_timeline agora vem do db.py
 from ..db import query_db, execute_db, logar_timeline 
+from ..extensions import r2_client # <--- CORREÇÃO: Importação faltante
 # --- INÍCIO DA CORREÇÃO (Refatoração) ---
 # Importa da camada de domínio/serviço específica
 from ..domain.implantacao_service import auto_finalizar_implantacao, _get_progress 
@@ -149,7 +150,7 @@ def adicionar_comentario(tarefa_id):
         return jsonify({'ok': False, 'error': 'O comentário não pode estar vazio se não houver imagem.'}), 400
 
     try:
-        # --- CORREÇÃO: Usa query_db com RETURNING id para obter o ID numérico ---
+        # --- CORREÇÃO DE BUG CRÍTICO: Usa query_db com RETURNING id para obter o ID numérico ---
         agora = datetime.now()
         result = query_db(
             "INSERT INTO comentarios (tarefa_id, usuario_cs, texto, data_criacao, imagem_url) "
@@ -184,7 +185,7 @@ def adicionar_comentario(tarefa_id):
         return jsonify({
             'ok': True,
             'comentario': {
-                'id': novo_id, # Agora é o ID numérico
+                'id': novo_id, # ID numérico correto
                 'tarefa_id': tarefa_id,
                 'usuario_cs': usuario_cs_email,
                 'usuario_nome': nome,
