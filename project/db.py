@@ -42,8 +42,14 @@ def get_db_connection():
             raise
 
 def query_db(query, args=(), one=False):
-    """Executa uma query SELECT no banco de dados."""
+    """
+    Executa uma query SELECT ou MUTATION (INSERT/UPDATE/DELETE com commit).
+    Se for uma mutação com RETURNING, retorna o resultado e commita.
+    """
     conn, db_type = None, None
+    # Verifica se a query é uma operação de modificação de dados
+    is_mutation = query.strip().upper().startswith(("INSERT", "UPDATE", "DELETE")) 
+    
     try:
         conn, db_type = get_db_connection()
         cursor = conn.cursor()
@@ -53,6 +59,11 @@ def query_db(query, args=(), one=False):
             
         cursor.execute(query, args)
         
+        # --- CORREÇÃO CRÍTICA: Se for mutação, faz o commit ---
+        if is_mutation:
+            conn.commit()
+        # -----------------------------------------------------
+
         if one:
             result = cursor.fetchone()
             return dict(result) if result else None
