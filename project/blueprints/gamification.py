@@ -141,7 +141,12 @@ def manage_gamification_metrics():
             media_acoes_dia = round(count_acao_interna / dias_no_mes, 2) if dias_no_mes > 0 else 0.0
 
             metricas_automaticas = {
-                'tma_medio_mes': f"{tma_medio} dias" if tma_medio > 0 else "N/A",
+                # --- INÍCIO DA CORREÇÃO ---
+                # Passa o valor "raw" (bruto) para o HTML
+                'impl_finalizadas_mes': count_finalizadas,
+                'tma_medio_mes_raw': tma_medio, 
+                'tma_medio_mes': f"{tma_medio} dias" if tma_medio > 0 else "N/A", # Mantém o display
+                # --- FIM DA CORREÇÃO ---
                 'impl_iniciadas_mes': count_iniciadas,
                 'reunioes_concluidas_dia_media': f"{media_reunioes_dia:.2f}",
                 'acoes_concluidas_dia_media': f"{media_acoes_dia:.2f}"
@@ -169,14 +174,20 @@ def manage_gamification_metrics():
                 'data_registro': datetime.now()
             }
             
-            float_fields = ['nota_qualidade', 'assiduidade', 'planos_sucesso_perc', 'satisfacao_processo']
+            # --- INÍCIO DA CORREÇÃO ---
+            float_fields = [
+                'nota_qualidade', 'assiduidade', 'planos_sucesso_perc', 'satisfacao_processo',
+                'tma_medio_mes', 'reunioes_concluidas_dia_media', 'acoes_concluidas_dia_media'
+            ]
             int_fields = [
                 'reclamacoes', 'perda_prazo', 'nao_preenchimento', 'elogios', 
                 'recomendacoes', 'certificacoes', 'treinamentos_pacto_part', 
                 'treinamentos_pacto_aplic', 'reunioes_presenciais', 'cancelamentos_resp', 
                 'nao_envolvimento', 'desc_incompreensivel', 'hora_extra', 
-                'perda_sla_grupo', 'finalizacao_incompleta'
+                'perda_sla_grupo', 'finalizacao_incompleta',
+                'impl_finalizadas_mes', 'impl_iniciadas_mes'
             ]
+            # --- FIM DA CORREÇÃO ---
 
             for field in float_fields:
                 value_str = request.form.get(field)
@@ -191,9 +202,15 @@ def manage_gamification_metrics():
             for field in int_fields:
                 value_str = request.form.get(field)
                 try:
-                    data_to_save[field] = int(value_str) if value_str else 0
+                    # --- INÍCIO DA CORREÇÃO ---
+                    # Permite que '0' seja salvo, mas string vazia vira None
+                    if value_str is not None and value_str != '':
+                         data_to_save[field] = int(value_str)
+                    else:
+                         data_to_save[field] = None
+                    # --- FIM DA CORREÇÃO ---
                 except ValueError:
-                    data_to_save[field] = 0
+                    data_to_save[field] = None
 
             existing_record_id = metricas_atuais.get('id') if metricas_atuais else None
             

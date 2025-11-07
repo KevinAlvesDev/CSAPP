@@ -162,36 +162,90 @@
                 </script>
 
                 <hr class="my-3">
-                <h6 class="text-info">Métricas Automáticas (Cálculo do Sistema)</h6>
-                <p class="text-muted small" style="margin-top: -5px;">Estes campos são apenas para visualização e não podem ser editados.</p>
-
+                
+                <h6 class="text-info">Métricas Automáticas (Cálculo Manual)</h6>
+                <p class="text-muted small" style="margin-top: -5px;">
+                    Os valores automáticos são sugeridos, mas podem ser sobrescritos manualmente.
+                </p>
+                
+                {# Novo campo adicionado #}
                 <div class="row mb-3 align-items-center">
-                    <label for="auto_tma_medio_mes" class="col-md-7 col-form-label text-md-end">Tempo Médio de Implantação (TMA)</label>
+                    <label for="impl_finalizadas_mes" class="col-md-7 col-form-label text-md-end">Implantações / Planos Finalizados (Unid.)</label>
                     <div class="col-md-5">
-                        <input type="text" class="form-control" id="auto_tma_medio_mes" value="{{ metricas_automaticas.tma_medio_mes | default('N/A') }}" readonly disabled>
+                        <input type="number" class="form-control metric-input" id="impl_finalizadas_mes" name="impl_finalizadas_mes" min="0" step="1" 
+                               value="{{ metricas_atuais.impl_finalizadas_mes if metricas_atuais.impl_finalizadas_mes is not none else (metricas_automaticas.impl_finalizadas_mes | default(0)) }}"
+                               data-regra-id="eleg_finalizadas">
                     </div>
                 </div>
 
                 <div class="row mb-3 align-items-center">
-                    <label for="auto_impl_iniciadas_mes" class="col-md-7 col-form-label text-md-end">Implantações / Planos Iniciados</label>
+                    <label for="tma_medio_mes" class="col-md-7 col-form-label text-md-end">Tempo Médio de Implantação (TMA em dias)</label>
                     <div class="col-md-5">
-                        <input type="text" class="form-control" id="auto_impl_iniciadas_mes" value="{{ metricas_automaticas.impl_iniciadas_mes | default(0) }}" readonly disabled>
+                        <input type="number" class="form-control metric-input" id="tma_medio_mes" name="tma_medio_mes" min="0" step="0.1" 
+                               value="{{ metricas_atuais.tma_medio_mes if metricas_atuais.tma_medio_mes is not none else (metricas_automaticas.tma_medio_mes_raw | default(0)) }}" 
+                               data-regra-id="pts_tma">
                     </div>
                 </div>
 
                 <div class="row mb-3 align-items-center">
-                    <label for="auto_acoes_concluidas_dia_media" class="col-md-7 col-form-label text-md-end">Ações realizadas por dia (Média)</label>
+                    <label for="impl_iniciadas_mes" class="col-md-7 col-form-label text-md-end">Implantações / Planos Iniciados (Unid.)</label>
                     <div class="col-md-5">
-                        <input type="text" class="form-control" id="auto_acoes_concluidas_dia_media" value="{{ metricas_automaticas.acoes_concluidas_dia_media | default('0.00') }}" readonly disabled>
+                        <input type="number" class="form-control metric-input" id="impl_iniciadas_mes" name="impl_iniciadas_mes" min="0" step="1" 
+                               value="{{ metricas_atuais.impl_iniciadas_mes if metricas_atuais.impl_iniciadas_mes is not none else (metricas_automaticas.impl_iniciadas_mes | default(0)) }}" 
+                               data-regra-id="pts_iniciadas">
                     </div>
                 </div>
 
                 <div class="row mb-3 align-items-center">
-                    <label for="auto_reunioes_concluidas_dia_media" class="col-md-7 col-form-label text-md-end">Reuniões Realizadas por Dia (Média)</label>
+                    <label for="acoes_concluidas_dia_media" class="col-md-7 col-form-label text-md-end">Ações realizadas por dia (Média)</label>
                     <div class="col-md-5">
-                        <input type="text" class="form-control" id="auto_reunioes_concluidas_dia_media" value="{{ metricas_automaticas.reunioes_concluidas_dia_media | default('0.00') }}" readonly disabled>
+                        <input type="number" class="form-control metric-input" id="acoes_concluidas_dia_media" name="acoes_concluidas_dia_media" min="0" step="0.1" 
+                               value="{{ metricas_atuais.acoes_concluidas_dia_media if metricas_atuais.acoes_concluidas_dia_media is not none else (metricas_automaticas.acoes_concluidas_dia_media | default(0)) }}" 
+                               data-regra-id="pts_acoes">
                     </div>
                 </div>
+
+                <div class="row mb-3 align-items-center">
+                    <label for="reunioes_concluidas_dia_media" class="col-md-7 col-form-label text-md-end">Reuniões Realizadas por Dia (Média)</label>
+                    <div class="col-md-5">
+                        <input type="number" class="form-control metric-input" id="reunioes_concluidas_dia_media" name="reunioes_concluidas_dia_media" min="0" step="0.1" 
+                               value="{{ metricas_atuais.reunioes_concluidas_dia_media if metricas_atuais.reunioes_concluidas_dia_media is not none else (metricas_automaticas.reunioes_concluidas_dia_media | default(0)) }}" 
+                               data-regra-id="pts_reunioes">
+                    </div>
+                </div>
+                {# Script de Pontos Automáticos (Adicionado) #}
+                <script>
+                    pontosRegrasManuais['pts_tma'] = {
+                        30: {{ regras_agrupadas['Pontos: TMA'] | selectattr('regra_id', 'equalto', 'pts_tma_30') | map(attribute='valor_pontos') | first | default(0) }},
+                        35: {{ regras_agrupadas['Pontos: TMA'] | selectattr('regra_id', 'equalto', 'pts_tma_35') | map(attribute='valor_pontos') | first | default(0) }},
+                        40: {{ regras_agrupadas['Pontos: TMA'] | selectattr('regra_id', 'equalto', 'pts_tma_40') | map(attribute='valor_pontos') | first | default(0) }},
+                        45: {{ regras_agrupadas['Pontos: TMA'] | selectattr('regra_id', 'equalto', 'pts_tma_45') | map(attribute='valor_pontos') | first | default(0) }},
+                        46: {{ regras_agrupadas['Pontos: TMA'] | selectattr('regra_id', 'equalto', 'pts_tma_46_mais') | map(attribute='valor_pontos') | first | default(0) }}
+                    };
+                    pontosRegrasManuais['pts_iniciadas'] = {
+                        10: {{ regras_agrupadas['Pontos: Impl. Iniciadas'] | selectattr('regra_id', 'equalto', 'pts_iniciadas_10') | map(attribute='valor_pontos') | first | default(0) }},
+                        9: {{ regras_agrupadas['Pontos: Impl. Iniciadas'] | selectattr('regra_id', 'equalto', 'pts_iniciadas_9') | map(attribute='valor_pontos') | first | default(0) }},
+                        8: {{ regras_agrupadas['Pontos: Impl. Iniciadas'] | selectattr('regra_id', 'equalto', 'pts_iniciadas_8') | map(attribute='valor_pontos') | first | default(0) }},
+                        7: {{ regras_agrupadas['Pontos: Impl. Iniciadas'] | selectattr('regra_id', 'equalto', 'pts_iniciadas_7') | map(attribute='valor_pontos') | first | default(0) }},
+                        6: {{ regras_agrupadas['Pontos: Impl. Iniciadas'] | selectattr('regra_id', 'equalto', 'pts_iniciadas_6') | map(attribute='valor_pontos') | first | default(0) }}
+                    };
+                    pontosRegrasManuais['pts_reunioes'] = {
+                        5: {{ regras_agrupadas['Pontos: Reuniões/Dia'] | selectattr('regra_id', 'equalto', 'pts_reunioes_5') | map(attribute='valor_pontos') | first | default(0) }},
+                        4: {{ regras_agrupadas['Pontos: Reuniões/Dia'] | selectattr('regra_id', 'equalto', 'pts_reunioes_4') | map(attribute='valor_pontos') | first | default(0) }},
+                        3: {{ regras_agrupadas['Pontos: Reuniões/Dia'] | selectattr('regra_id', 'equalto', 'pts_reunioes_3') | map(attribute='valor_pontos') | first | default(0) }},
+                        2: {{ regras_agrupadas['Pontos: Reuniões/Dia'] | selectattr('regra_id', 'equalto', 'pts_reunioes_2') | map(attribute='valor_pontos') | first | default(0) }}
+                    };
+                    pontosRegrasManuais['pts_acoes'] = {
+                        5: {{ regras_agrupadas['Pontos: Ações/Dia'] | selectattr('regra_id', 'equalto', 'pts_acoes_5') | map(attribute='valor_pontos') | first | default(0) }},
+                        4: {{ regras_agrupadas['Pontos: Ações/Dia'] | selectattr('regra_id', 'equalto', 'pts_acoes_4') | map(attribute='valor_pontos') | first | default(0) }},
+                        3: {{ regras_agrupadas['Pontos: Ações/Dia'] | selectattr('regra_id', 'equalto', 'pts_acoes_3') | map(attribute='valor_pontos') | first | default(0) }},
+                        2: {{ regras_agrupadas['Pontos: Ações/Dia'] | selectattr('regra_id', 'equalto', 'pts_acoes_2') | map(attribute='valor_pontos') | first | default(0) }}
+                    };
+                    // Regras de elegibilidade (para o campo 'impl_finalizadas_mes') não afetam a pontuação, apenas a elegibilidade
+                    pontosRegrasManuais['eleg_finalizadas'] = {}; 
+                </script>
+                
+                
                 {# Campos de Bônus (Layout de Lista) #}
                 {% if regras_agrupadas['Bônus'] or regras_agrupadas['Bônus: Reuniões Pres.'] %}
                     <hr class="my-3"><h6 class="text-success">Métricas de Bônus (Ocorrências)</h6>
@@ -299,10 +353,14 @@
             
             inputs.forEach(input => {
                 const regraId = input.dataset.regraId;
-                const valorInput = (input.step === '0.1') ? parseFloat(input.value) : parseInt(input.value);
+                const valorInput = (input.step === '0.1' || input.step === '0.01') ? parseFloat(input.value) : parseInt(input.value);
                 
                 if (isNaN(valorInput) || valorInput === 0) {
-                    return; 
+                    if (regraId === 'pts_tma' && valorInput === 0) {
+                        // Permite TMA = 0
+                    } else {
+                        return;
+                    }
                 }
 
                 const regraPontos = pontosRegrasManuais[regraId];
@@ -322,7 +380,36 @@
                 } else if (typeof regraPontos === 'object') {
                     // Lógica por Faixa (Lookup)
                     
-                    if (regraId === 'bonus_reun_pres') {
+                    // --- INÍCIO DA CORREÇÃO (Cálculo JS) ---
+                    if (regraId === 'pts_tma') {
+                        if (valorInput <= 30) total += regraPontos[30];
+                        else if (valorInput <= 35) total += regraPontos[35];
+                        else if (valorInput <= 40) total += regraPontos[40];
+                        else if (valorInput <= 45) total += regraPontos[45];
+                        else if (valorInput >= 46) total += regraPontos[46];
+                    }
+                    else if (regraId === 'pts_iniciadas') {
+                        if (valorInput >= 10) total += regraPontos[10];
+                        else if (valorInput >= 9) total += regraPontos[9];
+                        else if (valorInput >= 8) total += regraPontos[8];
+                        else if (valorInput >= 7) total += regraPontos[7];
+                        else if (valorInput >= 6) total += regraPontos[6];
+                    }
+                    else if (regraId === 'pts_reunioes') {
+                        if (valorInput >= 5) total += regraPontos[5];
+                        else if (valorInput >= 4) total += regraPontos[4];
+                        else if (valorInput >= 3) total += regraPontos[3];
+                        else if (valorInput >= 2) total += regraPontos[2];
+                    }
+                    else if (regraId === 'pts_acoes') {
+                        if (valorInput >= 5) total += regraPontos[5];
+                        else if (valorInput >= 4) total += regraPontos[4];
+                        else if (valorInput >= 3) total += regraPontos[3];
+                        else if (valorInput >= 2) total += regraPontos[2];
+                    }
+                    // --- FIM DA CORREÇÃO (Cálculo JS) ---
+                    
+                    else if (regraId === 'bonus_reun_pres') {
                         if (valorInput > 10) total += regraPontos[10];
                         else if (valorInput >= 7) total += regraPontos[7];
                         else if (valorInput >= 5) total += regraPontos[5];
