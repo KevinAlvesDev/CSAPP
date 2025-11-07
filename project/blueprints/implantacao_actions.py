@@ -72,17 +72,24 @@ def criar_implantacao():
     try:
         agora = datetime.now()
         
-        implantacao_id = execute_db( #
-            "INSERT INTO implantacoes (usuario_cs, nome_empresa, tipo, data_criacao, status, data_inicio_previsto, data_inicio_efetivo) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-            (usuario_atribuido, nome_empresa, tipo, agora, status, data_inicio_previsto, data_inicio_efetivo)
+        # --- CORREÇÃO DE BUG CRÍTICO (PostgreSQL): Usa query_db com RETURNING id ---
+        result = query_db(
+            "INSERT INTO implantacoes (usuario_cs, nome_empresa, tipo, data_criacao, status, data_inicio_previsto, data_inicio_efetivo) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id",
+            (usuario_atribuido, nome_empresa, tipo, agora, status, data_inicio_previsto, data_inicio_efetivo),
+            one=True
         )
+
+        implantacao_id = result.get('id') if result else None
+        
         if not implantacao_id:
+            # Captura a falha na inserção, que antes era capturada erroneamente.
             raise Exception("Falha ao obter ID da nova implantação.")
 
         logar_timeline(implantacao_id, usuario_criador, 'implantacao_criada', f'Implantação "{nome_empresa}" ({tipo.capitalize()}) criada e atribuída a {usuario_atribuido}.') #
         
         tasks_added = 0
-        # Cria tarefas padrão para 'completa' (mas não para 'modulo')
+        # O implantacao_id agora é um inteiro válido (PostgreSQL ou SQLite), permitindo a criação de tarefas
         if tipo == 'completa': 
             tasks_added = _create_default_tasks(implantacao_id) #
             
@@ -113,15 +120,24 @@ def criar_implantacao_modulo():
 
     try:
         agora = datetime.now()
-        # Status 'nova' e tipo 'modulo', sem data de início efetivo ou previsto
-        implantacao_id = execute_db(
-            "INSERT INTO implantacoes (usuario_cs, nome_empresa, tipo, data_criacao, status, data_inicio_previsto, data_inicio_efetivo) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-            (usuario_atribuido, nome_empresa, tipo, agora, status, None, None)
+        
+        # --- CORREÇÃO DE BUG CRÍTICO (PostgreSQL): Usa query_db com RETURNING id ---
+        result = query_db(
+            "INSERT INTO implantacoes (usuario_cs, nome_empresa, tipo, data_criacao, status, data_inicio_previsto, data_inicio_efetivo) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id",
+            (usuario_atribuido, nome_empresa, tipo, agora, status, None, None),
+            one=True
         )
+
+        implantacao_id = result.get('id') if result else None
+        
         if not implantacao_id:
             raise Exception("Falha ao obter ID da nova implantação de módulo.")
 
         logar_timeline(implantacao_id, usuario_criador, 'implantacao_criada', f'Implantação de Módulo "{nome_empresa}" criada e atribuída a {usuario_atribuido}.')
+        
+        # NOTA: Módulos não criam tarefas padrão, apenas a "Obrigações para Finalização"
+        # que deve ser adicionada manualmente ou em outro lugar.
         
         flash(f'Implantação de Módulo "{nome_empresa}" criada e atribuída a {usuario_atribuido}.', 'success')
         return redirect(url_for('main.dashboard'))
