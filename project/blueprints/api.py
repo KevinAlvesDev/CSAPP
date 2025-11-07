@@ -10,7 +10,6 @@ from botocore.exceptions import ClientError, NoCredentialsError
 from ..blueprints.auth import login_required
 # CORREÇÃO: logar_timeline agora vem do db.py
 from ..db import query_db, execute_db, logar_timeline 
-from ..extensions import r2_client
 # --- INÍCIO DA CORREÇÃO (Refatoração) ---
 # Importa da camada de domínio/serviço específica
 from ..domain.implantacao_service import auto_finalizar_implantacao, _get_progress 
@@ -150,12 +149,17 @@ def adicionar_comentario(tarefa_id):
         return jsonify({'ok': False, 'error': 'O comentário não pode estar vazio se não houver imagem.'}), 400
 
     try:
-        # Salva no DB
+        # --- CORREÇÃO: Usa query_db com RETURNING id para obter o ID numérico ---
         agora = datetime.now()
-        novo_id = execute_db(
-            "INSERT INTO comentarios (tarefa_id, usuario_cs, texto, data_criacao, imagem_url) VALUES (%s, %s, %s, %s, %s)",
-            (tarefa_id, usuario_cs_email, texto, agora, img_url)
+        result = query_db(
+            "INSERT INTO comentarios (tarefa_id, usuario_cs, texto, data_criacao, imagem_url) "
+            "VALUES (%s, %s, %s, %s, %s) RETURNING id",
+            (tarefa_id, usuario_cs_email, texto, agora, img_url),
+            one=True
         )
+        
+        novo_id = result.get('id') if result else None
+        
         if not novo_id:
             raise Exception("Falha ao salvar comentário e obter ID.")
 
@@ -180,7 +184,7 @@ def adicionar_comentario(tarefa_id):
         return jsonify({
             'ok': True,
             'comentario': {
-                'id': novo_id,
+                'id': novo_id, # Agora é o ID numérico
                 'tarefa_id': tarefa_id,
                 'usuario_cs': usuario_cs_email,
                 'usuario_nome': nome,
@@ -470,5 +474,3 @@ def excluir_tarefas_modulo():
     except Exception as e:
         print(f"ERRO ao excluir tarefas do módulo {tarefa_pai} (Impl. ID {impl_id}): {e}")
         return jsonify({'ok': False, 'error': f"Erro interno do servidor: {e}"}), 500
-
-# --- Rota /toggle_theme REMOVIDA ---
