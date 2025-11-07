@@ -10,11 +10,15 @@ venv/
 *.db
 *.sqlite
 *.db-journal
+*.sqlite-journal
 
 # Python (cache)
 __pycache__/
 *.pyc
 *.pyo
+
+# Sessões do Flask
+flask_session/
 
 # Arquivos de OS
 .DS_Store

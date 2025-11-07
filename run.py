@@ -1,15 +1,14 @@
 import sys
 import os
 
-# --- CORREÇÃO DE PATH ---
-# Adiciona o diretório atual (CSAPP) ao sys.path
-# Isso garante que o Python encontre o pacote 'project'
-current_dir = os.path.dirname(os.path.abspath(__file__))
-if current_dir not in sys.path:
-    sys.path.insert(0, current_dir)
-# -------------------------
+# --- CORREÇÃO DE PATH (REMOVIDA) ---
+# As linhas abaixo não são mais necessárias
+# current_dir = os.path.dirname(os.path.abspath(__file__))
+# if current_dir not in sys.path:
+#    sys.path.insert(0, current_dir)
+# -----------------------------------
 
-# Importa o create_app DEPOIS de ajustar o path
+# Importa o create_app (agora funciona sem o hack)
 from project import create_app
 
 # --- Captura de falhas ---
@@ -24,9 +23,6 @@ except Exception as e:
 # -----------------------------------------------------------------------
 
 
-# --- INÍCIO DA CORREÇÃO (Auto-criação do DB) ---
-# Move a inicialização do DB para fora do 'if __name__ == "__main__"'
-# Isso garante que o Gunicorn (produção) execute este bloco ao iniciar.
 if app:
     with app.app_context():
         from project.db import init_db
@@ -36,7 +32,6 @@ if app:
             print("Verificação do banco de dados (init_db) concluída.")
         except Exception as e:
             print(f"AVISO: Falha ao inicializar o esquema do banco de dados (init_db): {e}")
-# --- FIM DA CORREÇÃO ---
 
 
 if __name__ == '__main__':
@@ -44,8 +39,6 @@ if __name__ == '__main__':
 
     if app is None:
         exit(1)
-
-    # A verificação do DB já foi movida para cima e não precisa estar aqui
 
     from project.extensions import r2_client
     if not r2_client:

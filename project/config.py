@@ -63,11 +63,11 @@ class Config:
     else:
          print("Config: R2 (Cloudflare) configurado.")
          
-    # --- Configuração da Sessão ---
+    # --- Configuração da Sessão (CORRIGIDA) ---
     # Define o tempo de vida da sessão (ex: 7 dias)
     PERMANENT_SESSION_LIFETIME = 60 * 60 * 24 * 7  # 7 dias em segundos
-    SESSION_PERMANENT = True
-    SESSION_TYPE = 'filesystem' 
+    # SESSION_PERMANENT = True <-- REMOVIDO (será definido no login)
+    # SESSION_TYPE = 'filesystem' <-- REMOVIDO (usará cookie padrão)
     SESSION_COOKIE_SECURE = not USE_SQLITE_LOCALLY # Em produção, usar cookies seguros
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
