@@ -360,6 +360,12 @@
         const ctxRankingColab = document.getElementById('chartRankingColaborador');
         const ctxRankingPeriodo = document.getElementById('chartRankingPeriodo');
         
+        // --- INÍCIO DA CORREÇÃO ---
+        // Define a cor azul padrão
+        const corAzul = 'rgba(54, 162, 235, 0.7)';
+        const corBordaAzul = 'rgba(54, 162, 235, 1)';
+        // --- FIM DA CORREÇÃO ---
+        
         const barColors = [
             'rgba(54, 162, 235, 0.7)', // Blue
             'rgba(255, 99, 132, 0.7)', // Red
@@ -388,8 +394,8 @@
                     datasets: [{
                         label: 'Qtd. Clientes',
                         data: chartData.nivel_receita.data,
-                        backgroundColor: barColors,
-                        borderColor: barColors.map(c => c.replace('0.7', '1')),
+                        backgroundColor: corAzul, // <-- CORRIGIDO
+                        borderColor: corBordaAzul, // <-- CORRIGIDO
                         borderWidth: 1,
                         borderRadius: 6 // <-- BORDAS REDONDAS
                     }]
@@ -481,8 +487,8 @@
                     datasets: [{
                         label: 'Total Implantações (Filtro)',
                         data: chartData.ranking_colaborador.data,
-                        backgroundColor: 'rgba(75, 192, 192, 0.7)', // Green
-                        borderColor: 'rgba(75, 192, 192, 1)',
+                        backgroundColor: corAzul, // <-- CORRIGIDO
+                        borderColor: corBordaAzul, // <-- CORRIGIDO
                         borderWidth: 1,
                         borderRadius: 6 // <-- BORDAS REDONDAS
                     }]

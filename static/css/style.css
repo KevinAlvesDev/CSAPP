@@ -19,7 +19,11 @@ body {
 
 :root {
     /* Tema Claro (Agressivo/Moderno) */
-    --body-bg: #f7f9fc;
+    
+    /* --- INÍCIO DA CORREÇÃO (FUNDO) --- */
+    --body-bg: #ced4da; /* <-- Alterado para um cinza médio, mais escuro */
+    /* --- FIM DA CORREÇÃO --- */
+    
     --body-color: #1a1a1a;
     --container-bg: #ffffff;
     --card-bg: #ffffff;
@@ -34,7 +38,11 @@ body {
     
     --header-bg: #ffffff;
     --header-border: transparent; /* Minimalista: sem borda */
-    --sidebar-bg: #f8f9fa;
+    
+    /* --- INÍCIO DA CORREÇÃO (FUNDO) --- */
+    --sidebar-bg: #ced4da; /* <-- Alterado para corresponder ao novo fundo do body */
+    /* --- FIM DA CORREÇÃO --- */
+
     --table-bg: var(--card-bg);
     --table-border-color: #e9ecef;
     --table-header-bg: #f8f9fa;
