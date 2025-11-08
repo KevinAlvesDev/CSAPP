@@ -1,6 +1,6 @@
 # app2/CSAPP/project/__init__.py
 import os
-from flask import Flask, session, g, render_template, request, flash, redirect, url_for
+from flask import Flask, session, g, render_template, request, flash, redirect, url_for, current_app
 # from flask_session import Session <-- REMOVIDO
 from werkzeug.middleware.proxy_fix import ProxyFix # Para o HTTPS do Railway
 from .config import Config
@@ -76,6 +76,16 @@ def create_app():
     app.register_blueprint(analytics_bp)
     app.register_blueprint(gamification_bp)
 
+    # --- INÍCIO DA CORREÇÃO (BUG 1: Carregamento de Regras) ---
+    # Carrega as regras de gamificação uma vez na inicialização
+    try:
+        with app.app_context():
+            app.gamification_rules = _get_all_gamification_rules_grouped()
+    except Exception as e:
+        print(f"ERRO CRÍTICO: Falha ao carregar regras de gamificação na inicialização: {e}")
+        app.gamification_rules = {} # Define como vazio para evitar falhas
+    # --- FIM DA CORREÇÃO ---
+
     @app.before_request
     def load_logged_in_user():
         g.user_email = session.get('user', {}).get('email')
@@ -102,11 +112,15 @@ def create_app():
         g.PERFIS_COM_GESTAO = PERFIS_COM_GESTAO
         g.PERFIL_ADMIN = PERFIL_ADMIN
 
+        # --- INÍCIO DA CORREÇÃO (BUG 1: Leitura das Regras) ---
+        # Lê as regras do contexto da aplicação (carregadas uma vez)
+        # em vez de consultar o banco de dados a cada requisição.
         try:
-            g.gamification_rules = _get_all_gamification_rules_grouped()
+            g.gamification_rules = current_app.gamification_rules
         except Exception as e:
-            print(f"ALERTA: Falha ao carregar regras de gamificação no before_request: {e}")
+            print(f"ALERTA: Falha ao carregar regras de gamificação no before_request (a partir do app.context): {e}")
             g.gamification_rules = {} 
+        # --- FIM DA CORREÇÃO ---
     
     # Error Handlers
     @app.errorhandler(404)

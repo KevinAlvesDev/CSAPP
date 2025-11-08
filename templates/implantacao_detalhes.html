@@ -12,7 +12,6 @@
     <h1 class="main-title mb-0 fs-4">CS ONBOARDING DETALHES</h1>
     <div class="d-flex align-items-center">
 
-        {# Botão para abrir sidebar em telas pequenas #}
         <button class="btn btn-outline-secondary d-lg-none me-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar" aria-controls="mobileSidebar"> <i class="bi bi-list"></i> </button>
 
         <button class="btn btn-outline-secondary rounded-circle p-0 user-profile-btn" type="button" data-bs-toggle="offcanvas" data-bs-target="#userProfileSidebar" aria-controls="userProfileSidebar" title="Menu">
@@ -24,9 +23,7 @@
         </button>
         </div>
 </header>
-{# Layout Principal (Sidebar + Conteúdo) #}
 <div class="d-flex">
-    {# Sidebar #}
     <div class="offcanvas-lg offcanvas-start sidebar-bg d-lg-block" tabindex="-1" id="mobileSidebar" aria-labelledby="mobileSidebarLabel" style="width: 250px;">
         <div class="offcanvas-header header-bg">
             <h5 class="offcanvas-title" id="mobileSidebarLabel" style="color: var(--body-color);">Opções</h5>
@@ -48,7 +45,8 @@
                         data-telefone="{{ implantacao.telefone_responsavel | default('') }}"
                         data-email="{{ implantacao.email_responsavel | default('') }}"
                         data-inicio-implantacao="{{ implantacao.data_criacao_iso | default('') }}"
-                        data-inicio-efetivo="{{ implantacao.data_inicio_efetivo_iso | default('') }}" data-inicio-producao="{{ implantacao.data_inicio_producao_iso | default('') }}"
+                        data-inicio-efetivo-iso="{{ implantacao.data_inicio_efetivo_iso | default('') }}"
+                        data-inicio-producao="{{ implantacao.data_inicio_producao_iso | default('') }}"
                         data-final-implantacao="{{ implantacao.data_final_implantacao_iso | default('') }}"
                         data-chave-oamd="{{ implantacao.chave_oamd | default('') }}"
                         data-catraca="{{ implantacao.catraca | default('') }}"
@@ -90,7 +88,6 @@
                     <li class="list-group-item"> <button class="btn btn-sm btn-link text-warning text-decoration-none p-0" data-bs-toggle="modal" data-bs-target="#modalReabrir"> <i class="bi bi-folder-symlink me-2"></i> Reabrir </button> </li>
                 {% endif %}
 
-                {# BOTÃO DE CANCELAR #}
                 {% if implantacao.status not in ['finalizada', 'cancelada'] %}
                 <li class="list-group-item"> 
                     <button class="btn btn-sm btn-link text-dark text-decoration-none p-0" data-bs-toggle="modal" data-bs-target="#modalCancelar"> 
@@ -133,7 +130,6 @@
         </div>
     </div>
 
-    {# Conteúdo Principal (COM data-* attributes) #}
     <main class="flex-grow-1 p-4" id="main-content"
           data-implantacao-id="{{ implantacao.id }}"
           data-email-usuario-logado="{{ email_usuario_logado }}"
@@ -146,16 +142,13 @@
     >
     {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %} {% for category, message in messages %} <div class="alert alert-{{ 'danger' if category == 'error' else ('warning' if category=='warning' else 'success') }} alert-dismissible fade show" role="alert"> {{ message }} <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button> </div> {% endfor %} {% endif %} {% endwith %}
         
-        {# --- ESTRUTURA DE ABAS MODERNIZADA --- #}
         <div class="card">
             <div class="card-header">
-                {# 1. Status e Progresso #}
                 <div class="row align-items-center mb-3">
                     <div class="col-md-6 mb-3 mb-md-0">
                         <p class="mb-1"><strong>Status:</strong> 
                             {% if implantacao.status == 'finalizada' %} <span class="badge bg-success">Concluído</span> 
                             {% elif implantacao.status == 'parada' %} <span class="badge bg-danger">Parada</span>
-                            {# NOVO STATUS #}
                             {% elif implantacao.status == 'cancelada' %} <span class="badge bg-dark">Cancelada</span>
                             {% elif implantacao.status == 'futura' %} <span class="badge bg-info text-dark">Futura</span> 
                             {% elif implantacao.status == 'nova' %} <span class="badge bg-dark">Nova</span> 
@@ -164,7 +157,6 @@
                         </p>
                         {% if implantacao.status == 'parada' and implantacao.motivo_parada %} <p class="mb-1 small text-danger"> <strong>Motivo:</strong> {{ implantacao.motivo_parada }} </p> {% endif %}
                         
-                        {# EXIBIR MOTIVO SE CANCELADA #}
                         {% if implantacao.status == 'cancelada' and implantacao.motivo_cancelamento %} 
                             <p class="mb-1 small text-muted"> <strong>Motivo Cancelamento:</strong> {{ implantacao.motivo_cancelamento }} </p>
                             {% if implantacao.comprovante_cancelamento_url %}
@@ -180,7 +172,6 @@
                     </div>
                 </div>
                 
-                {# 2. Abas de Navegação #}
                 <ul class="nav nav-pills card-header-pills" id="detalhesTab" role="tablist">
                     <li class="nav-item" role="presentation"> <button class="nav-link active" id="checklist-treinamentos-tab" data-bs-toggle="tab" data-bs-target="#checklist-treinamentos-content" type="button" role="tab"> <i class="bi bi-check2-square me-1"></i> Treinamentos </button> </li>
                     <li class="nav-item" role="presentation"> <button class="nav-link" id="checklist-obrigatorio-tab" data-bs-toggle="tab" data-bs-target="#checklist-obrigatorio-content" type="button" role="tab"> <i class="bi bi-check-circle-fill me-1"></i> Obrigatório </button> </li>
@@ -332,16 +323,13 @@
                     </div>
         
                 </div>
-            </div> {# Fim do card-body #}
-        </div> {# Fim do card #}
+            </div>
+        </div>
     </main>
-</div> {# Fim do d-flex principal #}
+</div>
 
-{# --- Modais (Finalizar, Parar, Retomar, Reabrir, Add Tarefa, Transferir, Excluir) --- #}
-{# (Todos os url_for() aqui foram atualizados de 'main.' para 'actions.') #}
-{# Modal Finalizar #} <div class="modal fade" id="modalFinalizar" tabindex="-1"> <div class="modal-dialog"> <div class="modal-content"> <div class="modal-header header-bg"><h5 class="modal-title">Finalizar</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div> <form action="{{ url_for('actions.finalizar_implantacao') }}" method="POST"> <div class="modal-body"> <p>Tem certeza?</p> <p class="small text-warning">Só permitido se tarefas obrig./trein. concluídas.</p> <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}"> <input type="hidden" name="redirect_to" value="detalhes"> </div> <div class="modal-footer header-bg"> <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button> <button type="submit" class="btn btn-success">Confirmar</button> </div> </form> </div> </div> </div>
+<div class="modal fade" id="modalFinalizar" tabindex="-1"> <div class="modal-dialog"> <div class="modal-content"> <div class="modal-header header-bg"><h5 class="modal-title">Finalizar</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div> <form action="{{ url_for('actions.finalizar_implantacao') }}" method="POST"> <div class="modal-body"> <p>Tem certeza?</p> <p class="small text-warning">Só permitido se tarefas obrig./trein. concluídas.</p> <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}"> <input type="hidden" name="redirect_to" value="detalhes"> </div> <div class="modal-footer header-bg"> <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button> <button type="submit" class="btn btn-success">Confirmar</button> </div> </form> </div> </div> </div>
 
-{# Modal Parar (ATUALIZADO COM CAMPO DATA) #} 
 <div class="modal fade" id="modalParar" tabindex="-1"> 
     <div class="modal-dialog"> 
         <div class="modal-content"> 
@@ -351,7 +339,6 @@
                     <p>Tem certeza?</p> 
                     <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}"> 
                     
-                    {# NOVO CAMPO: DATA RETROATIVA DE PARADA #}
                     <div class="mb-3"> 
                         <label for="data_parada" class="form-label fw-bold">Data da Parada (Início Retroativo) <span class="text-danger">*</span></label> 
                         <input type="date" class="form-control" id="data_parada" name="data_parada" required>
@@ -376,13 +363,12 @@
     </div> 
 </div>
 
-{# Modal Retomar #} <div class="modal fade" id="modalRetomar" tabindex="-1"> <div class="modal-dialog"> <div class="modal-content"> <div class="modal-header header-bg"><h5 class="modal-title">Retomar</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div> <form action="{{ url_for('actions.retomar_implantacao') }}" method="POST"> <div class="modal-body"> <p>Tem certeza?</p> <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}"> <input type="hidden" name="redirect_to" value="detalhes"> </div> <div class="modal-footer header-bg"> <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button> <button type="submit" class="btn btn-primary">Retomar</button> </div> </form> </div> </div> </div>
-{# Modal Reabrir #} <div class="modal fade" id="modalReabrir" tabindex="-1"> <div class="modal-dialog"> <div class="modal-content"> <div class="modal-header header-bg"><h5 class="modal-title">Reabrir</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div> <form action="{{ url_for('actions.reabrir_implantacao') }}" method="POST"> <div class="modal-body"> <p>Tem certeza? Voltará para "Em Andamento".</p> <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}"> <input type="hidden" name="redirect_to" value="detalhes"> </div> <div class="modal-footer header-bg"> <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button> <button type="submit" class="btn btn-warning">Reabrir</button> </div> </form> </div> </div> </div>
-{# Modal Adicionar Tarefa #} <div class="modal fade" id="adicionarTarefaModal" tabindex="-1"> <div class="modal-dialog"> <div class="modal-content"> <div class="modal-header header-bg"><h5 class="modal-title">Adicionar Tarefa</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div> <form action="{{ url_for('actions.adicionar_tarefa') }}" method="POST"> <div class="modal-body"> <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}"> <div class="mb-3"> <label for="add-tarefa-filho-modal" class="form-label">Nome</label> <input type="text" class="form-control" id="add-tarefa-filho-modal" name="tarefa_filho" required> </div> <div class="mb-3"> <label for="add-tarefa-pai-modal" class="form-label">Módulo</label> <select class="form-select" id="add-tarefa-pai-modal" name="tarefa_pai" required> <option value="">Selecione...</option> {% for modulo in todos_modulos %} <option value="{{ modulo }}">{{ modulo }}</option> {% endfor %} <option value="Outros">Outros (Novo)</option> </select> </div> <div class="mb-3"> <label for="add-tarefa-tag-modal" class="form-label">Tag</label> <select class="form-select" id="add-tarefa-tag-modal" name="tag"> <option value="">Sem Tag</option> <option value="Ação interna">Ação interna</option> <option value="Reunião">Reunião</option> <option value="Outro">Outro</option> </select> </div> </div> <div class="modal-footer header-bg"> <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button> <button type="submit" class="btn btn-primary">Adicionar</button> </div> </form> </div> </div> </div>
-{# Modal Transferir CS #} {% if is_manager %} <div class="modal fade" id="modalTransferir" tabindex="-1"> <div class="modal-dialog"> <div class="modal-content"> <div class="modal-header header-bg"><h5 class="modal-title">Transferir</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div> <form action="{{ url_for('actions.transferir_implantacao') }}" method="POST"> <div class="modal-body"> <p>Transferir <strong>{{ implantacao.nome_empresa }}</strong> de <strong>{{ implantacao.usuario_cs }}</strong> para:</p> <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}"> <div class="mb-3"> <label for="novo_usuario_cs" class="form-label">Novo CS</label> <select class="form-select" id="novo_usuario_cs" name="novo_usuario_cs" required> <option value="">Selecione...</option> {% for user in all_cs_users %} {% if user.usuario != implantacao.usuario_cs %} <option value="{{ user.usuario }}">{{ user.nome }} ({{ user.usuario }})</option> {% endif %} {% endfor %} </select> </div> </div> <div class="modal-footer header-bg"> <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button> <button type="submit" class="btn btn-info">Confirmar</button> </div> </form> </div> </div> </div> {% endif %}
-{# Modal Excluir Implantação #} <div class="modal fade" id="modalExcluirImplantacao" tabindex="-1"> <div class="modal-dialog"> <div class="modal-content"> <div class="modal-header header-bg"><h5 class="modal-title text-danger">Excluir Implantação</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div> <form action="{{ url_for('actions.excluir_implantacao') }}" method="POST"> <div class="modal-body"> <h5 class="text-danger">Atenção! Irreversível!</h5> <p>Excluir permanentemente <strong>{{ implantacao.nome_empresa }}</strong>?</p> <p>Todos os dados serão perdidos.</p> <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}"> </div> <div class="modal-footer header-bg"> <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button> <button type="submit" class="btn btn-danger">Excluir</button> </div> </form> </div> </div> </div>
+<div class="modal fade" id="modalRetomar" tabindex="-1"> <div class="modal-dialog"> <div class="modal-content"> <div class="modal-header header-bg"><h5 class="modal-title">Retomar</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div> <form action="{{ url_for('actions.retomar_implantacao') }}" method="POST"> <div class="modal-body"> <p>Tem certeza?</p> <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}"> <input type="hidden" name="redirect_to" value="detalhes"> </div> <div class="modal-footer header-bg"> <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button> <button type="submit" class="btn btn-primary">Retomar</button> </div> </form> </div> </div> </div>
+<div class="modal fade" id="modalReabrir" tabindex="-1"> <div class="modal-dialog"> <div class="modal-content"> <div class="modal-header header-bg"><h5 class="modal-title">Reabrir</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div> <form action="{{ url_for('actions.reabrir_implantacao') }}" method="POST"> <div class="modal-body"> <p>Tem certeza? Voltará para "Em Andamento".</p> <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}"> <input type="hidden" name="redirect_to" value="detalhes"> </div> <div class="modal-footer header-bg"> <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button> <button type="submit" class="btn btn-warning">Reabrir</button> </div> </form> </div> </div> </div>
+<div class="modal fade" id="adicionarTarefaModal" tabindex="-1"> <div class="modal-dialog"> <div class="modal-content"> <div class="modal-header header-bg"><h5 class="modal-title">Adicionar Tarefa</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div> <form action="{{ url_for('actions.adicionar_tarefa') }}" method="POST"> <div class="modal-body"> <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}"> <div class="mb-3"> <label for="add-tarefa-filho-modal" class="form-label">Nome</label> <input type="text" class="form-control" id="add-tarefa-filho-modal" name="tarefa_filho" required> </div> <div class="mb-3"> <label for="add-tarefa-pai-modal" class="form-label">Módulo</label> <select class="form-select" id="add-tarefa-pai-modal" name="tarefa_pai" required> <option value="">Selecione...</option> {% for modulo in todos_modulos %} <option value="{{ modulo }}">{{ modulo }}</option> {% endfor %} <option value="Outros">Outros (Novo)</option> </select> </div> <div class="mb-3"> <label for="add-tarefa-tag-modal" class="form-label">Tag</label> <select class="form-select" id="add-tarefa-tag-modal" name="tag"> <option value="">Sem Tag</option> <option value="Ação interna">Ação interna</option> <option value="Reunião">Reunião</option> <option value="Outro">Outro</option> </select> </div> </div> <div class="modal-footer header-bg"> <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button> <button type="submit" class="btn btn-primary">Adicionar</button> </div> </form> </div> </div> </div>
+{% if is_manager %} <div class="modal fade" id="modalTransferir" tabindex="-1"> <div class="modal-dialog"> <div class="modal-content"> <div class="modal-header header-bg"><h5 class="modal-title">Transferir</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div> <form action="{{ url_for('actions.transferir_implantacao') }}" method="POST"> <div class="modal-body"> <p>Transferir <strong>{{ implantacao.nome_empresa }}</strong> de <strong>{{ implantacao.usuario_cs }}</strong> para:</p> <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}"> <div class="mb-3"> <label for="novo_usuario_cs" class="form-label">Novo CS</label> <select class="form-select" id="novo_usuario_cs" name="novo_usuario_cs" required> <option value="">Selecione...</option> {% for user in all_cs_users %} {% if user.usuario != implantacao.usuario_cs %} <option value="{{ user.usuario }}">{{ user.nome }} ({{ user.usuario }})</option> {% endif %} {% endfor %} </select> </div> </div> <div class="modal-footer header-bg"> <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button> <button type="submit" class="btn btn-info">Confirmar</button> </div> </form> </div> </div> </div> {% endif %}
+<div class="modal fade" id="modalExcluirImplantacao" tabindex="-1"> <div class="modal-dialog"> <div class="modal-content"> <div class="modal-header header-bg"><h5 class="modal-title text-danger">Excluir Implantação</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div> <form action="{{ url_for('actions.excluir_implantacao') }}" method="POST"> <div class="modal-body"> <h5 class="text-danger">Atenção! Irreversível!</h5> <p>Excluir permanentemente <strong>{{ implantacao.nome_empresa }}</strong>?</p> <p>Todos os dados serão perdidos.</p> <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}"> </div> <div class="modal-footer header-bg"> <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button> <button type="submit" class="btn btn-danger">Excluir</button> </div> </form> </div> </div> </div>
 
-{# Modal Cancelar #}
 <div class="modal fade" id="modalCancelar" tabindex="-1" aria-labelledby="modalCancelarLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -425,9 +411,7 @@
 
 
 {% block scripts_extra %}
-{# Inclui SortableJS para drag-and-drop #}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js" integrity="sha512-Eezs+g9Lq4TCCq0wae01s9PuNWzHYoCMkQAi7cDM6ZQJJ5CmAGgk+FdIQ0+UI0EzfYRYzVLgsJdJAYNWMXifcA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 
-{# Carrega o nosso ficheiro de lógica de página #}
 <script src="{{ url_for('static', filename='js/implantacao_detalhes.js') }}"></script>
 {% endblock %}

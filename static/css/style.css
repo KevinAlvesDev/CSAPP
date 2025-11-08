@@ -414,6 +414,11 @@ body {
     transition: background-color 0.3s, border-color 0.3s;
 }
 
-.card-body > .table-responsive {
-    margin: -1.25rem;
+/* --- INÍCIO DA CORREÇÃO (Scroll na Lista de Analytics) --- */
+.limited-height-table {
+    max-height: 400px; /* Altura para ~7-8 linhas + cabeçalho */
+    overflow-y: auto;
+    /* Garante que o cabeçalho sticky funcione dentro do scroll */
+    position: relative; 
 }
+/* --- FIM DA CORREÇÃO --- */

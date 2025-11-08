@@ -10,7 +10,10 @@ from werkzeug.utils import secure_filename
 
 # Importações internas do projeto
 from ..blueprints.auth import login_required, permission_required 
-from ..db import query_db, execute_db, logar_timeline 
+# --- INÍCIO DA CORREÇÃO (BUG 4) ---
+# Importa a nova função 'execute_and_fetch_one'
+from ..db import query_db, execute_db, logar_timeline, execute_and_fetch_one
+# --- FIM DA CORREÇÃO (BUG 4) ---
 # Importa dos novos arquivos de serviço no domínio
 from ..domain.implantacao_service import _get_progress, _create_default_tasks
 
@@ -72,13 +75,14 @@ def criar_implantacao():
     try:
         agora = datetime.now()
         
-        # --- CORREÇÃO DE BUG CRÍTICO (PostgreSQL): Usa query_db com RETURNING id ---
-        result = query_db(
+        # --- INÍCIO DA CORREÇÃO (BUG 4) ---
+        # Usa a nova função 'execute_and_fetch_one' em vez de 'query_db'
+        result = execute_and_fetch_one(
             "INSERT INTO implantacoes (usuario_cs, nome_empresa, tipo, data_criacao, status, data_inicio_previsto, data_inicio_efetivo) "
             "VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id",
-            (usuario_atribuido, nome_empresa, tipo, agora, status, data_inicio_previsto, data_inicio_efetivo),
-            one=True
+            (usuario_atribuido, nome_empresa, tipo, agora, status, data_inicio_previsto, data_inicio_efetivo)
         )
+        # --- FIM DA CORREÇÃO (BUG 4) ---
 
         implantacao_id = result.get('id') if result else None
         
@@ -121,13 +125,14 @@ def criar_implantacao_modulo():
     try:
         agora = datetime.now()
         
-        # --- CORREÇÃO DE BUG CRÍTICO (PostgreSQL): Usa query_db com RETURNING id ---
-        result = query_db(
+        # --- INÍCIO DA CORREÇÃO (BUG 4) ---
+        # Usa a nova função 'execute_and_fetch_one' em vez de 'query_db'
+        result = execute_and_fetch_one(
             "INSERT INTO implantacoes (usuario_cs, nome_empresa, tipo, data_criacao, status, data_inicio_previsto, data_inicio_efetivo) "
             "VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id",
-            (usuario_atribuido, nome_empresa, tipo, agora, status, None, None),
-            one=True
+            (usuario_atribuido, nome_empresa, tipo, agora, status, None, None)
         )
+        # --- FIM DA CORREÇÃO (BUG 4) ---
 
         implantacao_id = result.get('id') if result else None
         

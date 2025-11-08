@@ -153,8 +153,8 @@
                  {% if not implantacoes_lista_detalhada %}
                     <div class="alert alert-light text-center small py-2 mb-0">Nenhum cliente encontrado para os filtros selecionados.</div>
                  {% else %}
-                     <div class="table-responsive">
-                        <table class="table table-sm table-hover align-middle caption-top">
+                     <div class="table-responsive limited-height-table">
+                     <table class="table table-sm table-hover align-middle caption-top">
                             <caption class="small text-muted">Listando {{ implantacoes_lista_detalhada | length }} implantações (ordenadas por nome da empresa).</caption>
                             <thead class="table-light" style="position: sticky; top: 0;">
                                 <tr>

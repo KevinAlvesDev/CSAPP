@@ -7,13 +7,48 @@ function formatDataLog(dataStr) { if (!dataStr) return ''; try { const dateObj =
 function toggleComment(button, elementId) { const textElement = document.getElementById(elementId); if (!textElement) return; const isExpanded = textElement.classList.toggle('expanded'); button.textContent = isExpanded ? 'Ver menos...' : 'Ver mais...'; }
 function criarTimelineItemHTML(log) { if (!log || !log.data_criacao) return ''; let iconClass = 'bi-info-circle-fill'; if (log.tipo_evento === 'novo_comentario') iconClass = 'bi-chat-left-text-fill'; else if (log.tipo_evento?.includes('tarefa')) iconClass = 'bi-check-circle-fill'; else if (log.tipo_evento?.includes('status') || log.tipo_evento?.includes('implantacao') || log.tipo_evento?.includes('detalhes')) iconClass = 'bi-flag-fill'; else if (log.tipo_evento === 'modulo_excluido') iconClass = 'bi-trash-fill'; const dataFormatada = formatDataLog(log.data_criacao); const detalhesHTML = (log.detalhes || '').replace(/\n/g, '<br>'); return `<li class="timeline-item"><div class="timeline-icon"><i class="bi ${iconClass}"></i></div><div class="timeline-content"><div class="timeline-header"><span class="timeline-usuario">${log.usuario_nome || 'Sistema'}</span><span class="timeline-data">${dataFormatada}</span></div><p class="timeline-detalhes">${detalhesHTML}</p></div></li>`; }
 function adicionarLogNaTimeline(log) { if (!log) return; const timelineList = document.querySelector('#timeline-content .timeline-list'); if (!timelineList) return; const noTimelineMsg = document.getElementById('no-timeline-msg'); if (noTimelineMsg) noTimelineMsg.remove(); const logHTML = criarTimelineItemHTML(log); if (logHTML) timelineList.insertAdjacentHTML('afterbegin', logHTML); }
-function criarComentarioHTML(comentario, emailUsuarioLogado, urls) { if (!comentario || !comentario.id) return ''; const dataFormatada = formatDataComentario(comentario.data_criacao); let botaoExcluir = ''; if (comentario.usuario_cs == emailUsuarioLogado) { const urlExcluir = urls.delComentario + comentario.id; botaoExcluir = `<button class="btn btn-sm btn-link text-danger p-0 small mt-1" onclick="window.excluirComentario(${comentario.id}, '${urlExcluir}', this)">Excluir</button>`; } let textoHTML = `<p class="mb-1 small comment-text" id="comment-text-${comentario.id}">${comentario.texto || ''}</p>`; if (comentario.texto && comentario.texto.length > 200) { textoHTML += `<button class="btn btn-sm btn-link p-0 small" onclick="toggleComment(this, 'comment-text-${comentario.id}')">Ver mais...</button>`; } let imagemHTML = ''; if (comentario.imagem_url) { imagemHTML = `<a href="${comentario.imagem_url}" target="_blank" title="Ampliar"><img src="${comentario.imagem_url}" class="img-fluid rounded mt-1 comment-image"></a>`; } return `<div class="list-group-item list-group-item-action py-1 px-2" id="comentario-${comentario.id}"><div class="d-flex w-100 justify-content-between align-items-center mb-1"><strong class="mb-0 small"><i class="bi bi-person-fill me-1"></i> ${comentario.usuario_nome || comentario.usuario_cs}</strong><small class="text-secondary">${dataFormatada}</small></div><div class="comment-content-wrapper">${textoHTML}${imagemHTML}</div>${botaoExcluir}</div>`; }
+
+// --- INÍCIO DA CORREÇÃO (BUG 3) ---
+function criarComentarioHTML(comentario, emailUsuarioLogado, urls) {
+    if (!comentario || !comentario.id) return '';
+    const dataFormatada = formatDataComentario(comentario.data_criacao);
+    
+    let botaoExcluir = '';
+    if (comentario.usuario_cs == emailUsuarioLogado) {
+        // REMOVIDO: onclick="..."
+        // ADICIONADO: data-action="delete-comment" e data-comment-id
+        botaoExcluir = `<button class="btn btn-sm btn-link text-danger p-0 small mt-1" data-action="delete-comment" data-comment-id="${comentario.id}">Excluir</button>`;
+    }
+
+    let textoHTML = `<p class="mb-1 small comment-text" id="comment-text-${comentario.id}">${comentario.texto || ''}</p>`;
+    if (comentario.texto && comentario.texto.length > 200) {
+        // REMOVIDO: onclick="..."
+        // ADICIONADO: data-action="toggle-comment" e data-target-id
+        textoHTML += `<button class="btn btn-sm btn-link p-0 small" data-action="toggle-comment" data-target-id="comment-text-${comentario.id}">Ver mais...</button>`;
+    }
+    
+    let imagemHTML = '';
+    if (comentario.imagem_url) {
+        imagemHTML = `<a href="${comentario.imagem_url}" target="_blank" title="Ampliar"><img src="${comentario.imagem_url}" class="img-fluid rounded mt-1 comment-image"></a>`;
+    }
+    
+    return `<div class="list-group-item list-group-item-action py-1 px-2" id="comentario-${comentario.id}">
+                <div class="d-flex w-100 justify-content-between align-items-center mb-1">
+                    <strong class="mb-0 small"><i class="bi bi-person-fill me-1"></i> ${comentario.usuario_nome || comentario.usuario_cs}</strong>
+                    <small class="text-secondary">${dataFormatada}</small>
+                </div>
+                <div class="comment-content-wrapper">${textoHTML}${imagemHTML}</div>
+                ${botaoExcluir}
+            </div>`;
+}
+// --- FIM DA CORREÇÃO (BUG 3) ---
+
 function updateProgressBar(progress) { const progressBar = document.querySelector('#main-content .progress-bar'); if (progressBar) { const progressNum = parseInt(progress) || 0; progressBar.style.width = progressNum + '%'; progressBar.setAttribute('aria-valuenow', progressNum); progressBar.textContent = progressNum + '%'; } }
 
 // --- Funções de Ação (Adaptadas para ler URLs do objeto CONFIG) ---
 function adicionarComentario(tarefaId, button, CONFIG) { 
     const endpointUrl = CONFIG.endpoints.addComentario + tarefaId;
-    const form = button.closest('.comment-form'); const textarea = form.querySelector('textarea'); const fileInput = form.querySelector('input[type="file"]'); const comentarioTexto = textarea.value.trim(); const file = fileInput.files.length > 0 ? fileInput.files[0] : null; if (comentarioTexto === '' && !file) { alert('Comentário vazio sem imagem.'); return; } if (file) { const allowedTypes = ['image/png', 'image/jpeg', 'image/gif']; if (!allowedTypes.includes(file.type)) { alert('Tipo de arquivo não permitido.'); fileInput.value = null; return; } } const originalBtnHTML = button.innerHTML; button.disabled = true; button.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Salvando...'; const formData = new FormData(form); fetch(endpointUrl, { method: 'POST', body: formData }).then(response => response.json()).then(data => { if (data.ok && data.comentario) { const commentList = document.getElementById('comment-list-' + tarefaId); const noCommentMsg = document.getElementById('no-comment-' + tarefaId); if (noCommentMsg) noCommentMsg.remove(); const comentarioHTML = criarComentarioHTML(data.comentario, CONFIG.emailUsuarioLogado, CONFIG.endpoints); if (comentarioHTML) { commentList.insertAdjacentHTML('beforeend', comentarioHTML); commentList.scrollTop = commentList.scrollHeight; } textarea.value = ''; fileInput.value = null; adicionarLogNaTimeline(data.log_comentario); } else { throw new Error(data.error || 'Erro desconhecido.'); } }).catch(error => { console.error('Erro:', error); alert(`Erro: ${error.message}`); }).finally(() => { button.innerHTML = originalBtnHTML; button.disabled = false; }); }
+    const form = button.closest('.comment-form'); const textarea = form.querySelector('textarea'); const fileInput = form.querySelector('input[type="file"]'); const comentarioTexto = textarea.value.trim(); const file = fileInput.files.length > 0 ? fileInput.files[0] : null; if (comentarioTexto === '' && !file) { alert('Comentário vazio sem imagem.'); return; } if (file) { const allowedTypes = ['image/png', 'image/jpeg', 'image/gif']; if (!allowedTypes.includes(file.type)) { alert('Tipo de arquivo não permitido.'); fileInput.value = null; return; } } const originalBtnHTML = button.innerHTML; button.disabled = true; button.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Salvando...'; const formData = new FormData(form); fetch(endpointUrl, { method: 'POST', body: formData }).then(response => response.json()).then(data => { if (data.ok && data.comentario) { const commentList = document.getElementById('comment-list-' + tarefaId); const noCommentMsg = document.getElementById('no-comment-' + tarefaId); if (noCommentMsg) noCommentMsg.remove(); const comentarioHTML = criarComentarioHTML(data.comentario, CONFIG.emailUsuarioLogado, CONFIG.endpoints); if (comentarioHTML) { commentList.insertAdjacentHTML('beforeend', commentList.innerHTML); commentList.scrollTop = commentList.scrollHeight; } textarea.value = ''; fileInput.value = null; adicionarLogNaTimeline(data.log_comentario); } else { throw new Error(data.error || 'Erro desconhecido.'); } }).catch(error => { console.error('Erro:', error); alert(`Erro: ${error.message}`); }).finally(() => { button.innerHTML = originalBtnHTML; button.disabled = false; }); }
 function excluirComentario(comentarioId, endpointUrl, button) { if (!confirm('Excluir este comentário?')) return; const comentarioElement = button.closest('.list-group-item'); if (comentarioElement) comentarioElement.style.opacity = '0.5'; fetch(endpointUrl, { method: 'POST' }).then(response => response.json()).then(data => { if (data.ok) { if (comentarioElement) comentarioElement.remove(); const listElement = button.closest('.list-group'); if(listElement && listElement.children.length === 0){ const tarefaIdGuess = listElement.id.split('-')[2]; listElement.innerHTML = `<div class="list-group-item ... fst-italic" id="no-comment-${tarefaIdGuess}"> Nenhum comentário. </div>`; } adicionarLogNaTimeline(data.log_exclusao); } else { throw new Error(data.error || 'Erro.'); } }).catch(error => { console.error('Erro:', error); alert(`Erro: ${error.message}`); if (comentarioElement) comentarioElement.style.opacity = '1'; }); }
 function toggleTarefa(tarefaId, checkbox, CONFIG) { 
     const label = checkbox.closest('li').querySelector('label.form-check-label'); const isChecked = checkbox.checked; checkbox.disabled = true; 
@@ -109,20 +144,26 @@ document.addEventListener('DOMContentLoaded', function() {
              return;
         }
 
-        // Botão "Ver mais..." (comentário)
-        const toggleCommentButton = target.closest('button[onclick^="toggleComment"]');
+        // --- INÍCIO DA CORREÇÃO (BUG 3) ---
+        // Botão "Ver mais..." (comentário) - REFACTORIZADO
+        const toggleCommentButton = target.closest('button[data-action="toggle-comment"]');
         if (toggleCommentButton) {
-            // Este ainda usa o onclick inline, pois é gerado dinamicamente.
-            // A função global 'toggleComment' lida com isso.
+            const targetId = toggleCommentButton.dataset.targetId;
+            if(targetId) window.toggleComment(toggleCommentButton, targetId); // A função helper toggleComment ainda é útil
             return;
         }
         
-        // Botão Excluir Comentário
-        const deleteCommentButton = target.closest('button[onclick^="window.excluirComentario"]');
+        // Botão Excluir Comentário - REFACTORIZADO
+        const deleteCommentButton = target.closest('button[data-action="delete-comment"]');
         if (deleteCommentButton) {
-            // Este também usa onclick inline gerado dinamicamente.
+            const commentId = parseInt(deleteCommentButton.dataset.commentId);
+            if(commentId) {
+                const endpointUrl = CONFIG.endpoints.delComentario + commentId;
+                window.excluirComentario(commentId, endpointUrl, deleteCommentButton); // A função helper excluirComentario ainda é útil
+            }
             return;
         }
+        // --- FIM DA CORREÇÃO (BUG 3) ---
     });
     
     // Listener separado para Checkbox (evento 'change')

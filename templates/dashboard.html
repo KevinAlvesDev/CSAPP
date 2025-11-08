@@ -18,7 +18,6 @@
             {% endif %}
 
             <button class="btn btn-outline-secondary rounded-circle p-0 user-profile-btn ms-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#userProfileSidebar" aria-controls="userProfileSidebar" title="Menu">
-                {# g.perfil é injetado pelo decorator @login_required #}
                 {% if g.perfil.foto_url %}
                     <img src="{{ g.perfil.foto_url }}?v={{ range(1, 10000) | random }}" alt="Foto de Perfil" style="width: 100%; height: 100%; object-fit: cover;">
                 {% else %}
@@ -54,7 +53,6 @@
             </form>
         </div>
         {% endif %}
-        {# Resumo Rápido (métricas) #}
         <h2 class="h5 mb-3">Resumo Rápido {% if current_cs_filter and is_manager %}(Filtrado){% endif %}</h2>
         <div class="row row-cols-1 row-cols-md-3 row-cols-lg-6 g-3 mb-4">
             {% set m = metrics or {} %}
@@ -66,7 +64,6 @@
             <div class="col"><div class="card p-3 text-center"><h6 class="text-secondary">Paradas</h6><h4 class="mb-0 text-danger">{{ m.impl_paradas | default(0) }}</h4></div></div>
         </div>
 
-        {# Mensagens Flash #}
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -78,10 +75,8 @@
             {% endif %}
         {% endwith %}
 
-        {# --- ESTRUTURA DE ABAS MODERNIZADA --- #}
         <div class="card">
             <div class="card-header">
-                {# Abas como "Pílulas" (Botões) #}
                 <ul class="nav nav-pills card-header-pills" id="myTab" role="tablist">
                     <li class="nav-item" role="presentation"><button class="nav-link active" id="novas-tab" data-bs-toggle="tab" data-bs-target="#novas" type="button" role="tab">Novas</button></li>
                     <li class="nav-item" role="presentation"><button class="nav-link" id="andamento-tab" data-bs-toggle="tab" data-bs-target="#andamento" type="button" role="tab">Em Andamento</button></li>
@@ -93,7 +88,6 @@
             </div>
             
             <div class="card-body">
-                {# Conteúdo das Abas #}
                 <div class="tab-content" id="myTabContent">
                     <div class="tab-pane fade show active" id="novas" role="tabpanel" aria-labelledby="novas-tab">
                         <h2 class="h5 mb-3">Implantações Novas (Aguardando Início)</h2>
@@ -125,7 +119,7 @@
                                                    data-telefone="{{ impl.telefone_responsavel | default('') }}"
                                                    data-email="{{ impl.email_responsavel | default('') }}"
                                                    data-inicio-implantacao="{{ impl.data_criacao_iso | default('') }}"
-                                                   data-inicio-efetivo="{{ impl.data_inicio_efetivo_iso | default('') }}"
+                                                   data-inicio-efetivo-iso="{{ impl.data_inicio_efetivo_iso | default('') }}"
                                                    data-inicio-producao="{{ impl.data_inicio_producao_iso | default('') }}"
                                                    data-final-implantacao="{{ impl.data_final_implantacao_iso | default('') }}"
                                                    data-chave-oamd="{{ impl.chave_oamd | default('') }}"
@@ -189,7 +183,6 @@
                         {% endif %}
                     </div>
         
-                    {# Aba Em Andamento #}
                     <div class="tab-pane fade" id="andamento" role="tabpanel" aria-labelledby="andamento-tab">
                         <h2 class="h5 mb-3">Clientes em Andamento</h2>
                         {% if not implantacoes_andamento %} <div class="alert alert-info text-center" role="alert"> Nenhuma implantação em andamento. </div>
@@ -207,7 +200,7 @@
                                data-telefone="{{ impl.telefone_responsavel | default('') }}"
                                data-email="{{ impl.email_responsavel | default('') }}"
                                data-inicio-implantacao="{{ impl.data_criacao_iso | default('') }}"
-                               data-inicio-efetivo="{{ impl.data_inicio_efetivo_iso | default('') }}"
+                               data-inicio-efetivo-iso="{{ impl.data_inicio_efetivo_iso | default('') }}"
                                data-inicio-producao="{{ impl.data_inicio_producao_iso | default('') }}"
                                data-final-implantacao="{{ impl.data_final_implantacao_iso | default('') }}"
                                data-chave-oamd="{{ impl.chave_oamd | default('') }}"
@@ -241,7 +234,6 @@
                         <td class="text-nowrap"> <span class="badge bg-secondary text-white">{{ impl.dias_passados | int }} dias</span> </td> <td> <div class="progress" style="height: 20px;"> <div class="progress-bar progress-bar-striped bg-warning text-dark" role="progressbar" style="width: {{ impl.progresso }}%;" aria-valuenow="{{ impl.progresso }}">{{ impl.progresso }}%</div> </div> </td> <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_atribuido|float) if impl.valor_atribuido else 'N/A' }}</td> <td> <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver Detalhes</a> </td> </tr> {% endfor %} </tbody> </table> </div> {% endif %}
                     </div>
         
-                    {# Aba Atrasadas #}
                     <div class="tab-pane fade" id="atrasadas" role="tabpanel" aria-labelledby="atrasadas-tab">
                         <h2 class="h5 mb-3">Implantações Atrasadas (> 25 dias)</h2>
                         {% if not implantacoes_atrasadas %} <div class="alert alert-info text-center" role="alert"> Nenhuma implantação atrasada. </div>
@@ -255,7 +247,7 @@
                                data-responsavel="{{ impl.responsavel_cliente | default('') }}" data-cargo="{{ impl.cargo_responsavel | default('') }}"
                                data-telefone="{{ impl.telefone_responsavel | default('') }}" data-email="{{ impl.email_responsavel | default('') }}"
                                data-inicio-implantacao="{{ impl.data_criacao_iso | default('') }}"
-                               data-inicio-efetivo="{{ impl.data_inicio_efetivo_iso | default('') }}"
+                               data-inicio-efetivo-iso="{{ impl.data_inicio_efetivo_iso | default('') }}"
                                data-inicio-producao="{{ impl.data_inicio_producao_iso | default('') }}"
                                data-final-implantacao="{{ impl.data_final_implantacao_iso | default('') }}"
                                data-chave-oamd="{{ impl.chave_oamd | default('') }}" data-catraca="{{ impl.catraca | default('') }}" data-facial="{{ impl.facial | default('') }}"
@@ -277,7 +269,6 @@
                         <td><span class="badge bg-danger">{{ impl.dias_passados | int }} dias</span></td> <td> {% if impl.status == 'parada' %} <span class="badge bg-danger">Parada</span> {% else %} <span class="badge bg-warning text-dark">Em Andamento</span> {% endif %} </td> <td> <div class="progress" style="height: 20px;"> <div class="progress-bar progress-bar-striped bg-danger" role="progressbar" style="width: {{ impl.progresso }}%;" aria-valuenow="{{ impl.progresso }}">{{ impl.progresso }}%</div> </div> </td> <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_atribuido|float) if impl.valor_atribuido else 'N/A' }}</td> <td> <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver Detalhes</a> </td> </tr> {% endfor %} </tbody> </table> </div> {% endif %}
                     </div>
         
-                    {# Aba Futuras #}
                     <div class="tab-pane fade" id="futuras" role="tabpanel" aria-labelledby="futuras-tab">
                         <h2 class="h5 mb-3">Implantações Futuras (Agendadas)</h2>
                         {% if not implantacoes_futuras %} <div class="alert alert-info text-center" role="alert"> Nenhuma implantação futura agendada. </div>
@@ -291,7 +282,7 @@
                                data-responsavel="{{ impl.responsavel_cliente | default('') }}" data-cargo="{{ impl.cargo_responsavel | default('') }}"
                                data-telefone="{{ impl.telefone_telefone | default('') }}" data-email="{{ impl.email_responsavel | default('') }}"
                                data-inicio-implantacao="{{ impl.data_criacao_iso | default('') }}"
-                               data-inicio-efetivo="{{ impl.data_inicio_efetivo_iso | default('') }}"
+                               data-inicio-efetivo-iso="{{ impl.data_inicio_efetivo_iso | default('') }}"
                                data-inicio-producao="{{ impl.data_inicio_producao_iso | default('') }}"
                                data-final-implantacao="{{ impl.data_final_implantacao_iso | default('') }}"
                                data-chave-oamd="{{ impl.chave_oamd | default('') }}" data-catraca="{{ impl.catraca | default('') }}" data-facial="{{ impl.facial | default('') }}"
@@ -336,7 +327,6 @@
                         </td> </tr> {% endfor %} </tbody> </table> </div> {% endif %}
                     </div>
         
-                    {# Aba Finalizadas #}
                     <div class="tab-pane fade" id="finalizadas" role="tabpanel" aria-labelledby="finalizadas-tab">
                         <h2 class="h5 mb-3">Implantações Concluídas</h2>
                         {% if not implantacoes_finalizadas %} <div class="alert alert-info text-center" role="alert"> Nenhuma implantação finalizada. </div>
@@ -350,7 +340,7 @@
                                data-responsavel="{{ impl.responsavel_cliente | default('') }}" data-cargo="{{ impl.cargo_responsavel | default('') }}"
                                data-telefone="{{ impl.telefone_responsavel | default('') }}" data-email="{{ impl.email_responsavel | default('') }}"
                                data-inicio-implantacao="{{ impl.data_criacao_iso | default('') }}"
-                               data-inicio-efetivo="{{ impl.data_inicio_efetivo_iso | default('') }}"
+                               data-inicio-efetivo-iso="{{ impl.data_inicio_efetivo_iso | default('') }}"
                                data-inicio-producao="{{ impl.data_inicio_producao_iso | default('') }}"
                                data-final-implantacao="{{ impl.data_final_implantacao_iso | default('') }}"
                                data-chave-oamd="{{ impl.chave_oamd | default('') }}" data-catraca="{{ impl.catraca | default('') }}" data-facial="{{ impl.facial | default('') }}"
@@ -382,7 +372,6 @@
                         </td> </tr> {% endfor %} </tbody> </table> </div> {% endif %}
                     </div>
         
-                    {# Aba Paradas #}
                     <div class="tab-pane fade" id="paradas" role="tabpanel" aria-labelledby="paradas-tab">
                         <h2 class="h5 mb-3">Implantações Paradas</h2>
                         {% if not implantacoes_paradas %} <div class="alert alert-info text-center" role="alert"> Nenhuma implantação parada. </div>
@@ -396,7 +385,7 @@
                                data-responsavel="{{ impl.responsavel_cliente | default('') }}" data-cargo="{{ impl.cargo_responsavel | default('') }}"
                                data-telefone="{{ impl.telefone_telefone | default('') }}" data-email="{{ impl.email_responsavel | default('') }}"
                                data-inicio-implantacao="{{ impl.data_criacao_iso | default('') }}"
-                               data-inicio-efetivo="{{ impl.data_inicio_efetivo_iso | default('') }}"
+                               data-inicio-efetivo-iso="{{ impl.data_inicio_efetivo_iso | default('') }}"
                                data-inicio-producao="{{ impl.data_inicio_producao_iso | default('') }}"
                                data-final-implantacao="{{ impl.data_final_implantacao_iso | default('') }}"
                                data-chave-oamd="{{ impl.chave_oamd | default('') }}" data-catraca="{{ impl.catraca | default('') }}" data-facial="{{ impl.facial | default('') }}"
@@ -427,9 +416,9 @@
                             {% endif %}
                         </td> </tr> {% endfor %} </tbody> </table> </div> {% endif %}
                     </div>
-                </div> {# Fim do tab-content #}
-            </div> {# Fim do card-body #}
-        </div> {# Fim do card #}
+                </div>
+            </div>
+        </div>
     </main>
 </div>
 
@@ -545,7 +534,6 @@
 
 {% block scripts_extra %}
 <script>
-    // Memória da Aba Ativa (Dashboard)
     document.addEventListener('DOMContentLoaded', function () {
         const tabSelector = '#myTab .nav-link'; 
         const tabs = document.querySelectorAll(tabSelector); 
@@ -558,7 +546,6 @@
         });
         
         const abaAtivaId = localStorage.getItem(tabStorageKey); 
-        // O default agora é 'novas-tab'
         const defaultTabEl = document.getElementById('novas-tab'); 
         
         if (abaAtivaId) { 
@@ -580,19 +567,15 @@
         }
     });
     
-    // Script para Modal de Agendamento
     document.addEventListener('DOMContentLoaded', function () {
         var agendarModal = document.getElementById('agendarInicioModal');
         if (agendarModal) {
             agendarModal.addEventListener('show.bs.modal', function (event) {
-                // Botão que acionou o modal
                 var button = event.relatedTarget;
                 
-                // Extrair dados dos atributos data-bs-*
                 var implId = button.getAttribute('data-impl-id');
                 var implNome = button.getAttribute('data-impl-nome');
                 
-                // Atualizar o conteúdo do modal
                 var modalNomeEmpresa = agendarModal.querySelector('#agendarNomeEmpresa');
                 var modalImplIdInput = agendarModal.querySelector('#agendarImplId');
                 
@@ -603,7 +586,6 @@
                     modalImplIdInput.value = implId;
                 }
 
-                // Definir data mínima do calendário como hoje
                 var dateInput = agendarModal.querySelector('#data_inicio_previsto');
                 if (dateInput) {
                     var today = new Date().toISOString().split('T')[0];

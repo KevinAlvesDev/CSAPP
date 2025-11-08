@@ -44,11 +44,10 @@ def get_db_connection():
 
 def query_db(query, args=(), one=False):
     """
-    Executa uma query SELECT ou MUTATION (INSERT/UPDATE/DELETE com commit)
-    e retorna o resultado. Inclui rollback em caso de erro.
+    Executa uma query SELECT (APENAS LEITURA)
+    e retorna o resultado.
     """
     conn, db_type = None, None
-    is_mutation = query.strip().upper().startswith(("INSERT", "UPDATE", "DELETE")) 
     
     try:
         conn, db_type = get_db_connection()
@@ -59,10 +58,7 @@ def query_db(query, args=(), one=False):
             
         cursor.execute(query, args)
         
-        # --- COMMIT DE PERSISTÊNCIA ---
-        if is_mutation:
-            conn.commit() 
-        # -----------------------------
+        # --- LÓGICA DE MUTATION/COMMIT REMOVIDA DAQUI ---
 
         if one:
             result = cursor.fetchone()
@@ -72,11 +68,9 @@ def query_db(query, args=(), one=False):
             return [dict(row) for row in results] if results else []
             
     except Exception as e:
-        # --- ROLLBACK FORÇADO ---
         if conn:
-             conn.rollback() 
-        # ------------------------
-        print(f"ERRO DE QUERY: {e}\nQuery: {query}\nArgs: {args}")
+             conn.rollback() # Rollback em caso de erro de leitura
+        print(f"ERRO DE QUERY (Leitura): {e}\nQuery: {query}\nArgs: {args}")
         return None 
     finally:
         if conn:
@@ -113,6 +107,42 @@ def execute_db(query, args=()):
     finally:
         if conn:
             conn.close()
+
+# --- INÍCIO DA CORREÇÃO (BUG 4) ---
+def execute_and_fetch_one(query, args=()):
+    """
+    Executa uma query de MUTATION (INSERT/UPDATE) que retorna um
+    valor (ex: RETURNING id) e faz commit.
+    Retorna o primeiro resultado.
+    """
+    conn, db_type = None, None
+    try:
+        conn, db_type = get_db_connection()
+        cursor = conn.cursor()
+        
+        if db_type == 'sqlite':
+            query = query.replace('%s', '?')
+
+        cursor.execute(query, args)
+        
+        # Pega o resultado (ex: 'RETURNING id')
+        result = cursor.fetchone()
+        
+        # Faz o commit da transação
+        conn.commit()
+        
+        return dict(result) if result else None
+        
+    except Exception as e:
+        print(f"ERRO DE EXECUÇÃO (Fetch One): {e}\nQuery: {query}\nArgs: {args}")
+        if conn:
+            conn.rollback()
+        return None 
+    finally:
+        if conn:
+            conn.close()
+# --- FIM DA CORREÇÃO (BUG 4) ---
+
 
 def logar_timeline(implantacao_id, usuario_cs, tipo_evento, detalhe):
     """Registra um evento na timeline. Falha silenciosamente."""
