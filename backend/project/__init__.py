@@ -145,7 +145,7 @@ def create_app():
                 access_token_url='https://oauth2.googleapis.com/token',
                 server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
                 client_kwargs={
-                    'scope': 'openid email profile https://www.googleapis.com/auth/calendar.readonly',
+                    'scope': 'openid email profile https://www.googleapis.com/auth/calendar',
                     'prompt': 'consent',
                     'access_type': 'offline',
                 },
