@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Perfil - CS Onboarding{% endblock %}
+
+{% block head_extra %}
+<style>
+    .profile-pic-wrapper {
+        position: relative;
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        overflow: hidden;
+        border: 4px solid var(--accent-color);
+        margin: 0 auto 20px auto;
+        background-color: var(--sidebar-bg);
+    }
+    .profile-pic {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .profile-pic-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 5rem;
+        color: var(--accent-color);
+        opacity: 0.6;
+    }
+    /* Estilo para campos desabilitados */
+    input:read-only:disabled, select:disabled {
+        background-color: var(--input-border) !important;
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <header class="header-bg p-3 shadow-sm d-flex justify-content-end align-items-center position-relative">
+        <h1 class="main-title mb-0 fs-4" style="position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap;">EDITAR PERFIL</h1>
+
+        <div class="d-flex align-items-center">
+            <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-primary ms-3">
+                <i class="bi bi-arrow-left me-1"></i> Voltar ao Dashboard
+            </a>
+
+            <button class="btn btn-outline-secondary rounded-circle p-0 user-profile-btn ms-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#userProfileSidebar" aria-controls="userProfileSidebar" title="Menu">
+                {% if g.perfil.foto_url %}
+                    <img src="{{ g.perfil.foto_url }}?v={{ range(1, 10000) | random }}" alt="Foto de Perfil" style="width: 100%; height: 100%; object-fit: cover;">
+                {% else %}
+                    <i class="bi bi-person-fill" style="font-size: 1.5rem; color: var(--accent-color);"></i>
+                {% endif %}
+            </button>
+            </div>
+    </header>
+
+    <main class="p-4" id="main-content">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 col-md-10">
+
+                {# Mensagens Flash #}
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <div class="card metric-card p-4 shadow-sm">
+                    <div class="card-body">
+
+                        <form action="{{ url_for('profile.perfil') }}" method="POST" enctype="multipart/form-data">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                            <div class="profile-pic-wrapper">
+                                {% if perfil.foto_url %}
+                                    <img src="{{ perfil.foto_url }}?v={{ range(1, 10000) | random }}" alt="Foto de Perfil" class="profile-pic" id="profilePicPreview">
+                                {% else %}
+                                    <div class="profile-pic-placeholder" id="profilePicPlaceholder">
+                                        <i class="bi bi-person-fill"></i>
+                                    </div>
+                                    <img src="" alt="Foto de Perfil" class="profile-pic d-none" id="profilePicPreview">
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="foto_perfil" class="form-label">Alterar Foto de Perfil</label>
+                                <input class="form-control" type="file" id="foto_perfil" name="foto_perfil" accept="image/png, image/jpeg, image/gif" onchange="previewImage(event)">
+                                <div class="form-text">Tipos permitidos: PNG, JPG, GIF.</div>
+                            </div>
+
+                            <hr>
+
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email (Login)</label>
+                                <input type="email" class="form-control" id="email" value="{{ perfil.usuario | default(user_info.email) }}" readonly disabled>
+                                <div class="form-text">O email de login não pode ser alterado.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="nome" class="form-label">Nome Completo</label>
+                                <input type="text" class="form-control" id="nome" name="nome" value="{{ perfil.nome | default('') }}" required
+                                       {# CORREÇÃO: Verifica 'Implantador' #}
+                                       {% if g.perfil.perfil_acesso == 'Implantador' %}readonly disabled title="Seu perfil não permite alterar o nome."{% endif %}>
+                                {% if g.perfil.perfil_acesso == 'Implantador' %}
+                                    <div class="form-text text-warning">Seu perfil não permite alterar o nome.</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="cargo" class="form-label">Cargo</label>
+                                <select class="form-select" id="cargo" name="cargo"
+                                        {# CORREÇÃO: Verifica 'Implantador' #}
+                                        {% if g.perfil.perfil_acesso == 'Implantador' %}disabled title="Seu perfil não permite alterar o cargo."{% endif %}>
+                                    <option value="">Selecione seu cargo...</option>
+                                    {% for c in cargos_list %}
+                                        <option value="{{ c }}" {% if perfil.cargo == c %}selected{% endif %}>{{ c }}</option>
+                                    {% endfor %}
+                                </select>
+                                {% if g.perfil.perfil_acesso == 'Implantador' %}
+                                    <div class="form-text text-warning">Seu perfil não permite alterar o cargo.</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="text-end mt-4">
+                                <button type="submit" class="btn btn-primary btn-lg" style="background-color: var(--accent-color); border-color: var(--accent-color);">
+                                    <i class="bi bi-save me-2"></i> Salvar Alterações
+                                </button>
+                            </div>
+
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+    // Função para pré-visualizar a imagem de perfil
+    function previewImage(event) {
+        const reader = new FileReader();
+        reader.onload = function(){
+            const output = document.getElementById('profilePicPreview');
+            const placeholder = document.getElementById('profilePicPlaceholder');
+
+            output.src = reader.result;
+            output.classList.remove('d-none'); // Mostra a tag <img>
+            if (placeholder) {
+                placeholder.classList.add('d-none'); // Esconde o placeholder
+            }
+        };
+        // Verifica se um arquivo foi selecionado
+        if (event.target.files[0]) {
+            reader.readAsDataURL(event.target.files[0]);
+        }
+    }
+</script>
+{% endblock %}

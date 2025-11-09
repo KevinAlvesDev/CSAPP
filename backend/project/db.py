@@ -1,0 +1,610 @@
+# project/db.py
+import sqlite3
+import psycopg2
+from psycopg2.extras import DictCursor
+from flask import current_app, g
+from datetime import datetime
+import os
+import click
+from flask.cli import with_appcontext
+
+def get_db_connection():
+    """Retorna uma conexão com o banco de dados (SQLite ou PostgreSQL)."""
+    use_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
+    
+    if use_sqlite:
+        try:
+            base_dir = os.path.abspath(os.path.dirname(os.path.dirname(__file__))) 
+            db_path = os.path.join(base_dir, 'dashboard_simples.db')
+
+            # --- CORREÇÃO CRÍTICA PARA BLOQUEIO DO SQLITE ---
+            # Define isolation_level=None para autocommit. Isso resolve o erro "cannot commit"
+            # e os bloqueios de transação persistentes no SQLite local.
+            conn = sqlite3.connect(db_path, isolation_level=None) 
+            # ------------------------------------------------
+            conn.row_factory = sqlite3.Row 
+            return conn, 'sqlite'
+        except sqlite3.Error as e:
+            print(f"ERRO SQLite (ao conectar): {e}")
+            raise
+        except ValueError as e:
+            print(f"ERRO de Caminho SQLite: {e}")
+            raise
+            
+    else: # Modo Produção (PostgreSQL)
+        database_url = current_app.config.get('DATABASE_URL')
+        if not database_url:
+             raise ValueError("Configuração de produção: DATABASE_URL não definida.")
+        try:
+            conn = psycopg2.connect(database_url, cursor_factory=DictCursor)
+            return conn, 'postgres'
+        except psycopg2.Error as e:
+            print(f"ERRO PostgreSQL (ao conectar): {e}")
+            raise
+
+def query_db(query, args=(), one=False):
+    """
+    Executa uma query SELECT (APENAS LEITURA)
+    e retorna o resultado.
+    """
+    conn, db_type = None, None
+    
+    try:
+        conn, db_type = get_db_connection()
+        cursor = conn.cursor()
+        
+        if db_type == 'sqlite':
+            query = query.replace('%s', '?')
+            
+        cursor.execute(query, args)
+        
+        # --- LÓGICA DE MUTATION/COMMIT REMOVIDA DAQUI ---
+
+        if one:
+            result = cursor.fetchone()
+            return dict(result) if result else None
+        else:
+            results = cursor.fetchall()
+            return [dict(row) for row in results] if results else []
+            
+    except Exception as e:
+        if conn:
+             conn.rollback() # Rollback em caso de erro de leitura
+        print(f"ERRO DE QUERY (Leitura): {e}\nQuery: {query}\nArgs: {args}")
+        # Evita quebrar chamadas que esperam listas: retorna [] quando one=False
+        return None if one else []
+    finally:
+        if conn:
+            conn.close()
+
+def execute_db(query, args=()):
+    """Executa uma query de INSERT, UPDATE ou DELETE no banco de dados."""
+    conn, db_type = None, None
+    try:
+        conn, db_type = get_db_connection()
+        cursor = conn.cursor()
+        
+        if db_type == 'sqlite':
+            query = query.replace('%s', '?')
+
+        cursor.execute(query, args)
+        conn.commit()
+        
+        try:
+            if query.strip().upper().startswith("INSERT") and db_type == 'postgres':
+                pass 
+        except Exception:
+            pass 
+
+        if cursor.lastrowid: # Funciona bem para SQLite
+            return cursor.lastrowid
+        return True 
+        
+    except Exception as e:
+        print(f"ERRO DE EXECUÇÃO: {e}\nQuery: {query}\nArgs: {args}")
+        if conn:
+            conn.rollback()
+        return None 
+    finally:
+        if conn:
+            conn.close()
+
+# --- INÍCIO DA CORREÇÃO (BUG 4) ---
+def execute_and_fetch_one(query, args=()):
+    """
+    Executa uma query de MUTATION (INSERT/UPDATE) que retorna um
+    valor (ex: RETURNING id) e faz commit.
+    Retorna o primeiro resultado.
+    """
+    conn, db_type = None, None
+    try:
+        conn, db_type = get_db_connection()
+        cursor = conn.cursor()
+        
+        if db_type == 'sqlite':
+            query = query.replace('%s', '?')
+
+        cursor.execute(query, args)
+        
+        # Pega o resultado (ex: 'RETURNING id')
+        result = cursor.fetchone()
+        
+        # Faz o commit da transação
+        conn.commit()
+        
+        return dict(result) if result else None
+        
+    except Exception as e:
+        print(f"ERRO DE EXECUÇÃO (Fetch One): {e}\nQuery: {query}\nArgs: {args}")
+        if conn:
+            conn.rollback()
+        return None 
+    finally:
+        if conn:
+            conn.close()
+# --- FIM DA CORREÇÃO (BUG 4) ---
+
+
+def logar_timeline(implantacao_id, usuario_cs, tipo_evento, detalhe):
+    """Registra um evento na timeline. Falha silenciosamente."""
+    conn, db_type = None, None
+    try:
+        conn, db_type = get_db_connection()
+        cursor = conn.cursor()
+        
+        sql = "INSERT INTO timeline_log (implantacao_id, usuario_cs, tipo_evento, detalhes, data_criacao) VALUES (%s, %s, %s, %s, %s)"
+        
+        if db_type == 'sqlite':
+            sql = sql.replace('%s', '?')
+            
+        cursor.execute(sql, (implantacao_id, usuario_cs, tipo_evento, detalhe, datetime.now()))
+        conn.commit()
+        
+    except Exception as e:
+        print(f"ERRO CRÍTICO: Falha ao logar timeline para Impl. ID {implantacao_id}. Erro: {e}")
+        if conn:
+            conn.rollback()
+    finally:
+        if conn:
+            conn.close()
+
+
+def init_db():
+    """Inicializa o schema do banco de dados (SQLite ou PostgreSQL)."""
+    conn, db_type = None, None
+    try:
+        conn, db_type = get_db_connection()
+        cursor = conn.cursor()
+
+        if db_type == 'postgres':
+            # --- Sintaxe PostgreSQL ---
+            print("Executando init_db para PostgreSQL...")
+            
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS usuarios (
+                usuario VARCHAR(255) PRIMARY KEY,
+                senha TEXT NOT NULL
+            );
+            """)
+
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS perfil_usuario (
+                usuario VARCHAR(255) PRIMARY KEY REFERENCES usuarios(usuario) ON DELETE CASCADE,
+                nome TEXT,
+                cargo TEXT,
+                perfil_acesso VARCHAR(100) DEFAULT NULL,
+                foto_url TEXT,
+                impl_andamento INTEGER DEFAULT 0,
+                impl_finalizadas INTEGER DEFAULT 0,
+                impl_paradas INTEGER DEFAULT 0,
+                progresso_medio_carteira INTEGER DEFAULT 0,
+                impl_andamento_total INTEGER DEFAULT 0,
+                implantacoes_atrasadas INTEGER DEFAULT 0,
+                data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            """)
+
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS implantacoes (
+                id SERIAL PRIMARY KEY,
+                usuario_cs VARCHAR(255) REFERENCES usuarios(usuario) ON DELETE SET NULL,
+                nome_empresa TEXT NOT NULL,
+                status VARCHAR(50) DEFAULT 'nova' CHECK(status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')),
+                tipo VARCHAR(50) DEFAULT 'completa' CHECK(tipo IN ('completa', 'modulo')),
+                data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                data_inicio_efetivo TIMESTAMP DEFAULT NULL,
+                data_finalizacao TIMESTAMP DEFAULT NULL,
+                data_inicio_previsto TEXT DEFAULT NULL,
+                motivo_parada TEXT DEFAULT NULL,
+                data_cancelamento TIMESTAMP DEFAULT NULL,
+                motivo_cancelamento TEXT DEFAULT NULL,
+                comprovante_cancelamento_url TEXT DEFAULT NULL,
+                responsavel_cliente TEXT DEFAULT NULL,
+                cargo_responsavel TEXT DEFAULT NULL,
+                telefone_responsavel VARCHAR(50) DEFAULT NULL,
+                email_responsavel VARCHAR(255) DEFAULT NULL,
+                data_inicio_producao TEXT DEFAULT NULL,
+                data_final_implantacao TEXT DEFAULT NULL,
+                chave_oamd TEXT DEFAULT NULL,
+                catraca VARCHAR(20) DEFAULT 'Não definido',
+                facial VARCHAR(20) DEFAULT 'Não definido',
+                nivel_receita VARCHAR(100) DEFAULT NULL,
+                valor_atribuido VARCHAR(100) DEFAULT NULL,
+                id_favorecido VARCHAR(50) DEFAULT NULL,
+                tela_apoio_link TEXT DEFAULT NULL,
+                seguimento VARCHAR(100) DEFAULT NULL,
+                tipos_planos VARCHAR(100) DEFAULT NULL,
+                modalidades VARCHAR(100) DEFAULT NULL,
+                horarios_func VARCHAR(100) DEFAULT NULL,
+                formas_pagamento VARCHAR(100) DEFAULT NULL,
+                diaria VARCHAR(20) DEFAULT 'Não definido',
+                freepass VARCHAR(20) DEFAULT 'Não definido',
+                alunos_ativos INTEGER DEFAULT 0,
+                sistema_anterior VARCHAR(100) DEFAULT NULL,
+                importacao VARCHAR(20) DEFAULT 'Não definido',
+                recorrencia_usa VARCHAR(100) DEFAULT NULL,
+                boleto VARCHAR(20) DEFAULT 'Não definido',
+                nota_fiscal VARCHAR(20) DEFAULT 'Não definido',
+                resp_estrategico_nome VARCHAR(255) DEFAULT NULL,
+                resp_onb_nome VARCHAR(255) DEFAULT NULL,
+                resp_estrategico_obs TEXT DEFAULT NULL,
+                contatos TEXT DEFAULT NULL
+            );
+            """)
+
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS tarefas (
+                id SERIAL PRIMARY KEY,
+                implantacao_id INTEGER NOT NULL REFERENCES implantacoes(id) ON DELETE CASCADE,
+                tarefa_pai TEXT NOT NULL,
+                tarefa_filho TEXT NOT NULL,
+                concluida BOOLEAN DEFAULT FALSE,
+                ordem INTEGER DEFAULT 0,
+                tag VARCHAR(100) DEFAULT NULL,
+                data_conclusao TIMESTAMP DEFAULT NULL
+            );
+            """)
+
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS comentarios (
+                id SERIAL PRIMARY KEY,
+                tarefa_id INTEGER NOT NULL REFERENCES tarefas(id) ON DELETE CASCADE,
+                usuario_cs VARCHAR(255) REFERENCES usuarios(usuario) ON DELETE SET NULL,
+                texto TEXT NOT NULL,
+                data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                imagem_url TEXT DEFAULT NULL
+            );
+            """)
+            
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS timeline_log (
+                id SERIAL PRIMARY KEY,
+                implantacao_id INTEGER NOT NULL REFERENCES implantacoes(id) ON DELETE CASCADE,
+                usuario_cs VARCHAR(255) REFERENCES usuarios(usuario) ON DELETE SET NULL,
+                tipo_evento VARCHAR(100) NOT NULL,
+                detalhes TEXT NOT NULL,
+                data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            """)
+
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS gamificacao_regras (
+                id SERIAL PRIMARY KEY,
+                regra_id VARCHAR(100) UNIQUE NOT NULL,
+                categoria VARCHAR(100) NOT NULL,
+                descricao TEXT NOT NULL,
+                valor_pontos INTEGER NOT NULL DEFAULT 0,
+                tipo_valor VARCHAR(20) DEFAULT 'pontos'
+            );
+            """)
+
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS gamificacao_metricas_mensais (
+                id SERIAL PRIMARY KEY,
+                usuario_cs VARCHAR(255) NOT NULL REFERENCES usuarios(usuario) ON DELETE CASCADE,
+                mes INTEGER NOT NULL CHECK (mes >= 1 AND mes <= 12),
+                ano INTEGER NOT NULL,
+                nota_qualidade REAL DEFAULT NULL,
+                assiduidade REAL DEFAULT NULL,
+                planos_sucesso_perc REAL DEFAULT NULL,
+                satisfacao_processo REAL DEFAULT NULL,
+                reclamacoes INTEGER DEFAULT 0,
+                perda_prazo INTEGER DEFAULT 0,
+                nao_preenchimento INTEGER DEFAULT 0,
+                elogios INTEGER DEFAULT 0,
+                recomendacoes INTEGER DEFAULT 0,
+                certificacoes INTEGER DEFAULT 0,
+                treinamentos_pacto_part INTEGER DEFAULT 0,
+                treinamentos_pacto_aplic INTEGER DEFAULT 0,
+                reunioes_presenciais INTEGER DEFAULT 0,
+                cancelamentos_resp INTEGER DEFAULT 0,
+                nao_envolvimento INTEGER DEFAULT 0,
+                desc_incompreensivel INTEGER DEFAULT 0,
+                hora_extra INTEGER DEFAULT 0,
+                perda_sla_grupo INTEGER DEFAULT 0,
+                finalizacao_incompleta INTEGER DEFAULT 0,
+                impl_finalizadas_mes INTEGER DEFAULT NULL,
+                tma_medio_mes REAL DEFAULT NULL,
+                impl_iniciadas_mes INTEGER DEFAULT NULL,
+                reunioes_concluidas_dia_media REAL DEFAULT NULL,
+                acoes_concluidas_dia_media REAL DEFAULT NULL,
+                pontuacao_calculada INTEGER DEFAULT NULL,
+                elegivel BOOLEAN DEFAULT NULL,
+                data_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                registrado_por VARCHAR(255) REFERENCES usuarios(usuario) ON DELETE SET NULL,
+                UNIQUE (usuario_cs, mes, ano)
+            );
+            """)
+            
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_impl_usuario_cs ON implantacoes (usuario_cs);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_impl_status ON implantacoes (status);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_tarefas_implantacao_id ON tarefas (implantacao_id);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_comentarios_tarefa_id ON comentarios (tarefa_id);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_timeline_log_implantacao_id ON timeline_log (implantacao_id);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_gamificacao_user_period ON gamificacao_metricas_mensais (usuario_cs, ano, mes);")
+
+        
+        elif db_type == 'sqlite':
+            # --- Sintaxe SQLite ---
+            print("Executando init_db para SQLite...")
+            
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS implantacoes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                usuario_cs VARCHAR(255) REFERENCES usuarios(usuario) ON DELETE SET NULL,
+                nome_empresa TEXT NOT NULL,
+                status VARCHAR(50) DEFAULT 'nova' CHECK(status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')),
+                tipo VARCHAR(50) DEFAULT 'completa' CHECK(tipo IN ('completa', 'modulo')),
+                data_criacao DATETIME DEFAULT CURRENT_TIMESTAMP,
+                data_inicio_efetivo DATETIME DEFAULT NULL,
+                data_finalizacao DATETIME DEFAULT NULL,
+                data_inicio_previsto TEXT DEFAULT NULL,
+                motivo_parada TEXT DEFAULT NULL,
+                data_cancelamento DATETIME DEFAULT NULL,
+                motivo_cancelamento TEXT DEFAULT NULL,
+                comprovante_cancelamento_url TEXT DEFAULT NULL,
+                responsavel_cliente TEXT DEFAULT NULL,
+                cargo_responsavel TEXT DEFAULT NULL,
+                telefone_responsavel VARCHAR(50) DEFAULT NULL,
+                email_responsavel VARCHAR(255) DEFAULT NULL,
+                data_inicio_producao TEXT DEFAULT NULL,
+                data_final_implantacao TEXT DEFAULT NULL,
+                chave_oamd TEXT DEFAULT NULL,
+                catraca VARCHAR(20) DEFAULT 'Não definido',
+                facial VARCHAR(20) DEFAULT 'Não definido',
+                nivel_receita VARCHAR(100) DEFAULT NULL,
+                valor_atribuido VARCHAR(100) DEFAULT NULL,
+                id_favorecido VARCHAR(50) DEFAULT NULL,
+                tela_apoio_link TEXT DEFAULT NULL,
+                seguimento VARCHAR(100) DEFAULT NULL,
+                tipos_planos VARCHAR(100) DEFAULT NULL,
+                modalidades VARCHAR(100) DEFAULT NULL,
+                horarios_func VARCHAR(100) DEFAULT NULL,
+                formas_pagamento VARCHAR(100) DEFAULT NULL,
+                diaria VARCHAR(20) DEFAULT 'Não definido',
+                freepass VARCHAR(20) DEFAULT 'Não definido',
+                alunos_ativos INTEGER DEFAULT 0,
+                sistema_anterior VARCHAR(100) DEFAULT NULL,
+                importacao VARCHAR(20) DEFAULT 'Não definido',
+                recorrencia_usa VARCHAR(100) DEFAULT NULL,
+                boleto VARCHAR(20) DEFAULT 'Não definido',
+                nota_fiscal VARCHAR(20) DEFAULT 'Não definido',
+                resp_estrategico_nome VARCHAR(255) DEFAULT NULL,
+                resp_onb_nome VARCHAR(255) DEFAULT NULL,
+                resp_estrategico_obs TEXT DEFAULT NULL,
+                contatos TEXT DEFAULT NULL
+            );
+            """)
+            
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS tarefas (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                implantacao_id INTEGER NOT NULL REFERENCES implantacoes(id) ON DELETE CASCADE,
+                tarefa_pai TEXT NOT NULL,
+                tarefa_filho TEXT NOT NULL,
+                concluida BOOLEAN DEFAULT FALSE,
+                ordem INTEGER DEFAULT 0,
+                tag VARCHAR(100) DEFAULT NULL,
+                data_conclusao DATETIME DEFAULT NULL
+            );
+            """)
+            
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS comentarios (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tarefa_id INTEGER NOT NULL REFERENCES tarefas(id) ON DELETE CASCADE,
+                usuario_cs VARCHAR(255) REFERENCES usuarios(usuario) ON DELETE SET NULL,
+                texto TEXT NOT NULL,
+                data_criacao DATETIME DEFAULT CURRENT_TIMESTAMP,
+                imagem_url TEXT DEFAULT NULL
+            );
+            """)
+            
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS timeline_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                implantacao_id INTEGER NOT NULL REFERENCES implantacoes(id) ON DELETE CASCADE,
+                usuario_cs VARCHAR(255) REFERENCES usuarios(usuario) ON DELETE SET NULL,
+                tipo_evento VARCHAR(100) NOT NULL,
+                detalhes TEXT NOT NULL,
+                data_criacao DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+            """)
+
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS perfil_usuario (
+                usuario VARCHAR(255) PRIMARY KEY REFERENCES usuarios(usuario) ON DELETE CASCADE,
+                nome TEXT,
+                cargo TEXT,
+                perfil_acesso VARCHAR(100) DEFAULT NULL,
+                foto_url TEXT,
+                impl_andamento INTEGER DEFAULT 0,
+                impl_finalizadas INTEGER DEFAULT 0,
+                impl_paradas INTEGER DEFAULT 0,
+                progresso_medio_carteira INTEGER DEFAULT 0,
+                impl_andamento_total INTEGER DEFAULT 0,
+                implantacoes_atrasadas INTEGER DEFAULT 0,
+                data_criacao DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+            """)
+            
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS usuarios (
+                usuario VARCHAR(255) PRIMARY KEY, 
+                senha TEXT NOT NULL
+            );
+            """)
+
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS gamificacao_regras (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                regra_id VARCHAR(100) UNIQUE NOT NULL,
+                categoria VARCHAR(100) NOT NULL,
+                descricao TEXT NOT NULL,
+                valor_pontos INTEGER NOT NULL DEFAULT 0,
+                tipo_valor VARCHAR(20) DEFAULT 'pontos'
+            );
+            """)
+            
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS gamificacao_metricas_mensais (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                usuario_cs VARCHAR(255) NOT NULL REFERENCES usuarios(usuario) ON DELETE CASCADE,
+                mes INTEGER NOT NULL CHECK (mes >= 1 AND mes <= 12),
+                ano INTEGER NOT NULL,
+                nota_qualidade REAL DEFAULT NULL,
+                assiduidade REAL DEFAULT NULL,
+                planos_sucesso_perc REAL DEFAULT NULL,
+                satisfacao_processo REAL DEFAULT NULL,
+                reclamacoes INTEGER DEFAULT 0,
+                perda_prazo INTEGER DEFAULT 0,
+                nao_preenchimento INTEGER DEFAULT 0,
+                elogios INTEGER DEFAULT 0,
+                recomendacoes INTEGER DEFAULT 0,
+                certificacoes INTEGER DEFAULT 0,
+                treinamentos_pacto_part INTEGER DEFAULT 0,
+                treinamentos_pacto_aplic INTEGER DEFAULT 0,
+                reunioes_presenciais INTEGER DEFAULT 0,
+                cancelamentos_resp INTEGER DEFAULT 0,
+                nao_envolvimento INTEGER DEFAULT 0,
+                desc_incompreensivel INTEGER DEFAULT 0,
+                hora_extra INTEGER DEFAULT 0,
+                perda_sla_grupo INTEGER DEFAULT 0,
+                finalizacao_incompleta INTEGER DEFAULT 0,
+                impl_finalizadas_mes INTEGER DEFAULT NULL,
+                tma_medio_mes REAL DEFAULT NULL,
+                impl_iniciadas_mes INTEGER DEFAULT NULL,
+                reunioes_concluidas_dia_media REAL DEFAULT NULL,
+                acoes_concluidas_dia_media REAL DEFAULT NULL,
+                pontuacao_calculada INTEGER DEFAULT NULL,
+                elegivel BOOLEAN DEFAULT NULL,
+                data_registro DATETIME DEFAULT CURRENT_TIMESTAMP,
+                registrado_por VARCHAR(255) REFERENCES usuarios(usuario) ON DELETE SET NULL,
+                UNIQUE (usuario_cs, mes, ano)
+            );
+            """)
+
+        # Popula regras de gamificação se vazio (Comum a ambos os DBs)
+        sql_check = "SELECT COUNT(*) as c FROM gamificacao_regras"
+        cursor.execute(sql_check)
+        count_result = cursor.fetchone()
+        count = count_result[0] if isinstance(count_result, (tuple, list)) else count_result['c']
+
+        if count == 0:
+             print("Populando 'gamificacao_regras' com os valores padrão...")
+             regras = [
+                ('eleg_nota_qualidade_min', 'Elegibilidade', 'Nota Qualidade (Mín %)', 80, 'percentual'),
+                ('eleg_assiduidade_min', 'Elegibilidade', 'Assiduidade (Mín %)', 85, 'percentual'),
+                ('eleg_planos_sucesso_min', 'Elegibilidade', 'Planos de Sucesso (Mín %)', 75, 'percentual'),
+                ('eleg_reclamacoes_max', 'Elegibilidade', 'Reclamações (Máx)', 1, 'quantidade'),
+                ('eleg_perda_prazo_max', 'Elegibilidade', 'Perda de Prazo (Máx)', 2, 'quantidade'),
+                ('eleg_nao_preenchimento_max', 'Elegibilidade', 'Não Preenchimento (Máx)', 2, 'quantidade'),
+                ('eleg_finalizadas_junior', 'Elegibilidade', 'Impl. Finalizadas (Mín Júnior)', 4, 'quantidade'),
+                ('eleg_finalizadas_pleno', 'Elegibilidade', 'Impl. Finalizadas (Mín Pleno)', 5, 'quantidade'),
+                ('eleg_finalizadas_senior', 'Elegibilidade', 'Impl. Finalizadas (Mín Sênior)', 5, 'quantidade'),
+                ('eleg_reunioes_min', 'Elegibilidade', 'Média Reuniões/Dia (Mín)', 3, 'quantidade'),
+                ('pts_satisfacao_100', 'Pontos: Satisfação', 'Satisfação >= 100%', 25, 'pontos'),
+                ('pts_satisfacao_95', 'Pontos: Satisfação', 'Satisfação 95-99%', 17, 'pontos'),
+                ('pts_satisfacao_90', 'Pontos: Satisfação', 'Satisfação 90-94%', 15, 'pontos'),
+                ('pts_satisfacao_85', 'Pontos: Satisfação', 'Satisfação 85-89%', 14, 'pontos'),
+                ('pts_satisfacao_80', 'Pontos: Satisfação', 'Satisfação 80-84%', 12, 'pontos'),
+                ('pts_assiduidade_100', 'Pontos: Assiduidade', 'Assiduidade >= 100%', 30, 'pontos'),
+                ('pts_assiduidade_98', 'Pontos: Assiduidade', 'Assiduidade 98-99%', 20, 'pontos'),
+                ('pts_assiduidade_95', 'Pontos: Assiduidade', 'Assiduidade 95-97%', 15, 'pontos'),
+                ('pts_tma_30', 'Pontos: TMA', 'TMA <= 30 dias', 45, 'pontos'),
+                ('pts_tma_35', 'Pontos: TMA', 'TMA 31-35 dias', 32, 'pontos'),
+                ('pts_tma_40', 'Pontos: TMA', 'TMA 36-40 dias', 24, 'pontos'),
+                ('pts_tma_45', 'Pontos: TMA', 'TMA 41-45 dias', 16, 'pontos'),
+                ('pts_tma_46_mais', 'Pontos: TMA', 'TMA >= 46 dias', 8, 'pontos'),
+                ('pts_reunioes_5', 'Pontos: Reuniões/Dia', 'Média Reuniões >= 5', 35, 'pontos'),
+                ('pts_reunioes_4', 'Pontos: Reuniões/Dia', 'Média Reuniões >= 4', 30, 'pontos'),
+                ('pts_reunioes_3', 'Pontos: Reuniões/Dia', 'Média Reuniões >= 3', 25, 'pontos'),
+                ('pts_reunioes_2', 'Pontos: Reuniões/Dia', 'Média Reuniões >= 2', 15, 'pontos'),
+                ('pts_acoes_5', 'Pontos: Ações/Dia', 'Média Ações >= 5', 15, 'pontos'),
+                ('pts_acoes_4', 'Pontos: Ações/Dia', 'Média Ações >= 4', 10, 'pontos'),
+                ('pts_acoes_3', 'Pontos: Ações/Dia', 'Média Ações >= 3', 7, 'pontos'),
+                ('pts_acoes_2', 'Pontos: Ações/Dia', 'Média Ações >= 2', 5, 'pontos'),
+                ('pts_planos_100', 'Pontos: Planos Sucesso', 'Planos Sucesso >= 100%', 45, 'pontos'),
+                ('pts_planos_95', 'Pontos: Planos Sucesso', 'Planos Sucesso 95-99%', 35, 'pontos'),
+                ('pts_planos_90', 'Pontos: Planos Sucesso', 'Planos Sucesso 90-94%', 30, 'pontos'),
+                ('pts_planos_85', 'Pontos: Planos Sucesso', 'Planos Sucesso 85-89%', 20, 'pontos'),
+                ('pts_planos_80', 'Pontos: Planos Sucesso', 'Planos Sucesso 80-84%', 10, 'pontos'),
+                ('pts_iniciadas_10', 'Pontos: Impl. Iniciadas', 'Impl. Iniciadas >= 10', 25, 'pontos'),
+                ('pts_iniciadas_9', 'Pontos: Impl. Iniciadas', 'Impl. Iniciadas >= 9', 20, 'pontos'),
+                ('pts_iniciadas_8', 'Pontos: Impl. Iniciadas', 'Impl. Iniciadas >= 8', 18, 'pontos'),
+                ('pts_iniciadas_7', 'Pontos: Impl. Iniciadas', 'Impl. Iniciadas >= 7', 14, 'pontos'),
+                ('pts_iniciadas_6', 'Pontos: Impl. Iniciadas', 'Impl. Iniciadas >= 6', 10, 'pontos'),
+                ('pts_qualidade_100', 'Pontos: Qualidade', 'Nota Qualidade >= 100%', 55, 'pontos'),
+                ('pts_qualidade_95', 'Pontos: Qualidade', 'Nota Qualidade 95-99%', 40, 'pontos'),
+                ('pts_qualidade_90', 'Pontos: Qualidade', 'Nota Qualidade 90-94%', 30, 'pontos'),
+                ('pts_qualidade_85', 'Pontos: Qualidade', 'Nota Qualidade 85-89%', 15, 'pontos'),
+                ('pts_qualidade_80', 'Pontos: Qualidade', 'Nota Qualidade 80-84%', 0, 'pontos'),
+                ('bonus_elogios', 'Bônus', 'Elogio (Máx 1)', 15, 'pontos'),
+                ('bonus_recomendacoes', 'Bônus', 'Recomendação (por ocorrência)', 1, 'pontos'),
+                ('bonus_certificacoes', 'Bônus', 'Certificação (Máx 1)', 15, 'pontos'),
+                ('bonus_trein_pacto_part', 'Bônus', 'Treinamento Pacto (Participou)', 15, 'pontos'),
+                ('bonus_trein_pacto_aplic', 'Bônus', 'Treinamento Pacto (Aplicou)', 30, 'pontos'),
+                ('bonus_reun_pres_10', 'Bônus: Reuniões Pres.', 'Reuniões Presenciais >= 10', 35, 'pontos'),
+                ('bonus_reun_pres_7', 'Bônus: Reuniões Pres.', 'Reuniões Presenciais >= 7', 30, 'pontos'),
+                ('bonus_reun_pres_5', 'Bônus: Reuniões Pres.', 'Reuniões Presenciais >= 5', 25, 'pontos'),
+                ('bonus_reun_pres_3', 'Bônus: Reuniões Pres.', 'Reuniões Presenciais >= 3', 20, 'pontos'),
+                ('bonus_reun_pres_1', 'Bônus: Reuniões Pres.', 'Reuniões Presenciais >= 1', 15, 'pontos'),
+                ('penal_reclamacao', 'Penalidades', 'Reclamação (por ocorrência)', -50, 'penalidade'),
+                ('penal_perda_prazo', 'Penalidades', 'Perda de Prazo (por ocorrência)', -10, 'penalidade'),
+                ('penal_desc_incomp', 'Penalidades', 'Descrição Incompreensível (por ocorrência)', -10, 'penalidade'),
+                ('penal_cancel_resp', 'Penalidades', 'Cancelamento por Resp. (por ocorrência)', -100, 'penalidade'),
+                ('penal_nao_envolv', 'Penalidades', 'Não Envolvimento (por ocorrência)', -10, 'penalidade'),
+                ('penal_nao_preench', 'Penalidades', 'Não Preenchimento (por ocorrência)', -10, 'penalidade'),
+                ('penal_sla_grupo', 'Penalidades', 'Perda SLA Grupo (por ocorrência)', -5, 'penalidade'),
+                ('penal_final_incomp', 'Penalidades', 'Finalização Incompleta (por ocorrência)', -10, 'penalidade'),
+                ('penal_hora_extra', 'Penalidades', 'Hora Extra (por ocorrência)', -10, 'penalidade'),
+             ]
+             sql_insert = "INSERT INTO gamificacao_regras (regra_id, categoria, descricao, valor_pontos, tipo_valor) VALUES (%s, %s, %s, %s, %s)"
+             if db_type == 'sqlite':
+                 sql_insert = sql_insert.replace('%s', '?')
+             for regra in regras:
+                 cursor.execute(sql_insert, regra)
+
+        conn.commit()
+        print(f"Banco de dados ({db_type}) inicializado/verificado com sucesso.")
+        
+    except Exception as e:
+        print(f"ERRO ao inicializar DB: {e}")
+        if conn:
+            conn.rollback()
+    finally:
+        if conn:
+            conn.close()
+
+# --- COMANDOS FLASK CLI ---
+
+@click.command('init-db')
+@with_appcontext
+def init_db_command():
+    """Cria as tabelas do banco de dados via linha de comando."""
+    init_db()
+    click.echo('Inicialização do banco de dados concluída.')
+
+def init_app(app):
+    """Registra o comando init-db na aplicação."""
+    app.cli.add_command(init_db_command)

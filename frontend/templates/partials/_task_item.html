@@ -1,0 +1,54 @@
+{# templates/partials/_task_item.html #}
+<div class="d-flex flex-column flex-grow-1 me-3">
+    <div class="d-flex align-items-center mb-2">
+        <input 
+            class="form-check-input me-3 task-checkbox flex-shrink-0" 
+            type="checkbox" 
+            value="1" 
+            id="task-{{ tarefa.id }}" 
+            {% if tarefa.concluida %}checked{% endif %}
+            hx-post="{{ url_for('api.toggle_tarefa', tarefa_id=tarefa.id) }}"
+            hx-target="#task-item-{{ tarefa.id }}"
+            hx-swap="outerHTML"
+            >
+        <div class="task-label-container">
+            <label class="form-check-label {% if tarefa.concluida %}text-decoration-line-through text-success{% endif %}" for="task-{{ tarefa.id }}">
+                {{ tarefa.tarefa_filho }}
+            </label>
+            {% if tarefa.tag %}
+                <span class="badge rounded-pill task-tag ms-2 {% if tarefa.tag == 'Ação interna' %} bg-secondary {% elif tarefa.tag == 'Reunião' %} bg-info text-dark {% else %} bg-light text-dark {% endif %}">
+                    {{ tarefa.tag }}
+                </span>
+            {% endif %}
+        </div>
+    </div>
+    <div class="mt-1" style="margin-left: calc(1.25em + 0.75rem);">
+        {# A seção de comentários permanece, mas a lógica de adicionar/excluir pode ser refatorada com HTMX no futuro #}
+        <label class="form-label small text-secondary mb-1">Comentários</label>
+        <form 
+            hx-post="{{ url_for('api.adicionar_comentario', tarefa_id=tarefa.id) }}"
+            hx-target="#comment-list-{{ tarefa.id }}"
+            hx-swap="beforeend"
+            hx-encoding="multipart/form-data"
+            class="comment-form mb-2"
+            >
+            <textarea class="form-control form-control-sm" name="comentario" maxlength="8000" rows="1" placeholder="Adicionar comentário..."></textarea>
+            <input type="file" name="imagem" class="form-control form-control-sm" accept="image/png, image/jpeg, image/gif">
+            <button class="btn btn-outline-primary btn-sm" type="submit">Salvar</button>
+        </form>
+        <div class="list-group list-group-flush border rounded-1 comment-list-wrapper" id="comment-list-{{ tarefa.id }}" style="max-height: 300px; overflow-y: auto;">
+            {% if not tarefa.comentarios %}
+                <div class="list-group-item list-group-item-action py-1 px-2 small text-secondary fst-italic" id="no-comment-{{ tarefa.id }}">
+                    Nenhum comentário.
+                </div>
+            {% endif %}
+            {% for comentario in tarefa.comentarios %}
+                {% include 'partials/_comment_item.html' %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+<div class="d-flex align-items-center ms-2 flex-shrink-0">
+    <button class="btn btn-sm btn-outline-danger p-1 me-1" title="Excluir Tarefa"><i class="bi bi-x-lg"></i></button>
+    <i class="bi bi-grip-vertical handle" style="cursor: grab;" title="Mover Tarefa"></i>
+</div>
