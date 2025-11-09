@@ -18,46 +18,57 @@ body {
 }
 
 :root {
-    /* Tema Claro (Agressivo/Moderno) */
-    
-    /* --- INÍCIO DA CORREÇÃO (FUNDO) --- */
-    --body-bg: #ced4da; /* <-- Alterado para um cinza médio, mais escuro */
-    /* --- FIM DA CORREÇÃO --- */
-    
-    --body-color: #1a1a1a;
-    --container-bg: #ffffff;
-    --card-bg: #ffffff;
-    --input-bg: #f8f9fa; /* Fundo de input sutilmente diferente */
-    --input-border: #dee2e6;
-    --input-color: #212529;
-    --accent-color: #0d6efd;
-    --accent-color-rgb: 13, 110, 253;
-    /* Sombra de "destaque" (multi-camada, mais suave) */
-    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
-    --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    
-    --header-bg: #ffffff;
-    --header-border: transparent; /* Minimalista: sem borda */
-    
-    /* --- INÍCIO DA CORREÇÃO (FUNDO) --- */
-    --sidebar-bg: #ced4da; /* <-- Alterado para corresponder ao novo fundo do body */
-    /* --- FIM DA CORREÇÃO --- */
-
+    /* Tema escuro padrão */
+    --body-bg: #1f1f1f; /* cinza escuro neutro */
+    --body-color: #ffffff; /* texto principal branco */
+    /* Alinhamento com Bootstrap */
+    --bs-body-color: #ffffff;
+    --bs-heading-color: #ffffff;
+    --bs-card-color: #ffffff;
+    --bs-link-color: #ffffff;
+    --container-bg: #242424; /* cinza de fundo de containers */
+    --card-bg: #262626; /* cards com cinza médio */
+    --card-border-color: #3a3a3a; /* borda cinza */
+    --input-bg: #202020; /* campos de input cinza escuro */
+    --input-border: #3a3a3a; /* borda cinza */
+    --input-color: #ffffff;
+    --accent-color: #9ca3af; /* cinza-acento neutro */
+    --accent-color-rgb: 156, 163, 175;
+    /* Tokens extras removidos na reversão */
+    /* Sombras modernas (elevações) */
+    --elevation-1: 0 2px 8px rgba(0, 0, 0, 0.35);
+    --elevation-2: 0 6px 16px rgba(0, 0, 0, 0.45);
+    --elevation-3: 0 10px 24px rgba(0, 0, 0, 0.55);
+    /* Raio e espaçamento modernos */
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.25rem;
+    --space-6: 1.5rem;
+    --header-bg: #1e1e1e;
+    --header-border: #333333;
+    --sidebar-bg: #1f1f1f;
     --table-bg: var(--card-bg);
-    --table-border-color: #e9ecef;
-    --table-header-bg: #f8f9fa;
-    --table-hover-bg: rgba(var(--accent-color-rgb), 0.04);
-    --border-radius-sm: 0.375rem; /* 6px */
-    --border-radius-md: 0.5rem;   /* 8px */
+    --table-border-color: #3a3a3a;
+    --table-header-bg: #222222;
+    --table-hover-bg: rgba(var(--accent-color-rgb), 0.12);
+    /* Compatibilidade com tokens antigos */
+    --border-radius-sm: var(--radius-sm);
+    --border-radius-md: var(--radius-md);
 
-    --user-sidebar-bg: #ffffff;
+    --user-sidebar-bg: var(--container-bg);
     --user-sidebar-width: 280px;
     --user-sidebar-width-minimized: 60px;
-    --user-sidebar-link-hover: #f1f3f5;
-    --user-sidebar-border: #dee2e6;
+    --user-sidebar-link-hover: #0f1a2e; /* leve contraste no hover */
+    --user-sidebar-border: #1f2937;
 }
 
-/* --- FIM DO DARK MODE (Removido) --- */
+/* (Tema escuro removido) */
 
 
 body {
@@ -66,66 +77,148 @@ body {
     min-height: 100vh;
     overflow-x: hidden;
     transition: background-color 0.3s, color 0.3s;
-    line-height: 1.6;
+    line-height: 1.7;
 }
 .header-bg {
     background-color: var(--header-bg);
     border-bottom: 1px solid var(--header-border);
-    box-shadow: var(--shadow);
+    box-shadow: var(--elevation-1);
     transition: background-color 0.3s, border-color 0.3s;
+    border-radius: var(--radius-lg);
 }
 
 /* --- INÍCIO DA CORREÇÃO (FONTE) --- */
 .main-title {
     color: var(--accent-color);
-    font-family: var(--font-serif-display); /* Aplica Bodoni ao título principal */
-    font-weight: 700; /* Bodoni fica melhor em negrito */
-    letter-spacing: 0.5px; /* Destaque */
+    font-family: var(--bs-font-sans-serif);
+    font-weight: 700;
+    letter-spacing: 0.1px;
 }
 /* --- FIM DA CORREÇÃO --- */
 
 .metric-card, .card {
     background-color: var(--card-bg);
-    border: none; /* AGRESSIVO: Remove todas as bordas dos cards */
-    border-radius: var(--border-radius-md);
-    box-shadow: var(--shadow);
-    transition: all 0.25s ease-in-out;
+    border: 1px solid var(--card-border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--elevation-1);
+    transition: box-shadow 0.25s ease-in-out, transform 0.1s ease-out;
+    padding: var(--space-4);
 }
 .metric-card:hover, .card:hover {
-    transform: translateY(-4px); /* "Lift" mais agressivo */
-    box-shadow: var(--shadow-hover); /* Sombra de "destaque" */
+    box-shadow: var(--elevation-2);
+}
+
+/* --- Destaque adicional para cards de KPIs --- */
+.kpi-grid .card,
+.card.text-center {
+    border-color: rgba(var(--accent-color-rgb), 0.35);
+    box-shadow: var(--elevation-2);
+}
+.kpi-grid .card:hover,
+.card.text-center:hover {
+    box-shadow: var(--elevation-3);
+    border-color: rgba(var(--accent-color-rgb), 0.6);
+}
+.card.text-center h6 {
+    font-weight: 600;
+    opacity: 0.9;
+}
+.card.text-center h4 {
+    font-weight: 800;
+    letter-spacing: 0.2px;
 }
 
 .form-control, .form-select {
     background-color: var(--input-bg);
     color: var(--input-color);
     border: 1px solid var(--input-border);
-    border-radius: var(--border-radius-sm);
-    transition: all 0.3s;
+    border-radius: var(--radius-md);
+    padding: var(--space-3) var(--space-4);
+    transition: background-color 0.3s, border-color 0.3s, box-shadow 0.2s;
+}
+.input-group-text {
+    color: #212529; /* texto escuro para contraste */
+    background-color: #e9ecef; /* fundo claro padrão do Bootstrap */
+    border: 1px solid var(--input-border);
 }
 .form-control:focus, .form-select:focus {
     border-color: var(--accent-color);
-    box-shadow: 0 0 0 0.25rem rgba(var(--accent-color-rgb), 0.25);
-    background-color: var(--container-bg); /* Fundo mais claro no focus */
+    box-shadow: 0 0 0 0.22rem rgba(var(--accent-color-rgb), 0.35);
+    background-color: var(--container-bg);
     color: var(--input-color);
+}
+/* Input de arquivo (file) no tema escuro */
+.form-control[type="file"], input[type="file"].form-control {
+    background-color: var(--input-bg);
+    color: var(--input-color);
+    border: 1px solid var(--input-border);
+}
+.form-control[type="file"]::file-selector-button {
+    background-color: var(--card-bg);
+    color: var(--body-color);
+    border: 1px solid var(--input-border);
+    border-radius: var(--border-radius-sm);
+}
+.form-control[type="file"]::file-selector-button:hover {
+    background-color: var(--user-sidebar-link-hover);
+    color: var(--body-color);
+}
+/* WebKit fallback */
+input[type="file"]::-webkit-file-upload-button {
+    background-color: var(--card-bg);
+    color: var(--body-color);
+    border: 1px solid var(--input-border);
+    border-radius: var(--border-radius-sm);
+}
+input[type="file"]::-webkit-file-upload-button:hover {
+    background-color: var(--user-sidebar-link-hover);
+    color: var(--body-color);
 }
 .form-control:disabled, .form-select:disabled, input:read-only:disabled {
      background-color: #e9ecef !important;
      opacity: 0.8;
      cursor: not-allowed;
      color: #6c757d;
- }
+}
+
+/* Placeholder visível no tema escuro */
+::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+}
 
 .list-group-item {
     background-color: var(--card-bg);
     color: var(--body-color);
     border: 1px solid var(--input-border);
-    border-radius: var(--border-radius-sm);
-    margin-bottom: 0.25rem;
-    transition: background-color 0.3s, color 0.3s;
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-2);
+    transition: background-color 0.3s, color 0.3s, box-shadow 0.2s;
 }
 .list-group-item:last-child {
     margin-bottom: 0;
+}
+.list-group.gamificacao-ref .list-group-item {
+    background-color: #e9ecef !important; /* fundo claro para contraste */
+    color: #212529 !important; /* texto escuro legível */
+    border-color: #d3d6da !important;
+    display: grid !important;
+    grid-template-columns: 1fr 14rem 10rem; /* label | normal | sênior */
+    align-items: center;
+    column-gap: 0.75rem;
+}
+.list-group.gamificacao-ref .gamificacao-ref-header {
+    background-color: #dfe3e7 !important;
+    border-color: #c7cbd0 !important;
+    font-weight: 600;
+}
+.list-group.gamificacao-ref .list-group-item .fw-semibold,
+.list-group.gamificacao-ref .list-group-item .text-nowrap {
+    color: #212529 !important;
+}
+.list-group.gamificacao-ref .list-group-item span:nth-child(2),
+.list-group.gamificacao-ref .list-group-item span:nth-child(3) {
+    justify-self: end; /* alinhar valores à direita nas colunas */
+    text-align: right;
 }
 .sidebar-bg {
     background-color: var(--sidebar-bg) !important;
@@ -139,9 +232,11 @@ body {
 
 /* --- ESTILO DAS ABAS (NAV-PILLS) MODERNAS --- */
 .nav-pills .nav-link {
-    color: #6c757d; /* Cor inativa */
+    color: #6c757d;
     font-weight: 600;
     transition: all 0.2s ease-in-out;
+    border-radius: var(--radius-md);
+    padding: var(--space-2) var(--space-3);
 }
 .nav-pills .nav-link.active {
     background-color: var(--accent-color);
@@ -157,14 +252,14 @@ body {
 .table {
     color: var(--body-color);
     background-color: var(--table-bg);
-    border: none; /* Tabela sem borda */
-    border-radius: var(--border-radius-md);
+    border: none;
+    border-radius: var(--radius-lg);
     overflow: hidden;
 }
 .table th, .table td {
     border-color: var(--table-border-color);
     vertical-align: middle;
-    padding: 0.75rem;
+    padding: var(--space-3);
 }
 .table-hover > tbody > tr {
     transition: background-color 0.15s ease-out;
@@ -177,21 +272,25 @@ body {
     color: var(--body-color);
     background-color: var(--table-header-bg);
     border-bottom: 2px solid var(--table-border-color);
+    padding: var(--space-3);
 }
 
 .btn {
-    border-radius: var(--border-radius-sm);
-    transition: all 0.2s ease-in-out;
-    font-weight: 600; /* Destaque em todos os botões */
+    border-radius: var(--radius-md);
+    transition: transform 0.06s ease, box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out;
+    font-weight: 600;
+    padding: var(--space-2) var(--space-4);
+    box-shadow: var(--elevation-1);
 }
 .btn-primary, .btn-success, .btn-info {
     color: white !important;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 .btn-primary:hover, .btn-success:hover, .btn-info:hover {
-    transform: translateY(-2px); /* "Lift" agressivo */
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--elevation-2);
 }
+/* Microinterações sutis para botões */
+/* removidas para reverter comportamento */
 .table a {
     color: var(--accent-color);
     text-decoration: none;
@@ -225,9 +324,13 @@ body {
 }
 .modal-header {
     border-bottom: 1px solid var(--input-border);
+    background-color: var(--header-bg);
+    padding: var(--space-3) var(--space-4);
 }
 .modal-footer {
     border-top: 1px solid var(--input-border);
+    background-color: var(--header-bg);
+    padding: var(--space-3) var(--space-4);
 }
 
 .alert {
@@ -242,10 +345,12 @@ body {
     align-items: center;
     justify-content: center;
     transition: all 0.2s ease-in-out;
+    border-radius: var(--radius-md);
+    box-shadow: var(--elevation-1);
 }
 .user-profile-btn:hover {
-    transform: scale(1.1);
-    box-shadow: 0 0 10px rgba(var(--accent-color-rgb), 0.5);
+    transform: scale(1.06);
+    box-shadow: var(--elevation-2);
 }
 .user-profile-btn img {
     width: 100%; 
@@ -264,6 +369,7 @@ body {
     transition: width 0.3s ease-in-out, background-color 0.3s;
     width: var(--user-sidebar-width);
     color: var(--body-color);
+    border-radius: 0;
 }
 
 .user-sidebar-bg .offcanvas-header {
@@ -330,17 +436,25 @@ body {
     white-space: nowrap;
     transition: background-color 0.2s, color 0.2s;
     font-weight: 500;
+    gap: var(--space-2);
+    min-height: 44px; /* alvo de toque confortável */
 }
 .user-sidebar-nav .nav-link i {
     font-size: 1.25rem;
     width: 30px;
     flex-shrink: 0;
     text-align: center;
-    transition: font-size 0.2s;
+    transition: color 0.2s, opacity 0.2s;
+    color: var(--body-color);
+    opacity: 0.9;
 }
 .user-sidebar-nav .nav-link:hover {
     background-color: var(--user-sidebar-link-hover);
     color: var(--accent-color);
+}
+.user-sidebar-nav .nav-link:hover i {
+    color: var(--accent-color);
+    opacity: 1;
 }
 
 .user-sidebar-nav .nav-link .nav-link-text {
@@ -412,6 +526,8 @@ body {
     font-weight: 700; /* Mais destaque */
     color: var(--body-color);
     transition: background-color 0.3s, border-color 0.3s;
+    border-top-left-radius: var(--radius-lg);
+    border-top-right-radius: var(--radius-lg);
 }
 
 /* --- INÍCIO DA CORREÇÃO (Scroll na Lista de Analytics) --- */
@@ -421,4 +537,5 @@ body {
     /* Garante que o cabeçalho sticky funcione dentro do scroll */
     position: relative; 
 }
-/* --- FIM DA CORREÇÃO --- */
+
+/* Tipografia responsiva removida na reversão */

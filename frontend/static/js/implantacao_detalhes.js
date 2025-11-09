@@ -10,13 +10,43 @@ function adicionarLogNaTimeline(log) { if (!log) return; const timelineList = do
 
 function updateProgressBar(progress) { const progressBar = document.querySelector('#main-content .progress-bar'); if (progressBar) { const progressNum = parseInt(progress) || 0; progressBar.style.width = progressNum + '%'; progressBar.setAttribute('aria-valuenow', progressNum); progressBar.textContent = progressNum + '%'; } }
 
+// Confirmação com modal Bootstrap (fallback para window.confirm)
+function confirmWithModal(message) {
+    return new Promise((resolve) => {
+        if (!window.bootstrap) { resolve(window.confirm(message)); return; }
+        const html = `
+        <div class="modal fade" tabindex="-1" id="confirmActionModal">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Confirmar ação</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body"><p>${message}</p></div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="confirmActionBtn">Confirmar</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+        const wrap = document.createElement('div'); wrap.innerHTML = html; const modalEl = wrap.firstElementChild; document.body.appendChild(modalEl);
+        const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl, { backdrop: 'static', keyboard: true });
+        const cleanup = () => { bsModal.hide(); modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove(), { once: true }); };
+        modalEl.querySelector('#confirmActionBtn').addEventListener('click', () => { resolve(true); cleanup(); });
+        modalEl.addEventListener('hide.bs.modal', () => { resolve(false); }, { once: true });
+        bsModal.show();
+    });
+}
+
 // --- Funções de Ação (Adaptadas para ler URLs do objeto CONFIG) ---
 function excluirTarefa(tarefaId, button, CONFIG) { 
     if (!confirm('Excluir tarefa e comentários?')) return; 
     const endpointUrl = CONFIG.endpoints.delTarefa + tarefaId;
     button.disabled = true; button.innerHTML = '<span class="spinner-border spinner-border-sm"></span>'; const listItem = button.closest('.list-group-item'); if (listItem) listItem.style.opacity = '0.5'; fetch(endpointUrl, { method: 'POST' }).then(response => response.json()).then(data => { if (data.ok) { if(listItem) listItem.remove(); adicionarLogNaTimeline(data.log_exclusao); if (data.novo_progresso !== undefined) updateProgressBar(data.novo_progresso); if (data.implantacao_finalizada) { adicionarLogNaTimeline(data.log_finalizacao); window.location.reload(); } } else { throw new Error(data.error || 'Erro.'); } }).catch(error => { console.error('Erro:', error); alert(`Erro: ${error.message}`); button.innerHTML = '<i class="bi bi-x-lg"></i>'; button.disabled = false; if (listItem) listItem.style.opacity = '1'; }); }
-function excluirTodasDoModulo(button, moduloNome, CONFIG) { 
-    if (!confirm(`EXCLUIR TODAS as tarefas do módulo "${moduloNome}"? Irreversível!`)) return; 
+async function excluirTodasDoModulo(button, moduloNome, CONFIG) { 
+    const ok = await confirmWithModal(`EXCLUIR TODAS as tarefas do módulo "${moduloNome}"? Esta ação é irreversível.`);
+    if (!ok) return; 
     const endpointUrl = CONFIG.endpoints.delModulo;
     const cardElement = button.closest('.module-header'); // Procura o .module-header
     const collapseElement = cardElement ? cardElement.nextElementSibling : null; // Pega o .collapse
@@ -28,7 +58,7 @@ function excluirTodasDoModulo(button, moduloNome, CONFIG) {
 
     fetch(endpointUrl, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ implantacao_id: CONFIG.implantacaoId, tarefa_pai: moduloNome }) }).then(response => response.json()).then(data => { if (data.ok) { if (collapseElement) { const taskList = collapseElement.querySelector('.list-group-sortable'); if (taskList) { taskList.innerHTML = ''; const noTaskMsg = document.createElement('div'); noTaskMsg.className = 'list-group-item text-center small text-muted fst-italic'; noTaskMsg.textContent = 'Nenhuma tarefa. Use "Adicionar Tarefa".'; taskList.appendChild(noTaskMsg); } } adicionarLogNaTimeline(data.log_exclusao_modulo); if (data.novo_progresso !== undefined) updateProgressBar(data.novo_progresso); if (data.implantacao_finalizada) { adicionarLogNaTimeline(data.log_finalizacao); window.location.reload(); } } else { throw new Error(data.error || 'Erro.'); } }).catch(error => { console.error('Erro:', error); alert(`Erro: ${error.message}`); }).finally(() => { button.innerHTML = originalBtnHTML; button.disabled = false; if (cardElement) cardElement.style.opacity = '1'; if (collapseElement) collapseElement.style.opacity = '1'; }); }
 function marcarTodasDoModulo(button, collapseId, CONFIG) { 
-    const collapseElement = document.getElementById(collapseId); if (!collapseElement) return; const bsCollapse = bootstrap.Collapse.getOrCreateInstance(collapseElement); bsCollapse.show(); setTimeout(() => { const checkboxesNaoMarcadas = Array.from(collapseElement.querySelectorAll('.task-checkbox:not(:checked)')); if (checkboxesNaoMarcadas.length === 0) { alert('Todas já concluídas.'); return; } if (!confirm(`Marcar ${checkboxesNaoMarcadas.length} tarefa(s) como concluída(s)?`)) return; const originalBtnHTML = button.innerHTML; button.disabled = true; button.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Marcando...`; let promises = []; let errors = []; let ultimaFinalizada = false; let ultimoLogTarefa = null; let ultimoLogFinalizacao = null; let ultimoProgresso = null; checkboxesNaoMarcadas.forEach(checkbox => { const tarefaId = parseInt(checkbox.closest('li').dataset.id); if (isNaN(tarefaId)) return; 
+    const collapseElement = document.getElementById(collapseId); if (!collapseElement) return; const bsCollapse = bootstrap.Collapse.getOrCreateInstance(collapseElement); bsCollapse.show(); setTimeout(async () => { const checkboxesNaoMarcadas = Array.from(collapseElement.querySelectorAll('.task-checkbox:not(:checked)')); if (checkboxesNaoMarcadas.length === 0) { alert('Todas já concluídas.'); return; } const ok = await confirmWithModal(`Marcar ${checkboxesNaoMarcadas.length} tarefa(s) como concluída(s)?`); if (!ok) return; const originalBtnHTML = button.innerHTML; button.disabled = true; button.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Marcando...`; let promises = []; let errors = []; let ultimaFinalizada = false; let ultimoLogTarefa = null; let ultimoLogFinalizacao = null; let ultimoProgresso = null; checkboxesNaoMarcadas.forEach(checkbox => { const tarefaId = parseInt(checkbox.closest('li').dataset.id); if (isNaN(tarefaId)) return; 
     const endpointUrl = CONFIG.endpoints.toggleTarefa + tarefaId;
     checkbox.disabled = true; const promise = fetch(endpointUrl, { method: 'POST' }).then(response => response.json()).then(data => { if (data.ok) { const label = checkbox.closest('li').querySelector('label.form-check-label'); checkbox.checked = true; if(label) label.classList.add('text-decoration-line-through', 'text-success'); ultimoProgresso = data.novo_progresso; ultimoLogTarefa = data.log_tarefa; if(data.implantacao_finalizada) { ultimaFinalizada = true; ultimoLogFinalizacao = data.log_finalizacao; } return { success: true }; } else { throw new Error(data.error || 'Erro'); } }).catch(error => { console.error(`Erro ${tarefaId}:`, error); errors.push(tarefaId); checkbox.checked = false; const label = checkbox.closest('li').querySelector('label.form-check-label'); if(label) label.classList.remove('text-decoration-line-through', 'text-success'); return { success: false }; }).finally(() => { checkbox.disabled = false; }); promises.push(promise); }); Promise.all(promises).then(() => { button.innerHTML = originalBtnHTML; button.disabled = false; if (ultimoProgresso !== null) updateProgressBar(ultimoProgresso); if (ultimoLogTarefa) adicionarLogNaTimeline(ultimoLogTarefa); if (ultimaFinalizada) { if (ultimoLogFinalizacao) adicionarLogNaTimeline(ultimoLogFinalizacao); window.location.reload(); return; } if (errors.length > 0) alert(`Falha ao marcar ${errors.length} tarefa(s).`); }); }, 300); }
 
@@ -124,8 +154,54 @@ document.addEventListener('DOMContentLoaded', function() {
     window.excluirTarefa = excluirTarefa; 
     window.marcarTodasDoModulo = marcarTodasDoModulo; 
     window.excluirTodasDoModulo = excluirTodasDoModulo;
-    
-    document.querySelectorAll('.list-group-sortable').forEach(listEl => { const moduloContainer = listEl.closest('.collapse, .card'); let modulo = moduloContainer?.dataset.modulo; if (!modulo && moduloContainer?.classList.contains('card')) { const header = moduloContainer.querySelector('.card-header'); const collapseTarget = header?.getAttribute('data-bs-target'); if (collapseTarget) { const collapseElement = document.querySelector(collapseTarget); if(collapseElement) modulo = collapseElement.dataset.modulo; } if (!modulo) { const headerText = header?.querySelector('h5')?.textContent.trim(); if (headerText) modulo = headerText; } } if (!modulo) { console.warn("Módulo não encontrado:", listEl); return; } new Sortable(listEl, { animation: 150, handle: '.handle', ghostClass: 'bg-secondary', onEnd: function (evt) { const novaOrdemIds = Array.from(evt.to.children).map(item => parseInt(item.dataset.id)); fetch(CONFIG.endpoints.reordenar, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ implantacao_id: CONFIG.implantacaoId, tarefa_pai: modulo, ordem: novaOrdemIds }) }).then(r => r.json()).then(d => { if (d.ok) adicionarLogNaTimeline(d.log_reordenar); else throw new Error(d.error); }).catch(e => alert('Erro salvar ordem.')); }, }); });
+
+    function initializeSortableLists(CONFIG) {
+        if (!window.Sortable) {
+            console.warn('Sortable não carregado ainda. Aguardando evento de pronto.');
+            return;
+        }
+        document.querySelectorAll('.list-group-sortable').forEach(listEl => {
+            const moduloContainer = listEl.closest('.collapse, .card');
+            let modulo = moduloContainer?.dataset.modulo;
+            if (!modulo && moduloContainer?.classList.contains('card')) {
+                const header = moduloContainer.querySelector('.card-header');
+                const collapseTarget = header?.getAttribute('data-bs-target');
+                if (collapseTarget) {
+                    const collapseElement = document.querySelector(collapseTarget);
+                    if (collapseElement) modulo = collapseElement.dataset.modulo;
+                }
+                if (!modulo) {
+                    const headerText = header?.querySelector('h5')?.textContent.trim();
+                    if (headerText) modulo = headerText;
+                }
+            }
+            if (!modulo) { console.warn("Módulo não encontrado:", listEl); return; }
+            new Sortable(listEl, {
+                animation: 150,
+                handle: '.handle',
+                ghostClass: 'bg-secondary',
+                onEnd: function (evt) {
+                    const novaOrdemIds = Array.from(evt.to.children).map(item => parseInt(item.dataset.id));
+                    fetch(CONFIG.endpoints.reordenar, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ implantacao_id: CONFIG.implantacaoId, tarefa_pai: modulo, ordem: novaOrdemIds })
+                    }).then(r => r.json()).then(d => {
+                        if (d.ok) adicionarLogNaTimeline(d.log_reordenar);
+                        else throw new Error(d.error);
+                    }).catch(e => alert('Erro salvar ordem.'));
+                },
+            });
+        });
+    }
+
+    if (window.Sortable) {
+        initializeSortableLists(CONFIG);
+    } else {
+        document.addEventListener('sortable-ready', function() {
+            initializeSortableLists(CONFIG);
+        }, { once: true });
+    }
     const tabSelector = '#detalhesTab .nav-link'; const tabPaneSelector = '#detalhesTabContent .tab-pane'; const tabs = document.querySelectorAll(tabSelector); const panes = document.querySelectorAll(tabPaneSelector); const tabStorageKey = `tabAtiva-implantacao-${CONFIG.implantacaoId}`;
     function activateTabById(buttonId) { const targetButton = document.getElementById(buttonId); const targetPaneId = targetButton?.getAttribute('data-bs-target'); if (!targetButton || !targetPaneId) { console.warn(`[ActivateTab] Botão/painel não encontrado: ${buttonId}`); return false; } const targetPane = document.querySelector(targetPaneId); if (!targetPane) { console.warn(`[ActivateTab] Painel não encontrado: ${targetPaneId}`); return false; } console.log(`[ActivateTab] Ativando: ${buttonId}`); tabs.forEach(t => t.classList.remove('active')); panes.forEach(p => p.classList.remove('active', 'show')); targetButton.classList.add('active'); targetPane.classList.add('active', 'show'); localStorage.setItem(tabStorageKey, buttonId); return true; }
     tabs.forEach(tab => { tab.addEventListener('shown.bs.tab', event => { console.log('[Tab Event] shown:', event.target.id); localStorage.setItem(tabStorageKey, event.target.id); if (window.location.hash) { console.log('[Tab Event] Limpando hash'); history.pushState("", document.title, window.location.pathname + window.location.search); } }); });

@@ -55,6 +55,55 @@
                         </div>
                         {% endfor %}
                     {% endfor %}
+                
+                {# Referência em formato de lista (solicitado) - manter dentro da modal-body para scroll #}
+                <div class="px-3">
+                    <hr class="my-3">
+                    <h6 class="mb-2">Referência – valores por implantação</h6>
+                    <ul class="list-group gamificacao-ref">
+                        <li class="list-group-item gamificacao-ref-header">
+                            <span class="fw-semibold">Pontos</span>
+                            <span class="fw-semibold">Valor por implantação finalizada</span>
+                            <span class="fw-semibold">SÊNIOR</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="fw-semibold">Até 99</span>
+                            <span class="text-nowrap">R$ 20,00</span>
+                            <span class="text-nowrap">R$ 30,00</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="fw-semibold">Acima de 100</span>
+                            <span class="text-nowrap">R$ 120,00</span>
+                            <span class="text-nowrap">R$ 140,00</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="fw-semibold">Acima de 150</span>
+                            <span class="text-nowrap">R$ 140,00</span>
+                            <span class="text-nowrap">R$ 160,00</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="fw-semibold">Acima de 200</span>
+                            <span class="text-nowrap">R$ 160,00</span>
+                            <span class="text-nowrap">R$ 200,00</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="fw-semibold">Acima de 250</span>
+                            <span class="text-nowrap">R$ 180,00</span>
+                            <span class="text-nowrap">R$ 220,00</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="fw-semibold">Acima de 300</span>
+                            <span class="text-nowrap">R$ 200,00</span>
+                            <span class="text-nowrap">R$ 250,00</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="fw-semibold">Bônus extra média trimestre = 330</span>
+                            <span class="text-nowrap">R$ 1.000,00 TOTAL</span>
+                            <span class="text-nowrap">R$ 1.000,00 TOTAL</span>
+                        </li>
+                    </ul>
+                    <p class="form-text">Informativo para consulta rápida; não altera os valores configurados acima.</p>
+                </div>
                 </div>
                 <div class="modal-footer header-bg"> 
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -68,42 +117,62 @@
                 <h5 class="modal-title" id="modalGamificacaoLabel" style="color: var(--body-color);">Gamificação - Critérios e Pontuação</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
+             <div class="modal-body">
                 {# Mostra as regras do DB de forma estática se não for admin #}
                 {% if not g.gamification_rules %}
                     <div class="alert alert-info">Carregando regras...</div>
                 {% endif %}
 
-                {% for categoria, regras in g.gamification_rules.items() %}
-                    <div class="card mb-3">
-                        <div class="card-header 
-                            {% if categoria == 'Penalidades' %}bg-danger text-white
-                            {% elif 'Bônus' in categoria %}bg-success text-white
-                            {% elif categoria == 'Elegibilidade' %}bg-warning text-dark
-                            {% endif %}"
-                        >
-                            {{ categoria }}
-                        </div>
-                        <ul class="list-group list-group-flush">
-                            {% for regra in regras %}
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <span>{{ regra.descricao }}</span>
-                                    
-                                    {% set suffix = 'pts' %}
-                                    {% if regra.tipo_valor == 'percentual' %}{% set suffix = '%' %}
-                                    {% elif regra.tipo_valor == 'quantidade' %}{% set suffix = ' (limite)' %}
-                                    {% elif regra.tipo_valor == 'dias' %}{% set suffix = ' dias' %}
-                                    {% elif regra.tipo_valor == 'penalidade' %}{% set suffix = ' pts' %}
-                                    {% endif %}
-
-                                    <strong class="text-nowrap ms-3">
-                                        {{ regra.valor_pontos }}{{ suffix }}
-                                    </strong>
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                {% endfor %}
+                {# Exibição simplificada: somente a tabela de referência solicitada #}
+                
+                {# Referência em formato de lista (solicitado) - não administradores #}
+                <div class="px-3">
+                    <hr class="my-3">
+                    <h6 class="mb-2">Referência – valores por implantação</h6>
+                    <ul class="list-group gamificacao-ref">
+                        <li class="list-group-item gamificacao-ref-header">
+                            <span class="fw-semibold">Pontos</span>
+                            <span class="fw-semibold">Valor por implantação finalizada</span>
+                            <span class="fw-semibold">SÊNIOR</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="fw-semibold">Até 99</span>
+                            <span class="text-nowrap">R$ 20,00</span>
+                            <span class="text-nowrap">R$ 30,00</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="fw-semibold">Acima de 100</span>
+                            <span class="text-nowrap">R$ 120,00</span>
+                            <span class="text-nowrap">R$ 140,00</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="fw-semibold">Acima de 150</span>
+                            <span class="text-nowrap">R$ 140,00</span>
+                            <span class="text-nowrap">R$ 160,00</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="fw-semibold">Acima de 200</span>
+                            <span class="text-nowrap">R$ 160,00</span>
+                            <span class="text-nowrap">R$ 200,00</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="fw-semibold">Acima de 250</span>
+                            <span class="text-nowrap">R$ 180,00</span>
+                            <span class="text-nowrap">R$ 220,00</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="fw-semibold">Acima de 300</span>
+                            <span class="text-nowrap">R$ 200,00</span>
+                            <span class="text-nowrap">R$ 250,00</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="fw-semibold">Bônus extra média trimestre = 330</span>
+                            <span class="text-nowrap">R$ 1.000,00 TOTAL</span>
+                            <span class="text-nowrap">R$ 1.000,00 TOTAL</span>
+                        </li>
+                    </ul>
+                    <p class="form-text">Informativo para consulta rápida.</p>
+                </div>
              </div> 
              <div class="modal-footer header-bg"> 
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button> 

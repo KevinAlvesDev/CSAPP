@@ -9,98 +9,151 @@
     
     <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+    
     {% block head_extra %}{% endblock %}
 </head>
 <body>
+    <!-- Toggle do menu responsivo bigSlide -->
+    <a href="#menu" class="menu-link menu-toggle btn btn-outline-secondary btn-sm" title="Menu">
+        <i class="bi bi-list"></i>
+    </a>
+
+    <!-- Painel lateral bigSlide -->
+    <nav id="menu" class="bigslide-panel" role="navigation">
+        <div class="d-flex align-items-center mb-3">
+            <div class="user-profile-btn-sidebar me-2">
+                {% if g.perfil and g.perfil.foto_url %}
+                    <img src="{{ g.perfil.foto_url }}?v={{ range(1, 10000) | random }}" alt="Foto" style="width:40px;height:40px;object-fit:cover;border-radius:50%;">
+                {% else %}
+                    <i class="bi bi-person-fill" style="font-size: 1.5rem;"></i>
+                {% endif %}
+            </div>
+            <strong>{{ g.perfil.nome or g.user_email }}</strong>
+        </div>
+        <ul class="nav flex-column">
+            <li class="nav-item"><a class="nav-link {% if request.endpoint == 'main.dashboard' %}active{% endif %}" href="{{ url_for('main.dashboard') }}"><i class="bi bi-speedometer2 me-2"></i> Dashboard</a></li>
+            {% if implantacao and implantacao.id %}
+            <li class="nav-item"><a class="nav-link {% if request.endpoint == 'main.ver_implantacao' %}active{% endif %}" href="{{ url_for('main.ver_implantacao', impl_id=implantacao.id) }}"><i class="bi bi-kanban me-2"></i> Detalhes da Implantação</a></li>
+            {% endif %}
+            <li class="nav-item"><a class="nav-link {% if request.endpoint == 'profile.perfil' %}active{% endif %}" href="{{ url_for('profile.perfil') }}"><i class="bi bi-person-circle me-2"></i> Perfil</a></li>
+            {% if g.perfil and g.perfil.perfil_acesso in g.PERFIS_COM_GESTAO %}
+            <li class="nav-item nav-item-divider"><hr></li>
+            <li class="nav-item"><a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#modalGerenciarUsuarios"><i class="bi bi-people-fill me-2"></i> Usuários</a></li>
+            <li class="nav-item"><a class="nav-link {% if request.endpoint == 'analytics.analytics_dashboard' %}active{% endif %}" href="{{ url_for('analytics.analytics_dashboard') }}"><i class="bi bi-graph-up me-2"></i> Gerencial</a></li>
+            <li class="nav-item nav-item-divider"><hr></li>
+            <li class="nav-item"><span class="nav-link disabled">Gamificação</span></li>
+            <li class="nav-item"><a class="nav-link {% if request.endpoint == 'gamification.manage_gamification_metrics' %}active{% endif %}" href="{{ url_for('gamification.manage_gamification_metrics') }}"><i class="bi bi-pencil-square me-2"></i> Métricas</a></li>
+            <li class="nav-item"><a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#modalGamificacao"><i class="bi bi-list-check me-2"></i> Critérios da Gamificação</a></li>
+            <li class="nav-item"><a class="nav-link {% if request.endpoint == 'gamification.gamification_report' %}active{% endif %}" href="{{ url_for('gamification.gamification_report') }}"><i class="bi bi-clipboard-data me-2"></i> Relatório</a></li>
+            {% endif %}
+            <li class="nav-item nav-item-divider"><hr></li>
+            <li class="nav-item"><a class="nav-link text-danger" href="{{ url_for('auth.logout') }}"><i class="bi bi-box-arrow-left me-2"></i> Sair</a></li>
+        </ul>
+    </nav>
+
+    <div class="push">
     {% block content %}
     <div class="container py-4">
-        <h1>Conteúdo Padrão</h1> <p>Substitua no template filho.</p>
+        <div class="card">
+            <div class="card-body">
+                <h1 class="main-title mb-2">Conteúdo Padrão</h1>
+                <p class="text-muted text-center mb-0">Substitua no template filho.</p>
+            </div>
+        </div>
     </div>
     {% endblock %}
-
-    <div class="offcanvas offcanvas-end user-sidebar-bg" tabindex="-1" id="userProfileSidebar" aria-labelledby="userProfileSidebarLabel">
-        <div class="offcanvas-header header-bg d-flex justify-content-between align-items-center">
-            
-            <div class="d-flex align-items-center">
-                <div class="user-profile-btn-sidebar">
-                    {% if g.perfil.foto_url %}
-                        <img src="{{ g.perfil.foto_url }}?v={{ range(1, 10000) | random }}" alt="Foto">
-                    {% else %}
-                        <i class="bi bi-person-fill"></i>
-                    {% endif %}
-                </div>
-                <h5 class="offcanvas-title ms-2" id="userProfileSidebarLabel"><span class="nav-link-text">{{ g.perfil.nome or g.user_email }}</span></h5>
-            </div>
-
-            <button type="button" class="btn btn-outline-secondary btn-sm" id="toggleSidebarMinify" title="Minimizar Menu">
-                <i class="bi bi-arrows-angle-contract"></i>
-            </button>
-        </div>
-        
-        <div class="offcanvas-body" id="userSidebarBody">
-            <ul class="nav flex-column user-sidebar-nav">
-                
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('profile.perfil') }}">
-                        <i class="bi bi-person-circle me-2"></i>
-                        <span class="nav-link-text">Editar Perfil</span>
-                    </a>
-                </li>
-
-                 {% if g.perfil and g.perfil.perfil_acesso in g.PERFIS_COM_GESTAO %}
-                    <li class="nav-item">
-                        <a class="nav-link text-primary" href="#" data-bs-toggle="modal" data-bs-target="#modalGerenciarUsuarios">
-                            <i class="bi bi-people-fill me-2"></i>
-                            <span class="nav-link-text">Usuários</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-info" href="{{ url_for('analytics.analytics_dashboard') }}">
-                            <i class="bi bi-graph-up me-2"></i>
-                            <span class="nav-link-text">Gerencial</span>
-                        </a>
-                    </li>
-                    <li class="nav-item nav-item-divider"><hr></li>
-                    <li class="nav-item-header"><span class="nav-link-text">Gamificação</span></li>
-                    <li class="nav-item">
-                        <a class="nav-link text-warning" href="{{ url_for('gamification.manage_gamification_metrics') }}">
-                            <i class="bi bi-pencil-square me-2"></i>
-                            <span class="nav-link-text">Métricas Gamificação</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-success" href="{{ url_for('gamification.gamification_report') }}">
-                            <i class="bi bi-clipboard-data me-2"></i>
-                            <span class="nav-link-text">Relatório Gamificação</span>
-                        </a>
-                    </li>
-                 {% endif %}
-
-                <li class="nav-item nav-item-divider"><hr></li>
-
-                <li class="nav-item">
-                     <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#modalGamificacao">
-                        <i class="bi bi-trophy-fill me-2"></i>
-                        <span class="nav-link-text">Critérios Gamificação</span>
-                    </a>
-                </li>
-                
-                <li class="nav-item nav-item-divider"><hr></li>
-
-                <li class="nav-item mt-auto">
-                    <a class="nav-link text-danger" href="{{ url_for('auth.logout') }}">
-                        <i class="bi bi-box-arrow-left me-2"></i>
-                        <span class="nav-link-text">Sair</span>
-                    </a>
-                </li>
-            </ul>
-        </div>
-    </div>
+    </div> <!-- fim .push -->
     
     {% include 'modals/_detalhes_empresa.html' %}
     {% include 'modals/_gamificacao_regras.html' %}
     {% include 'modals/_gerenciar_usuarios.html' %}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Removidos carregamentos via CDN de jQuery/bigSlide; usamos fallback nativo abaixo -->
+    <!-- Fallback nativo sem jQuery/bigSlide -->
+    <script>
+      (function(){
+        function nativeInit(){
+          // Se jQuery/bigSlide estiverem disponíveis, não ativar fallback
+          if (window.jQuery && jQuery.fn && jQuery.fn.bigSlide) return;
+
+          var menuToggle = document.querySelector('.menu-link');
+          var menu = document.getElementById('menu');
+          var push = document.querySelector('.push');
+          if (!menuToggle || !menu || !push) return;
+
+          // Backdrop nativo
+          var backdrop = document.querySelector('.bigslide-backdrop');
+          if (!backdrop) {
+            backdrop = document.createElement('div');
+            backdrop.className = 'bigslide-backdrop d-none';
+            document.body.appendChild(backdrop);
+          }
+
+          var open = false;
+          function openMenu(){
+            document.body.classList.add('menu-open');
+            menu.classList.add('open');
+            push.classList.add('push-shifted');
+            backdrop.classList.remove('d-none');
+            open = true;
+          }
+          function closeMenu(){
+            document.body.classList.remove('menu-open');
+            menu.classList.remove('open');
+            push.classList.remove('push-shifted');
+            backdrop.classList.add('d-none');
+            open = false;
+          }
+          function toggleMenu(e){
+            if (e) e.preventDefault();
+            (open ? closeMenu : openMenu)();
+          }
+
+          menuToggle.addEventListener('click', toggleMenu);
+          backdrop.addEventListener('click', closeMenu);
+          // Fecha ao navegar
+          menu.addEventListener('click', function(ev){
+            var target = ev.target.closest('a.nav-link');
+            if (target) { setTimeout(closeMenu, 10); }
+          });
+          // Fecha com ESC
+          document.addEventListener('keydown', function(ev){ if (ev.key === 'Escape' && open) closeMenu(); });
+        }
+
+        // Se bigSlide não carregar, ativamos o fallback nativo
+        if (!(window.jQuery && jQuery.fn && jQuery.fn.bigSlide)) {
+          // Tentar após DOM pronto
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', nativeInit);
+          } else {
+            nativeInit();
+          }
+        }
+        // Além disso, se o evento "bigslide-ready" nunca ocorrer, já teremos o fallback ativo
+      })();
+    </script>
+    <!-- Garantir que qualquer modal feche o menu para evitar sobreposição/flicker -->
+    <script>
+      document.addEventListener('show.bs.modal', function(){
+        try {
+          var menu = document.getElementById('menu');
+          var push = document.querySelector('.push');
+          var backdrop = document.querySelector('.bigslide-backdrop');
+          if (document.body.classList.contains('menu-open')) {
+            document.body.classList.remove('menu-open');
+            if (menu) menu.classList.remove('open');
+            if (push) push.classList.remove('push-shifted');
+            if (backdrop) backdrop.classList.add('d-none');
+          }
+          // Se bigSlide estiver ativo, aciona o fechamento para sincronizar estado interno
+          if (window.jQuery && jQuery.fn && jQuery.fn.bigSlide) {
+            jQuery('.menu-link').trigger('click');
+          }
+        } catch (e) { /* ignora erros de ambiente */ }
+      });
+    </script>
     
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
     <script>
@@ -276,41 +329,7 @@
                 if (shouldOpenModal) { setTimeout(() => { const bsModal = bootstrap.Modal.getOrCreateInstance(modalGerenciarUsuarios); if (bsModal) { bsModal.show(); const currentUrl = new URL(window.location); currentUrl.searchParams.delete('open_users_modal'); history.replaceState(null, '', currentUrl.toString()); } }, 100); }
             }
 
-            const userSidebar = document.getElementById('userProfileSidebar');
-            const userSidebarBody = document.getElementById('userSidebarBody');
-            const toggleMinifyBtn = document.getElementById('toggleSidebarMinify');
-            const sidebarMinifyKey = 'userSidebarMinimized';
-
-            function setSidebarMinified(isMinified) {
-                if (!userSidebar || !userSidebarBody || !toggleMinifyBtn) return;
-                
-                if (isMinified) {
-                    userSidebar.classList.add('minimized');
-                    userSidebarBody.classList.add('minimized');
-                    toggleMinifyBtn.innerHTML = '<i class="bi bi-arrows-angle-expand"></i>';
-                    toggleMinifyBtn.title = 'Maximizar Menu';
-                    localStorage.setItem(sidebarMinifyKey, 'true');
-                } else {
-                    userSidebar.classList.remove('minimized');
-                    userSidebarBody.classList.remove('minimized');
-                    toggleMinifyBtn.innerHTML = '<i class="bi bi-arrows-angle-contract"></i>';
-                    toggleMinifyBtn.title = 'Minimizar Menu';
-                    localStorage.setItem(sidebarMinifyKey, 'false');
-                }
-            }
-
-            if (toggleMinifyBtn) {
-                toggleMinifyBtn.addEventListener('click', () => {
-                    const isCurrentlyMinified = userSidebar.classList.contains('minimized');
-                    setSidebarMinified(!isCurrentlyMinified);
-                });
-            }
-
-            if (localStorage.getItem(sidebarMinifyKey) === 'true') {
-                setSidebarMinified(true);
-            } else {
-                setSidebarMinified(false);
-            }
+            // Menu offcanvas antigo removido; nenhuma lógica necessária aqui.
             
         });
     </script>

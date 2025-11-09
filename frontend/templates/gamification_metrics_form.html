@@ -4,25 +4,18 @@
 
 {% block content %}
 <div class="container-fluid p-0">
-    <header class="header-bg p-3 d-flex justify-content-between align-items-center">
-        <h1 class="main-title mb-0 fs-4">MÉTRICAS MANUAIS - GAMIFICAÇÃO</h1>
+    <header class="header-bg p-3 d-flex justify-content-between align-items-center rounded-3">
+    <h1 class="main-title mb-0 fs-4 mx-auto text-center">MÉTRICAS MANUAIS - GAMIFICAÇÃO</h1>
         
         <div class="d-flex align-items-center">
              <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary me-3">
                 <i class="bi bi-arrow-left me-1"></i> Voltar ao Dashboard
             </a>
-             <a href="{{ url_for('gamification.gamification_report') }}" class="btn btn-outline-primary me-3">
+             <a href="{{ url_for('gamification.gamification_report') }}" class="btn btn-primary me-3">
                 <i class="bi bi-clipboard-data me-1"></i> Ver Relatório
             </a>
             
-            <button class="btn btn-outline-secondary rounded-circle p-0 user-profile-btn ms-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#userProfileSidebar" aria-controls="userProfileSidebar" title="Menu">
-                {% if g.perfil.foto_url %}
-                    <img src="{{ g.perfil.foto_url }}?v={{ range(1, 10000) | random }}" alt="Foto de Perfil" style="width: 100%; height: 100%; object-fit: cover;">
-                {% else %}
-                    <i class="bi bi-person-fill" style="font-size: 1.5rem; color: var(--accent-color);"></i>
-                {% endif %}
-            </button>
-
+            {# Botão do menu offcanvas antigo removido #}
         </div>
     </header>
 
@@ -39,8 +32,9 @@
         {% endwith %}
 
         {# Formulário de Filtro #}
-        <div class="metric-card p-3 rounded shadow-sm mb-4">
-            <h5 class="mb-3 border-bottom pb-2">Selecionar Mês e Colaborador</h5>
+        <div class="card mb-4 rounded-3">
+            <div class="card-body">
+            <h5 class="card-title mb-3 border-bottom pb-2">Selecionar Mês e Colaborador</h5>
             <form method="GET" action="{{ url_for('gamification.manage_gamification_metrics') }}" id="metrics-filter-form">
                 <div class="row g-3 align-items-end">
                     <div class="col-md-4">
@@ -84,12 +78,17 @@
                     </div>
                 </div>
             </form>
+            </div>
         </div>
 
         {# Formulário de Métricas #}
         {% if current_cs_email %}
-        <div class="metric-card p-3 rounded shadow-sm">
-            <h5 class="mb-3 border-bottom pb-2">Lançar Métricas para <span class="text-primary">{{ current_cs_email }}</span> ({{ "%02d"|format(current_mes) }}/{{ current_ano }})</h5>
+        <div class="card rounded-3">
+            <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h5 class="card-title border-bottom pb-2">Lançar Métricas para <span class="text-primary">{{ current_cs_email }}</span> ({{ "%02d"|format(current_mes) }}/{{ current_ano }})</h5>
+                <span class="badge bg-info text-dark">Período ativo</span>
+            </div>
             
             <form action="{{ url_for('gamification.manage_gamification_metrics', cs_email=current_cs_email, mes=current_mes, ano=current_ano) }}" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -164,7 +163,7 @@
 
                 <hr class="my-3">
                 
-                <h6 class="text-info">Métricas Automáticas (Cálculo Manual)</h6>
+                <h6 class="text-info text-center">Métricas Automáticas (Cálculo Manual)</h6>
                 <p class="text-muted small" style="margin-top: -5px;">
                     Os valores automáticos são sugeridos, mas podem ser sobrescritos manualmente.
                 </p>
@@ -308,7 +307,7 @@
                 {% endif %}
 
 
-                <hr class="my-3">
+                <hr class="tw-my-3">
                 
                 {# Total (Layout de Lista) #}
                 <div class="row mb-3 align-items-center justify-content-end">
@@ -326,14 +325,15 @@
 
                 <div class="row mt-4">
                     <div class="col-md-12 text-end">
-                        <button type="submit" class="btn btn-primary btn-lg"><i class="bi bi-save me-1"></i> Salvar Métricas</button>
+                        <button type="submit" class="dsy-btn dsy-btn-primary dsy-btn-lg"><i class="bi bi-save tw-mr-1"></i> Salvar Métricas</button>
                     </div>
                 </div>
 
             </form>
+            </div>
         </div>
         {% else %}
-        <div class="alert alert-info text-center">
+        <div class="dsy-alert dsy-alert-info tw-justify-center">
             Selecione um colaborador e um período para lançar as métricas manuais.
         </div>
         {% endif %}

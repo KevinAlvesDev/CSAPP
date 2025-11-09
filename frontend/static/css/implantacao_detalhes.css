@@ -4,39 +4,30 @@
 .timeline-list { list-style-type: none; padding-left: 0; }
 .timeline-item { 
     display: flex; 
-    padding: 12px 8px; /* Adiciona padding lateral */
-    border-bottom: 1px solid var(--input-border); 
-    border-radius: var(--border-radius-sm); /* Arredonda o item */
-    transition: background-color 0.2s ease, padding-left 0.2s ease; /* Transição fluida */
+    padding: 0.5rem 0.5rem; /* espaçamento padrão */
+    border-bottom: 1px solid var(--input-border);
 }
 .timeline-item:last-child { border-bottom: none; }
-.timeline-item:hover {
-    background-color: var(--table-hover-bg); /* Destaque */
-    padding-left: 12px; /* Indentação fluida */
-}
+.timeline-item:hover { background-color: transparent; }
 .timeline-icon { 
     flex-shrink: 0; 
     width: 40px; 
     height: 40px; 
     background-color: var(--input-border); 
     color: var(--accent-color); 
-    border-radius: 50%; 
+    border-radius: 50%;
     display: flex; 
     align-items: center; 
     justify-content: center; 
     font-size: 1.2rem; 
     margin-right: 15px; 
-    transition: all 0.2s ease-in-out;
+    /* transições e sombras removidas */
 }
-.timeline-item:hover .timeline-icon {
-    transform: scale(1.1);
-    background-color: var(--accent-color);
-    color: white;
-}
+/* efeito de hover removido na reversão */
 .timeline-content { flex-grow: 1; min-width: 0; }
 .timeline-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
 .timeline-usuario { font-weight: 600; color: var(--body-color); }
-.timeline-data { font-size: 0.8rem; color: #8b949e; flex-shrink: 0; padding-left: 10px; }
+.timeline-data { font-size: 0.8rem; color: #8b949e; flex-shrink: 0; padding-left: var(--space-2); }
 body.dark-mode .timeline-data { color: #888; }
 .timeline-detalhes { font-size: 0.9rem; margin-bottom: 0; color: var(--body-color); opacity: 0.9; white-space: pre-wrap; word-break: break-word; }
 
@@ -75,7 +66,7 @@ body.dark-mode .timeline-data { color: #888; }
 
 /* --- ESTA É A MUDANÇA (FONTE DO TÍTULO DO MÓDULO) --- */
 .module-header h5 {
-    color: var(--accent-color);
+    color: var(--body-color);
     font-family: var(--bs-font-sans-serif); /* <-- Fonte "Inter" (padrão) */
     font-weight: 700; 
     font-size: 1.1rem; 

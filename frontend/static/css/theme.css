@@ -1,0 +1,262 @@
+/* Minimalista e fluído: ajustes leves sobre Bootstrap */
+:root {
+  /* Tokens de sombra alinham com elevações globais */
+  --shadow-sm: var(--elevation-1);
+  --shadow-md: var(--elevation-2);
+}
+
+body {
+  background-color: var(--body-bg);
+}
+
+/* Títulos centralizados e tipografia sutil */
+.main-title {
+  text-align: center;
+  letter-spacing: 0.3px;
+  font-weight: 600;
+}
+
+.card-title {
+  text-align: center;
+}
+
+/* Cards com cantos suaves e sombra leve */
+.card {
+  border: 0;
+}
+/* hover revertido: sem sombra adicional */
+
+/* Cabeçalho suave */
+header.header-bg {
+  background-color: var(--header-bg);
+}
+
+/* Botões com micro interação */
+.btn {
+  transition: transform 0.08s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+.btn:active {
+  transform: translateY(1px);
+}
+
+/* Tabelas mais limpas */
+.table thead th {
+  font-weight: 600;
+  color: var(--body-color);
+  background-color: var(--table-header-bg);
+}
+.table tbody tr:hover {
+  background-color: var(--table-bg) !important; /* mantém escuro no hover */
+}
+.table-hover > tbody > tr:hover {
+  background-color: var(--table-bg) !important; /* mantém escuro no hover */
+}
+.table-hover > tbody > tr:hover > * {
+  background-color: var(--table-bg) !important; /* mantém escuro no hover */
+  color: var(--body-color) !important;
+}
+
+/* Tema escuro para o corpo da tabela */
+.table {
+  color: var(--body-color);
+  /* Força variáveis do Bootstrap para tema escuro por padrão */
+  --bs-table-bg: var(--table-bg);
+  --bs-table-color: var(--body-color);
+  --bs-table-border-color: var(--table-border-color);
+  --bs-table-hover-bg: var(--table-hover-bg);
+  --bs-table-striped-bg: var(--table-bg);
+}
+.table tbody tr,
+.table tfoot tr {
+  background-color: var(--table-bg);
+}
+.table th,
+.table td {
+  border-color: var(--table-border-color) !important;
+  padding: var(--space-3);
+}
+
+/* Botão de perfil mais elegante */
+.user-profile-btn {
+  width: 40px;
+  height: 40px;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Pequenos utilitários */
+.rounded-3 { border-radius: var(--radius-lg) !important; }
+.shadow-soft { box-shadow: var(--shadow-sm) !important; }
+
+/* Toggle visível do menu responsivo */
+.menu-toggle {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 1020; /* abaixo do modal (1050) e acima do conteúdo */
+  background: var(--container-bg);
+  border: 1px solid var(--table-border-color);
+  color: var(--body-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  display: inline-block;
+  line-height: 1;
+}
+
+/* Painel lateral bigSlide */
+#menu.bigslide-panel {
+  position: fixed;
+  top: 0;
+  left: -280px; /* posição inicial fora da tela */
+  width: 280px;
+  height: 100vh;
+  background: var(--container-bg);
+  box-shadow: 0 6px 16px rgba(16, 24, 40, 0.08);
+  border-right: 1px solid var(--table-border-color);
+  padding: 1rem;
+  overflow-y: auto;
+  z-index: 1030; /* abaixo do modal-backdrop (1040) e do modal (1050) */
+  transition: left 0.3s ease;
+}
+
+/* Estado aberto para fallback nativo */
+body.menu-open #menu.bigslide-panel {
+  left: 0;
+}
+
+/* Sobrescritas úteis para texto no tema escuro */
+.text-dark { color: #ffffff !important; }
+.text-muted { color: rgba(255, 255, 255, 0.7) !important; }
+.nav-link { color: var(--body-color); }
+.nav-link:hover { color: var(--accent-color); }
+
+/* Legibilidade global no tema escuro */
+.text-body,
+.text-secondary,
+.text-muted,
+.text-dark,
+.text-black,
+.form-text,
+.small,
+small {
+  color: #ffffff !important;
+}
+a,
+.btn-link {
+  color: #ffffff;
+}
+a:hover,
+.btn-link:hover {
+  color: var(--accent-color);
+}
+
+/* Componentes comuns */
+.progress .progress-bar { color: #ffffff; }
+.list-group-item {
+  color: var(--body-color);
+  background-color: var(--card-bg);
+  border-color: var(--table-border-color);
+}
+.modal-content {
+  background-color: var(--container-bg);
+  color: var(--body-color);
+  border-color: var(--table-border-color);
+}
+.menu-toggle i { color: var(--body-color); }
+
+#menu .nav-link {
+  border-radius: var(--radius-md);
+}
+
+#menu .nav-item-divider hr {
+  margin: 0.75rem 0;
+}
+
+/* Backdrop para o menu responsivo */
+.bigslide-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(16, 24, 40, 0.3);
+  z-index: 1025; /* abaixo do modal-backdrop (1040) e acima do conteúdo */
+}
+
+/* Empurrar conteúdo para direita no fallback */
+.push {
+  transition: margin-left 0.3s ease;
+}
+.push.push-shifted {
+  margin-left: 280px;
+}
+.h1, .h2, .h3, .h4, .h5, .h6,
+h1, h2, h3, h4, h5, h6 {
+  color: #ffffff !important;
+}
+.table th,
+.table td {
+  color: var(--body-color) !important;
+}
+
+/* Forçar fundo escuro em tabelas que não usam classe .table */
+table {
+  background-color: var(--table-bg) !important;
+  color: var(--body-color) !important;
+}
+table > :not(caption) > * > * {
+  background-color: var(--table-bg) !important;
+  color: var(--body-color) !important;
+  border-color: var(--table-border-color) !important;
+}
+
+/* Neutralizar variantes claras no tema escuro */
+.table-light,
+.table-light > :not(caption) > * > * {
+  --bs-table-bg: var(--table-bg);
+  --bs-table-color: var(--body-color);
+  --bs-table-border-color: var(--table-border-color);
+  background-color: var(--table-bg) !important;
+  color: var(--body-color) !important;
+}
+
+/* Garantir listras escuras */
+.table-striped {
+  --bs-table-striped-bg: var(--table-bg);
+}
+.table-striped > tbody > tr:nth-of-type(odd) > * {
+  background-color: var(--table-bg) !important;
+}
+
+/* Utilitários claros ajustados ao tema escuro */
+.bg-light, .bg-white {
+  background-color: var(--card-bg) !important;
+  color: var(--body-color) !important;
+}
+
+/* Texto branco em botões */
+.btn {
+  color: #ffffff !important;
+}
+.btn:hover,
+.btn:focus {
+  color: #ffffff !important;
+}
+/* Variantes outline com texto branco */
+.btn-outline-primary,
+.btn-outline-secondary,
+.btn-outline-success,
+.btn-outline-danger,
+.btn-outline-warning,
+.btn-outline-info,
+.btn-outline-light,
+.btn-outline-dark {
+  color: #ffffff !important;
+}
+/* Botão de fechar do modal em branco */
+.btn-close {
+  filter: invert(1) contrast(1.1);
+  opacity: 0.85;
+}
+.btn-close:hover { opacity: 1; }
