@@ -178,6 +178,7 @@
           </div>
         </form>
         <div class="alert alert-danger d-none" id="evError"></div>
+        <div class="alert alert-success d-none" id="evSuccess"></div>
       </div>
       <div class="modal-footer header-bg">
         <button type="button" class="btn btn-outline-danger d-none" id="deleteEventBtn"><i class="bi bi-trash"></i> Excluir</button>
@@ -225,11 +226,21 @@
         const col = byDate[dateKey];
         if (!col) return;
         const colorClass = 'bg-' + (ev.colorId || 'default');
+        // Link do Meet, quando existente
+        let meetLink = null;
+        if (ev.hangoutLink) {
+          meetLink = ev.hangoutLink;
+        } else if (ev.conferenceData && Array.isArray(ev.conferenceData.entryPoints)) {
+          const ep = ev.conferenceData.entryPoints.find(x => (x.entryPointType === 'video' || x.entryPointType === 'more') && x.uri);
+          meetLink = ep && ep.uri ? ep.uri : null;
+        }
         if (ev.start && ev.start.date) {
           // All-day
           const chip = document.createElement('span');
           chip.className = `badge ${colorClass}`;
-          chip.textContent = ev.summary || 'Compromisso';
+          const title = ev.summary || 'Compromisso';
+          const meetHtml = meetLink ? ` <a href="${meetLink}" class="meet-link ms-1" title="Abrir Meet" target="_blank" rel="noopener"><i class="bi bi-camera-video-fill"></i></a>` : '';
+          chip.innerHTML = `${title}${meetHtml}`;
           col.querySelector('.allday-strip').appendChild(chip);
         } else {
           const start = new Date(startIso);
@@ -241,7 +252,8 @@
           card.className = 'event-card bg-7';
           card.style.top = minutesFromMidnight + 'px';
           card.style.height = durationMin + 'px';
-          card.innerHTML = `<span class="event-time">${fmtTime.format(start)}</span><span class="event-title">${ev.summary || 'Compromisso'}</span>` + (ev.location ? `<div class="event-loc"><i class="bi bi-geo-alt"></i> ${ev.location}</div>` : '');
+          const meetHtml = meetLink ? ` <a href="${meetLink}" class="meet-link ms-1" title="Abrir Meet" target="_blank" rel="noopener"><i class="bi bi-camera-video-fill"></i></a>` : '';
+          card.innerHTML = `<span class="event-time">${fmtTime.format(start)}</span><span class="event-title">${ev.summary || 'Compromisso'}</span>${meetHtml}` + (ev.location ? `<div class="event-loc"><i class="bi bi-geo-alt"></i> ${ev.location}</div>` : '');
           // Atribui metadados para edição/remoção
           if (ev.id) card.dataset.eventId = ev.id;
           card.dataset.summary = ev.summary || 'Compromisso';
@@ -251,10 +263,16 @@
           card.dataset.date = dateKey;
           card.dataset.startTime = `${String(start.getHours()).padStart(2,'0')}:${String(start.getMinutes()).padStart(2,'0')}`;
           card.dataset.endTime = endIso ? `${String(end.getHours()).padStart(2,'0')}:${String(end.getMinutes()).padStart(2,'0')}` : '';
+          if (meetLink) card.dataset.hangoutLink = meetLink;
           card.style.cursor = 'pointer';
           const resize = document.createElement('div'); resize.className = 'resize-handle'; card.appendChild(resize);
           col.querySelector('.events-area').appendChild(card);
         }
+      });
+
+      // Evita que cliques no link do Meet disparem ações do card
+      document.querySelectorAll('.event-card a.meet-link, .allday-strip a.meet-link').forEach(a => {
+        a.addEventListener('click', (e) => { e.stopPropagation(); });
       });
 
       // Navegação
@@ -311,6 +329,7 @@
       const saveBtn = document.getElementById('saveEventBtn');
       const deleteBtn = document.getElementById('deleteEventBtn');
       const errBox = document.getElementById('evError');
+      const successBox = document.getElementById('evSuccess');
       let editingEventId = null;
       let selectedEvents = new Set();
       let currentCalendarId = '{{ current_calendar or "primary" }}';
@@ -354,6 +373,7 @@
         titleEl.textContent = 'Novo Evento';
         deleteBtn.classList.add('d-none');
         errBox.classList.add('d-none');
+        if (successBox) successBox.classList.add('d-none');
         fSummary.value = '';
         fDescription.value = '';
         const todayIso = new Date().toISOString().slice(0,10);
@@ -382,6 +402,7 @@
           titleEl.textContent = editingEventId ? 'Editar Evento' : 'Evento';
           deleteBtn.classList.toggle('d-none', !editingEventId);
           errBox.classList.add('d-none');
+          if (successBox) successBox.classList.add('d-none');
           fSummary.value = card.dataset.summary || '';
           fDescription.value = card.dataset.description || '';
           fDate.value = card.dataset.date || new Date().toISOString().slice(0,10);
@@ -530,9 +551,93 @@
           }
           const data = await resp.json();
           if (!resp.ok || !data.ok) throw new Error(data.error || `Erro ${resp.status}`);
-          if (bsEventModal) bsEventModal.hide();
-          // Recarrega para refletir o novo evento
-          window.location.reload();
+          // Se houver link do Meet, mostra no modal e mantém aberto
+          let meetLink = null;
+          const ev = data.event || {};
+          if (ev.hangoutLink) {
+            meetLink = ev.hangoutLink;
+          } else if (ev.conferenceData && Array.isArray(ev.conferenceData.entryPoints)) {
+            const videoEp = ev.conferenceData.entryPoints.find(ep => (ep.entryPointType === 'video' || ep.entryPointType === 'more') && ep.uri);
+            meetLink = videoEp && videoEp.uri ? videoEp.uri : null;
+          }
+          // Renderiza imediatamente o evento criado/atualizado no grid se possível
+          (function renderEventInGrid(eventObj){
+            try {
+              const startIso = (eventObj.start && (eventObj.start.dateTime || eventObj.start.date)) || null;
+              const endIso = (eventObj.end && (eventObj.end.dateTime || eventObj.end.date)) || null;
+              if (!startIso) return;
+              const dateKey = startIso.slice(0,10);
+              const col = document.querySelector(`.agenda-grid .day-col[data-iso="${dateKey}"]`);
+              if (!col) return;
+              const colorClass = 'bg-' + (eventObj.colorId || 'default');
+              let localMeet = null;
+              if (eventObj.hangoutLink) localMeet = eventObj.hangoutLink;
+              else if (eventObj.conferenceData && Array.isArray(eventObj.conferenceData.entryPoints)) {
+                const ep = eventObj.conferenceData.entryPoints.find(x => (x.entryPointType === 'video' || x.entryPointType === 'more') && x.uri);
+                localMeet = ep && ep.uri ? ep.uri : null;
+              }
+              if (eventObj.start && eventObj.start.date) {
+                const chip = document.createElement('span');
+                chip.className = `badge ${colorClass}`;
+                const title = eventObj.summary || 'Compromisso';
+                const meetHtml = localMeet ? ` <a href="${localMeet}" class="meet-link ms-1" title="Abrir Meet" target="_blank" rel="noopener"><i class="bi bi-camera-video-fill"></i></a>` : '';
+                chip.innerHTML = `${title}${meetHtml}`;
+                col.querySelector('.allday-strip').appendChild(chip);
+              } else {
+                const start = new Date(startIso);
+                const end = endIso ? new Date(endIso) : new Date(start.getTime() + 30*60000);
+                const minutesFromMidnight = start.getHours()*60 + start.getMinutes();
+                const durationMin = Math.max(20, (end - start) / 60000);
+                const card = document.createElement('div');
+                card.className = 'event-card bg-7';
+                card.style.top = minutesFromMidnight + 'px';
+                card.style.height = durationMin + 'px';
+                const meetHtml = localMeet ? ` <a href="${localMeet}" class="meet-link ms-1" title="Abrir Meet" target="_blank" rel="noopener"><i class="bi bi-camera-video-fill"></i></a>` : '';
+                card.innerHTML = `<span class="event-time">${fmtTime.format(start)}</span><span class="event-title">${eventObj.summary || 'Compromisso'}</span>${meetHtml}` + (eventObj.location ? `<div class="event-loc"><i class="bi bi-geo-alt"></i> ${eventObj.location}</div>` : '');
+                if (eventObj.id) card.dataset.eventId = eventObj.id;
+                card.dataset.summary = eventObj.summary || 'Compromisso';
+                card.dataset.description = eventObj.description || '';
+                card.dataset.colorId = eventObj.colorId || '';
+                card.dataset.location = eventObj.location || '';
+                card.dataset.date = dateKey;
+                card.dataset.startTime = `${String(start.getHours()).padStart(2,'0')}:${String(start.getMinutes()).padStart(2,'0')}`;
+                card.dataset.endTime = endIso ? `${String(end.getHours()).padStart(2,'0')}:${String(end.getMinutes()).padStart(2,'0')}` : '';
+                if (localMeet) card.dataset.hangoutLink = localMeet;
+                card.style.cursor = 'pointer';
+                const resize = document.createElement('div'); resize.className = 'resize-handle'; card.appendChild(resize);
+                col.querySelector('.events-area').appendChild(card);
+                // Evita propagação no novo link e ativa click para edição
+                const linkEl = card.querySelector('a.meet-link');
+                if (linkEl) linkEl.addEventListener('click', (e)=> e.stopPropagation());
+                card.addEventListener('click', () => {
+                  editingEventId = card.dataset.eventId || null;
+                  titleEl.textContent = editingEventId ? 'Editar Evento' : 'Evento';
+                  deleteBtn.classList.toggle('d-none', !editingEventId);
+                  errBox.classList.add('d-none');
+                  if (successBox) successBox.classList.add('d-none');
+                  fSummary.value = card.dataset.summary || '';
+                  fDescription.value = card.dataset.description || '';
+                  fDate.value = card.dataset.date || new Date().toISOString().slice(0,10);
+                  const hasTimes = !!card.dataset.startTime;
+                  fAllDay.checked = !hasTimes;
+                  timeRow.classList.toggle('d-none', !hasTimes);
+                  fStart.value = card.dataset.startTime || '08:00';
+                  fEnd.value = card.dataset.endTime || '09:00';
+                  fLocation.value = card.dataset.location || '';
+                  if (fCalendar && topCalendarSelector){ fCalendar.value = topCalendarSelector.value || currentCalendarId; }
+                  if (bsEventModal) bsEventModal.show();
+                });
+              }
+            } catch(e){ /* ignora falhas envolvendo DOM */ }
+          })(ev);
+          if (meetLink && successBox) {
+            successBox.innerHTML = `Evento criado. Link da reunião: <a href="${meetLink}" target="_blank" rel="noopener">${meetLink}</a>`;
+            successBox.classList.remove('d-none');
+          } else {
+            if (bsEventModal) bsEventModal.hide();
+            // Recarrega para refletir o novo evento
+            window.location.reload();
+          }
         } catch (e) {
           errBox.textContent = e.message || String(e);
           errBox.classList.remove('d-none');

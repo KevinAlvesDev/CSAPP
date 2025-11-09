@@ -241,7 +241,15 @@ def agenda_create_event():
         event_body['start'] = { 'dateTime': start_dt, 'timeZone': time_zone }
         event_body['end']   = { 'dateTime': end_dt,   'timeZone': time_zone }
 
-    # Sem alterações adicionais de recorrência/lembretes nesta rota
+    # Recorrência e lembretes (alinha com a UI que envia estes campos)
+    recurrence = payload.get('recurrence')
+    reminders = payload.get('reminders')
+
+    # Aplica recorrência e lembretes se fornecidos
+    if recurrence is not None:
+        event_body['recurrence'] = recurrence
+    if reminders is not None:
+        event_body['reminders'] = reminders
 
     # Opcional: gerar link de reunião (Google Meet)
     conference = bool((payload.get('conference') is True) or (payload.get('createMeetLink') is True))
