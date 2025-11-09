@@ -1,5 +1,6 @@
 # app2/CSAPP/project/__init__.py
 import os
+from dotenv import load_dotenv, find_dotenv
 from flask import Flask, session, g, render_template, request, flash, redirect, url_for, current_app, jsonify
 # from flask_session import Session <-- REMOVIDO
 from werkzeug.middleware.proxy_fix import ProxyFix # Para o HTTPS do Railway
@@ -28,9 +29,42 @@ def create_app():
         app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1
     )
     
+    # 0. Garante carregamento do .env ANTES de importar Config
+    try:
+        _dotenv_path = find_dotenv()
+        if _dotenv_path:
+            load_dotenv(_dotenv_path, override=True)
+        else:
+            load_dotenv(override=True)
+        # Fallback explícito: tenta carregar .env na raiz do workspace
+        from pathlib import Path
+        root_env = Path(__file__).resolve().parents[3] / '.env'
+        if root_env.exists():
+            load_dotenv(str(root_env), override=True)
+            print(f"[Startup] .env carregado explicitamente de: {root_env}")
+    except Exception as e:
+        print(f"[Startup] Aviso: falha ao carregar .env antes da Config: {e}")
+
     # 1. Carrega a configuração (config.py)
     from .config import Config
     app.config.from_object(Config)
+
+    # Diagnóstico de inicialização: imprime variáveis Google
+    try:
+        gi = app.config.get('GOOGLE_CLIENT_ID')
+        gs = app.config.get('GOOGLE_CLIENT_SECRET')
+        gr = app.config.get('GOOGLE_REDIRECT_URI')
+        print(f"[Startup] Google Config: CLIENT_ID={'definido' if gi else 'vazio'}, CLIENT_SECRET={'definido' if gs else 'vazio'}, REDIRECT_URI={'definido' if gr else 'vazio'}")
+        print(f"[Startup] GOOGLE_OAUTH_ENABLED={bool(app.config.get('GOOGLE_OAUTH_ENABLED'))}")
+    except Exception as e:
+        print(f"[Startup] Falha ao imprimir Google Config: {e}")
+
+    # Permite redirect_uri em HTTP (desenvolvimento/local). Útil para Authlib/OAuthlib.
+    try:
+        os.environ.setdefault('OAUTHLIB_INSECURE_TRANSPORT', '1')
+        os.environ.setdefault('AUTHLIB_INSECURE_TRANSPORT', '1')
+    except Exception:
+        pass
 
     # --- INÍCIO DA CORREÇÃO (Importações Atrasadas) ---
     # Importa os módulos APÓS a 'app' ser criada.
@@ -38,7 +72,7 @@ def create_app():
     from .domain.gamification_service import _get_all_gamification_rules_grouped
     from .utils import format_date_br, format_date_iso_for_json
     from .constants import PERFIS_COM_GESTAO, PERFIL_ADMIN, ADMIN_EMAIL
-    from .db import query_db
+    from .db import query_db, execute_db
     # --- FIM DA CORREÇÃO ---
 
     # Registrar os filtros no Jinja2
@@ -99,6 +133,34 @@ def create_app():
     else:
         print("Auth0 não registrado: AUTH0_ENABLED=False")
 
+    # Registrar cliente Google (Agenda) se configurado
+    try:
+        if app.config.get('GOOGLE_OAUTH_ENABLED', False):
+            # Define explicitamente os endpoints para evitar falhas ao buscar metadados
+            oauth.register(
+                name='google',
+                client_id=app.config['GOOGLE_CLIENT_ID'],
+                client_secret=app.config['GOOGLE_CLIENT_SECRET'],
+                authorize_url='https://accounts.google.com/o/oauth2/v2/auth',
+                access_token_url='https://oauth2.googleapis.com/token',
+                server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+                client_kwargs={
+                    'scope': 'openid email profile https://www.googleapis.com/auth/calendar.readonly',
+                    'prompt': 'consent',
+                    'access_type': 'offline',
+                },
+            )
+            print('OAuth Google registrado (Agenda).')
+            # Revalida e loga após registro
+            gi = app.config.get('GOOGLE_CLIENT_ID')
+            gs = app.config.get('GOOGLE_CLIENT_SECRET')
+            gr = app.config.get('GOOGLE_REDIRECT_URI')
+            print(f"[Startup] Pós-registro OAuth: CLIENT_ID={'definido' if gi else 'vazio'}, CLIENT_SECRET={'definido' if gs else 'vazio'}, REDIRECT_URI={'definido' if gr else 'vazio'}")
+        else:
+            print('OAuth Google não registrado: GOOGLE_OAUTH_ENABLED=False')
+    except Exception as e:
+        print(f"AVISO: Falha ao registrar cliente OAuth Google: {e}")
+
     # Importa os blueprints AQUI, depois de tudo estar configurado
     from .blueprints.main import main_bp
     from .blueprints.auth import auth_bp
@@ -108,6 +170,7 @@ def create_app():
     from .blueprints.management import management_bp
     from .blueprints.analytics import analytics_bp
     from .blueprints.gamification import gamification_bp
+    from .blueprints.agenda import agenda_bp
 
     # Isenta o blueprint da API da verificação de CSRF (endpoints JSON via fetch)
     try:
@@ -124,6 +187,7 @@ def create_app():
     app.register_blueprint(management_bp)
     app.register_blueprint(analytics_bp)
     app.register_blueprint(gamification_bp)
+    app.register_blueprint(agenda_bp)
 
     # --- INÍCIO DA CORREÇÃO (BUG 1: Carregamento de Regras) ---
     # Carrega as regras de gamificação uma vez na inicialização

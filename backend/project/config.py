@@ -1,10 +1,24 @@
 # app2/CSAPP/project/config.py
 import os
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
+from pathlib import Path
 
-# Carrega variáveis do arquivo .env a partir do diretório atual (raiz do projeto)
-# Isso NÃO sobrescreve variáveis existentes
-load_dotenv()
+# Carrega variáveis do arquivo .env de forma robusta
+# Procura o .env desde o diretório atual até os diretórios pais
+_dotenv_path = find_dotenv()
+if _dotenv_path:
+    load_dotenv(_dotenv_path, override=True)
+else:
+    load_dotenv(override=True)
+
+# Fallback explícito: tenta carregar .env na raiz do workspace
+try:
+    root_env = Path(__file__).resolve().parents[3] / '.env'
+    if root_env.exists():
+        load_dotenv(str(root_env), override=True)
+        print(f"[Startup] .env carregado explicitamente de: {root_env}")
+except Exception as e:
+    print(f"[Startup] Aviso: falha ao carregar .env explícito: {e}")
 
 class Config:
     """Configuração base da aplicação."""
@@ -77,3 +91,12 @@ class Config:
     SESSION_COOKIE_SECURE = not USE_SQLITE_LOCALLY # Em produção, usar cookies seguros
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
+
+    # --- Configuração do Google OAuth (Agenda) ---
+    GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
+    GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
+    # Para ambientes locais, use algo como: http://127.0.0.1:5000/agenda/callback
+    GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI')
+    GOOGLE_OAUTH_ENABLED = all([GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI])
+    if not GOOGLE_OAUTH_ENABLED:
+        print("Config: Google OAuth desativado (variáveis ausentes). Define GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI.")

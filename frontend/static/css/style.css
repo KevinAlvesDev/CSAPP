@@ -248,6 +248,23 @@ input[type="file"]::-webkit-file-upload-button:hover {
 }
 /* --- FIM DO ESTILO DAS ABAS --- */
 
+/* --- Agenda (estilo inspirado no Google Calendar) --- */
+.agenda-date-header {
+    font-size: 0.95rem;
+    letter-spacing: 0.1px;
+}
+.agenda-event-row {
+    border-top: none;
+    border-bottom: 1px solid var(--input-border);
+}
+.agenda-event-row:last-child {
+    border-bottom: none;
+}
+.agenda-dot { box-shadow: 0 0 0 2px rgba(0,0,0,0.05); }
+.agenda-meta { opacity: 0.9; }
+.agenda-actions .btn { white-space: nowrap; }
+/* --- Fim Agenda --- */
+
 
 .table {
     color: var(--body-color);
