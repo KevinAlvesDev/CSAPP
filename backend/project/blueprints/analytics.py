@@ -1,7 +1,12 @@
-from flask import Blueprint, render_template, g, flash, redirect, url_for, request
+from flask import Blueprint, render_template, g, flash, redirect, url_for, request, jsonify
 from ..blueprints.auth import permission_required
 # --- INÍCIO DA ALTERAÇÃO (ETAPA 2) ---
 from ..domain.analytics_service import get_analytics_data
+from ..domain.analytics_service import (
+    get_implants_by_day,
+    get_funnel_counts,
+    get_gamification_rank,
+)
 # --- FIM DA ALTERAÇÃO ---
 from ..db import query_db
 from ..constants import PERFIS_COM_ANALYTICS, PERFIS_COM_GESTAO
@@ -149,3 +154,81 @@ def analytics_dashboard():
         print(f"ERRO ao carregar dashboard de analytics: {e}")
         flash(f"Erro interno ao carregar os dados de relatórios: {e}", "error")
         return redirect(url_for('main.dashboard'))
+
+# --- NOVAS ROTAS: API de Gráficos ---
+
+@analytics_bp.route('/analytics/implants_by_day')
+@permission_required(PERFIS_COM_ANALYTICS)
+def api_implants_by_day():
+    """Retorna contagem de implantações finalizadas por dia no período."""
+    try:
+        cs_email = request.args.get('cs_email')
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+
+        if cs_email:
+            cs_email = validate_email(cs_email)
+        if start_date:
+            start_date = validate_date(start_date)
+        if end_date:
+            end_date = validate_date(end_date)
+
+        # Usuários sem perfil gerencial só podem consultar seus dados
+        if g.perfil.get('perfil_acesso') not in PERFIS_COM_GESTAO:
+            cs_email = g.user_email
+
+        payload = get_implants_by_day(start_date=start_date, end_date=end_date, cs_email=cs_email)
+        return jsonify({ 'ok': True, **payload })
+    except ValidationError as e:
+        return jsonify({ 'ok': False, 'error': f'Parâmetro inválido: {str(e)}' }), 400
+    except Exception as e:
+        return jsonify({ 'ok': False, 'error': f'Erro interno: {str(e)}' }), 500
+
+
+@analytics_bp.route('/analytics/funnel')
+@permission_required(PERFIS_COM_ANALYTICS)
+def api_funnel():
+    """Retorna contagem por status para funil em período opcional."""
+    try:
+        cs_email = request.args.get('cs_email')
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+
+        if cs_email:
+            cs_email = validate_email(cs_email)
+        if start_date:
+            start_date = validate_date(start_date)
+        if end_date:
+            end_date = validate_date(end_date)
+
+        if g.perfil.get('perfil_acesso') not in PERFIS_COM_GESTAO:
+            cs_email = g.user_email
+
+        payload = get_funnel_counts(start_date=start_date, end_date=end_date, cs_email=cs_email)
+        return jsonify({ 'ok': True, **payload })
+    except ValidationError as e:
+        return jsonify({ 'ok': False, 'error': f'Parâmetro inválido: {str(e)}' }), 400
+    except Exception as e:
+        return jsonify({ 'ok': False, 'error': f'Erro interno: {str(e)}' }), 500
+
+
+@analytics_bp.route('/analytics/gamification_rank')
+@permission_required(PERFIS_COM_ANALYTICS)
+def api_gamification_rank():
+    """Retorna ranking de gamificação por mês/ano."""
+    try:
+        month = request.args.get('month')
+        year = request.args.get('year')
+
+        # Valida números simples
+        if month:
+            month = int(sanitize_string(month, max_length=2))
+        if year:
+            year = int(sanitize_string(year, max_length=4))
+
+        payload = get_gamification_rank(month=month, year=year)
+        return jsonify({ 'ok': True, **payload })
+    except ValueError:
+        return jsonify({ 'ok': False, 'error': 'Parâmetros month/year devem ser inteiros.' }), 400
+    except Exception as e:
+        return jsonify({ 'ok': False, 'error': f'Erro interno: {str(e)}' }), 500

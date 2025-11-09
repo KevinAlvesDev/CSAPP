@@ -500,3 +500,116 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
         'default_task_start_date': default_task_start_date_str,
         'default_task_end_date': default_task_end_date_str,
     }
+
+# --- NOVAS FUNÇÕES: API de Analytics ---
+
+def get_implants_by_day(start_date=None, end_date=None, cs_email=None):
+    """Contagem de implantações finalizadas por dia, com filtros opcionais."""
+    is_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
+    date_func = "date"  # Compatível com SQLite e Postgres
+    query = f"""
+        SELECT {date_func}(i.data_finalizacao) AS dia, COUNT(*) AS total
+        FROM implantacoes i
+        WHERE i.status = 'finalizada'
+    """
+    args = []
+
+    if cs_email:
+        query += " AND i.usuario_cs = %s"
+        args.append(cs_email)
+
+    def _fmt(date_str, is_end=False):
+        if not date_str:
+            return None, None
+        try:
+            dt = datetime.strptime(date_str, '%Y-%m-%d').date()
+            if is_end and not is_sqlite:
+                return '<', (dt + timedelta(days=1)).strftime('%Y-%m-%d')
+            return '<=' if is_end else '>=', date_str
+        except ValueError:
+            return None, None
+
+    if start_date:
+        op, val = _fmt(start_date, is_end=False)
+        if op:
+            query += f" AND {date_func}(i.data_finalizacao) {op} {date_func}(%s)"
+            args.append(val)
+
+    if end_date:
+        op, val = _fmt(end_date, is_end=True)
+        if op:
+            query += f" AND {date_func}(i.data_finalizacao) {op} {date_func}(%s)"
+            args.append(val)
+
+    query += f" GROUP BY {date_func}(i.data_finalizacao) ORDER BY {date_func}(i.data_finalizacao)"
+    rows = query_db(query, tuple(args)) or []
+    labels = [r.get('dia') for r in rows]
+    data = [r.get('total', 0) for r in rows]
+    return { 'labels': labels, 'data': data }
+
+
+def get_funnel_counts(start_date=None, end_date=None, cs_email=None):
+    """Contagem de implantações por status, com período opcional (data_criacao)."""
+    is_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
+    date_func = "date"
+    query = """
+        SELECT i.status, COUNT(*) AS total
+        FROM implantacoes i
+        WHERE 1=1
+    """
+    args = []
+
+    if cs_email:
+        query += " AND i.usuario_cs = %s"
+        args.append(cs_email)
+
+    def _fmt(date_str, is_end=False):
+        if not date_str:
+            return None, None
+        try:
+            dt = datetime.strptime(date_str, '%Y-%m-%d').date()
+            if is_end and not is_sqlite:
+                return '<', (dt + timedelta(days=1)).strftime('%Y-%m-%d')
+            return '<=' if is_end else '>=', date_str
+        except ValueError:
+            return None, None
+
+    if start_date:
+        op, val = _fmt(start_date, is_end=False)
+        if op:
+            query += f" AND {date_func}(i.data_criacao) {op} {date_func}(%s)"
+            args.append(val)
+
+    if end_date:
+        op, val = _fmt(end_date, is_end=True)
+        if op:
+            query += f" AND {date_func}(i.data_criacao) {op} {date_func}(%s)"
+            args.append(val)
+
+    query += " GROUP BY i.status"
+    rows = query_db(query, tuple(args)) or []
+    mapping = { r.get('status'): r.get('total', 0) for r in rows }
+    ordered_labels = ['nova', 'futura', 'andamento', 'parada', 'finalizada', 'cancelada']
+    labels_pt = ['Novas', 'Futuras', 'Em Andamento', 'Paradas', 'Finalizadas', 'Canceladas']
+    data = [mapping.get(k, 0) for k in ordered_labels]
+    return { 'labels': labels_pt, 'data': data }
+
+
+def get_gamification_rank(month=None, year=None):
+    """Ranking de gamificação por mês/ano, usando tabela de métricas mensais."""
+    agora = datetime.now()
+    m = month or agora.month
+    y = year or agora.year
+    query = """
+        SELECT gm.usuario_cs,
+               COALESCE(p.nome, gm.usuario_cs) AS nome,
+               COALESCE(gm.pontuacao_calculada, 0) AS pontos
+        FROM gamificacao_metricas_mensais gm
+        LEFT JOIN perfil_usuario p ON gm.usuario_cs = p.usuario
+        WHERE gm.mes = %s AND gm.ano = %s
+        ORDER BY gm.pontuacao_calculada DESC, nome ASC
+    """
+    rows = query_db(query, (m, y)) or []
+    labels = [r.get('nome') for r in rows]
+    data = [r.get('pontos', 0) for r in rows]
+    return { 'labels': labels, 'data': data, 'month': m, 'year': y }

@@ -87,6 +87,27 @@ def criar_implantacao():
          flash('Usuário a ser atribuído não foi selecionado.', 'error')
          return redirect(url_for('main.dashboard'))
 
+    # --- VALIDAÇÃO: Evitar duplicidade de empresa ativa ---
+    try:
+        existente = query_db(
+            """
+            SELECT id, status
+            FROM implantacoes
+            WHERE LOWER(nome_empresa) = LOWER(%s)
+              AND status IN ('nova','futura','andamento','parada')
+            LIMIT 1
+            """,
+            (nome_empresa,), one=True
+        )
+        if existente:
+            status_existente = existente.get('status')
+            flash(f'Já existe uma implantação ativa para "{nome_empresa}" (status: {status_existente}). Evite duplicados.', 'error')
+            return redirect(url_for('main.dashboard'))
+    except Exception as e:
+        print(f"Falha ao verificar duplicidade de empresa '{nome_empresa}': {e}")
+        flash('Erro ao validar duplicidade de empresa.', 'error')
+        return redirect(url_for('main.dashboard'))
+
     try:
         agora = datetime.now()
         
@@ -146,6 +167,27 @@ def criar_implantacao_modulo():
     tipo = 'modulo'
     # O status inicial é SEMPRE 'nova'
     status = 'nova'
+
+    # --- VALIDAÇÃO: Evitar duplicidade de empresa ativa ---
+    try:
+        existente = query_db(
+            """
+            SELECT id, status
+            FROM implantacoes
+            WHERE LOWER(nome_empresa) = LOWER(%s)
+              AND status IN ('nova','futura','andamento','parada')
+            LIMIT 1
+            """,
+            (nome_empresa,), one=True
+        )
+        if existente:
+            status_existente = existente.get('status')
+            flash(f'Já existe uma implantação ativa para "{nome_empresa}" (status: {status_existente}). Evite duplicados.', 'error')
+            return redirect(url_for('main.dashboard'))
+    except Exception as e:
+        print(f"Falha ao verificar duplicidade de empresa (módulo) '{nome_empresa}': {e}")
+        flash('Erro ao validar duplicidade de empresa.', 'error')
+        return redirect(url_for('main.dashboard'))
 
     try:
         agora = datetime.now()
