@@ -134,4 +134,19 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!activated) { const firstTabButton = document.querySelector(tabSelector); if (firstTabButton) { console.log('[Init Fallback] Ativando padrão:', firstTabButton.id); activateTabById(firstTabButton.id); } else { console.error("[Init Fallback] Nenhuma aba!"); } }
     document.querySelectorAll('.comment-text').forEach(textEl => { const wrapper = textEl.closest('.comment-content-wrapper'); let button = wrapper ? wrapper.querySelector('button[onclick^="toggleComment"]') : null; const maxHeight = parseFloat(window.getComputedStyle(textEl).maxHeight); const isOverflowing = textEl.scrollHeight > maxHeight + 5; if (isOverflowing && !button) { const newButton = document.createElement('button'); newButton.className = 'btn btn-sm btn-link p-0 small'; newButton.textContent = 'Ver mais...'; newButton.onclick = function() { toggleComment(this, textEl.id); }; textElement.parentNode.insertBefore(newButton, textEl.nextSibling); } else if (!isOverflowing && button) { button.remove(); } else if (isOverflowing && button) { button.textContent = textEl.classList.contains('expanded') ? 'Ver menos...' : 'Ver mais...'; } });
     document.querySelectorAll('.module-header[data-bs-toggle="collapse"]').forEach(header => { const collapseId = header.getAttribute('data-bs-target'); const collapseElement = document.querySelector(collapseId); const icon = header.querySelector('i.bi-chevron-down, i.bi-chevron-up'); if (collapseElement && icon) { collapseElement.addEventListener('show.bs.collapse', () => { icon.classList.replace('bi-chevron-down','bi-chevron-up'); }); collapseElement.addEventListener('hide.bs.collapse', () => { icon.classList.replace('bi-chevron-up','bi-chevron-down'); }); if (collapseElement.classList.contains('show')) { icon.classList.replace('bi-chevron-down','bi-chevron-up'); } } });
+
+    // 4. Atualiza progresso/timeline após requisições HTMX (toggle individual)
+    document.body.addEventListener('progress_update', function(event) {
+        const data = event.detail || {};
+        if (data.novo_progresso !== undefined) {
+            updateProgressBar(data.novo_progresso);
+        }
+        if (data.log_tarefa) {
+            adicionarLogNaTimeline(data.log_tarefa);
+        }
+        if (data.implantacao_finalizada) {
+            if (data.log_finalizacao) adicionarLogNaTimeline(data.log_finalizacao);
+            window.location.reload();
+        }
+    });
 });

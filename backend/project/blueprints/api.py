@@ -1,9 +1,10 @@
 # app2/CSAPP/project/blueprints/api.py
 
-from flask import Blueprint, request, jsonify, g, current_app, render_template
+from flask import Blueprint, request, jsonify, g, current_app, render_template, make_response
 from datetime import datetime
 import os
 import time
+import json
 from werkzeug.utils import secure_filename
 from botocore.exceptions import ClientError, NoCredentialsError
 
@@ -74,28 +75,64 @@ def toggle_tarefa(tarefa_id):
         
         auto_finalizar_implantacao(tarefa['implantacao_id'], usuario_cs_email)
         
-        # Após a atualização, buscamos novamente os dados completos da tarefa para re-renderizar o template
-        tarefa_atualizada = query_db("SELECT * FROM tarefas WHERE id = %s", (tarefa_id,), one=True)
-        
-        # Buscamos os comentários associados, pois o template parcial precisa deles
-        comentarios = query_db(
-            """
-            SELECT c.*, p.nome as usuario_nome, p.foto_url 
-            FROM comentarios c 
-            JOIN perfil_usuario p ON c.usuario_cs = p.usuario 
-            WHERE c.tarefa_id = %s 
-            ORDER BY c.data_criacao ASC
-            """, (tarefa_id,)
-        )
-        
-        # Adicionamos os comentários formatados à tarefa
-        tarefa_atualizada['comentarios'] = []
-        for comentario in comentarios:
-            comentario['data_criacao_fmt_d'] = format_date_br(comentario['data_criacao'])
-            tarefa_atualizada['comentarios'].append(comentario)
+        # Calcula progresso e verifica auto-finalização
+        finalizada, log_finalizacao = auto_finalizar_implantacao(tarefa['implantacao_id'], usuario_cs_email)
+        novo_prog, _, _ = _get_progress(tarefa['implantacao_id'])
 
-        # Renderiza apenas o template do item da tarefa e o retorna
-        return render_template('partials/_task_item.html', tarefa=tarefa_atualizada)
+        # Recupera o último log correspondente à alteração da tarefa
+        nome = g.perfil.get('nome', usuario_cs_email)
+        log_tarefa = query_db(
+            "SELECT *, %s as usuario_nome FROM timeline_log "
+            "WHERE implantacao_id = %s AND tipo_evento = 'tarefa_alterada' "
+            "ORDER BY id DESC LIMIT 1",
+            (nome, tarefa['implantacao_id']), one=True
+        )
+        if log_tarefa:
+            log_tarefa['data_criacao'] = format_date_iso_for_json(log_tarefa.get('data_criacao'))
+
+        # Se a requisição vier do HTMX, retornamos HTML do item de tarefa atualizado
+        if request.headers.get('HX-Request') == 'true':
+            tarefa_atualizada = query_db(
+                "SELECT id, tarefa_filho, tag, concluida FROM tarefas WHERE id = %s",
+                (tarefa_id,), one=True
+            )
+            comentarios = query_db(
+                """
+                SELECT c.*, p.nome as usuario_nome
+                FROM comentarios c
+                LEFT JOIN perfil_usuario p ON c.usuario_cs = p.usuario
+                WHERE c.tarefa_id = %s
+                ORDER BY c.id ASC
+                """,
+                (tarefa_id,)
+            ) or []
+            # Injeta os comentários na tarefa para o template parcial
+            tarefa_atualizada['comentarios'] = comentarios
+            # Cria resposta com cabeçalho HX-Trigger para atualizar progresso & timeline
+            hx_payload = {
+                'progress_update': {
+                    'novo_progresso': novo_prog,
+                    'log_tarefa': log_tarefa,
+                    'implantacao_finalizada': finalizada,
+                    'log_finalizacao': log_finalizacao
+                }
+            }
+            # Constrói HTML com item atualizado e fragmento OOB da barra de progresso
+            item_html = render_template('partials/_task_item_wrapper.html', tarefa=tarefa_atualizada)
+            progress_html = render_template('partials/_progress_total_bar.html', progresso_percent=novo_prog)
+            resp = make_response(item_html + progress_html)
+            # Dispara evento após o swap de conteúdo (garante DOM atualizado)
+            resp.headers['HX-Trigger-After-Swap'] = json.dumps(hx_payload)
+            return resp
+
+        # Caso contrário (fetch/JSON), mantemos a resposta JSON para o frontend JS
+        return jsonify({
+            'ok': True,
+            'novo_progresso': novo_prog,
+            'log_tarefa': log_tarefa,
+            'implantacao_finalizada': finalizada,
+            'log_finalizacao': log_finalizacao
+        })
         
     except Exception as e:
         print(f"ERRO ao alternar tarefa ID {tarefa_id}: {e}")
@@ -126,9 +163,6 @@ def adicionar_comentario(tarefa_id):
     
     img_url = None
 
-    if not r2_client or not current_app.config['CLOUDFLARE_PUBLIC_URL']:
-        return jsonify({'ok': False, 'error': 'Serviço de armazenamento R2 não está configurado.'}), 500
-
     # 1. Verifica permissão e status da implantação
     tarefa_info = query_db(
         "SELECT i.usuario_cs, i.id as implantacao_id, t.tarefa_filho, i.status "
@@ -152,6 +186,9 @@ def adicionar_comentario(tarefa_id):
         file = request.files.get('imagem')
         if file and file.filename and allowed_file(file.filename):
             try:
+                # Exige R2 somente quando há imagem para upload
+                if not r2_client or not current_app.config.get('CLOUDFLARE_PUBLIC_URL'):
+                    return jsonify({'ok': False, 'error': 'Serviço de armazenamento (R2) não está configurado para upload de imagem.'}), 500
                 impl_id = tarefa_info['implantacao_id']
                 
                 # Cria nome único
@@ -235,8 +272,7 @@ def excluir_comentario(comentario_id):
         api_logger.warning(f'Invalid comment ID in excluir_comentario: {str(e)} - User: {g.user_email}')
         return jsonify({'ok': False, 'error': f'ID de comentário inválido: {str(e)}'}), 400
 
-    if not r2_client:
-        return jsonify({'ok': False, 'error': 'Serviço R2 não configurado.'}), 500
+    # R2 opcional: prossegue mesmo sem armazenamento configurado
         
     try:
         comentario = query_db(
@@ -257,12 +293,12 @@ def excluir_comentario(comentario_id):
             security_logger.warning(f'Permission denied for user {g.user_email} trying to delete comment {comentario_id}')
             return jsonify({'ok': False, 'error': 'Permissão negada.'}), 403
 
-        # Exclui imagem do R2
+        # Exclui imagem do R2 (se configurado); caso contrário, segue somente DB
         imagem_url = comentario.get('imagem_url')
-        public_url_base = current_app.config['CLOUDFLARE_PUBLIC_URL']
-        bucket_name = current_app.config['CLOUDFLARE_BUCKET_NAME']
+        public_url_base = current_app.config.get('CLOUDFLARE_PUBLIC_URL')
+        bucket_name = current_app.config.get('CLOUDFLARE_BUCKET_NAME')
         
-        if imagem_url and public_url_base and imagem_url.startswith(public_url_base):
+        if r2_client and public_url_base and bucket_name and imagem_url and imagem_url.startswith(public_url_base):
             try:
                 object_key = imagem_url.replace(f"{public_url_base}/", "")
                 if object_key:
@@ -272,6 +308,8 @@ def excluir_comentario(comentario_id):
                 print(f"Aviso: Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete.response['Error']['Code']}")
             except Exception as e_delete:
                  print(f"Aviso: Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete}")
+        else:
+            print("Aviso: R2 não configurado ou variáveis ausentes; exclusão seguirá apenas no banco de dados.")
 
         # Exclui do DB
         execute_db("DELETE FROM comentarios WHERE id = %s", (comentario_id,))
@@ -298,8 +336,7 @@ def excluir_tarefa(tarefa_id):
         api_logger.warning(f'Invalid task ID in excluir_tarefa: {str(e)} - User: {g.user_email}')
         return jsonify({'ok': False, 'error': f'ID de tarefa inválido: {str(e)}'}), 400
 
-    if not r2_client:
-        return jsonify({'ok': False, 'error': 'Serviço R2 não configurado.'}), 500
+    # R2 opcional: prossegue mesmo sem armazenamento configurado
         
     try:
         tarefa = query_db(
@@ -326,21 +363,24 @@ def excluir_tarefa(tarefa_id):
 
         # Excluir imagens associadas aos comentários ANTES de excluir a tarefa
         comentarios_tarefa = query_db("SELECT id, imagem_url FROM comentarios WHERE tarefa_id = %s", (tarefa_id,))
-        public_url_base = current_app.config['CLOUDFLARE_PUBLIC_URL']
-        bucket_name = current_app.config['CLOUDFLARE_BUCKET_NAME']
+        public_url_base = current_app.config.get('CLOUDFLARE_PUBLIC_URL')
+        bucket_name = current_app.config.get('CLOUDFLARE_BUCKET_NAME')
         
-        for com in comentarios_tarefa:
-             imagem_url = com.get('imagem_url')
-             if imagem_url and public_url_base and imagem_url.startswith(public_url_base):
-                try:
-                    object_key = imagem_url.replace(f"{public_url_base}/", "")
-                    if object_key:
-                        r2_client.delete_object(Bucket=bucket_name, Key=object_key)
-                        print(f"Objeto R2 (comentário {com['id']}) excluído: {object_key}")
-                except ClientError as e_delete:
-                    print(f"Aviso: Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete.response['Error']['Code']}")
-                except Exception as e_delete:
-                     print(f"Aviso: Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete}")
+        if r2_client and public_url_base and bucket_name:
+            for com in comentarios_tarefa:
+                imagem_url = com.get('imagem_url')
+                if imagem_url and imagem_url.startswith(public_url_base):
+                    try:
+                        object_key = imagem_url.replace(f"{public_url_base}/", "")
+                        if object_key:
+                            r2_client.delete_object(Bucket=bucket_name, Key=object_key)
+                            print(f"Objeto R2 (comentário {com['id']}) excluído: {object_key}")
+                    except ClientError as e_delete:
+                        print(f"Aviso: Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete.response['Error']['Code']}")
+                    except Exception as e_delete:
+                        print(f"Aviso: Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete}")
+        else:
+            print("Aviso: R2 não configurado ou variáveis ausentes; exclusão seguirá apenas no banco de dados.")
 
         # Agora exclui a tarefa (comentários são excluídos por CASCATA no DB)
         execute_db("DELETE FROM tarefas WHERE id = %s", (tarefa_id,))
@@ -447,9 +487,7 @@ def excluir_tarefas_modulo():
     if impl.get('status') == 'finalizada':
         return jsonify({'ok': False, 'error': 'Não é possível excluir tarefas de implantações finalizadas.'}), 400
 
-    # 2. Verificar R2
-    if not r2_client:
-        return jsonify({'ok': False, 'error': 'Serviço de armazenamento (R2) não configurado.'}), 500
+    # 2. R2 opcional: prossegue mesmo sem armazenamento configurado
 
     try:
         # 3. Buscar imagens de comentários ANTES de excluir as tarefas
@@ -462,22 +500,25 @@ def excluir_tarefas_modulo():
             """, (impl_id, tarefa_pai)
         )
         
-        public_url_base = current_app.config['CLOUDFLARE_PUBLIC_URL']
-        bucket_name = current_app.config['CLOUDFLARE_BUCKET_NAME']
+        public_url_base = current_app.config.get('CLOUDFLARE_PUBLIC_URL')
+        bucket_name = current_app.config.get('CLOUDFLARE_BUCKET_NAME')
 
-        # 4. Excluir imagens do R2
-        for c in comentarios_img:
-            imagem_url = c.get('imagem_url')
-            if imagem_url and public_url_base and imagem_url.startswith(public_url_base):
-                try:
-                    object_key = imagem_url.replace(f"{public_url_base}/", "")
-                    if object_key:
-                        r2_client.delete_object(Bucket=bucket_name, Key=object_key)
-                        print(f"Objeto R2 (módulo {tarefa_pai}) excluído: {object_key}")
-                except ClientError as e_delete:
-                    print(f"Aviso: Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete.response['Error']['Code']}")
-                except Exception as e_delete:
-                    print(f"Aviso: Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete}")
+        # 4. Excluir imagens do R2 (se disponível); caso contrário, seguir sem apagar arquivos
+        if r2_client and public_url_base and bucket_name:
+            for c in comentarios_img:
+                imagem_url = c.get('imagem_url')
+                if imagem_url and imagem_url.startswith(public_url_base):
+                    try:
+                        object_key = imagem_url.replace(f"{public_url_base}/", "")
+                        if object_key:
+                            r2_client.delete_object(Bucket=bucket_name, Key=object_key)
+                            print(f"Objeto R2 (módulo {tarefa_pai}) excluído: {object_key}")
+                    except ClientError as e_delete:
+                        print(f"Aviso: Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete.response['Error']['Code']}")
+                    except Exception as e_delete:
+                        print(f"Aviso: Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete}")
+        else:
+            print("Aviso: R2 não configurado ou variáveis ausentes; exclusão seguirá apenas no banco de dados.")
         
         # 5. Excluir Tarefas (ON DELETE CASCADE cuidará dos comentários no DB)
         execute_db("DELETE FROM tarefas WHERE implantacao_id = %s AND tarefa_pai = %s", (impl_id, tarefa_pai))

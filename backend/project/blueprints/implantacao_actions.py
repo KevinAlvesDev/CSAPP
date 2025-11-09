@@ -575,23 +575,27 @@ def excluir_implantacao():
         flash('Permissão negada.', 'error')
         return redirect(url_for('main.dashboard'))
     
-    if not r2_client:
-        flash("Erro: Serviço de armazenamento R2 não configurado. Não é possível excluir as imagens associadas.", "error")
-        return redirect(request.referrer or url_for('main.dashboard'))
+    # R2 opcional: continua a exclusão mesmo sem armazenamento configurado
     try:
         comentarios_img = query_db( #
             """ SELECT c.imagem_url FROM comentarios c JOIN tarefas t ON c.tarefa_id = t.id WHERE t.implantacao_id = %s AND c.imagem_url IS NOT NULL AND c.imagem_url != '' """, (implantacao_id,)
         )
-        public_url_base = current_app.config['CLOUDFLARE_PUBLIC_URL'] #
-        bucket_name = current_app.config['CLOUDFLARE_BUCKET_NAME'] #
-        for c in comentarios_img:
-            imagem_url = c.get('imagem_url')
-            if imagem_url and public_url_base and imagem_url.startswith(public_url_base):
-                try:
-                    object_key = imagem_url.replace(f"{public_url_base}/", "")
-                    if object_key: r2_client.delete_object(Bucket=bucket_name, Key=object_key) #
-                except ClientError as e_delete: print(f"Aviso: Falha ao excluir R2 (key: {object_key}). Erro: {e_delete.response['Error']['Code']}")
-                except Exception as e_delete: print(f"Aviso: Falha ao excluir R2 (key: {object_key}). Erro: {e_delete}")
+        public_url_base = current_app.config.get('CLOUDFLARE_PUBLIC_URL') #
+        bucket_name = current_app.config.get('CLOUDFLARE_BUCKET_NAME') #
+        if r2_client and public_url_base and bucket_name:
+            for c in comentarios_img:
+                imagem_url = c.get('imagem_url')
+                if imagem_url and imagem_url.startswith(public_url_base):
+                    try:
+                        object_key = imagem_url.replace(f"{public_url_base}/", "")
+                        if object_key:
+                            r2_client.delete_object(Bucket=bucket_name, Key=object_key) #
+                    except ClientError as e_delete:
+                        print(f"Aviso: Falha ao excluir R2 (key: {object_key}). Erro: {e_delete.response['Error']['Code']}")
+                    except Exception as e_delete:
+                        print(f"Aviso: Falha ao excluir R2 (key: {object_key}). Erro: {e_delete}")
+        else:
+            print("Aviso: R2 não configurado ou variáveis ausentes; exclusão seguirá apenas no banco de dados.")
         execute_db("DELETE FROM implantacoes WHERE id = %s", (implantacao_id,)) #
         flash('Implantação e todos os dados associados foram excluídos com sucesso.', 'success')
     except Exception as e:

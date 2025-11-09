@@ -111,10 +111,11 @@ def manage_gamification_metrics():
     hoje = datetime.now()
     default_mes = hoje.month
     default_ano = hoje.year
+    max_ano = hoje.year + 10
 
     try:
         target_mes = validate_integer(request.values.get('mes', default_mes), min_value=1, max_value=12)
-        target_ano = validate_integer(request.values.get('ano', default_ano), min_value=2020, max_value=2030)
+        target_ano = validate_integer(request.values.get('ano', default_ano), min_value=2020, max_value=max_ano)
     except ValidationError:
         target_mes = default_mes
         target_ano = default_ano
@@ -339,12 +340,26 @@ def gamification_report():
     default_mes = int(request.args.get('mes', hoje.month))
     default_ano = int(request.args.get('ano', hoje.year))
     
+    # Validação e sanitização dos filtros
+    try:
+        selected_month = validate_integer(default_mes, min_value=1, max_value=12)
+        selected_year = validate_integer(default_ano, min_value=2020, max_value=hoje.year + 10)
+    except ValidationError:
+        selected_month = hoje.month
+        selected_year = hoje.year
+
     target_cs_email = request.args.get('cs_email')
+    if target_cs_email:
+        try:
+            target_cs_email = validate_email(target_cs_email)
+        except ValidationError:
+            flash('Email inválido no filtro do relatório.', 'warning')
+            target_cs_email = None
     
     try:
         report_data_sorted = get_gamification_report_data(
-            default_mes, 
-            default_ano, 
+            selected_month, 
+            selected_year, 
             target_cs_email,
             all_cs_users_list=all_cs_users 
         )
@@ -358,7 +373,7 @@ def gamification_report():
         report_data=report_data_sorted,
         all_cs_users=all_cs_users,
         current_cs_email=target_cs_email,
-        selected_month=default_mes,
-        selected_year=default_ano,
+        selected_month=selected_month,
+        selected_year=selected_year,
         current_year=hoje.year 
     )

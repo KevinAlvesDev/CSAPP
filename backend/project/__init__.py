@@ -1,6 +1,6 @@
 # app2/CSAPP/project/__init__.py
 import os
-from flask import Flask, session, g, render_template, request, flash, redirect, url_for, current_app
+from flask import Flask, session, g, render_template, request, flash, redirect, url_for, current_app, jsonify
 # from flask_session import Session <-- REMOVIDO
 from werkzeug.middleware.proxy_fix import ProxyFix # Para o HTTPS do Railway
 from .extensions import oauth, init_r2, init_limiter, limiter
@@ -109,6 +109,12 @@ def create_app():
     from .blueprints.analytics import analytics_bp
     from .blueprints.gamification import gamification_bp
 
+    # Isenta o blueprint da API da verificação de CSRF (endpoints JSON via fetch)
+    try:
+        csrf.exempt(api_bp)
+    except Exception as e:
+        print(f"Aviso: não foi possível isentar CSRF no api_bp: {e}")
+
     # 3. Registra os Blueprints
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
@@ -190,12 +196,18 @@ def create_app():
     # Error Handlers
     @app.errorhandler(404)
     def page_not_found(e):
+        # Resposta JSON para solicitações da API
+        if request.path.startswith('/api'):
+            return jsonify({'ok': False, 'error': 'Recurso não encontrado'}), 404
         flash("Página não encontrada. Redirecionando para o Dashboard.", "warning")
         return redirect(url_for('main.dashboard'))
 
     @app.errorhandler(500)
     def internal_server_error(e):
         print(f"ERRO 500: {e}")
+        # Resposta JSON para solicitações da API
+        if request.path.startswith('/api'):
+            return jsonify({'ok': False, 'error': 'Erro interno do servidor'}), 500
         flash("Ocorreu um erro interno no servidor. Redirecionando para o Dashboard.", "error")
         return redirect(url_for('main.dashboard'))
 
@@ -213,11 +225,18 @@ def create_app():
         # Content-Security-Policy: permite CDNs necessários mantendo restrições
         csp = (
             "default-src 'self'; "
-            "img-src 'self' data:; "
-            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com; "
+            # Permite imagens externas (ex.: R2 público) e data:
+            "img-src 'self' data: https:; "
+            # Permite estilos dos CDNs usados e gstatic (Google Translate)
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com https://fonts.gstatic.com https://www.gstatic.com; "
+            # Alguns navegadores usam style-src-elem; alinhar com style-src
+            "style-src-elem 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com https://fonts.gstatic.com https://www.gstatic.com; "
+            # Scripts de CDNs necessários; incluir gstatic se usado por widgets
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com https://www.gstatic.com; "
+            # Fontes de CDNs
             "font-src 'self' data: https://cdn.jsdelivr.net https://fonts.gstatic.com; "
-            "connect-src 'self'"
+            # Conexões a origens HTTPS (Auth0/API externas, se houver)
+            "connect-src 'self' https:"
         )
         response.headers.setdefault('Content-Security-Policy', csp)
         # Permissions-Policy (desativa features não usadas)

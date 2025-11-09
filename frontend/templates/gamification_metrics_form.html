@@ -313,95 +313,14 @@
                 {# Total (Layout de Lista) #}
                 <div class="row mb-3 align-items-center justify-content-end">
                     <label for="total_pontos_manuais" class="col-md-7 col-form-label text-md-end fs-5">Total de Pontos (Performance + Bônus/Penal.)</label>
-@implantacao_actions_bp.route('/criar_implantacao', methods=['POST'])
-@login_required
-@permission_required(PERFIS_COM_CRIACAO)
-@limiter.limit("10 per minute", key_func=lambda: g.user_email or get_remote_address())
-def criar_implantacao():
-    ...from ..extensions import r2_client  # já existe
-from ..extensions import limiter
-from flask_limiter.util import get_remote_address# --- Segurança: Cabeçalhos HTTP ---
-@app.after_request
-def set_security_headers(response):
-    # Proteções básicas
-    response.headers.setdefault('X-Content-Type-Options', 'nosniff')
-    response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
-    response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
-    # HSTS (apenas se HTTPS estiver habilitado/por trás de proxy seguro)
-    if request.headers.get('X-Forwarded-Proto', 'http') == 'https' or request.is_secure:
-        # 6 meses de HSTS; includeSubDomains e preload opcionais
-        response.headers.setdefault('Strict-Transport-Security', 'max-age=15552000; includeSubDomains')
-    # Content-Security-Policy (compatível com inline atual, mas restrita)
-    csp = "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; font-src 'self' data:; connect-src 'self'"
-    response.headers.setdefault('Content-Security-Policy', csp)
-    # Permissions-Policy (desativa features não usadas)
-    response.headers.setdefault('Permissions-Policy', "geolocation=(), microphone=(), camera=(), fullscreen=(*)")
-    return response# --- Segurança: Cabeçalhos HTTP ---
-@app.after_request
-def set_security_headers(response):
-    # Proteções básicas
-    response.headers.setdefault('X-Content-Type-Options', 'nosniff')
-    response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
-    response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
-    # HSTS (apenas se HTTPS estiver habilitado/por trás de proxy seguro)
-    if request.headers.get('X-Forwarded-Proto', 'http') == 'https' or request.is_secure:
-        # 6 meses de HSTS; includeSubDomains e preload opcionais
-        response.headers.setdefault('Strict-Transport-Security', 'max-age=15552000; includeSubDomains')
-    # Content-Security-Policy (compatível com inline atual, mas restrita)
-    csp = "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; font-src 'self' data:; connect-src 'self'"
-    response.headers.setdefault('Content-Security-Policy', csp)
-    # Permissions-Policy (desativa features não usadas)
-    response.headers.setdefault('Permissions-Policy', "geolocation=(), microphone=(), camera=(), fullscreen=(*)")
-    return response# --- Segurança: Cabeçalhos HTTP ---
-@app.after_request
-def set_security_headers(response):
-    # Proteções básicas
-    response.headers.setdefault('X-Content-Type-Options', 'nosniff')
-    response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
-    response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
-    # HSTS (apenas se HTTPS estiver habilitado/por trás de proxy seguro)
-    if request.headers.get('X-Forwarded-Proto', 'http') == 'https' or request.is_secure:
-        # 6 meses de HSTS; includeSubDomains e preload opcionais
-        response.headers.setdefault('Strict-Transport-Security', 'max-age=15552000; includeSubDomains')
-    # Content-Security-Policy (compatível com inline atual, mas restrita)
-    csp = "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; font-src 'self' data:; connect-src 'self'"
-    response.headers.setdefault('Content-Security-Policy', csp)
-    # Permissions-Policy (desativa features não usadas)
-    response.headers.setdefault('Permissions-Policy', "geolocation=(), microphone=(), camera=(), fullscreen=(*)")
-    return response# --- Segurança: Cabeçalhos HTTP ---
-@app.after_request
-def set_security_headers(response):
-    # Proteções básicas
-    response.headers.setdefault('X-Content-Type-Options', 'nosniff')
-    response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
-    response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
-    # HSTS (apenas se HTTPS estiver habilitado/por trás de proxy seguro)
-    if request.headers.get('X-Forwarded-Proto', 'http') == 'https' or request.is_secure:
-        # 6 meses de HSTS; includeSubDomains e preload opcionais
-        response.headers.setdefault('Strict-Transport-Security', 'max-age=15552000; includeSubDomains')
-    # Content-Security-Policy (compatível com inline atual, mas restrita)
-    csp = "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; font-src 'self' data:; connect-src 'self'"
-    response.headers.setdefault('Content-Security-Policy', csp)
-    # Permissions-Policy (desativa features não usadas)
-    response.headers.setdefault('Permissions-Policy', "geolocation=(), microphone=(), camera=(), fullscreen=(*)")
-    return response# --- Segurança: Cabeçalhos HTTP ---
-@app.after_request
-def set_security_headers(response):
-    # Proteções básicas
-    response.headers.setdefault('X-Content-Type-Options', 'nosniff')
-    response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
-    response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
-    # HSTS (apenas se HTTPS estiver habilitado/por trás de proxy seguro)
-    if request.headers.get('X-Forwarded-Proto', 'http') == 'https' or request.is_secure:
-        # 6 meses de HSTS; includeSubDomains e preload opcionais
-        response.headers.setdefault('Strict-Transport-Security', 'max-age=15552000; includeSubDomains')
-    # Content-Security-Policy (compatível com inline atual, mas restrita)
-    csp = "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; font-src 'self' data:; connect-src 'self'"
-    response.headers.setdefault('Content-Security-Policy', csp)
-    # Permissions-Policy (desativa features não usadas)
-    response.headers.setdefault('Permissions-Policy', "geolocation=(), microphone=(), camera=(), fullscreen=(*)")
-    return response                    <div class="col-md-5">
-                                    <input type="text" class="form-control form-control-lg fs-4 fw-bold" id="total_pontos_manuais" value="0 pts" readonly disabled style="background-color: var(--input-border) !important; color: var(--body-color) !important;">
+ 
+ 
+ 
+ 
+ 
+ 
+                    <div class="col-md-5">
+                        <input type="text" class="form-control form-control-lg fs-4 fw-bold" id="total_pontos_manuais" value="0 pts" readonly disabled style="background-color: var(--input-border) !important; color: var(--body-color) !important;">
                     </div>
                 </div>
 

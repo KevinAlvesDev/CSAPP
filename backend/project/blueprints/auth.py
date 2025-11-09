@@ -93,7 +93,17 @@ def login_required(f):
     def decorated_function(*args, **kwargs):
         # g.user_email foi carregado em @app.before_request
         if not g.user_email:
-            flash('Login necessário para acessar esta página.', 'info')
+            # Evita erro em ambientes de teste sem SECRET_KEY
+            try:
+                if current_app.secret_key:
+                    flash('Login necessário para acessar esta página.', 'info')
+            except Exception:
+                pass
+            # Registra tentativa de acesso sem autenticação
+            try:
+                auth_logger.info(f'Login required: anonymous access to {request.path}')
+            except Exception:
+                pass
             return redirect(url_for('auth.login'))
         
         # O @app.before_request criou g.perfil (do DB ou um placeholder).
@@ -148,9 +158,17 @@ def permission_required(required_profiles):
             if user_perfil is None or user_perfil not in required_profiles:
                 # Mensagem específica para criar implantação/acesso a analytics/gestão
                 if any(p in required_profiles for p in PERFIS_COM_GESTAO):
-                     flash('Seu perfil de acesso atual não tem permissão para essa função, entre em contato com um administrador.', 'error')
+                     try:
+                         if current_app.secret_key:
+                             flash('Seu perfil de acesso atual não tem permissão para essa função, entre em contato com um administrador.', 'error')
+                     except Exception:
+                         pass
                 else:
-                     flash('Acesso negado. Você não tem permissão para esta funcionalidade.', 'error')
+                     try:
+                         if current_app.secret_key:
+                             flash('Acesso negado. Você não tem permissão para esta funcionalidade.', 'error')
+                     except Exception:
+                         pass
                 
                 security_logger.warning(f'Access denied for user {g.user_email} with role {user_perfil} trying to access {request.path}')
                 return redirect(url_for('main.dashboard'))

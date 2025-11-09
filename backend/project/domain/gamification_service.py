@@ -206,19 +206,30 @@ def _check_eligibility(metricas_manuais, regras_db, count_finalizadas, media_reu
     elif psp < min_planos_sucesso: elegivel = False; motivo_inelegibilidade.append(f"Planos Sucesso < {min_planos_sucesso}%")
 
     min_reunioes_dia = regras_db.get('eleg_reunioes_min', 3)
-    if media_reunioes_dia < min_reunioes_dia:
+    # Trata None com segurança: se não houver média calculada, considera 0
+    media_reunioes_dia_safe = media_reunioes_dia if media_reunioes_dia is not None else 0
+    if media_reunioes_dia_safe < min_reunioes_dia:
         elegivel = False
-        motivo_inelegibilidade.append(f"Média Reuniões/Dia ({media_reunioes_dia:.2f}) < {min_reunioes_dia}")
+        motivo_inelegibilidade.append(f"Média Reuniões/Dia ({media_reunioes_dia_safe:.2f}) < {min_reunioes_dia}")
 
     if count_finalizadas < min_processos_concluidos:
         elegivel = False
         motivo_inelegibilidade.append(f"Impl. Finalizadas ({count_finalizadas}) < {min_processos_concluidos} ({cargo})")
 
-    if metricas_manuais.get('reclamacoes', 0) >= max_reclamacoes + 1:
+    # Normaliza valores None para 0 antes de comparações com >=
+    reclamacoes = metricas_manuais.get('reclamacoes')
+    reclamacoes = 0 if reclamacoes is None else reclamacoes
+    if reclamacoes >= max_reclamacoes + 1:
         elegivel = False; motivo_inelegibilidade.append(f"Reclamações >= {max_reclamacoes + 1}")
-    if metricas_manuais.get('perda_prazo', 0) >= max_perda_prazo + 1:
+
+    perda_prazo = metricas_manuais.get('perda_prazo')
+    perda_prazo = 0 if perda_prazo is None else perda_prazo
+    if perda_prazo >= max_perda_prazo + 1:
         elegivel = False; motivo_inelegibilidade.append(f"Perda Prazo >= {max_perda_prazo + 1}")
-    if metricas_manuais.get('nao_preenchimento', 0) >= max_nao_preenchimento + 1:
+
+    nao_preenchimento = metricas_manuais.get('nao_preenchimento')
+    nao_preenchimento = 0 if nao_preenchimento is None else nao_preenchimento
+    if nao_preenchimento >= max_nao_preenchimento + 1:
         elegivel = False; motivo_inelegibilidade.append(f"Não Preenchimento >= {max_nao_preenchimento + 1}")
 
     if nq is not None and nq < 80:

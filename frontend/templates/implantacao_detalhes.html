@@ -167,8 +167,10 @@
                         <p class="mb-0"><strong>Cadastro:</strong> {{ implantacao.data_criacao_fmt_dt_hr }}</p>
                     </div>
                     <div class="col-md-6">
-                        <h4 class="h6 mb-2">Progresso Total</h4>
-                        <div class="progress" style="height: 30px;"> <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: {{ progresso_porcentagem }}%;" aria-valuenow="{{ progresso_porcentagem }}">{{ progresso_porcentagem }}%</div> </div>
+<h4 class="h6 mb-2">Progresso Total</h4>
+<div class="progress" style="height: 30px;">
+  <div id="progress-total-bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: {{ progresso_porcentagem }}%;" aria-valuenow="{{ progresso_porcentagem }}">{{ progresso_porcentagem }}%</div>
+</div>
                     </div>
                 </div>
                 

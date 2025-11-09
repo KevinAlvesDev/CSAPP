@@ -18,20 +18,20 @@ limiter = None
 gamification_rules_cache = TTLCache(maxsize=10, ttl=3600)
 
 def init_limiter(app):
-    """Inicializa o Flask-Limiter usando a API compatível com versões atuais."""
+    """Inicializa o Flask-Limiter sem limites globais agressivos (evita 429 indevidos)."""
     global limiter
 
     try:
-        # Cria o limiter sem passar o app como primeiro argumento
+        # Cria o limiter sem limites padrão para não afetar ações em massa
         limiter = Limiter(
             key_func=get_remote_address,
-            default_limits=["200 per day", "50 per hour"],
+            default_limits=[],  # Sem limite global; aplicar por rota quando necessário
             storage_uri="memory://",
             strategy="fixed-window",
         )
         # Inicializa com o app
         limiter.init_app(app)
-        print("Extensão Limiter inicializada.")
+        print("Extensão Limiter inicializada (sem limites globais).")
     except Exception as e:
         print(f"ERRO CRÍTICO: Falha ao inicializar a extensão Limiter: {e}")
         limiter = None
