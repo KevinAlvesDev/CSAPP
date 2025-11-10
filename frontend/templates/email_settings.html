@@ -6,8 +6,31 @@
   <h2>Configurar E-mail Pessoal para Envio (Gmail App Password)</h2>
   <p class="text-muted">Use um App Password do Gmail para enviar comentários externos com seu próprio e-mail.</p>
 
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ 'danger' if category == 'error' else (category if category in ['success','info','warning'] else 'info') }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
   <div class="row">
     <div class="col-md-6">
+      <div class="card mb-4">
+        <div class="card-header">Gmail API (envio via HTTPS)</div>
+        <div class="card-body">
+          {% if google_connected %}
+            <div class="alert alert-success mb-3">Gmail conectado para envio via API.</div>
+            <button class="btn btn-outline-secondary" disabled>Conectado</button>
+          {% else %}
+            <p class="mb-2">Conecte sua conta Google para enviar sem SMTP, evitando bloqueios de rede.</p>
+            <a href="{{ url_for('profile.email_google_connect') }}" class="btn btn-outline-primary">Conectar Gmail para enviar</a>
+          {% endif %}
+        </div>
+      </div>
       <div class="card mb-4">
         <div class="card-header">Suas Credenciais</div>
         <div class="card-body">

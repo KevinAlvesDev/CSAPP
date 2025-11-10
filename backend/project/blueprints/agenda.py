@@ -189,10 +189,15 @@ def agenda_callback():
             'token_type': token.get('token_type'),
         }
         session.permanent = True
-        flash('Google Agenda conectada com sucesso!', 'success')
+        flash('Conexão com Google concluída com sucesso!', 'success')
     except Exception as e:
         print(f"Erro no callback OAuth Google: {e}")
-        flash('Falha ao conectar à Agenda do Google.', 'error')
+        flash('Falha na conexão com Google.', 'error')
+
+    # Se houver um destino específico após a conexão (ex.: página de e-mail), redireciona para lá
+    dest = session.pop('oauth_next', None)
+    if dest:
+        return redirect(dest)
     return redirect(url_for('agenda.agenda_home'))
 
 

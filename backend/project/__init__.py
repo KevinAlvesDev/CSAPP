@@ -121,15 +121,29 @@ def create_app():
     # Registrar o cliente Auth0
     # Registra o cliente Auth0 apenas se estiver habilitado
     if app.config.get('AUTH0_ENABLED', True):
+        # Normaliza o domínio do Auth0 para evitar URLs inválidas (backticks, esquemas duplicados, barras finais)
+        raw_domain = (app.config.get('AUTH0_DOMAIN') or '').strip().strip('`').strip()
+        if raw_domain.startswith('http://') or raw_domain.startswith('https://'):
+            raw_domain = raw_domain.split('://', 1)[1]
+        auth0_domain = raw_domain.rstrip('/')
+
+        authorize_url = f"https://{auth0_domain}/authorize"
+        access_token_url = f"https://{auth0_domain}/oauth/token"
+        server_metadata_url = f"https://{auth0_domain}/.well-known/openid-configuration"
+
         oauth.register(
             name='auth0',
             client_id=app.config['AUTH0_CLIENT_ID'],
             client_secret=app.config['AUTH0_CLIENT_SECRET'],
-            authorize_url=f"https://{app.config['AUTH0_DOMAIN']}/authorize",
-            access_token_url=f"https://{app.config['AUTH0_DOMAIN']}/oauth/token",
-            server_metadata_url=f"https://{app.config['AUTH0_DOMAIN']}/.well-known/openid-configuration",
+            authorize_url=authorize_url,
+            access_token_url=access_token_url,
+            server_metadata_url=server_metadata_url,
             client_kwargs={'scope': 'openid profile email'},
         )
+        try:
+            print(f"Auth0 registrado: domain={auth0_domain}")
+        except Exception:
+            pass
     else:
         print("Auth0 não registrado: AUTH0_ENABLED=False")
 
@@ -145,7 +159,7 @@ def create_app():
                 access_token_url='https://oauth2.googleapis.com/token',
                 server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
                 client_kwargs={
-                    'scope': 'openid email profile https://www.googleapis.com/auth/calendar',
+                    'scope': 'openid email profile https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/gmail.send',
                     'prompt': 'consent',
                     'access_type': 'offline',
                 },

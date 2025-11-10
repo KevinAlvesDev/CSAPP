@@ -1,7 +1,7 @@
 import os
 import time
 from flask import (
-    Blueprint, render_template, request, flash, redirect, url_for, g, current_app
+    Blueprint, render_template, request, flash, redirect, url_for, g, current_app, session
 )
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash
@@ -9,7 +9,7 @@ from botocore.exceptions import ClientError, NoCredentialsError
 
 from ..blueprints.auth import login_required
 from ..db import execute_db, query_db
-from ..extensions import r2_client
+from ..extensions import r2_client, oauth
 from ..utils import allowed_file
 from ..constants import CARGOS_LIST, PERFIL_IMPLANTADOR # <-- ALTERADO
 from ..validation import sanitize_string, ValidationError
@@ -168,7 +168,26 @@ def email_settings():
         "SELECT * FROM email_accounts WHERE usuario_cs = %s",
         (usuario_cs_email,), one=True
     )
-    return render_template('email_settings.html', settings=settings)
+    # Status da conexão com Google (Gmail API)
+    token = session.get('google_token') or {}
+    google_connected = bool(token.get('access_token'))
+    return render_template('email_settings.html', settings=settings, google_connected=google_connected)
+
+
+@profile_bp.route('/email/google/connect')
+@login_required
+def email_google_connect():
+    """Inicia o fluxo OAuth Google para habilitar escopo gmail.send."""
+    if not current_app.config.get('GOOGLE_OAUTH_ENABLED', False):
+        flash('Integração com Google não está configurada.', 'warning')
+        return redirect(url_for('profile.email_settings'))
+    # Após conectar, retornar à página de e-mail
+    session['oauth_next'] = url_for('profile.email_settings')
+    # Usa o GOOGLE_REDIRECT_URI se estiver válido; caso contrário, gera automaticamente a URL do callback atual
+    redirect_uri = current_app.config.get('GOOGLE_REDIRECT_URI')
+    if not redirect_uri or not (redirect_uri.startswith('http://') or redirect_uri.startswith('https://')):
+        redirect_uri = url_for('agenda.agenda_callback', _external=True)
+    return oauth.google.authorize_redirect(redirect_uri)
 
 
 @profile_bp.route('/email/save', methods=['POST'])
@@ -214,7 +233,7 @@ def email_settings_save():
 @profile_bp.route('/email/test', methods=['POST'])
 @login_required
 def email_settings_test():
-    from ..email_utils import send_email_with_credentials
+    from ..email_utils import send_email_with_credentials, send_email_via_gmail_api
     usuario_cs_email = g.user_email
     try:
         test_email = sanitize_string(request.form.get('test_email', ''), max_length=200)
@@ -232,23 +251,37 @@ def email_settings_test():
         flash('Nenhuma configuração de e-mail ativa encontrada para seu usuário.', 'warning')
         return redirect(url_for('profile.email_settings'))
 
-    # Usa Gmail padrão com TLS
-    ok = send_email_with_credentials(
-        to_email=test_email,
-        subject='Teste de envio - CSAPP',
-        body_text='Este é um e-mail de teste do CSAPP.',
-        body_html='<p>Este é um <strong>e-mail de teste</strong> do CSAPP.</p>',
-        reply_to=usuario_cs_email,
-        from_name=settings.get('from_name') or usuario_cs_email,
-        host='smtp.gmail.com',
-        port=587,
-        user=settings.get('smtp_user'),
-        password=settings.get('smtp_password'),
-        from_addr=settings.get('smtp_user'),
-        use_tls=True,
-        use_ssl=False,
-        timeout=12,
-    )
+    # Se o usuário estiver conectado ao Google com escopo gmail.send, usa a API HTTP
+    token = session.get('google_token') or {}
+    access_token = token.get('access_token')
+    if access_token:
+        ok = send_email_via_gmail_api(
+            access_token=access_token,
+            to_email=test_email,
+            subject='Teste de envio - CSAPP',
+            body_text='Este é um e-mail de teste do CSAPP.',
+            body_html='<p>Este é um <strong>e-mail de teste</strong> do CSAPP.</p>',
+            reply_to=usuario_cs_email,
+            from_name=settings.get('from_name') or usuario_cs_email,
+        )
+    else:
+        # Caso não esteja conectado ao Google, tenta via SMTP (App Password)
+        ok = send_email_with_credentials(
+            to_email=test_email,
+            subject='Teste de envio - CSAPP',
+            body_text='Este é um e-mail de teste do CSAPP.',
+            body_html='<p>Este é um <strong>e-mail de teste</strong> do CSAPP.</p>',
+            reply_to=usuario_cs_email,
+            from_name=settings.get('from_name') or usuario_cs_email,
+            host='smtp.gmail.com',
+            port=587,
+            user=settings.get('smtp_user'),
+            password=settings.get('smtp_password'),
+            from_addr=settings.get('smtp_user'),
+            use_tls=True,
+            use_ssl=False,
+            timeout=12,
+        )
 
     if ok:
         flash(f'E-mail de teste enviado para {test_email}.', 'success')
