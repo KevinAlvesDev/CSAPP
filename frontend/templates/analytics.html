@@ -173,7 +173,7 @@
                                         {% elif impl.status == 'futura' %} <span class="badge bg-info text-dark">Futura</span>
                                         {% elif impl.status == 'nova' %} <span class="badge bg-dark">Nova</span>
                                         {# NOVO BADGE #}
-                                        {% elif impl.status == 'cancelada' %} <span class="badge bg-secondary text-white">Cancelada</span>
+                                        {% elif impl.status == 'cancelada' %} <span class="badge bg-secondary text-dark">Cancelada</span>
                                         {% else %} <span class="badge bg-warning text-dark">Em Andamento</span>
                                         {% endif %}
                                     </td>
@@ -496,7 +496,7 @@
                         tooltip: tooltipOptions, // <-- TOOLTIP MODERNO
                         
                         datalabels: {
-                            color: '#FFFFFF', 
+                            color: '#000000', 
                             textAlign: 'center',
                             font: {
                                 weight: 'bold',

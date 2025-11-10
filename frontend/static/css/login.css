@@ -68,7 +68,7 @@ body {
 .btn-login {
     background-color: var(--accent-color);
     border-color: var(--accent-color);
-    color: white;
+    color: #000000;
     font-weight: 600;
     padding: 10px 30px;
     font-size: 1.1rem;
@@ -78,7 +78,7 @@ body {
 .btn-login:hover {
     background-color: var(--accent-color-darker);
     border-color: var(--accent-color-darker);
-    color: white;
+    color: #000000;
     transform: translateY(-3px); /* "Lift" agressivo */
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); /* Sombra de destaque */
 }

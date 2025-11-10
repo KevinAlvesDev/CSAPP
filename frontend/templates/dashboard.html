@@ -243,7 +243,7 @@
                             </a>
                         </td> 
                         <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or impl.usuario_cs }}</td>
-                        <td class="text-nowrap"> <span class="badge bg-secondary text-white">{{ impl.dias_passados | int }} dias</span> </td> <td> <div class="progress" style="height: 20px;"> <div class="progress-bar progress-bar-striped bg-warning text-dark" role="progressbar" style="width: {{ impl.progresso }}%;" aria-valuenow="{{ impl.progresso }}">{{ impl.progresso }}%</div> </div> </td> <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_atribuido|float) if impl.valor_atribuido else 'N/A' }}</td> <td> <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver Detalhes</a> </td> </tr> {% endfor %} </tbody> </table> </div> {% endif %}
+                        <td class="text-nowrap"> <span class="badge bg-secondary text-dark">{{ impl.dias_passados | int }} dias</span> </td> <td> <div class="progress" style="height: 20px;"> <div class="progress-bar progress-bar-striped bg-warning text-dark" role="progressbar" style="width: {{ impl.progresso }}%;" aria-valuenow="{{ impl.progresso }}">{{ impl.progresso }}%</div> </div> </td> <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_atribuido|float) if impl.valor_atribuido else 'N/A' }}</td> <td> <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver Detalhes</a> </td> </tr> {% endfor %} </tbody> </table> </div> {% endif %}
                     </div>
         
                     <div class="tab-pane fade" id="atrasadas" role="tabpanel" aria-labelledby="atrasadas-tab">

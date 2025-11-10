@@ -123,34 +123,14 @@ body.menu-open #menu.bigslide-panel {
   left: 0;
 }
 
-/* Sobrescritas úteis para texto no tema escuro */
-.text-dark { color: #ffffff !important; }
-.text-muted { color: rgba(255, 255, 255, 0.7) !important; }
+/* Removidas sobrescritas de texto do tema escuro.
+   Mantemos o comportamento padrão do Bootstrap.
+   Links e textos herdam das variáveis globais definidas em style.css. */
 .nav-link { color: var(--body-color); }
 .nav-link:hover { color: var(--accent-color); }
 
-/* Legibilidade global no tema escuro */
-.text-body,
-.text-secondary,
-.text-muted,
-.text-dark,
-.text-black,
-.form-text,
-.small,
-small {
-  color: #ffffff !important;
-}
-a,
-.btn-link {
-  color: #ffffff;
-}
-a:hover,
-.btn-link:hover {
-  color: var(--accent-color);
-}
-
 /* Componentes comuns */
-.progress .progress-bar { color: #ffffff; }
+.progress .progress-bar { color: #000000; }
 .list-group-item {
   color: var(--body-color);
   background-color: var(--card-bg);
@@ -191,10 +171,7 @@ a:hover,
 .push.push-shifted {
   margin-left: 280px;
 }
-.h1, .h2, .h3, .h4, .h5, .h6,
-h1, h2, h3, h4, h5, h6 {
-  color: #ffffff !important;
-}
+/* Mantém títulos com cor padrão herdada das variáveis globais */
 .table th,
 .table td {
   color: var(--body-color) !important;
@@ -235,15 +212,11 @@ table > :not(caption) > * > * {
   color: var(--body-color) !important;
 }
 
-/* Texto branco em botões */
-.btn {
-  color: #ffffff !important;
-}
+/* Texto dos botões segue o tema claro */
+.btn { color: #000000 !important; }
 .btn:hover,
-.btn:focus {
-  color: #ffffff !important;
-}
-/* Variantes outline com texto branco */
+.btn:focus { color: #000000 !important; }
+/* Variantes outline com texto escuro (legível no tema claro) */
 .btn-outline-primary,
 .btn-outline-secondary,
 .btn-outline-success,
@@ -251,12 +224,7 @@ table > :not(caption) > * > * {
 .btn-outline-warning,
 .btn-outline-info,
 .btn-outline-light,
-.btn-outline-dark {
-  color: #ffffff !important;
-}
-/* Botão de fechar do modal em branco */
-.btn-close {
-  filter: invert(1) contrast(1.1);
-  opacity: 0.85;
-}
+.btn-outline-dark { color: #000000 !important; }
+/* Ícone de fechar do modal sem inversão */
+.btn-close { filter: none; opacity: 0.85; }
 .btn-close:hover { opacity: 1; }

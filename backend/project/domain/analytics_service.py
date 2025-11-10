@@ -68,6 +68,17 @@ def _format_date_for_query(date_str, is_end_date=False, is_sqlite=False):
     except ValueError:
         return None, None
 
+# Helpers globais para expressões de data (compatíveis com PostgreSQL/SQLite)
+def date_col_expr(col: str) -> str:
+    """Retorna expressão SQL para extrair a porção de data da coluna conforme o banco."""
+    is_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
+    return f"date({col})" if is_sqlite else f"CAST({col} AS DATE)"
+
+def date_param_expr() -> str:
+    """Retorna expressão SQL para parâmetro de data conforme o banco."""
+    is_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
+    return "date(%s)" if is_sqlite else "CAST(%s AS DATE)"
+
 def get_analytics_data(target_cs_email=None, target_status=None, start_date=None, end_date=None, target_tag=None,
                        task_cs_email=None, task_start_date=None, task_end_date=None
                        ):
@@ -463,11 +474,6 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
 def get_implants_by_day(start_date=None, end_date=None, cs_email=None):
     """Contagem de implantações finalizadas por dia, com filtros opcionais."""
     is_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
-    # Funções auxiliares para expressões de data compatíveis
-    def date_col_expr(col: str) -> str:
-        return f"date({col})" if is_sqlite else f"CAST({col} AS DATE)"
-    def date_param_expr() -> str:
-        return "date(%s)" if is_sqlite else "CAST(%s AS DATE)"
 
     query = f"""
         SELECT {date_col_expr('i.data_finalizacao')} AS dia, COUNT(*) AS total
@@ -513,10 +519,6 @@ def get_implants_by_day(start_date=None, end_date=None, cs_email=None):
 def get_funnel_counts(start_date=None, end_date=None, cs_email=None):
     """Contagem de implantações por status, com período opcional (data_criacao)."""
     is_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
-    def date_col_expr(col: str) -> str:
-        return f"date({col})" if is_sqlite else f"CAST({col} AS DATE)"
-    def date_param_expr() -> str:
-        return "date(%s)" if is_sqlite else "CAST(%s AS DATE)"
 
     query = """
         SELECT i.status, COUNT(*) AS total

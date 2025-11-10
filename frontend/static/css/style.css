@@ -18,27 +18,26 @@ body {
 }
 
 :root {
-    /* Tema escuro padrão */
-    --body-bg: #1f1f1f; /* cinza escuro neutro */
-    --body-color: #ffffff; /* texto principal branco */
+    /* Tema cinza claro padrão */
+    --body-bg: #f2f4f7; /* fundo cinza claro suave */
+    --body-color: #1f2937; /* texto principal escuro */
     /* Alinhamento com Bootstrap */
-    --bs-body-color: #ffffff;
-    --bs-heading-color: #ffffff;
-    --bs-card-color: #ffffff;
-    --bs-link-color: #ffffff;
-    --container-bg: #242424; /* cinza de fundo de containers */
-    --card-bg: #262626; /* cards com cinza médio */
-    --card-border-color: #3a3a3a; /* borda cinza */
-    --input-bg: #202020; /* campos de input cinza escuro */
-    --input-border: #3a3a3a; /* borda cinza */
-    --input-color: #ffffff;
-    --accent-color: #9ca3af; /* cinza-acento neutro */
-    --accent-color-rgb: 156, 163, 175;
-    /* Tokens extras removidos na reversão */
+    --bs-body-color: #212529;
+    --bs-heading-color: #212529;
+    --bs-card-color: #212529;
+    --bs-link-color: #0d6efd;
+    --container-bg: #ffffff; /* fundo claro de containers */
+    --card-bg: #ffffff; /* cards claros */
+    --card-border-color: #e5e7eb; /* borda cinza clara */
+    --input-bg: #ffffff; /* campos de input claros */
+    --input-border: #d1d5db; /* borda cinza média */
+    --input-color: #111827; /* texto de input escuro */
+    --accent-color: #6c757d; /* cinza-acento neutro */
+    --accent-color-rgb: 108, 117, 125;
     /* Sombras modernas (elevações) */
-    --elevation-1: 0 2px 8px rgba(0, 0, 0, 0.35);
-    --elevation-2: 0 6px 16px rgba(0, 0, 0, 0.45);
-    --elevation-3: 0 10px 24px rgba(0, 0, 0, 0.55);
+    --elevation-1: 0 2px 8px rgba(0, 0, 0, 0.08);
+    --elevation-2: 0 6px 16px rgba(0, 0, 0, 0.12);
+    --elevation-3: 0 10px 24px rgba(0, 0, 0, 0.16);
     /* Raio e espaçamento modernos */
     --radius-sm: 0.375rem;
     --radius-md: 0.5rem;
@@ -50,12 +49,12 @@ body {
     --space-4: 1rem;
     --space-5: 1.25rem;
     --space-6: 1.5rem;
-    --header-bg: #1e1e1e;
-    --header-border: #333333;
-    --sidebar-bg: #1f1f1f;
-    --table-bg: var(--card-bg);
-    --table-border-color: #3a3a3a;
-    --table-header-bg: #222222;
+    --header-bg: #f8f9fa; /* cabeçalho bem claro */
+    --header-border: #e5e7eb;
+    --sidebar-bg: #f7f8fa; /* sidebar clara */
+    --table-bg: #ffffff; /* tabela clara */
+    --table-border-color: #e5e7eb;
+    --table-header-bg: #eef2f7; /* header da tabela ligeiramente destacado */
     --table-hover-bg: rgba(var(--accent-color-rgb), 0.12);
     /* Compatibilidade com tokens antigos */
     --border-radius-sm: var(--radius-sm);
@@ -64,8 +63,8 @@ body {
     --user-sidebar-bg: var(--container-bg);
     --user-sidebar-width: 280px;
     --user-sidebar-width-minimized: 60px;
-    --user-sidebar-link-hover: #0f1a2e; /* leve contraste no hover */
-    --user-sidebar-border: #1f2937;
+    --user-sidebar-link-hover: #eef2f7; /* leve contraste no hover */
+    --user-sidebar-border: #e5e7eb;
 }
 
 /* (Tema escuro removido) */
@@ -181,9 +180,9 @@ input[type="file"]::-webkit-file-upload-button:hover {
      color: #6c757d;
 }
 
-/* Placeholder visível no tema escuro */
+/* Placeholder visível no tema claro */
 ::placeholder {
-    color: rgba(255, 255, 255, 0.7);
+    color: #6c757d;
 }
 
 .list-group-item {
@@ -240,7 +239,7 @@ input[type="file"]::-webkit-file-upload-button:hover {
 }
 .nav-pills .nav-link.active {
     background-color: var(--accent-color);
-    color: white;
+    color: #000000;
     box-shadow: 0 2px 4px rgba(var(--accent-color-rgb), 0.3);
 }
 .nav-pills .nav-link:hover:not(.active) {
@@ -300,7 +299,7 @@ input[type="file"]::-webkit-file-upload-button:hover {
     box-shadow: var(--elevation-1);
 }
 .btn-primary, .btn-success, .btn-info {
-    color: white !important;
+    color: #000000 !important;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 .btn-primary:hover, .btn-success:hover, .btn-info:hover {
@@ -409,7 +408,7 @@ input[type="file"]::-webkit-file-upload-button:hover {
     align-items: center;
     justify-content: center;
     background-color: var(--accent-color);
-    color: white;
+    color: #000000;
     flex-shrink: 0;
 }
 .user-profile-btn-sidebar img {
@@ -526,7 +525,7 @@ input[type="file"]::-webkit-file-upload-button:hover {
 }
 .metric-card.card-outline-danger .table thead th {
     background-color: var(--bs-danger);
-    color: white;
+    color: #000000;
 }
 
 .kpi-grid {

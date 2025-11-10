@@ -463,8 +463,9 @@ def excluir_tarefa(tarefa_id):
         impl_id = tarefa['impl_id']
         nome_tarefa = tarefa['tarefa_filho']
         
-        if tarefa.get('status') == 'finalizada':
-            return jsonify({'ok': False, 'error': 'Não é possível excluir tarefas de implantações finalizadas.'}), 400
+        # Bloqueia exclusão para implantações não editáveis
+        if tarefa.get('status') in ['finalizada', 'parada', 'cancelada']:
+            return jsonify({'ok': False, 'error': f'Não é possível excluir tarefas de implantações com status "{tarefa.get("status")}".'}), 400
 
         # Excluir imagens associadas aos comentários ANTES de excluir a tarefa
         comentarios_tarefa = query_db("SELECT id, imagem_url FROM comentarios WHERE tarefa_id = %s", (tarefa_id,))
@@ -488,7 +489,19 @@ def excluir_tarefa(tarefa_id):
             print("Aviso: R2 não configurado ou variáveis ausentes; exclusão seguirá apenas no banco de dados.")
 
         # Agora exclui a tarefa (comentários são excluídos por CASCATA no DB)
-        execute_db("DELETE FROM tarefas WHERE id = %s", (tarefa_id,))
+        # Reforço de segurança: só exclui se a implantação NÃO estiver em estado bloqueado
+        execute_db(
+            """
+            DELETE FROM tarefas
+            WHERE id = %s
+              AND EXISTS (
+                SELECT 1 FROM implantacoes i
+                WHERE i.id = tarefas.implantacao_id
+                  AND i.status NOT IN ('finalizada', 'parada', 'cancelada')
+              )
+            """,
+            (tarefa_id,)
+        )
         logar_timeline(impl_id, usuario_cs_email, 'tarefa_excluida', f"Tarefa '{nome_tarefa}' foi excluída.")
         
         api_logger.info(f'Task {tarefa_id} deleted by user {g.user_email}')
@@ -589,8 +602,10 @@ def excluir_tarefas_modulo():
         security_logger.warning(f'Permission denied for user {g.user_email} trying to delete tasks from module {tarefa_pai} in implantation {impl_id}')
         return jsonify({'ok': False, 'error': 'Permissão negada ou implantação não encontrada.'}), 403
 
-    if impl.get('status') == 'finalizada':
-        return jsonify({'ok': False, 'error': 'Não é possível excluir tarefas de implantações finalizadas.'}), 400
+    # Bloqueia exclusão em massa para implantações não editáveis
+    st = impl.get('status')
+    if st in ['finalizada', 'parada', 'cancelada']:
+        return jsonify({'ok': False, 'error': f'Não é possível excluir tarefas de implantações com status "{st}".'}), 400
 
     # 2. R2 opcional: prossegue mesmo sem armazenamento configurado
 
@@ -626,7 +641,19 @@ def excluir_tarefas_modulo():
             print("Aviso: R2 não configurado ou variáveis ausentes; exclusão seguirá apenas no banco de dados.")
         
         # 5. Excluir Tarefas (ON DELETE CASCADE cuidará dos comentários no DB)
-        execute_db("DELETE FROM tarefas WHERE implantacao_id = %s AND tarefa_pai = %s", (impl_id, tarefa_pai))
+        # Reforço de segurança: só exclui se a implantação NÃO estiver em estado bloqueado
+        execute_db(
+            """
+            DELETE FROM tarefas
+            WHERE implantacao_id = %s AND tarefa_pai = %s
+              AND EXISTS (
+                SELECT 1 FROM implantacoes i
+                WHERE i.id = %s
+                  AND i.status NOT IN ('finalizada', 'parada', 'cancelada')
+              )
+            """,
+            (impl_id, tarefa_pai, impl_id)
+        )
         
         # 6. Logar
         logar_timeline(impl_id, usuario_cs_email, 'modulo_excluido', f"Todas as tarefas do módulo '{tarefa_pai}' foram excluídas.")
