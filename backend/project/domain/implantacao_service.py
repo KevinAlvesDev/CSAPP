@@ -67,16 +67,26 @@ def auto_finalizar_implantacao(impl_id, usuario_cs_email):
     Verifica se todas as tarefas (exceto pendências) estão concluídas
     e, em caso afirmativo, finaliza a implantação.
     """
+    # Conta tarefas pendentes fora do módulo "Pendências" e inclui tarefas sem módulo (NULL)
     pending_tasks = query_db(
         "SELECT COUNT(*) as total FROM tarefas "
-        "WHERE implantacao_id = %s AND concluida = %s AND tarefa_pai != %s",
+        "WHERE implantacao_id = %s AND concluida = %s AND (tarefa_pai != %s OR tarefa_pai IS NULL)",
         (impl_id, 0, MODULO_PENDENCIAS),
         one=True
     )
 
+    # Garante que existam tarefas obrigatórias/treinamento cadastradas (fora de Pendências)
+    total_nonpend_tasks = query_db(
+        "SELECT COUNT(*) as total FROM tarefas "
+        "WHERE implantacao_id = %s AND (tarefa_pai != %s OR tarefa_pai IS NULL)",
+        (impl_id, MODULO_PENDENCIAS),
+        one=True
+    )
+
+    total_nonpend = total_nonpend_tasks.get('total', 0) if total_nonpend_tasks else 0
     total_pendentes = pending_tasks.get('total', 0) if pending_tasks else 0
 
-    if total_pendentes == 0:
+    if total_nonpend > 0 and total_pendentes == 0:
         impl_status = query_db(
             "SELECT status, nome_empresa FROM implantacoes WHERE id = %s",
             (impl_id,),

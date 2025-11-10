@@ -56,49 +56,6 @@ def calculate_time_in_status(impl_id, status_target='parada'):
     return None 
 
 
-def get_analytics_data(target_cs_email=None, target_status=None, start_date=None, end_date=None, target_tag=None,
-                       task_cs_email=None, task_start_date=None, task_end_date=None
-                       ):
-    """Busca e processa dados de TODA a carteira (ou filtrada) para o módulo Gerencial."""
-
-    is_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
-    date_func = "date" if is_sqlite else ""
-    agora = datetime.now() 
-    ano_corrente = agora.year
-
-    # --- LÓGICA DE FILTRO PRINCIPAL (PARA GRÁFICOS E LISTA DETALHADA) ---
-    query_impl = """
-        SELECT i.*,
-               p.nome as cs_nome, p.cargo as cs_cargo, p.perfil_acesso as cs_perfil
-        FROM implantacoes i
-        LEFT JOIN perfil_usuario p ON i.usuario_cs = p.usuario
-        WHERE 1=1
-    """
-    args_impl = []
-
-    if target_cs_email:
-        query_impl += " AND i.usuario_cs = %s "
-        args_impl.append(target_cs_email)
-
-    if target_status and target_status != 'todas':
-        if target_status == 'atrasadas_status':
-            if is_sqlite:
-                query_impl += " AND i.status = 'andamento' AND i.data_inicio_efetivo IS NOT NULL AND date(i.data_inicio_efetivo) <= date('now', '-26 days') " 
-            else: # PostgreSQL
-                query_impl += " AND i.status = 'andamento' AND i.data_inicio_efetivo IS NOT NULL AND i.data_inicio_efetivo <= NOW() - INTERVAL '26 days' " 
-        elif target_status == 'nova':
-            query_impl += " AND i.status = 'nova' "
-        elif target_status == 'futura': 
-            query_impl += " AND i.status = 'futura' "
-        elif target_status == 'cancelada':
-             query_impl += " AND i.status = 'cancelada' "
-        else:
-            query_impl += " AND i.status = %s "
-            args_impl.append(target_status)
-
-    # Para canceladas, usamos a data_finalizacao como referência de filtro de data
-    date_field_to_filter = "i.data_finalizacao" if target_status in ['finalizada', 'cancelada'] else "i.data_criacao"
-
 def _format_date_for_query(date_str, is_end_date=False, is_sqlite=False):
     if not date_str:
         return None, None
@@ -156,12 +113,12 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
 
     start_op, start_date_val = _format_date_for_query(start_date, is_sqlite=is_sqlite)
     if start_op:
-        query_impl += f" AND {date_func}({date_field_to_filter}) {start_op} {date_func}(%s) "
+        query_impl += f" AND {date_col_expr(date_field_to_filter)} {start_op} {date_param_expr()} "
         args_impl.append(start_date_val)
 
     end_op, end_date_val = _format_date_for_query(end_date, is_end_date=True, is_sqlite=is_sqlite)
     if end_op:
-        query_impl += f" AND {date_func}({date_field_to_filter}) {end_op} {date_func}(%s) "
+        query_impl += f" AND {date_col_expr(date_field_to_filter)} {end_op} {date_param_expr()} "
         args_impl.append(end_date_val)
 
 
@@ -206,12 +163,12 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
 
     task_start_op, task_start_date_val = _format_date_for_query(task_start_date_to_query, is_sqlite=is_sqlite)
     if task_start_op:
-        query_tasks += f" AND {date_func}(t.data_conclusao) {task_start_op} {date_func}(%s) "
+        query_tasks += f" AND {date_col_expr('t.data_conclusao')} {task_start_op} {date_param_expr()} "
         args_tasks.append(task_start_date_val)
 
     task_end_op, task_end_date_val = _format_date_for_query(task_end_date_to_query, is_end_date=True, is_sqlite=is_sqlite)
     if task_end_op:
-        query_tasks += f" AND {date_func}(t.data_conclusao) {task_end_op} {date_func}(%s) "
+        query_tasks += f" AND {date_col_expr('t.data_conclusao')} {task_end_op} {date_param_expr()} "
         args_tasks.append(task_end_date_val)
 
     query_tasks += " GROUP BY i.usuario_cs, p.nome, t.tag ORDER BY cs_nome, t.tag "
@@ -506,9 +463,14 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
 def get_implants_by_day(start_date=None, end_date=None, cs_email=None):
     """Contagem de implantações finalizadas por dia, com filtros opcionais."""
     is_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
-    date_func = "date"  # Compatível com SQLite e Postgres
+    # Funções auxiliares para expressões de data compatíveis
+    def date_col_expr(col: str) -> str:
+        return f"date({col})" if is_sqlite else f"CAST({col} AS DATE)"
+    def date_param_expr() -> str:
+        return "date(%s)" if is_sqlite else "CAST(%s AS DATE)"
+
     query = f"""
-        SELECT {date_func}(i.data_finalizacao) AS dia, COUNT(*) AS total
+        SELECT {date_col_expr('i.data_finalizacao')} AS dia, COUNT(*) AS total
         FROM implantacoes i
         WHERE i.status = 'finalizada'
     """
@@ -532,16 +494,16 @@ def get_implants_by_day(start_date=None, end_date=None, cs_email=None):
     if start_date:
         op, val = _fmt(start_date, is_end=False)
         if op:
-            query += f" AND {date_func}(i.data_finalizacao) {op} {date_func}(%s)"
+            query += f" AND {date_col_expr('i.data_finalizacao')} {op} {date_param_expr()}"
             args.append(val)
 
     if end_date:
         op, val = _fmt(end_date, is_end=True)
         if op:
-            query += f" AND {date_func}(i.data_finalizacao) {op} {date_func}(%s)"
+            query += f" AND {date_col_expr('i.data_finalizacao')} {op} {date_param_expr()}"
             args.append(val)
 
-    query += f" GROUP BY {date_func}(i.data_finalizacao) ORDER BY {date_func}(i.data_finalizacao)"
+    query += f" GROUP BY {date_col_expr('i.data_finalizacao')} ORDER BY {date_col_expr('i.data_finalizacao')}"
     rows = query_db(query, tuple(args)) or []
     labels = [r.get('dia') for r in rows]
     data = [r.get('total', 0) for r in rows]
@@ -551,7 +513,11 @@ def get_implants_by_day(start_date=None, end_date=None, cs_email=None):
 def get_funnel_counts(start_date=None, end_date=None, cs_email=None):
     """Contagem de implantações por status, com período opcional (data_criacao)."""
     is_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
-    date_func = "date"
+    def date_col_expr(col: str) -> str:
+        return f"date({col})" if is_sqlite else f"CAST({col} AS DATE)"
+    def date_param_expr() -> str:
+        return "date(%s)" if is_sqlite else "CAST(%s AS DATE)"
+
     query = """
         SELECT i.status, COUNT(*) AS total
         FROM implantacoes i
@@ -577,13 +543,13 @@ def get_funnel_counts(start_date=None, end_date=None, cs_email=None):
     if start_date:
         op, val = _fmt(start_date, is_end=False)
         if op:
-            query += f" AND {date_func}(i.data_criacao) {op} {date_func}(%s)"
+            query += f" AND {date_col_expr('i.data_criacao')} {op} {date_param_expr()}"
             args.append(val)
 
     if end_date:
         op, val = _fmt(end_date, is_end=True)
         if op:
-            query += f" AND {date_func}(i.data_criacao) {op} {date_func}(%s)"
+            query += f" AND {date_col_expr('i.data_criacao')} {op} {date_param_expr()}"
             args.append(val)
 
     query += " GROUP BY i.status"

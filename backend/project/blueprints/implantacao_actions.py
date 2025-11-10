@@ -337,10 +337,22 @@ def finalizar_implantacao():
         if not impl or impl.get('usuario_cs') != usuario_cs_email or impl.get('status') != 'andamento':
             raise Exception('Operação negada. Implantação não está "em andamento".')
 
-        pending_tasks = query_db( #
-            "SELECT COUNT(*) as total FROM tarefas WHERE implantacao_id = %s AND concluida = %s AND tarefa_pai != %s",
-            (implantacao_id, 0, MODULO_PENDENCIAS), one=True #
+        # Conta tarefas pendentes fora do módulo "Pendências" e inclui tarefas sem módulo (NULL)
+        pending_tasks = query_db(
+            "SELECT COUNT(*) as total FROM tarefas WHERE implantacao_id = %s AND concluida = %s AND (tarefa_pai != %s OR tarefa_pai IS NULL)",
+            (implantacao_id, 0, MODULO_PENDENCIAS), one=True
         )
+
+        # Garante que existam tarefas obrigatórias/treinamento cadastradas (fora de Pendências)
+        total_nonpend_tasks = query_db(
+            "SELECT COUNT(*) as total FROM tarefas WHERE implantacao_id = %s AND (tarefa_pai != %s OR tarefa_pai IS NULL)",
+            (implantacao_id, MODULO_PENDENCIAS), one=True
+        )
+
+        total_nonpend = total_nonpend_tasks.get('total', 0) if total_nonpend_tasks else 0
+        if total_nonpend == 0:
+            flash('Não é possível finalizar: nenhuma tarefa obrigatória/treinamento foi cadastrada.', 'error')
+            return redirect(dest_url)
 
         if pending_tasks and pending_tasks.get('total', 0) > 0:
             total_pendentes = pending_tasks.get('total')

@@ -70,7 +70,6 @@
             <button class="btn btn-primary btn-sm" id="openCreateEvent"><i class="bi bi-plus-lg me-1"></i> Criar</button>
             <select class="form-select form-select-sm" id="calendarSelector" style="width:auto;"></select>
             <input type="text" id="agendaSearch" class="form-control form-control-sm" placeholder="Pesquisar..." style="width:180px;">
-            <button class="btn btn-outline-danger btn-sm" id="bulkDelete" disabled><i class="bi bi-trash"></i> Excluir selecionados</button>
           </div>
           <strong>Semana</strong>
         </div>
@@ -121,9 +120,10 @@
             <label class="form-label small">Título</label>
             <input type="text" class="form-control" id="evSummary" placeholder="Ex.: Reunião">
           </div>
-          <div class="mb-2">
-            <label class="form-label small">Descrição</label>
-            <textarea class="form-control" id="evDescription" rows="2" placeholder="Opcional"></textarea>
+          <div class="d-flex justify-content-end mb-2">
+            <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#evAdvanced" aria-expanded="false" aria-controls="evAdvanced">
+              <i class="bi bi-three-dots"></i> Mais opções
+            </button>
           </div>
           <div class="row g-2">
             <div class="col-6">
@@ -147,34 +147,40 @@
               <input type="time" class="form-control" id="evEnd">
             </div>
           </div>
-          <div class="mb-2">
-            <label class="form-label small">Local</label>
-            <input type="text" class="form-control" id="evLocation" placeholder="Opcional">
-          </div>
-          <div class="mb-2">
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="evMeet">
-              <label class="form-check-label small" for="evMeet">Gerar link de reunião (Google Meet)</label>
+          <div class="collapse" id="evAdvanced">
+            <div class="mb-2">
+              <label class="form-label small">Descrição</label>
+              <textarea class="form-control" id="evDescription" rows="2" placeholder="Opcional"></textarea>
             </div>
-          </div>
-          <div class="row g-2">
-            <div class="col-6">
-              <label class="form-label small">Recorrência</label>
-              <select class="form-select" id="evRepeat">
-                <option value="none">Nenhuma</option>
-                <option value="daily">Diária</option>
-                <option value="weekly">Semanal</option>
-                <option value="monthly">Mensal</option>
-              </select>
+            <div class="mb-2">
+              <label class="form-label small">Local</label>
+              <input type="text" class="form-control" id="evLocation" placeholder="Opcional">
             </div>
-            <div class="col-6">
-              <label class="form-label small">Lembrete (minutos)</label>
-              <input type="number" min="0" class="form-control" id="evReminder" placeholder="Ex.: 10">
+            <div class="mb-2">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="evMeet">
+                <label class="form-check-label small" for="evMeet">Gerar link de reunião (Google Meet)</label>
+              </div>
             </div>
-          </div>
-          <div class="mt-2">
-            <label class="form-label small">Calendário</label>
-            <select class="form-select" id="evCalendar"></select>
+            <div class="row g-2">
+              <div class="col-6">
+                <label class="form-label small">Recorrência</label>
+                <select class="form-select" id="evRepeat">
+                  <option value="none">Nenhuma</option>
+                  <option value="daily">Diária</option>
+                  <option value="weekly">Semanal</option>
+                  <option value="monthly">Mensal</option>
+                </select>
+              </div>
+              <div class="col-6">
+                <label class="form-label small">Lembrete (minutos)</label>
+                <input type="number" min="0" class="form-control" id="evReminder" placeholder="Ex.: 10">
+              </div>
+            </div>
+            <div class="mt-2">
+              <label class="form-label small">Calendário</label>
+              <select class="form-select" id="evCalendar"></select>
+            </div>
           </div>
         </form>
         <div class="alert alert-danger d-none" id="evError"></div>
@@ -324,14 +330,13 @@
       const fCalendar = document.getElementById('evCalendar');
       const topCalendarSelector = document.getElementById('calendarSelector');
       const searchInput = document.getElementById('agendaSearch');
-      const bulkDeleteBtn = document.getElementById('bulkDelete');
       const timeRow = document.getElementById('timeRow');
       const saveBtn = document.getElementById('saveEventBtn');
       const deleteBtn = document.getElementById('deleteEventBtn');
       const errBox = document.getElementById('evError');
       const successBox = document.getElementById('evSuccess');
       let editingEventId = null;
-      let selectedEvents = new Set();
+      // Seleção múltipla removida
       let currentCalendarId = '{{ current_calendar or "primary" }}';
 
       // Carrega calendários
@@ -415,19 +420,11 @@
            if (fCalendar && topCalendarSelector){ fCalendar.value = topCalendarSelector.value || currentCalendarId; }
           if (bsEventModal) bsEventModal.show();
         });
-        // Seleção múltipla com Ctrl
-        card.addEventListener('mousedown', (e)=>{
-          if (e.ctrlKey){
-            const id = card.dataset.eventId; if (!id) return;
-            if (selectedEvents.has(id)){ selectedEvents.delete(id); card.classList.remove('selected'); }
-            else { selectedEvents.add(id); card.classList.add('selected'); }
-            bulkDeleteBtn.disabled = selectedEvents.size === 0;
-          }
-        });
+        // Removido: seleção múltipla com Ctrl
         // Drag to move
         let dragStartY = null; let startTop = null; let dragging = false; let currentDayCol = null;
         card.addEventListener('mousedown', (e)=>{
-          if (e.ctrlKey) return; // já tratado para seleção
+          // Mantemos drag sem interação de seleção múltipla
           if (e.target.classList.contains('resize-handle')) return; // resize separado
           dragging = true; card.classList.add('dragging');
           dragStartY = e.clientY; startTop = parseInt(card.style.top||'0',10);
@@ -663,19 +660,7 @@
         }
       });
 
-      // Exclusão em lote
-      bulkDeleteBtn.addEventListener('click', async ()=>{
-        const ids = Array.from(selectedEvents); if (!ids.length) return;
-        try {
-          for (const id of ids){
-            const url = '{{ url_for("agenda.agenda_delete_event", event_id="__ID__") }}'.replace('__ID__', id) + `?calendarId=${encodeURIComponent(topCalendarSelector?.value || currentCalendarId)}`;
-            const headers = {};
-            if (csrfToken) headers['X-CSRFToken'] = csrfToken;
-            const resp = await fetch(url, { method:'DELETE', headers }); const data = await resp.json(); if (!resp.ok || !data.ok) throw new Error(data.error || `Erro ${resp.status}`);
-          }
-          window.location.reload();
-        } catch(e){ console.error('Falha na exclusão em lote:', e); }
-      });
+      // Removido: exclusão em lote
     }
   });
 </script>

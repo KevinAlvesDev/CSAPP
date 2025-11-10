@@ -57,7 +57,8 @@ def toggle_tarefa(tarefa_id):
              security_logger.warning(f'Permission denied for user {g.user_email} trying to toggle task {tarefa_id}')
              return jsonify({'ok': False, 'error': 'Permissão negada.'}), 403
             
-        if tarefa.get('status') in ['finalizada', 'parada', 'futura']:
+        # Permite marcar/desmarcar tarefas em 'nova' e 'andamento'. Bloqueia demais estados.
+        if tarefa.get('status') in ['finalizada', 'parada', 'cancelada']:
             return jsonify({'ok': False, 'error': f'Não é possível alterar tarefas de implantações com status "{tarefa.get("status")}".'}), 400
             
         novo_status_bool = not tarefa.get('concluida', False)
@@ -137,6 +138,110 @@ def toggle_tarefa(tarefa_id):
     except Exception as e:
         print(f"ERRO ao alternar tarefa ID {tarefa_id}: {e}")
         return jsonify({'ok': False, 'error': f"Erro interno: {e}"}), 500
+
+
+@api_bp.route('/toggle_tarefas', methods=['POST'])
+@login_required
+def toggle_tarefas_bulk():
+    """Alterna o status de múltiplas tarefas de uma mesma implantação em uma única operação.
+    Espera JSON com {'ids': [<int>, ...]} ou form 'ids' separado por vírgula.
+    Garante verificação de permissão e finaliza a implantação somente ao final.
+    """
+    usuario_cs_email = g.user_email
+
+    # Coleta IDs
+    ids = []
+    try:
+        if request.is_json:
+            payload = request.get_json(silent=True) or {}
+            ids = payload.get('ids') or []
+        else:
+            raw = (request.form.get('ids') or '').strip()
+            if raw:
+                ids = [s for s in raw.split(',') if s]
+
+        # Valida e normaliza inteiros
+        ids_norm = []
+        for tid in ids:
+            try:
+                tid_val = validate_integer(int(tid), min_value=1)
+                ids_norm.append(tid_val)
+            except Exception:
+                raise ValidationError(f"ID inválido na lista: {tid}")
+
+        if not ids_norm:
+            return jsonify({'ok': False, 'error': 'Nenhuma tarefa informada.'}), 400
+    except ValidationError as e:
+        api_logger.warning(f'Invalid task IDs in toggle_tarefas_bulk: {str(e)} - User: {g.user_email}')
+        return jsonify({'ok': False, 'error': f'Lista de IDs inválida: {str(e)}'}), 400
+
+    # Busca tarefas e valida contexto (mesma implantação, permissão, status permitido)
+    implantacao_id = None
+    status_impl = None
+    tarefas_info = []
+    for tarefa_id in ids_norm:
+        tarefa = query_db(
+            """
+            SELECT t.id, t.concluida, t.tarefa_filho, i.usuario_cs, i.id as implantacao_id, i.status
+            FROM tarefas t
+            JOIN implantacoes i ON t.implantacao_id = i.id
+            WHERE t.id = %s
+            """,
+            (tarefa_id,), one=True
+        )
+        if not tarefa:
+            return jsonify({'ok': False, 'error': f'Tarefa {tarefa_id} não encontrada.'}), 404
+
+        # Permissão: dono da implantação ou gestor
+        is_owner = tarefa.get('usuario_cs') == usuario_cs_email
+        is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
+        if not (is_owner or is_manager):
+            security_logger.warning(f'Permission denied for user {g.user_email} trying to bulk toggle task {tarefa_id}')
+            return jsonify({'ok': False, 'error': 'Permissão negada.'}), 403
+
+        # Status permitido
+        st = tarefa.get('status')
+        if st in ['finalizada', 'parada', 'cancelada']:
+            return jsonify({'ok': False, 'error': f'Implantação em status "{st}" não permite alteração de tarefas.'}), 400
+
+        if implantacao_id is None:
+            implantacao_id = tarefa.get('implantacao_id')
+            status_impl = st
+        elif implantacao_id != tarefa.get('implantacao_id'):
+            return jsonify({'ok': False, 'error': 'Todas as tarefas devem pertencer à mesma implantação.'}), 400
+
+        tarefas_info.append(tarefa)
+
+    # Executa toggles e logs
+    try:
+        updated = 0
+        for tarefa in tarefas_info:
+            tid = tarefa['id']
+            novo_status_bool = not tarefa.get('concluida', False)
+            data_conclusao_val = datetime.now() if novo_status_bool else None
+            execute_db(
+                "UPDATE tarefas SET concluida = %s, data_conclusao = %s WHERE id = %s",
+                (novo_status_bool, data_conclusao_val, tid)
+            )
+            detalhe = f"Tarefa '{tarefa['tarefa_filho']}': {'Marcada como Concluída' if novo_status_bool else 'Marcada como Não Concluída'}."
+            logar_timeline(implantacao_id, usuario_cs_email, 'tarefa_alterada', detalhe)
+            updated += 1
+
+        # Calcula progresso e tenta auto-finalização uma única vez
+        finalizada, log_finalizacao = auto_finalizar_implantacao(implantacao_id, usuario_cs_email)
+        novo_prog, _, _ = _get_progress(implantacao_id)
+
+        # Resposta JSON
+        return jsonify({
+            'ok': True,
+            'updated_count': updated,
+            'novo_progresso': novo_prog,
+            'implantacao_finalizada': finalizada,
+            'log_finalizacao': log_finalizacao
+        })
+    except Exception as e:
+        print(f"ERRO ao alternar tarefas em lote para implantação {implantacao_id}: {e}")
+        return jsonify({'ok': False, 'error': f'Erro interno: {e}'}), 500
 
 @api_bp.route('/adicionar_comentario/<int:tarefa_id>', methods=['POST'])
 @login_required
