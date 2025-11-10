@@ -100,3 +100,15 @@ class Config:
     GOOGLE_OAUTH_ENABLED = all([GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI])
     if not GOOGLE_OAUTH_ENABLED:
         print("Config: Google OAuth desativado (variáveis ausentes). Define GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI.")
+
+    # --- Configuração de SMTP (E-mail para comentários externos) ---
+    SMTP_HOST = os.environ.get('SMTP_HOST')
+    SMTP_PORT = int(os.environ.get('SMTP_PORT', '587'))
+    SMTP_USER = os.environ.get('SMTP_USER')
+    SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD')
+    SMTP_FROM = os.environ.get('SMTP_FROM') or os.environ.get('SMTP_USER')
+    SMTP_USE_TLS = os.environ.get('SMTP_USE_TLS', 'true').lower() in ('1','true','yes')
+    SMTP_USE_SSL = os.environ.get('SMTP_USE_SSL', 'false').lower() in ('1','true','yes')
+    EMAIL_CONFIGURADO = all([SMTP_HOST, SMTP_PORT, SMTP_FROM])
+    if not EMAIL_CONFIGURADO:
+        print("AVISO: SMTP não configurado (comentários externos não enviarão e-mails).")

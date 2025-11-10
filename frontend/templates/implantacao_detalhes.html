@@ -373,6 +373,39 @@
         </div>
     </div>
 </div>
+    
+    <script>
+    (function() {
+        function getVisibilidade(form) {
+            var sel = form.querySelector('select[name="visibilidade"]');
+            return sel ? (sel.value || '').toLowerCase() : '';
+        }
+        function buildConfirmMessage(form) {
+            var email = (form.getAttribute('data-email-responsavel') || '').trim();
+            var empresa = (form.getAttribute('data-nome-empresa') || '').trim();
+            if (email) {
+                return 'Este comentário será enviado por e-mail ao responsável (' + email + ') da empresa ' + (empresa || '') + '.\n\nConfirma o envio externo?';
+            }
+            return 'Este comentário será enviado por e-mail ao responsável definido na implantação.\n\nConfirma o envio externo?';
+        }
+
+        document.addEventListener('submit', function(ev) {
+            var form = ev.target;
+            if (!form || !form.classList || !form.classList.contains('comment-form')) {
+                return;
+            }
+            var vis = getVisibilidade(form);
+            if (vis === 'externo') {
+                var msg = buildConfirmMessage(form);
+                var ok = window.confirm(msg);
+                if (!ok) {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                }
+            }
+        }, true);
+    })();
+    </script>
 
 {% endblock %}
 

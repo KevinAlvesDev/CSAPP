@@ -275,6 +275,16 @@ def init_db():
                 imagem_url TEXT DEFAULT NULL
             );
             """)
+
+            # Adiciona coluna de visibilidade (retrofit), ignorando erro se já existir
+            try:
+                cursor.execute("ALTER TABLE comentarios ADD COLUMN visibilidade VARCHAR(20) DEFAULT 'externo';")
+            except Exception as e:
+                print(f"Aviso: coluna 'visibilidade' já existe ou não pôde ser criada (PostgreSQL): {e}")
+            try:
+                cursor.execute("ALTER TABLE comentarios ADD CONSTRAINT comentarios_visibilidade_check CHECK (visibilidade IN ('interno','externo'));")
+            except Exception as e:
+                print(f"Aviso: constraint de check para 'visibilidade' já existe ou não pôde ser criada (PostgreSQL): {e}")
             
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS timeline_log (
@@ -419,6 +429,12 @@ def init_db():
                 imagem_url TEXT DEFAULT NULL
             );
             """)
+
+            # Adiciona coluna de visibilidade (retrofit), ignorando erro se já existir
+            try:
+                cursor.execute("ALTER TABLE comentarios ADD COLUMN visibilidade VARCHAR(20) DEFAULT 'externo'")
+            except Exception as e:
+                print(f"Aviso: coluna 'visibilidade' já existe ou não pôde ser criada (SQLite): {e}")
             
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS timeline_log (

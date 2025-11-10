@@ -168,7 +168,7 @@ def get_implantacao_details(impl_id, usuario_cs_email, user_perfil):
 
     progresso, _, _ = _get_progress(impl_id)
 
-def _get_tarefas_and_comentarios(impl_id):
+def _get_tarefas_and_comentarios(impl_id, is_owner=False, is_manager=False):
     tarefas_raw = query_db("SELECT * FROM tarefas WHERE implantacao_id = %s ORDER BY tarefa_pai, ordem", (impl_id,))
     comentarios_raw = query_db(
         """ SELECT c.*, COALESCE(p.nome, c.usuario_cs) as usuario_nome 
@@ -176,6 +176,10 @@ def _get_tarefas_and_comentarios(impl_id):
             WHERE c.tarefa_id IN (SELECT id FROM tarefas WHERE implantacao_id = %s) 
             ORDER BY c.data_criacao DESC """, (impl_id,)
     )
+
+    # Filtra comentários internos se usuário não for dono nem gestor
+    if not (is_owner or is_manager):
+        comentarios_raw = [c for c in (comentarios_raw or []) if (c.get('visibilidade') != 'interno')]
 
     comentarios_por_tarefa = {}
     for c in comentarios_raw:
@@ -226,7 +230,8 @@ def get_implantacao_details(impl_id, usuario_cs_email, user_perfil):
 
     progresso, _, _ = _get_progress(impl_id)
 
-    tarefas_agrupadas_obrigatorio, ordered_treinamento, tarefas_agrupadas_pendencias, todos_modulos_lista = _get_tarefas_and_comentarios(impl_id)
+    is_owner = implantacao.get('usuario_cs') == usuario_cs_email
+    tarefas_agrupadas_obrigatorio, ordered_treinamento, tarefas_agrupadas_pendencias, todos_modulos_lista = _get_tarefas_and_comentarios(impl_id, is_owner=is_owner, is_manager=is_manager)
 
     logs_timeline = _get_timeline_logs(impl_id)
 

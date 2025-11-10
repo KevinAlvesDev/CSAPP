@@ -267,6 +267,10 @@ def adicionar_comentario(tarefa_id):
         return jsonify({'ok': False, 'error': f'Texto do comentário inválido: {str(e)}'}), 400
     
     img_url = None
+    # Valida visibilidade
+    visibilidade = (request.form.get('visibilidade', 'interno') or 'interno').strip().lower()
+    if visibilidade not in ('interno', 'externo'):
+        visibilidade = 'interno'
 
     # 1. Verifica permissão e status da implantação
     tarefa_info = query_db(
@@ -327,9 +331,9 @@ def adicionar_comentario(tarefa_id):
     try:
         agora = datetime.now()
         result = execute_and_fetch_one(
-            "INSERT INTO comentarios (tarefa_id, usuario_cs, texto, data_criacao, imagem_url) "
-            "VALUES (%s, %s, %s, %s, %s) RETURNING id",
-            (tarefa_id, usuario_cs_email, texto, agora, img_url)
+            "INSERT INTO comentarios (tarefa_id, usuario_cs, texto, data_criacao, imagem_url, visibilidade) "
+            "VALUES (%s, %s, %s, %s, %s, %s) RETURNING id",
+            (tarefa_id, usuario_cs_email, texto, agora, img_url, visibilidade)
         )
         
         novo_id = result.get('id') if result else None
@@ -357,6 +361,29 @@ def adicionar_comentario(tarefa_id):
 
         if not novo_comentario_dados:
             return jsonify({'ok': False, 'error': 'Falha ao recuperar o comentário após a criação.'}), 500
+
+        # Se for externo, tenta enviar e-mail ao responsável
+        try:
+            if visibilidade == 'externo':
+                impl = query_db(
+                    "SELECT i.id, i.nome_empresa, i.email_responsavel FROM implantacoes i "
+                    "JOIN tarefas t ON t.implantacao_id = i.id WHERE t.id = %s",
+                    (tarefa_id,), one=True
+                )
+                to_email = impl.get('email_responsavel') if impl else None
+                if to_email:
+                    from flask import current_app
+                    from ..email_utils import send_email
+                    subject = f"Resumo de reunião - {impl.get('nome_empresa', 'Academia')}"
+                    corpo_txt = f"Olá,\n\nCompartilhamos o resumo da reunião referente à implantação.\n\nResumo:\n{texto or ''}\n\n"
+                    if img_url:
+                        corpo_txt += f"Imagem: {img_url}\n\n"
+                    corpo_html = f"<p>Olá,</p><p>Compartilhamos o resumo da reunião referente à implantação.</p><p><strong>Resumo:</strong></p><div>{(texto or '').replace('\n','<br>')}</div>" + (f"<p><a href='{img_url}' target='_blank'>Ver imagem</a></p>" if img_url else "")
+                    send_email(to_email, subject, corpo_txt, corpo_html)
+                else:
+                    api_logger.info(f"Comentário externo sem e-mail do responsável configurado para tarefa {tarefa_id}.")
+        except Exception as e_mail:
+            print(f"AVISO: Falha ao enviar e-mail de comentário externo: {e_mail}")
 
         # Renderiza o template do comentário e o retorna como HTML
         return render_template('partials/_comment_item.html', comentario=novo_comentario_dados)
