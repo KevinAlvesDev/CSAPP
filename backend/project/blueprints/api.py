@@ -362,7 +362,7 @@ def adicionar_comentario(tarefa_id):
         if not novo_comentario_dados:
             return jsonify({'ok': False, 'error': 'Falha ao recuperar o comentário após a criação.'}), 500
 
-        # Se for externo, tenta enviar e-mail ao responsável
+        # Se for externo, agenda envio de e-mail ao responsável em background (não bloqueia resposta)
         try:
             if visibilidade == 'externo':
                 impl = query_db(
@@ -372,18 +372,62 @@ def adicionar_comentario(tarefa_id):
                 )
                 to_email = impl.get('email_responsavel') if impl else None
                 if to_email:
-                    from flask import current_app
                     from ..email_utils import send_email
+                    import threading
                     subject = f"Resumo de reunião - {impl.get('nome_empresa', 'Academia')}"
                     corpo_txt = f"Olá,\n\nCompartilhamos o resumo da reunião referente à implantação.\n\nResumo:\n{texto or ''}\n\n"
                     if img_url:
                         corpo_txt += f"Imagem: {img_url}\n\n"
                     corpo_html = f"<p>Olá,</p><p>Compartilhamos o resumo da reunião referente à implantação.</p><p><strong>Resumo:</strong></p><div>{(texto or '').replace('\n','<br>')}</div>" + (f"<p><a href='{img_url}' target='_blank'>Ver imagem</a></p>" if img_url else "")
-                    send_email(to_email, subject, corpo_txt, corpo_html)
+
+                    def _send_async():
+                        try:
+                            # Tenta usar credenciais do próprio usuário (App Password), senão cai no SMTP global
+                            user_settings = query_db(
+                                "SELECT * FROM email_accounts WHERE usuario_cs = %s AND active = 1",
+                                (usuario_cs_email,), one=True
+                            )
+                            if user_settings:
+                                from ..email_utils import send_email_with_credentials
+                                ok = send_email_with_credentials(
+                                    to_email=to_email,
+                                    subject=subject,
+                                    body_text=corpo_txt,
+                                    body_html=corpo_html,
+                                    reply_to=usuario_cs_email,
+                                    from_name=novo_comentario_dados.get('usuario_nome') or usuario_cs_email,
+                                    host='smtp.gmail.com',
+                                    port=587,
+                                    user=user_settings.get('smtp_user'),
+                                    password=user_settings.get('smtp_password'),
+                                    from_addr=user_settings.get('smtp_user'),
+                                    use_tls=True,
+                                    use_ssl=False,
+                                    timeout=12,
+                                )
+                            else:
+                                # Define Reply-To para o autor e exibe o nome dele no From
+                                ok = send_email(
+                                    to_email,
+                                    subject,
+                                    corpo_txt,
+                                    corpo_html,
+                                    reply_to=usuario_cs_email,
+                                    from_name=novo_comentario_dados.get('usuario_nome') or usuario_cs_email,
+                                )
+                            if ok:
+                                api_logger.info(f"E-mail de comentário externo enviado para {to_email} (tarefa {tarefa_id}).")
+                            else:
+                                api_logger.warning(f"Falha ao enviar e-mail de comentário externo para {to_email} (tarefa {tarefa_id}).")
+                        except Exception as e_mail_inner:
+                            print(f"AVISO: Erro no envio assíncrono de e-mail: {e_mail_inner}")
+
+                    threading.Thread(target=_send_async, daemon=True).start()
+                    api_logger.info(f"Envio de e-mail de comentário externo agendado para {to_email} (tarefa {tarefa_id}).")
                 else:
                     api_logger.info(f"Comentário externo sem e-mail do responsável configurado para tarefa {tarefa_id}.")
         except Exception as e_mail:
-            print(f"AVISO: Falha ao enviar e-mail de comentário externo: {e_mail}")
+            print(f"AVISO: Falha ao agendar envio de e-mail de comentário externo: {e_mail}")
 
         # Renderiza o template do comentário e o retorna como HTML
         return render_template('partials/_comment_item.html', comentario=novo_comentario_dados)

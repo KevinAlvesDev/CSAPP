@@ -1,9 +1,17 @@
 import smtplib
 from email.message import EmailMessage
+from email.utils import formataddr
 from typing import Optional
 from flask import current_app
 
-def send_email(to_email: str, subject: str, body_text: str, body_html: Optional[str] = None) -> bool:
+def send_email(
+    to_email: str,
+    subject: str,
+    body_text: str,
+    body_html: Optional[str] = None,
+    reply_to: Optional[str] = None,
+    from_name: Optional[str] = None,
+) -> bool:
     """
     Envia um e-mail simples via SMTP usando configurações de current_app.config.
     Retorna True em caso de sucesso, False caso contrário.
@@ -16,26 +24,33 @@ def send_email(to_email: str, subject: str, body_text: str, body_html: Optional[
     from_addr = cfg.get('SMTP_FROM') or user
     use_tls = cfg.get('SMTP_USE_TLS', True)
     use_ssl = cfg.get('SMTP_USE_SSL', False)
+    timeout = cfg.get('SMTP_TIMEOUT', 12)  # falha rápida para ambientes com egress restrito
 
     if not host or not port or not from_addr:
         return False
 
     msg = EmailMessage()
     msg['Subject'] = subject
-    msg['From'] = from_addr
+    # Exibe nome do autor no From, mantendo o endereço autenticado
+    if from_name:
+        msg['From'] = formataddr((from_name, from_addr))
+    else:
+        msg['From'] = from_addr
     msg['To'] = to_email
+    if reply_to:
+        msg['Reply-To'] = reply_to
     msg.set_content(body_text or '')
     if body_html:
         msg.add_alternative(body_html, subtype='html')
 
     try:
         if use_ssl:
-            with smtplib.SMTP_SSL(host, port) as server:
+            with smtplib.SMTP_SSL(host, port, timeout=timeout) as server:
                 if user and password:
                     server.login(user, password)
                 server.send_message(msg)
         else:
-            with smtplib.SMTP(host, port) as server:
+            with smtplib.SMTP(host, port, timeout=timeout) as server:
                 server.ehlo()
                 if use_tls:
                     server.starttls()
@@ -46,4 +61,57 @@ def send_email(to_email: str, subject: str, body_text: str, body_html: Optional[
         return True
     except Exception as e:
         print(f"AVISO: Falha ao enviar e-mail para {to_email}: {e}")
+        return False
+
+
+def send_email_with_credentials(
+    to_email: str,
+    subject: str,
+    body_text: str,
+    body_html: Optional[str] = None,
+    reply_to: Optional[str] = None,
+    from_name: Optional[str] = None,
+    host: Optional[str] = None,
+    port: Optional[int] = None,
+    user: Optional[str] = None,
+    password: Optional[str] = None,
+    from_addr: Optional[str] = None,
+    use_tls: bool = True,
+    use_ssl: bool = False,
+    timeout: int = 12,
+) -> bool:
+    """
+    Envia e-mail usando credenciais explícitas (por usuário). Útil para App Password do Gmail.
+    """
+    if not host or not port or not (from_addr or user):
+        return False
+
+    msg = EmailMessage()
+    msg['Subject'] = subject
+    msg['From'] = formataddr((from_name, from_addr or user)) if from_name else (from_addr or user)
+    msg['To'] = to_email
+    if reply_to:
+        msg['Reply-To'] = reply_to
+    msg.set_content(body_text or '')
+    if body_html:
+        msg.add_alternative(body_html, subtype='html')
+
+    try:
+        if use_ssl:
+            with smtplib.SMTP_SSL(host, port, timeout=timeout) as server:
+                if user and password:
+                    server.login(user, password)
+                server.send_message(msg)
+        else:
+            with smtplib.SMTP(host, port, timeout=timeout) as server:
+                server.ehlo()
+                if use_tls:
+                    server.starttls()
+                    server.ehlo()
+                if user and password:
+                    server.login(user, password)
+                server.send_message(msg)
+        return True
+    except Exception as e:
+        print(f"AVISO: Falha ao enviar (credenciais de usuário) para {to_email}: {e}")
         return False

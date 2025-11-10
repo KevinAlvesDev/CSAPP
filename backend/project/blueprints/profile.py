@@ -142,3 +142,117 @@ def perfil():
 
     # Método GET
     return render_template('perfil.html', user_info=g.user, perfil=current_perfil, cargos_list=CARGOS_LIST)
+@profile_bp.route('/email', methods=['GET'])
+@login_required
+def email_settings():
+    usuario_cs_email = g.user_email
+    # Garante tabela mínima
+    try:
+        execute_db(
+            """
+            CREATE TABLE IF NOT EXISTS email_accounts (
+                usuario_cs TEXT PRIMARY KEY,
+                smtp_user TEXT NOT NULL,
+                smtp_password TEXT NOT NULL,
+                from_name TEXT,
+                active INTEGER DEFAULT 1,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+    except Exception as e:
+        print(f"Aviso: falha ao garantir tabela email_accounts: {e}")
+
+    settings = query_db(
+        "SELECT * FROM email_accounts WHERE usuario_cs = %s",
+        (usuario_cs_email,), one=True
+    )
+    return render_template('email_settings.html', settings=settings)
+
+
+@profile_bp.route('/email/save', methods=['POST'])
+@login_required
+def email_settings_save():
+    usuario_cs_email = g.user_email
+    try:
+        smtp_user = sanitize_string(request.form.get('smtp_user', ''), max_length=200)
+        smtp_password = sanitize_string(request.form.get('smtp_password', ''), max_length=200)
+        from_name = request.form.get('from_name', '')
+        if from_name:
+            from_name = sanitize_string(from_name, max_length=200)
+        if not smtp_user or not smtp_password:
+            raise ValidationError('Email e App Password são obrigatórios.')
+    except ValidationError as e:
+        flash(f'Erro: {str(e)}', 'error')
+        return redirect(url_for('profile.email_settings'))
+
+    try:
+        # Upsert simples
+        existing = query_db(
+            "SELECT usuario_cs FROM email_accounts WHERE usuario_cs = %s",
+            (usuario_cs_email,), one=True
+        )
+        if existing:
+            execute_db(
+                "UPDATE email_accounts SET smtp_user = %s, smtp_password = %s, from_name = %s, active = 1, updated_at = CURRENT_TIMESTAMP WHERE usuario_cs = %s",
+                (smtp_user, smtp_password, from_name, usuario_cs_email)
+            )
+        else:
+            execute_db(
+                "INSERT INTO email_accounts (usuario_cs, smtp_user, smtp_password, from_name, active) VALUES (%s, %s, %s, %s, 1)",
+                (usuario_cs_email, smtp_user, smtp_password, from_name)
+            )
+        flash('Configurações de e-mail salvas com sucesso.', 'success')
+    except Exception as e:
+        print(f"ERRO ao salvar configurações de e-mail para {usuario_cs_email}: {e}")
+        flash('Erro ao salvar configurações de e-mail.', 'error')
+
+    return redirect(url_for('profile.email_settings'))
+
+
+@profile_bp.route('/email/test', methods=['POST'])
+@login_required
+def email_settings_test():
+    from ..email_utils import send_email_with_credentials
+    usuario_cs_email = g.user_email
+    try:
+        test_email = sanitize_string(request.form.get('test_email', ''), max_length=200)
+        if not test_email:
+            raise ValidationError('Informe um e-mail de teste válido.')
+    except ValidationError as e:
+        flash(f'Erro: {str(e)}', 'error')
+        return redirect(url_for('profile.email_settings'))
+
+    settings = query_db(
+        "SELECT * FROM email_accounts WHERE usuario_cs = %s AND active = 1",
+        (usuario_cs_email,), one=True
+    )
+    if not settings:
+        flash('Nenhuma configuração de e-mail ativa encontrada para seu usuário.', 'warning')
+        return redirect(url_for('profile.email_settings'))
+
+    # Usa Gmail padrão com TLS
+    ok = send_email_with_credentials(
+        to_email=test_email,
+        subject='Teste de envio - CSAPP',
+        body_text='Este é um e-mail de teste do CSAPP.',
+        body_html='<p>Este é um <strong>e-mail de teste</strong> do CSAPP.</p>',
+        reply_to=usuario_cs_email,
+        from_name=settings.get('from_name') or usuario_cs_email,
+        host='smtp.gmail.com',
+        port=587,
+        user=settings.get('smtp_user'),
+        password=settings.get('smtp_password'),
+        from_addr=settings.get('smtp_user'),
+        use_tls=True,
+        use_ssl=False,
+        timeout=12,
+    )
+
+    if ok:
+        flash(f'E-mail de teste enviado para {test_email}.', 'success')
+    else:
+        flash('Falha ao enviar e-mail de teste. Verifique App Password e permissões.', 'error')
+
+    return redirect(url_for('profile.email_settings'))
