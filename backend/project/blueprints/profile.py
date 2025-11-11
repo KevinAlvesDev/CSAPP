@@ -254,7 +254,12 @@ def email_settings_test():
     # Se o usuário estiver conectado ao Google com escopo gmail.send, usa a API HTTP
     token = session.get('google_token') or {}
     access_token = token.get('access_token')
-    if access_token:
+    ok = False
+    tried_gmail_api = False
+    try_gmail_api = bool(access_token) and ('gmail' in current_app.config.get('GOOGLE_OAUTH_SCOPES', ''))
+
+    if try_gmail_api:
+        tried_gmail_api = True
         ok = send_email_via_gmail_api(
             access_token=access_token,
             to_email=test_email,
@@ -264,8 +269,9 @@ def email_settings_test():
             reply_to=usuario_cs_email,
             from_name=settings.get('from_name') or usuario_cs_email,
         )
-    else:
-        # Caso não esteja conectado ao Google, tenta via SMTP (App Password)
+
+    # Fallback automático para SMTP (App Password)
+    if not ok:
         ok = send_email_with_credentials(
             to_email=test_email,
             subject='Teste de envio - CSAPP',
@@ -283,9 +289,32 @@ def email_settings_test():
             timeout=12,
         )
 
+    # Segundo fallback: tentar porta 465 com SSL direto (alguns ambientes bloqueiam 587/TLS)
+    if not ok:
+        ok = send_email_with_credentials(
+            to_email=test_email,
+            subject='Teste de envio - CSAPP',
+            body_text='Este é um e-mail de teste do CSAPP.',
+            body_html='<p>Este é um <strong>e-mail de teste</strong> do CSAPP.</p>',
+            reply_to=usuario_cs_email,
+            from_name=settings.get('from_name') or usuario_cs_email,
+            host='smtp.gmail.com',
+            port=465,
+            user=settings.get('smtp_user'),
+            password=settings.get('smtp_password'),
+            from_addr=settings.get('smtp_user'),
+            use_tls=False,
+            use_ssl=True,
+            timeout=12,
+        )
+
     if ok:
         flash(f'E-mail de teste enviado para {test_email}.', 'success')
     else:
-        flash('Falha ao enviar e-mail de teste. Verifique App Password e permissões.', 'error')
+        if tried_gmail_api and not try_gmail_api:
+            # Caso improvável: token presente mas escopo ausente
+            flash('Falha ao enviar e-mail: sessão Google sem escopo gmail.send. Conecte novamente com permissão adequada ou use App Password.', 'error')
+        else:
+            flash('Falha ao enviar e-mail de teste. Verifique App Password e permissões.', 'error')
 
     return redirect(url_for('profile.email_settings'))

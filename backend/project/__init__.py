@@ -159,7 +159,8 @@ def create_app():
                 access_token_url='https://oauth2.googleapis.com/token',
                 server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
                 client_kwargs={
-                    'scope': 'openid email profile https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/gmail.send',
+                    # Escopos agora configuráveis via .env (evita escopos restritos por padrão)
+                    'scope': app.config.get('GOOGLE_OAUTH_SCOPES', 'openid email profile https://www.googleapis.com/auth/calendar'),
                     'prompt': 'consent',
                     'access_type': 'offline',
                 },

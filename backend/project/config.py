@@ -101,6 +101,13 @@ class Config:
     if not GOOGLE_OAUTH_ENABLED:
         print("Config: Google OAuth desativado (variáveis ausentes). Define GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI.")
 
+    # Escopos do Google OAuth (configuráveis via .env)
+    # Por padrão, evita escopos restritos (ex.: gmail.send) que exigem verificação/publicação
+    GOOGLE_OAUTH_SCOPES = os.environ.get(
+        'GOOGLE_OAUTH_SCOPES',
+        'openid email profile https://www.googleapis.com/auth/calendar'
+    )
+
     # --- Configuração de SMTP (E-mail para comentários externos) ---
     SMTP_HOST = os.environ.get('SMTP_HOST')
     SMTP_PORT = int(os.environ.get('SMTP_PORT', '587'))
