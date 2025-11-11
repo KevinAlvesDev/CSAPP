@@ -107,6 +107,19 @@
             <strong>Dica:</strong> Após salvar, use “Enviar teste” para validar. O e-mail de teste deve aparecer na sua caixa “Enviados” do Gmail e o destinatário deve recebê-lo (verifique o spam, se necessário).
           </div>
 
+          <div class="alert alert-warning mt-3">
+            <strong>Se aparecer erro 535 (credenciais rejeitadas):</strong>
+            <ul class="mb-0">
+              <li>Confirme que <em>App Password</em> foi recém-gerado e colado sem espaços.</li>
+              <li>Garanta que o <em>E-mail do Gmail</em> é da mesma conta que gerou o App Password.</li>
+              <li>Desbloqueie possíveis logins suspeitos em
+                <a href="https://accounts.google.com/DisplayUnlockCaptcha" target="_blank" rel="noopener">DisplayUnlockCaptcha</a>
+                e tente novamente.</li>
+              <li>Se for Google Workspace, verifique com o administrador se <em>App Passwords</em> e SMTP básico estão permitidos.</li>
+              <li>O sistema já tenta automaticamente <code>smtp.gmail.com:587/TLS</code> e, se falhar, <code>smtp.gmail.com:465/SSL</code>.</li>
+            </ul>
+          </div>
+
           <p class="mb-2">Servidor SMTP do Gmail: <code>smtp.gmail.com</code>, Porta <code>587</code>, TLS habilitado.</p>
           <p class="text-muted small mb-0">
             Se você não vê “App passwords”: certifique-se de que o 2FA está ativado, que sua conta não está com “Proteção Avançada”,

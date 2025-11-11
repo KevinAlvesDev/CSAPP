@@ -233,7 +233,7 @@ def email_settings_save():
 @profile_bp.route('/email/test', methods=['POST'])
 @login_required
 def email_settings_test():
-    from ..email_utils import send_email_with_credentials, send_email_via_gmail_api
+    from ..email_utils import send_email_with_credentials, send_email_via_gmail_api, send_email
     usuario_cs_email = g.user_email
     try:
         test_email = sanitize_string(request.form.get('test_email', ''), max_length=200)
@@ -308,12 +308,25 @@ def email_settings_test():
             timeout=12,
         )
 
+    # Terceiro fallback: tentar SMTP global via configuração do app (ex.: SendGrid/SES)
+    if not ok and current_app.config.get('EMAIL_CONFIGURADO'):
+        ok = send_email(
+            to_email=test_email,
+            subject='Teste de envio - CSAPP',
+            body_text='Este é um e-mail de teste do CSAPP.',
+            body_html='<p>Este é um <strong>e-mail de teste</strong> do CSAPP.</p>',
+            reply_to=usuario_cs_email,
+            from_name=settings.get('from_name') or usuario_cs_email,
+        )
+
     if ok:
         flash(f'E-mail de teste enviado para {test_email}.', 'success')
     else:
         if tried_gmail_api and not try_gmail_api:
             # Caso improvável: token presente mas escopo ausente
-            flash('Falha ao enviar e-mail: sessão Google sem escopo gmail.send. Conecte novamente com permissão adequada ou use App Password.', 'error')
+            flash('Falha: sessão Google sem escopo gmail.send. Conecte novamente com permissão adequada ou use App Password.', 'error')
+        elif current_app.config.get('EMAIL_CONFIGURADO'):
+            flash('Falha ao enviar e-mail pelo SMTP global. Verifique credenciais do provedor.', 'error')
         else:
             flash('Falha ao enviar e-mail de teste. Verifique App Password e permissões.', 'error')
 
