@@ -7,7 +7,7 @@ from ..db import query_db, execute_db
 from ..extensions import r2_client
 from werkzeug.utils import secure_filename
 import smtplib
-from ..email_utils import load_smtp_settings, save_smtp_settings, test_smtp_connection, send_email, detect_smtp_settings
+from ..email_utils import load_smtp_settings, save_smtp_settings, test_smtp_connection, send_email, detect_smtp_settings, NetworkError
 from ..validation import validate_email, ValidationError
 from ..logging_config import app_logger
 
@@ -243,6 +243,13 @@ def quick_setup_email():
         flash(
             "Falha na autenticação com o provedor. Verifique sua App Password e se o seu e-mail pertence ao provedor correto.",
             "error"
+        )
+    except NetworkError as e:
+        # Em ambientes PaaS (Railway), conexões SMTP podem ser bloqueadas; salvamos e informamos o usuário
+        app_logger.warning(f"Quick-setup salvo, mas sem teste de conexão por restrição de rede para {user_email}: {e}")
+        flash(
+            "Configurações salvas. Não foi possível testar a conexão porque o ambiente de produção bloqueia saída SMTP. Você poderá testar a autenticação a partir de um ambiente com acesso à rede (ex.: local) ou configurar um provedor via API (SendGrid/Mailgun/SES).",
+            "warning"
         )
     except Exception as e:
         app_logger.error(f"Erro no quick-setup SMTP para {user_email}: {e}")

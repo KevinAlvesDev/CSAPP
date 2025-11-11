@@ -1,11 +1,16 @@
 # testo/CSAPP/backend/project/email_utils.py
 import smtplib
+import socket
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from werkzeug.security import generate_password_hash, check_password_hash
 from .db import query_db, execute_db
 from .logging_config import security_logger, app_logger
 import re
+
+# Exceção específica para falhas de rede ao tentar acessar o provedor SMTP
+class NetworkError(Exception):
+    pass
 
 # --- CRIPTOGRAFIA (Simples) ---
 # Em um cenário ideal, usaríamos uma biblioteca de criptografia real (ex: cryptography.fernet)
@@ -233,6 +238,11 @@ def test_smtp_connection(settings, plain_password):
         security_logger.warning(f"Falha de autenticacao SMTP (provedor rejeitou) para {user}: {e}")
         raise # Re-lança a exceção original do smtplib
         
+    except (OSError, socket.gaierror, smtplib.SMTPConnectError, smtplib.SMTPServerDisconnected, TimeoutError) as e:
+        # Falhas de egress/conectividade típicas em ambientes PaaS (ex.: Railway)
+        app_logger.warning(f"Falha de conectividade SMTP para {user} em {host}:{port}: {e}")
+        raise NetworkError(f"Erro de conexao: {e}")
+    
     except Exception as e:
         app_logger.error(f"Erro inesperado no teste SMTP para {user}: {e}")
         raise ValueError(f"Erro de conexao: {e}")
