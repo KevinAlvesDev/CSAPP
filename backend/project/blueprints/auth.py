@@ -7,6 +7,7 @@ from flask import (
 )
 from werkzeug.security import generate_password_hash, check_password_hash
 from urllib.parse import urlencode
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 # NOVO: Importar exceções específicas do DB, se possível (exemplo genérico)
 from psycopg2 import IntegrityError as Psycopg2IntegrityError
 from sqlite3 import IntegrityError as Sqlite3IntegrityError
@@ -21,6 +22,10 @@ from ..extensions import limiter
 from ..logging_config import auth_logger, security_logger
 
 auth_bp = Blueprint('auth', __name__)
+
+def _get_reset_serializer():
+    secret_key = current_app.config.get('SECRET_KEY') or current_app.secret_key
+    return URLSafeTimedSerializer(secret_key, salt='password-reset')
 
 def _sync_user_profile(user_email, user_name, auth0_user_id):
     """Garante que o usuário do Auth0 exista no DB local e defina o perfil inicial."""
@@ -190,6 +195,147 @@ def rate_limit(max_requests):
             return limiter.limit(max_requests)(f)
         return f
     return decorator
+
+@auth_bp.route('/change-password', methods=['GET', 'POST'])
+@rate_limit("15 per minute")
+@login_required
+def change_password():
+    """Permite ao usuário autenticado alterar sua senha."""
+    if request.method == 'GET':
+        return render_template('change_password.html', auth0_enabled=False)
+
+    # POST
+    current_password = request.form.get('current_password', '')
+    new_password = request.form.get('new_password', '')
+    new_password_confirm = request.form.get('new_password_confirm', '')
+
+    if not all([current_password, new_password, new_password_confirm]):
+        flash('Preencha todos os campos.', 'error')
+        return render_template('change_password.html', auth0_enabled=False)
+
+    try:
+        from ..validation import validate_password_strength, ValidationError
+        validate_password_strength(new_password)
+    except ValidationError as ve:
+        flash(str(ve), 'error')
+        return render_template('change_password.html', auth0_enabled=False)
+
+    if new_password != new_password_confirm:
+        flash('As senhas novas não coincidem.', 'error')
+        return render_template('change_password.html', auth0_enabled=False)
+
+    # Busca senha atual do usuário
+    usuario = query_db("SELECT usuario, senha FROM usuarios WHERE usuario = %s", (g.user_email,), one=True)
+    if not usuario:
+        flash('Conta não encontrada.', 'error')
+        return render_template('change_password.html', auth0_enabled=False)
+
+    if not check_password_hash(usuario.get('senha'), current_password):
+        flash('Senha atual incorreta.', 'error')
+        return render_template('change_password.html', auth0_enabled=False)
+
+    try:
+        senha_hash = generate_password_hash(new_password)
+        execute_db("UPDATE usuarios SET senha = %s WHERE usuario = %s", (senha_hash, g.user_email))
+        auth_logger.info(f'User changed password: {g.user_email}')
+        flash('Senha alterada com sucesso.', 'success')
+        return redirect(url_for('main.dashboard'))
+    except Exception as e:
+        auth_logger.error(f'Error changing password for {g.user_email}: {str(e)}')
+        flash('Erro ao alterar senha. Tente novamente.', 'error')
+        return render_template('change_password.html', auth0_enabled=False)
+
+@auth_bp.route('/forgot-password', methods=['GET', 'POST'])
+@rate_limit("10 per minute")
+def forgot_password():
+    """Solicita recuperação de senha via e-mail com token."""
+    if request.method == 'GET':
+        return render_template('forgot_password.html', auth0_enabled=False)
+
+    email = (request.form.get('email') or '').strip().lower()
+    try:
+        from ..validation import validate_email
+        email = validate_email(email)
+    except Exception:
+        flash('E-mail inválido.', 'error')
+        return render_template('forgot_password.html', auth0_enabled=False)
+
+    usuario = query_db("SELECT usuario FROM usuarios WHERE usuario = %s", (email,), one=True)
+    if not usuario:
+        # Não revelar se usuário existe; mensagem genérica
+        flash('Se o e-mail existir, você receberá um link de reset.', 'info')
+        return redirect(url_for('auth.login'))
+
+    # Gera token temporário
+    s = _get_reset_serializer()
+    token = s.dumps({'email': email})
+    reset_url = url_for('auth.reset_password', token=token, _external=True)
+
+    # Tenta enviar e-mail via SMTP global
+    try:
+        from ..email_utils import send_email_global
+        subject = 'Recuperação de senha - CS Onboarding'
+        body_html = f"""
+            <p>Olá,</p>
+            <p>Para redefinir sua senha, clique no link abaixo. Ele expira em 1 hora.</p>
+            <p><a href="{reset_url}">Redefinir senha</a></p>
+            <p>Se você não solicitou, ignore este e-mail.</p>
+        """
+        send_email_global(subject, body_html, [email])
+        flash('Enviamos um link de redefinição de senha para seu e-mail.', 'success')
+    except Exception as e:
+        auth_logger.warning(f'Password reset email not sent (fallback): {e}')
+        flash('Sistema de e-mail não está configurado. Use o link para redefinir:', 'warning')
+        flash(reset_url, 'info')
+
+    return redirect(url_for('auth.login'))
+
+@auth_bp.route('/reset-password/<token>', methods=['GET', 'POST'])
+@rate_limit("10 per minute")
+def reset_password(token):
+    """Redefine a senha usando token temporário."""
+    # Valida token (expira em 3600s)
+    s = _get_reset_serializer()
+    try:
+        data = s.loads(token, max_age=3600)
+        email = data.get('email')
+    except SignatureExpired:
+        flash('O link expirou. Solicite novamente.', 'error')
+        return redirect(url_for('auth.forgot_password'))
+    except BadSignature:
+        flash('Link inválido.', 'error')
+        return redirect(url_for('auth.forgot_password'))
+
+    if request.method == 'GET':
+        return render_template('reset_password.html', auth0_enabled=False)
+
+    new_password = request.form.get('new_password', '')
+    new_password_confirm = request.form.get('new_password_confirm', '')
+    if not all([new_password, new_password_confirm]):
+        flash('Preencha todos os campos.', 'error')
+        return render_template('reset_password.html', auth0_enabled=False)
+
+    try:
+        from ..validation import validate_password_strength, ValidationError
+        validate_password_strength(new_password)
+    except ValidationError as ve:
+        flash(str(ve), 'error')
+        return render_template('reset_password.html', auth0_enabled=False)
+
+    if new_password != new_password_confirm:
+        flash('As senhas não coincidem.', 'error')
+        return render_template('reset_password.html', auth0_enabled=False)
+
+    try:
+        senha_hash = generate_password_hash(new_password)
+        execute_db("UPDATE usuarios SET senha = %s WHERE usuario = %s", (senha_hash, email))
+        auth_logger.info(f'User reset password: {email}')
+        flash('Senha redefinida com sucesso. Faça login.', 'success')
+        return redirect(url_for('auth.login'))
+    except Exception as e:
+        auth_logger.error(f'Error resetting password for {email}: {str(e)}')
+        flash('Erro ao redefinir senha. Tente novamente.', 'error')
+        return render_template('reset_password.html', auth0_enabled=False)
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 @rate_limit("30 per minute")  # Limite de 30 tentativas por minuto (suporta múltiplos usuários)
@@ -434,9 +580,12 @@ def register():
         flash(f'Nome inválido: {str(e)}', 'error')
         return render_template('register.html', auth0_enabled=False)
     
-    # Valida senha
-    if len(password) < 6:
-        flash('A senha deve ter no mínimo 6 caracteres.', 'error')
+    # Valida senha (complexidade)
+    try:
+        from ..validation import validate_password_strength, ValidationError
+        validate_password_strength(password)
+    except ValidationError as ve:
+        flash(str(ve), 'error')
         return render_template('register.html', auth0_enabled=False)
     
     if password != password_confirm:

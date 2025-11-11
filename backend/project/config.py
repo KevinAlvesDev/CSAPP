@@ -119,3 +119,7 @@ class Config:
     EMAIL_CONFIGURADO = all([SMTP_HOST, SMTP_PORT, SMTP_FROM])
     if not EMAIL_CONFIGURADO:
         print("AVISO: SMTP não configurado (comentários externos não enviarão e-mails).")
+
+    # --- Internacionalização básica ---
+    # Defina LANG=pt ou LANG=en no ambiente
+    LANG = os.environ.get('LANG', 'pt')

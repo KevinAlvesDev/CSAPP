@@ -2,9 +2,11 @@
 import smtplib
 import socket
 from email.mime.text import MIMEText
+import ssl
 from email.mime.multipart import MIMEMultipart
 from werkzeug.security import generate_password_hash, check_password_hash
 from .db import query_db, execute_db
+from flask import current_app
 from .logging_config import security_logger, app_logger
 import re
 
@@ -289,6 +291,47 @@ def send_email(subject, body_html, recipients, smtp_settings, plain_password, fr
         
     except Exception as e:
         app_logger.error(f"Falha ao enviar e-mail real por {user}: {e}")
+        raise
+
+def send_email_global(subject, body_html, recipients):
+    """
+    Envia um e-mail usando configuração SMTP global de current_app.config.
+    Retorna True em caso de sucesso; lança exceção em falha.
+    """
+    cfg = current_app.config
+    host = cfg.get('SMTP_HOST')
+    port = int(cfg.get('SMTP_PORT', 587))
+    user = cfg.get('SMTP_USER')
+    password = cfg.get('SMTP_PASSWORD')
+    use_tls = cfg.get('SMTP_USE_TLS', True)
+    use_ssl = cfg.get('SMTP_USE_SSL', False)
+    from_addr = cfg.get('SMTP_FROM') or user
+
+    if not host or not from_addr:
+        raise ValueError('SMTP global não configurado (host/from ausentes).')
+
+    msg = MIMEText(body_html, 'html')
+    msg['Subject'] = subject
+    msg['From'] = from_addr
+    msg['To'] = ", ".join(recipients)
+
+    try:
+        if use_ssl:
+            context = ssl.create_default_context()
+            server = smtplib.SMTP_SSL(host, port, context=context)
+        else:
+            server = smtplib.SMTP(host, port, timeout=10)
+            if use_tls:
+                server.starttls()
+
+        if user and password:
+            server.login(user, password)
+        server.sendmail(from_addr, recipients, msg.as_string())
+        server.quit()
+        app_logger.info(f"E-mail global enviado para {recipients}")
+        return True
+    except Exception as e:
+        app_logger.error(f"Falha no envio de e-mail global: {e}")
         raise
     
 

@@ -15,6 +15,42 @@ class ValidationError(Exception):
     pass
 
 
+# Lista mínima de senhas comuns para bloqueio
+COMMON_PASSWORDS = {
+    '123456', '123456789', 'qwerty', 'password', '111111',
+    '12345678', 'abc123', 'password1', '12345', '000000',
+}
+
+
+def validate_password_strength(password: str) -> str:
+    """
+    Valida critérios de complexidade de senha.
+    - Mínimo 8 caracteres
+    - Pelo menos uma letra maiúscula, uma minúscula, um dígito e um símbolo
+    - Não pode estar na lista de senhas comuns
+    Retorna a própria senha se válida; lança ValidationError caso contrário.
+    """
+    if not isinstance(password, str):
+        raise ValidationError('Senha deve ser uma string')
+
+    if len(password) < 8:
+        raise ValidationError('A senha deve ter no mínimo 8 caracteres.')
+
+    if password.lower() in COMMON_PASSWORDS:
+        raise ValidationError('Senha muito comum. Escolha outra.')
+
+    if not re.search(r'[A-Z]', password):
+        raise ValidationError('A senha deve conter pelo menos uma letra maiúscula.')
+    if not re.search(r'[a-z]', password):
+        raise ValidationError('A senha deve conter pelo menos uma letra minúscula.')
+    if not re.search(r'\d', password):
+        raise ValidationError('A senha deve conter pelo menos um número.')
+    if not re.search(r'[^A-Za-z0-9]', password):
+        raise ValidationError('A senha deve conter pelo menos um símbolo.')
+
+    return password
+
+
 def sanitize_string(value: str, max_length: int = None, min_length: int = 0, 
                    allow_html: bool = False, allowed_chars: str = None) -> str:
     """

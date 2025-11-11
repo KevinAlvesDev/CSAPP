@@ -25707,3 +25707,525 @@ requests.exceptions.InvalidURL: URL has an invalid label.
 2025-11-11 15:51:27 - INFO - system - system - project - Sistema de logging configurado com sucesso
 2025-11-11 15:51:27 - WARNING - system - system - werkzeug -  * Debugger is active!
 2025-11-11 15:51:27 - INFO - system - system - werkzeug -  * Debugger PIN: 130-522-712
+2025-11-11 16:50:55 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 16:50:55 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 16:50:55 - INFO - system - system - werkzeug - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2025-11-11 16:50:55 - INFO - system - system - werkzeug - [33mPress CTRL+C to quit[0m
+2025-11-11 16:51:16 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:51:16] "GET /?ide_webview_request_time=1762890674366 HTTP/1.1" 200 -
+2025-11-11 16:51:16 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:51:16] "GET /static/css/login.css HTTP/1.1" 200 -
+2025-11-11 16:51:17 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:51:17] "[32mGET /@vite/client HTTP/1.1[0m" 302 -
+2025-11-11 16:51:17 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 16:51:17 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 16:51:17 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:51:17] "[32mGET /dashboard HTTP/1.1[0m" 302 -
+2025-11-11 16:51:17 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:51:17] "GET /login HTTP/1.1" 200 -
+2025-11-11 16:51:32 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:51:32] "GET /register HTTP/1.1" 200 -
+2025-11-11 16:51:33 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:51:33] "[36mGET /static/css/login.css HTTP/1.1[0m" 304 -
+2025-11-11 16:51:46 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:51:46] "[32mGET /@vite/client HTTP/1.1[0m" 302 -
+2025-11-11 16:51:46 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 16:51:46 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 16:51:46 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:51:46] "[32mGET /dashboard HTTP/1.1[0m" 302 -
+2025-11-11 16:51:46 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:51:46] "GET /login HTTP/1.1" 200 -
+2025-11-11 16:51:52 - INFO - system - system - auth - New user registered: kevinalveswp@gmail.com
+2025-11-11 16:51:52 - INFO - system - system - auth - New user registered: kevinalveswp@gmail.com
+2025-11-11 16:51:52 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:51:52] "[32mPOST /register HTTP/1.1[0m" 302 -
+2025-11-11 16:51:52 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:51:52] "GET /login HTTP/1.1" 200 -
+2025-11-11 16:51:52 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:51:52] "GET /static/css/login.css HTTP/1.1" 200 -
+2025-11-11 16:51:52 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:51:52] "[32mGET /@vite/client HTTP/1.1[0m" 302 -
+2025-11-11 16:51:52 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 16:51:52 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 16:51:52 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:51:52] "[32mGET /dashboard HTTP/1.1[0m" 302 -
+2025-11-11 16:51:52 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:51:52] "GET /login HTTP/1.1" 200 -
+2025-11-11 16:52:06 - INFO - system - system - auth - User logged in successfully: kevinalveswp@gmail.com
+2025-11-11 16:52:06 - INFO - system - system - auth - User logged in successfully: kevinalveswp@gmail.com
+2025-11-11 16:52:06 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:52:06] "[32mPOST /login HTTP/1.1[0m" 302 -
+2025-11-11 16:52:06 - INFO - kevinalveswp@gmail.com - Kevin Alves (None) - auth - User authenticated: kevinalveswp@gmail.com, Role: None, Path: /dashboard
+2025-11-11 16:52:06 - INFO - kevinalveswp@gmail.com - Kevin Alves (None) - auth - User authenticated: kevinalveswp@gmail.com, Role: None, Path: /dashboard
+2025-11-11 16:52:06 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:52:06] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 16:52:06 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:52:06] "GET /static/css/theme.css HTTP/1.1" 200 -
+2025-11-11 16:52:06 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:52:06] "GET /static/css/style.css HTTP/1.1" 200 -
+2025-11-11 16:52:07 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:52:07] "[32mGET /@vite/client HTTP/1.1[0m" 302 -
+2025-11-11 16:52:07 - INFO - kevinalveswp@gmail.com - Kevin Alves (None) - auth - User authenticated: kevinalveswp@gmail.com, Role: None, Path: /dashboard
+2025-11-11 16:52:07 - INFO - kevinalveswp@gmail.com - Kevin Alves (None) - auth - User authenticated: kevinalveswp@gmail.com, Role: None, Path: /dashboard
+2025-11-11 16:52:07 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:52:07] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 16:52:12 - INFO - kevinalveswp@gmail.com - Kevin Alves (None) - auth - User authenticated: kevinalveswp@gmail.com, Role: None, Path: /profile/
+2025-11-11 16:52:12 - INFO - kevinalveswp@gmail.com - Kevin Alves (None) - auth - User authenticated: kevinalveswp@gmail.com, Role: None, Path: /profile/
+2025-11-11 16:52:12 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:52:12] "GET /profile/ HTTP/1.1" 200 -
+2025-11-11 16:52:12 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:52:12] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+2025-11-11 16:52:13 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:52:13] "[36mGET /static/css/theme.css HTTP/1.1[0m" 304 -
+2025-11-11 16:52:13 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:52:13] "GET /static/imagens/teladelogin.jpg HTTP/1.1" 200 -
+2025-11-11 16:52:13 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:52:13] "[32mGET /@vite/client HTTP/1.1[0m" 302 -
+2025-11-11 16:52:13 - INFO - kevinalveswp@gmail.com - Kevin Alves (None) - auth - User authenticated: kevinalveswp@gmail.com, Role: None, Path: /dashboard
+2025-11-11 16:52:13 - INFO - kevinalveswp@gmail.com - Kevin Alves (None) - auth - User authenticated: kevinalveswp@gmail.com, Role: None, Path: /dashboard
+2025-11-11 16:52:13 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:52:13] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 16:52:16 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:52:16] "[32mGET /logout HTTP/1.1[0m" 302 -
+2025-11-11 16:52:16 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:52:16] "GET / HTTP/1.1" 200 -
+2025-11-11 16:52:16 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:52:16] "[36mGET /static/css/login.css HTTP/1.1[0m" 304 -
+2025-11-11 16:52:16 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:52:16] "[32mGET /@vite/client HTTP/1.1[0m" 302 -
+2025-11-11 16:52:16 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 16:52:16 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 16:52:16 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:52:16] "[32mGET /dashboard HTTP/1.1[0m" 302 -
+2025-11-11 16:52:16 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:52:16] "GET /login HTTP/1.1" 200 -
+2025-11-11 16:54:47 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 16:54:47 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 16:54:48 - INFO - system - system - werkzeug - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2025-11-11 16:54:48 - INFO - system - system - werkzeug - [33mPress CTRL+C to quit[0m
+2025-11-11 16:54:56 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:54:56] "GET / HTTP/1.1" 200 -
+2025-11-11 16:54:57 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:54:57] "GET /static/css/login.css HTTP/1.1" 200 -
+2025-11-11 16:54:59 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:54:59] "[32mGET /@vite/client HTTP/1.1[0m" 302 -
+2025-11-11 16:54:59 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 16:54:59 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 16:54:59 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:54:59] "[32mGET /dashboard HTTP/1.1[0m" 302 -
+2025-11-11 16:54:59 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:54:59] "GET /login HTTP/1.1" 200 -
+2025-11-11 16:55:04 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:55:04] "GET /?ide_webview_request_time=1762890904290 HTTP/1.1" 200 -
+2025-11-11 16:55:04 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:55:04] "[36mGET /static/css/login.css HTTP/1.1[0m" 304 -
+2025-11-11 16:55:04 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:55:04] "[32mGET /@vite/client HTTP/1.1[0m" 302 -
+2025-11-11 16:55:04 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 16:55:04 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 16:55:04 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:55:04] "[32mGET /dashboard HTTP/1.1[0m" 302 -
+2025-11-11 16:55:05 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:55:05] "GET /login HTTP/1.1" 200 -
+2025-11-11 16:55:12 - INFO - system - system - auth - User logged in successfully: kevinalveswp@gmail.com
+2025-11-11 16:55:12 - INFO - system - system - auth - User logged in successfully: kevinalveswp@gmail.com
+2025-11-11 16:55:12 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:55:12] "[32mPOST /login HTTP/1.1[0m" 302 -
+2025-11-11 16:55:12 - INFO - kevinalveswp@gmail.com - Kevin Alves (None) - auth - User authenticated: kevinalveswp@gmail.com, Role: None, Path: /dashboard
+2025-11-11 16:55:12 - INFO - kevinalveswp@gmail.com - Kevin Alves (None) - auth - User authenticated: kevinalveswp@gmail.com, Role: None, Path: /dashboard
+2025-11-11 16:55:13 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:55:13] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 16:55:14 - INFO - kevinalveswp@gmail.com - Kevin Alves (None) - auth - User logged in successfully: kevinalveswp@gmail.com
+2025-11-11 16:55:14 - INFO - kevinalveswp@gmail.com - Kevin Alves (None) - auth - User logged in successfully: kevinalveswp@gmail.com
+2025-11-11 16:55:14 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:55:14] "[32mPOST /login HTTP/1.1[0m" 302 -
+2025-11-11 16:55:14 - INFO - kevinalveswp@gmail.com - Kevin Alves (None) - auth - User authenticated: kevinalveswp@gmail.com, Role: None, Path: /dashboard
+2025-11-11 16:55:14 - INFO - kevinalveswp@gmail.com - Kevin Alves (None) - auth - User authenticated: kevinalveswp@gmail.com, Role: None, Path: /dashboard
+2025-11-11 16:55:14 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:55:14] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 16:55:14 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:55:14] "GET /static/css/theme.css HTTP/1.1" 200 -
+2025-11-11 16:55:14 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:55:14] "GET /static/css/style.css HTTP/1.1" 200 -
+2025-11-11 16:55:23 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:55:23] "[32mGET /@vite/client HTTP/1.1[0m" 302 -
+2025-11-11 16:55:23 - INFO - kevinalveswp@gmail.com - Kevin Alves (None) - auth - User authenticated: kevinalveswp@gmail.com, Role: None, Path: /dashboard
+2025-11-11 16:55:23 - INFO - kevinalveswp@gmail.com - Kevin Alves (None) - auth - User authenticated: kevinalveswp@gmail.com, Role: None, Path: /dashboard
+2025-11-11 16:55:23 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 16:55:23] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 17:03:31 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 17:03:31 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 17:03:32 - INFO - system - system - werkzeug - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2025-11-11 17:03:32 - INFO - system - system - werkzeug - [33mPress CTRL+C to quit[0m
+2025-11-11 17:03:44 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:03:44] "[32mGET /?ide_webview_request_time=1762891424659 HTTP/1.1[0m" 302 -
+2025-11-11 17:03:44 - INFO - kevinalveswp@gmail.com - Kevin Alves (None) - auth - User authenticated: kevinalveswp@gmail.com, Role: None, Path: /dashboard
+2025-11-11 17:03:44 - INFO - kevinalveswp@gmail.com - Kevin Alves (None) - auth - User authenticated: kevinalveswp@gmail.com, Role: None, Path: /dashboard
+2025-11-11 17:03:44 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:03:44] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 17:03:44 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:03:44] "GET /static/css/style.css HTTP/1.1" 200 -
+2025-11-11 17:03:44 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:03:44] "GET /static/css/theme.css HTTP/1.1" 200 -
+2025-11-11 17:03:45 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:03:45] "[32mGET /@vite/client HTTP/1.1[0m" 302 -
+2025-11-11 17:03:45 - INFO - kevinalveswp@gmail.com - Kevin Alves (None) - auth - User authenticated: kevinalveswp@gmail.com, Role: None, Path: /dashboard
+2025-11-11 17:03:45 - INFO - kevinalveswp@gmail.com - Kevin Alves (None) - auth - User authenticated: kevinalveswp@gmail.com, Role: None, Path: /dashboard
+2025-11-11 17:03:45 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:03:45] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 17:04:00 - INFO - kevinalveswp@gmail.com - Kevin Alves (None) - auth - User authenticated: kevinalveswp@gmail.com, Role: None, Path: /dashboard
+2025-11-11 17:04:00 - INFO - kevinalveswp@gmail.com - Kevin Alves (None) - auth - User authenticated: kevinalveswp@gmail.com, Role: None, Path: /dashboard
+2025-11-11 17:04:00 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:00] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 17:04:01 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:01] "GET /static/css/theme.css HTTP/1.1" 200 -
+2025-11-11 17:04:01 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:01] "GET /static/css/style.css HTTP/1.1" 200 -
+2025-11-11 17:04:01 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:01] "[32mGET /@vite/client HTTP/1.1[0m" 302 -
+2025-11-11 17:04:02 - INFO - kevinalveswp@gmail.com - Kevin Alves (None) - auth - User authenticated: kevinalveswp@gmail.com, Role: None, Path: /dashboard
+2025-11-11 17:04:02 - INFO - kevinalveswp@gmail.com - Kevin Alves (None) - auth - User authenticated: kevinalveswp@gmail.com, Role: None, Path: /dashboard
+2025-11-11 17:04:02 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:02] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 17:04:05 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:05] "[32mGET /logout HTTP/1.1[0m" 302 -
+2025-11-11 17:04:05 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:05] "GET / HTTP/1.1" 200 -
+2025-11-11 17:04:05 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:05] "GET /static/css/login.css HTTP/1.1" 200 -
+2025-11-11 17:04:06 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:06] "[32mGET /@vite/client HTTP/1.1[0m" 302 -
+2025-11-11 17:04:06 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 17:04:06 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 17:04:06 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:06] "[32mGET /dashboard HTTP/1.1[0m" 302 -
+2025-11-11 17:04:06 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:06] "GET /login HTTP/1.1" 200 -
+2025-11-11 17:04:08 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:08] "GET / HTTP/1.1" 200 -
+2025-11-11 17:04:08 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:08] "GET /static/css/login.css HTTP/1.1" 200 -
+2025-11-11 17:04:13 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:13] "[32mGET /@vite/client HTTP/1.1[0m" 302 -
+2025-11-11 17:04:14 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 17:04:14 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 17:04:15 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:15] "[32mGET /dashboard HTTP/1.1[0m" 302 -
+2025-11-11 17:04:15 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:15] "GET /login HTTP/1.1" 200 -
+2025-11-11 17:04:19 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:19] "[32mGET / HTTP/1.1[0m" 302 -
+2025-11-11 17:04:20 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:20] "[32mGET / HTTP/1.1[0m" 302 -
+2025-11-11 17:04:20 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 17:04:20 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 17:04:20 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:20] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 17:04:21 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:21] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+2025-11-11 17:04:21 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:21] "[36mGET /static/css/theme.css HTTP/1.1[0m" 304 -
+2025-11-11 17:04:24 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:24] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+2025-11-11 17:04:24 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 17:04:24 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 17:04:25 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:25] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 17:04:26 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:26] "[32mGET /logout HTTP/1.1[0m" 302 -
+2025-11-11 17:04:26 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:26] "GET / HTTP/1.1" 200 -
+2025-11-11 17:04:27 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:27] "GET /static/css/login.css HTTP/1.1" 200 -
+2025-11-11 17:04:27 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:27] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+2025-11-11 17:04:28 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 17:04:28 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 17:04:28 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:28] "[32mGET /dashboard HTTP/1.1[0m" 302 -
+2025-11-11 17:04:30 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:30] "GET /login HTTP/1.1" 200 -
+2025-11-11 17:04:40 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:40] "GET / HTTP/1.1" 200 -
+2025-11-11 17:04:40 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:40] "[36mGET /static/css/login.css HTTP/1.1[0m" 304 -
+2025-11-11 17:04:41 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:41] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+2025-11-11 17:04:41 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 17:04:41 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 17:04:41 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:41] "[32mGET /dashboard HTTP/1.1[0m" 302 -
+2025-11-11 17:04:42 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:42] "GET /login HTTP/1.1" 200 -
+2025-11-11 17:04:54 - WARNING - system - system - auth - Login attempt with non-existent email: kevinalvexxx@gmail.com
+2025-11-11 17:04:54 - WARNING - system - system - auth - Login attempt with non-existent email: kevinalvexxx@gmail.com
+2025-11-11 17:04:54 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:54] "POST /login HTTP/1.1" 200 -
+2025-11-11 17:04:54 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:54] "[36mGET /static/css/login.css HTTP/1.1[0m" 304 -
+2025-11-11 17:04:54 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:54] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+2025-11-11 17:04:55 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 17:04:55 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 17:04:55 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:55] "[32mGET /dashboard HTTP/1.1[0m" 302 -
+2025-11-11 17:04:55 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:04:55] "GET /login HTTP/1.1" 200 -
+2025-11-11 17:10:15 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 17:10:15 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 17:10:17 - INFO - system - system - werkzeug - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2025-11-11 17:10:17 - INFO - system - system - werkzeug - [33mPress CTRL+C to quit[0m
+2025-11-11 17:10:26 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:10:26] "GET /?ide_webview_request_time=1762891826488 HTTP/1.1" 200 -
+2025-11-11 17:10:26 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:10:26] "GET /static/css/login.css HTTP/1.1" 200 -
+2025-11-11 17:10:27 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:10:27] "[32mGET /@vite/client HTTP/1.1[0m" 302 -
+2025-11-11 17:10:27 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 17:10:27 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 17:10:27 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:10:27] "[32mGET /dashboard HTTP/1.1[0m" 302 -
+2025-11-11 17:10:27 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:10:27] "GET /login HTTP/1.1" 200 -
+2025-11-11 17:13:00 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:13:00] "GET /?ide_webview_request_time=1762891980284 HTTP/1.1" 200 -
+2025-11-11 17:13:01 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:13:01] "GET /static/css/login.css HTTP/1.1" 200 -
+2025-11-11 17:13:01 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:13:01] "[32mGET /@vite/client HTTP/1.1[0m" 302 -
+2025-11-11 17:13:01 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 17:13:01 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 17:13:02 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:13:02] "[32mGET /dashboard HTTP/1.1[0m" 302 -
+2025-11-11 17:13:02 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:13:02] "GET /login HTTP/1.1" 200 -
+2025-11-11 17:13:07 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 17:13:07 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 17:13:12 - INFO - system - system - werkzeug - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2025-11-11 17:13:12 - INFO - system - system - werkzeug - [33mPress CTRL+C to quit[0m
+2025-11-11 17:14:42 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:14:42] "GET /?ide_webview_request_time=1762891980284 HTTP/1.1" 200 -
+2025-11-11 17:14:42 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:14:42] "GET /static/css/login.css HTTP/1.1" 200 -
+2025-11-11 17:14:43 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:14:43] "[32mGET /@vite/client HTTP/1.1[0m" 302 -
+2025-11-11 17:14:43 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 17:14:43 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 17:14:43 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:14:43] "[32mGET /dashboard HTTP/1.1[0m" 302 -
+2025-11-11 17:14:43 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:14:43] "GET /login HTTP/1.1" 200 -
+2025-11-11 17:14:47 - WARNING - system - system - auth - Login attempt with non-existent email: kevinalvexxx@gmail.com
+2025-11-11 17:14:47 - WARNING - system - system - auth - Login attempt with non-existent email: kevinalvexxx@gmail.com
+2025-11-11 17:14:47 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:14:47] "POST /login HTTP/1.1" 200 -
+2025-11-11 17:14:47 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:14:47] "GET /static/css/login.css HTTP/1.1" 200 -
+2025-11-11 17:14:48 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:14:48] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+2025-11-11 17:14:48 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 17:14:48 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 17:14:48 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:14:48] "[32mGET /dashboard HTTP/1.1[0m" 302 -
+2025-11-11 17:14:48 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:14:48] "GET /login HTTP/1.1" 200 -
+2025-11-11 17:14:51 - WARNING - system - system - auth - Login attempt with non-existent email: kevinalvexxx@gmail.com
+2025-11-11 17:14:51 - WARNING - system - system - auth - Login attempt with non-existent email: kevinalvexxx@gmail.com
+2025-11-11 17:14:51 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:14:51] "POST /login HTTP/1.1" 200 -
+2025-11-11 17:14:51 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:14:51] "GET /static/css/login.css HTTP/1.1" 200 -
+2025-11-11 17:14:52 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:14:52] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+2025-11-11 17:14:52 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 17:14:52 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 17:14:52 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:14:52] "[32mGET /dashboard HTTP/1.1[0m" 302 -
+2025-11-11 17:14:52 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:14:52] "GET /login HTTP/1.1" 200 -
+2025-11-11 17:15:30 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 17:15:30 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 17:15:30 - INFO - system - system - werkzeug - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2025-11-11 17:15:30 - INFO - system - system - werkzeug - [33mPress CTRL+C to quit[0m
+2025-11-11 17:15:49 - WARNING - system - system - auth - Login attempt with non-existent email: kevinalvexxx@gmail.com
+2025-11-11 17:15:49 - WARNING - system - system - auth - Login attempt with non-existent email: kevinalvexxx@gmail.com
+2025-11-11 17:15:49 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:15:49] "POST /login HTTP/1.1" 200 -
+2025-11-11 17:15:49 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:15:49] "GET /static/css/login.css HTTP/1.1" 200 -
+2025-11-11 17:15:50 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:15:50] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+2025-11-11 17:15:50 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 17:15:50 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 17:15:50 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:15:50] "[32mGET /dashboard HTTP/1.1[0m" 302 -
+2025-11-11 17:15:50 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:15:50] "GET /login HTTP/1.1" 200 -
+2025-11-11 17:15:54 - WARNING - system - system - auth - Login attempt with non-existent email: kevinalvexxx@gmail.com
+2025-11-11 17:15:54 - WARNING - system - system - auth - Login attempt with non-existent email: kevinalvexxx@gmail.com
+2025-11-11 17:15:54 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:15:54] "POST /login HTTP/1.1" 200 -
+2025-11-11 17:15:54 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:15:54] "GET /static/css/login.css HTTP/1.1" 200 -
+2025-11-11 17:15:55 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:15:55] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+2025-11-11 17:15:55 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 17:15:55 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 17:15:55 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:15:55] "[32mGET /dashboard HTTP/1.1[0m" 302 -
+2025-11-11 17:15:55 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:15:55] "GET /login HTTP/1.1" 200 -
+2025-11-11 17:16:00 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:16:00] "GET /forgot-password HTTP/1.1" 200 -
+2025-11-11 17:16:00 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:16:00] "[36mGET /static/css/login.css HTTP/1.1[0m" 304 -
+2025-11-11 17:16:00 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:16:00] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+2025-11-11 17:16:01 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 17:16:01 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 17:16:01 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:16:01] "[32mGET /dashboard HTTP/1.1[0m" 302 -
+2025-11-11 17:16:01 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:16:01] "GET /login HTTP/1.1" 200 -
+2025-11-11 17:16:04 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:16:04] "GET /login HTTP/1.1" 200 -
+2025-11-11 17:16:04 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:16:04] "[36mGET /static/css/login.css HTTP/1.1[0m" 304 -
+2025-11-11 17:16:04 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:16:04] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+2025-11-11 17:16:04 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 17:16:04 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 17:16:04 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:16:04] "[32mGET /dashboard HTTP/1.1[0m" 302 -
+2025-11-11 17:16:04 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:16:04] "GET /login HTTP/1.1" 200 -
+2025-11-11 17:29:28 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 17:29:28 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 17:30:20 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:30:20] "GET /login HTTP/1.1" 200 -
+2025-11-11 17:30:20 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:30:20] "GET /static/css/login.css HTTP/1.1" 200 -
+2025-11-11 17:30:21 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:30:21] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+2025-11-11 17:30:21 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 17:30:21 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 17:30:21 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:30:21] "[32mGET /dashboard HTTP/1.1[0m" 302 -
+2025-11-11 17:30:21 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:30:21] "GET /login HTTP/1.1" 200 -
+2025-11-11 17:30:30 - INFO - system - system - auth - User logged in successfully: suporte01.cs@gmail.com
+2025-11-11 17:30:30 - INFO - system - system - auth - User logged in successfully: suporte01.cs@gmail.com
+2025-11-11 17:30:30 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:30:30] "[32mPOST /login HTTP/1.1[0m" 302 -
+2025-11-11 17:30:30 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 17:30:30 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 17:30:31 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:30:31] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 17:30:31 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:30:31] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+2025-11-11 17:30:31 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:30:31] "[36mGET /static/css/theme.css HTTP/1.1[0m" 304 -
+2025-11-11 17:30:32 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:30:32] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+2025-11-11 17:30:32 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 17:30:32 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 17:30:32 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:30:32] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 17:30:45 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /change-password
+2025-11-11 17:30:45 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /change-password
+2025-11-11 17:30:46 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:30:46] "GET /change-password HTTP/1.1" 200 -
+2025-11-11 17:30:46 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:30:46] "[36mGET /static/css/login.css HTTP/1.1[0m" 304 -
+2025-11-11 17:30:46 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:30:46] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+2025-11-11 17:30:46 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 17:30:46 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 17:30:47 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:30:47] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 17:30:48 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 17:30:48 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 17:30:48 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:30:48] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 17:30:48 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:30:48] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+2025-11-11 17:30:48 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:30:48] "[36mGET /static/css/theme.css HTTP/1.1[0m" 304 -
+2025-11-11 17:30:49 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:30:49] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+2025-11-11 17:30:49 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 17:30:49 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 17:30:49 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:30:49] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 17:30:50 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /profile/
+2025-11-11 17:30:50 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /profile/
+2025-11-11 17:30:51 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:30:51] "GET /profile/ HTTP/1.1" 200 -
+2025-11-11 17:30:51 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:30:51] "GET /static/imagens/teladelogin.jpg HTTP/1.1" 200 -
+2025-11-11 17:30:51 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:30:51] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+2025-11-11 17:30:51 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:30:51] "[36mGET /static/css/theme.css HTTP/1.1[0m" 304 -
+2025-11-11 17:30:51 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:30:51] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+2025-11-11 17:30:51 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 17:30:51 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 17:30:51 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:30:51] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 17:31:22 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /profile/
+2025-11-11 17:31:22 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /profile/
+2025-11-11 17:31:22 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:31:22] "GET /profile/ HTTP/1.1" 200 -
+2025-11-11 17:31:22 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:31:22] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+2025-11-11 17:31:22 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:31:22] "[36mGET /static/css/theme.css HTTP/1.1[0m" 304 -
+2025-11-11 17:31:22 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:31:22] "[36mGET /static/imagens/teladelogin.jpg HTTP/1.1[0m" 304 -
+2025-11-11 17:31:22 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:31:22] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+2025-11-11 17:31:22 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 17:31:22 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 17:31:22 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:31:22] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 17:36:14 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 17:36:14 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 17:36:15 - INFO - system - system - werkzeug - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2025-11-11 17:36:15 - INFO - system - system - werkzeug - [33mPress CTRL+C to quit[0m
+2025-11-11 17:36:23 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:36:23] "GET /?ide_webview_request_time=1762893383869 HTTP/1.1" 200 -
+2025-11-11 17:36:24 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:36:24] "GET /static/css/login.css HTTP/1.1" 200 -
+2025-11-11 17:36:24 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:36:24] "[32mGET /@vite/client HTTP/1.1[0m" 302 -
+2025-11-11 17:36:24 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 17:36:24 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 17:36:24 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:36:24] "[32mGET /dashboard HTTP/1.1[0m" 302 -
+2025-11-11 17:36:24 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:36:24] "GET /login HTTP/1.1" 200 -
+2025-11-11 17:41:22 - INFO - system - system - auth - Login required: anonymous access to /profile/
+2025-11-11 17:41:22 - INFO - system - system - auth - Login required: anonymous access to /profile/
+2025-11-11 17:41:22 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:41:22] "[32mGET /profile/?ide_webview_request_time=1762893682073 HTTP/1.1[0m" 302 -
+2025-11-11 17:41:22 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:41:22] "GET /login HTTP/1.1" 200 -
+2025-11-11 17:41:22 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:41:22] "GET /static/css/login.css HTTP/1.1" 200 -
+2025-11-11 17:41:22 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:41:22] "[32mGET /@vite/client HTTP/1.1[0m" 302 -
+2025-11-11 17:41:22 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 17:41:22 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 17:41:22 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:41:22] "[32mGET /dashboard HTTP/1.1[0m" 302 -
+2025-11-11 17:41:22 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 17:41:22] "GET /login HTTP/1.1" 200 -
+2025-11-11 18:00:11 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 18:00:11 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 18:00:12 - INFO - system - system - werkzeug - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2025-11-11 18:00:12 - INFO - system - system - werkzeug - [33mPress CTRL+C to quit[0m
+2025-11-11 18:00:18 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:00:18] "GET /login HTTP/1.1" 200 -
+2025-11-11 18:00:18 - INFO - system - system - auth - Login required: anonymous access to /profile/
+2025-11-11 18:00:18 - INFO - system - system - auth - Login required: anonymous access to /profile/
+2025-11-11 18:00:18 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:00:18] "GET /login HTTP/1.1" 200 -
+2025-11-11 18:00:18 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:00:18] "[32mGET /profile/?ide_webview_request_time=1762894818236 HTTP/1.1[0m" 302 -
+2025-11-11 18:00:19 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:00:19] "GET /login HTTP/1.1" 200 -
+2025-11-11 18:00:19 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:00:19] "GET /static/css/login.css HTTP/1.1" 200 -
+2025-11-11 18:00:21 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:00:21] "[32mGET /@vite/client HTTP/1.1[0m" 302 -
+2025-11-11 18:00:21 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 18:00:21 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 18:00:22 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:00:22] "[32mGET /dashboard HTTP/1.1[0m" 302 -
+2025-11-11 18:00:22 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:00:22] "GET /login HTTP/1.1" 200 -
+2025-11-11 18:01:24 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /profile/
+2025-11-11 18:01:24 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /profile/
+2025-11-11 18:01:24 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:01:24] "GET /profile/ HTTP/1.1" 200 -
+2025-11-11 18:01:26 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:01:26] "GET /static/css/style.css HTTP/1.1" 200 -
+2025-11-11 18:01:26 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:01:26] "GET /static/css/theme.css HTTP/1.1" 200 -
+2025-11-11 18:01:27 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:01:27] "GET /static/imagens/teladelogin.jpg HTTP/1.1" 200 -
+2025-11-11 18:01:31 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 18:01:31 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 18:01:32 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:01:32] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 18:01:32 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:01:32] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+2025-11-11 18:01:32 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:01:32] "[36mGET /static/css/theme.css HTTP/1.1[0m" 304 -
+2025-11-11 18:01:53 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 18:01:53 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 18:01:55 - INFO - system - system - werkzeug - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2025-11-11 18:01:56 - INFO - system - system - werkzeug - [33mPress CTRL+C to quit[0m
+2025-11-11 18:02:01 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:02:01] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+2025-11-11 18:02:01 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 18:02:01 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 18:02:05 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:02:05] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 18:02:22 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /change-password
+2025-11-11 18:02:22 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /change-password
+2025-11-11 18:02:23 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:02:23] "GET /change-password HTTP/1.1" 200 -
+2025-11-11 18:02:24 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:02:24] "[36mGET /static/css/login.css HTTP/1.1[0m" 304 -
+2025-11-11 18:02:25 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:02:25] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+2025-11-11 18:02:27 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 18:02:27 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 18:02:27 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:02:27] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 18:03:02 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:03:02] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+2025-11-11 18:03:02 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 18:03:02 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 18:03:03 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:03:03] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 18:03:28 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /profile/
+2025-11-11 18:03:28 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /profile/
+2025-11-11 18:03:29 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:03:29] "GET /profile/ HTTP/1.1" 200 -
+2025-11-11 18:03:29 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:03:29] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+2025-11-11 18:03:30 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:03:30] "[36mGET /static/css/theme.css HTTP/1.1[0m" 304 -
+2025-11-11 18:03:30 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:03:30] "[36mGET /static/imagens/teladelogin.jpg HTTP/1.1[0m" 304 -
+2025-11-11 18:03:31 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:03:31] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+2025-11-11 18:03:31 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 18:03:31 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 18:03:32 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:03:32] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 18:03:37 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /agenda
+2025-11-11 18:03:37 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /agenda
+2025-11-11 18:03:38 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:03:38] "GET /agenda HTTP/1.1" 200 -
+2025-11-11 18:03:39 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:03:39] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+2025-11-11 18:03:39 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:03:39] "[36mGET /static/css/theme.css HTTP/1.1[0m" 304 -
+2025-11-11 18:03:40 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:03:40] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+2025-11-11 18:03:41 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 18:03:41 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 18:03:42 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:03:42] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 18:03:43 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /management/users
+2025-11-11 18:03:43 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /management/users
+2025-11-11 18:03:44 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:03:44] "GET /management/users HTTP/1.1" 200 -
+2025-11-11 18:03:45 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:03:45] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+2025-11-11 18:03:46 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:03:46] "[36mGET /static/css/theme.css HTTP/1.1[0m" 304 -
+2025-11-11 18:03:53 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /management/users/update_perfil
+2025-11-11 18:03:53 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /management/users/update_perfil
+2025-11-11 18:03:53 - WARNING - suporte01.cs@gmail.com - Admin Dev (Administrador) - security - Tentativa de atribuir perfil inválido 'Implantador' para kevinalveswp@gmail.com por suporte01.cs@gmail.com
+2025-11-11 18:03:53 - WARNING - suporte01.cs@gmail.com - Admin Dev (Administrador) - security - Tentativa de atribuir perfil inválido 'Implantador' para kevinalveswp@gmail.com por suporte01.cs@gmail.com
+2025-11-11 18:03:53 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:03:53] "[32mPOST /management/users/update_perfil HTTP/1.1[0m" 302 -
+2025-11-11 18:03:53 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /management/users
+2025-11-11 18:03:53 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /management/users
+2025-11-11 18:03:53 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:03:53] "GET /management/users HTTP/1.1" 200 -
+2025-11-11 18:03:54 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:03:54] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+2025-11-11 18:03:54 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:03:54] "[36mGET /static/css/theme.css HTTP/1.1[0m" 304 -
+2025-11-11 18:03:55 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:03:55] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+2025-11-11 18:03:56 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 18:03:56 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 18:03:56 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:03:56] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 18:04:11 - INFO - system - system - auth - Login required: anonymous access to /profile/
+2025-11-11 18:04:11 - INFO - system - system - auth - Login required: anonymous access to /profile/
+2025-11-11 18:04:11 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:04:11] "[32mGET /profile/?ide_webview_request_time=1762895051074 HTTP/1.1[0m" 302 -
+2025-11-11 18:04:12 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:04:12] "GET /login HTTP/1.1" 200 -
+2025-11-11 18:04:13 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:04:13] "GET /static/css/login.css HTTP/1.1" 200 -
+2025-11-11 18:04:14 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:04:14] "[32mGET /@vite/client HTTP/1.1[0m" 302 -
+2025-11-11 18:04:14 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 18:04:14 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 18:04:15 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:04:15] "[32mGET /dashboard HTTP/1.1[0m" 302 -
+2025-11-11 18:04:15 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:04:15] "GET /login HTTP/1.1" 200 -
+2025-11-11 18:06:27 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /management/users
+2025-11-11 18:06:27 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /management/users
+2025-11-11 18:06:27 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:06:27] "GET /management/users HTTP/1.1" 200 -
+2025-11-11 18:06:28 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:06:28] "GET /static/css/style.css HTTP/1.1" 200 -
+2025-11-11 18:06:28 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:06:28] "GET /static/css/theme.css HTTP/1.1" 200 -
+2025-11-11 18:06:28 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:06:28] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+2025-11-11 18:06:29 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 18:06:29 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 18:06:29 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:06:29] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 18:06:41 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /profile/
+2025-11-11 18:06:41 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /profile/
+2025-11-11 18:06:41 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:06:41] "GET /profile/ HTTP/1.1" 200 -
+2025-11-11 18:06:42 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:06:42] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+2025-11-11 18:06:42 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:06:42] "[36mGET /static/css/theme.css HTTP/1.1[0m" 304 -
+2025-11-11 18:06:42 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:06:42] "[36mGET /static/imagens/teladelogin.jpg HTTP/1.1[0m" 304 -
+2025-11-11 18:06:42 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:06:42] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+2025-11-11 18:06:42 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 18:06:42 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 18:06:43 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:06:43] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 18:06:45 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /change-password
+2025-11-11 18:06:45 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /change-password
+2025-11-11 18:06:45 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:06:45] "GET /change-password HTTP/1.1" 200 -
+2025-11-11 18:06:46 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:06:46] "[36mGET /static/css/login.css HTTP/1.1[0m" 304 -
+2025-11-11 18:06:46 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:06:46] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+2025-11-11 18:06:47 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 18:06:47 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 18:06:47 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:06:47] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 18:06:49 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 18:06:49 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 18:06:49 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:06:49] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 18:06:50 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:06:50] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+2025-11-11 18:06:50 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:06:50] "[36mGET /static/css/theme.css HTTP/1.1[0m" 304 -
+2025-11-11 18:06:50 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:06:50] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+2025-11-11 18:06:51 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 18:06:51 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 18:06:51 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:06:51] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 18:08:23 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 18:08:23 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 18:08:23 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:08:23] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 18:08:23 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:08:23] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+2025-11-11 18:08:23 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:08:23] "[36mGET /static/css/theme.css HTTP/1.1[0m" 304 -
+2025-11-11 18:08:26 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:08:26] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+2025-11-11 18:08:26 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 18:08:26 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 18:08:26 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:08:26] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 18:09:22 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 18:09:22 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 18:09:27 - INFO - system - system - werkzeug - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5001
+ * Running on http://192.168.157.176:5001
+2025-11-11 18:09:27 - INFO - system - system - werkzeug - [33mPress CTRL+C to quit[0m
+2025-11-11 18:09:27 - INFO - system - system - werkzeug -  * Restarting with stat
+2025-11-11 18:09:30 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:09:30] "[32mGET / HTTP/1.1[0m" 302 -
+2025-11-11 18:09:31 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 18:09:31 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 18:09:32 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:09:32] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 18:09:35 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:09:35] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+2025-11-11 18:09:35 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:09:35] "[36mGET /static/css/theme.css HTTP/1.1[0m" 304 -
+2025-11-11 18:09:37 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:09:37] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+2025-11-11 18:09:37 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 18:09:37 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 18:09:37 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:09:37] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 18:09:43 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:09:43] "GET /login HTTP/1.1" 200 -
+2025-11-11 18:09:43 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:09:43] "GET /static/css/login.css HTTP/1.1" 200 -
+2025-11-11 18:09:43 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 18:09:43 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 18:09:45 - WARNING - system - system - werkzeug -  * Debugger is active!
+2025-11-11 18:09:45 - INFO - system - system - werkzeug -  * Debugger PIN: 130-522-712
+2025-11-11 18:09:46 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:09:46] "[32mGET /@vite/client HTTP/1.1[0m" 302 -
+2025-11-11 18:09:46 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 18:09:46 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 18:09:46 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:09:46] "[32mGET /dashboard HTTP/1.1[0m" 302 -
+2025-11-11 18:09:46 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:09:46] "GET /login HTTP/1.1" 200 -
+2025-11-11 18:09:51 - INFO - system - system - auth - Login required: anonymous access to /profile/
+2025-11-11 18:09:51 - INFO - system - system - auth - Login required: anonymous access to /profile/
+2025-11-11 18:09:51 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:09:51] "[32mGET /profile/?ide_webview_request_time=1762895391891 HTTP/1.1[0m" 302 -
+2025-11-11 18:09:52 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:09:52] "GET /login HTTP/1.1" 200 -
+2025-11-11 18:09:53 - INFO - system - system - auth - Login required: anonymous access to /profile/
+2025-11-11 18:09:53 - INFO - system - system - auth - Login required: anonymous access to /profile/
+2025-11-11 18:09:53 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:09:53] "[32mGET /profile/?ide_webview_request_time=1762895393041 HTTP/1.1[0m" 302 -
+2025-11-11 18:09:53 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:09:53] "GET /login HTTP/1.1" 200 -
+2025-11-11 18:09:53 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:09:53] "GET /static/css/login.css HTTP/1.1" 200 -
+2025-11-11 18:09:53 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:09:53] "GET /static/css/login.css HTTP/1.1" 200 -
+2025-11-11 18:09:54 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:09:54] "[32mGET /@vite/client HTTP/1.1[0m" 302 -
+2025-11-11 18:09:54 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 18:09:54 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-11 18:09:54 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:09:54] "[32mGET /dashboard HTTP/1.1[0m" 302 -
+2025-11-11 18:09:54 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 18:09:54] "GET /login HTTP/1.1" 200 -

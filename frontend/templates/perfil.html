@@ -17,7 +17,7 @@
     <div class="row justify-content-center">
         <div class="col-lg-6 mb-4">
             <div class="card shadow">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Meu Perfil</h5>
                 </div>
                 <div class="card-body">
@@ -80,133 +80,31 @@
             </div>
         </div>
 
+        {# Seção simples para alterar senha dentro da tela de Perfil #}
         <div class="col-lg-6 mb-4">
-            <div class="card shadow mb-4">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0">Configuração Rápida de E-mail</h5>
-                </div>
-                <div class="card-body">
-                    <p class="card-text text-muted small">
-                        Informe seu e-mail e sua <strong>App Password</strong>. Nós
-                        detectamos automaticamente o servidor SMTP (Gmail, Outlook, Yahoo, etc.).
-                        Funciona para qualquer usuário; sem precisar configurar host/porta.
-                    </p>
-
-                    <form action="{{ url_for('profile.quick_setup_email') }}" method="POST">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                        <div class="mb-3">
-                            <label for="quick_email" class="form-label">Seu E-mail</label>
-                            <input type="email" id="quick_email" name="quick_email" class="form-control"
-                                   value="{{ g.user_email }}" readonly>
-                            <small class="form-text text-muted">Usamos seu e-mail de login como remetente.</small>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="quick_password" class="form-label">App Password</label>
-                            <input type="password" id="quick_password" name="quick_password" class="form-control"
-                                   placeholder="Cole aqui sua App Password" required>
-                            <small class="form-text text-muted">A senha é armazenada com hash e validada imediatamente.</small>
-                        </div>
-
-                        <div class="text-end border-top pt-3 mt-3">
-                            <button type="submit" class="btn btn-success">
-                                <i class="fas fa-magic me-2"></i>Configurar Automaticamente
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
             <div class="card shadow">
-                <div class="card-header bg-secondary text-white">
-                    <h5 class="mb-0">Configuração de E-mail Pessoal (App Password)</h5>
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="fas fa-key me-2"></i>{{ t('change_title') }}</h5>
                 </div>
                 <div class="card-body">
-                    <p class="card-text text-muted small">
-                        Configure sua "App Password" (ex: Gmail) para habilitar funcionalidades de envio de e-mail.
-                        A sua senha é armazenada com hash e <strong class="text-danger">não pode ser lida</strong>.
-                        Você deve <strong class="text-danger">sempre</strong> preencher o campo 'Senha' para salvar uma nova senha ou para testar.
-                    </p>
-
-                    <form action="{{ url_for('profile.save_email_settings') }}" method="POST" id="form-email-settings">
+                    <p class="text-muted small mb-3">{{ t('change_subtitle') }}</p>
+                    <form action="{{ url_for('auth.change_password') }}" method="POST">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        
-                        <div class="row">
-                            <div class="col-md-8">
-                                <div class="mb-3">
-                                    <label for="smtp_host" class="form-label">Host SMTP</label>
-                                    <input type="text" id="smtp_host" name="host" class="form-control" 
-                                           value="{{ smtp_settings.host }}" placeholder="ex: smtp.gmail.com">
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label for="smtp_port" class="form-label">Porta</label>
-                                    <input type="number" id="smtp_port" name="port" class="form-control" 
-                                           value="{{ smtp_settings.port }}" placeholder="ex: 587">
-                                </div>
-                            </div>
-                        </div>
-                        
                         <div class="mb-3">
-                            <label for="smtp_user" class="form-label">Usuário SMTP (Seu E-mail)</label>
-                            <input type="email" id="smtp_user" name="user" class="form-control" 
-                                   value="{{ smtp_settings.user }}" placeholder="ex: seu.email@gmail.com">
+                            <label for="current_password" class="form-label">{{ t('current_password_label') }}</label>
+                            <input type="password" id="current_password" name="current_password" class="form-control" required>
                         </div>
-                        
                         <div class="mb-3">
-                            <label for="smtp_password" class="form-label">Senha (App Password)</label>
-                            <input type="password" id="smtp_password" name="password" class="form-control" 
-                                   placeholder="Preencha para salvar ou testar">
-                            <small class="form-text text-muted">
-                                Deixe em branco ao salvar para manter a senha anterior.
-                            </small>
+                            <label for="new_password" class="form-label">{{ t('new_password_label') }}</label>
+                            <input type="password" id="new_password" name="new_password" class="form-control" required>
                         </div>
-
                         <div class="mb-3">
-                            <label for="smtp_from_name" class="form-label">Nome para exibir no e-mail</label>
-                            <input type="text" id="smtp_from_name" name="from_name" class="form-control" 
-                                   placeholder="Ex: Seu Nome" value="{{ g.perfil.nome or '' }}">
-                            <small class="form-text text-muted">Será mostrado como remetente (From).</small>
+                            <label for="new_password_confirm" class="form-label">{{ t('confirm_new_password_label') }}</label>
+                            <input type="password" id="new_password_confirm" name="new_password_confirm" class="form-control" required>
                         </div>
-
-                        <div class="mb-3">
-                            <label for="smtp_test_recipient" class="form-label">Destinatário do e-mail de teste</label>
-                            <input type="email" id="smtp_test_recipient" name="test_recipient" class="form-control" 
-                                   placeholder="ex: destinatario@empresa.com">
-                            <small class="form-text text-muted">Informe um e-mail que deve receber o teste.</small>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-auto">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="smtp_use_tls" name="use_tls" 
-                                           value="true" {% if smtp_settings.use_tls %}checked{% endif %}>
-                                    <label class="form-check-label" for="smtp_use_tls">Usar TLS</label>
-                                </div>
-                            </div>
-                            <div class="col-auto">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="smtp_use_ssl" name="use_ssl" 
-                                           value="true" {% if smtp_settings.use_ssl %}checked{% endif %}>
-                                    <label class="form-check-label" for="smtp_use_ssl">Usar SSL</label>
-                                </div>
-                            </div>
-                        </div>
-                        
                         <div class="text-end border-top pt-3 mt-3">
-                            <button type="submit" class="btn btn-outline-secondary"
-                                    formaction="{{ url_for('profile.test_email') }}" formmethod="POST">
-                                <i class="fas fa-link me-2"></i>Testar Conexão
-                            </button>
-
-                            <button type="submit" class="btn btn-outline-info ms-2" 
-                                    formaction="{{ url_for('profile.email_send_test') }}" formmethod="POST">
-                                <i class="fas fa-paper-plane me-2"></i>Enviar E-mail de Teste
-                            </button>
-                            
-                            <button type="submit" class="btn btn-primary ms-2">
-                                <i class="fas fa-save me-2"></i>Salvar Configuração
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fas fa-save me-2"></i>{{ t('change_button') }}
                             </button>
                         </div>
                     </form>

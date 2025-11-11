@@ -49,6 +49,16 @@ def create_app():
     from .config import Config
     app.config.from_object(Config)
 
+    # i18n básico
+    from .i18n import get_translator
+    translator = get_translator(app)
+    @app.context_processor
+    def inject_i18n():
+        return {
+            't': translator,
+            'lang': app.config.get('LANG', 'pt')
+        }
+
     # Diagnóstico de inicialização: imprime variáveis Google
     try:
         gi = app.config.get('GOOGLE_CLIENT_ID')

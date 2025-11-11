@@ -82,3 +82,8 @@ body {
     transform: translateY(-3px); /* "Lift" agressivo */
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); /* Sombra de destaque */
 }
+
+/* Bordas arredondadas para campos de formulário */
+.form-control {
+    border-radius: var(--border-radius-md);
+}
