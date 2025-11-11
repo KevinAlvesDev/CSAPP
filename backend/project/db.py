@@ -204,6 +204,21 @@ def init_db():
             );
             """)
 
+            # Configurações SMTP por usuário (necessárias para quick-setup e testes)
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS smtp_settings (
+                usuario_email VARCHAR(255) PRIMARY KEY REFERENCES usuarios(usuario) ON DELETE CASCADE,
+                host TEXT NOT NULL,
+                port INTEGER NOT NULL,
+                "user" VARCHAR(255) NOT NULL,
+                password TEXT,
+                use_tls BOOLEAN DEFAULT TRUE,
+                use_ssl BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            """)
+
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS implantacoes (
                 id SERIAL PRIMARY KEY,
@@ -468,6 +483,21 @@ def init_db():
             CREATE TABLE IF NOT EXISTS usuarios (
                 usuario VARCHAR(255) PRIMARY KEY, 
                 senha TEXT NOT NULL
+            );
+            """)
+
+            # Configurações SMTP por usuário (necessárias para quick-setup e testes)
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS smtp_settings (
+                usuario_email VARCHAR(255) PRIMARY KEY,
+                host TEXT NOT NULL,
+                port INTEGER NOT NULL,
+                "user" VARCHAR(255) NOT NULL,
+                password TEXT,
+                use_tls INTEGER DEFAULT 1,
+                use_ssl INTEGER DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
             """)
 

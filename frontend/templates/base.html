@@ -36,7 +36,7 @@
             {% if implantacao and implantacao.id %}
             <li class="nav-item"><a class="nav-link {% if request.endpoint == 'main.ver_implantacao' %}active{% endif %}" href="{{ url_for('main.ver_implantacao', impl_id=implantacao.id) }}"><i class="bi bi-kanban me-2"></i> Detalhes da Implantação</a></li>
             {% endif %}
-            <li class="nav-item"><a class="nav-link {% if request.endpoint == 'profile.perfil' %}active{% endif %}" href="{{ url_for('profile.perfil') }}"><i class="bi bi-person-circle me-2"></i> Perfil</a></li>
+            <li class="nav-item"><a class="nav-link {% if request.endpoint == 'profile.profile' %}active{% endif %}" href="{{ url_for('profile.profile') }}"><i class="bi bi-person-circle me-2"></i> Perfil</a></li>
             <!-- Agenda visível para todos usuários autenticados -->
             <li class="nav-item"><a class="nav-link {% if request.endpoint and request.endpoint.startswith('agenda.') %}active{% endif %}" href="{{ url_for('agenda.agenda_home') }}"><i class="bi bi-calendar-week me-2"></i> Agenda</a></li>
 

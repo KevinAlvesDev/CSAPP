@@ -298,3 +298,52 @@ def dev_login():
 
     flash('Logado em modo desenvolvimento com acesso de Administrador.', 'success')
     return redirect(url_for('main.dashboard'))
+
+@auth_bp.route('/dev-login-as', methods=['GET', 'POST'])
+def dev_login_as():
+    """Login de desenvolvimento com e-mail arbitrário (somente quando Auth0 está desativado)."""
+    if current_app.config.get('AUTH0_ENABLED', True):
+        return redirect(url_for('auth.login'))
+
+    if request.method == 'GET':
+        return render_template('dev_login.html', auth0_enabled=False)
+
+    # POST: processa formulário
+    email = (request.form.get('email') or '').strip()
+    name = (request.form.get('name') or email).strip()
+
+    if not email:
+        flash('Informe um e-mail válido.', 'error')
+        return redirect(url_for('auth.dev_login_as'))
+
+    # Validação mínima de e-mail usando util interno, se disponível
+    try:
+        from ..validation import validate_email
+        email = validate_email(email)
+    except Exception:
+        flash('E-mail inválido.', 'error')
+        return redirect(url_for('auth.dev_login_as'))
+
+    session['user'] = {
+        'email': email,
+        'name': name or email,
+        'sub': 'dev|manual'
+    }
+    session.permanent = True
+
+    try:
+        _sync_user_profile(email, name or email, 'dev|manual')
+        # Em desenvolvimento, concede permissão inicial de Implantador para novos usuários
+        if email != ADMIN_EMAIL:
+            try:
+                execute_db(
+                    "UPDATE perfil_usuario SET perfil_acesso = %s WHERE usuario = %s AND (perfil_acesso IS NULL OR perfil_acesso = '')",
+                    (PERFIL_IMPLANTADOR, email)
+                )
+            except Exception as role_err:
+                print(f"AVISO: não foi possível definir perfil Implantador para {email}: {role_err}")
+    except Exception as e:
+        print(f"AVISO: falha ao sincronizar perfil dev para {email}: {e}")
+
+    flash(f'Logado como {email} (desenvolvimento).', 'success')
+    return redirect(url_for('main.dashboard'))

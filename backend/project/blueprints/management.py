@@ -24,9 +24,10 @@ def manage_users():
         # Garante que 'perfis_acesso' é uma lista (ex: de constants.py)
         perfis_disponiveis = current_app.config.get('PERFIS_DE_ACESSO', ['Visitante', 'Implantador', 'Gestor', 'Administrador'])
         
+        # Usa o nome esperado pelo template: 'perfis_list'
         return render_template('manage_users.html', 
                                users=users_data, 
-                               perfis_disponiveis=perfis_disponiveis)
+                               perfis_list=perfis_disponiveis)
     except Exception as e:
         app_logger.error(f"Erro ao carregar manage_users: {e}")
         flash("Erro ao carregar dados dos usuários.", "error")
@@ -69,6 +70,56 @@ def update_user_profile():
     except Exception as e:
         app_logger.error(f"Erro ao atualizar perfil de {usuario_alvo} por {g.user_email}: {e}")
         return jsonify({'ok': False, 'error': f'Erro de banco de dados: {e}'}), 500
+
+@management_bp.route('/users/update_perfil', methods=['POST'])
+def update_user_perfil():
+    """Atualiza o perfil via formulário HTML (compatível com manage_users.html)."""
+    # Valida campos do formulário
+    usuario_alvo = request.form.get('usuario_email')
+    novo_perfil = request.form.get('new_perfil')
+
+    if usuario_alvo is None:
+        flash('Usuário não especificado.', 'error')
+        return redirect(url_for('management.manage_users'))
+
+    # Tratar opção "Nenhum" como None
+    if novo_perfil == "":
+        novo_perfil = None
+
+    # Regra de segurança: não pode alterar o próprio perfil por esta rota
+    if usuario_alvo == g.user_email:
+        security_logger.warning(f"Admin {g.user_email} tentou alterar o próprio perfil via 'update_user_perfil'")
+        flash('Você não pode alterar o seu próprio perfil por esta interface.', 'warning')
+        return redirect(url_for('management.manage_users'))
+
+    # Valida o perfil (se não for None, deve estar na lista de constantes)
+    perfis_disponiveis = current_app.config.get('PERFIS_DE_ACESSO', [])
+    if novo_perfil is not None and novo_perfil not in perfis_disponiveis:
+        security_logger.warning(
+            f"Tentativa de atribuir perfil inválido '{novo_perfil}' para {usuario_alvo} por {g.user_email}"
+        )
+        flash('Perfil de acesso inválido.', 'error')
+        return redirect(url_for('management.manage_users'))
+
+    try:
+        # Verifica se o usuário existe
+        user_exists = query_db("SELECT 1 FROM perfil_usuario WHERE usuario = %s", (usuario_alvo,), one=True)
+        if not user_exists:
+            flash('Usuário não encontrado.', 'error')
+            return redirect(url_for('management.manage_users'))
+
+        execute_db(
+            "UPDATE perfil_usuario SET perfil_acesso = %s WHERE usuario = %s",
+            (novo_perfil, usuario_alvo)
+        )
+        app_logger.info(f"Admin {g.user_email} atualizou o perfil de {usuario_alvo} para {novo_perfil}")
+        flash('Perfil atualizado com sucesso.', 'success')
+        return redirect(url_for('management.manage_users'))
+
+    except Exception as e:
+        app_logger.error(f"Erro ao atualizar perfil de {usuario_alvo} por {g.user_email}: {e}")
+        flash(f'Erro de banco de dados: {e}', 'error')
+        return redirect(url_for('management.manage_users'))
 
 @management_bp.route('/users/delete', methods=['POST'])
 def delete_user():

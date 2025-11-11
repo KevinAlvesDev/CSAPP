@@ -37,6 +37,9 @@
             <a href="{{ url_for('auth.dev_login') }}" class="btn btn-login btn-lg mt-3">
                 <i class="bi bi-person-check me-2"></i> Login de Desenvolvimento
             </a>
+            <a href="{{ url_for('auth.dev_login_as') }}" class="btn btn-outline-primary btn-lg mt-3 ms-2">
+                <i class="bi bi-person-plus me-2"></i> Login com outro e-mail (dev)
+            </a>
             <p class="text-muted mt-2">Auth0 desativado neste ambiente.</p>
         {% endif %}
     </div>

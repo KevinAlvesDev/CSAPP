@@ -5,6 +5,7 @@ from email.mime.multipart import MIMEMultipart
 from werkzeug.security import generate_password_hash, check_password_hash
 from .db import query_db, execute_db
 from .logging_config import security_logger, app_logger
+import re
 
 # --- CRIPTOGRAFIA (Simples) ---
 # Em um cenário ideal, usaríamos uma biblioteca de criptografia real (ex: cryptography.fernet)
@@ -25,6 +26,86 @@ def _check_password(hashed_password, provided_password):
     return check_password_hash(hashed_password, provided_password)
 
 # --- FUNÇÕES DE LÓGICA DE E-MAIL ---
+
+def detect_smtp_settings(user_email):
+    """
+    Detecta automaticamente host/porta/SSL/TLS com base no domínio do e-mail.
+    Retorna dict: {host, port, use_tls, use_ssl}.
+
+    Objetivo: permitir configuração com apenas e-mail + app password.
+    """
+    if not user_email or '@' not in user_email:
+        raise ValueError("E-mail inválido para detecção de SMTP.")
+
+    domain = user_email.split('@', 1)[1].lower().strip()
+
+    # Mapeamentos comuns (TLS 587 por padrão)
+    COMMON = {
+        # Google
+        'gmail.com': ('smtp.gmail.com', 587, True, False),
+        'googlemail.com': ('smtp.gmail.com', 587, True, False),
+        # Microsoft 365 / Outlook
+        'outlook.com': ('smtp.office365.com', 587, True, False),
+        'hotmail.com': ('smtp.office365.com', 587, True, False),
+        'live.com': ('smtp.office365.com', 587, True, False),
+        'office365.com': ('smtp.office365.com', 587, True, False),
+        'msn.com': ('smtp.office365.com', 587, True, False),
+        # Yahoo
+        'yahoo.com': ('smtp.mail.yahoo.com', 587, True, False),
+        'yahoo.com.br': ('smtp.mail.yahoo.com', 587, True, False),
+        # iCloud / Apple
+        'icloud.com': ('smtp.mail.me.com', 587, True, False),
+        'me.com': ('smtp.mail.me.com', 587, True, False),
+        'mac.com': ('smtp.mail.me.com', 587, True, False),
+        # Zoho
+        'zoho.com': ('smtp.zoho.com', 587, True, False),
+        # Yandex
+        'yandex.com': ('smtp.yandex.com', 587, True, False),
+        'yandex.ru': ('smtp.yandex.ru', 587, True, False),
+        # Provedores BR (comuns)
+        'uol.com.br': ('smtp.uol.com.br', 587, True, False),
+        'bol.com.br': ('smtp.bol.com.br', 587, True, False),
+        'terra.com.br': ('smtp.terra.com.br', 587, True, False),
+        'ig.com.br': ('smtp.ig.com.br', 587, True, False),
+        'globo.com': ('smtp.globo.com', 587, True, False),
+    }
+
+    if domain in COMMON:
+        host, port, use_tls, use_ssl = COMMON[domain]
+        app_logger.info(f"Detecção SMTP: {domain} -> {host}:{port} (TLS={use_tls}, SSL={use_ssl})")
+        return {
+            'host': host,
+            'port': port,
+            'use_tls': use_tls,
+            'use_ssl': use_ssl,
+        }
+
+    # Heurística para Microsoft 365 com domínio customizado (muito comum)
+    # MX costuma apontar para *.protection.outlook.com, mas sem consultar DNS, assumimos office365
+    if re.search(r"(\.onmicrosoft\.com|\.office365\.com)$", domain):
+        return {
+            'host': 'smtp.office365.com',
+            'port': 587,
+            'use_tls': True,
+            'use_ssl': False,
+        }
+
+    # Fallback: tentar padronizar por subdomínios comuns
+    candidates = [
+        f"smtp.{domain}",
+        f"mail.{domain}",
+    ]
+
+    # Não conectamos aqui; deixamos a validação para test_smtp_connection
+    # Retornamos o primeiro candidato com TLS na porta 587
+    chosen = candidates[0]
+    app_logger.info(f"Detecção SMTP: domínio desconhecido '{domain}', usando heurística -> {chosen}:587 (TLS)")
+    return {
+        'host': chosen,
+        'port': 587,
+        'use_tls': True,
+        'use_ssl': False,
+    }
 
 def load_smtp_settings(user_email):
     """
@@ -98,7 +179,10 @@ def save_smtp_settings(user_email, data):
             """
             params = (user_email, host, int(port), user, use_tls, use_ssl)
 
-        execute_db(sql, params)
+        result = execute_db(sql, params)
+        if not result:
+            app_logger.error(f"Persistência falhou ao salvar SMTP para {user_email} (sem retorno do execute_db)")
+            raise RuntimeError("Falha ao salvar configurações SMTP.")
         app_logger.info(f"Configurações SMTP salvas para o usuário: {user_email}")
 
     except Exception as e:

@@ -12881,3 +12881,15 @@ Traceback (most recent call last):
   File "C:\Users\kevinpereira\AppData\Roaming\Python\Python314\site-packages\requests\models.py", line 456, in prepare_url
     raise InvalidURL("URL has an invalid label.")
 requests.exceptions.InvalidURL: URL has an invalid label.
+2025-11-11 08:55:47 - ERROR - kevinalvexxx@gmail.com - Kevin Alves (None) - app - Erro no quick-setup SMTP para kevinalvexxx@gmail.com: Configurações não encontradas.
+2025-11-11 08:55:47 - ERROR - kevinalvexxx@gmail.com - Kevin Alves (None) - app - Erro no quick-setup SMTP para kevinalvexxx@gmail.com: Configurações não encontradas.
+2025-11-11 08:58:47 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - app - Erro ao carregar manage_users: Could not build url for endpoint 'management.update_user_perfil'. Did you mean 'management.update_user_profile' instead?
+2025-11-11 08:58:47 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - app - Erro ao carregar manage_users: Could not build url for endpoint 'management.update_user_perfil'. Did you mean 'management.update_user_profile' instead?
+2025-11-11 08:58:57 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - app - Erro ao carregar manage_users: Could not build url for endpoint 'management.update_user_perfil'. Did you mean 'management.update_user_profile' instead?
+2025-11-11 08:58:57 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - app - Erro ao carregar manage_users: Could not build url for endpoint 'management.update_user_perfil'. Did you mean 'management.update_user_profile' instead?
+2025-11-11 08:59:02 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - app - Erro ao carregar manage_users: Could not build url for endpoint 'management.update_user_perfil'. Did you mean 'management.update_user_profile' instead?
+2025-11-11 08:59:02 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - app - Erro ao carregar manage_users: Could not build url for endpoint 'management.update_user_perfil'. Did you mean 'management.update_user_profile' instead?
+2025-11-11 09:02:38 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - app - Erro ao carregar manage_users: Could not build url for endpoint 'management.update_user_perfil'. Did you mean 'management.update_user_profile' instead?
+2025-11-11 09:02:38 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - app - Erro ao carregar manage_users: Could not build url for endpoint 'management.update_user_perfil'. Did you mean 'management.update_user_profile' instead?
+2025-11-11 09:06:56 - ERROR - kevinalvexxx@gmail.com - Kevin Alves (Implantador) - app - Erro no quick-setup SMTP para kevinalvexxx@gmail.com: Configurações não encontradas.
+2025-11-11 09:06:56 - ERROR - kevinalvexxx@gmail.com - Kevin Alves (Implantador) - app - Erro no quick-setup SMTP para kevinalvexxx@gmail.com: Configurações não encontradas.

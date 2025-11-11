@@ -7,7 +7,7 @@ from ..db import query_db, execute_db
 from ..extensions import r2_client
 from werkzeug.utils import secure_filename
 import smtplib
-from ..email_utils import load_smtp_settings, save_smtp_settings, test_smtp_connection, send_email
+from ..email_utils import load_smtp_settings, save_smtp_settings, test_smtp_connection, send_email, detect_smtp_settings
 from ..validation import validate_email, ValidationError
 from ..logging_config import app_logger
 
@@ -197,5 +197,55 @@ def email_send_test():
     except Exception as e:
         app_logger.error(f"Erro ao enviar e-mail de teste para {g.user_email}: {e}")
         flash(f"Erro ao enviar teste: {e}", "error")
+
+    return redirect(url_for('profile.profile'))
+
+@profile_bp.route('/email/quick-setup', methods=['POST'])
+def quick_setup_email():
+    """Configuração rápida: usa apenas e-mail do usuário e App Password.
+    Detecta automaticamente host/porta/TLS/SSL com base no domínio e salva.
+    Em seguida, testa a autenticação com a App Password fornecida.
+    """
+    # O e-mail do usuário está fixo como g.user_email
+    user_email = g.user_email
+    plain_password = request.form.get('quick_password')
+
+    if not plain_password:
+        flash("Informe sua App Password para configurar.", "warning")
+        return redirect(url_for('profile.profile'))
+
+    try:
+        # 1) Detecta o provedor SMTP
+        auto = detect_smtp_settings(user_email)
+
+        # 2) Salva configurações com hash da senha (user = g.user_email)
+        save_payload = {
+            'host': auto['host'],
+            'port': auto['port'],
+            'user': user_email,
+            'password': plain_password,  # será hasheada internamente
+            'use_tls': 'true' if auto.get('use_tls') else 'false',
+            'use_ssl': 'true' if auto.get('use_ssl') else 'false',
+        }
+        save_smtp_settings(user_email, save_payload)
+
+        # 3) Carrega e testa autenticação com a senha em texto plano
+        settings = load_smtp_settings(user_email)
+        test_smtp_connection(settings, plain_password)
+
+        flash(
+            f"Configuração automática concluída para {user_email} usando {auto['host']}:{auto['port']}.",
+            "success"
+        )
+    
+    except smtplib.SMTPAuthenticationError as e:
+        app_logger.warning(f"Falha de autenticação SMTP no quick-setup para {user_email}: {e}")
+        flash(
+            "Falha na autenticação com o provedor. Verifique sua App Password e se o seu e-mail pertence ao provedor correto.",
+            "error"
+        )
+    except Exception as e:
+        app_logger.error(f"Erro no quick-setup SMTP para {user_email}: {e}")
+        flash(f"Não foi possível configurar automático: {e}", "error")
 
     return redirect(url_for('profile.profile'))
