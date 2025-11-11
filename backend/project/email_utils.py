@@ -1,10 +1,30 @@
 import smtplib
+import socket
 from email.message import EmailMessage
 from email.utils import formataddr
 from typing import Optional
 from flask import current_app
 import base64
 import requests
+
+
+def _prefer_ipv4(host: Optional[str]) -> Optional[str]:
+    """
+    Resolve o hostname para um endereço IPv4 e retorna o IP.
+    Se não for possível, retorna o hostname original.
+    Ajuda a evitar falhas em ambientes com IPv6 indisponível (Errno 101).
+    """
+    if not host:
+        return host
+    try:
+        infos = socket.getaddrinfo(host, None, socket.AF_INET, socket.SOCK_STREAM)
+        if infos:
+            # sockaddr = (ip, port) — port será definido na conexão
+            ip = infos[0][4][0]
+            return ip
+    except Exception:
+        pass
+    return host
 
 def send_email(
     to_email: str,
@@ -31,6 +51,8 @@ def send_email(
     if not host or not port or not from_addr:
         return False
 
+    connect_host = _prefer_ipv4(host)
+
     msg = EmailMessage()
     msg['Subject'] = subject
     # Exibe nome do autor no From, mantendo o endereço autenticado
@@ -47,12 +69,12 @@ def send_email(
 
     try:
         if use_ssl:
-            with smtplib.SMTP_SSL(host, port, timeout=timeout) as server:
+            with smtplib.SMTP_SSL(connect_host, port, timeout=timeout) as server:
                 if user and password:
                     server.login(user, password)
                 server.send_message(msg)
         else:
-            with smtplib.SMTP(host, port, timeout=timeout) as server:
+            with smtplib.SMTP(connect_host, port, timeout=timeout) as server:
                 server.ehlo()
                 if use_tls:
                     server.starttls()
@@ -62,7 +84,7 @@ def send_email(
                 server.send_message(msg)
         return True
     except Exception as e:
-        print(f"AVISO: Falha ao enviar e-mail para {to_email}: {e}")
+        print(f"AVISO: Falha ao enviar e-mail para {to_email} (host={host}->{connect_host}, port={port}, tls={use_tls}, ssl={use_ssl}): {e}")
         return False
 
 
@@ -88,6 +110,8 @@ def send_email_with_credentials(
     if not host or not port or not (from_addr or user):
         return False
 
+    connect_host = _prefer_ipv4(host)
+
     msg = EmailMessage()
     msg['Subject'] = subject
     msg['From'] = formataddr((from_name, from_addr or user)) if from_name else (from_addr or user)
@@ -100,12 +124,12 @@ def send_email_with_credentials(
 
     try:
         if use_ssl:
-            with smtplib.SMTP_SSL(host, port, timeout=timeout) as server:
+            with smtplib.SMTP_SSL(connect_host, port, timeout=timeout) as server:
                 if user and password:
                     server.login(user, password)
                 server.send_message(msg)
         else:
-            with smtplib.SMTP(host, port, timeout=timeout) as server:
+            with smtplib.SMTP(connect_host, port, timeout=timeout) as server:
                 server.ehlo()
                 if use_tls:
                     server.starttls()
@@ -115,7 +139,7 @@ def send_email_with_credentials(
                 server.send_message(msg)
         return True
     except Exception as e:
-        print(f"AVISO: Falha ao enviar (credenciais de usuário) para {to_email}: {e}")
+        print(f"AVISO: Falha ao enviar (credenciais de usuário) para {to_email} (host={host}->{connect_host}, port={port}, tls={use_tls}, ssl={use_ssl}): {e}")
         return False
 
 

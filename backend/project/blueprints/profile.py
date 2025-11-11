@@ -247,9 +247,8 @@ def email_settings_test():
         "SELECT * FROM email_accounts WHERE usuario_cs = %s AND active = 1",
         (usuario_cs_email,), one=True
     )
-    if not settings:
-        flash('Nenhuma configuração de e-mail ativa encontrada para seu usuário.', 'warning')
-        return redirect(url_for('profile.email_settings'))
+    # Define from_name padrão mesmo sem configuração pessoal
+    from_name = (settings.get('from_name') if settings else None) or usuario_cs_email
 
     # Se o usuário estiver conectado ao Google com escopo gmail.send, usa a API HTTP
     token = session.get('google_token') or {}
@@ -267,18 +266,18 @@ def email_settings_test():
             body_text='Este é um e-mail de teste do CSAPP.',
             body_html='<p>Este é um <strong>e-mail de teste</strong> do CSAPP.</p>',
             reply_to=usuario_cs_email,
-            from_name=settings.get('from_name') or usuario_cs_email,
+            from_name=from_name,
         )
 
-    # Fallback automático para SMTP (App Password)
-    if not ok:
+    # Fallback automático para SMTP (App Password) somente se houver credenciais pessoais
+    if not ok and settings:
         ok = send_email_with_credentials(
             to_email=test_email,
             subject='Teste de envio - CSAPP',
             body_text='Este é um e-mail de teste do CSAPP.',
             body_html='<p>Este é um <strong>e-mail de teste</strong> do CSAPP.</p>',
             reply_to=usuario_cs_email,
-            from_name=settings.get('from_name') or usuario_cs_email,
+            from_name=from_name,
             host='smtp.gmail.com',
             port=587,
             user=settings.get('smtp_user'),
@@ -289,15 +288,15 @@ def email_settings_test():
             timeout=12,
         )
 
-    # Segundo fallback: tentar porta 465 com SSL direto (alguns ambientes bloqueiam 587/TLS)
-    if not ok:
+    # Segundo fallback (pessoal): tentar porta 465 com SSL direto (alguns ambientes bloqueiam 587/TLS)
+    if not ok and settings:
         ok = send_email_with_credentials(
             to_email=test_email,
             subject='Teste de envio - CSAPP',
             body_text='Este é um e-mail de teste do CSAPP.',
             body_html='<p>Este é um <strong>e-mail de teste</strong> do CSAPP.</p>',
             reply_to=usuario_cs_email,
-            from_name=settings.get('from_name') or usuario_cs_email,
+            from_name=from_name,
             host='smtp.gmail.com',
             port=465,
             user=settings.get('smtp_user'),
@@ -308,7 +307,7 @@ def email_settings_test():
             timeout=12,
         )
 
-    # Terceiro fallback: tentar SMTP global via configuração do app (ex.: SendGrid/SES)
+    # Fallback global: tentar SMTP do app (.env), inclusive quando não houver credenciais pessoais
     if not ok and current_app.config.get('EMAIL_CONFIGURADO'):
         ok = send_email(
             to_email=test_email,
@@ -316,7 +315,7 @@ def email_settings_test():
             body_text='Este é um e-mail de teste do CSAPP.',
             body_html='<p>Este é um <strong>e-mail de teste</strong> do CSAPP.</p>',
             reply_to=usuario_cs_email,
-            from_name=settings.get('from_name') or usuario_cs_email,
+            from_name=from_name,
         )
 
     if ok:
@@ -328,6 +327,9 @@ def email_settings_test():
         elif current_app.config.get('EMAIL_CONFIGURADO'):
             flash('Falha ao enviar e-mail pelo SMTP global. Verifique credenciais do provedor.', 'error')
         else:
-            flash('Falha ao enviar e-mail de teste. Verifique App Password e permissões.', 'error')
+            if not settings:
+                flash('Falha ao enviar: sem credenciais pessoais e SMTP global não configurado. Configure App Password em /email ou SMTP global no .env.', 'error')
+            else:
+                flash('Falha ao enviar e-mail de teste. Verifique App Password e permissões.', 'error')
 
     return redirect(url_for('profile.email_settings'))
