@@ -8,7 +8,7 @@ function toggleComment(button, elementId) { const textElement = document.getElem
 function criarTimelineItemHTML(log) { if (!log || !log.data_criacao) return ''; let iconClass = 'bi-info-circle-fill'; if (log.tipo_evento === 'novo_comentario') iconClass = 'bi-chat-left-text-fill'; else if (log.tipo_evento?.includes('tarefa')) iconClass = 'bi-check-circle-fill'; else if (log.tipo_evento?.includes('status') || log.tipo_evento?.includes('implantacao') || log.tipo_evento?.includes('detalhes')) iconClass = 'bi-flag-fill'; else if (log.tipo_evento === 'modulo_excluido') iconClass = 'bi-trash-fill'; const dataFormatada = formatDataLog(log.data_criacao); const detalhesHTML = (log.detalhes || '').replace(/\n/g, '<br>'); return `<li class="timeline-item"><div class="timeline-icon"><i class="bi ${iconClass}"></i></div><div class="timeline-content"><div class="timeline-header"><span class="timeline-usuario">${log.usuario_nome || 'Sistema'}</span><span class="timeline-data">${dataFormatada}</span></div><p class="timeline-detalhes">${detalhesHTML}</p></div></li>`; }
 function adicionarLogNaTimeline(log) { if (!log) return; const timelineList = document.querySelector('#timeline-content .timeline-list'); if (!timelineList) return; const noTimelineMsg = document.getElementById('no-timeline-msg'); if (noTimelineMsg) noTimelineMsg.remove(); const logHTML = criarTimelineItemHTML(log); if (logHTML) timelineList.insertAdjacentHTML('afterbegin', logHTML); }
 
-function updateProgressBar(progress) { const progressBar = document.querySelector('#main-content .progress-bar'); if (progressBar) { const progressNum = parseInt(progress) || 0; progressBar.style.width = progressNum + '%'; progressBar.setAttribute('aria-valuenow', progressNum); progressBar.textContent = progressNum + '%'; } }
+function updateProgressBar(progress) { const progressBar = document.querySelector('#progress-total-bar'); if (progressBar) { const progressNum = parseInt(progress) || 0; progressBar.style.width = progressNum + '%'; progressBar.setAttribute('aria-valuenow', progressNum); progressBar.textContent = progressNum + '%'; } }
 
 // Confirmação com modal Bootstrap (fallback para window.confirm)
 function confirmWithModal(message) {
@@ -222,7 +222,9 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.module-header[data-bs-toggle="collapse"]').forEach(header => { const collapseId = header.getAttribute('data-bs-target'); const collapseElement = document.querySelector(collapseId); const icon = header.querySelector('i.bi-chevron-down, i.bi-chevron-up'); if (collapseElement && icon) { collapseElement.addEventListener('show.bs.collapse', () => { icon.classList.replace('bi-chevron-down','bi-chevron-up'); }); collapseElement.addEventListener('hide.bs.collapse', () => { icon.classList.replace('bi-chevron-up','bi-chevron-down'); }); if (collapseElement.classList.contains('show')) { icon.classList.replace('bi-chevron-down','bi-chevron-up'); } } });
 
     // 4. Atualiza progresso/timeline após requisições HTMX (toggle individual)
-    document.body.addEventListener('progress_update', function(event) {
+    // HTMX dispara eventos customizados quando HX-Trigger-After-Swap está presente
+    // Escutamos o evento progress_update que é disparado pelo HTMX
+    document.addEventListener('progress_update', function(event) {
         const data = event.detail || {};
         if (data.novo_progresso !== undefined) {
             updateProgressBar(data.novo_progresso);
@@ -233,6 +235,37 @@ document.addEventListener('DOMContentLoaded', function() {
         if (data.implantacao_finalizada) {
             if (data.log_finalizacao) adicionarLogNaTimeline(data.log_finalizacao);
             window.location.reload();
+        }
+    });
+    
+    // Intercepta respostas HTMX para atualizar a barra de progresso quando uma tarefa é marcada individualmente
+    // O backend envia um fragmento OOB com a barra de progresso atualizada via hx-swap-oob="true"
+    document.body.addEventListener('htmx:afterSwap', function(event) {
+        // Verifica se a resposta veio de um toggle de tarefa (checkbox individual)
+        const target = event.detail.target;
+        if (target && target.id && target.id.startsWith('task-item-')) {
+            // O backend envia um fragmento OOB que atualiza a barra de progresso
+            // Após o swap, o HTMX deve ter atualizado o elemento #progress-total-bar
+            // Mas vamos garantir que está sincronizado lendo o valor atualizado
+            setTimeout(function() {
+                const progressBar = document.querySelector('#progress-total-bar');
+                if (progressBar) {
+                    // Extrai o progresso do elemento atualizado pelo HTMX OOB
+                    const progressText = progressBar.textContent.trim();
+                    const progressMatch = progressText.match(/(\d+)%/);
+                    if (progressMatch) {
+                        const progressNum = parseInt(progressMatch[1]);
+                        // Atualiza a barra para garantir que está sincronizada
+                        updateProgressBar(progressNum);
+                    } else {
+                        // Se não conseguir extrair do texto, tenta do atributo aria-valuenow
+                        const ariaValue = progressBar.getAttribute('aria-valuenow');
+                        if (ariaValue) {
+                            updateProgressBar(parseInt(ariaValue));
+                        }
+                    }
+                }
+            }, 50); // Pequeno delay para garantir que o HTMX processou o OOB
         }
     });
 });

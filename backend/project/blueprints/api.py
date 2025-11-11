@@ -74,9 +74,7 @@ def toggle_tarefa(tarefa_id):
         
         api_logger.info(f'Task {tarefa_id} status changed to {novo_status_bool} by user {g.user_email}')
         
-        auto_finalizar_implantacao(tarefa['implantacao_id'], usuario_cs_email)
-        
-        # Calcula progresso e verifica auto-finalização
+        # Calcula progresso e verifica auto-finalização (chamada única)
         finalizada, log_finalizacao = auto_finalizar_implantacao(tarefa['implantacao_id'], usuario_cs_email)
         novo_prog, _, _ = _get_progress(tarefa['implantacao_id'])
 
@@ -109,6 +107,17 @@ def toggle_tarefa(tarefa_id):
             ) or []
             # Injeta os comentários na tarefa para o template parcial
             tarefa_atualizada['comentarios'] = comentarios
+            
+            # Busca dados da implantação para o template (necessário para _task_item.html)
+            implantacao_info = query_db(
+                "SELECT nome_empresa, email_responsavel FROM implantacoes WHERE id = %s",
+                (tarefa['implantacao_id'],), one=True
+            ) or {}
+            implantacao = {
+                'nome_empresa': implantacao_info.get('nome_empresa', ''),
+                'email_responsavel': implantacao_info.get('email_responsavel', '')
+            }
+            
             # Cria resposta com cabeçalho HX-Trigger para atualizar progresso & timeline
             hx_payload = {
                 'progress_update': {
@@ -119,7 +128,7 @@ def toggle_tarefa(tarefa_id):
                 }
             }
             # Constrói HTML com item atualizado e fragmento OOB da barra de progresso
-            item_html = render_template('partials/_task_item_wrapper.html', tarefa=tarefa_atualizada)
+            item_html = render_template('partials/_task_item_wrapper.html', tarefa=tarefa_atualizada, implantacao=implantacao)
             progress_html = render_template('partials/_progress_total_bar.html', progresso_percent=novo_prog)
             resp = make_response(item_html + progress_html)
             # Dispara evento após o swap de conteúdo (garante DOM atualizado)
