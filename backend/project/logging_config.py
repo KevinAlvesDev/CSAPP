@@ -76,7 +76,7 @@ def setup_logging(app):
     app.logger.addFilter(ContextFilter())
 
     # Garante criação dos loggers nomeados usados pelo projeto (compatível com testes)
-    for name in ['auth', 'api', 'database', 'implantacao', 'gamification', 'analytics', 'security', 'management']:
+    for name in ['app', 'auth', 'api', 'database', 'implantacao', 'gamification', 'analytics', 'security', 'management']:
         named_logger = logging.getLogger(name)
         named_logger.setLevel(log_level)
         named_logger.addHandler(file_handler)
@@ -99,3 +99,4 @@ gamification_logger = get_logger('gamification')
 analytics_logger = get_logger('analytics')
 security_logger = get_logger('security')
 management_logger = get_logger('management')
+app_logger = get_logger('app')

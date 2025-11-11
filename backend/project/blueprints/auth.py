@@ -176,6 +176,11 @@ def permission_required(required_profiles):
         return decorated_function
     return decorator
 
+# Decorador específico para Administrador
+def admin_required(f):
+    """Protege rotas que exigem perfil Administrador."""
+    return permission_required([PERFIL_ADMIN])(f)
+
 # --- Rotas de Autenticação ---
 
 def rate_limit(max_requests):

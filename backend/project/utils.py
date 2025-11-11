@@ -65,3 +65,45 @@ def allowed_file(filename):
     from .constants import ALLOWED_EXTENSIONS
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+# --- Funções de apoio para gestão de usuários ---
+def load_profiles_list(exclude_self=True):
+    """Carrega lista de perfis de usuários com contagens de implantações.
+
+    Retorna uma lista de dicts com chaves:
+    - usuario, nome, cargo, perfil_acesso
+    - impl_andamento_total, impl_finalizadas
+    Opcionalmente exclui o usuário atual (g.user_email) quando exclude_self=True.
+    """
+    try:
+        from flask import g
+        from .db import query_db
+
+        users = query_db(
+            "SELECT usuario, nome, cargo, perfil_acesso FROM perfil_usuario ORDER BY usuario",
+            (), one=False
+        ) or []
+
+        enriched = []
+        for u in users:
+            email = u.get('usuario')
+            counts = query_db(
+                (
+                    "SELECT "
+                    "SUM(CASE WHEN status = 'andamento' THEN 1 ELSE 0 END) AS impl_andamento_total, "
+                    "SUM(CASE WHEN status = 'finalizada' THEN 1 ELSE 0 END) AS impl_finalizadas "
+                    "FROM implantacoes WHERE usuario_cs = %s"
+                ),
+                (email,), one=True
+            ) or {}
+
+            u['impl_andamento_total'] = counts.get('impl_andamento_total') or 0
+            u['impl_finalizadas'] = counts.get('impl_finalizadas') or 0
+
+            if not (exclude_self and getattr(g, 'user_email', None) == email):
+                enriched.append(u)
+
+        return enriched
+    except Exception:
+        # Fallback simples em caso de erro no DB: retorna lista vazia
+        return []

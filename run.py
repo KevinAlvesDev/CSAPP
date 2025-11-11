@@ -1,6 +1,27 @@
-# run.py
+# testo/CSAPP/run.py
 import os
-from project import create_app
+import sys
+
+# --- CORREÇÃO DE IMPORTAÇÃO ---
+# Adiciona o diretório 'backend' ao path do Python
+# para que possamos importar 'project' de dentro dele.
+backend_dir = os.path.join(os.path.dirname(__file__), 'backend')
+if backend_dir not in sys.path:
+    # Insere no início da lista para ter prioridade
+    sys.path.insert(0, backend_dir)
+
+# Importa 'create_app' de 'backend.project'
+try:
+    # Esta importação agora encontrará 'backend/project/__init__.py'
+    from project import create_app
+except ImportError:
+    print("\n--- ERRO DE IMPORTAÇÃO ---")
+    print(f"Não foi possível encontrar 'project.create_app'.")
+    print(f"Certifique-se que o seu código principal está em: {os.path.join(backend_dir, 'project')}")
+    print("--------------------------\n")
+    sys.exit(1)
+# --- FIM DA CORREÇÃO ---
+
 
 # --- Captura de falhas ---
 try:
@@ -18,28 +39,21 @@ if __name__ == '__main__':
 
         exit(1)
 
-
-
     # Verifica R2 apenas no arranque local para aviso
-
-    from project.extensions import r2_client
-
-    if not r2_client:
-
-        print("\n!!! ATENÇÃO: Cliente R2 não inicializado. Uploads não funcionarão. !!!\n")
-
-
+    try:
+        from project.extensions import r2_client
+        if not r2_client:
+            print("\n!!! ATENÇÃO: Cliente R2 não inicializado. Uploads não funcionarão. !!!\n")
+    except ImportError:
+        print("\nAviso: Não foi possível importar 'project.extensions' para verificar R2.")
+    except Exception:
+        pass # Falha silenciosa se r2_client não estiver no contexto
 
     port = int(os.environ.get("PORT", 5000))
 
     # Para uso local, se quiser inicializar automaticamente, descomente:
-
     # with app.app_context():
-
     #     from project.db import init_db
-
     #     init_db()
-
         
-
     app.run(debug=True, host='0.0.0.0', port=port)

@@ -1,333 +1,201 @@
-import os
-import time
+# testo/CSAPP/backend/project/blueprints/profile.py
 from flask import (
     Blueprint, render_template, request, flash, redirect, url_for, g, current_app, session
 )
-from werkzeug.utils import secure_filename
-from werkzeug.security import generate_password_hash
-from botocore.exceptions import ClientError, NoCredentialsError
-
 from ..blueprints.auth import login_required
-from ..db import execute_db, query_db
-from ..extensions import r2_client, oauth
-from ..utils import allowed_file
-from ..constants import CARGOS_LIST, PERFIL_IMPLANTADOR # <-- ALTERADO
-from ..validation import sanitize_string, ValidationError
+from ..db import query_db, execute_db
+from ..extensions import r2_client
+from werkzeug.utils import secure_filename
+import smtplib
+from ..email_utils import load_smtp_settings, save_smtp_settings, test_smtp_connection, send_email
+from ..validation import validate_email, ValidationError
+from ..logging_config import app_logger
 
-profile_bp = Blueprint('profile', __name__)
+profile_bp = Blueprint('profile', __name__, url_prefix='/profile')
 
-@profile_bp.route('/perfil', methods=['GET', 'POST'])
+@profile_bp.before_request
 @login_required
-def perfil():
-    usuario_cs_email = g.user_email
-    current_perfil = g.perfil # Perfil carregado pelo @login_required
+def before_request():
+    """Protege todas as rotas de perfil."""
+    pass
 
-    if request.method == 'POST':
-        # Verifica se o R2 está configurado antes de tentar o upload
-        if not r2_client or not current_app.config['CLOUDFLARE_PUBLIC_URL']:
-            flash("Erro: Serviço de armazenamento (R2) não configurado. Não é possível alterar a foto.", "error")
-            return redirect(url_for('profile.perfil'))
-            
+@profile_bp.route('/')
+def profile():
+    """Exibe a página de perfil do usuário e as configurações de e-mail."""
+    
+    # Carrega configurações SMTP pessoais
+    smtp_settings = load_smtp_settings(g.user_email)
+    
+    # Prepara dados para o formulário (sem a senha)
+    settings_data = {
+        'host': smtp_settings.get('host', '') if smtp_settings else '',
+        'port': smtp_settings.get('port', 587) if smtp_settings else 587,
+        'user': smtp_settings.get('user', '') if smtp_settings else '', # 'user' é o nome da coluna no dict
+        'use_tls': smtp_settings.get('use_tls', True) if smtp_settings else True,
+        'use_ssl': smtp_settings.get('use_ssl', False) if smtp_settings else False,
+    }
+    
+    # A senha NUNCA é enviada de volta para o template.
+    # O campo de senha estará sempre vazio.
+    
+    return render_template('perfil.html', 
+                           smtp_settings=settings_data, 
+                           r2_configurado=g.R2_CONFIGURED)
+
+@profile_bp.route('/save', methods=['POST'])
+def save_profile():
+    """Salva as informações básicas do perfil e faz upload da foto."""
+    
+    nome = request.form.get('nome')
+    cargo = request.form.get('cargo')
+    foto = request.files.get('foto')
+    
+    if not nome or not cargo:
+        flash("Nome e Cargo são obrigatórios.", "error")
+        return redirect(url_for('profile.profile'))
+
+    foto_url = g.perfil.get('foto_url') # Mantém a foto existente por padrão
+
+    if foto and g.R2_CONFIGURED:
         try:
-            # Pega e valida os dados do formulário
-            try:
-                form_nome = request.form.get('nome', '')
-                if form_nome:
-                    form_nome = sanitize_string(form_nome, max_length=100, min_length=1)
-                else:
-                    form_nome = ''
-                    
-                form_cargo = request.form.get('cargo', '')
-                if form_cargo:
-                    form_cargo = sanitize_string(form_cargo, max_length=50)
-                else:
-                    form_cargo = ''
-            except ValidationError as e:
-                flash(f'Erro de validação: {str(e)}', 'error')
-                return redirect(url_for('profile.perfil'))
+            filename = secure_filename(foto.filename)
+            # Define um 'caminho' no R2, ex: 'fotos_perfil/usuario_email.ext'
+            s3_key = f"fotos_perfil/{g.user_email}_{filename}"
             
-            # --- Lógica de Restrição ATUALIZADA ---
-            is_implantador = current_perfil.get('perfil_acesso') == PERFIL_IMPLANTADOR # <-- ALTERADO
-            
-            # DEFINE nome_to_save: Se não for implantador, usa o valor do form.
-            if not is_implantador:
-                 nome_to_save = form_nome if form_nome else None
-            else:
-                 nome_to_save = current_perfil.get('nome')
-            
-            # Cargo só é salvo se não for implantador.
-            cargo_to_save = current_perfil.get('cargo') # Mantém o atual por padrão
-            if not is_implantador:
-                if not form_cargo: 
-                    cargo_to_save = None
-                elif form_cargo in CARGOS_LIST:
-                    cargo_to_save = form_cargo
-                else:
-                    cargo_to_save = current_perfil.get('cargo') 
-            # --------------------------
-            
-            foto_url_atual = current_perfil.get('foto_url')
-
-            # --- Lógica de Upload para R2 (original) ---
-            if 'foto_perfil' in request.files:
-                file = request.files['foto_perfil']
-                if file and file.filename and allowed_file(file.filename):
-                    try:
-                        # Cria um nome de arquivo único
-                        nome_base, extensao = os.path.splitext(secure_filename(file.filename))
-                        email_hash = generate_password_hash(usuario_cs_email).split('$')[-1][:8]
-                        object_name = f"profile_pics/perfil_{email_hash}_{int(time.time())}{extensao}"
-
-                        # Faz o upload para o R2
-                        file.seek(0)
-                        r2_client.upload_fileobj(
-                            file,
-                            current_app.config['CLOUDFLARE_BUCKET_NAME'],
-                            object_name,
-                            ExtraArgs={'ContentType': file.content_type}
-                        )
-                        
-                        # Constrói a URL pública
-                        nova_foto_url = f"{current_app.config['CLOUDFLARE_PUBLIC_URL']}/{object_name}"
-                        print(f"Upload R2 concluído: {nova_foto_url}")
-
-                        # --- Excluir foto ANTIGA do R2 ---
-                        if foto_url_atual and foto_url_atual != nova_foto_url:
-                            try:
-                                old_object_key = foto_url_atual.replace(f"{current_app.config['CLOUDFLARE_PUBLIC_URL']}/", "")
-                                if old_object_key and old_object_key != foto_url_atual:
-                                    print(f"Tentando excluir objeto R2 antigo: {old_object_key}")
-                                    r2_client.delete_object(
-                                        Bucket=current_app.config['CLOUDFLARE_BUCKET_NAME'], 
-                                        Key=old_object_key
-                                    )
-                                    print(f"Objeto R2 antigo excluído.")
-                            except Exception as e_delete:
-                                print(f"Aviso: Falha ao excluir foto antiga do R2. {e_delete}")
-                        
-                        foto_url_atual = nova_foto_url
-
-                    except (ClientError, NoCredentialsError) as e_upload:
-                        print(f"ERRO upload R2: {e_upload}")
-                        flash("Erro ao fazer upload da nova foto (credenciais/conexão R2?).", "error")
-                    except Exception as e_upload:
-                        print(f"ERRO upload R2: {e_upload}")
-                        flash("Erro ao fazer upload da nova foto.", "error")
-
-            # Atualiza o banco de dados com os valores corretos (respeitando a restrição)
-            execute_db(
-                """
-                UPDATE perfil_usuario 
-                SET nome = %s, cargo = %s, foto_url = %s 
-                WHERE usuario = %s
-                """,
-                (nome_to_save, cargo_to_save, foto_url_atual, usuario_cs_email)
+            r2_client.upload_fileobj(
+                foto,
+                current_app.config['CLOUDFLARE_BUCKET_NAME'],
+                s3_key,
+                ExtraArgs={'ContentType': foto.content_type}
             )
+            # URL pública do R2 (configurada no .env)
+            base_public_url = current_app.config['CLOUDFLARE_PUBLIC_URL']
+            foto_url = f"{base_public_url}/{s3_key}"
             
-            if is_implantador and (request.form.get('nome', '').strip() != current_perfil.get('nome') or request.form.get('cargo', '').strip() != current_perfil.get('cargo')):
-                 # Verifica se a intenção era mudar (o form submetido é diferente do valor inicial)
-                 flash(f'Perfil atualizado. Nome e Cargo não podem ser alterados pelo perfil {PERFIL_IMPLANTADOR}.', 'warning') # <-- ALTERADO
-            else:
-                 flash('Perfil atualizado com sucesso!', 'success')
-            
-            # Recarrega o perfil para refletir a mudança no request atual
-            g.perfil = query_db("SELECT * FROM perfil_usuario WHERE usuario = %s", (usuario_cs_email,), one=True)
-            
-            return redirect(url_for('profile.perfil'))
-            
-        except Exception as e:
-            print(f"ERRO GERAL ao atualizar perfil para {usuario_cs_email}: {e}")
-            flash(f'Erro ao atualizar perfil: {e}', 'error')
-            return redirect(url_for('profile.perfil'))
+            app_logger.info(f"Foto de perfil carregada para {g.user_email} em {foto_url}")
 
-    # Método GET
-    return render_template('perfil.html', user_info=g.user, perfil=current_perfil, cargos_list=CARGOS_LIST)
-@profile_bp.route('/email', methods=['GET'])
-@login_required
-def email_settings():
-    usuario_cs_email = g.user_email
-    # Garante tabela mínima
+        except Exception as e:
+            app_logger.error(f"Falha no upload para o R2 para {g.user_email}: {e}")
+            flash("Erro ao fazer upload da foto.", "error")
+
     try:
         execute_db(
-            """
-            CREATE TABLE IF NOT EXISTS email_accounts (
-                usuario_cs TEXT PRIMARY KEY,
-                smtp_user TEXT NOT NULL,
-                smtp_password TEXT NOT NULL,
-                from_name TEXT,
-                active INTEGER DEFAULT 1,
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-            )
-            """
+            "UPDATE perfil_usuario SET nome = %s, cargo = %s, foto_url = %s WHERE usuario = %s",
+            (nome, cargo, foto_url, g.user_email)
         )
+        
+        # Atualiza a sessão para refletir o novo nome/foto imediatamente
+        session['user'] = session.get('user', {})
+        session['user']['name'] = nome
+        session['user']['picture'] = foto_url
+        session.modified = True
+        
+        flash("Perfil atualizado com sucesso!", "success")
+        
     except Exception as e:
-        print(f"Aviso: falha ao garantir tabela email_accounts: {e}")
+        app_logger.error(f"Erro ao salvar perfil no DB para {g.user_email}: {e}")
+        flash("Erro ao salvar perfil no banco de dados.", "error")
 
-    settings = query_db(
-        "SELECT * FROM email_accounts WHERE usuario_cs = %s",
-        (usuario_cs_email,), one=True
-    )
-    # Status da conexão com Google (Gmail API)
-    token = session.get('google_token') or {}
-    google_connected = bool(token.get('access_token'))
-    return render_template('email_settings.html', settings=settings, google_connected=google_connected)
+    return redirect(url_for('profile.profile'))
 
-
-@profile_bp.route('/email/google/connect')
-@login_required
-def email_google_connect():
-    """Inicia o fluxo OAuth Google para habilitar escopo gmail.send."""
-    if not current_app.config.get('GOOGLE_OAUTH_ENABLED', False):
-        flash('Integração com Google não está configurada.', 'warning')
-        return redirect(url_for('profile.email_settings'))
-    # Após conectar, retornar à página de e-mail
-    session['oauth_next'] = url_for('profile.email_settings')
-    # Usa o GOOGLE_REDIRECT_URI se estiver válido; caso contrário, gera automaticamente a URL do callback atual
-    redirect_uri = current_app.config.get('GOOGLE_REDIRECT_URI')
-    if not redirect_uri or not (redirect_uri.startswith('http://') or redirect_uri.startswith('https://')):
-        redirect_uri = url_for('agenda.agenda_callback', _external=True)
-    return oauth.google.authorize_redirect(redirect_uri)
-
+# --- ROTAS DE E-MAIL (MOVIDAS DA GESTÃO) ---
 
 @profile_bp.route('/email/save', methods=['POST'])
-@login_required
-def email_settings_save():
-    usuario_cs_email = g.user_email
+def save_email_settings():
+    """Salva as configurações de SMTP pessoais do usuário."""
+    data = request.form
     try:
-        smtp_user = sanitize_string(request.form.get('smtp_user', ''), max_length=200)
-        smtp_password = sanitize_string(request.form.get('smtp_password', ''), max_length=200)
-        from_name = request.form.get('from_name', '')
-        if from_name:
-            from_name = sanitize_string(from_name, max_length=200)
-        if not smtp_user or not smtp_password:
-            raise ValidationError('Email e App Password são obrigatórios.')
-    except ValidationError as e:
-        flash(f'Erro: {str(e)}', 'error')
-        return redirect(url_for('profile.email_settings'))
-
-    try:
-        # Upsert simples
-        existing = query_db(
-            "SELECT usuario_cs FROM email_accounts WHERE usuario_cs = %s",
-            (usuario_cs_email,), one=True
-        )
-        if existing:
-            execute_db(
-                "UPDATE email_accounts SET smtp_user = %s, smtp_password = %s, from_name = %s, active = 1, updated_at = CURRENT_TIMESTAMP WHERE usuario_cs = %s",
-                (smtp_user, smtp_password, from_name, usuario_cs_email)
-            )
-        else:
-            execute_db(
-                "INSERT INTO email_accounts (usuario_cs, smtp_user, smtp_password, from_name, active) VALUES (%s, %s, %s, %s, 1)",
-                (usuario_cs_email, smtp_user, smtp_password, from_name)
-            )
-        flash('Configurações de e-mail salvas com sucesso.', 'success')
+        # Passa o e-mail do usuário logado para a função de salvar
+        save_smtp_settings(g.user_email, data)
+        flash("Configurações de SMTP salvas com sucesso!", "success")
+    except ValueError as e:
+        app_logger.warning(f"Falha ao salvar SMTP (dados incompletos) para {g.user_email}: {e}")
+        flash(f"Erro ao salvar: {e}", "error")
     except Exception as e:
-        print(f"ERRO ao salvar configurações de e-mail para {usuario_cs_email}: {e}")
-        flash('Erro ao salvar configurações de e-mail.', 'error')
-
-    return redirect(url_for('profile.email_settings'))
-
+        app_logger.error(f"Erro ao salvar SMTP para {g.user_email}: {e}")
+        flash("Ocorreu um erro ao salvar as configurações.", "error")
+        
+    return redirect(url_for('profile.profile'))
 
 @profile_bp.route('/email/test', methods=['POST'])
-@login_required
-def email_settings_test():
-    from ..email_utils import send_email_with_credentials, send_email_via_gmail_api, send_email
-    usuario_cs_email = g.user_email
+def test_email():
+    """Testa as configurações de SMTP pessoais do usuário."""
+    
+    # A senha para o teste DEVE ser fornecida no formulário
+    test_password = request.form.get('password')
+    
+    if not test_password:
+        flash("Para testar, você deve preencher o campo 'Senha' com sua App Password.", "warning")
+        return redirect(url_for('profile.profile'))
+        
     try:
-        test_email = sanitize_string(request.form.get('test_email', ''), max_length=200)
-        if not test_email:
-            raise ValidationError('Informe um e-mail de teste válido.')
-    except ValidationError as e:
-        flash(f'Erro: {str(e)}', 'error')
-        return redirect(url_for('profile.email_settings'))
+        # 1. Carrega as configurações salvas (que têm o HASH)
+        settings = load_smtp_settings(g.user_email)
+        if not settings:
+            flash("Nenhuma configuração de SMTP salva para testar.", "error")
+            return redirect(url_for('profile.profile'))
 
-    settings = query_db(
-        "SELECT * FROM email_accounts WHERE usuario_cs = %s AND active = 1",
-        (usuario_cs_email,), one=True
-    )
-    if not settings:
-        flash('Nenhuma configuração de e-mail ativa encontrada para seu usuário.', 'warning')
-        return redirect(url_for('profile.email_settings'))
+        # 2. Testa a conexão (compara o hash e tenta o login no provedor)
+        test_smtp_connection(settings, test_password)
+        
+        flash("Conexão SMTP bem-sucedida!", "success")
+        
+    except smtplib.SMTPAuthenticationError as e:
+        app_logger.warning(f"Falha no teste de autenticação SMTP para {g.user_email}: {e}")
+        flash(f"Falha na autenticação: {e}. Verifique sua App Password e se o SMTP_USER está correto.", "error")
+    except Exception as e:
+        app_logger.error(f"Erro no teste de SMTP para {g.user_email}: {e}")
+        flash(f"Falha ao testar conexão: {e}", "error")
 
-    # Se o usuário estiver conectado ao Google com escopo gmail.send, usa a API HTTP
-    token = session.get('google_token') or {}
-    access_token = token.get('access_token')
-    ok = False
-    tried_gmail_api = False
-    try_gmail_api = bool(access_token) and ('gmail' in current_app.config.get('GOOGLE_OAUTH_SCOPES', ''))
+    return redirect(url_for('profile.profile'))
 
-    if try_gmail_api:
-        tried_gmail_api = True
-        ok = send_email_via_gmail_api(
-            access_token=access_token,
-            to_email=test_email,
-            subject='Teste de envio - CSAPP',
-            body_text='Este é um e-mail de teste do CSAPP.',
-            body_html='<p>Este é um <strong>e-mail de teste</strong> do CSAPP.</p>',
-            reply_to=usuario_cs_email,
-            from_name=settings.get('from_name') or usuario_cs_email,
+@profile_bp.route('/email/send-test', methods=['POST'])
+def email_send_test():
+    """Envia um e-mail de teste usando as configurações pessoais do usuário."""
+    try:
+        test_recipient = request.form.get('test_recipient', '').strip()
+        from_name = request.form.get('from_name', '').strip() or g.perfil.get('nome') or g.user_email
+        plain_password = request.form.get('password')
+
+        if not plain_password:
+            flash("Para enviar teste, preencha o campo 'Senha' com sua App Password.", "warning")
+            return redirect(url_for('profile.profile'))
+
+        # Valida destinatário
+        try:
+            test_recipient = validate_email(test_recipient)
+        except ValidationError as e:
+            flash(f"Destinatário inválido: {str(e)}", "error")
+            return redirect(url_for('profile.profile'))
+
+        # Carrega configurações salvas e valida conexão
+        settings = load_smtp_settings(g.user_email)
+        if not settings:
+            flash("Nenhuma configuração de SMTP salva para enviar.", "error")
+            return redirect(url_for('profile.profile'))
+
+        # Primeiro testa autenticação para garantir credenciais válidas
+        test_smtp_connection(settings, plain_password)
+
+        # Envia o e-mail de teste
+        subject = "Teste de envio - CSAPP"
+        body_html = (
+            f"<p>Este é um envio de <strong>teste</strong> da plataforma CSAPP.</p>"
+            f"<p>Solicitado por: {from_name} ({g.user_email})</p>"
+            f"<p>Se recebeu este e-mail, o envio está configurado corretamente.</p>"
         )
+        ok = send_email(subject, body_html, [test_recipient], settings, plain_password, from_name=from_name, reply_to=g.user_email)
 
-    # Fallback automático para SMTP (App Password)
-    if not ok:
-        ok = send_email_with_credentials(
-            to_email=test_email,
-            subject='Teste de envio - CSAPP',
-            body_text='Este é um e-mail de teste do CSAPP.',
-            body_html='<p>Este é um <strong>e-mail de teste</strong> do CSAPP.</p>',
-            reply_to=usuario_cs_email,
-            from_name=settings.get('from_name') or usuario_cs_email,
-            host='smtp.gmail.com',
-            port=587,
-            user=settings.get('smtp_user'),
-            password=settings.get('smtp_password'),
-            from_addr=settings.get('smtp_user'),
-            use_tls=True,
-            use_ssl=False,
-            timeout=12,
-        )
-
-    # Segundo fallback: tentar porta 465 com SSL direto (alguns ambientes bloqueiam 587/TLS)
-    if not ok:
-        ok = send_email_with_credentials(
-            to_email=test_email,
-            subject='Teste de envio - CSAPP',
-            body_text='Este é um e-mail de teste do CSAPP.',
-            body_html='<p>Este é um <strong>e-mail de teste</strong> do CSAPP.</p>',
-            reply_to=usuario_cs_email,
-            from_name=settings.get('from_name') or usuario_cs_email,
-            host='smtp.gmail.com',
-            port=465,
-            user=settings.get('smtp_user'),
-            password=settings.get('smtp_password'),
-            from_addr=settings.get('smtp_user'),
-            use_tls=False,
-            use_ssl=True,
-            timeout=12,
-        )
-
-    # Terceiro fallback: tentar SMTP global via configuração do app (ex.: SendGrid/SES)
-    if not ok and current_app.config.get('EMAIL_CONFIGURADO'):
-        ok = send_email(
-            to_email=test_email,
-            subject='Teste de envio - CSAPP',
-            body_text='Este é um e-mail de teste do CSAPP.',
-            body_html='<p>Este é um <strong>e-mail de teste</strong> do CSAPP.</p>',
-            reply_to=usuario_cs_email,
-            from_name=settings.get('from_name') or usuario_cs_email,
-        )
-
-    if ok:
-        flash(f'E-mail de teste enviado para {test_email}.', 'success')
-    else:
-        if tried_gmail_api and not try_gmail_api:
-            # Caso improvável: token presente mas escopo ausente
-            flash('Falha: sessão Google sem escopo gmail.send. Conecte novamente com permissão adequada ou use App Password.', 'error')
-        elif current_app.config.get('EMAIL_CONFIGURADO'):
-            flash('Falha ao enviar e-mail pelo SMTP global. Verifique credenciais do provedor.', 'error')
+        if ok:
+            flash(f"E-mail de teste enviado para {test_recipient}.", "success")
         else:
-            flash('Falha ao enviar e-mail de teste. Verifique App Password e permissões.', 'error')
+            flash(f"Falha ao enviar e-mail de teste para {test_recipient}.", "error")
 
-    return redirect(url_for('profile.email_settings'))
+    except smtplib.SMTPAuthenticationError as e:
+        app_logger.warning(f"Falha de autenticação SMTP ao enviar teste para {g.user_email}: {e}")
+        flash(f"Falha na autenticação: {e}. Verifique sua App Password.", "error")
+    except Exception as e:
+        app_logger.error(f"Erro ao enviar e-mail de teste para {g.user_email}: {e}")
+        flash(f"Erro ao enviar teste: {e}", "error")
+
+    return redirect(url_for('profile.profile'))

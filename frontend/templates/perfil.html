@@ -1,171 +1,172 @@
 {% extends "base.html" %}
 
-{% block title %}Editar Perfil - CS Onboarding{% endblock %}
-
-{% block head_extra %}
-<style>
-    .profile-pic-wrapper {
-        position: relative;
-        width: 150px;
-        height: 150px;
-        border-radius: 50%;
-        overflow: hidden;
-        border: 4px solid var(--accent-color);
-        margin: 0 auto 20px auto;
-        background-color: var(--sidebar-bg);
-    }
-    .profile-pic {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-    .profile-pic-placeholder {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 5rem;
-        color: var(--accent-color);
-        opacity: 0.6;
-    }
-    /* Estilo para campos desabilitados */
-    input:read-only:disabled, select:disabled {
-        background-color: var(--input-border) !important;
-        opacity: 0.7;
-        cursor: not-allowed;
-    }
-</style>
-{% endblock %}
+{% block title %}Meu Perfil{% endblock %}
 
 {% block content %}
-<div class="container-fluid p-0">
-    <header class="header-bg p-3 shadow-sm d-flex justify-content-end align-items-center position-relative">
-        <h1 class="main-title mb-0 fs-4" style="position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap;">EDITAR PERFIL</h1>
+<div class="container-fluid mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Meu Perfil</h5>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('profile.save_profile') }}" method="POST" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-        <div class="d-flex align-items-center">
-            <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-primary ms-3">
-                <i class="bi bi-arrow-left me-1"></i> Voltar ao Dashboard
-            </a>
-
-            {# Botão do menu offcanvas antigo removido #}
-            </div>
-    </header>
-
-    <main class="p-4" id="main-content">
-        <div class="row justify-content-center">
-            <div class="col-lg-8 col-md-10">
-
-                {# Mensagens Flash #}
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                        {% for category, message in messages %}
-                            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
-                                {{ message }}
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>
-                        {% endfor %}
-                    {% endif %}
-                {% endwith %}
-
-                <div class="card metric-card p-4 shadow-sm">
-                    <div class="card-body">
-
-                        <form action="{{ url_for('profile.perfil') }}" method="POST" enctype="multipart/form-data">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                            <div class="profile-pic-wrapper">
-                                {% if perfil.foto_url %}
-                                    <img src="{{ perfil.foto_url }}?v={{ range(1, 10000) | random }}" alt="Foto de Perfil" class="profile-pic" id="profilePicPreview">
-                                {% else %}
-                                    <div class="profile-pic-placeholder" id="profilePicPlaceholder">
-                                        <i class="bi bi-person-fill"></i>
-                                    </div>
-                                    <img src="" alt="Foto de Perfil" class="profile-pic d-none" id="profilePicPreview">
+                        <div class="row">
+                            <div class="col-md-4 text-center mb-3">
+                                <img src="{{ g.perfil.foto_url or url_for('static', filename='imagens/teladelogin.jpg') }}" 
+                                     alt="Foto de Perfil" 
+                                     class="img-thumbnail rounded-circle" 
+                                     style="width: 150px; height: 150px; object-fit: cover;">
+                                
+                                <label for="foto" class="btn btn-sm btn-outline-primary mt-2">
+                                    Trocar Foto
+                                </label>
+                                <input type="file" name="foto" id="foto" class="d-none" 
+                                       accept="image/png, image/jpeg"
+                                       {% if not r2_configurado %}disabled{% endif %}>
+                                
+                                {% if not r2_configurado %}
+                                <small class="form-text text-danger d-block mt-1">
+                                    Upload de fotos desativado (R2 não configurado).
+                                </small>
                                 {% endif %}
                             </div>
 
-                            <div class="mb-3">
-                                <label for="foto_perfil" class="form-label">Alterar Foto de Perfil</label>
-                                <input class="form-control" type="file" id="foto_perfil" name="foto_perfil" accept="image/png, image/jpeg, image/gif" onchange="previewImage(event)">
-                                <div class="form-text">Tipos permitidos: PNG, JPG, GIF.</div>
-                            </div>
-
-                            <hr>
-
-                            <div class="mb-3">
-                                <label for="email" class="form-label">Email (Login)</label>
-                                <input type="email" class="form-control" id="email" value="{{ perfil.usuario | default(user_info.email) }}" readonly disabled>
-                                <div class="form-text">O email de login não pode ser alterado.</div>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label">Envio de e-mails pessoais</label>
-                                <div class="d-flex align-items-center">
-                                    <a href="{{ url_for('profile.email_settings') }}" class="btn btn-outline-primary btn-sm">Configurar Gmail (App Password)</a>
-                                    <small class="text-muted ms-2">Configure para enviar comentários externos com seu próprio e-mail.</small>
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label for="email" class="form-label">Email (Usuário)</label>
+                                    <input type="email" id="email" name="email" class="form-control" 
+                                           value="{{ g.user_email }}" readonly disabled>
+                                    <small class="form-text text-muted">O e-mail não pode ser alterado.</small>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="nome" class="form-label">Nome Completo</label>
+                                    <input type="text" id="nome" name="nome" class="form-control" 
+                                           value="{{ g.perfil.nome or '' }}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="cargo" class="form-label">Cargo</label>
+                                    <input type="text" id="cargo" name="cargo" class="form-control" 
+                                           value="{{ g.perfil.cargo or '' }}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="perfil_acesso" class="form-label">Perfil de Acesso</label>
+                                    <input type="text" id="perfil_acesso" name="perfil_acesso" class="form-control" 
+                                           value="{{ g.perfil.perfil_acesso or 'N/D' }}" readonly disabled>
                                 </div>
                             </div>
+                        </div>
 
-                            <div class="mb-3">
-                                <label for="nome" class="form-label">Nome Completo</label>
-                                <input type="text" class="form-control" id="nome" name="nome" value="{{ perfil.nome | default('') }}" required
-                                       {# CORREÇÃO: Verifica 'Implantador' #}
-                                       {% if g.perfil.perfil_acesso == 'Implantador' %}readonly disabled title="Seu perfil não permite alterar o nome."{% endif %}>
-                                {% if g.perfil.perfil_acesso == 'Implantador' %}
-                                    <div class="form-text text-warning">Seu perfil não permite alterar o nome.</div>
-                                {% endif %}
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="cargo" class="form-label">Cargo</label>
-                                <select class="form-select" id="cargo" name="cargo"
-                                        {# CORREÇÃO: Verifica 'Implantador' #}
-                                        {% if g.perfil.perfil_acesso == 'Implantador' %}disabled title="Seu perfil não permite alterar o cargo."{% endif %}>
-                                    <option value="">Selecione seu cargo...</option>
-                                    {% for c in cargos_list %}
-                                        <option value="{{ c }}" {% if perfil.cargo == c %}selected{% endif %}>{{ c }}</option>
-                                    {% endfor %}
-                                </select>
-                                {% if g.perfil.perfil_acesso == 'Implantador' %}
-                                    <div class="form-text text-warning">Seu perfil não permite alterar o cargo.</div>
-                                {% endif %}
-                            </div>
-
-                            <div class="text-end mt-4">
-                                <button type="submit" class="btn btn-primary btn-lg" style="background-color: var(--accent-color); border-color: var(--accent-color);">
-                                    <i class="bi bi-save me-2"></i> Salvar Alterações
-                                </button>
-                            </div>
-
-                        </form>
-                    </div>
+                        <div class="text-end border-top pt-3 mt-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Salvar Perfil
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
-    </main>
+
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">Configuração de E-mail Pessoal (App Password)</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted small">
+                        Configure sua "App Password" (ex: Gmail) para habilitar funcionalidades de envio de e-mail.
+                        A sua senha é armazenada com hash e <strong class="text-danger">não pode ser lida</strong>.
+                        Você deve <strong class="text-danger">sempre</strong> preencher o campo 'Senha' para salvar uma nova senha ou para testar.
+                    </p>
+
+                    <form action="{{ url_for('profile.save_email_settings') }}" method="POST" id="form-email-settings">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label for="smtp_host" class="form-label">Host SMTP</label>
+                                    <input type="text" id="smtp_host" name="host" class="form-control" 
+                                           value="{{ smtp_settings.host }}" placeholder="ex: smtp.gmail.com">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="smtp_port" class="form-label">Porta</label>
+                                    <input type="number" id="smtp_port" name="port" class="form-control" 
+                                           value="{{ smtp_settings.port }}" placeholder="ex: 587">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="smtp_user" class="form-label">Usuário SMTP (Seu E-mail)</label>
+                            <input type="email" id="smtp_user" name="user" class="form-control" 
+                                   value="{{ smtp_settings.user }}" placeholder="ex: seu.email@gmail.com">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="smtp_password" class="form-label">Senha (App Password)</label>
+                            <input type="password" id="smtp_password" name="password" class="form-control" 
+                                   placeholder="Preencha para salvar ou testar">
+                            <small class="form-text text-muted">
+                                Deixe em branco ao salvar para manter a senha anterior.
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="smtp_from_name" class="form-label">Nome para exibir no e-mail</label>
+                            <input type="text" id="smtp_from_name" name="from_name" class="form-control" 
+                                   placeholder="Ex: Seu Nome" value="{{ g.perfil.nome or '' }}">
+                            <small class="form-text text-muted">Será mostrado como remetente (From).</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="smtp_test_recipient" class="form-label">Destinatário do e-mail de teste</label>
+                            <input type="email" id="smtp_test_recipient" name="test_recipient" class="form-control" 
+                                   placeholder="ex: destinatario@empresa.com">
+                            <small class="form-text text-muted">Informe um e-mail que deve receber o teste.</small>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-auto">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="smtp_use_tls" name="use_tls" 
+                                           value="true" {% if smtp_settings.use_tls %}checked{% endif %}>
+                                    <label class="form-check-label" for="smtp_use_tls">Usar TLS</label>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="smtp_use_ssl" name="use_ssl" 
+                                           value="true" {% if smtp_settings.use_ssl %}checked{% endif %}>
+                                    <label class="form-check-label" for="smtp_use_ssl">Usar SSL</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="text-end border-top pt-3 mt-3">
+                            <button type="submit" class="btn btn-outline-secondary"
+                                    formaction="{{ url_for('profile.test_email') }}" formmethod="POST">
+                                <i class="fas fa-link me-2"></i>Testar Conexão
+                            </button>
+
+                            <button type="submit" class="btn btn-outline-info ms-2" 
+                                    formaction="{{ url_for('profile.email_send_test') }}" formmethod="POST">
+                                <i class="fas fa-paper-plane me-2"></i>Enviar E-mail de Teste
+                            </button>
+                            
+                            <button type="submit" class="btn btn-primary ms-2">
+                                <i class="fas fa-save me-2"></i>Salvar Configuração
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
-{% endblock %}
-
-{% block scripts_extra %}
-<script>
-    // Função para pré-visualizar a imagem de perfil
-    function previewImage(event) {
-        const reader = new FileReader();
-        reader.onload = function(){
-            const output = document.getElementById('profilePicPreview');
-            const placeholder = document.getElementById('profilePicPlaceholder');
-
-            output.src = reader.result;
-            output.classList.remove('d-none'); // Mostra a tag <img>
-            if (placeholder) {
-                placeholder.classList.add('d-none'); // Esconde o placeholder
-            }
-        };
-        // Verifica se um arquivo foi selecionado
-        if (event.target.files[0]) {
-            reader.readAsDataURL(event.target.files[0]);
-        }
-    }
-</script>
 {% endblock %}
