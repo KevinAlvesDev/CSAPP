@@ -25529,3 +25529,181 @@ requests.exceptions.InvalidURL: URL has an invalid label.
 2025-11-11 15:31:38 - WARNING - system - system - werkzeug -  * Debugger is active!
 2025-11-11 15:31:38 - INFO - system - system - werkzeug -  * Debugger PIN: 130-522-712
 2025-11-11 15:31:42 - INFO - system - system - werkzeug -  * Detected change in 'C:\\Users\\kevinpereira\\Desktop\\CSAPP\\backend\\project\\blueprints\\api.py', reloading
+2025-11-11 15:31:42 - INFO - system - system - werkzeug -  * Restarting with stat
+2025-11-11 15:31:45 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 15:31:45 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 15:31:45 - WARNING - system - system - werkzeug -  * Debugger is active!
+2025-11-11 15:31:45 - INFO - system - system - werkzeug -  * Debugger PIN: 130-522-712
+2025-11-11 15:34:21 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /implantacao/1
+2025-11-11 15:34:21 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /implantacao/1
+2025-11-11 15:34:22 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:34:22] "GET /implantacao/1 HTTP/1.1" 200 -
+2025-11-11 15:34:23 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:34:23] "GET /static/js/implantacao_detalhes.js HTTP/1.1" 200 -
+2025-11-11 15:34:23 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:34:23] "GET /static/css/theme.css HTTP/1.1" 200 -
+2025-11-11 15:34:23 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:34:23] "GET /static/css/style.css HTTP/1.1" 200 -
+2025-11-11 15:34:23 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:34:23] "GET /static/css/implantacao_detalhes.css?v=2 HTTP/1.1" 200 -
+2025-11-11 15:34:23 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:34:23] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+2025-11-11 15:34:23 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 15:34:23 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 15:34:24 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:34:24] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 15:34:25 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /api/toggle_tarefa/18
+2025-11-11 15:34:25 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /api/toggle_tarefa/18
+2025-11-11 15:34:25 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - api - Task 18 status changed to True by user suporte01.cs@gmail.com
+2025-11-11 15:34:25 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - api - Task 18 status changed to True by user suporte01.cs@gmail.com
+2025-11-11 15:34:25 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:34:25] "POST /api/toggle_tarefa/18 HTTP/1.1" 200 -
+2025-11-11 15:34:26 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /api/toggle_tarefa/19
+2025-11-11 15:34:26 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /api/toggle_tarefa/19
+2025-11-11 15:34:26 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - api - Task 19 status changed to True by user suporte01.cs@gmail.com
+2025-11-11 15:34:26 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - api - Task 19 status changed to True by user suporte01.cs@gmail.com
+2025-11-11 15:34:26 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:34:26] "POST /api/toggle_tarefa/19 HTTP/1.1" 200 -
+2025-11-11 15:34:35 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 15:34:35 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 15:34:35 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:34:35] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 15:34:35 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:34:35] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+2025-11-11 15:34:35 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:34:35] "[36mGET /static/css/theme.css HTTP/1.1[0m" 304 -
+2025-11-11 15:34:35 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:34:35] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+2025-11-11 15:34:35 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 15:34:35 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 15:34:35 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:34:35] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 15:34:46 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /implantacao/1
+2025-11-11 15:34:46 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /implantacao/1
+2025-11-11 15:34:46 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:34:46] "GET /implantacao/1 HTTP/1.1" 200 -
+2025-11-11 15:34:46 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:34:46] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+2025-11-11 15:34:46 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:34:46] "[36mGET /static/css/implantacao_detalhes.css?v=2 HTTP/1.1[0m" 304 -
+2025-11-11 15:34:46 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:34:46] "[36mGET /static/css/theme.css HTTP/1.1[0m" 304 -
+2025-11-11 15:34:46 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:34:46] "[36mGET /static/js/implantacao_detalhes.js HTTP/1.1[0m" 304 -
+2025-11-11 15:34:46 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:34:46] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+2025-11-11 15:34:46 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 15:34:46 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 15:34:46 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:34:46] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 15:34:54 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 15:34:54 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 15:34:54 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:34:54] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 15:34:54 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:34:54] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+2025-11-11 15:34:54 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:34:54] "[36mGET /static/css/theme.css HTTP/1.1[0m" 304 -
+2025-11-11 15:34:54 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:34:54] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+2025-11-11 15:34:54 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 15:34:54 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 15:34:54 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:34:54] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 15:45:08 - INFO - system - system - werkzeug -  * Detected change in 'C:\\Users\\kevinpereira\\Desktop\\CSAPP\\backend\\project\\blueprints\\auth.py', reloading
+2025-11-11 15:45:09 - INFO - system - system - werkzeug -  * Restarting with stat
+2025-11-11 15:45:17 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 15:45:17 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 15:45:18 - WARNING - system - system - werkzeug -  * Debugger is active!
+2025-11-11 15:45:18 - INFO - system - system - werkzeug -  * Debugger PIN: 130-522-712
+2025-11-11 15:45:27 - INFO - system - system - werkzeug -  * Detected change in 'C:\\Users\\kevinpereira\\Desktop\\CSAPP\\backend\\project\\blueprints\\auth.py', reloading
+2025-11-11 15:45:27 - INFO - system - system - werkzeug -  * Restarting with stat
+2025-11-11 15:45:34 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 15:45:34 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 15:45:36 - WARNING - system - system - werkzeug -  * Debugger is active!
+2025-11-11 15:45:36 - INFO - system - system - werkzeug -  * Debugger PIN: 130-522-712
+2025-11-11 15:45:57 - INFO - system - system - werkzeug -  * Detected change in 'C:\\Users\\kevinpereira\\Desktop\\CSAPP\\backend\\project\\blueprints\\main.py', reloading
+2025-11-11 15:45:57 - INFO - system - system - werkzeug -  * Restarting with stat
+2025-11-11 15:46:00 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 15:46:00 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 15:46:00 - WARNING - system - system - werkzeug -  * Debugger is active!
+2025-11-11 15:46:00 - INFO - system - system - werkzeug -  * Debugger PIN: 130-522-712
+2025-11-11 15:46:04 - INFO - system - system - werkzeug -  * Detected change in 'C:\\Users\\kevinpereira\\Desktop\\CSAPP\\backend\\project\\blueprints\\auth.py', reloading
+2025-11-11 15:46:05 - INFO - system - system - werkzeug -  * Restarting with stat
+2025-11-11 15:46:08 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 15:46:08 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 15:46:08 - WARNING - system - system - werkzeug -  * Debugger is active!
+2025-11-11 15:46:08 - INFO - system - system - werkzeug -  * Debugger PIN: 130-522-712
+2025-11-11 15:46:15 - INFO - system - system - werkzeug -  * Detected change in 'C:\\Users\\kevinpereira\\Desktop\\CSAPP\\backend\\project\\blueprints\\auth.py', reloading
+2025-11-11 15:46:17 - INFO - system - system - werkzeug -  * Restarting with stat
+2025-11-11 15:46:24 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 15:46:24 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 15:46:24 - WARNING - system - system - werkzeug -  * Debugger is active!
+2025-11-11 15:46:24 - INFO - system - system - werkzeug -  * Debugger PIN: 130-522-712
+2025-11-11 15:47:02 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /implantacao/1
+2025-11-11 15:47:02 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /implantacao/1
+2025-11-11 15:47:02 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:47:02] "GET /implantacao/1 HTTP/1.1" 200 -
+2025-11-11 15:47:03 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:47:03] "[36mGET /static/css/implantacao_detalhes.css?v=2 HTTP/1.1[0m" 304 -
+2025-11-11 15:47:03 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:47:03] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+2025-11-11 15:47:03 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:47:03] "[36mGET /static/css/theme.css HTTP/1.1[0m" 304 -
+2025-11-11 15:47:03 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:47:03] "[36mGET /static/js/implantacao_detalhes.js HTTP/1.1[0m" 304 -
+2025-11-11 15:47:03 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:47:03] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+2025-11-11 15:47:03 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 15:47:03 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 15:47:04 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:47:04] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 15:47:05 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /api/toggle_tarefa/13
+2025-11-11 15:47:05 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /api/toggle_tarefa/13
+2025-11-11 15:47:05 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - api - Task 13 status changed to False by user suporte01.cs@gmail.com
+2025-11-11 15:47:05 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - api - Task 13 status changed to False by user suporte01.cs@gmail.com
+2025-11-11 15:47:05 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:47:05] "POST /api/toggle_tarefa/13 HTTP/1.1" 200 -
+2025-11-11 15:47:06 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /api/toggle_tarefa/13
+2025-11-11 15:47:06 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /api/toggle_tarefa/13
+2025-11-11 15:47:06 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - api - Task 13 status changed to True by user suporte01.cs@gmail.com
+2025-11-11 15:47:06 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - api - Task 13 status changed to True by user suporte01.cs@gmail.com
+2025-11-11 15:47:06 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:47:06] "POST /api/toggle_tarefa/13 HTTP/1.1" 200 -
+2025-11-11 15:47:08 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /excluir_implantacao
+2025-11-11 15:47:08 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /excluir_implantacao
+2025-11-11 15:47:08 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:47:08] "[32mPOST /excluir_implantacao HTTP/1.1[0m" 302 -
+2025-11-11 15:47:08 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 15:47:08 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 15:47:08 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:47:08] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 15:47:08 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:47:08] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+2025-11-11 15:47:08 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:47:08] "[36mGET /static/css/theme.css HTTP/1.1[0m" 304 -
+2025-11-11 15:47:08 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:47:08] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+2025-11-11 15:47:08 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 15:47:08 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-11 15:47:08 - INFO - system - system - werkzeug - 127.0.0.1 - - [11/Nov/2025 15:47:08] "GET /dashboard HTTP/1.1" 200 -
+2025-11-11 15:48:53 - INFO - system - system - werkzeug -  * Detected change in 'C:\\Users\\kevinpereira\\Desktop\\CSAPP\\backend\\project\\blueprints\\implantacao_actions.py', reloading
+2025-11-11 15:48:54 - INFO - system - system - werkzeug -  * Restarting with stat
+2025-11-11 15:48:58 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 15:48:58 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 15:48:58 - WARNING - system - system - werkzeug -  * Debugger is active!
+2025-11-11 15:48:58 - INFO - system - system - werkzeug -  * Debugger PIN: 130-522-712
+2025-11-11 15:49:04 - INFO - system - system - werkzeug -  * Detected change in 'C:\\Users\\kevinpereira\\Desktop\\CSAPP\\backend\\project\\blueprints\\implantacao_actions.py', reloading
+2025-11-11 15:49:04 - INFO - system - system - werkzeug -  * Restarting with stat
+2025-11-11 15:49:08 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 15:49:08 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 15:49:08 - WARNING - system - system - werkzeug -  * Debugger is active!
+2025-11-11 15:49:08 - INFO - system - system - werkzeug -  * Debugger PIN: 130-522-712
+2025-11-11 15:49:58 - INFO - system - system - werkzeug -  * Detected change in 'C:\\Users\\kevinpereira\\Desktop\\CSAPP\\backend\\project\\blueprints\\implantacao_actions.py', reloading
+2025-11-11 15:49:59 - INFO - system - system - werkzeug -  * Restarting with stat
+2025-11-11 15:50:02 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 15:50:02 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 15:50:02 - WARNING - system - system - werkzeug -  * Debugger is active!
+2025-11-11 15:50:02 - INFO - system - system - werkzeug -  * Debugger PIN: 130-522-712
+2025-11-11 15:50:14 - INFO - system - system - werkzeug -  * Detected change in 'C:\\Users\\kevinpereira\\Desktop\\CSAPP\\backend\\project\\blueprints\\implantacao_actions.py', reloading
+2025-11-11 15:50:14 - INFO - system - system - werkzeug -  * Restarting with stat
+2025-11-11 15:50:19 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 15:50:19 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 15:50:20 - WARNING - system - system - werkzeug -  * Debugger is active!
+2025-11-11 15:50:20 - INFO - system - system - werkzeug -  * Debugger PIN: 130-522-712
+2025-11-11 15:50:33 - INFO - system - system - werkzeug -  * Detected change in 'C:\\Users\\kevinpereira\\Desktop\\CSAPP\\backend\\project\\blueprints\\implantacao_actions.py', reloading
+2025-11-11 15:50:33 - INFO - system - system - werkzeug -  * Restarting with stat
+2025-11-11 15:50:37 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 15:50:37 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 15:50:38 - WARNING - system - system - werkzeug -  * Debugger is active!
+2025-11-11 15:50:38 - INFO - system - system - werkzeug -  * Debugger PIN: 130-522-712
+2025-11-11 15:50:41 - INFO - system - system - werkzeug -  * Detected change in 'C:\\Users\\kevinpereira\\Desktop\\CSAPP\\backend\\project\\blueprints\\implantacao_actions.py', reloading
+2025-11-11 15:50:41 - INFO - system - system - werkzeug -  * Restarting with stat
+2025-11-11 15:50:44 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 15:50:44 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 15:50:45 - WARNING - system - system - werkzeug -  * Debugger is active!
+2025-11-11 15:50:45 - INFO - system - system - werkzeug -  * Debugger PIN: 130-522-712
+2025-11-11 15:50:48 - INFO - system - system - werkzeug -  * Detected change in 'C:\\Users\\kevinpereira\\Desktop\\CSAPP\\backend\\project\\blueprints\\implantacao_actions.py', reloading
+2025-11-11 15:50:48 - INFO - system - system - werkzeug -  * Restarting with stat
+2025-11-11 15:50:51 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 15:50:51 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 15:50:52 - WARNING - system - system - werkzeug -  * Debugger is active!
+2025-11-11 15:50:52 - INFO - system - system - werkzeug -  * Debugger PIN: 130-522-712
+2025-11-11 15:51:02 - INFO - system - system - werkzeug -  * Detected change in 'C:\\Users\\kevinpereira\\Desktop\\CSAPP\\backend\\project\\blueprints\\auth.py', reloading
+2025-11-11 15:51:02 - INFO - system - system - werkzeug -  * Restarting with stat
+2025-11-11 15:51:06 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 15:51:06 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 15:51:06 - WARNING - system - system - werkzeug -  * Debugger is active!
+2025-11-11 15:51:06 - INFO - system - system - werkzeug -  * Debugger PIN: 130-522-712
+2025-11-11 15:51:12 - INFO - system - system - werkzeug -  * Detected change in 'C:\\Users\\kevinpereira\\Desktop\\CSAPP\\backend\\project\\blueprints\\gamification.py', reloading
+2025-11-11 15:51:12 - INFO - system - system - werkzeug -  * Restarting with stat
+2025-11-11 15:51:15 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 15:51:15 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 15:51:15 - WARNING - system - system - werkzeug -  * Debugger is active!
+2025-11-11 15:51:15 - INFO - system - system - werkzeug -  * Debugger PIN: 130-522-712
+2025-11-11 15:51:24 - INFO - system - system - werkzeug -  * Detected change in 'C:\\Users\\kevinpereira\\Desktop\\CSAPP\\backend\\project\\blueprints\\auth.py', reloading
+2025-11-11 15:51:24 - INFO - system - system - werkzeug -  * Restarting with stat
+2025-11-11 15:51:27 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 15:51:27 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-11 15:51:27 - WARNING - system - system - werkzeug -  * Debugger is active!
+2025-11-11 15:51:27 - INFO - system - system - werkzeug -  * Debugger PIN: 130-522-712

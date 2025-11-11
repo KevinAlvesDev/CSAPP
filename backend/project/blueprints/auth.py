@@ -5,7 +5,7 @@ from flask import (
     Blueprint, redirect, url_for, session, render_template, g, flash, 
     current_app, request
 )
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 from urllib.parse import urlencode
 # NOVO: Importar exceções específicas do DB, se possível (exemplo genérico)
 from psycopg2 import IntegrityError as Psycopg2IntegrityError
@@ -191,21 +191,67 @@ def rate_limit(max_requests):
         return f
     return decorator
 
-@auth_bp.route('/login')
-@rate_limit("10 per minute")  # Limite de 10 tentativas por minuto
+@auth_bp.route('/login', methods=['GET', 'POST'])
+@rate_limit("30 per minute")  # Limite de 30 tentativas por minuto (suporta múltiplos usuários)
 def login():
-    """Redireciona o usuário para a página de login do Auth0."""
-    # Se Auth0 estiver desativado, usa fluxo de dev login
-    if not current_app.config.get('AUTH0_ENABLED', True):
-        return redirect(url_for('auth.dev_login'))
-
-    # --- CORREÇÃO: Importa 'oauth' aqui ---
-    from ..extensions import oauth
-
-    session.clear()
-    redirect_uri = url_for('auth.callback', _external=True)
-    auth0 = oauth.create_client('auth0')
-    return auth0.authorize_redirect(redirect_uri=redirect_uri)
+    """Página de login próprio ou redireciona para Auth0."""
+    # Se Auth0 estiver habilitado, redireciona para Auth0
+    if current_app.config.get('AUTH0_ENABLED', True):
+        from ..extensions import oauth
+        session.clear()
+        redirect_uri = url_for('auth.callback', _external=True)
+        auth0 = oauth.create_client('auth0')
+        return auth0.authorize_redirect(redirect_uri=redirect_uri)
+    
+    # Sistema de login próprio
+    if request.method == 'GET':
+        return render_template('login.html', auth0_enabled=False, use_custom_auth=True)
+    
+    # POST: processa login
+    email = (request.form.get('email') or '').strip().lower()
+    password = request.form.get('password', '')
+    
+    if not email or not password:
+        flash('Por favor, preencha todos os campos.', 'error')
+        return render_template('login.html', auth0_enabled=False, use_custom_auth=True)
+    
+    # Valida email
+    try:
+        from ..validation import validate_email
+        email = validate_email(email)
+    except Exception as e:
+        flash('E-mail inválido.', 'error')
+        return render_template('login.html', auth0_enabled=False, use_custom_auth=True)
+    
+    # Busca usuário no banco
+    usuario = query_db("SELECT usuario, senha FROM usuarios WHERE usuario = %s", (email,), one=True)
+    
+    if not usuario:
+        auth_logger.warning(f'Login attempt with non-existent email: {email}')
+        flash('E-mail ou senha incorretos.', 'error')
+        return render_template('login.html', auth0_enabled=False, use_custom_auth=True)
+    
+    # Verifica senha
+    if not check_password_hash(usuario.get('senha'), password):
+        auth_logger.warning(f'Failed login attempt for: {email}')
+        flash('E-mail ou senha incorretos.', 'error')
+        return render_template('login.html', auth0_enabled=False, use_custom_auth=True)
+    
+    # Busca perfil do usuário
+    perfil = query_db("SELECT nome FROM perfil_usuario WHERE usuario = %s", (email,), one=True)
+    nome = perfil.get('nome') if perfil else email
+    
+    # Cria sessão
+    session['user'] = {
+        'email': email,
+        'name': nome,
+        'sub': f'local|{email}'
+    }
+    session.permanent = True
+    
+    auth_logger.info(f'User logged in successfully: {email}')
+    flash(f'Bem-vindo, {nome}!', 'success')
+    return redirect(url_for('main.dashboard'))
 
 @auth_bp.route('/callback')
 @rate_limit("5 per minute")  # Limite de 5 callbacks por minuto
@@ -347,3 +393,84 @@ def dev_login_as():
 
     flash(f'Logado como {email} (desenvolvimento).', 'success')
     return redirect(url_for('main.dashboard'))
+
+@auth_bp.route('/register', methods=['GET', 'POST'])
+@rate_limit("20 per minute")  # Limite de 20 registros por minuto (suporta múltiplos usuários)
+def register():
+    """Página de registro de novos usuários."""
+    # Se Auth0 estiver habilitado, redireciona para login
+    if current_app.config.get('AUTH0_ENABLED', True):
+        flash('Registro via Auth0. Use o botão de login para se registrar.', 'info')
+        return redirect(url_for('auth.login'))
+    
+    if request.method == 'GET':
+        return render_template('register.html', auth0_enabled=False)
+    
+    # POST: processa registro
+    email = (request.form.get('email') or '').strip().lower()
+    nome = (request.form.get('nome') or '').strip()
+    password = request.form.get('password', '')
+    password_confirm = request.form.get('password_confirm', '')
+    
+    # Validações básicas
+    if not all([email, nome, password, password_confirm]):
+        flash('Por favor, preencha todos os campos.', 'error')
+        return render_template('register.html', auth0_enabled=False)
+    
+    # Valida email
+    try:
+        from ..validation import validate_email
+        email = validate_email(email)
+    except Exception as e:
+        flash(f'E-mail inválido: {str(e)}', 'error')
+        return render_template('register.html', auth0_enabled=False)
+    
+    # Valida nome (sem escape HTML, apenas sanitização básica)
+    try:
+        from ..validation import sanitize_string
+        # Permite HTML básico para nomes (não escapa, apenas remove tags perigosas)
+        nome = sanitize_string(nome, min_length=2, max_length=100, allow_html=False)
+    except Exception as e:
+        flash(f'Nome inválido: {str(e)}', 'error')
+        return render_template('register.html', auth0_enabled=False)
+    
+    # Valida senha
+    if len(password) < 6:
+        flash('A senha deve ter no mínimo 6 caracteres.', 'error')
+        return render_template('register.html', auth0_enabled=False)
+    
+    if password != password_confirm:
+        flash('As senhas não coincidem.', 'error')
+        return render_template('register.html', auth0_enabled=False)
+    
+    # Verifica se usuário já existe
+    usuario_existente = query_db("SELECT usuario FROM usuarios WHERE usuario = %s", (email,), one=True)
+    if usuario_existente:
+        flash('Este e-mail já está cadastrado. Faça login ou use outro e-mail.', 'error')
+        return render_template('register.html', auth0_enabled=False)
+    
+    # Cria usuário
+    try:
+        senha_hash = generate_password_hash(password)
+        execute_db(
+            "INSERT INTO usuarios (usuario, senha) VALUES (%s, %s)",
+            (email, senha_hash)
+        )
+        
+        # Cria perfil (sem perfil de acesso inicial - será definido por admin)
+        execute_db(
+            "INSERT INTO perfil_usuario (usuario, nome, perfil_acesso) VALUES (%s, %s, %s)",
+            (email, nome, None)
+        )
+        
+        auth_logger.info(f'New user registered: {email}')
+        flash('Conta criada com sucesso! Faça login para continuar.', 'success')
+        return redirect(url_for('auth.login'))
+        
+    except (Psycopg2IntegrityError, Sqlite3IntegrityError):
+        flash('Este e-mail já está cadastrado.', 'error')
+        return render_template('register.html', auth0_enabled=False)
+    except Exception as e:
+        auth_logger.error(f'Error registering user {email}: {str(e)}')
+        flash('Erro ao criar conta. Tente novamente mais tarde.', 'error')
+        return render_template('register.html', auth0_enabled=False)

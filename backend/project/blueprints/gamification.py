@@ -37,7 +37,7 @@ def _get_all_cs_users_for_gamification():
 
 @gamification_bp.route('/save-rules-modal', methods=['POST'])
 @permission_required(PERFIS_COM_GESTAO)
-@limiter.limit("10 per minute", key_func=lambda: g.user_email or get_remote_address())
+@limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 def save_gamification_rules_from_modal():
     """
     Rota (apenas POST) para salvar as regras de gamificação
@@ -86,7 +86,7 @@ def save_gamification_rules_from_modal():
 
 @gamification_bp.route('/metrics', methods=['GET', 'POST'])
 @permission_required(PERFIS_COM_GESTAO)
-@limiter.limit("20 per minute", key_func=lambda: g.user_email or get_remote_address())
+@limiter.limit("100 per minute", key_func=lambda: g.user_email or get_remote_address())
 def manage_gamification_metrics():
     """Rota para gestores inserirem/atualizarem as métricas manuais de um CS."""
     

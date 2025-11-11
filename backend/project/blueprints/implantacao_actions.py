@@ -50,7 +50,7 @@ implantacao_actions_bp = Blueprint('actions', __name__)
 @implantacao_actions_bp.route('/criar_implantacao', methods=['POST'])
 @login_required
 @permission_required(PERFIS_COM_CRIACAO) #
-@limiter.limit("10 per minute", key_func=lambda: g.user_email or get_remote_address())
+@limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 def criar_implantacao():
     # A importação de _create_default_tasks foi movida para o topo do arquivo
     
@@ -146,7 +146,7 @@ def criar_implantacao():
 @implantacao_actions_bp.route('/criar_implantacao_modulo', methods=['POST'])
 @login_required
 @permission_required(PERFIS_COM_CRIACAO)
-@limiter.limit("10 per minute", key_func=lambda: g.user_email or get_remote_address())
+@limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 def criar_implantacao_modulo():
     usuario_criador = g.user_email # Quem está criando
     
@@ -221,7 +221,7 @@ def criar_implantacao_modulo():
 
 @implantacao_actions_bp.route('/iniciar_implantacao', methods=['POST'])
 @login_required
-@limiter.limit("10 per minute", key_func=lambda: g.user_email or get_remote_address())
+@limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 def iniciar_implantacao():
     usuario_cs_email = g.user_email #
     
@@ -280,7 +280,7 @@ def iniciar_implantacao():
 
 @implantacao_actions_bp.route('/agendar_implantacao', methods=['POST'])
 @login_required
-@limiter.limit("10 per minute", key_func=lambda: g.user_email or get_remote_address())
+@limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 def agendar_implantacao():
     usuario_cs_email = g.user_email
     implantacao_id = request.form.get('implantacao_id')
@@ -320,7 +320,7 @@ def agendar_implantacao():
 
 @implantacao_actions_bp.route('/finalizar_implantacao', methods=['POST'])
 @login_required
-@limiter.limit("10 per minute", key_func=lambda: g.user_email or get_remote_address())
+@limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 def finalizar_implantacao():
     usuario_cs_email = g.user_email #
     implantacao_id = request.form.get('implantacao_id')
@@ -374,7 +374,7 @@ def finalizar_implantacao():
 
 @implantacao_actions_bp.route('/parar_implantacao', methods=['POST'])
 @login_required
-@limiter.limit("10 per minute", key_func=lambda: g.user_email or get_remote_address())
+@limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 def parar_implantacao():
     usuario_cs_email = g.user_email
     implantacao_id = request.form.get('implantacao_id')
@@ -418,7 +418,7 @@ def parar_implantacao():
 
 @implantacao_actions_bp.route('/retomar_implantacao', methods=['POST'])
 @login_required
-@limiter.limit("10 per minute", key_func=lambda: g.user_email or get_remote_address())
+@limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 def retomar_implantacao():
     usuario_cs_email = g.user_email #
     implantacao_id = request.form.get('implantacao_id')
@@ -452,7 +452,7 @@ def retomar_implantacao():
 
 @implantacao_actions_bp.route('/reabrir_implantacao', methods=['POST'])
 @login_required
-@limiter.limit("10 per minute", key_func=lambda: g.user_email or get_remote_address())
+@limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 def reabrir_implantacao():
     usuario_cs_email = g.user_email #
     implantacao_id = request.form.get('implantacao_id')
@@ -490,7 +490,7 @@ def reabrir_implantacao():
 
 @implantacao_actions_bp.route('/atualizar_detalhes_empresa', methods=['POST'])
 @login_required
-@limiter.limit("20 per minute", key_func=lambda: g.user_email or get_remote_address())
+@limiter.limit("100 per minute", key_func=lambda: g.user_email or get_remote_address())
 def atualizar_detalhes_empresa():
     usuario_cs_email = g.user_email #
     implantacao_id = request.form.get('implantacao_id')
@@ -590,7 +590,7 @@ def atualizar_detalhes_empresa():
 @implantacao_actions_bp.route('/transferir_implantacao', methods=['POST'])
 @login_required
 @permission_required(PERFIS_COM_GESTAO) #
-@limiter.limit("5 per minute", key_func=lambda: g.user_email or get_remote_address())
+@limiter.limit("30 per minute", key_func=lambda: g.user_email or get_remote_address())
 def transferir_implantacao():
     usuario_cs_email = g.user_email #
     implantacao_id = request.form.get('implantacao_id')
@@ -617,7 +617,7 @@ def transferir_implantacao():
 
 @implantacao_actions_bp.route('/excluir_implantacao', methods=['POST'])
 @login_required
-@limiter.limit("3 per minute", key_func=lambda: g.user_email or get_remote_address())
+@limiter.limit("100 per minute", key_func=lambda: g.user_email or get_remote_address())
 def excluir_implantacao():
     usuario_cs_email = g.user_email #
     implantacao_id = request.form.get('implantacao_id')

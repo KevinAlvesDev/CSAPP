@@ -47,10 +47,12 @@ def home():
     if 'user' in session:
         return redirect(url_for('main.dashboard'))
     # Passa flag para o template evitar acessar current_app diretamente
+    auth0_enabled = current_app.config.get('AUTH0_ENABLED', True)
     return render_template(
         'login.html',
-        auth0_enabled=current_app.config.get('AUTH0_ENABLED', True)
-    ) #
+        auth0_enabled=auth0_enabled,
+        use_custom_auth=not auth0_enabled  # Usa sistema próprio quando Auth0 está desativado
+    )
 
 @main_bp.route('/dashboard')
 @login_required
