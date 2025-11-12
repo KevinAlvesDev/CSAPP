@@ -5,6 +5,7 @@ from email.mime.text import MIMEText
 import ssl
 from email.mime.multipart import MIMEMultipart
 from werkzeug.security import generate_password_hash, check_password_hash
+import requests
 from .db import query_db, execute_db
 from flask import current_app
 from .logging_config import security_logger, app_logger
@@ -333,20 +334,69 @@ def send_email_with_credentials(to_email, subject, body_text, body_html, reply_t
 
 def send_email_global(subject, body_html, recipients, from_name=None, reply_to=None):
     """
-    Envia um e-mail usando configuração SMTP global de current_app.config.
+    Envia um e-mail usando a configuração global.
+    Suporta drivers: 'smtp' (padrão) e 'sendgrid' (HTTP API em porta 443).
     Retorna True em caso de sucesso; lança exceção em falha.
     """
     cfg = current_app.config
+    driver = (cfg.get('EMAIL_DRIVER') or 'smtp').lower()
+
+    # Endereço do remetente (usado por ambos os drivers)
+    from_addr = cfg.get('SMTP_FROM') or cfg.get('SMTP_USER')
+    if not from_addr:
+        raise ValueError('Configuração de e-mail inválida: remetente (SMTP_FROM) ausente.')
+
+    if driver == 'sendgrid':
+        api_key = cfg.get('SENDGRID_API_KEY')
+        if not api_key:
+            raise ValueError('SendGrid não configurado: defina SENDGRID_API_KEY.')
+
+        # Monta payload para SendGrid
+        payload = {
+            "from": {"email": from_addr, **({"name": from_name} if from_name else {})},
+            "personalizations": [{
+                "to": [{"email": r} for r in recipients],
+                "subject": subject,
+            }],
+            "content": [{"type": "text/html", "value": body_html}]
+        }
+        if reply_to:
+            payload["reply_to"] = {"email": reply_to}
+
+        try:
+            base = cfg.get('SENDGRID_ENDPOINT', 'https://api.sendgrid.com')
+            url = f"{base.rstrip('/')}/v3/mail/send"
+            resp = requests.post(
+                url,
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+                timeout=10,
+            )
+            # SendGrid retorna 202 para aceito
+            if resp.status_code == 202:
+                app_logger.info(f"E-mail global (SendGrid) enviado para {recipients}")
+                return True
+            else:
+                # Inclui resposta do provider para diagnóstico
+                raise RuntimeError(f"SendGrid falhou ({resp.status_code}): {resp.text}")
+        except requests.RequestException as e:
+            # Erros de rede aqui geralmente são resolvidos em PaaS (porta 443)
+            app_logger.error(f"Falha de rede no envio via SendGrid: {e}")
+            raise
+
+    # Driver SMTP padrão
     host = cfg.get('SMTP_HOST')
     port = int(cfg.get('SMTP_PORT', 587))
     user = cfg.get('SMTP_USER')
     password = cfg.get('SMTP_PASSWORD')
     use_tls = cfg.get('SMTP_USE_TLS', True)
     use_ssl = cfg.get('SMTP_USE_SSL', False)
-    from_addr = cfg.get('SMTP_FROM') or user
 
-    if not host or not from_addr:
-        raise ValueError('SMTP global não configurado (host/from ausentes).')
+    if not host:
+        raise ValueError('SMTP global não configurado (host ausente).')
 
     # Usa MIMEMultipart para permitir futuras alternativas de texto
     msg = MIMEMultipart('alternative')
@@ -370,10 +420,10 @@ def send_email_global(subject, body_html, recipients, from_name=None, reply_to=N
             server.login(user, password)
         server.sendmail(from_addr, recipients, msg.as_string())
         server.quit()
-        app_logger.info(f"E-mail global enviado para {recipients}")
+        app_logger.info(f"E-mail global (SMTP) enviado para {recipients}")
         return True
     except Exception as e:
-        app_logger.error(f"Falha no envio de e-mail global: {e}")
+        app_logger.error(f"Falha no envio de e-mail global (SMTP): {e}")
         raise
     
 

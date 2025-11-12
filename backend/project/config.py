@@ -109,6 +109,9 @@ class Config:
     )
 
     # --- Configuração de SMTP (E-mail para comentários externos) ---
+    # Driver de envio: 'smtp' (padrão) ou 'sendgrid' (HTTP API)
+    EMAIL_DRIVER = os.environ.get('EMAIL_DRIVER', 'smtp').lower()
+
     SMTP_HOST = os.environ.get('SMTP_HOST')
     SMTP_PORT = int(os.environ.get('SMTP_PORT', '587'))
     SMTP_USER = os.environ.get('SMTP_USER')
@@ -116,9 +119,21 @@ class Config:
     SMTP_FROM = os.environ.get('SMTP_FROM') or os.environ.get('SMTP_USER')
     SMTP_USE_TLS = os.environ.get('SMTP_USE_TLS', 'true').lower() in ('1','true','yes')
     SMTP_USE_SSL = os.environ.get('SMTP_USE_SSL', 'false').lower() in ('1','true','yes')
-    EMAIL_CONFIGURADO = all([SMTP_HOST, SMTP_PORT, SMTP_FROM])
-    if not EMAIL_CONFIGURADO:
-        print("AVISO: SMTP não configurado (comentários externos não enviarão e-mails).")
+    # Credencial para driver SendGrid (HTTP API)
+    SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY')
+
+    # Validação de configuração baseada no driver
+    if EMAIL_DRIVER == 'smtp':
+        EMAIL_CONFIGURADO = all([SMTP_HOST, SMTP_PORT, SMTP_FROM])
+        if not EMAIL_CONFIGURADO:
+            print("AVISO: SMTP não configurado (comentários externos não enviarão e-mails).")
+    elif EMAIL_DRIVER == 'sendgrid':
+        EMAIL_CONFIGURADO = all([SENDGRID_API_KEY, SMTP_FROM])
+        if not EMAIL_CONFIGURADO:
+            print("AVISO: SendGrid não configurado (defina SENDGRID_API_KEY e SMTP_FROM).")
+    else:
+        EMAIL_CONFIGURADO = False
+        print(f"AVISO: EMAIL_DRIVER '{EMAIL_DRIVER}' não suportado. Use 'smtp' ou 'sendgrid'.")
 
     # --- Internacionalização básica ---
     # Defina LANG=pt ou LANG=en no ambiente
