@@ -53,15 +53,28 @@ body.dark-mode .timeline-data { color: #888; }
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.75rem 0.5rem;
+    padding: 0.9rem 0.75rem;
     border-bottom: 0; /* remove a linha inferior */
-    margin-top: 2rem; /* Mais espaço */
-    margin-bottom: 0.5rem;
+    margin-top: 1.25rem; /* espaço entre módulos */
+    margin-bottom: 0; /* unimos com o collapse abaixo */
     cursor: pointer;
-    transition: background-color 0.2s ease-in-out;
+    transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out;
+    /* Destaque visual de card */
+    background-color: var(--card-bg);
+    background-image: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+    border: 2px solid var(--card-border-color);
+    border-color: rgba(var(--accent-color-rgb), 0.45);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0; /* cantos superiores arredondados */
+    box-shadow: var(--elevation-2);
 }
 .module-header:hover {
     background-color: var(--table-hover-bg);
+    box-shadow: var(--elevation-3);
+    border-color: rgba(var(--accent-color-rgb), 0.6);
+}
+body.dark-mode .module-header {
+    background-image: none;
+    background-color: var(--card-bg);
 }
 
 /* --- ESTA É A MUDANÇA (FONTE DO TÍTULO DO MÓDULO) --- */
@@ -85,19 +98,42 @@ body.dark-mode .timeline-data { color: #888; }
     opacity: 1;
 }
 
+/* Container do conteúdo do módulo como corpo do card */
+.module-header + .module-content-collapse {
+    border: 2px solid var(--card-border-color);
+    border-color: rgba(var(--accent-color-rgb), 0.45);
+    border-top: 0; /* une com o header acima */
+    background-color: var(--card-bg);
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    box-shadow: var(--elevation-3);
+    padding: 0.75rem 0.5rem;
+    margin-top: 0; /* encosta no header */
+    margin-bottom: 1rem; /* separa do próximo módulo */
+}
+body.dark-mode .module-header + .module-content-collapse {
+    box-shadow: var(--elevation-2);
+}
+
 /* 2. Lista de Tarefas (Minimalista e Fluida) */
 .tasks-list-group { padding-left: 0.25rem; }
 .tasks-list-group .list-group-item {
-    background-color: var(--container-bg);
-    border: 0; /* remove qualquer linha de separação */
-    padding: 1rem 1rem; /* mais espaço para visibilidade */
-    border-radius: var(--radius-lg);
-    box-shadow: var(--elevation-2); /* sombra mais forte para destacar o card */
+    background-color: #eef2f7; /* ainda mais contraste com o fundo branco */
+    border: 2px solid var(--card-border-color);
+    border-color: rgba(var(--accent-color-rgb), 0.35);
+    padding: 1.05rem 1.15rem; /* um pouco mais de espaço */
+    border-radius: var(--radius-md);
+    box-shadow: var(--elevation-2); /* sombra mais forte para destacar */
     margin-bottom: var(--space-3);
-    transition: box-shadow 0.2s ease, transform 0.06s ease, background-color 0.2s ease;
+    transition: box-shadow 0.2s ease, transform 0.06s ease, background-color 0.2s ease, border-color 0.2s ease;
+    border-left: 4px solid rgba(var(--accent-color-rgb), 0.45); /* faixa de destaque à esquerda */
 }
 .tasks-list-group .list-group-item:hover {
     box-shadow: var(--elevation-3);
+    background-color: var(--card-bg);
+    border-color: rgba(var(--accent-color-rgb), 0.55);
+    border-left-color: rgba(var(--accent-color-rgb), 0.7);
+}
+body.dark-mode .tasks-list-group .list-group-item {
     background-color: var(--card-bg);
 }
 .tasks-list-group .list-group-item:active { transform: translateY(1px); }

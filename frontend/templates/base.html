@@ -258,6 +258,15 @@
                     const button = event.relatedTarget;
                     if (!button || !button.getAttribute('data-id')) return;
                     const getData = (key, defaultVal = '') => { const val = button.getAttribute(`data-${key}`); return (val === 'null' || val === 'undefined' || val === null || val === 'None' || val === undefined || val === '') ? defaultVal : val; };
+                    // Helper: formata 'YYYY-MM-DD' para 'DD/MM/YYYY' (padrão BR)
+                    const formatDateBrSimple = (iso) => {
+                        if (!iso || typeof iso !== 'string') return '';
+                        const onlyDate = iso.split('T')[0];
+                        const parts = onlyDate.split('-');
+                        if (parts.length !== 3) return onlyDate;
+                        const [yyyy, mm, dd] = parts;
+                        return `${dd.padStart(2, '0')}/${mm.padStart(2, '0')}/${yyyy}`;
+                    };
                     const modal = modalDetalhesEmpresa;
 
                     modal.querySelector('#modal-implantacao_id').value = getData('id');
@@ -265,8 +274,13 @@
                     modal.querySelector('#modal-cargo_responsavel').value = getData('cargo');
                     modal.querySelector('#modal-telefone_responsavel').value = getData('telefone');
                     modal.querySelector('#modal-email_responsavel').value = getData('email');
-                    modal.querySelector('#modal-data_inicio_producao').value = getData('inicio-producao');
-                    modal.querySelector('#modal-data_final_implantacao').value = getData('final-implantacao');
+                    // Preenche datas visíveis no padrão BR (DD/MM/AAAA)
+                    const inicioProducaoIso = getData('inicio-producao');
+                    const finalImplantacaoIso = getData('final-implantacao');
+                    const inicioProducaoInput = modal.querySelector('#modal-data_inicio_producao');
+                    const finalImplantacaoInput = modal.querySelector('#modal-data_final_implantacao');
+                    if (inicioProducaoInput) inicioProducaoInput.value = formatDateBrSimple(inicioProducaoIso);
+                    if (finalImplantacaoInput) finalImplantacaoInput.value = formatDateBrSimple(finalImplantacaoIso);
                     modal.querySelector('#modal-id_favorecido').value = getData('id-favorecido');
                     modal.querySelector('#modal-chave_oamd').value = getData('chave-oamd');
                     modal.querySelector('#modal-tela_apoio_link').value = getData('tela-apoio-link');
@@ -302,9 +316,12 @@
                     // --- FIM DA CORREÇÃO ---
 
                     const dataCadastroInput = modal.querySelector('#modal-data_cadastro');
-                    if(dataCadastroInput) dataCadastroInput.value = getData('inicio-implantacao');
+                    if (dataCadastroInput) {
+                        const inicioImplantacaoIso = getData('inicio-implantacao');
+                        dataCadastroInput.value = formatDateBrSimple(inicioImplantacaoIso);
+                    }
                     const inicioEfetivoInput = modal.querySelector('#modal-inicio_efetivo');
-                    if(inicioEfetivoInput) inicioEfetivoInput.value = inicioEfetivoValueFromAttr;
+                    if (inicioEfetivoInput) inicioEfetivoInput.value = formatDateBrSimple(inicioEfetivoValueFromAttr);
                     
                     formatarTelefone(modal.querySelector('#modal-telefone_responsavel'));
                     const modalRedirect = modal.querySelector('#modal-redirect_to'); const isDetailsPage = document.getElementById('checklist-area-treinamento'); modalRedirect.value = isDetailsPage ? 'detalhes' : 'dashboard';
@@ -319,6 +336,27 @@
                     tomSelectInstances = {};
                 });
             }
+            
+            // Converte datas BR -> ISO no submit do formulário do modal
+            (function attachSubmitConverter(){
+                const modalForm = document.querySelector('#modalDetalhesEmpresa form');
+                if (!modalForm) return;
+                const toIso = (br) => {
+                    if (!br || typeof br !== 'string') return '';
+                    const m = br.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+                    if (!m) return br; // Se já estiver ISO ou vazio, mantém
+                    const [_, dd, mm, yyyy] = m;
+                    return `${yyyy}-${mm}-${dd}`;
+                };
+                modalForm.addEventListener('submit', function(e){
+                    const inicioEfetivo = modalForm.querySelector('#modal-inicio_efetivo');
+                    const dataInicioProd = modalForm.querySelector('#modal-data_inicio_producao');
+                    const dataFinalImpl = modalForm.querySelector('#modal-data_final_implantacao');
+                    if (inicioEfetivo && inicioEfetivo.value) inicioEfetivo.value = toIso(inicioEfetivo.value);
+                    if (dataInicioProd && dataInicioProd.value) dataInicioProd.value = toIso(dataInicioProd.value);
+                    if (dataFinalImpl && dataFinalImpl.value) dataFinalImpl.value = toIso(dataFinalImpl.value);
+                });
+            })();
 
             const modalGerenciarUsuarios = document.getElementById('modalGerenciarUsuarios');
             if (modalGerenciarUsuarios) {
