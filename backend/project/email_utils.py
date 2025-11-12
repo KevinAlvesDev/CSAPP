@@ -353,8 +353,16 @@ def send_email_global(subject, body_html, recipients, from_name=None, reply_to=N
 
         # Monta payload para SendGrid
         content = []
+        # Inclui texto plano sempre que possível para melhorar entregabilidade
         if body_text:
             content.append({"type": "text/plain", "value": body_text})
+        elif body_html:
+            try:
+                # Fallback simples: remove tags HTML para gerar texto plano
+                plain_fallback = re.sub(r"<[^>]+>", "", body_html)
+                content.append({"type": "text/plain", "value": plain_fallback})
+            except Exception:
+                pass
         if body_html:
             content.append({"type": "text/html", "value": body_html})
         # Garante pelo menos um conteúdo
@@ -371,6 +379,28 @@ def send_email_global(subject, body_html, recipients, from_name=None, reply_to=N
         }
         if reply_to:
             payload["reply_to"] = {"email": reply_to}
+
+        # Opcional: desabilitar tracking (cliques/aberturas) para destinatários corporativos
+        try:
+            disable_tracking_env = str(cfg.get('SENDGRID_DISABLE_TRACKING', '')).lower() in ('1', 'true', 'yes')
+            domains_cfg = cfg.get('EMAIL_DISABLE_TRACKING_DOMAINS')
+            disable_for_domain = False
+            if domains_cfg:
+                domains_set = {d.strip().lower() for d in str(domains_cfg).split(',') if d.strip()}
+                for r in recipients:
+                    if '@' in r:
+                        r_dom = r.split('@', 1)[1].lower()
+                        if r_dom in domains_set:
+                            disable_for_domain = True
+                            break
+            if disable_tracking_env or disable_for_domain:
+                payload["tracking_settings"] = {
+                    "click_tracking": {"enable": False, "enable_text": False},
+                    "open_tracking": {"enable": False}
+                }
+        except Exception:
+            # Falha silenciosa na configuração opcional de tracking
+            pass
 
         try:
             base = cfg.get('SENDGRID_ENDPOINT', 'https://api.sendgrid.com')
