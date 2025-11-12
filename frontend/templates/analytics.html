@@ -188,28 +188,7 @@
                  {% endif %}
              </div>
         </div>
-        <div class="card metric-card mt-4">
-             <div class="card-header">
-                <h5 class="mb-0">Ranking Implantação por Colaborador</h5>
-             </div>
-             <div class="card-body card-body-chart">
-                 <p class="small text-muted mb-3">Total de implantações (baseado nos filtros principais) por colaborador.</p>
-                 <div class="chart-container">
-                    <canvas id="chartRankingColaborador"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="card metric-card mt-4">
-             <div class="card-header">
-                <h5 class="mb-0">Ranking Implantação por Período</h5>
-             </div>
-             <div class="card-body card-body-chart">
-                 <p class="small text-muted mb-3">Total de implantações <span class="fw-bold text-success">finalizadas</span> no ano corrente, agrupadas por mês (respeita o filtro principal de Colaborador).</p>
-                 <div class="chart-container">
-                    <canvas id="chartRankingPeriodo"></canvas>
-                </div>
-            </div>
-        </div>
+        
                 <div class="card metric-card border border-danger mt-4">
              <div class="card-header">
                 <h5 class="mb-0 text-danger">Implantações Paradas</h5>
@@ -246,71 +225,7 @@
                  {% endif %}
              </div>
         </div>
-        <div class="card metric-card mt-4">
-            <div class="card-header">
-                <h5 class="mb-0">Relatório de Produtividade (Tarefas Concluídas)</h5>
-            </div>
-            <div class="card-body">
-                <form method="GET" action="{{ url_for('analytics.analytics_dashboard') }}" id="task-filter-form">
-                    <input type="hidden" name="cs_email" value="{{ current_cs_email | default('') }}">
-                    <input type="hidden" name="status_filter" value="{{ current_status_filter | default('todas') }}">
-                    <input type="hidden" name="start_date" value="{{ current_start_date | default('') }}">
-                    <input type="hidden" name="end_date" value="{{ current_end_date | default('') }}">
-
-                    <div class="row g-3 align-items-end">
-                        <div class="col-md-4">
-                            <label for="task_cs_email_filter" class="form-label small">Filtrar por Colaborador</label>
-                            <select class="form-select" id="task_cs_email_filter" name="task_cs_email">
-                                <option value="">Todos os CS</option>
-                                {% for cs in all_cs %}
-                                    <option value="{{ cs.usuario }}" {% if cs.usuario == current_task_cs_email %}selected{% endif %}>
-                                        {{ cs.nome }} ({{ cs.perfil_acesso or 'N/A' }})
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                             <label for="task_start_date_filter" class="form-label small">Período (Início)</label>
-                             <input type="date" class="form-control" id="task_start_date_filter" name="task_start_date" value="{{ current_task_start_date or '' }}">
-                        </div>
-                        <div class="col-md-3">
-                             <label for="task_end_date_filter" class="form-label small">Período (Fim)</label>
-                             <input type="date" class="form-control" id="task_end_date_filter" name="task_end_date" value="{{ current_task_end_date or '' }}">
-                        </div>
-                        <div class="col-md-2 d-flex">
-                            <button type="submit" class="btn btn-primary w-100 me-2"><i class="bi bi-funnel-fill me-1"></i> Filtrar</button>
-                        </div>
-                    </div>
-                </form>
-
-                <div class="table-responsive mt-3">
-                    <table class="table table-sm table-hover align-middle caption-top">
-                        <caption class="small text-muted">Exibindo tarefas concluídas de 'Ação interna' e 'Reunião' para o período selecionado.</caption>
-                        <thead class="table-light">
-                            <tr>
-                                <th>Usuário</th>
-                                <th class="text-center">Ação interna (Total)</th>
-                                <th class="text-center">Reunião (Total)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% if not task_summary_data %}
-                            <tr>
-                                <td colspan="3" class="text-center text-muted small py-3">Nenhuma tarefa concluída encontrada para os filtros selecionados.</td>
-                            </tr>
-                            {% endif %}
-                            {% for task_row in task_summary_data %}
-                            <tr>
-                                <td>{{ task_row.cs_nome }}</td>
-                                <td class="text-center">{{ task_row['Ação interna'] | default(0) }}</td>
-                                <td class="text-center">{{ task_row['Reunião'] | default(0) }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+        <!-- Implantações Canceladas movida para logo abaixo de Implantações Paradas -->
         <div class="card metric-card mt-4">
             <div class="card-header">
                 <h5 class="mb-0">Implantações Canceladas</h5>
@@ -345,6 +260,70 @@
                         </table>
                     </div>
                 {% endif %}
+            </div>
+        </div>
+
+        <!-- Nova seção: Lista Detalhada de Módulos em Implantação -->
+        <div class="card metric-card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">Lista Detalhada de Módulos em Implantação</h5>
+            </div>
+            <div class="card-body">
+                {% set modules_lista = modules_implantacao_lista | default([]) %}
+                {% if not modules_lista %}
+                    <div class="alert alert-light text-center small py-2 mb-0">Nenhum módulo listado para os filtros selecionados.</div>
+                {% else %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover align-middle caption-top">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col">Empresa</th>
+                                    <th scope="col">Módulo</th>
+                                    <th scope="col">Responsável</th>
+                                    <th scope="col">Status</th>
+                                    <th scope="col">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in modules_lista %}
+                                <tr>
+                                    <td class="text-truncate" style="max-width: 250px;">{{ item.nome_empresa | default('N/A') }}</td>
+                                    <td class="text-truncate" style="max-width: 200px;">{{ item.modulo | default('N/A') }}</td>
+                                    <td class="text-truncate" style="max-width: 200px;">{{ item.cs_nome | default('N/A') }}</td>
+                                    <td>{{ item.status | default('N/A') }}</td>
+                                    <td>
+                                        <a href="{{ url_for('main.ver_implantacao', impl_id=item.impl_id | default(item.id)) }}" class="btn btn-sm btn-outline-primary py-0 px-2">Ver</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Rankings movidos para o final da página -->
+        <div class="card metric-card mt-4">
+             <div class="card-header">
+                <h5 class="mb-0">Ranking Implantação por Colaborador</h5>
+             </div>
+             <div class="card-body card-body-chart">
+                 <p class="small text-muted mb-3">Total de implantações (baseado nos filtros principais) por colaborador.</p>
+                 <div class="chart-container">
+                    <canvas id="chartRankingColaborador"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="card metric-card mt-4">
+             <div class="card-header">
+                <h5 class="mb-0">Ranking Implantação por Período</h5>
+             </div>
+             <div class="card-body card-body-chart">
+                 <p class="small text-muted mb-3">Total de implantações <span class="fw-bold text-success">finalizadas</span> no ano corrente, agrupadas por mês (respeita o filtro principal de Colaborador).</p>
+                 <div class="chart-container">
+                    <canvas id="chartRankingPeriodo"></canvas>
+                </div>
             </div>
         </div>
         </main>

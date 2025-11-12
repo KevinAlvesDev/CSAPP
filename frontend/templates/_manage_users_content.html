@@ -1,10 +1,6 @@
 {# templates/_manage_users_content.html (COMPLETO E ATUALIZADO) #}
 
-<div class="mb-4">
-    <h5 class="card-title text-primary">Controle de Perfil de Acesso</h5>
-    <p class="card-text">Permite a visualização de todos os usuários e a atribuição/alteração do seu <strong>Perfil de Acesso</strong>.</p>
-    <p class="card-text">Novas contas não terão um perfil de acesso definido e não podem acessar funcionalidades de gestão.</p>
-</div>
+
 
 <div class="table-responsive">
     <table class="table table-hover align-middle">
@@ -13,7 +9,6 @@
                 <th>Usuário (E-mail)</th>
                 <th>Nome / Cargo</th> {# ALTERADO #}
                 <th>Perfil de Acesso</th> {# ALTERADO #}
-                <th>Total Implantações</th> {# ALTERADO #}
                 <th>Alterar Perfil de Acesso</th>
                 {# COLUNA EXCLUIR #}
                 <th>Excluir</th> 
@@ -45,10 +40,6 @@
                     {% else %}
                         <span class="text-muted">Nenhum</span>
                     {% endif %}
-                </td>
-                <td>
-                    {# ALTERADO: Mostra a soma das implantações conhecidas pelo perfil #}
-                    <span class="text-nowrap">{{ (user.impl_andamento_total or 0) + (user.impl_finalizadas or 0) + (user.impl_paradas or 0) }}</span> 
                 </td>
                 <td>
                     <form method="POST" action="{{ url_for('management.update_user_perfil') }}" class="d-flex" 
@@ -92,8 +83,7 @@
             {% endfor %}
             {% if not users %}
             <tr>
-                {# Colspan corrigido de 5 para 6 #}
-                <td colspan="6" class="text-center text-muted">Nenhum usuário encontrado no sistema.</td> 
+                <td colspan="5" class="text-center text-muted">Nenhum usuário encontrado no sistema.</td> 
             </tr>
             {% endif %}
         </tbody>

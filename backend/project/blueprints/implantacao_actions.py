@@ -159,6 +159,16 @@ def criar_implantacao_modulo():
         usuario_atribuido = sanitize_string(request.form.get('usuario_atribuido_cs_modulo', ''), max_length=100)
         if not usuario_atribuido:
             raise ValidationError('Implantador atribuído é obrigatório.')
+
+        modulo_tipo = sanitize_string(request.form.get('modulo_tipo', ''), max_length=50)
+        modulo_opcoes = {
+            'nota_fiscal': 'Nota fiscal',
+            'vendas_online': 'Vendas Online',
+            'app_treino': 'App Treino',
+            'recorrencia': 'Recorrência'
+        }
+        if modulo_tipo not in modulo_opcoes:
+            raise ValidationError('Selecione o módulo a ser implantado.')
             
     except ValidationError as e:
         flash(f'Erro nos dados: {str(e)}', 'error')
@@ -206,12 +216,13 @@ def criar_implantacao_modulo():
         if not implantacao_id:
             raise Exception("Falha ao obter ID da nova implantação de módulo.")
 
-        logar_timeline(implantacao_id, usuario_criador, 'implantacao_criada', f'Implantação de Módulo "{nome_empresa}" criada e atribuída a {usuario_atribuido}.')
+        modulo_label = modulo_opcoes.get(modulo_tipo, modulo_tipo)
+        logar_timeline(implantacao_id, usuario_criador, 'implantacao_criada', f'Implantação de Módulo "{nome_empresa}" (módulo: {modulo_label}) criada e atribuída a {usuario_atribuido}.')
         
         # NOTA: Módulos não criam tarefas padrão, apenas a "Obrigações para Finalização"
         # que deve ser adicionada manualmente ou em outro lugar.
         
-        flash(f'Implantação de Módulo "{nome_empresa}" criada e atribuída a {usuario_atribuido}.', 'success')
+        flash(f'Implantação de Módulo "{nome_empresa}" (módulo: {modulo_label}) criada e atribuída a {usuario_atribuido}.', 'success')
         return redirect(url_for('main.dashboard'))
 
     except Exception as e:

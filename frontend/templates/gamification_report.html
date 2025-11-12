@@ -88,12 +88,11 @@
                 <table class="table table-hover align-middle">
                     <thead class="table-light">
                         <tr>
-                            <th scope="col">#</th>
                             <th scope="col">Colaborador</th>
-                            <th scope="col">Cargo</th>
                             <th scope="col">Impl. Finalizadas (Mês)</th>
                             <th scope="col">TMA Médio (Mês)</th>
                             <th scope="col">Status</th>
+                            <th scope="col">Comissão</th>
                             <th scope="col">Pontuação Final</th>
                             <th scope="col">Detalhes</th>
                         </tr>
@@ -101,7 +100,7 @@
                     <tbody>
                         {% if not report_data %}
                             <tr>
-                                <td colspan="8" class="text-center text-muted p-4">
+                                <td colspan="7" class="text-center text-muted p-4">
                                     Nenhum dado encontrado para os filtros selecionados.
                                     <br>
                                     <small>Certifique-se de que as <a href="{{ url_for('gamification.manage_gamification_metrics') }}">métricas manuais</a> foram preenchidas para este período.</small>
@@ -111,12 +110,32 @@
 
                         {% for data in report_data | selectattr('elegivel') | sort(attribute='pontuacao_final', reverse=true) %}
                         <tr class="table-light">
-                            <td>{{ loop.index }}</td>
                             <td><strong>{{ data.usuario_nome }}</strong></td>
-                            <td>{{ data.cargo }}</td>
                             <td>{{ data.impl_finalizadas_mes }}</td>
                             <td>{{ data.tma_medio_mes }} dias</td>
                             <td><span class="badge bg-success fs-6">Elegível</span></td>
+                            <td>
+                                {# Cálculo da comissão baseado na tabela de referência #}
+                                {% set pts = data.pontuacao_final or 0 %}
+                                {% set cargo_lower = (data.cargo or '') | lower %}
+                                {% set is_senior = 'sênior' in cargo_lower or 'senior' in cargo_lower %}
+                                {% if pts > 300 %}
+                                    {% set valor_impl = 250 if is_senior else 200 %}
+                                {% elif pts > 250 %}
+                                    {% set valor_impl = 220 if is_senior else 180 %}
+                                {% elif pts > 200 %}
+                                    {% set valor_impl = 200 if is_senior else 160 %}
+                                {% elif pts > 150 %}
+                                    {% set valor_impl = 160 if is_senior else 140 %}
+                                {% elif pts > 100 %}
+                                    {% set valor_impl = 140 if is_senior else 120 %}
+                                {% else %}
+                                    {% set valor_impl = 30 if is_senior else 20 %}
+                                {% endif %}
+                                {% set comissao = (valor_impl | float) * (data.impl_finalizadas_mes or 0) %}
+                                {% set comissao_str = 'R$ ' ~ ('%.2f' | format(comissao)).replace('.', ',') %}
+                                <span class="fw-semibold">{{ comissao_str }}</span>
+                            </td>
                             <td><strong class="fs-5 text-success">{{ data.pontuacao_final }} pts</strong></td>
                             <td>
                                 <button class="btn btn-sm btn-outline-primary py-0 px-2" type="button" data-bs-toggle="collapse" data-bs-target="#details-{{ loop.index }}" aria-expanded="false">
@@ -125,7 +144,7 @@
                             </td>
                         </tr>
                         <tr class="collapse" id="details-{{ loop.index }}">
-                            <td colspan="8" class="p-0">
+                            <td colspan="7" class="p-0">
                                 <div class="p-3 bg-light">
                                     <h6 class="text-success">Detalhamento de Pontos (Elegível)</h6>
                                     <ul class="list-group list-group-flush">
@@ -149,12 +168,11 @@
                         
                         {% for data in report_data | selectattr('elegivel', 'false') %}
                         <tr class="table-light opacity-75">
-                            <td>-</td>
                             <td>{{ data.usuario_nome }}</td>
-                            <td>{{ data.cargo }}</td>
                             <td>{{ data.impl_finalizadas_mes }}</td>
                             <td>{{ data.tma_medio_mes }} dias</td>
                             <td><span class="badge bg-danger fs-6">Não Elegível</span></td>
+                            <td>—</td>
                             <td><strong class="fs-5 text-danger">{{ data.pontuacao_final }} pts</strong></td>
                             <td>
                                 <button class="btn btn-sm btn-outline-danger py-0 px-2" type="button" data-bs-toggle="collapse" data-bs-target="#details-ne-{{ loop.index }}" aria-expanded="false">
@@ -163,7 +181,7 @@
                             </td>
                         </tr>
                         <tr class="collapse" id="details-ne-{{ loop.index }}">
-                            <td colspan="8" class="p-0">
+                            <td colspan="7" class="p-0">
                                 <div class="p-3 bg-light">
                                     <h6 class="text-danger">Motivos da Inelegibilidade</h6>
                                     <p class="mb-0">{{ data.motivo_inelegibilidade | default('Motivo não especificado ou erro no cálculo.') }}</p>

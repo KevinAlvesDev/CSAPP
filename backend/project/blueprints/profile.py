@@ -23,6 +23,11 @@ def profile():
     """Exibe a página de perfil do usuário."""
     return render_template('perfil.html', r2_configurado=g.R2_CONFIGURED)
 
+@profile_bp.route('/modal')
+def profile_modal():
+    """Retorna apenas o conteúdo parcial para exibir dentro do modal de Perfil."""
+    return render_template('modals/_perfil_content.html', r2_configurado=g.R2_CONFIGURED)
+
 @profile_bp.route('/save', methods=['POST'])
 def save_profile():
     """Salva as informações básicas do perfil e faz upload da foto."""

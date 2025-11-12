@@ -39,6 +39,27 @@ def manage_users():
         management_logger.error(f"Erro ao carregar a lista de usuários: {e}")
         return ("Erro ao carregar a lista de usuários", 500)
 
+@management_bp.route('/users/modal')
+def manage_users_modal():
+    """Renderiza somente o conteúdo do modal de gerenciamento de usuários (sem coluna 'Implantações')."""
+    try:
+        users_data = query_db(
+            "SELECT usuario as usuario, nome, perfil_acesso FROM perfil_usuario ORDER BY nome"
+        ) or []
+
+        perfis_disponiveis = current_app.config.get(
+            'PERFIS_DE_ACESSO', ['Visitante', 'Implantador', 'Gestor', 'Administrador']
+        )
+
+        return render_template(
+            '_manage_users_content.html',
+            users=users_data,
+            perfis_list=perfis_disponiveis
+        )
+    except Exception as e:
+        management_logger.error(f"Erro ao carregar conteúdo do modal de usuários: {e}")
+        return ("Erro ao carregar usuários", 500)
+
 @management_bp.route('/users/update_profile', methods=['POST'])
 def update_user_profile():
     """Atualiza o perfil de acesso de um usuário."""

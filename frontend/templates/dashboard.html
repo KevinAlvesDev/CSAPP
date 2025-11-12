@@ -201,6 +201,7 @@
                         {% else %} <div class="table-responsive"> <table class="table table-striped table-hover table-sm align-middle"> <thead> <tr> 
                             <th scope="col">Empresa</th> 
                             <th scope="col">Implantador</th>
+                            <th scope="col">Tipo</th>
                             <th scope="col">Dias</th> <th scope="col" style="width: 20%;">Progresso</th> <th scope="col">Valor (Total: R$ {{ "%.2f"|format(metrics.total_valor_andamento|float) if metrics.total_valor_andamento else '0.00' }})</th> <th scope="col">Ações</th> </tr> </thead> <tbody>
                         {% for impl in implantacoes_andamento %} <tr> <td class="text-truncate" style="max-width: 200px;">
                             <a href="#" class="btn-edit-empresa fw-bold text-decoration-none"
@@ -243,6 +244,7 @@
                             </a>
                         </td> 
                         <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or impl.usuario_cs }}</td>
+                        <td><span class="badge bg-info text-dark">{{ 'Módulo' if impl.tipo == 'modulo' else 'Completa' }}</span></td>
                         <td class="text-nowrap"> <span class="badge bg-secondary text-dark">{{ impl.dias_passados | int }} dias</span> </td> <td> <div class="progress" style="height: 20px;"> <div class="progress-bar progress-bar-striped bg-warning text-dark" role="progressbar" style="width: {{ impl.progresso }}%;" aria-valuenow="{{ impl.progresso }}">{{ impl.progresso }}%</div> </div> </td> <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_atribuido|float) if impl.valor_atribuido else 'N/A' }}</td> <td> <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver Detalhes</a> </td> </tr> {% endfor %} </tbody> </table> </div> {% endif %}
                     </div>
         
@@ -252,6 +254,7 @@
                         {% else %} <div class="table-responsive"> <table class="table table-hover align-middle"> <thead> <tr> 
                             <th scope="col">Empresa</th> 
                             <th scope="col">Implantador</th>
+                            <th scope="col">Tipo</th>
                             <th scope="col">Dias</th> <th scope="col">Status</th> <th scope="col" style="width: 20%;">Progresso</th> <th scope="col">Valor (Total: R$ {{ "%.2f"|format(metrics.total_valor_atrasadas|float) if metrics.total_valor_atrasadas else '0.00' }})</th> <th scope="col">Ações</th> </tr> </thead> <tbody>
                         {% for impl in implantacoes_atrasadas %} <tr> <td class="text-truncate" style="max-width: 200px;">
                             <a href="#" class="btn-edit-empresa fw-bold text-decoration-none" data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa"
@@ -278,6 +281,7 @@
                              </a>
                         </td>
                         <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or impl.usuario_cs }}</td>
+                        <td><span class="badge bg-info text-dark">{{ 'Módulo' if impl.tipo == 'modulo' else 'Completa' }}</span></td>
                         <td><span class="badge bg-danger">{{ impl.dias_passados | int }} dias</span></td> <td> {% if impl.status == 'parada' %} <span class="badge bg-danger">Parada</span> {% else %} <span class="badge bg-warning text-dark">Em Andamento</span> {% endif %} </td> <td> <div class="progress" style="height: 20px;"> <div class="progress-bar progress-bar-striped bg-danger" role="progressbar" style="width: {{ impl.progresso }}%;" aria-valuenow="{{ impl.progresso }}">{{ impl.progresso }}%</div> </div> </td> <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_atribuido|float) if impl.valor_atribuido else 'N/A' }}</td> <td> <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver Detalhes</a> </td> </tr> {% endfor %} </tbody> </table> </div> {% endif %}
                     </div>
         
@@ -287,6 +291,7 @@
                         {% else %} <div class="table-responsive"> <table class="table table-hover align-middle"> <thead> <tr> 
                             <th scope="col">Empresa</th> 
                             <th scope="col">Implantador</th>
+                            <th scope="col">Tipo</th>
                             <th scope="col">Status</th> <th scope="col">Início Previsto</th> <th scope="col">Valor (Total: R$ {{ "%.2f"|format(metrics.total_valor_futuras|float) if metrics.total_valor_futuras else '0.00' }})</th> <th scope="col">Ações</th> </tr> </thead> <tbody>
                         {% for impl in implantacoes_futuras %} <tr> <td class="text-truncate" style="max-width: 200px;">
                             <a href="#" class="btn-edit-empresa fw-bold text-decoration-none" data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa"
@@ -314,6 +319,7 @@
                             </a>
                         </td> 
                         <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or impl.usuario_cs }}</td>
+                        <td><span class="badge bg-info text-dark">{{ 'Módulo' if impl.tipo == 'modulo' else 'Completa' }}</span></td>
                         <td><span class="badge bg-info text-dark">Futura</span></td> 
                         <td>
                             {% if impl.data_inicio_previsto_fmt_d %}
@@ -346,6 +352,7 @@
                         {% else %} <div class="table-responsive"> <table class="table table-hover align-middle"> <thead> <tr> 
                             <th scope="col">Empresa</th> 
                             <th scope="col">Implantador</th>
+                            <th scope="col">Tipo</th>
                             <th scope="col">Progresso</th> <th scope="col">Valor (Total: R$ {{ "%.2f"|format(metrics.total_valor_finalizadas|float) if metrics.total_valor_finalizadas else '0.00' }})</th> <th scope="col">Ações</th> </tr> </thead> <tbody>
                         {% for impl in implantacoes_finalizadas %} <tr> <td class="text-truncate" style="max-width: 200px;">
                             <a href="#" class="btn-edit-empresa fw-bold text-decoration-none" data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa"
@@ -372,6 +379,7 @@
                             </a>
                         </td> 
                         <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or impl.usuario_cs }}</td>
+                        <td><span class="badge bg-info text-dark">{{ 'Módulo' if impl.tipo == 'modulo' else 'Completa' }}</span></td>
                         <td> <span class="badge bg-success">100% Concluída</span> </td> <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_atribuido|float) if impl.valor_atribuido else 'N/A' }}</td> 
                         <td class="text-nowrap"> 
                             <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver Histórico</a> 
@@ -392,6 +400,7 @@
                         {% else %} <div class="table-responsive"> <table class="table table-hover align-middle"> <thead> <tr> 
                             <th scope="col">Empresa</th> 
                             <th scope="col">Implantador</th>
+                            <th scope="col">Tipo</th>
                             <th scope="col">Dias</th>
                             <th scope="col">Motivo</th> <th scope="col">Valor (Total: R$ {{ "%.2f"|format(metrics.total_valor_paradas|float) if metrics.total_valor_paradas else '0.00' }})</th> <th scope="col">Ações</th> </tr> </thead> <tbody>
                         {% for impl in implantacoes_paradas %} <tr> <td class="text-truncate" style="max-width: 200px;">
@@ -419,6 +428,7 @@
                             </a>
                         </td> 
                         <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or impl.usuario_cs }}</td>
+                        <td><span class="badge bg-info text-dark">{{ 'Módulo' if impl.tipo == 'modulo' else 'Completa' }}</span></td>
                         <td><span class="badge bg-danger">{{ impl.dias_parada | int }} dias</span></td>
                         <td class="text-truncate" style="max-width: 200px;">{{ impl.motivo_parada | default('N/A') }}</td> <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_atribuido|float) if impl.valor_atribuido else 'N/A' }}</td> 
                         <td class="text-nowrap"> 
@@ -495,6 +505,16 @@
                     <div class="mb-3">
                         <label for="nomeEmpresaModulo" class="form-label">Nome Empresa (Cliente Existente)</label>
                         <input type="text" class="form-control" id="nomeEmpresaModulo" name="nome_empresa_modulo" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="modulo_tipo" class="form-label">Módulo a ser implantado</label>
+                        <select class="form-select" id="modulo_tipo" name="modulo_tipo" required>
+                            <option value="">Selecione um módulo...</option>
+                            <option value="nota_fiscal">Nota fiscal</option>
+                            <option value="vendas_online">Vendas Online</option>
+                            <option value="app_treino">App Treino</option>
+                            <option value="recorrencia">Recorrência</option>
+                        </select>
                     </div>
                     <div class="mb-3">
                         <label for="usuario_atribuido_cs_modulo" class="form-label">Atribuir ao Implantador</label>

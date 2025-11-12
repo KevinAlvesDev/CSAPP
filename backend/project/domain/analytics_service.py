@@ -137,7 +137,20 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
 
     # 1. BUSCA PRINCIPAL DE IMPLANTAÇÕES (FILTRADAS PELO FILTRO PRINCIPAL)
     impl_list = query_db(query_impl, tuple(args_impl))
-    impl_list = impl_list if impl_list is not None else [] 
+    impl_list = impl_list if impl_list is not None else []
+    # Separa por tipo para uso específico em gráficos/cards (completas) e na lista de módulos
+    impl_completas = [impl for impl in impl_list if isinstance(impl, dict) and impl.get('tipo') == 'completa']
+    modules_implantacao_lista = [
+        {
+            'impl_id': impl.get('id'),
+            'id': impl.get('id'),
+            'nome_empresa': impl.get('nome_empresa'),
+            'cs_nome': impl.get('cs_nome', impl.get('usuario_cs')),
+            'status': impl.get('status'),
+            'modulo': impl.get('modulo')
+        }
+        for impl in impl_list if isinstance(impl, dict) and impl.get('tipo') == 'modulo'
+    ]
     
     # 2. BUSCA DE TODOS OS PERFIS DE CS (PARA RANKING E FILTROS)
     all_cs_profiles = query_db("SELECT usuario, nome, cargo, perfil_acesso FROM perfil_usuario")
@@ -223,7 +236,7 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
     query_impl_ano = """
         SELECT i.usuario_cs, i.data_finalizacao, i.data_criacao
         FROM implantacoes i
-        WHERE i.status = 'finalizada'
+        WHERE i.status = 'finalizada' AND i.tipo = 'completa'
     """
     args_impl_ano = []
     
@@ -284,7 +297,7 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
     
     chart_data_ranking_colab = {}
 
-    for impl in impl_list:
+    for impl in impl_completas:
         if not impl or not isinstance(impl, dict): continue
 
         impl_id = impl.get('id')
@@ -301,7 +314,7 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
         if cs_nome_impl:
             chart_data_ranking_colab[cs_nome_impl] = chart_data_ranking_colab.get(cs_nome_impl, 0) + 1
 
-        total_impl_global += 1 
+        total_impl_global += 1
 
         tma_dias = None
         if status == 'finalizada':
@@ -431,8 +444,8 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
     }
     
     ranking_colab_data = sorted(
-        chart_data_ranking_colab.items(), 
-        key=lambda item: item[1], 
+        chart_data_ranking_colab.items(),
+        key=lambda item: item[1],
         reverse=True
     )
     
@@ -460,7 +473,8 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
 
     return {
         'kpi_cards': global_metrics,
-        'implantacoes_lista_detalhada': impl_list,
+        'implantacoes_lista_detalhada': impl_completas,
+        'modules_implantacao_lista': modules_implantacao_lista,
         'chart_data': chart_data,
         'implantacoes_paradas_lista': implantacoes_paradas_detalhadas,
         'implantacoes_canceladas_lista': implantacoes_canceladas_detalhadas,
