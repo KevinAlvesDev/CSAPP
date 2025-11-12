@@ -281,7 +281,13 @@ def forgot_password():
             <p><a href="{reset_url}">Redefinir senha</a></p>
             <p>Se você não solicitou, ignore este e-mail.</p>
         """
-        send_email_global(subject, body_html, [email])
+        body_text = (
+            "Olá,\n\n"
+            "Para redefinir sua senha, use o link abaixo. Ele expira em 1 hora.\n"
+            f"{reset_url}\n\n"
+            "Se você não solicitou, ignore este e-mail.\n"
+        )
+        send_email_global(subject, body_html, [email], body_text=body_text)
         flash('Enviamos um link de redefinição de senha para seu e-mail.', 'success')
     except Exception as e:
         auth_logger.warning(f'Password reset email not sent (fallback): {e}')

@@ -332,7 +332,7 @@ def send_email_with_credentials(to_email, subject, body_text, body_html, reply_t
         app_logger.error(f"Falha ao enviar e-mail com credenciais para {to_email}: {e}")
         return False
 
-def send_email_global(subject, body_html, recipients, from_name=None, reply_to=None):
+def send_email_global(subject, body_html, recipients, from_name=None, reply_to=None, body_text=None):
     """
     Envia um e-mail usando a configuração global.
     Suporta drivers: 'smtp' (padrão) e 'sendgrid' (HTTP API em porta 443).
@@ -352,13 +352,22 @@ def send_email_global(subject, body_html, recipients, from_name=None, reply_to=N
             raise ValueError('SendGrid não configurado: defina SENDGRID_API_KEY.')
 
         # Monta payload para SendGrid
+        content = []
+        if body_text:
+            content.append({"type": "text/plain", "value": body_text})
+        if body_html:
+            content.append({"type": "text/html", "value": body_html})
+        # Garante pelo menos um conteúdo
+        if not content:
+            content = [{"type": "text/plain", "value": subject or "Mensagem"}]
+
         payload = {
             "from": {"email": from_addr, **({"name": from_name} if from_name else {})},
             "personalizations": [{
                 "to": [{"email": r} for r in recipients],
                 "subject": subject,
             }],
-            "content": [{"type": "text/html", "value": body_html}]
+            "content": content
         }
         if reply_to:
             payload["reply_to"] = {"email": reply_to}
@@ -377,7 +386,11 @@ def send_email_global(subject, body_html, recipients, from_name=None, reply_to=N
             )
             # SendGrid retorna 202 para aceito
             if resp.status_code == 202:
-                app_logger.info(f"E-mail global (SendGrid) enviado para {recipients}")
+                msg_id = resp.headers.get('X-Message-Id') or resp.headers.get('X-Message-ID')
+                if msg_id:
+                    app_logger.info(f"E-mail global (SendGrid) enviado para {recipients} (Message-ID: {msg_id})")
+                else:
+                    app_logger.info(f"E-mail global (SendGrid) enviado para {recipients}")
                 return True
             else:
                 # Inclui resposta do provider para diagnóstico
@@ -398,14 +411,17 @@ def send_email_global(subject, body_html, recipients, from_name=None, reply_to=N
     if not host:
         raise ValueError('SMTP global não configurado (host ausente).')
 
-    # Usa MIMEMultipart para permitir futuras alternativas de texto
+    # Usa MIMEMultipart para permitir alternativas de texto
     msg = MIMEMultipart('alternative')
     msg['Subject'] = subject
     msg['From'] = f"{from_name} <{from_addr}>" if from_name else from_addr
     msg['To'] = ", ".join(recipients)
     if reply_to:
         msg['Reply-To'] = reply_to
-    msg.attach(MIMEText(body_html, 'html'))
+    if body_text:
+        msg.attach(MIMEText(body_text, 'plain'))
+    if body_html:
+        msg.attach(MIMEText(body_html, 'html'))
 
     try:
         if use_ssl:

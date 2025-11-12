@@ -28489,3 +28489,43 @@ requests.exceptions.InvalidURL: URL has an invalid label.
 2025-11-12 13:31:22 - INFO - system - system - werkzeug -  * Detected change in 'C:\\Users\\kevinpereira\\Desktop\\app\\CSAPP\\backend\\project\\email_utils.py', reloading
 2025-11-12 13:31:22 - INFO - system - system - werkzeug -  * Restarting with stat
 2025-11-12 13:31:23 - INFO - system - system - werkzeug -  * Restarting with stat
+2025-11-12 13:31:30 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-12 13:31:30 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-12 13:31:30 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-12 13:31:30 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-12 13:31:31 - WARNING - system - system - werkzeug -  * Debugger is active!
+2025-11-12 13:31:31 - WARNING - system - system - werkzeug -  * Debugger is active!
+2025-11-12 13:31:31 - INFO - system - system - werkzeug -  * Debugger PIN: 130-522-712
+2025-11-12 13:31:31 - INFO - system - system - werkzeug -  * Debugger PIN: 130-522-712
+2025-11-12 13:37:45 - INFO - system - system - werkzeug - 127.0.0.1 - - [12/Nov/2025 13:37:45] "[32mGET / HTTP/1.1[0m" 302 -
+2025-11-12 13:37:45 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-12 13:37:45 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-12 13:37:46 - INFO - system - system - werkzeug - 127.0.0.1 - - [12/Nov/2025 13:37:46] "GET /dashboard HTTP/1.1" 200 -
+2025-11-12 13:42:30 - INFO - system - system - werkzeug -  * Detected change in 'C:\\Users\\kevinpereira\\Desktop\\app\\CSAPP\\backend\\project\\email_utils.py', reloading
+2025-11-12 13:42:32 - INFO - system - system - werkzeug -  * Detected change in 'C:\\Users\\kevinpereira\\Desktop\\app\\CSAPP\\backend\\project\\email_utils.py', reloading
+2025-11-12 13:42:32 - INFO - system - system - werkzeug -  * Restarting with stat
+2025-11-12 13:42:34 - INFO - system - system - werkzeug -  * Restarting with stat
+2025-11-12 13:42:43 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-12 13:42:43 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-12 13:42:43 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-12 13:42:43 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-12 13:42:43 - WARNING - system - system - werkzeug -  * Debugger is active!
+2025-11-12 13:42:43 - INFO - system - system - werkzeug -  * Debugger PIN: 130-522-712
+2025-11-12 13:42:44 - WARNING - system - system - werkzeug -  * Debugger is active!
+2025-11-12 13:42:44 - INFO - system - system - werkzeug -  * Debugger PIN: 130-522-712
+2025-11-12 13:42:50 - INFO - system - system - werkzeug -  * Detected change in 'C:\\Users\\kevinpereira\\Desktop\\app\\CSAPP\\backend\\project\\blueprints\\api.py', reloading
+2025-11-12 13:42:51 - INFO - system - system - werkzeug -  * Detected change in 'C:\\Users\\kevinpereira\\Desktop\\app\\CSAPP\\backend\\project\\blueprints\\api.py', reloading
+2025-11-12 13:42:52 - INFO - system - system - werkzeug -  * Restarting with stat
+2025-11-12 13:42:52 - INFO - system - system - werkzeug -  * Restarting with stat
+2025-11-12 13:43:00 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-12 13:43:00 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-12 13:43:00 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-12 13:43:00 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-12 13:43:00 - WARNING - system - system - werkzeug -  * Debugger is active!
+2025-11-12 13:43:00 - INFO - system - system - werkzeug -  * Debugger PIN: 130-522-712
+2025-11-12 13:43:01 - WARNING - system - system - werkzeug -  * Debugger is active!
+2025-11-12 13:43:01 - INFO - system - system - werkzeug -  * Debugger PIN: 130-522-712
+2025-11-12 13:43:07 - INFO - system - system - werkzeug -  * Detected change in 'C:\\Users\\kevinpereira\\Desktop\\app\\CSAPP\\backend\\project\\blueprints\\auth.py', reloading
+2025-11-12 13:43:07 - INFO - system - system - werkzeug -  * Detected change in 'C:\\Users\\kevinpereira\\Desktop\\app\\CSAPP\\backend\\project\\blueprints\\auth.py', reloading
+2025-11-12 13:43:08 - INFO - system - system - werkzeug -  * Restarting with stat
+2025-11-12 13:43:08 - INFO - system - system - werkzeug -  * Restarting with stat

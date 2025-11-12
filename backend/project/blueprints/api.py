@@ -410,6 +410,7 @@ def adicionar_comentario(tarefa_id):
                                 recipients=[to_email],
                                 reply_to=usuario_cs_email,
                                 from_name=novo_comentario_dados.get('usuario_nome') or usuario_cs_email,
+                                body_text=corpo_txt,
                             )
                         except Exception as e_mail_inner:
                             send_error = str(e_mail_inner)
