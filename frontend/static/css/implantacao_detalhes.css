@@ -54,7 +54,7 @@ body.dark-mode .timeline-data { color: #888; }
     justify-content: space-between;
     align-items: center;
     padding: 0.75rem 0.5rem;
-    border-bottom: 2px solid var(--accent-color); /* Borda de destaque */
+    border-bottom: 0; /* remove a linha inferior */
     margin-top: 2rem; /* Mais espaço */
     margin-bottom: 0.5rem;
     cursor: pointer;
@@ -86,29 +86,30 @@ body.dark-mode .timeline-data { color: #888; }
 }
 
 /* 2. Lista de Tarefas (Minimalista e Fluida) */
-.tasks-list-group {
-    padding-left: 0.5rem;
-}
+.tasks-list-group { padding-left: 0.25rem; }
 .tasks-list-group .list-group-item {
-    background-color: transparent;
-    border: none;
-    border-bottom: 1px solid var(--input-border);
-    padding: 1rem 0.5rem;
-    border-radius: 0;
-    transition: background-color 0.2s ease;
+    background-color: var(--container-bg);
+    border: 0; /* remove qualquer linha de separação */
+    padding: 1rem 1rem; /* mais espaço para visibilidade */
+    border-radius: var(--radius-lg);
+    box-shadow: var(--elevation-2); /* sombra mais forte para destacar o card */
+    margin-bottom: var(--space-3);
+    transition: box-shadow 0.2s ease, transform 0.06s ease, background-color 0.2s ease;
 }
 .tasks-list-group .list-group-item:hover {
-    background-color: var(--table-hover-bg);
+    box-shadow: var(--elevation-3);
+    background-color: var(--card-bg);
 }
-.tasks-list-group .list-group-item:last-child {
-    border-bottom: none;
-}
-.tasks-list-group .list-group-item .handle {
-    opacity: 0.4;
-    transition: opacity 0.2s;
-}
-.tasks-list-group .list-group-item:hover .handle {
-    opacity: 1;
+.tasks-list-group .list-group-item:active { transform: translateY(1px); }
+.tasks-list-group .list-group-item:last-child { margin-bottom: 0; }
+.tasks-list-group .list-group-item .handle { opacity: 0.35; transition: opacity 0.2s; }
+.tasks-list-group .list-group-item:hover .handle { opacity: 0.65; }
+
+/* Garantir que a variante flush não reintroduza linhas entre itens */
+.tasks-list-group.list-group-flush .list-group-item,
+.tasks-list-group.list-group-flush .list-group-item + .list-group-item {
+    border-top: 0 !important;
+    border-bottom: 0 !important;
 }
 
 /* --- FONTE DAS TAREFAS (REMOVIDA) --- */
