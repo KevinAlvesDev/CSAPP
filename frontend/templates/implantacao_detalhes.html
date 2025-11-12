@@ -389,21 +389,22 @@
             return 'Este comentário será enviado por e-mail ao responsável definido na implantação.\n\nConfirma o envio externo?';
         }
 
-        document.addEventListener('submit', function(ev) {
-            var form = ev.target;
-            if (!form || !form.classList || !form.classList.contains('comment-form')) {
-                return;
+        // Confirmação antes da requisição HTMX (sem necessidade de clicar "Salvar" novamente)
+        document.body.addEventListener('htmx:beforeRequest', function(ev) {
+            var elt = ev.detail && ev.detail.elt;
+            if (!elt || !elt.matches('form.comment-form')) return;
+
+            var vis = getVisibilidade(elt);
+            if (vis !== 'externo') return;
+
+            var msg = buildConfirmMessage(elt);
+            var ok = window.confirm(msg);
+            if (!ok) {
+                // Usuário cancelou: bloqueia o envio
+                ev.preventDefault();
             }
-            var vis = getVisibilidade(form);
-            if (vis === 'externo') {
-                var msg = buildConfirmMessage(form);
-                var ok = window.confirm(msg);
-                if (!ok) {
-                    ev.preventDefault();
-                    ev.stopPropagation();
-                }
-            }
-        }, true);
+            // Se confirmou, não impedimos: HTMX prossegue com a requisição original
+        });
     })();
     </script>
 

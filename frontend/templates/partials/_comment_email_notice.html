@@ -1,0 +1,12 @@
+{% set status = comentario.get('email_send_status') %}
+{% if status %}
+  {% if status == 'ok' %}
+    <div class="list-group-item py-2" hx-swap-oob="afterend:#comment-list-{{ comentario.tarefa_id }}">
+      <small class="text-success">E-mail enviado ao responsável ({{ comentario.get('responsavel_nome') or comentario.get('responsavel_email') }}).</small>
+    </div>
+  {% else %}
+    <div class="list-group-item py-2" hx-swap-oob="afterend:#comment-list-{{ comentario.tarefa_id }}">
+      <small class="text-danger">Falha ao enviar e-mail ao responsável: {{ comentario.get('email_send_error') or 'verifique configurações SMTP ou credenciais do usuário.' }}</small>
+    </div>
+  {% endif %}
+{% endif %}

@@ -267,5 +267,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }, 50); // Pequeno delay para garantir que o HTMX processou o OOB
         }
+
+        // Após adicionar comentário, limpar formulário e rolar lista para o final
+        if (target && target.id && target.id.startsWith('comment-list-')) {
+            try {
+                // scroll até o último item
+                target.scrollTop = target.scrollHeight;
+                // limpar textarea e input file do form imediatamente anterior
+                const form = target.previousElementSibling;
+                if (form && form.classList && form.classList.contains('comment-form')) {
+                    // limpa via reset para também limpar <select>
+                    form.reset();
+                }
+            } catch (e) {
+                console.warn('Falha ao limpar/rolar após comentário HTMX:', e);
+            }
+        }
     });
 });

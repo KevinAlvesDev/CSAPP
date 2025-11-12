@@ -255,6 +255,15 @@ def toggle_tarefas_bulk():
 @api_bp.route('/adicionar_comentario/<int:tarefa_id>', methods=['POST'])
 @login_required
 def adicionar_comentario(tarefa_id):
+    # Helper: quando requisição vier do HTMX, retornamos um bloco HTML amigável com a mensagem de erro
+    def render_hx_error(message, status_code=400):
+        if request.headers.get('HX-Request') == 'true':
+            # Para HTMX, retornar 200 garante que o conteúdo seja injetado no alvo
+            html = render_template('partials/_comment_error.html', message=message)
+            resp = make_response(html, 200)
+            return resp
+        return jsonify({'ok': False, 'error': message}), status_code
+
     usuario_cs_email = g.user_email
     
     # Valida o ID da tarefa
@@ -262,7 +271,7 @@ def adicionar_comentario(tarefa_id):
         tarefa_id = validate_integer(tarefa_id, min_value=1)
     except ValidationError as e:
         api_logger.warning(f'Invalid task ID in adicionar_comentario: {str(e)} - User: {g.user_email}')
-        return jsonify({'ok': False, 'error': f'ID de tarefa inválido: {str(e)}'}), 400
+        return render_hx_error(f'ID de tarefa inválido: {str(e)}', 400)
     
     # Valida e sanitiza o texto do comentário
     try:
@@ -273,7 +282,7 @@ def adicionar_comentario(tarefa_id):
             texto = ''
     except ValidationError as e:
         api_logger.warning(f'Invalid comment in adicionar_comentario: {str(e)} - User: {g.user_email}')
-        return jsonify({'ok': False, 'error': f'Texto do comentário inválido: {str(e)}'}), 400
+        return render_hx_error(f'Texto do comentário inválido: {str(e)}', 400)
     
     img_url = None
     # Valida visibilidade
@@ -293,11 +302,11 @@ def adicionar_comentario(tarefa_id):
     is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
     
     if not tarefa_info or not (is_owner or is_manager):
-        return jsonify({'ok': False, 'error': 'Permissão negada.'}), 403
+        return render_hx_error('Permissão negada.', 403)
         
     if tarefa_info.get('status') in ['finalizada', 'parada']:
         status_atual = tarefa_info.get('status')
-        return jsonify({'ok': False, 'error': f'Não é possível adicionar comentários a implantações com status "{status_atual}".'}), 400
+        return render_hx_error(f'Não é possível adicionar comentários a implantações com status "{status_atual}".', 400)
 
     # Lida com o upload da imagem
     if 'imagem' in request.files:
@@ -306,7 +315,7 @@ def adicionar_comentario(tarefa_id):
             try:
                 # Exige R2 somente quando há imagem para upload
                 if not r2_client or not current_app.config.get('CLOUDFLARE_PUBLIC_URL'):
-                    return jsonify({'ok': False, 'error': 'Serviço de armazenamento (R2) não está configurado para upload de imagem.'}), 500
+                    return render_hx_error('Serviço de armazenamento (R2) não está configurado para upload de imagem.', 500)
                 impl_id = tarefa_info['implantacao_id']
                 
                 # Cria nome único
@@ -328,14 +337,14 @@ def adicionar_comentario(tarefa_id):
                 
             except (ClientError, NoCredentialsError) as upload_err:
                 print(f"ERRO upload R2 comentário: {upload_err}")
-                return jsonify({'ok': False, 'error': 'Erro ao fazer upload da imagem para o R2.'}), 500
+                return render_hx_error('Erro ao fazer upload da imagem para o R2.', 500)
             except Exception as e:
-                return jsonify({'ok': False, 'error': f'Falha ao processar imagem: {e}'}), 500
+                return render_hx_error(f'Falha ao processar imagem: {e}', 500)
         elif file and file.filename and not allowed_file(file.filename):
-            return jsonify({'ok': False, 'error': 'Tipo de arquivo de imagem não permitido.'}), 400
+            return render_hx_error('Tipo de arquivo de imagem não permitido.', 400)
 
     if not texto and not img_url:
-        return jsonify({'ok': False, 'error': 'O comentário não pode estar vazio se não houver imagem.'}), 400
+        return render_hx_error('O comentário não pode estar vazio se não houver imagem.', 400)
 
     try:
         agora = datetime.now()
@@ -369,7 +378,7 @@ def adicionar_comentario(tarefa_id):
         )
 
         if not novo_comentario_dados:
-            return jsonify({'ok': False, 'error': 'Falha ao recuperar o comentário após a criação.'}), 500
+            return render_hx_error('Falha ao recuperar o comentário após a criação.', 500)
 
         # Se for externo, agenda envio de e-mail ao responsável em background (não bloqueia resposta)
         try:
@@ -381,7 +390,7 @@ def adicionar_comentario(tarefa_id):
                 )
                 to_email = impl.get('email_responsavel') if impl else None
                 if to_email:
-                    from ..email_utils import send_email
+                    from ..email_utils import send_email_global
                     import threading
                     subject = f"Resumo de reunião - {impl.get('nome_empresa', 'Academia')}"
                     corpo_txt = f"Olá,\n\nCompartilhamos o resumo da reunião referente à implantação.\n\nResumo:\n{texto or ''}\n\n"
@@ -390,59 +399,64 @@ def adicionar_comentario(tarefa_id):
                     corpo_html = f"<p>Olá,</p><p>Compartilhamos o resumo da reunião referente à implantação.</p><p><strong>Resumo:</strong></p><div>{(texto or '').replace('\n','<br>')}</div>" + (f"<p><a href='{img_url}' target='_blank'>Ver imagem</a></p>" if img_url else "")
 
                     def _send_async():
+                        # Envio síncrono (o comentário já foi salvo; o envio ocorre antes da resposta)
+                        send_ok = False
+                        send_error = None
                         try:
-                            # Tenta usar credenciais do próprio usuário (App Password), senão cai no SMTP global
-                            user_settings = query_db(
-                                "SELECT * FROM email_accounts WHERE usuario_cs = %s AND active = 1",
-                                (usuario_cs_email,), one=True
+                            # Usa SMTP global, com Reply-To do autor e From Name
+                            send_ok = send_email_global(
+                                subject=subject,
+                                body_html=corpo_html,
+                                recipients=[to_email],
+                                reply_to=usuario_cs_email,
+                                from_name=novo_comentario_dados.get('usuario_nome') or usuario_cs_email,
                             )
-                            if user_settings:
-                                from ..email_utils import send_email_with_credentials
-                                ok = send_email_with_credentials(
-                                    to_email=to_email,
-                                    subject=subject,
-                                    body_text=corpo_txt,
-                                    body_html=corpo_html,
-                                    reply_to=usuario_cs_email,
-                                    from_name=novo_comentario_dados.get('usuario_nome') or usuario_cs_email,
-                                    host='smtp.gmail.com',
-                                    port=587,
-                                    user=user_settings.get('smtp_user'),
-                                    password=user_settings.get('smtp_password'),
-                                    from_addr=user_settings.get('smtp_user'),
-                                    use_tls=True,
-                                    use_ssl=False,
-                                    timeout=12,
-                                )
-                            else:
-                                # Define Reply-To para o autor e exibe o nome dele no From
-                                ok = send_email(
-                                    to_email,
-                                    subject,
-                                    corpo_txt,
-                                    corpo_html,
-                                    reply_to=usuario_cs_email,
-                                    from_name=novo_comentario_dados.get('usuario_nome') or usuario_cs_email,
-                                )
-                            if ok:
-                                api_logger.info(f"E-mail de comentário externo enviado para {to_email} (tarefa {tarefa_id}).")
-                            else:
-                                api_logger.warning(f"Falha ao enviar e-mail de comentário externo para {to_email} (tarefa {tarefa_id}).")
                         except Exception as e_mail_inner:
-                            print(f"AVISO: Erro no envio assíncrono de e-mail: {e_mail_inner}")
+                            send_error = str(e_mail_inner)
+                            send_ok = False
 
-                    threading.Thread(target=_send_async, daemon=True).start()
-                    api_logger.info(f"Envio de e-mail de comentário externo agendado para {to_email} (tarefa {tarefa_id}).")
+                        if send_ok:
+                            api_logger.info(f"E-mail de comentário externo enviado para {to_email} (tarefa {tarefa_id}).")
+                        else:
+                            api_logger.warning(f"Falha ao enviar e-mail de comentário externo para {to_email} (tarefa {tarefa_id}). Motivo: {send_error or 'desconhecido'}")
+                        # Passa status de envio no template via fragmento OOB de aviso
+                        novo_comentario_dados['email_send_status'] = 'ok' if send_ok else 'fail'
+                        novo_comentario_dados['email_send_error'] = send_error
+                        api_logger.info(f"Envio de e-mail de comentário externo processado para {to_email} (tarefa {tarefa_id}).")
+                    # Executa imediatamente (fluxo síncrono)
+                    _send_async()
                 else:
                     api_logger.info(f"Comentário externo sem e-mail do responsável configurado para tarefa {tarefa_id}.")
         except Exception as e_mail:
             print(f"AVISO: Falha ao agendar envio de e-mail de comentário externo: {e_mail}")
 
-        # Renderiza o template do comentário e o retorna como HTML
-        return render_template('partials/_comment_item.html', comentario=novo_comentario_dados)
+        # Renderiza o template do comentário e inclui stub OOB para remover placeholder "Nenhum comentário"
+        # Preenche dados do responsável para o aviso OOB
+        try:
+            if visibilidade == 'externo':
+                if not isinstance(novo_comentario_dados, dict):
+                    novo_comentario_dados = dict(novo_comentario_dados)
+                # Garante campos de responsável (nome/e-mail) no comentário para o aviso
+                novo_comentario_dados['responsavel_email'] = (impl or {}).get('email_responsavel')
+                novo_comentario_dados['responsavel_nome'] = (impl or {}).get('responsavel_cliente')
+        except Exception:
+            pass
+
+        item_html = render_template('partials/_comment_item.html', comentario=novo_comentario_dados)
+        oob_stub = f"<div id='no-comment-{tarefa_id}' hx-swap-oob='delete'></div>"
+        # Adiciona aviso de status de e-mail (se aplicável)
+        notice_html = ''
+        try:
+            if visibilidade == 'externo':
+                notice_html = render_template('partials/_comment_email_notice.html', comentario=novo_comentario_dados)
+        except Exception:
+            notice_html = ''
+        return make_response(item_html + oob_stub + (notice_html or ''), 200)
         
     except Exception as e:
         print(f"ERRO ao salvar comentário para tarefa {tarefa_id}: {e}")
+        if request.headers.get('HX-Request') == 'true':
+            return render_hx_error(f"Erro interno do servidor: {e}", 500)
         return jsonify({'ok': False, 'error': f"Erro interno do servidor: {e}"}), 500
 
 @api_bp.route('/excluir_comentario/<int:comentario_id>', methods=['POST'])

@@ -293,7 +293,45 @@ def send_email(subject, body_html, recipients, smtp_settings, plain_password, fr
         app_logger.error(f"Falha ao enviar e-mail real por {user}: {e}")
         raise
 
-def send_email_global(subject, body_html, recipients):
+def send_email_with_credentials(to_email, subject, body_text, body_html, reply_to,
+                                from_name, host, port, user, password, from_addr,
+                                use_tls=True, use_ssl=False, timeout=10):
+    """
+    Envia e-mail usando credenciais explícitas (branch usado no comentário externo).
+    Retorna True em caso de sucesso; False em falha.
+    """
+    try:
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = subject
+        msg['From'] = f"{from_name} <{from_addr}>" if from_name else from_addr
+        msg['To'] = to_email
+        if reply_to:
+            msg['Reply-To'] = reply_to
+
+        if body_text:
+            msg.attach(MIMEText(body_text, 'plain'))
+        if body_html:
+            msg.attach(MIMEText(body_html, 'html'))
+
+        if use_ssl:
+            context = ssl.create_default_context()
+            server = smtplib.SMTP_SSL(host, int(port), context=context, timeout=timeout)
+        else:
+            server = smtplib.SMTP(host, int(port), timeout=timeout)
+            if use_tls:
+                server.starttls()
+
+        if user and password:
+            server.login(user, password)
+        server.sendmail(from_addr, [to_email], msg.as_string())
+        server.quit()
+        app_logger.info(f"E-mail enviado com credenciais para {to_email}")
+        return True
+    except Exception as e:
+        app_logger.error(f"Falha ao enviar e-mail com credenciais para {to_email}: {e}")
+        return False
+
+def send_email_global(subject, body_html, recipients, from_name=None, reply_to=None):
     """
     Envia um e-mail usando configuração SMTP global de current_app.config.
     Retorna True em caso de sucesso; lança exceção em falha.
@@ -310,10 +348,14 @@ def send_email_global(subject, body_html, recipients):
     if not host or not from_addr:
         raise ValueError('SMTP global não configurado (host/from ausentes).')
 
-    msg = MIMEText(body_html, 'html')
+    # Usa MIMEMultipart para permitir futuras alternativas de texto
+    msg = MIMEMultipart('alternative')
     msg['Subject'] = subject
-    msg['From'] = from_addr
+    msg['From'] = f"{from_name} <{from_addr}>" if from_name else from_addr
     msg['To'] = ", ".join(recipients)
+    if reply_to:
+        msg['Reply-To'] = reply_to
+    msg.attach(MIMEText(body_html, 'html'))
 
     try:
         if use_ssl:
