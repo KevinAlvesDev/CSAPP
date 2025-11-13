@@ -25,3 +25,13 @@ flask_session/
 
 # Uploads de Usuário
 /uploads/
+
+# Logs
+logs/
+*.log
+backend/logs/
+htmlcov/
+.pytest_cache/
+coverage.json
+.coverage
+test_report_*.txt

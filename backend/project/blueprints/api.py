@@ -13,20 +13,22 @@ from ..blueprints.auth import login_required
 # Importa a nova função 'execute_and_fetch_one'
 from ..db import query_db, execute_db, logar_timeline, execute_and_fetch_one
 # --- FIM DA CORREÇÃO (BUG 4) ---
-from ..extensions import r2_client # <--- CORREÇÃO: Importação faltante
+from ..extensions import r2_client, limiter # <--- CORREÇÃO: Importação faltante + limiter
 # --- INÍCIO DA CORREÇÃO (Refatoração) ---
 # Importa da camada de domínio/serviço específica
-from ..domain.implantacao_service import auto_finalizar_implantacao, _get_progress 
+from ..domain.implantacao_service import auto_finalizar_implantacao, _get_progress
 # --- FIM DA CORREÇÃO ---
 from ..utils import allowed_file, format_date_iso_for_json, format_date_br
 from ..constants import PERFIS_COM_GESTAO
 from ..validation import validate_integer, sanitize_string, validate_email, ValidationError
 from ..logging_config import api_logger, security_logger
+from flask_limiter.util import get_remote_address
 
 api_bp = Blueprint('api', __name__, url_prefix='/api') # Prefixo /api
 
 @api_bp.route('/toggle_tarefa/<int:tarefa_id>', methods=['POST'])
 @login_required
+@limiter.limit("100 per minute", key_func=lambda: g.user_email or get_remote_address())
 def toggle_tarefa(tarefa_id):
     usuario_cs_email = g.user_email
     
@@ -254,6 +256,7 @@ def toggle_tarefas_bulk():
 
 @api_bp.route('/adicionar_comentario/<int:tarefa_id>', methods=['POST'])
 @login_required
+@limiter.limit("20 per minute", key_func=lambda: g.user_email or get_remote_address())
 def adicionar_comentario(tarefa_id):
     # Helper: quando requisição vier do HTMX, retornamos um bloco HTML amigável com a mensagem de erro
     def render_hx_error(message, status_code=400):
@@ -308,40 +311,48 @@ def adicionar_comentario(tarefa_id):
         status_atual = tarefa_info.get('status')
         return render_hx_error(f'Não é possível adicionar comentários a implantações com status "{status_atual}".', 400)
 
-    # Lida com o upload da imagem
+    # Lida com o upload da imagem (com validação avançada)
     if 'imagem' in request.files:
         file = request.files.get('imagem')
-        if file and file.filename and allowed_file(file.filename):
+        if file and file.filename:
+            # Usa validação avançada de arquivo
+            from ..file_validation import validate_uploaded_file
+
+            is_valid, error_msg, metadata = validate_uploaded_file(file)
+
+            if not is_valid:
+                current_app.logger.warning(f"File upload rejected: {error_msg}")
+                return render_hx_error(f'Arquivo inválido: {error_msg}', 400)
+
             try:
                 # Exige R2 somente quando há imagem para upload
                 if not r2_client or not current_app.config.get('CLOUDFLARE_PUBLIC_URL'):
                     return render_hx_error('Serviço de armazenamento (R2) não está configurado para upload de imagem.', 500)
                 impl_id = tarefa_info['implantacao_id']
-                
-                # Cria nome único
-                filename = secure_filename(file.filename)
-                nome_base, extensao = os.path.splitext(filename)
+
+                # Usa o nome seguro do metadata
+                safe_filename = metadata['safe_filename']
+                nome_base, extensao = os.path.splitext(safe_filename)
                 nome_unico = f"{nome_base}_task{tarefa_id}_{int(time.time())}{extensao}"
                 object_name = f"comment_images/impl_{impl_id}/task_{tarefa_id}/{nome_unico}"
 
                 # Upload para R2
                 file.seek(0)
                 r2_client.upload_fileobj(
-                    file, 
-                    current_app.config['CLOUDFLARE_BUCKET_NAME'], 
-                    object_name, 
-                    ExtraArgs={'ContentType': file.content_type}
+                    file,
+                    current_app.config['CLOUDFLARE_BUCKET_NAME'],
+                    object_name,
+                    ExtraArgs={'ContentType': metadata['mime_type']}
                 )
                 img_url = f"{current_app.config['CLOUDFLARE_PUBLIC_URL']}/{object_name}"
-                print(f"SUCESSO (R2): Upload de comentário para {object_name}.")
-                
+                current_app.logger.info(f"File uploaded to R2: {object_name} ({metadata['size_mb']} MB)")
+
             except (ClientError, NoCredentialsError) as upload_err:
-                print(f"ERRO upload R2 comentário: {upload_err}")
+                current_app.logger.error(f"R2 upload error: {upload_err}")
                 return render_hx_error('Erro ao fazer upload da imagem para o R2.', 500)
             except Exception as e:
+                current_app.logger.error(f"File processing error: {e}")
                 return render_hx_error(f'Falha ao processar imagem: {e}', 500)
-        elif file and file.filename and not allowed_file(file.filename):
-            return render_hx_error('Tipo de arquivo de imagem não permitido.', 400)
 
     if not texto and not img_url:
         return render_hx_error('O comentário não pode estar vazio se não houver imagem.', 400)
@@ -398,34 +409,20 @@ def adicionar_comentario(tarefa_id):
                         corpo_txt += f"Imagem: {img_url}\n\n"
                     corpo_html = f"<p>Olá,</p><p>Compartilhamos o resumo da reunião referente à implantação.</p><p><strong>Resumo:</strong></p><div>{(texto or '').replace('\n','<br>')}</div>" + (f"<p><a href='{img_url}' target='_blank'>Ver imagem</a></p>" if img_url else "")
 
-                    def _send_async():
-                        # Envio síncrono (o comentário já foi salvo; o envio ocorre antes da resposta)
-                        send_ok = False
-                        send_error = None
-                        try:
-                            # Usa SMTP global, com Reply-To do autor e From Name
-                            send_ok = send_email_global(
-                                subject=subject,
-                                body_html=corpo_html,
-                                recipients=[to_email],
-                                reply_to=usuario_cs_email,
-                                from_name=novo_comentario_dados.get('usuario_nome') or usuario_cs_email,
-                                body_text=corpo_txt,
-                            )
-                        except Exception as e_mail_inner:
-                            send_error = str(e_mail_inner)
-                            send_ok = False
+                    # Envio ASSÍNCRONO (não bloqueia a resposta ao usuário)
+                    from ..async_tasks import send_email_async
 
-                        if send_ok:
-                            api_logger.info(f"E-mail de comentário externo enviado para {to_email} (tarefa {tarefa_id}).")
-                        else:
-                            api_logger.warning(f"Falha ao enviar e-mail de comentário externo para {to_email} (tarefa {tarefa_id}). Motivo: {send_error or 'desconhecido'}")
-                        # Passa status de envio no template via fragmento OOB de aviso
-                        novo_comentario_dados['email_send_status'] = 'ok' if send_ok else 'fail'
-                        novo_comentario_dados['email_send_error'] = send_error
-                        api_logger.info(f"Envio de e-mail de comentário externo processado para {to_email} (tarefa {tarefa_id}).")
-                    # Executa imediatamente (fluxo síncrono)
-                    _send_async()
+                    # Envia email em background thread
+                    send_email_async(
+                        subject=subject,
+                        body_html=corpo_html,
+                        recipients=[to_email],
+                        reply_to=usuario_cs_email,
+                        from_name=novo_comentario_dados.get('usuario_nome') or usuario_cs_email,
+                        body_text=corpo_txt
+                    )
+
+                    api_logger.info(f"E-mail de comentário externo agendado para {to_email} (tarefa {tarefa_id}).")
                 else:
                     api_logger.info(f"Comentário externo sem e-mail do responsável configurado para tarefa {tarefa_id}.")
         except Exception as e_mail:
@@ -462,6 +459,7 @@ def adicionar_comentario(tarefa_id):
 
 @api_bp.route('/excluir_comentario/<int:comentario_id>', methods=['POST'])
 @login_required
+@limiter.limit("30 per minute", key_func=lambda: g.user_email or get_remote_address())
 def excluir_comentario(comentario_id):
     usuario_cs_email = g.user_email
     
@@ -526,6 +524,7 @@ def excluir_comentario(comentario_id):
 
 @api_bp.route('/excluir_tarefa/<int:tarefa_id>', methods=['POST'])
 @login_required
+@limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 def excluir_tarefa(tarefa_id):
     usuario_cs_email = g.user_email
     

@@ -1,40 +1,65 @@
 # project/domain/dashboard_service.py
 # (Função movida de project/services.py)
 
-from flask import g
+from flask import g, current_app
 from ..db import query_db, execute_db
 from ..constants import (
     PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR
 )
 from ..utils import format_date_iso_for_json, format_date_br
-from datetime import datetime, date 
+from ..cache_config import cache
+from datetime import datetime, date
 
 # --- Função de Lógica do Dashboard ---
 
-def get_dashboard_data(user_email, filtered_cs_email=None):
+def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=None):
     """
     Busca e processa todos os dados para o dashboard.
+    Agora com cache e suporte opcional a paginação.
+
+    Args:
+        user_email: Email do usuário
+        filtered_cs_email: Email do CS para filtrar (gestores)
+        page: Número da página (opcional, se None retorna todos)
+        per_page: Itens por página (opcional, padrão 100)
+
+    Returns:
+        Se page é None: (dashboard_data, metrics) - comportamento original
+        Se page é fornecido: (dashboard_data, metrics, pagination) - com paginação
     """
+    # Ajusta per_page padrão
+    if page is not None and per_page is None:
+        per_page = 100
+
+    # Cria chave de cache única baseada nos parâmetros (incluindo paginação)
+    cache_key = f'dashboard_data_{user_email}_{filtered_cs_email or "all"}_p{page}_pp{per_page}'
+
+    # Tenta buscar do cache
+    if cache:
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return cached_data
+
     perfil_acesso = g.perfil.get('perfil_acesso') if g.get('perfil') else None
     manager_profiles = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
-    
+
     is_manager_view = perfil_acesso in manager_profiles
 
-    # 1. Busca implantações
+    # 1. Busca implantações (com paginação opcional)
     query_sql = """
         SELECT i.*, p.nome as cs_nome
         FROM implantacoes i
         LEFT JOIN perfil_usuario p ON i.usuario_cs = p.usuario
     """
     args = []
-    
+
     if not is_manager_view:
         query_sql += " WHERE i.usuario_cs = %s "
         args.append(user_email)
     elif is_manager_view and filtered_cs_email:
         query_sql += " WHERE i.usuario_cs = %s "
         args.append(filtered_cs_email)
-    
+
     query_sql += """
         ORDER BY CASE status
                      WHEN 'nova' THEN 1
@@ -45,7 +70,35 @@ def get_dashboard_data(user_email, filtered_cs_email=None):
                      ELSE 6
                  END, data_criacao DESC
     """
-    
+
+    # Se paginação está ativada, busca total e adiciona LIMIT/OFFSET
+    pagination = None
+    if page is not None:
+        # Busca total de registros para paginação
+        count_sql = """
+            SELECT COUNT(*) as total
+            FROM implantacoes i
+        """
+        count_args = []
+
+        if not is_manager_view:
+            count_sql += " WHERE i.usuario_cs = %s "
+            count_args.append(user_email)
+        elif is_manager_view and filtered_cs_email:
+            count_sql += " WHERE i.usuario_cs = %s "
+            count_args.append(filtered_cs_email)
+
+        total_result = query_db(count_sql, tuple(count_args), one=True)
+        total = total_result.get('total', 0) if total_result else 0
+
+        # Cria objeto de paginação
+        from ..pagination import Pagination
+        pagination = Pagination(page=page, per_page=per_page, total=total)
+
+        # Adiciona LIMIT e OFFSET à query
+        query_sql += " LIMIT %s OFFSET %s"
+        args.extend([pagination.limit, pagination.offset])
+
     impl_list = query_db(query_sql, tuple(args))
     impl_list = impl_list if impl_list is not None else []
 
@@ -128,7 +181,7 @@ def get_dashboard_data(user_email, filtered_cs_email=None):
                          try:
                             data_inicio_datetime = datetime.strptime(data_inicio_obj, '%Y-%m-%d')
                          except ValueError:
-                            print(f"AVISO: Formato de data_inicio_efetivo (str) inválido para impl {impl_id}: {data_inicio_obj}")
+                            current_app.logger.warning(f"Invalid data_inicio_efetivo format for impl {impl_id}: {data_inicio_obj}")
             
             elif isinstance(data_inicio_obj, date) and not isinstance(data_inicio_obj, datetime):
                 data_inicio_datetime = datetime.combine(data_inicio_obj, datetime.min.time())
@@ -143,8 +196,8 @@ def get_dashboard_data(user_email, filtered_cs_email=None):
                     dias_passados_delta = agora_naive - inicio_naive
                     dias_passados = dias_passados_delta.days if dias_passados_delta.days >= 0 else 0
                 except TypeError as te:
-                    print(f"AVISO: Erro de tipo ao calcular dias passados para impl {impl_id}. Verifique timezones. Erro: {te}")
-                    dias_passados = -1 
+                    current_app.logger.warning(f"Type error calculating dias_passados for impl {impl_id}: {te}")
+                    dias_passados = -1
                     
         impl['dias_passados'] = dias_passados 
 
@@ -171,7 +224,7 @@ def get_dashboard_data(user_email, filtered_cs_email=None):
                             try:
                                 data_inicio_parada_datetime = datetime.strptime(data_finalizacao_obj, '%Y-%m-%d')
                             except ValueError:
-                                print(f"AVISO: Formato de data_finalizacao inválido para impl {impl_id}: {data_finalizacao_obj}")
+                                current_app.logger.warning(f"Invalid data_finalizacao format for impl {impl_id}: {data_finalizacao_obj}")
                 elif isinstance(data_finalizacao_obj, date) and not isinstance(data_finalizacao_obj, datetime):
                     data_inicio_parada_datetime = datetime.combine(data_finalizacao_obj, datetime.min.time())
                 elif isinstance(data_finalizacao_obj, datetime):
@@ -184,7 +237,7 @@ def get_dashboard_data(user_email, filtered_cs_email=None):
                         dias_parada_delta = agora_naive - parada_naive
                         dias_parada = dias_parada_delta.days if dias_parada_delta.days >= 0 else 0
                     except TypeError as te:
-                        print(f"AVISO: Erro ao calcular dias de parada para impl {impl_id}: {te}")
+                        current_app.logger.warning(f"Error calculating dias_parada for impl {impl_id}: {te}")
 
             impl['dias_parada'] = dias_parada
             dashboard_data['paradas'].append(impl)
@@ -202,7 +255,7 @@ def get_dashboard_data(user_email, filtered_cs_email=None):
                 try:
                     data_prevista_obj = datetime.strptime(data_prevista_str, '%Y-%m-%d').date()
                 except ValueError:
-                    print(f"AVISO: Formato de data_inicio_previsto (str) inválido para impl {impl_id}: {data_prevista_str}")
+                    current_app.logger.warning(f"Invalid data_inicio_previsto format for impl {impl_id}: {data_prevista_str}")
             elif isinstance(data_prevista_str, date):
                 data_prevista_obj = data_prevista_str
 
@@ -230,7 +283,7 @@ def get_dashboard_data(user_email, filtered_cs_email=None):
                 metrics['total_valor_andamento'] += impl_valor 
 
         else:
-            print(f"AVISO: Implantação ID {impl_id} com status desconhecido ou nulo: '{status}'. Ignorando na categorização.")
+            current_app.logger.warning(f"Unknown or null status for implantacao {impl_id}: '{status}'. Skipping categorization.")
 
     if not is_manager_view and not filtered_cs_email and impl_list:
         try:
@@ -245,6 +298,15 @@ def get_dashboard_data(user_email, filtered_cs_email=None):
                  metrics['impl_finalizadas'], metrics['impl_paradas'], user_email)
             )
         except Exception as update_err:
-            print(f"AVISO: Falha ao atualizar métricas no perfil {user_email}: {update_err}")
+            current_app.logger.error(f"Failed to update metrics for user {user_email}: {update_err}")
 
-    return dashboard_data, metrics
+    # Armazena resultado no cache (5 minutos)
+    if pagination:
+        result = (dashboard_data, metrics, pagination)
+    else:
+        result = (dashboard_data, metrics)
+
+    if cache:
+        cache.set(cache_key, result, timeout=300)
+
+    return result

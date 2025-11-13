@@ -66,6 +66,74 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+
+def calcular_progresso(concluidas, total):
+    """Calcula o progresso percentual de tarefas concluídas.
+
+    Args:
+        concluidas: Número de tarefas concluídas
+        total: Número total de tarefas
+
+    Returns:
+        int: Percentual de progresso (0-100)
+    """
+    if total == 0:
+        return 0
+    return round((concluidas / total) * 100)
+
+
+def calcular_dias_decorridos(data_inicio):
+    """Calcula quantos dias se passaram desde uma data.
+
+    Args:
+        data_inicio: Data de início (datetime, date ou string ISO)
+
+    Returns:
+        int: Número de dias decorridos
+    """
+    if not data_inicio:
+        return 0
+
+    # Converte para datetime se necessário
+    if isinstance(data_inicio, str):
+        data_inicio = _convert_to_date_or_datetime(data_inicio)
+
+    # Converte date para datetime
+    if isinstance(data_inicio, date) and not isinstance(data_inicio, datetime):
+        data_inicio = datetime.combine(data_inicio, datetime.min.time())
+
+    # Calcula diferença
+    agora = datetime.now()
+    if isinstance(data_inicio, datetime):
+        # Remove timezone info para comparação
+        agora_naive = agora.replace(tzinfo=None) if agora.tzinfo else agora
+        inicio_naive = data_inicio.replace(tzinfo=None) if data_inicio.tzinfo else data_inicio
+        delta = agora_naive - inicio_naive
+        return max(0, delta.days)
+
+    return 0
+
+
+def gerar_cor_status(status):
+    """Gera cor hexadecimal baseada no status.
+
+    Args:
+        status: Status da implantação
+
+    Returns:
+        str: Código de cor hexadecimal
+    """
+    cores = {
+        'andamento': '#3498db',  # Azul
+        'finalizada': '#2ecc71',  # Verde
+        'pausada': '#f39c12',     # Laranja
+        'parada': '#f39c12',      # Laranja
+        'cancelada': '#e74c3c',   # Vermelho
+        'nova': '#9b59b6',        # Roxo
+        'futura': '#1abc9c',      # Turquesa
+    }
+    return cores.get(status.lower() if status else '', '#95a5a6')  # Cinza como padrão
+
 # --- Funções de apoio para gestão de usuários ---
 def load_profiles_list(exclude_self=True):
     """Carrega lista de perfis de usuários com contagens de implantações.
@@ -74,36 +142,37 @@ def load_profiles_list(exclude_self=True):
     - usuario, nome, cargo, perfil_acesso
     - impl_andamento_total, impl_finalizadas
     Opcionalmente exclui o usuário atual (g.user_email) quando exclude_self=True.
+
+    OTIMIZAÇÃO: Usa uma única query com JOIN para evitar problema N+1.
     """
     try:
         from flask import g
         from .db import query_db
 
+        # Uma única query com JOIN e GROUP BY (resolve problema N+1)
         users = query_db(
-            "SELECT usuario, nome, cargo, perfil_acesso FROM perfil_usuario ORDER BY usuario",
+            """
+            SELECT
+                p.usuario,
+                p.nome,
+                p.cargo,
+                p.perfil_acesso,
+                COALESCE(SUM(CASE WHEN i.status = 'andamento' THEN 1 ELSE 0 END), 0) AS impl_andamento_total,
+                COALESCE(SUM(CASE WHEN i.status = 'finalizada' THEN 1 ELSE 0 END), 0) AS impl_finalizadas
+            FROM perfil_usuario p
+            LEFT JOIN implantacoes i ON p.usuario = i.usuario_cs
+            GROUP BY p.usuario, p.nome, p.cargo, p.perfil_acesso
+            ORDER BY p.usuario
+            """,
             (), one=False
         ) or []
 
-        enriched = []
-        for u in users:
-            email = u.get('usuario')
-            counts = query_db(
-                (
-                    "SELECT "
-                    "SUM(CASE WHEN status = 'andamento' THEN 1 ELSE 0 END) AS impl_andamento_total, "
-                    "SUM(CASE WHEN status = 'finalizada' THEN 1 ELSE 0 END) AS impl_finalizadas "
-                    "FROM implantacoes WHERE usuario_cs = %s"
-                ),
-                (email,), one=True
-            ) or {}
+        # Filtra o usuário atual se necessário
+        if exclude_self:
+            current_user = getattr(g, 'user_email', None)
+            users = [u for u in users if u.get('usuario') != current_user]
 
-            u['impl_andamento_total'] = counts.get('impl_andamento_total') or 0
-            u['impl_finalizadas'] = counts.get('impl_finalizadas') or 0
-
-            if not (exclude_self and getattr(g, 'user_email', None) == email):
-                enriched.append(u)
-
-        return enriched
+        return users
     except Exception:
         # Fallback simples em caso de erro no DB: retorna lista vazia
         return []

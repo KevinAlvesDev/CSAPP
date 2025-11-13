@@ -25,7 +25,9 @@ NAO_DEFINIDO_BOOL = "Não definido"
 SIM_NAO_OPTIONS = [NAO_DEFINIDO_BOOL, "Sim", "Não"]
 
 # --- Cargos e Perfis de Acesso ---
-ADMIN_EMAIL = "suporte01.cs@gmail.com" 
+# ADMIN_EMAIL agora vem de variável de ambiente (ver config.py)
+import os
+ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'admin@example.com')
 
 # Cargos (Função na empresa, editável pelo usuário no perfil)
 CARGOS_LIST = ["Júnior", "Pleno", "Sênior"] 

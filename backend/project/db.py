@@ -8,57 +8,40 @@ import os
 import click
 from flask.cli import with_appcontext
 
-def get_db_connection():
-    """Retorna uma conexão com o banco de dados (SQLite ou PostgreSQL)."""
-    use_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
-    
-    if use_sqlite:
-        try:
-            base_dir = os.path.abspath(os.path.dirname(os.path.dirname(__file__))) 
-            db_path = os.path.join(base_dir, 'dashboard_simples.db')
+# Importa o módulo de connection pooling
+from .db_pool import get_db_connection as get_pooled_connection
 
-            # --- CORREÇÃO CRÍTICA PARA BLOQUEIO DO SQLITE ---
-            # Define isolation_level=None para autocommit. Isso resolve o erro "cannot commit"
-            # e os bloqueios de transação persistentes no SQLite local.
-            conn = sqlite3.connect(db_path, isolation_level=None) 
-            # ------------------------------------------------
-            conn.row_factory = sqlite3.Row 
-            return conn, 'sqlite'
-        except sqlite3.Error as e:
-            print(f"ERRO SQLite (ao conectar): {e}")
-            raise
-        except ValueError as e:
-            print(f"ERRO de Caminho SQLite: {e}")
-            raise
-            
-    else: # Modo Produção (PostgreSQL)
-        database_url = current_app.config.get('DATABASE_URL')
-        if not database_url:
-             raise ValueError("Configuração de produção: DATABASE_URL não definida.")
-        try:
-            conn = psycopg2.connect(database_url, cursor_factory=DictCursor)
-            return conn, 'postgres'
-        except psycopg2.Error as e:
-            print(f"ERRO PostgreSQL (ao conectar): {e}")
-            raise
+def get_db_connection():
+    """
+    Retorna uma conexão com o banco de dados (SQLite ou PostgreSQL).
+    Agora usa connection pooling para PostgreSQL.
+    """
+    # Delega para o módulo de pooling
+    return get_pooled_connection()
 
 def query_db(query, args=(), one=False):
     """
-    Executa uma query SELECT (APENAS LEITURA)
-    e retorna o resultado.
+    Executa uma query SELECT (APENAS LEITURA) e retorna o resultado.
+    Agora usa connection pooling e logging adequado.
     """
+    # Rastreia query para APM
+    try:
+        from .performance_monitoring import track_query
+        track_query()
+    except:
+        pass  # APM não disponível
+
     conn, db_type = None, None
-    
+    use_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
+
     try:
         conn, db_type = get_db_connection()
         cursor = conn.cursor()
-        
+
         if db_type == 'sqlite':
             query = query.replace('%s', '?')
-            
+
         cursor.execute(query, args)
-        
-        # --- LÓGICA DE MUTATION/COMMIT REMOVIDA DAQUI ---
 
         if one:
             result = cursor.fetchone()
@@ -66,83 +49,93 @@ def query_db(query, args=(), one=False):
         else:
             results = cursor.fetchall()
             return [dict(row) for row in results] if results else []
-            
+
     except Exception as e:
+        # Usa logging em vez de print
+        current_app.logger.error(f"Database query error: {e}")
+        current_app.logger.debug(f"Query: {query[:100]}...")  # Trunca query longa
         if conn:
-             conn.rollback() # Rollback em caso de erro de leitura
-        print(f"ERRO DE QUERY (Leitura): {e}\nQuery: {query}\nArgs: {args}")
-        # Evita quebrar chamadas que esperam listas: retorna [] quando one=False
+            conn.rollback()
         return None if one else []
     finally:
-        if conn:
+        # Para SQLite, fecha a conexão. Para PostgreSQL, o pooling cuida disso.
+        if use_sqlite and conn:
             conn.close()
 
 def execute_db(query, args=()):
-    """Executa uma query de INSERT, UPDATE ou DELETE no banco de dados."""
+    """
+    Executa uma query de INSERT, UPDATE ou DELETE no banco de dados.
+    Agora usa connection pooling e logging adequado.
+    """
+    # Rastreia query para APM
+    try:
+        from .performance_monitoring import track_query
+        track_query()
+    except:
+        pass  # APM não disponível
+
     conn, db_type = None, None
+    use_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
+
     try:
         conn, db_type = get_db_connection()
         cursor = conn.cursor()
-        
+
         if db_type == 'sqlite':
             query = query.replace('%s', '?')
 
         cursor.execute(query, args)
         conn.commit()
-        
-        try:
-            if query.strip().upper().startswith("INSERT") and db_type == 'postgres':
-                pass 
-        except Exception:
-            pass 
 
-        if cursor.lastrowid: # Funciona bem para SQLite
+        if cursor.lastrowid:
             return cursor.lastrowid
-        return True 
-        
+        return True
+
     except Exception as e:
-        print(f"ERRO DE EXECUÇÃO: {e}\nQuery: {query}\nArgs: {args}")
+        # Usa logging em vez de print
+        current_app.logger.error(f"Database execution error: {e}")
+        current_app.logger.debug(f"Query: {query[:100]}...")  # Trunca query longa
         if conn:
             conn.rollback()
-        return None 
+        return None
     finally:
-        if conn:
+        # Para SQLite, fecha a conexão. Para PostgreSQL, o pooling cuida disso.
+        if use_sqlite and conn:
             conn.close()
 
-# --- INÍCIO DA CORREÇÃO (BUG 4) ---
 def execute_and_fetch_one(query, args=()):
     """
     Executa uma query de MUTATION (INSERT/UPDATE) que retorna um
     valor (ex: RETURNING id) e faz commit.
-    Retorna o primeiro resultado.
+    Agora usa connection pooling e logging adequado.
     """
     conn, db_type = None, None
+    use_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
+
     try:
         conn, db_type = get_db_connection()
         cursor = conn.cursor()
-        
+
         if db_type == 'sqlite':
             query = query.replace('%s', '?')
 
         cursor.execute(query, args)
-        
-        # Pega o resultado (ex: 'RETURNING id')
         result = cursor.fetchone()
-        
-        # Faz o commit da transação
         conn.commit()
-        
+
         return dict(result) if result else None
-        
+
     except Exception as e:
-        print(f"ERRO DE EXECUÇÃO (Fetch One): {e}\nQuery: {query}\nArgs: {args}")
+        # Usa logging em vez de print
+        current_app.logger.error(f"Database execute_and_fetch error: {e}")
+        current_app.logger.debug(f"Query: {query[:100]}...")  # Trunca query longa
         if conn:
             conn.rollback()
-        return None 
+        return None
     finally:
-        if conn:
+        # Para SQLite, fecha a conexão. Para PostgreSQL, o pooling cuida disso.
+        if use_sqlite and conn:
             conn.close()
-# --- FIM DA CORREÇÃO (BUG 4) ---
 
 
 def logar_timeline(implantacao_id, usuario_cs, tipo_evento, detalhe):

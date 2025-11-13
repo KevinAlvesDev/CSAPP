@@ -38,3 +38,12 @@ six==1.17.0
 urllib3==2.5.0
 Werkzeug==3.1.3
 gunicorn==23.0.0
+
+# Novas dependências para melhorias
+alembic==1.13.1
+Flask-Caching==2.1.0
+Flask-Compress==1.15
+Flask-Talisman==1.1.0
+python-magic-bin==0.4.14
+redis==5.0.1
+sentry-sdk[flask]==1.40.0

@@ -92,17 +92,48 @@ def create_app():
     # 2. Inicializa extensões
     # Session(app) # <-- REMOVIDO
     oauth.init_app(app)
-    init_r2(app) 
+    init_r2(app)
     db.init_app(app)
-    
+
+    # Inicializa Flask-Compress para compressão de respostas
+    from flask_compress import Compress
+    compress = Compress()
+    compress.init_app(app)
+    app.config['COMPRESS_MIMETYPES'] = [
+        'text/html', 'text/css', 'text/xml', 'application/json',
+        'application/javascript', 'text/javascript'
+    ]
+    app.config['COMPRESS_LEVEL'] = 6  # Nível de compressão (1-9, padrão 6)
+    app.config['COMPRESS_MIN_SIZE'] = 500  # Comprime apenas respostas > 500 bytes
+
+    # Inicializa Performance Monitoring (APM básico)
+    from .performance_monitoring import performance_monitor
+    performance_monitor.init_app(app)
+
+    # Inicializa o connection pool para PostgreSQL
+    from .db_pool import init_connection_pool, close_db_connection
+    if not app.config.get('USE_SQLITE_LOCALLY', False):
+        init_connection_pool(app)
+
+    # Registra teardown para retornar conexões ao pool
+    app.teardown_appcontext(close_db_connection)
+
     # Inicializa o rate limiter
     init_limiter(app)
-    
+
     # Inicializa CSRF protection
     csrf.init_app(app)
-    
+
     # Configura o sistema de logging
     setup_logging(app)
+
+    # Configura middleware de segurança (headers de proteção)
+    from .security_middleware import init_security_headers
+    init_security_headers(app)
+
+    # Inicializa o sistema de cache
+    from .cache_config import init_cache
+    init_cache(app)
 
     # --- Inicialização automática do DB em desenvolvimento (SQLite) ---
     # Cria tabelas e semeia o admin padrão se estiver em ambiente local (sem DATABASE_URL)
@@ -190,16 +221,22 @@ def create_app():
     from .blueprints.main import main_bp
     from .blueprints.auth import auth_bp
     from .blueprints.api import api_bp
+    from .blueprints.api_v1 import api_v1_bp  # API versionada
     from .blueprints.implantacao_actions import implantacao_actions_bp
     from .blueprints.profile import profile_bp
     from .blueprints.management import management_bp
     from .blueprints.analytics import analytics_bp
     from .blueprints.gamification import gamification_bp
     from .blueprints.agenda import agenda_bp
+    from .blueprints.health import health_bp
+    from .api_docs import api_docs_bp
 
     # Isenta o blueprint da API da verificação de CSRF (endpoints JSON via fetch)
     try:
         csrf.exempt(api_bp)
+        csrf.exempt(api_v1_bp)  # API v1 não precisa de CSRF
+        csrf.exempt(health_bp)  # Health checks não precisam de CSRF
+        csrf.exempt(api_docs_bp)  # Documentação não precisa de CSRF
     except Exception as e:
         print(f"Aviso: não foi possível isentar CSRF no api_bp: {e}")
 
@@ -207,12 +244,15 @@ def create_app():
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(api_bp)
+    app.register_blueprint(api_v1_bp)  # Registra API v1
     app.register_blueprint(implantacao_actions_bp)
     app.register_blueprint(profile_bp)
     app.register_blueprint(management_bp)
     app.register_blueprint(analytics_bp)
     app.register_blueprint(gamification_bp)
     app.register_blueprint(agenda_bp)
+    app.register_blueprint(health_bp)
+    app.register_blueprint(api_docs_bp)
 
     # --- INÍCIO DA CORREÇÃO (BUG 1: Carregamento de Regras) ---
     # Carrega as regras de gamificação uma vez na inicialização
