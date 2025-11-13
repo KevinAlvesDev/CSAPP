@@ -45,11 +45,24 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
 
     is_manager_view = perfil_acesso in manager_profiles
 
-    # 1. Busca implantações (com paginação opcional)
+    # 1. Busca implantações com contagens de tarefas (otimização N+1)
+    # PERFORMANCE: Usa subquery para evitar problemas com GROUP BY
     query_sql = """
-        SELECT i.*, p.nome as cs_nome
+        SELECT
+            i.*,
+            p.nome as cs_nome,
+            COALESCE(t_counts.total_tarefas, 0) as total_tarefas,
+            COALESCE(t_counts.tarefas_concluidas, 0) as tarefas_concluidas
         FROM implantacoes i
         LEFT JOIN perfil_usuario p ON i.usuario_cs = p.usuario
+        LEFT JOIN (
+            SELECT
+                implantacao_id,
+                COUNT(*) as total_tarefas,
+                COUNT(CASE WHEN concluida = TRUE THEN 1 END) as tarefas_concluidas
+            FROM tarefas
+            GROUP BY implantacao_id
+        ) t_counts ON t_counts.implantacao_id = i.id
     """
     args = []
 
@@ -60,15 +73,16 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
         query_sql += " WHERE i.usuario_cs = %s "
         args.append(filtered_cs_email)
 
+    # Ordenação (sem GROUP BY pois usamos subquery)
     query_sql += """
-        ORDER BY CASE status
+        ORDER BY CASE i.status
                      WHEN 'nova' THEN 1
                      WHEN 'andamento' THEN 2
                      WHEN 'parada' THEN 3
                      WHEN 'futura' THEN 4
                      WHEN 'finalizada' THEN 5
                      ELSE 6
-                 END, data_criacao DESC
+                 END, i.data_criacao DESC
     """
 
     # Se paginação está ativada, busca total e adiciona LIMIT/OFFSET
@@ -119,20 +133,8 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
         'total_valor_novas': 0.0, 
     }
 
-    impl_ids = [impl['id'] for impl in impl_list if impl and 'id' in impl] 
-    tasks_by_impl = {}
-    if impl_ids:
-        placeholders = ','.join(['%s'] * len(impl_ids))
-        sql = f"SELECT implantacao_id, concluida FROM tarefas WHERE implantacao_id IN ({placeholders})"
-        all_tasks = query_db(sql, tuple(impl_ids))
-
-        if all_tasks:
-            for task in all_tasks:
-                impl_id_key = task.get('implantacao_id')
-                if impl_id_key is not None:
-                    if impl_id_key not in tasks_by_impl:
-                        tasks_by_impl[impl_id_key] = []
-                    tasks_by_impl[impl_id_key].append(task)
+    # PERFORMANCE: Código removido - tarefas já vêm agregadas no JOIN principal
+    # Isso elimina N+1 queries (antes: 1 query por implantação, agora: 1 query total)
 
     agora = datetime.now() 
 
@@ -151,9 +153,9 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
         impl['data_inicio_producao_iso'] = format_date_iso_for_json(impl.get('data_inicio_producao'), only_date=True)
         impl['data_final_implantacao_iso'] = format_date_iso_for_json(impl.get('data_final_implantacao'), only_date=True)
 
-        impl_tasks = tasks_by_impl.get(impl_id, []) 
-        total_tasks = len(impl_tasks)
-        done_tasks = sum(1 for t in impl_tasks if t.get('concluida')) 
+        # PERFORMANCE: Usa contagens já calculadas no JOIN (evita loop)
+        total_tasks = impl.get('total_tarefas', 0) or 0
+        done_tasks = impl.get('tarefas_concluidas', 0) or 0
         impl['progresso'] = int(round((done_tasks / total_tasks) * 100)) if total_tasks > 0 else 0
 
         try:

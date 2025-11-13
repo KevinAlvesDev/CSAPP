@@ -11,14 +11,32 @@ from ..domain.analytics_service import (
 from ..db import query_db
 from ..constants import PERFIS_COM_ANALYTICS, PERFIS_COM_GESTAO
 from ..validation import validate_email, sanitize_string, validate_date, ValidationError
+from ..cache_config import cache
 
 analytics_bp = Blueprint('analytics', __name__)
 
 def get_all_customer_success():
-    """Busca a lista de todos os CS com nome e e-mail para o filtro."""
-    # Garante que a query retorne uma lista vazia em vez de None se falhar
+    """
+    Busca a lista de todos os CS com nome e e-mail para o filtro.
+
+    PERFORMANCE: Cacheado por 10 minutos (600s) pois lista de CS muda raramente.
+    """
+    # Tenta usar cache se disponível
+    if cache:
+        cache_key = 'all_customer_success'
+        cached_result = cache.get(cache_key)
+        if cached_result:
+            return cached_result
+
+    # Busca do banco
     result = query_db("SELECT usuario, nome, perfil_acesso FROM perfil_usuario WHERE perfil_acesso IS NOT NULL AND perfil_acesso != '' ORDER BY nome", ())
-    return result if result is not None else []
+    result = result if result is not None else []
+
+    # Cacheia se disponível
+    if cache:
+        cache.set(cache_key, result, timeout=600)
+
+    return result
 
 @analytics_bp.route('/analytics')
 @permission_required(PERFIS_COM_ANALYTICS)
@@ -152,7 +170,9 @@ def analytics_dashboard():
         )
         
     except Exception as e:
-        print(f"ERRO ao carregar dashboard de analytics: {e}")
+        from ..logging_config import get_logger
+        logger = get_logger('analytics')
+        logger.error(f"Erro ao carregar dashboard de analytics: {e}", exc_info=True)
         flash(f"Erro interno ao carregar os dados de relatórios: {e}", "error")
         return redirect(url_for('main.dashboard'))
 

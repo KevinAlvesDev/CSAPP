@@ -7,9 +7,13 @@ from datetime import datetime
 import os
 import click
 from flask.cli import with_appcontext
+from contextlib import contextmanager
 
 # Importa o módulo de connection pooling
 from .db_pool import get_db_connection as get_pooled_connection
+
+# Importa exceções customizadas
+from .exceptions import DatabaseError
 
 def get_db_connection():
     """
@@ -19,10 +23,54 @@ def get_db_connection():
     # Delega para o módulo de pooling
     return get_pooled_connection()
 
-def query_db(query, args=(), one=False):
+
+@contextmanager
+def db_connection():
+    """
+    Context manager para conexões de banco de dados.
+    Garante que a conexão seja fechada corretamente, mesmo em caso de erro.
+
+    Uso:
+        with db_connection() as (conn, db_type):
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM usuarios")
+            # Conexão é fechada automaticamente ao sair do bloco
+
+    Yields:
+        tuple: (conexão, tipo_db) onde tipo_db é 'sqlite' ou 'postgresql'
+    """
+    conn, db_type = None, None
+    use_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
+
+    try:
+        conn, db_type = get_db_connection()
+        yield conn, db_type
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        raise
+    finally:
+        # Para SQLite, fecha a conexão. Para PostgreSQL, o pooling cuida disso.
+        if use_sqlite and conn:
+            conn.close()
+
+def query_db(query, args=(), one=False, raise_on_error=False):
     """
     Executa uma query SELECT (APENAS LEITURA) e retorna o resultado.
-    Agora usa connection pooling e logging adequado.
+
+    Args:
+        query: Query SQL a executar
+        args: Argumentos da query (tuple)
+        one: Se True, retorna apenas um resultado
+        raise_on_error: Se True, lança DatabaseError em caso de erro (padrão: False para retrocompatibilidade)
+
+    Returns:
+        Resultado da query (dict ou list de dicts) ou None/[] em caso de erro (se raise_on_error=False)
+
+    Raises:
+        DatabaseError: Se raise_on_error=True e ocorrer erro
+
+    Nota: Usa connection pooling e logging adequado.
     """
     # Rastreia query para APM
     try:
@@ -52,20 +100,37 @@ def query_db(query, args=(), one=False):
 
     except Exception as e:
         # Usa logging em vez de print
-        current_app.logger.error(f"Database query error: {e}")
+        current_app.logger.error(f"Database query error: {e}", exc_info=True)
         current_app.logger.debug(f"Query: {query[:100]}...")  # Trunca query longa
         if conn:
             conn.rollback()
+
+        # Se raise_on_error=True, lança exceção
+        if raise_on_error:
+            raise DatabaseError(f"Erro ao executar query: {e}", {'query': query[:100], 'args': args}) from e
+
         return None if one else []
     finally:
         # Para SQLite, fecha a conexão. Para PostgreSQL, o pooling cuida disso.
         if use_sqlite and conn:
             conn.close()
 
-def execute_db(query, args=()):
+def execute_db(query, args=(), raise_on_error=False):
     """
     Executa uma query de INSERT, UPDATE ou DELETE no banco de dados.
-    Agora usa connection pooling e logging adequado.
+
+    Args:
+        query: Query SQL a executar
+        args: Argumentos da query (tuple)
+        raise_on_error: Se True, lança DatabaseError em caso de erro (padrão: False para retrocompatibilidade)
+
+    Returns:
+        Número de linhas afetadas ou None em caso de erro (se raise_on_error=False)
+
+    Raises:
+        DatabaseError: Se raise_on_error=True e ocorrer erro
+
+    Nota: Usa connection pooling e logging adequado.
     """
     # Rastreia query para APM
     try:
@@ -93,10 +158,15 @@ def execute_db(query, args=()):
 
     except Exception as e:
         # Usa logging em vez de print
-        current_app.logger.error(f"Database execution error: {e}")
+        current_app.logger.error(f"Database execution error: {e}", exc_info=True)
         current_app.logger.debug(f"Query: {query[:100]}...")  # Trunca query longa
         if conn:
             conn.rollback()
+
+        # Se raise_on_error=True, lança exceção
+        if raise_on_error:
+            raise DatabaseError(f"Erro ao executar query: {e}", {'query': query[:100], 'args': args}) from e
+
         return None
     finally:
         # Para SQLite, fecha a conexão. Para PostgreSQL, o pooling cuida disso.

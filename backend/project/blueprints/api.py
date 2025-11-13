@@ -23,11 +23,14 @@ from ..constants import PERFIS_COM_GESTAO
 from ..validation import validate_integer, sanitize_string, validate_email, ValidationError
 from ..logging_config import api_logger, security_logger
 from flask_limiter.util import get_remote_address
+# SEGURANÇA: Validação de Origin/Referer para APIs
+from ..api_security import validate_api_origin
 
 api_bp = Blueprint('api', __name__, url_prefix='/api') # Prefixo /api
 
 @api_bp.route('/toggle_tarefa/<int:tarefa_id>', methods=['POST'])
 @login_required
+@validate_api_origin  # SEGURANÇA: Valida Origin/Referer
 @limiter.limit("100 per minute", key_func=lambda: g.user_email or get_remote_address())
 def toggle_tarefa(tarefa_id):
     usuario_cs_email = g.user_email
@@ -147,12 +150,13 @@ def toggle_tarefa(tarefa_id):
         })
         
     except Exception as e:
-        print(f"ERRO ao alternar tarefa ID {tarefa_id}: {e}")
+        api_logger.error(f"Erro ao alternar tarefa ID {tarefa_id}: {e}", exc_info=True)
         return jsonify({'ok': False, 'error': f"Erro interno: {e}"}), 500
 
 
 @api_bp.route('/toggle_tarefas', methods=['POST'])
 @login_required
+@validate_api_origin  # SEGURANÇA: Valida Origin/Referer
 def toggle_tarefas_bulk():
     """Alterna o status de múltiplas tarefas de uma mesma implantação em uma única operação.
     Espera JSON com {'ids': [<int>, ...]} ou form 'ids' separado por vírgula.
@@ -251,11 +255,12 @@ def toggle_tarefas_bulk():
             'log_finalizacao': log_finalizacao
         })
     except Exception as e:
-        print(f"ERRO ao alternar tarefas em lote para implantação {implantacao_id}: {e}")
+        api_logger.error(f"Erro ao alternar tarefas em lote para implantação {implantacao_id}: {e}", exc_info=True)
         return jsonify({'ok': False, 'error': f'Erro interno: {e}'}), 500
 
 @api_bp.route('/adicionar_comentario/<int:tarefa_id>', methods=['POST'])
 @login_required
+@validate_api_origin  # SEGURANÇA: Valida Origin/Referer
 @limiter.limit("20 per minute", key_func=lambda: g.user_email or get_remote_address())
 def adicionar_comentario(tarefa_id):
     # Helper: quando requisição vier do HTMX, retornamos um bloco HTML amigável com a mensagem de erro
@@ -426,7 +431,7 @@ def adicionar_comentario(tarefa_id):
                 else:
                     api_logger.info(f"Comentário externo sem e-mail do responsável configurado para tarefa {tarefa_id}.")
         except Exception as e_mail:
-            print(f"AVISO: Falha ao agendar envio de e-mail de comentário externo: {e_mail}")
+            api_logger.warning(f"Falha ao agendar envio de e-mail de comentário externo: {e_mail}")
 
         # Renderiza o template do comentário e inclui stub OOB para remover placeholder "Nenhum comentário"
         # Preenche dados do responsável para o aviso OOB
@@ -452,13 +457,14 @@ def adicionar_comentario(tarefa_id):
         return make_response(item_html + oob_stub + (notice_html or ''), 200)
         
     except Exception as e:
-        print(f"ERRO ao salvar comentário para tarefa {tarefa_id}: {e}")
+        api_logger.error(f"Erro ao salvar comentário para tarefa {tarefa_id}: {e}", exc_info=True)
         if request.headers.get('HX-Request') == 'true':
             return render_hx_error(f"Erro interno do servidor: {e}", 500)
         return jsonify({'ok': False, 'error': f"Erro interno do servidor: {e}"}), 500
 
 @api_bp.route('/excluir_comentario/<int:comentario_id>', methods=['POST'])
 @login_required
+@validate_api_origin  # SEGURANÇA: Valida Origin/Referer
 @limiter.limit("30 per minute", key_func=lambda: g.user_email or get_remote_address())
 def excluir_comentario(comentario_id):
     usuario_cs_email = g.user_email
@@ -501,13 +507,13 @@ def excluir_comentario(comentario_id):
                 object_key = imagem_url.replace(f"{public_url_base}/", "")
                 if object_key:
                     r2_client.delete_object(Bucket=bucket_name, Key=object_key)
-                    print(f"Objeto R2 (comentário) excluído: {object_key}")
+                    api_logger.info(f"Objeto R2 (comentário) excluído: {object_key}")
             except ClientError as e_delete:
-                print(f"Aviso: Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete.response['Error']['Code']}")
+                api_logger.warning(f"Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete.response['Error']['Code']}")
             except Exception as e_delete:
-                 print(f"Aviso: Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete}")
+                 api_logger.warning(f"Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete}")
         else:
-            print("Aviso: R2 não configurado ou variáveis ausentes; exclusão seguirá apenas no banco de dados.")
+            api_logger.warning("R2 não configurado ou variáveis ausentes; exclusão seguirá apenas no banco de dados.")
 
         # Exclui do DB
         execute_db("DELETE FROM comentarios WHERE id = %s", (comentario_id,))
@@ -519,11 +525,12 @@ def excluir_comentario(comentario_id):
         return '', 200
         
     except Exception as e:
-        print(f"ERRO ao excluir comentário ID {comentario_id}: {e}")
+        api_logger.error(f"Erro ao excluir comentário ID {comentario_id}: {e}", exc_info=True)
         return jsonify({'ok': False, 'error': f"Erro interno do servidor: {e}"}), 500
 
 @api_bp.route('/excluir_tarefa/<int:tarefa_id>', methods=['POST'])
 @login_required
+@validate_api_origin  # SEGURANÇA: Valida Origin/Referer
 @limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 def excluir_tarefa(tarefa_id):
     usuario_cs_email = g.user_email
@@ -574,13 +581,13 @@ def excluir_tarefa(tarefa_id):
                         object_key = imagem_url.replace(f"{public_url_base}/", "")
                         if object_key:
                             r2_client.delete_object(Bucket=bucket_name, Key=object_key)
-                            print(f"Objeto R2 (comentário {com['id']}) excluído: {object_key}")
+                            api_logger.info(f"Objeto R2 (comentário {com['id']}) excluído: {object_key}")
                     except ClientError as e_delete:
-                        print(f"Aviso: Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete.response['Error']['Code']}")
+                        api_logger.warning(f"Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete.response['Error']['Code']}")
                     except Exception as e_delete:
-                        print(f"Aviso: Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete}")
+                        api_logger.warning(f"Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete}")
         else:
-            print("Aviso: R2 não configurado ou variáveis ausentes; exclusão seguirá apenas no banco de dados.")
+            api_logger.warning("R2 não configurado ou variáveis ausentes; exclusão seguirá apenas no banco de dados.")
 
         # Agora exclui a tarefa (comentários são excluídos por CASCATA no DB)
         # Reforço de segurança: só exclui se a implantação NÃO estiver em estado bloqueado
@@ -624,11 +631,12 @@ def excluir_tarefa(tarefa_id):
         })
         
     except Exception as e:
-        print(f"ERRO ao excluir tarefa ID {tarefa_id}: {e}")
+        api_logger.error(f"Erro ao excluir tarefa ID {tarefa_id}: {e}", exc_info=True)
         return jsonify({'ok': False, 'error': f"Erro interno do servidor: {e}"}), 500
 
 @api_bp.route('/reordenar_tarefas', methods=['POST'])
 @login_required
+@validate_api_origin  # SEGURANÇA: Valida Origin/Referer
 def reordenar_tarefas():
     usuario_cs_email = g.user_email
     try:
@@ -672,11 +680,12 @@ def reordenar_tarefas():
         return jsonify({'ok': True, 'log_reordenar': log_reordenar})
         
     except Exception as e:
-        print(f"ERRO ao reordenar tarefas: {e}")
+        api_logger.error(f"Erro ao reordenar tarefas: {e}", exc_info=True)
         return jsonify({'ok': False, 'error': f"Erro interno do servidor: {e}"}), 500
 
 @api_bp.route('/excluir_tarefas_modulo', methods=['POST'])
 @login_required
+@validate_api_origin  # SEGURANÇA: Valida Origin/Referer
 def excluir_tarefas_modulo():
     """Exclui todas as tarefas de um módulo (tarefa_pai) específico."""
     usuario_cs_email = g.user_email
@@ -726,13 +735,13 @@ def excluir_tarefas_modulo():
                         object_key = imagem_url.replace(f"{public_url_base}/", "")
                         if object_key:
                             r2_client.delete_object(Bucket=bucket_name, Key=object_key)
-                            print(f"Objeto R2 (módulo {tarefa_pai}) excluído: {object_key}")
+                            api_logger.info(f"Objeto R2 (módulo {tarefa_pai}) excluído: {object_key}")
                     except ClientError as e_delete:
-                        print(f"Aviso: Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete.response['Error']['Code']}")
+                        api_logger.warning(f"Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete.response['Error']['Code']}")
                     except Exception as e_delete:
-                        print(f"Aviso: Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete}")
+                        api_logger.warning(f"Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete}")
         else:
-            print("Aviso: R2 não configurado ou variáveis ausentes; exclusão seguirá apenas no banco de dados.")
+            api_logger.warning("R2 não configurado ou variáveis ausentes; exclusão seguirá apenas no banco de dados.")
         
         # 5. Excluir Tarefas (ON DELETE CASCADE cuidará dos comentários no DB)
         # Reforço de segurança: só exclui se a implantação NÃO estiver em estado bloqueado
@@ -779,6 +788,5 @@ def excluir_tarefas_modulo():
         })
 
     except Exception as e:
-        api_logger.error(f'Error deleting tasks from module {tarefa_pai} in implantation {impl_id}: {str(e)} - User: {g.user_email}')
-        print(f"ERRO ao excluir tarefas do módulo {tarefa_pai} (Impl. ID {impl_id}): {e}")
+        api_logger.error(f'Erro ao excluir tarefas do módulo {tarefa_pai} (Impl. ID {impl_id}): {e} - User: {g.user_email}', exc_info=True)
         return jsonify({'ok': False, 'error': f"Erro interno do servidor: {e}"}), 500

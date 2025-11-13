@@ -95,6 +95,13 @@ def create_app():
     init_r2(app)
     db.init_app(app)
 
+    # Inicializa Sentry para monitoramento de erros (se configurado)
+    try:
+        from .sentry_config import init_sentry
+        init_sentry(app)
+    except Exception as e:
+        app.logger.warning(f"Sentry não inicializado: {e}")
+
     # Inicializa Flask-Compress para compressão de respostas
     from flask_compress import Compress
     compress = Compress()

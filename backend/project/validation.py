@@ -15,38 +15,96 @@ class ValidationError(Exception):
     pass
 
 
-# Lista mínima de senhas comuns para bloqueio
+# Lista expandida de senhas comuns para bloqueio (Top 50 senhas mais usadas)
 COMMON_PASSWORDS = {
-    '123456', '123456789', 'qwerty', 'password', '111111',
-    '12345678', 'abc123', 'password1', '12345', '000000',
+    # Sequências numéricas
+    '123456', '123456789', '12345678', '12345', '1234567890',
+    '111111', '000000', '123123', '1234567', '1234',
+    # Senhas baseadas em "password"
+    'password', 'password1', 'password123', 'Password1', 'Password123',
+    # Teclado QWERTY
+    'qwerty', 'qwerty123', 'qwertyuiop', 'asdfgh', 'zxcvbn',
+    'qwerty1', 'asdfghjkl', '1qaz2wsx',
+    # Palavras comuns
+    'abc123', 'welcome', 'monkey', 'dragon', 'master',
+    'sunshine', 'princess', 'letmein', 'shadow', 'admin',
+    'iloveyou', 'football', 'baseball', 'superman', 'batman',
+    # Variações
+    'passw0rd', 'p@ssw0rd', 'p@ssword', '123qwe', 'qwe123',
+    'admin123', 'root', 'toor', 'test', 'guest',
+    # Anos comuns
+    '2024', '2023', '2022', '2021', '2020',
 }
 
 
-def validate_password_strength(password: str) -> str:
+def validate_password_strength(password: str, min_length: int = 8, max_length: int = 128) -> str:
     """
-    Valida critérios de complexidade de senha.
-    - Mínimo 8 caracteres
-    - Pelo menos uma letra maiúscula, uma minúscula, um dígito e um símbolo
-    - Não pode estar na lista de senhas comuns
-    Retorna a própria senha se válida; lança ValidationError caso contrário.
+    Valida critérios de complexidade de senha com requisitos rigorosos.
+
+    Requisitos:
+    - Mínimo 8 caracteres (configurável)
+    - Máximo 128 caracteres (previne DoS)
+    - Pelo menos uma letra maiúscula (A-Z)
+    - Pelo menos uma letra minúscula (a-z)
+    - Pelo menos um dígito (0-9)
+    - Pelo menos um símbolo (!@#$%^&*(),.?":{}|<>)
+    - Não pode estar na lista de senhas comuns (Top 50)
+    - Não pode ter mais de 3 caracteres repetidos consecutivos
+    - Não pode ser sequência simples (123456, abcdef)
+
+    Args:
+        password: Senha a ser validada
+        min_length: Comprimento mínimo (padrão: 8)
+        max_length: Comprimento máximo (padrão: 128)
+
+    Returns:
+        Senha validada
+
+    Raises:
+        ValidationError: Se a senha não atender aos requisitos
+
+    Exemplo:
+        validate_password_strength("Senh@Forte123")  # ✅ Válida
+        validate_password_strength("senha123")       # ❌ Sem maiúscula e símbolo
     """
     if not isinstance(password, str):
         raise ValidationError('Senha deve ser uma string')
 
-    if len(password) < 8:
-        raise ValidationError('A senha deve ter no mínimo 8 caracteres.')
+    # Validação de comprimento
+    if len(password) < min_length:
+        raise ValidationError(f'A senha deve ter no mínimo {min_length} caracteres.')
 
+    if len(password) > max_length:
+        raise ValidationError(f'A senha deve ter no máximo {max_length} caracteres.')
+
+    # Verifica senhas comuns (case-insensitive)
     if password.lower() in COMMON_PASSWORDS:
-        raise ValidationError('Senha muito comum. Escolha outra.')
+        raise ValidationError('Senha muito comum. Escolha uma senha mais segura.')
 
+    # Validação de complexidade
     if not re.search(r'[A-Z]', password):
-        raise ValidationError('A senha deve conter pelo menos uma letra maiúscula.')
+        raise ValidationError('A senha deve conter pelo menos uma letra maiúscula (A-Z).')
+
     if not re.search(r'[a-z]', password):
-        raise ValidationError('A senha deve conter pelo menos uma letra minúscula.')
+        raise ValidationError('A senha deve conter pelo menos uma letra minúscula (a-z).')
+
     if not re.search(r'\d', password):
-        raise ValidationError('A senha deve conter pelo menos um número.')
-    if not re.search(r'[^A-Za-z0-9]', password):
-        raise ValidationError('A senha deve conter pelo menos um símbolo.')
+        raise ValidationError('A senha deve conter pelo menos um número (0-9).')
+
+    if not re.search(r'[!@#$%^&*(),.?":{}|<>\-_+=\[\]\\\/;\'`~]', password):
+        raise ValidationError('A senha deve conter pelo menos um símbolo (!@#$%^&*(),.?":{}|<>).')
+
+    # Verifica caracteres repetidos consecutivos (ex: "aaaa", "1111")
+    if re.search(r'(.)\1{3,}', password):
+        raise ValidationError('A senha não pode ter mais de 3 caracteres iguais consecutivos.')
+
+    # Verifica sequências simples (ex: "123456", "abcdef")
+    sequences = ['0123456789', 'abcdefghijklmnopqrstuvwxyz', 'qwertyuiop', 'asdfghjkl', 'zxcvbnm']
+    password_lower = password.lower()
+    for seq in sequences:
+        for i in range(len(seq) - 4):
+            if seq[i:i+5] in password_lower or seq[i:i+5][::-1] in password_lower:
+                raise ValidationError('A senha não pode conter sequências simples (ex: 12345, abcde).')
 
     return password
 

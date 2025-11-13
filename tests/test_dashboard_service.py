@@ -42,7 +42,7 @@ def app():
     
     # Cleanup
     with app.app_context():
-        conn, _ = from project.db import get_db_connection
+        from project.db import get_db_connection
         conn, _ = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("DELETE FROM implantacoes WHERE usuario_cs = 'dashboard@test.com'")

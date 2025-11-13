@@ -2,8 +2,8 @@
 
 from functools import wraps
 from flask import (
-    Blueprint, redirect, url_for, session, render_template, g, flash, 
-    current_app, request
+    Blueprint, redirect, url_for, session, render_template, g, flash,
+    current_app, request, abort
 )
 from werkzeug.security import generate_password_hash, check_password_hash
 from urllib.parse import urlencode
@@ -197,7 +197,7 @@ def rate_limit(max_requests):
     return decorator
 
 @auth_bp.route('/change-password', methods=['GET', 'POST'])
-@rate_limit("15 per minute")
+@rate_limit("10 per minute")  # SEGURANÇA: Reduzido de 15 para 10 tentativas/min
 @login_required
 def change_password():
     """Permite ao usuário autenticado alterar sua senha."""
@@ -246,7 +246,7 @@ def change_password():
         return render_template('change_password.html', auth0_enabled=False)
 
 @auth_bp.route('/forgot-password', methods=['GET', 'POST'])
-@rate_limit("10 per minute")
+@rate_limit("5 per minute")  # SEGURANÇA: Reduzido de 10 para 5 tentativas/min (previne abuso)
 def forgot_password():
     """Solicita recuperação de senha via e-mail com token."""
     if request.method == 'GET':
@@ -297,7 +297,7 @@ def forgot_password():
     return redirect(url_for('auth.login'))
 
 @auth_bp.route('/reset-password/<token>', methods=['GET', 'POST'])
-@rate_limit("10 per minute")
+@rate_limit("5 per minute")  # SEGURANÇA: Reduzido de 10 para 5 tentativas/min
 def reset_password(token):
     """Redefine a senha usando token temporário."""
     # Valida token (expira em 3600s)
@@ -344,7 +344,7 @@ def reset_password(token):
         return render_template('reset_password.html', auth0_enabled=False)
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
-@rate_limit("30 per minute")  # Limite de 30 tentativas por minuto (suporta múltiplos usuários)
+@rate_limit("5 per minute")  # SEGURANÇA: Reduzido de 30 para 5 tentativas/min (previne força bruta)
 def login():
     """Página de login próprio ou redireciona para Auth0."""
     # Se Auth0 estiver habilitado, redireciona para Auth0
@@ -443,15 +443,14 @@ def callback():
         return redirect(url_for('main.dashboard'))
         
     except ValueError as ve: # Pega o erro de usuário duplicado
-        print(f"ERRO no callback (duplicação): {ve}")
-        auth_logger.warning(f'Login attempt with duplicate user: {ve}')
+        auth_logger.error(f'Erro no callback (duplicação): {ve}')
         flash(str(ve), "error") # Mostra "Usuário já cadastrado"
         session.clear()
         return redirect(url_for('auth.login')) # Volta para a tela de login
     except Exception as e:
-        print(f"ERRO no callback do Auth0: {e}")
+        auth_logger.error(f'Erro no callback do Auth0: {e}', exc_info=True)
         # Mensagem genérica para outros erros
-        flash(f"Erro durante a autenticação: Algo deu errado, por favor tente novamente.", "error") 
+        flash(f"Erro durante a autenticação: Algo deu errado, por favor tente novamente.", "error")
         session.clear()
         return redirect(url_for('main.home'))
 
@@ -474,9 +473,25 @@ def logout():
 
 @auth_bp.route('/dev-login', methods=['GET'])
 def dev_login():
-    """Login de desenvolvimento: cria sessão local sem Auth0."""
+    """Login de desenvolvimento: cria sessão local sem Auth0.
+
+    SEGURANÇA: Esta rota só funciona em ambiente de desenvolvimento.
+    Em produção, retorna 404 para evitar acesso não autorizado.
+    """
+    # PROTEÇÃO CRÍTICA: Bloqueia em produção
+    import os
     if current_app.config.get('AUTH0_ENABLED', True):
         return redirect(url_for('auth.login'))
+
+    # Verifica se está em ambiente de desenvolvimento
+    flask_env = os.environ.get('FLASK_ENV', 'production')
+    flask_debug = current_app.config.get('DEBUG', False)
+    use_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
+
+    # Bloqueia se não estiver em desenvolvimento
+    if flask_env == 'production' or (not flask_debug and not use_sqlite):
+        security_logger.warning(f'Tentativa de acesso a /dev-login em ambiente de produção')
+        abort(404)  # Retorna 404 para não revelar que a rota existe
 
     # Usuário de desenvolvimento com acesso total (Administrador)
     dev_email = ADMIN_EMAIL  # garante perfil Administrador pelo sincronizador
@@ -492,16 +507,33 @@ def dev_login():
     try:
         _sync_user_profile(dev_email, 'Dev User', 'dev|local')
     except Exception as e:
-        print(f"AVISO: falha ao sincronizar perfil dev {dev_email}: {e}")
+        auth_logger.warning(f"Falha ao sincronizar perfil dev {dev_email}: {e}")
 
+    auth_logger.info(f'Dev login realizado: {dev_email}')
     flash('Logado em modo desenvolvimento com acesso de Administrador.', 'success')
     return redirect(url_for('main.dashboard'))
 
 @auth_bp.route('/dev-login-as', methods=['GET', 'POST'])
 def dev_login_as():
-    """Login de desenvolvimento com e-mail arbitrário (somente quando Auth0 está desativado)."""
+    """Login de desenvolvimento com e-mail arbitrário (somente quando Auth0 está desativado).
+
+    SEGURANÇA: Esta rota só funciona em ambiente de desenvolvimento.
+    Em produção, retorna 404 para evitar acesso não autorizado.
+    """
+    # PROTEÇÃO CRÍTICA: Bloqueia em produção
+    import os
     if current_app.config.get('AUTH0_ENABLED', True):
         return redirect(url_for('auth.login'))
+
+    # Verifica se está em ambiente de desenvolvimento
+    flask_env = os.environ.get('FLASK_ENV', 'production')
+    flask_debug = current_app.config.get('DEBUG', False)
+    use_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
+
+    # Bloqueia se não estiver em desenvolvimento
+    if flask_env == 'production' or (not flask_debug and not use_sqlite):
+        security_logger.warning(f'Tentativa de acesso a /dev-login-as em ambiente de produção')
+        abort(404)  # Retorna 404 para não revelar que a rota existe
 
     if request.method == 'GET':
         return render_template('dev_login.html', auth0_enabled=False)
@@ -539,15 +571,15 @@ def dev_login_as():
                     (PERFIL_IMPLANTADOR, email)
                 )
             except Exception as role_err:
-                print(f"AVISO: não foi possível definir perfil Implantador para {email}: {role_err}")
+                auth_logger.warning(f"Não foi possível definir perfil Implantador para {email}: {role_err}")
     except Exception as e:
-        print(f"AVISO: falha ao sincronizar perfil dev para {email}: {e}")
+        auth_logger.warning(f"Falha ao sincronizar perfil dev para {email}: {e}")
 
     flash(f'Logado como {email} (desenvolvimento).', 'success')
     return redirect(url_for('main.dashboard'))
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
-@rate_limit("20 per minute")  # Limite de 20 registros por minuto (suporta múltiplos usuários)
+@rate_limit("10 per minute")  # SEGURANÇA: Reduzido de 20 para 10 registros/min (previne spam)
 def register():
     """Página de registro de novos usuários."""
     # Se Auth0 estiver habilitado, redireciona para login

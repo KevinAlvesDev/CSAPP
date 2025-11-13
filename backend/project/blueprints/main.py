@@ -28,6 +28,7 @@ from ..constants import (
 # Garanta que o 'utils' seja importado
 from .. import utils
 from ..validation import validate_integer, sanitize_string, ValidationError
+from ..cache_config import cache
 
 main_bp = Blueprint('main', __name__)
 
@@ -76,8 +77,22 @@ def dashboard():
         current_cs_filter = None
 
     try:
-        # A função get_dashboard_data agora vem do dashboard_service
-        dashboard_data, metrics = get_dashboard_data(user_email, filtered_cs_email=current_cs_filter) #
+        # PERFORMANCE: Cache inteligente - só cacheia quando não há filtro
+        # Cache de 5 minutos (300 segundos) para reduzir carga no banco
+        if current_cs_filter is None and cache:
+            # Sem filtro: usa cache (se disponível)
+            cache_key = f'dashboard_data_{user_email}'
+            cached_result = cache.get(cache_key)
+
+            if cached_result:
+                dashboard_data, metrics = cached_result
+            else:
+                dashboard_data, metrics = get_dashboard_data(user_email, filtered_cs_email=None)
+                # Cacheia por 5 minutos
+                cache.set(cache_key, (dashboard_data, metrics), timeout=300)
+        else:
+            # Com filtro ou sem cache: busca direto do banco
+            dashboard_data, metrics = get_dashboard_data(user_email, filtered_cs_email=current_cs_filter)
         
         perfil_data = g.perfil if g.perfil else {} #
         default_metrics = { 'nome': user_info.get('name', user_email), 'impl_andamento': 0, 'impl_finalizadas': 0, 'impl_paradas': 0, 'progresso_medio_carteira': 0, 'impl_andamento_total': 0, 'implantacoes_atrasadas': 0, 'implantacoes_futuras': 0 }
@@ -162,7 +177,9 @@ def ver_implantacao(impl_id):
         
     except Exception as e:
         # 4. Captura erros inesperados do servidor
-        print(f"ERRO ao carregar detalhes da implantação ID {impl_id}: {e}")
+        from ..logging_config import get_logger
+        logger = get_logger('main')
+        logger.error(f"Erro ao carregar detalhes da implantação ID {impl_id}: {e}", exc_info=True)
         flash("Erro ao carregar detalhes da implantação.", "error")
         return redirect(url_for('main.dashboard'))
 

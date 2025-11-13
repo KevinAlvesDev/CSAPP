@@ -2,11 +2,13 @@ from flask import Blueprint, render_template, g, session, redirect, url_for, cur
 from urllib.parse import urlencode
 from ..blueprints.auth import login_required
 from ..extensions import oauth
+from ..logging_config import get_logger
 import requests
 from datetime import datetime, date, timedelta
 import uuid
 
 agenda_bp = Blueprint('agenda', __name__)
+agenda_logger = get_logger('agenda')
 
 def google_events_endpoint(calendar_id: str = 'primary'):
     return f'https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events'
@@ -25,7 +27,7 @@ def _google_oauth_configured():
 def agenda_home():
     # Se OAuth Google não estiver configurado, mostra instruções
     try:
-        print(f"[Agenda] /agenda: GOOGLE_OAUTH_ENABLED={_google_oauth_configured()}")
+        agenda_logger.debug(f"Google OAuth configurado: {_google_oauth_configured()}")
     except Exception:
         pass
     if not _google_oauth_configured():
@@ -34,7 +36,7 @@ def agenda_home():
 
     token = session.get('google_token')
     try:
-        print(f"[Agenda] /agenda: token na sessão? {bool(token)}; chaves={list(token.keys()) if token else None}")
+        agenda_logger.debug(f"Token na sessão: {bool(token)}; chaves={list(token.keys()) if token else None}")
     except Exception:
         pass
     if not token:
@@ -42,7 +44,7 @@ def agenda_home():
 
     access_token = token.get('access_token')
     try:
-        print(f"[Agenda] /agenda: access_token presente? {bool(access_token)}")
+        agenda_logger.debug(f"Access token presente: {bool(access_token)}")
     except Exception:
         pass
     if not access_token:
@@ -82,14 +84,14 @@ def agenda_home():
     params = {k: v for k, v in params.items() if v is not None}
 
     try:
-        print(f"[Agenda] /agenda: buscando eventos no Google Calendar...")
+        agenda_logger.info(f"Buscando eventos no Google Calendar para {g.user_email}")
         resp = requests.get(
             google_events_endpoint(calendar_id),
             headers={'Authorization': f'Bearer {access_token}'},
             params=params,
             timeout=10,
         )
-        print(f"[Agenda] /agenda: resposta Google status={resp.status_code}")
+        agenda_logger.debug(f"Resposta Google Calendar status={resp.status_code}")
         if resp.status_code == 401:
             # Token expirado; pedir reconexão
             flash('Sessão do Google expirou. Conecte novamente a Agenda.', 'warning')
@@ -98,7 +100,7 @@ def agenda_home():
         data = resp.json()
         events = data.get('items', [])
         try:
-            print(f"[Agenda] /agenda: eventos carregados={len(events)}")
+            agenda_logger.info(f"Eventos carregados: {len(events)} para {g.user_email}")
         except Exception:
             pass
         # Prepara dias da semana para o template
@@ -115,9 +117,9 @@ def agenda_home():
             search_query=query_text or '',
         )
     except Exception as e:
-        print(f"Erro ao buscar eventos do Google Calendar para {g.user_email}: {e}")
+        agenda_logger.error(f"Erro ao buscar eventos do Google Calendar para {g.user_email}: {e}", exc_info=True)
         try:
-            print(f"[Agenda] /agenda: corpo erro/resposta={getattr(resp, 'text', None)}")
+            agenda_logger.debug(f"Corpo erro/resposta: {getattr(resp, 'text', None)}")
         except Exception:
             pass
         flash('Falha ao carregar eventos da Agenda do Google.', 'error')
@@ -191,7 +193,7 @@ def agenda_callback():
         session.permanent = True
         flash('Conexão com Google concluída com sucesso!', 'success')
     except Exception as e:
-        print(f"Erro no callback OAuth Google: {e}")
+        agenda_logger.error(f"Erro no callback OAuth Google: {e}", exc_info=True)
         flash('Falha na conexão com Google.', 'error')
 
     # Se houver um destino específico após a conexão (ex.: página de e-mail), redireciona para lá

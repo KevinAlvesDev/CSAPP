@@ -21,7 +21,7 @@ _SUBMODULES = [
     'validation',
     'utils',
     'db',
-    'services',
+    'domain',  # Substituído 'services' por 'domain' (refatoração)
     'task_definitions',
     'blueprints',
 ]
