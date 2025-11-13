@@ -44,6 +44,6 @@ alembic==1.13.1
 Flask-Caching==2.1.0
 Flask-Compress==1.15
 Flask-Talisman==1.1.0
-python-magic-bin==0.4.14
+python-magic==0.4.27
 redis==5.0.1
 sentry-sdk[flask]==1.40.0
