@@ -4,7 +4,7 @@ Middleware de segurança para adicionar headers de proteção.
 Implementa CSP, HSTS, X-Frame-Options, etc.
 """
 
-from flask import current_app
+from flask import current_app, request
 
 
 def init_security_headers(app):
@@ -66,13 +66,13 @@ def init_security_headers(app):
         if is_production:
             # max-age=31536000 = 1 ano
             response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains; preload'
-        
+
         # Cache-Control para páginas sensíveis (login, perfil, etc)
-        if any(path in response.request.path for path in ['/login', '/perfil', '/management']):
+        if any(path in request.path for path in ['/login', '/perfil', '/management']):
             response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, private'
             response.headers['Pragma'] = 'no-cache'
             response.headers['Expires'] = '0'
-        
+
         return response
     
     app.logger.info("Security headers middleware initialized")
