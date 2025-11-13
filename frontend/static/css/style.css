@@ -19,7 +19,7 @@ body {
 
 :root {
     /* Tema cinza claro padrão */
-    --body-bg: #f2f4f7; /* fundo cinza claro suave */
+    --body-bg: #e6e8eb; /* fundo 5% mais escuro */
     --body-color: #1f2937; /* texto principal escuro */
     /* Alinhamento com Bootstrap */
     --bs-body-color: #212529;

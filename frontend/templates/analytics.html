@@ -278,9 +278,9 @@
                             <thead class="table-light">
                                 <tr>
                                     <th scope="col">Empresa</th>
-                                    <th scope="col">Módulo</th>
                                     <th scope="col">Responsável</th>
                                     <th scope="col">Status</th>
+                                    <th scope="col">Dias</th>
                                     <th scope="col">Ações</th>
                                 </tr>
                             </thead>
@@ -288,9 +288,27 @@
                                 {% for item in modules_lista %}
                                 <tr>
                                     <td class="text-truncate" style="max-width: 250px;">{{ item.nome_empresa | default('N/A') }}</td>
-                                    <td class="text-truncate" style="max-width: 200px;">{{ item.modulo | default('N/A') }}</td>
                                     <td class="text-truncate" style="max-width: 200px;">{{ item.cs_nome | default('N/A') }}</td>
-                                    <td>{{ item.status | default('N/A') }}</td>
+                                    <td>
+                                        {% if item.status == 'finalizada' %}
+                                            <span class="badge bg-success">Concluído</span>
+                                        {% elif item.status == 'andamento' %}
+                                            <span class="badge bg-warning text-dark">Em Andamento</span>
+                                        {% elif item.status == 'atrasada' %}
+                                            <span class="badge bg-danger">Atrasada</span>
+                                        {% elif item.status == 'parada' %}
+                                            <span class="badge bg-danger">Parada</span>
+                                        {% elif item.status == 'futura' %}
+                                            <span class="badge bg-info text-dark">Futura</span>
+                                        {% elif item.status == 'cancelada' %}
+                                            <span class="badge bg-secondary">Cancelada</span>
+                                        {% elif item.status == 'nova' %}
+                                            <span class="badge bg-dark">Nova</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ item.status | default('N/A') }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-nowrap"><span class="badge bg-secondary text-dark">{{ item.dias | default(0) }} dias</span></td>
                                     <td>
                                         <a href="{{ url_for('main.ver_implantacao', impl_id=item.impl_id | default(item.id)) }}" class="btn btn-sm btn-outline-primary py-0 px-2">Ver</a>
                                     </td>

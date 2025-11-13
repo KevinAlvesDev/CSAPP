@@ -73,9 +73,10 @@
                     <li class="nav-item" role="presentation"><button class="nav-link active" id="novas-tab" data-bs-toggle="tab" data-bs-target="#novas" type="button" role="tab">Novas</button></li>
                     <li class="nav-item" role="presentation"><button class="nav-link" id="andamento-tab" data-bs-toggle="tab" data-bs-target="#andamento" type="button" role="tab">Em Andamento</button></li>
                     <li class="nav-item" role="presentation"><button class="nav-link" id="atrasadas-tab" data-bs-toggle="tab" data-bs-target="#atrasadas" type="button" role="tab">Atrasadas</button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" id="paradas-tab" data-bs-toggle="tab" data-bs-target="#paradas" type="button" role="tab">Paradas</button></li>
                     <li class="nav-item" role="presentation"><button class="nav-link" id="futuras-tab" data-bs-toggle="tab" data-bs-target="#futuras" type="button" role="tab">Futuras</button></li>
                     <li class="nav-item" role="presentation"><button class="nav-link" id="finalizadas-tab" data-bs-toggle="tab" data-bs-target="#finalizadas" type="button" role="tab">Concluídas</button></li>
-                    <li class="nav-item" role="presentation"><button class="nav-link" id="paradas-tab" data-bs-toggle="tab" data-bs-target="#paradas" type="button" role="tab">Paradas</button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" id="modulos-tab" data-bs-toggle="tab" data-bs-target="#modulos" type="button" role="tab">Módulos</button></li>
                 </ul>
             </div>
             
@@ -194,7 +195,103 @@
                             </div>
                         {% endif %}
                     </div>
-        
+
+                    <!-- Aba Módulos (todos os módulos independentemente do status atual) -->
+                    <div class="tab-pane fade" id="modulos" role="tabpanel" aria-labelledby="modulos-tab">
+                        <h2 class="h5 mb-3">Módulos em Implantação (todos status)</h2>
+                        {% set ativos = (implantacoes_novas or []) + (implantacoes_andamento or []) + (implantacoes_atrasadas or []) + (implantacoes_paradas or []) + (implantacoes_futuras or []) %}
+                        {% set ns = namespace(has_modulos=false) %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle table-sm">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Empresa</th>
+                                        <th scope="col">Implantador</th>
+                                        <th scope="col">Módulo</th>
+                                        <th scope="col">Status</th>
+                                        <th scope="col">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for impl in ativos %}
+                                        {% if impl.tipo == 'modulo' %}
+                                            {% set ns.has_modulos = true %}
+                                            <tr>
+                                                <td class="text-truncate" style="max-width: 200px;">
+                                                    <a href="#" class="btn-edit-empresa fw-bold text-decoration-none"
+                                                       data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa"
+                                                       data-id="{{ impl.id }}"
+                                                       data-nome="{{ impl.nome_empresa }}"
+                                                       data-responsavel="{{ impl.responsavel_cliente | default('') }}"
+                                                       data-cargo="{{ impl.cargo_responsavel | default('') }}"
+                                                       data-telefone="{{ impl.telefone_responsavel | default('') }}"
+                                                       data-email="{{ impl.email_responsavel | default('') }}"
+                                                       data-inicio-implantacao="{{ impl.data_criacao_iso | default('') }}"
+                                                       data-inicio-efetivo-iso="{{ impl.data_inicio_efetivo_iso | default('') }}"
+                                                       data-inicio-producao="{{ impl.data_inicio_producao_iso | default('') }}"
+                                                       data-final-implantacao="{{ impl.data_final_implantacao_iso | default('') }}"
+                                                       data-chave-oamd="{{ impl.chave_oamd | default('') }}"
+                                                       data-catraca="{{ impl.catraca | default('') }}"
+                                                       data-facial="{{ impl.facial | default('') }}"
+                                                       data-nivel-receita="{{ impl.nivel_receita | default('') }}"
+                                                       data-valor-atribuido="{{ impl.valor_atribuido | default('') }}"
+                                                       data-id-favorecido="{{ impl.id_favorecido | default('') }}"
+                                                       data-tela-apoio-link="{{ impl.tela_apoio_link | default('') }}"
+                                                       data-resp-estrategico-nome="{{ impl.resp_estrategico_nome | default('') }}"
+                                                       data-resp-onb-nome="{{ impl.resp_onb_nome | default('') }}"
+                                                       data-resp-estrategico-obs="{{ impl.resp_estrategico_obs | default('') }}"
+                                                       data-contatos="{{ impl.contatos | default('') }}"
+                                                       data-seguimento="{{ impl.seguimento | default('') }}"
+                                                       data-tipos-planos="{{ impl.tipos_planos | default('') }}"
+                                                       data-modalidades="{{ impl.modalidades | default('') }}"
+                                                       data-horarios-func="{{ impl.horarios_func | default('') }}"
+                                                       data-formas-pagamento="{{ impl.formas_pagamento | default('') }}"
+                                                       data-diaria="{{ impl.diaria | default('') }}"
+                                                       data-freepass="{{ impl.freepass | default('') }}"
+                                                       data-alunos-ativos="{{ impl.alunos_ativos | default(0) }}"
+                                                       data-sistema-anterior="{{ impl.sistema_anterior | default('') }}"
+                                                       data-importacao="{{ impl.importacao | default('') }}"
+                                                       data-recorrencia-usa="{{ impl.recorrencia_usa | default('') }}"
+                                                       data-boleto="{{ impl.boleto | default('') }}"
+                                                       data-nota-fiscal="{{ impl.nota_fiscal | default('') }}">
+                                                        {{ impl.nome_empresa }}
+                                                    </a>
+                                                </td>
+                                                <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or impl.usuario_cs }}</td>
+                                                <td>
+                                                    <span class="badge bg-info text-dark">{{ impl.modulo_tipo or impl.modulo_nome or 'Módulo' }}</span>
+                                                </td>
+                                                <td>
+                                                    {% if impl.status == 'nova' %}
+                                                        <span class="badge bg-dark">Nova</span>
+                                                    {% elif impl.status == 'andamento' %}
+                                                        <span class="badge bg-warning text-dark">Em Andamento</span>
+                                                    {% elif impl.status == 'atrasada' %}
+                                                        <span class="badge bg-danger">Atrasada</span>
+                                                    {% elif impl.status == 'parada' %}
+                                                        <span class="badge bg-danger">Parada</span>
+                                                    {% elif impl.status == 'futura' %}
+                                                        <span class="badge bg-info text-dark">Futura</span>
+                                                    {% else %}
+                                                        <span class="badge bg-secondary">{{ impl.status | default('N/A') }}</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary">
+                                                        <i class="bi bi-eye me-1"></i> Ver Detalhes
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        {% endif %}
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% if not ns.has_modulos %}
+                            <div class="alert alert-info text-center" role="alert"> Nenhum módulo em implantação encontrado. </div>
+                        {% endif %}
+                    </div>
+
                     <div class="tab-pane fade" id="andamento" role="tabpanel" aria-labelledby="andamento-tab">
                         <h2 class="h5 mb-3">Clientes em Andamento</h2>
                         {% if not implantacoes_andamento %} <div class="alert alert-info text-center" role="alert"> Nenhuma implantação em andamento. </div>

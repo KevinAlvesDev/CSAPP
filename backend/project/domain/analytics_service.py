@@ -140,17 +140,75 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
     impl_list = impl_list if impl_list is not None else []
     # Separa por tipo para uso específico em gráficos/cards (completas) e na lista de módulos
     impl_completas = [impl for impl in impl_list if isinstance(impl, dict) and impl.get('tipo') == 'completa']
-    modules_implantacao_lista = [
-        {
+    # Monta lista de módulos com cálculo de dias em status
+    modules_implantacao_lista = []
+    def _to_dt(val):
+        if not val:
+            return None
+        if isinstance(val, datetime):
+            return val
+        if isinstance(val, date) and not isinstance(val, datetime):
+            return datetime.combine(val, datetime.min.time())
+        if isinstance(val, str):
+            try:
+                return datetime.fromisoformat(val.replace('Z', '+00:00'))
+            except ValueError:
+                try:
+                    return datetime.strptime(val, '%Y-%m-%d %H:%M:%S.%f') if '.' in val else datetime.strptime(val, '%Y-%m-%d %H:%M:%S')
+                except ValueError:
+                    try:
+                        return datetime.strptime(val, '%Y-%m-%d')
+                    except ValueError:
+                        return None
+        return None
+
+    for impl in impl_list:
+        if not isinstance(impl, dict) or impl.get('tipo') != 'modulo':
+            continue
+
+        status = impl.get('status')
+        dias = 0
+
+        if status == 'parada':
+            try:
+                dias_parada = calculate_time_in_status(impl.get('id'), 'parada')
+                dias = dias_parada if dias_parada is not None else 0
+            except Exception:
+                dias = 0
+        elif status in ['andamento', 'atrasada']:
+            di = _to_dt(impl.get('data_inicio_efetivo'))
+            if di:
+                agora_naive = agora.replace(tzinfo=None) if agora.tzinfo else agora
+                inicio_naive = di.replace(tzinfo=None) if di.tzinfo else di
+                try:
+                    delta = agora_naive - inicio_naive
+                    dias = delta.days if delta.days >= 0 else 0
+                except TypeError:
+                    dias = 0
+            else:
+                dias = 0
+        else:
+            dc = _to_dt(impl.get('data_criacao'))
+            if dc:
+                agora_naive = agora.replace(tzinfo=None) if agora.tzinfo else agora
+                criacao_naive = dc.replace(tzinfo=None) if dc.tzinfo else dc
+                try:
+                    delta = agora_naive - criacao_naive
+                    dias = delta.days if delta.days >= 0 else 0
+                except TypeError:
+                    dias = 0
+            else:
+                dias = 0
+
+        modules_implantacao_lista.append({
             'impl_id': impl.get('id'),
             'id': impl.get('id'),
             'nome_empresa': impl.get('nome_empresa'),
             'cs_nome': impl.get('cs_nome', impl.get('usuario_cs')),
-            'status': impl.get('status'),
-            'modulo': impl.get('modulo')
-        }
-        for impl in impl_list if isinstance(impl, dict) and impl.get('tipo') == 'modulo'
-    ]
+            'status': status,
+            'modulo': impl.get('modulo'),
+            'dias': dias,
+        })
     
     # 2. BUSCA DE TODOS OS PERFIS DE CS (PARA RANKING E FILTROS)
     all_cs_profiles = query_db("SELECT usuario, nome, cargo, perfil_acesso FROM perfil_usuario")

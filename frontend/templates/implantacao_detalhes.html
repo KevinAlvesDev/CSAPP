@@ -288,7 +288,7 @@
 </div>
 
 <div class="modal fade" id="modalFinalizar" tabindex="-1"> <div class="modal-dialog"> <div class="modal-content"> <div class="modal-header header-bg"><h5 class="modal-title">Finalizar</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div> <form action="{{ url_for('actions.finalizar_implantacao') }}" method="POST">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"> <div class="modal-body"> <p>Tem certeza?</p> <p class="small text-warning">Só permitido se tarefas obrig./trein. concluídas.</p> <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}"> <input type="hidden" name="redirect_to" value="detalhes"> </div> <div class="modal-footer header-bg"> <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button> <button type="submit" class="btn btn-success">Confirmar</button> </div> </form> </div> </div> </div>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"> <div class="modal-body"> <p>Tem certeza?</p> <p class="small text-danger">Só permitido se tarefas obrig./trein. concluídas.</p> <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}"> <input type="hidden" name="redirect_to" value="detalhes"> </div> <div class="modal-footer header-bg"> <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button> <button type="submit" class="btn btn-success">Confirmar</button> </div> </form> </div> </div> </div>
 
 <div class="modal fade" id="modalParar" tabindex="-1"> 
     <div class="modal-dialog"> 
@@ -302,7 +302,7 @@
                     
                     <div class="mb-3"> 
                         <label for="data_parada" class="form-label fw-bold">Data da Parada (Início Retroativo) <span class="text-danger">*</span></label> 
-                        <input type="date" class="form-control" id="data_parada" name="data_parada" required>
+                        <input type="text" class="form-control" id="data_parada" name="data_parada" required placeholder="DD/MM/AAAA" inputmode="numeric" pattern="\d{2}/\d{2}/\d{4}">
                     </div>
 
                     <div class="mb-3"> 
@@ -351,7 +351,7 @@
                     
                     <div class="mb-3">
                         <label for="data_cancelamento" class="form-label fw-bold">Data do Cancelamento <span class="text-danger">*</span></label>
-                        <input type="date" class="form-control" id="data_cancelamento" name="data_cancelamento" required>
+                        <input type="text" class="form-control" id="data_cancelamento" name="data_cancelamento" required placeholder="DD/MM/AAAA" inputmode="numeric" pattern="\d{2}/\d{2}/\d{4}">
                     </div>
 
                     <div class="mb-3">
@@ -376,6 +376,50 @@
     
     <script>
     (function() {
+        function brToIsoDate(str) {
+            if (!str) return null;
+            var m = str.trim().match(/^([0-3]\d)\/([01]\d)\/(\d{4})$/);
+            if (!m) return null;
+            var d = m[1], mo = m[2], y = m[3];
+            return y + '-' + mo + '-' + d; // YYYY-MM-DD
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var formParar = document.querySelector('#modalParar form');
+            if (formParar) {
+                formParar.addEventListener('submit', function(ev) {
+                    var inp = formParar.querySelector('#data_parada');
+                    if (inp) {
+                        var iso = brToIsoDate(inp.value);
+                        if (!iso) {
+                            ev.preventDefault();
+                            alert('Informe a data da parada em formato DD/MM/AAAA.');
+                            inp.focus();
+                            return;
+                        }
+                        inp.value = iso;
+                    }
+                });
+            }
+
+            var formCancelar = document.querySelector('#modalCancelar form');
+            if (formCancelar) {
+                formCancelar.addEventListener('submit', function(ev) {
+                    var inp = formCancelar.querySelector('#data_cancelamento');
+                    if (inp) {
+                        var iso = brToIsoDate(inp.value);
+                        if (!iso) {
+                            ev.preventDefault();
+                            alert('Informe a data do cancelamento em formato DD/MM/AAAA.');
+                            inp.focus();
+                            return;
+                        }
+                        inp.value = iso;
+                    }
+                });
+            }
+        });
+        
         function getVisibilidade(form) {
             var sel = form.querySelector('select[name="visibilidade"]');
             return sel ? (sel.value || '').toLowerCase() : '';

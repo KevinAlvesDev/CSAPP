@@ -7,7 +7,7 @@
         <thead>
             <tr class="table-light">
                 <th>Usuário (E-mail)</th>
-                <th>Nome / Cargo</th> {# ALTERADO #}
+                <th>Nome</th> {# ALTERADO: remover exibição de cargo #}
                 <th>Perfil de Acesso</th> {# ALTERADO #}
                 <th>Alterar Perfil de Acesso</th>
                 {# COLUNA EXCLUIR #}
@@ -26,7 +26,7 @@
                     <strong class="text-truncate" style="max-width: 150px; display: inline-block;">{{ user.usuario }}</strong>
                 </td>
                 <td>
-                    {{ user.nome or 'N/A' }} / {{ user.cargo or 'Sem Cargo' }}
+                    {{ user.nome or 'N/A' }}
                 </td>
                 <td>
                     {% if user.perfil_acesso %}

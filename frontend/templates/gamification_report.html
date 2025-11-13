@@ -90,7 +90,6 @@
                         <tr>
                             <th scope="col">Colaborador</th>
                             <th scope="col">Impl. Finalizadas (Mês)</th>
-                            <th scope="col">TMA Médio (Mês)</th>
                             <th scope="col">Status</th>
                             <th scope="col">Comissão</th>
                             <th scope="col">Pontuação Final</th>
@@ -100,7 +99,7 @@
                     <tbody>
                         {% if not report_data %}
                             <tr>
-                                <td colspan="7" class="text-center text-muted p-4">
+                                <td colspan="6" class="text-center text-muted p-4">
                                     Nenhum dado encontrado para os filtros selecionados.
                                     <br>
                                     <small>Certifique-se de que as <a href="{{ url_for('gamification.manage_gamification_metrics') }}">métricas manuais</a> foram preenchidas para este período.</small>
@@ -112,7 +111,6 @@
                         <tr class="table-light">
                             <td><strong>{{ data.usuario_nome }}</strong></td>
                             <td>{{ data.impl_finalizadas_mes }}</td>
-                            <td>{{ data.tma_medio_mes }} dias</td>
                             <td><span class="badge bg-success fs-6">Elegível</span></td>
                             <td>
                                 {# Cálculo da comissão baseado na tabela de referência #}
@@ -181,7 +179,7 @@
                             </td>
                         </tr>
                         <tr class="collapse" id="details-ne-{{ loop.index }}">
-                            <td colspan="7" class="p-0">
+                            <td colspan="6" class="p-0">
                                 <div class="p-3 bg-light">
                                     <h6 class="text-danger">Motivos da Inelegibilidade</h6>
                                     <p class="mb-0">{{ data.motivo_inelegibilidade | default('Motivo não especificado ou erro no cálculo.') }}</p>

@@ -225,6 +225,21 @@ table > :not(caption) > * > * {
 .btn-outline-info,
 .btn-outline-light,
 .btn-outline-dark { color: #000000 !important; }
+
+/* Ajuste solicitado: btn-outline-primary deve aparecer azul */
+.btn-outline-primary {
+  color: #0d6efd !important;
+  border-color: #0d6efd !important;
+}
 /* Ícone de fechar do modal sem inversão */
 .btn-close { filter: none; opacity: 0.85; }
 .btn-close:hover { opacity: 1; }
+
+/* Link de empresa nos cards/tabelas do Dashboard */
+.btn-edit-empresa {
+  color: #0d6efd;
+}
+.btn-edit-empresa:hover,
+.btn-edit-empresa:focus {
+  color: #0b5ed7;
+}
