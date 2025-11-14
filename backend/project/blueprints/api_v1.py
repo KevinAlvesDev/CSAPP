@@ -16,11 +16,13 @@ Endpoints disponíveis:
 
 from flask import Blueprint, request, jsonify, g, current_app
 from ..blueprints.auth import login_required
+from ..constants import PERFIS_COM_GESTAO
 from ..db import query_db, execute_db
 from ..extensions import limiter
 from ..validation import validate_integer, sanitize_string, ValidationError
 from ..logging_config import api_logger
 from flask_limiter.util import get_remote_address
+from datetime import datetime, date
 
 
 api_v1_bp = Blueprint('api_v1', __name__, url_prefix='/api/v1')
@@ -128,15 +130,25 @@ def get_implantacao(impl_id):
     try:
         user_email = g.user_email
         
-        # Busca implantação
-        impl = query_db(
-            """SELECT i.*, p.nome as cs_nome
-               FROM implantacoes i
-               LEFT JOIN perfil_usuario p ON i.usuario_cs = p.usuario
-               WHERE i.id = %s AND i.usuario_cs = %s""",
-            (impl_id, user_email),
-            one=True
-        )
+        is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
+        if is_manager:
+            impl = query_db(
+                """SELECT i.*, p.nome as cs_nome
+                   FROM implantacoes i
+                   LEFT JOIN perfil_usuario p ON i.usuario_cs = p.usuario
+                   WHERE i.id = %s""",
+                (impl_id,),
+                one=True
+            )
+        else:
+            impl = query_db(
+                """SELECT i.*, p.nome as cs_nome
+                   FROM implantacoes i
+                   LEFT JOIN perfil_usuario p ON i.usuario_cs = p.usuario
+                   WHERE i.id = %s AND i.usuario_cs = %s""",
+                (impl_id, user_email),
+                one=True
+            )
         
         if not impl:
             return jsonify({'ok': False, 'error': 'Implantação não encontrada'}), 404
@@ -158,4 +170,52 @@ def get_implantacao(impl_id):
     except Exception as e:
         api_logger.error(f"Error getting implantacao {impl_id}: {e}")
         return jsonify({'ok': False, 'error': str(e)}), 500
+
+@api_v1_bp.route('/implantacoes/<int:impl_id>/status/atrasada', methods=['POST'])
+@login_required
+@limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
+def marcar_atrasada(impl_id):
+    try:
+        impl = query_db("SELECT status, data_inicio_efetivo, nome_empresa FROM implantacoes WHERE id = %s", (impl_id,), one=True)
+        if not impl:
+            return jsonify({'ok': False, 'error': 'Implantacao nao encontrada'}), 404
+        status = impl.get('status')
+        di = impl.get('data_inicio_efetivo')
+        di_dt = None
+        if isinstance(di, str):
+            try:
+                di_dt = datetime.fromisoformat(di.replace('Z', '+00:00'))
+            except ValueError:
+                try:
+                    if '.' in di:
+                        di_dt = datetime.strptime(di, '%Y-%m-%d %H:%M:%S.%f')
+                    else:
+                        di_dt = datetime.strptime(di, '%Y-%m-%d %H:%M:%S')
+                except ValueError:
+                    try:
+                        di_dt = datetime.strptime(di, '%Y-%m-%d')
+                    except ValueError:
+                        di_dt = None
+        elif isinstance(di, date) and not isinstance(di, datetime):
+            di_dt = datetime.combine(di, datetime.min.time())
+        elif isinstance(di, datetime):
+            di_dt = di
+        if not di_dt:
+            return jsonify({'ok': False, 'error': 'Data de inicio efetivo ausente'}), 400
+        agora = datetime.now()
+        agora_naive = agora.replace(tzinfo=None) if agora.tzinfo else agora
+        inicio_naive = di_dt.replace(tzinfo=None) if di_dt.tzinfo else di_dt
+        dias = (agora_naive - inicio_naive).days
+        if dias > 25 and status == 'andamento':
+            execute_db("UPDATE implantacoes SET status = 'atrasada' WHERE id = %s", (impl_id,))
+            api_logger.info(f"Implantacao {impl_id} marcada como atrasada")
+            return jsonify({'ok': True, 'status': 'atrasada', 'dias': dias})
+        if dias <= 25 and status == 'atrasada':
+            execute_db("UPDATE implantacoes SET status = 'andamento' WHERE id = %s", (impl_id,))
+            api_logger.info(f"Implantacao {impl_id} revertida para andamento")
+            return jsonify({'ok': True, 'status': 'andamento', 'dias': dias})
+        return jsonify({'ok': True, 'status': status, 'dias': dias})
+    except Exception as e:
+        api_logger.error(f"Erro ao marcar atrasada: {e}", exc_info=True)
+        return jsonify({'ok': False, 'error': 'Erro interno'}), 500
 

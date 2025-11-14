@@ -209,26 +209,22 @@ def execute_and_fetch_one(query, args=()):
 
 
 def logar_timeline(implantacao_id, usuario_cs, tipo_evento, detalhe):
-    """Registra um evento na timeline. Falha silenciosamente."""
     conn, db_type = None, None
     try:
         conn, db_type = get_db_connection()
         cursor = conn.cursor()
-        
         sql = "INSERT INTO timeline_log (implantacao_id, usuario_cs, tipo_evento, detalhes, data_criacao) VALUES (%s, %s, %s, %s, %s)"
-        
         if db_type == 'sqlite':
             sql = sql.replace('%s', '?')
-            
         cursor.execute(sql, (implantacao_id, usuario_cs, tipo_evento, detalhe, datetime.now()))
         conn.commit()
-        
     except Exception as e:
         print(f"ERRO CRÍTICO: Falha ao logar timeline para Impl. ID {implantacao_id}. Erro: {e}")
         if conn:
             conn.rollback()
     finally:
-        if conn:
+        use_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
+        if use_sqlite and conn:
             conn.close()
 
 

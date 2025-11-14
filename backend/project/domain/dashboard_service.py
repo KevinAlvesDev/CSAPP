@@ -124,7 +124,8 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
     metrics = {
         'impl_andamento_total': 0, 'implantacoes_atrasadas': 0,
         'implantacoes_futuras': 0, 'impl_finalizadas': 0, 'impl_paradas': 0,
-        'impl_novas': 0, 
+        'impl_novas': 0,
+        'modulos_total': 0,
         'total_valor_andamento': 0.0,
         'total_valor_atrasadas': 0.0,
         'total_valor_futuras': 0.0,
@@ -147,6 +148,11 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
             continue
 
         status = impl.get('status')
+        try:
+            if impl.get('tipo') == 'modulo' and status in ['nova','andamento','atrasada','parada','futura']:
+                metrics['modulos_total'] += 1
+        except Exception:
+            pass
 
         impl['data_criacao_iso'] = format_date_iso_for_json(impl.get('data_criacao'), only_date=True)
         impl['data_inicio_efetivo_iso'] = format_date_iso_for_json(impl.get('data_inicio_efetivo'), only_date=True)
@@ -275,14 +281,34 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
 
         elif status == 'andamento':
             metrics['impl_andamento_total'] += 1 
-            
             if dias_passados > 25:
+                try:
+                    execute_db("UPDATE implantacoes SET status = 'atrasada' WHERE id = %s AND status = 'andamento'", (impl_id,))
+                    status = 'atrasada'
+                    impl['status'] = 'atrasada'
+                except Exception:
+                    pass
                 dashboard_data['atrasadas'].append(impl)
                 metrics['implantacoes_atrasadas'] += 1
                 metrics['total_valor_atrasadas'] += impl_valor
             else:
                 dashboard_data['andamento'].append(impl)
                 metrics['total_valor_andamento'] += impl_valor 
+        elif status == 'atrasada':
+            metrics['implantacoes_atrasadas'] += 1
+            if dias_passados <= 25:
+                try:
+                    execute_db("UPDATE implantacoes SET status = 'andamento' WHERE id = %s AND status = 'atrasada'", (impl_id,))
+                    status = 'andamento'
+                    impl['status'] = 'andamento'
+                    dashboard_data['andamento'].append(impl)
+                    metrics['total_valor_andamento'] += impl_valor
+                except Exception:
+                    dashboard_data['atrasadas'].append(impl)
+                    metrics['total_valor_atrasadas'] += impl_valor
+            else:
+                dashboard_data['atrasadas'].append(impl)
+                metrics['total_valor_atrasadas'] += impl_valor
 
         else:
             current_app.logger.warning(f"Unknown or null status for implantacao {impl_id}: '{status}'. Skipping categorization.")

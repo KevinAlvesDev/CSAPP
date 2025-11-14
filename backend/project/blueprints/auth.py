@@ -191,6 +191,12 @@ def admin_required(f):
 def rate_limit(max_requests):
     """Decorator condicional para rate limiting."""
     def decorator(f):
+        try:
+            from flask import current_app
+            if current_app and not current_app.config.get('RATELIMIT_ENABLED', True):
+                return f
+        except Exception:
+            pass
         if limiter:
             return limiter.limit(max_requests)(f)
         return f
@@ -202,6 +208,10 @@ def rate_limit(max_requests):
 def change_password():
     """Permite ao usuário autenticado alterar sua senha."""
     if request.method == 'GET':
+        try:
+            session.pop('_flashes', None)
+        except Exception:
+            pass
         return render_template('change_password.html', auth0_enabled=False)
 
     # POST
@@ -250,6 +260,10 @@ def change_password():
 def forgot_password():
     """Solicita recuperação de senha via e-mail com token."""
     if request.method == 'GET':
+        try:
+            session.pop('_flashes', None)
+        except Exception:
+            pass
         return render_template('forgot_password.html', auth0_enabled=False)
 
     email = (request.form.get('email') or '').strip().lower()
@@ -313,6 +327,10 @@ def reset_password(token):
         return redirect(url_for('auth.forgot_password'))
 
     if request.method == 'GET':
+        try:
+            session.pop('_flashes', None)
+        except Exception:
+            pass
         return render_template('reset_password.html', auth0_enabled=False)
 
     new_password = request.form.get('new_password', '')
@@ -357,6 +375,10 @@ def login():
     
     # Sistema de login próprio
     if request.method == 'GET':
+        try:
+            session.pop('_flashes', None)
+        except Exception:
+            pass
         return render_template('login.html', auth0_enabled=False, use_custom_auth=True)
     
     # POST: processa login
@@ -536,6 +558,10 @@ def dev_login_as():
         abort(404)  # Retorna 404 para não revelar que a rota existe
 
     if request.method == 'GET':
+        try:
+            session.pop('_flashes', None)
+        except Exception:
+            pass
         return render_template('dev_login.html', auth0_enabled=False)
 
     # POST: processa formulário
@@ -588,6 +614,10 @@ def register():
         return redirect(url_for('auth.login'))
     
     if request.method == 'GET':
+        try:
+            session.pop('_flashes', None)
+        except Exception:
+            pass
         return render_template('register.html', auth0_enabled=False)
     
     # POST: processa registro

@@ -13,6 +13,7 @@ from ..blueprints.auth import login_required, permission_required
 # --- INÍCIO DA CORREÇÃO (BUG 4) ---
 # Importa a nova função 'execute_and_fetch_one'
 from ..db import query_db, execute_db, logar_timeline, execute_and_fetch_one
+from ..cache_config import clear_user_cache, clear_implantacao_cache
 # --- FIM DA CORREÇÃO (BUG 4) ---
 # Importa dos novos arquivos de serviço no domínio
 from ..domain.implantacao_service import _get_progress, _create_default_tasks
@@ -39,6 +40,7 @@ from ..extensions import r2_client # Necessário para excluir_implantacao
 from ..extensions import limiter
 from flask_limiter.util import get_remote_address
 from ..validation import validate_integer, sanitize_string, validate_date, ValidationError
+from ..logging_config import app_logger
 
 # --- CORREÇÃO: Renomeado de 'actions_bp' para 'implantacao_actions_bp' ---
 implantacao_actions_bp = Blueprint('actions', __name__)
@@ -134,6 +136,14 @@ def criar_implantacao():
             tasks_added = _create_default_tasks(implantacao_id) #
             
         flash(f'Implantação "{nome_empresa}" criada com {tasks_added} tarefas padrão.', 'success')
+        # Invalida caches relacionados para refletir imediatamente no dashboard
+        try:
+            clear_user_cache(usuario_criador)
+            if usuario_atribuido and usuario_atribuido != usuario_criador:
+                clear_user_cache(usuario_atribuido)
+            clear_implantacao_cache(implantacao_id)
+        except Exception:
+            pass
         # --- AJUSTE 1 (Redirecionamento) ---
         # Redireciona para o dashboard, não para os detalhes
         return redirect(url_for('main.dashboard'))
@@ -218,6 +228,14 @@ def criar_implantacao_modulo():
 
         modulo_label = modulo_opcoes.get(modulo_tipo, modulo_tipo)
         logar_timeline(implantacao_id, usuario_criador, 'implantacao_criada', f'Implantação de Módulo "{nome_empresa}" (módulo: {modulo_label}) criada e atribuída a {usuario_atribuido}.')
+        # Invalida caches relacionados
+        try:
+            clear_user_cache(usuario_criador)
+            if usuario_atribuido and usuario_atribuido != usuario_criador:
+                clear_user_cache(usuario_atribuido)
+            clear_implantacao_cache(implantacao_id)
+        except Exception:
+            pass
         
         # NOTA: Módulos não criam tarefas padrão, apenas a "Obrigações para Finalização"
         # que deve ser adicionada manualmente ou em outro lugar.
@@ -280,6 +298,11 @@ def iniciar_implantacao():
         )
         logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Implantação "{impl.get("nome_empresa", "N/A")}" iniciada.') #
         flash('Implantação iniciada com sucesso!', 'success')
+        try:
+            clear_user_cache(usuario_cs_email)
+            clear_implantacao_cache(implantacao_id)
+        except Exception:
+            pass
         
         # Após iniciar, sempre vai para a página de detalhes
         return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
@@ -300,6 +323,12 @@ def agendar_implantacao():
     if not data_prevista:
         flash('A data de início previsto é obrigatória.', 'error')
         return redirect(url_for('main.dashboard'))
+    try:
+        data_prevista_dt = validate_date(data_prevista)
+        data_prevista_iso = data_prevista_dt.isoformat()
+    except ValidationError:
+        flash('Data de início inválida. Formatos aceitos: DD/MM/AAAA, MM/DD/AAAA, AAAA-MM-DD.', 'error')
+        return redirect(url_for('main.dashboard'))
 
     try:
         impl = query_db(
@@ -317,10 +346,15 @@ def agendar_implantacao():
 
         execute_db(
             "UPDATE implantacoes SET status = 'futura', data_inicio_previsto = %s WHERE id = %s",
-            (data_prevista, implantacao_id)
+            (data_prevista_iso, implantacao_id)
         )
-        logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Início da implantação "{impl.get("nome_empresa")}" agendado para {data_prevista}.')
+        logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Início da implantação "{impl.get("nome_empresa")}" agendado para {data_prevista_iso}.')
         flash(f'Implantação "{impl.get("nome_empresa")}" movida para "Futuras" com início em {data_prevista}.', 'success')
+        try:
+            clear_user_cache(usuario_cs_email)
+            clear_implantacao_cache(implantacao_id)
+        except Exception:
+            pass
 
     except Exception as e:
         print(f"Erro ao agendar implantação ID {implantacao_id}: {e}")
@@ -341,46 +375,74 @@ def finalizar_implantacao():
         dest_url = url_for('main.ver_implantacao', impl_id=implantacao_id)
 
     try:
-        impl = query_db( #
+        app_logger.info(f"Finalizar solicitada por {usuario_cs_email} para implantacao_id={implantacao_id}")
+        impl = query_db(
             "SELECT usuario_cs, nome_empresa, status FROM implantacoes WHERE id = %s",
             (implantacao_id,), one=True
         )
-        if not impl or impl.get('usuario_cs') != usuario_cs_email or impl.get('status') != 'andamento':
-            raise Exception('Operação negada. Implantação não está "em andamento".')
+        if not impl:
+            app_logger.warning(f"Finalizar negada: implantação inexistente id={implantacao_id} user={usuario_cs_email}")
+            flash('Implantação não encontrada.', 'error')
+            return redirect(dest_url)
+        if impl.get('usuario_cs') != usuario_cs_email:
+            app_logger.warning(f"Finalizar negada: permissão user={usuario_cs_email} não é dono da implantação id={implantacao_id}")
+            flash('Permissão negada. Esta implantação não pertence a você.', 'error')
+            return redirect(dest_url)
+        if impl.get('status') != 'andamento':
+            app_logger.warning(f"Finalizar negada: status atual='{impl.get('status')}' id={implantacao_id} user={usuario_cs_email}")
+            flash(f"Operação não permitida: status atual é '{impl.get('status')}'. Retome ou inicie antes de finalizar.", 'warning')
+            return redirect(dest_url)
 
         # Conta tarefas pendentes fora do módulo "Pendências" e inclui tarefas sem módulo (NULL)
         pending_tasks = query_db(
-            "SELECT COUNT(*) as total FROM tarefas WHERE implantacao_id = %s AND concluida = %s AND (tarefa_pai != %s OR tarefa_pai IS NULL)",
-            (implantacao_id, 0, MODULO_PENDENCIAS), one=True
+            "SELECT COUNT(*) as total FROM tarefas WHERE implantacao_id = %s AND concluida = %s",
+            (implantacao_id, 0), one=True
         )
 
         # Garante que existam tarefas obrigatórias/treinamento cadastradas (fora de Pendências)
-        total_nonpend_tasks = query_db(
-            "SELECT COUNT(*) as total FROM tarefas WHERE implantacao_id = %s AND (tarefa_pai != %s OR tarefa_pai IS NULL)",
-            (implantacao_id, MODULO_PENDENCIAS), one=True
+        total_tasks_row = query_db(
+            "SELECT COUNT(*) as total FROM tarefas WHERE implantacao_id = %s",
+            (implantacao_id,), one=True
         )
 
-        total_nonpend = total_nonpend_tasks.get('total', 0) if total_nonpend_tasks else 0
-        if total_nonpend == 0:
-            flash('Não é possível finalizar: nenhuma tarefa obrigatória/treinamento foi cadastrada.', 'error')
+        total_all = total_tasks_row.get('total', 0) if total_tasks_row else 0
+        app_logger.info(f"Finalizar validação tarefas: total={total_all} pendentes={pending_tasks.get('total', 0) if pending_tasks else 0} id={implantacao_id} user={usuario_cs_email}")
+        if total_all == 0:
+            flash('Não é possível finalizar: nenhuma tarefa foi cadastrada.', 'error')
             return redirect(dest_url)
 
         if pending_tasks and pending_tasks.get('total', 0) > 0:
             total_pendentes = pending_tasks.get('total')
-            flash(f'Não é possível finalizar: {total_pendentes} tarefas obrigatórias/treinamento ainda estão pendentes.', 'error')
+            nomes = query_db(
+                "SELECT tarefa_filho FROM tarefas WHERE implantacao_id = %s AND concluida = %s ORDER BY tarefa_filho LIMIT 10",
+                (implantacao_id, 0)
+            ) or []
+            nomes_txt = ", ".join([n.get('tarefa_filho') for n in nomes])
+            flash(f'Não é possível finalizar: {total_pendentes} tarefa(s) pendente(s). Pendentes: {nomes_txt}...', 'error')
             return redirect(dest_url)
 
-        execute_db( #
+        execute_db(
             "UPDATE implantacoes SET status = 'finalizada', data_finalizacao = CURRENT_TIMESTAMP WHERE id = %s",
             (implantacao_id,)
         )
         logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Implantação "{impl.get("nome_empresa", "N/A")}" finalizada manually.') #
         flash('Implantação finalizada com sucesso!', 'success')
+        try:
+            clear_user_cache(usuario_cs_email)
+            clear_implantacao_cache(implantacao_id)
+        except Exception:
+            pass
+        app_logger.info(f"Finalizar concluída id={implantacao_id} user={usuario_cs_email}")
+        try:
+            clear_user_cache(usuario_cs_email)
+            clear_implantacao_cache(implantacao_id)
+        except Exception:
+            pass
 
     except Exception as e:
-        print(f"Erro ao finalizar implantação ID {implantacao_id}: {e}")
-        flash(f'Erro ao finalizar implantação: {e}', 'error')
-
+        app_logger.error(f"Erro ao finalizar implantação id={implantacao_id} user={usuario_cs_email}: {e}")
+        flash('Erro ao finalizar implantação.', 'error')
+    
     return redirect(dest_url)
 
 @implantacao_actions_bp.route('/parar_implantacao', methods=['POST'])
@@ -399,11 +461,16 @@ def parar_implantacao():
         flash('O motivo da parada é obrigatório.', 'error')
         return redirect(dest_url)
     
-    # --- NOVA VALIDAÇÃO ---
+    # --- VALIDAÇÃO DE DATA ---
     if not data_parada:
         flash('A data da parada é obrigatória.', 'error')
         return redirect(dest_url)
-    # ------------------------------
+    try:
+        data_parada_dt = validate_date(data_parada)
+        data_parada_iso = data_parada_dt.isoformat()
+    except ValidationError:
+        flash('Data da parada inválida. Formatos aceitos: DD/MM/AAAA, MM/DD/AAAA, AAAA-MM-DD.', 'error')
+        return redirect(dest_url)
 
     try:
         impl = query_db( 
@@ -413,13 +480,18 @@ def parar_implantacao():
         if not impl or impl.get('usuario_cs') != usuario_cs_email or impl.get('status') != 'andamento':
             raise Exception('Operação negada. Implantação não está "em andamento".')
 
-        # --- UPDATE CORRIGIDO: Usa data_parada retroativa ---
+        # --- UPDATE: Usa data_parada validada (ISO) ---
         execute_db(
             "UPDATE implantacoes SET status = 'parada', data_finalizacao = %s, motivo_parada = %s WHERE id = %s",
-            (data_parada, motivo, implantacao_id)
+            (data_parada_iso, motivo, implantacao_id)
         )
-        logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Implantação "{impl.get("nome_empresa", "N/A")}" parada retroativamente em {data_parada}. Motivo: {motivo}')
+        logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Implantação "{impl.get("nome_empresa", "N/A")}" parada retroativamente em {data_parada_iso}. Motivo: {motivo}')
         flash('Implantação marcada como "Parada" com data retroativa.', 'success')
+        try:
+            clear_user_cache(usuario_cs_email)
+            clear_implantacao_cache(implantacao_id)
+        except Exception:
+            pass
 
     except Exception as e:
         print(f"Erro ao parar implantação ID {implantacao_id}: {e}")
@@ -454,6 +526,11 @@ def retomar_implantacao():
         )
         logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Implantação "{impl.get("nome_empresa", "N/A")}" retomada.') #
         flash('Implantação retomada e movida para "Em Andamento".', 'success')
+        try:
+            clear_user_cache(usuario_cs_email)
+            clear_implantacao_cache(implantacao_id)
+        except Exception:
+            pass
 
     except Exception as e:
         print(f"Erro ao retomar implantação ID {implantacao_id}: {e}")
@@ -492,6 +569,11 @@ def reabrir_implantacao():
         )
         logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Implantação "{impl.get("nome_empresa", "N/A")}" reaberta.') #
         flash('Implantação reaberta com sucesso e movida para "Em Andamento".', 'success')
+        try:
+            clear_user_cache(usuario_cs_email)
+            clear_implantacao_cache(implantacao_id)
+        except Exception:
+            pass
 
     except Exception as e:
         print(f"Erro ao reabrir implantação ID {implantacao_id}: {e}")
@@ -546,29 +628,35 @@ def atualizar_detalhes_empresa():
     # *** FIM DA ALTERAÇÃO ***
 
     try:
+        def normalize_date_str(s):
+            if not s:
+                return None
+            try:
+                d = validate_date(s)
+            except ValidationError:
+                return None
+            try:
+                return d.date().isoformat()
+            except Exception:
+                return d.isoformat().split('T')[0]
+
         campos = {
             'responsavel_cliente': get_form_value('responsavel_cliente'),
             'cargo_responsavel': get_form_value('cargo_responsavel'),
             'telefone_responsavel': get_form_value('telefone_responsavel'),
             'email_responsavel': get_form_value('email_responsavel'),
-            'data_inicio_producao': get_form_value('data_inicio_producao'),
-            'data_final_implantacao': get_form_value('data_final_implantacao'),
-            
-            # --- (ALTERAÇÃO DA ÚLTIMA REQUISIÇÃO) ---
-            'data_inicio_efetivo': get_form_value('data_inicio_efetivo'),
-            # --- FIM DA ALTERAÇÃO ---
-
+            'data_inicio_producao': normalize_date_str(get_form_value('data_inicio_producao')),
+            'data_final_implantacao': normalize_date_str(get_form_value('data_final_implantacao')),
+            'data_inicio_efetivo': normalize_date_str(get_form_value('data_inicio_efetivo')),
             'id_favorecido': get_form_value('id_favorecido'),
             'nivel_receita': get_form_value('nivel_receita'),
             'chave_oamd': get_form_value('chave_oamd'),
             'tela_apoio_link': get_form_value('tela_apoio_link'),
             'seguimento': get_form_value('seguimento'),
             'tipos_planos': get_form_value('tipos_planos'),
-            
             'modalidades': modalidades_val,
             'horarios_func': horarios_val,
             'formas_pagamento': formas_pagamento_val,
-            
             'diaria': get_boolean_value('diaria'), 
             'freepass': get_boolean_value('freepass'), 
             'alunos_ativos': alunos_ativos, 
@@ -726,7 +814,14 @@ def cancelar_implantacao():
     # Validação de campos obrigatórios
     if not all([implantacao_id, data_cancelamento, motivo]):
         flash('Todos os campos (Data, Motivo Resumo) são obrigatórios para cancelar.', 'error')
-         # A URL de redirecionamento é construída aqui para garantir que o erro seja exibido.
+        return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
+
+    # Validação de data
+    try:
+        data_cancel_dt = validate_date(data_cancelamento)
+        data_cancel_iso = data_cancel_dt.isoformat()
+    except ValidationError:
+        flash('Data do cancelamento inválida. Formatos aceitos: DD/MM/AAAA, MM/DD/AAAA, AAAA-MM-DD.', 'error')
         return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
         
     file = request.files.get('comprovante_cancelamento')
@@ -771,10 +866,10 @@ def cancelar_implantacao():
         # Atualiza DB
         execute_db(
             "UPDATE implantacoes SET status = 'cancelada', data_cancelamento = %s, motivo_cancelamento = %s, comprovante_cancelamento_url = %s, data_finalizacao = CURRENT_TIMESTAMP WHERE id = %s",
-            (data_cancelamento, motivo, comprovante_url, implantacao_id)
+            (data_cancel_iso, motivo, comprovante_url, implantacao_id)
         )
         
-        logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Implantação CANCELADA.\nMotivo: {motivo}\nData inf.: {utils.format_date_br(data_cancelamento)}')
+        logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Implantação CANCELADA.\nMotivo: {motivo}\nData inf.: {utils.format_date_br(data_cancel_iso)}')
         flash('Implantação cancelada com sucesso.', 'success')
         return redirect(url_for('main.dashboard'))
 

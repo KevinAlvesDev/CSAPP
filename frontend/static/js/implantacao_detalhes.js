@@ -40,10 +40,39 @@ function confirmWithModal(message) {
 }
 
 // --- Funções de Ação (Adaptadas para ler URLs do objeto CONFIG) ---
-function excluirTarefa(tarefaId, button, CONFIG) { 
-    if (!confirm('Excluir tarefa e comentários?')) return; 
+async function excluirTarefa(tarefaId, button, CONFIG) { 
+    const ok = await confirmWithModal('Excluir tarefa e comentários?'); 
+    if (!ok) return; 
     const endpointUrl = CONFIG.endpoints.delTarefa + tarefaId;
-    button.disabled = true; button.innerHTML = '<span class="spinner-border spinner-border-sm"></span>'; const listItem = button.closest('.list-group-item'); if (listItem) listItem.style.opacity = '0.5'; fetch(endpointUrl, { method: 'POST' }).then(response => response.json()).then(data => { if (data.ok) { if(listItem) listItem.remove(); adicionarLogNaTimeline(data.log_exclusao); if (data.novo_progresso !== undefined) updateProgressBar(data.novo_progresso); if (data.implantacao_finalizada) { adicionarLogNaTimeline(data.log_finalizacao); window.location.reload(); } } else { throw new Error(data.error || 'Erro.'); } }).catch(error => { console.error('Erro:', error); alert(`Erro: ${error.message}`); button.innerHTML = '<i class="bi bi-x-lg"></i>'; button.disabled = false; if (listItem) listItem.style.opacity = '1'; }); }
+    const originalHTML = button.innerHTML;
+    button.disabled = true; 
+    button.innerHTML = '<span class="spinner-border spinner-border-sm"></span>'; 
+    const listItem = button.closest('.list-group-item'); 
+    if (listItem) listItem.style.opacity = '0.5'; 
+    fetch(endpointUrl, { method: 'POST' })
+      .then(response => response.json())
+      .then(data => { 
+        if (data.ok) { 
+          if(listItem) listItem.remove(); 
+          adicionarLogNaTimeline(data.log_exclusao); 
+          if (data.novo_progresso !== undefined) updateProgressBar(data.novo_progresso); 
+          if (data.implantacao_finalizada) { 
+            adicionarLogNaTimeline(data.log_finalizacao); 
+            window.location.reload(); 
+          } 
+        } else { 
+          throw new Error(data.error || 'Erro.'); 
+        } 
+      })
+      .catch(error => { 
+        alert(`Erro: ${error.message}`); 
+        if (listItem) listItem.style.opacity = '1'; 
+      })
+      .finally(() => { 
+        button.innerHTML = originalHTML; 
+        button.disabled = false; 
+      }); 
+}
 async function excluirTodasDoModulo(button, moduloNome, CONFIG) { 
     const ok = await confirmWithModal(`EXCLUIR TODAS as tarefas do módulo "${moduloNome}"? Esta ação é irreversível.`);
     if (!ok) return; 

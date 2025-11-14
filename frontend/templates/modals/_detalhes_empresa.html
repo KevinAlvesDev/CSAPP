@@ -32,11 +32,26 @@
                         
                         <div class="col-md-3 mb-3"> 
                             <label for="modal-inicio_efetivo" class="form-label">Início Efetivo (Editável)</label> 
-                            <input type="text" class="form-control" id="modal-inicio_efetivo" name="data_inicio_efetivo" placeholder="DD/MM/AAAA" inputmode="numeric" pattern="\d{2}/\d{2}/\d{4}"> 
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="modal-inicio_efetivo" name="data_inicio_efetivo" placeholder="DD/MM/AAAA" inputmode="numeric" pattern="\d{2}/\d{2}/\d{4}"> 
+                                <button class="btn btn-outline-secondary" type="button" id="btn-cal-inicio_efetivo" aria-label="Abrir calendário"><i class="bi bi-calendar3"></i></button>
+                            </div>
                         </div>
 
-                        <div class="col-md-3 mb-3"><label for="modal-data_inicio_producao" class="form-label">Início Produção (Data)</label><input type="text" class="form-control" id="modal-data_inicio_producao" name="data_inicio_producao" placeholder="DD/MM/AAAA" inputmode="numeric" pattern="\d{2}/\d{2}/\d{4}"></div>
-                        <div class="col-md-3 mb-3"><label for="modal-data_final_implantacao" class="form-label">Fim da Implantação (Data)</label><input type="text" class="form-control" id="modal-data_final_implantacao" name="data_final_implantacao" placeholder="DD/MM/AAAA" inputmode="numeric" pattern="\d{2}/\d{2}/\d{4}"></div>
+                        <div class="col-md-3 mb-3">
+                            <label for="modal-data_inicio_producao" class="form-label">Início Produção (Data)</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="modal-data_inicio_producao" name="data_inicio_producao" placeholder="DD/MM/AAAA" inputmode="numeric" pattern="\d{2}/\d{2}/\d{4}">
+                                <button class="btn btn-outline-secondary" type="button" id="btn-cal-data_inicio_producao" aria-label="Abrir calendário"><i class="bi bi-calendar3"></i></button>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="modal-data_final_implantacao" class="form-label">Fim da Implantação (Data)</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="modal-data_final_implantacao" name="data_final_implantacao" placeholder="DD/MM/AAAA" inputmode="numeric" pattern="\d{2}/\d{2}/\d{4}">
+                                <button class="btn btn-outline-secondary" type="button" id="btn-cal-data_final_implantacao" aria-label="Abrir calendário"><i class="bi bi-calendar3"></i></button>
+                            </div>
+                        </div>
                     </div>
                     
                     <div class="row">

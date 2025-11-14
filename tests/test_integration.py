@@ -194,5 +194,68 @@ class TestImplantacaoFlowIntegration:
             
             assert len(comentarios) == 1
             assert comentarios[0]['texto'] == 'Comentário de teste de integração'
-            assert comentarios[0]['visibilidade'] == 'interno'
+        assert comentarios[0]['visibilidade'] == 'interno'
+
+    def test_parar_implantacao_validacao_data(self, auth_client, app):
+        with app.app_context():
+            # Cria implantação em andamento
+            execute_db(
+                """INSERT INTO implantacoes 
+                   (nome_empresa, email_responsavel, usuario_cs, status) 
+                   VALUES (?, ?, ?, ?)""",
+                ('Empresa Parada', 'resp@teste.com', 'test@example.com', 'andamento')
+            )
+            impl = query_db(
+                "SELECT * FROM implantacoes WHERE nome_empresa = ?",
+                ('Empresa Parada',),
+                one=True
+            )
+            impl_id = impl['id']
+
+        # Data válida (ISO)
+        resp_ok = auth_client.post('/parar_implantacao', data={
+            'implantacao_id': impl_id,
+            'motivo_parada': 'Teste de parada',
+            'data_parada': '2023-12-25'
+        }, follow_redirects=True)
+        assert resp_ok.status_code == 200
+        with app.app_context():
+            upd = query_db("SELECT status, data_finalizacao FROM implantacoes WHERE id = ?", (impl_id,), one=True)
+        assert upd['status'] == 'parada'
+        assert str(upd['data_finalizacao']).startswith('2023-12-25')
+
+        # Reabrir e testar formatos adicionais válidos (BR e US)
+        with app.app_context():
+            execute_db("UPDATE implantacoes SET status='andamento', data_finalizacao=NULL WHERE id = ?", (impl_id,))
+        resp_br = auth_client.post('/parar_implantacao', data={
+            'implantacao_id': impl_id,
+            'motivo_parada': 'Teste BR',
+            'data_parada': '25/12/2023'
+        }, follow_redirects=True)
+        assert resp_br.status_code == 200
+        with app.app_context():
+            upd_br = query_db("SELECT status, data_finalizacao FROM implantacoes WHERE id = ?", (impl_id,), one=True)
+        assert upd_br['status'] == 'parada'
+        assert str(upd_br['data_finalizacao']).startswith('2023-12-25')
+
+    def test_excluir_implantacao_status_200(self, auth_client, app):
+        with app.app_context():
+            # Cria implantação para excluir
+            execute_db(
+                """INSERT INTO implantacoes 
+                   (nome_empresa, email_responsavel, usuario_cs, status) 
+                   VALUES (?, ?, ?, ?)""",
+                ('Empresa Excluir', 'resp@teste.com', 'test@example.com', 'andamento')
+            )
+            impl = query_db("SELECT * FROM implantacoes WHERE nome_empresa = ?", ('Empresa Excluir',), one=True)
+            impl_id = impl['id']
+
+        # Excluir e seguir redirecionamento (espera 200)
+        resp = auth_client.post('/excluir_implantacao', data={
+            'implantacao_id': impl_id
+        }, follow_redirects=True)
+        assert resp.status_code == 200
+        with app.app_context():
+            deleted = query_db("SELECT * FROM implantacoes WHERE id = ?", (impl_id,), one=True)
+        assert deleted is None
 

@@ -16,7 +16,7 @@ CARGOS_RESPONSAVEL = [
     "Analista de TI", "Financeiro", "Outro"
 ]
 
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf'}
 
 # --- Valor Padrão para Sim/Não (Booleans) ---
 NAO_DEFINIDO_BOOL = "Não definido" 

@@ -204,8 +204,39 @@ def _get_tarefas_and_comentarios(impl_id, is_owner=False, is_manager=False):
         if mp in tarefas_agrupadas_treinamento: ordered_treinamento[mp] = tarefas_agrupadas_treinamento.pop(mp)
     for mr in sorted(tarefas_agrupadas_treinamento.keys()): ordered_treinamento[mr] = tarefas_agrupadas_treinamento[mr]
 
+    # Remove o módulo obrigatório da lista de seleção do modal "Adicionar Tarefa"
+    if MODULO_OBRIGATORIO in todos_modulos_temp:
+        try:
+            todos_modulos_temp.remove(MODULO_OBRIGATORIO)
+        except Exception:
+            pass
     todos_modulos_lista = sorted(list(todos_modulos_temp))
-    if MODULO_PENDENCIAS not in todos_modulos_lista: todos_modulos_lista.append(MODULO_PENDENCIAS)
+    if MODULO_PENDENCIAS not in todos_modulos_lista:
+        todos_modulos_lista.append(MODULO_PENDENCIAS)
+
+    preferred_order = [
+        "Definição de carteira",
+        "Welcome",
+        "Estruturação de BD",
+        "Importação de dados",
+        "Módulo ADM",
+        "Módulo Treino",
+        "Módulo CRM",
+        "Módulo Financeiro",
+        "Conclusão",
+        MODULO_PENDENCIAS,
+    ]
+    seen = set()
+    ordered_mods = []
+    for name in preferred_order:
+        if name in todos_modulos_lista and name not in seen:
+            ordered_mods.append(name)
+            seen.add(name)
+    for name in todos_modulos_lista:
+        if name not in seen:
+            ordered_mods.append(name)
+            seen.add(name)
+    todos_modulos_lista = ordered_mods
     
     return tarefas_agrupadas_obrigatorio, ordered_treinamento, tarefas_agrupadas_pendencias, todos_modulos_lista
 

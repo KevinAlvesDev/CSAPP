@@ -107,10 +107,10 @@
             </ul>
             <h6 class="text-secondary border-bottom pb-2 mb-3 mt-3">Detalhes do Cliente</h6>
             <ul class="list-unstyled small sidebar-info-list">
-                <li><i class="bi bi-person-badge me-2"></i><strong>Responsável:</strong> {{ implantacao.responsavel_cliente | default('N/A') }}</li>
-                <li><i class="bi bi-briefcase me-2"></i><strong>Cargo:</strong> {{ implantacao.cargo_responsavel | default('N/A') }}</li>
-                <li><i class="bi bi-telephone me-2"></i><strong>Telefone:</strong> {{ implantacao.telefone_responsavel | default('N/A') }}</li>
-                <li><i class="bi bi-envelope me-2"></i><strong>E-mail:</strong> {{ implantacao.email_responsavel | default('N/A') }}</li>
+                <li><i class="bi bi-person-badge me-2"></i><strong>Responsável:</strong> {{ implantacao.responsavel_cliente | default('Não preenchido', true) }}</li>
+                <li><i class="bi bi-briefcase me-2"></i><strong>Cargo:</strong> {{ implantacao.cargo_responsavel | default('Não preenchido', true) }}</li>
+                <li><i class="bi bi-telephone me-2"></i><strong>Telefone:</strong> {{ implantacao.telefone_responsavel | default('Não preenchido', true) }}</li>
+                <li><i class="bi bi-envelope me-2"></i><strong>E-mail:</strong> {{ implantacao.email_responsavel | default('Não preenchido', true) }}</li>
             </ul>
             <h6 class="text-secondary border-bottom pb-2 mb-3 mt-3">Datas e Atributos</h6>
             <ul class="list-unstyled small sidebar-info-list">
@@ -187,6 +187,7 @@
                                     <h5 class="mb-0 fs-6">{{ modulo }}</h5>
                                     <div>
                                         <button class="btn btn-outline-success btn-marcar-todas me-2" type="button" title="Marcar todas"> <i class="bi bi-check-all"></i> Todas </button>
+                                        
                                         <button class="btn btn-outline-danger btn-marcar-todas me-2" type="button" title="Excluir todas"> <i class="bi bi-trash"></i> Todas </button>
                                         <i class="bi bi-chevron-down"></i>
                                     </div>
@@ -212,6 +213,7 @@
                                     <h5 class="mb-0 fs-6">{{ modulo }}</h5>
                                     <div>
                                         <button class="btn btn-outline-success btn-marcar-todas me-2" type="button" title="Marcar todas"> <i class="bi bi-check-all"></i> Todas </button>
+                                        
                                         <button class="btn btn-outline-danger btn-marcar-todas me-2" type="button" title="Excluir todas"> <i class="bi bi-trash"></i> Todas </button>
                                         <i class="bi bi-chevron-down"></i>
                                     </div>
@@ -300,9 +302,12 @@
                     <p>Tem certeza?</p> 
                     <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}"> 
                     
-                    <div class="mb-3"> 
-                        <label for="data_parada" class="form-label fw-bold">Data da Parada (Início Retroativo) <span class="text-danger">*</span></label> 
-                        <input type="text" class="form-control" id="data_parada" name="data_parada" required placeholder="DD/MM/AAAA" inputmode="numeric" pattern="\d{2}/\d{2}/\d{4}">
+                    <div class="mb-3">
+                        <label for="data_parada" class="form-label fw-bold">Data da Parada (Início Retroativo) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="data_parada" name="data_parada" required placeholder="DD/MM/AAAA" inputmode="numeric" pattern="\d{2}/\d{2}/\d{4}">
+                            <button class="btn btn-outline-secondary" type="button" id="btn_cal_data_parada" aria-label="Abrir calendário"><i class="bi bi-calendar3"></i></button>
+                        </div>
                     </div>
 
                     <div class="mb-3"> 
@@ -329,7 +334,7 @@
 <div class="modal fade" id="modalReabrir" tabindex="-1"> <div class="modal-dialog"> <div class="modal-content"> <div class="modal-header header-bg"><h5 class="modal-title">Reabrir</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div> <form action="{{ url_for('actions.reabrir_implantacao') }}" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"> <div class="modal-body"> <p>Tem certeza? Voltará para "Em Andamento".</p> <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}"> <input type="hidden" name="redirect_to" value="detalhes"> </div> <div class="modal-footer header-bg"> <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button> <button type="submit" class="btn btn-warning">Reabrir</button> </div> </form> </div> </div> </div>
 <div class="modal fade" id="adicionarTarefaModal" tabindex="-1"> <div class="modal-dialog"> <div class="modal-content"> <div class="modal-header header-bg"><h5 class="modal-title">Adicionar Tarefa</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div> <form action="{{ url_for('actions.adicionar_tarefa') }}" method="POST">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"> <div class="modal-body"> <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}"> <div class="mb-3"> <label for="add-tarefa-filho-modal" class="form-label">Nome</label> <input type="text" class="form-control" id="add-tarefa-filho-modal" name="tarefa_filho" required> </div> <div class="mb-3"> <label for="add-tarefa-pai-modal" class="form-label">Módulo</label> <select class="form-select" id="add-tarefa-pai-modal" name="tarefa_pai" required> <option value="">Selecione...</option> {% for modulo in todos_modulos %} <option value="{{ modulo }}">{{ modulo }}</option> {% endfor %} <option value="Outros">Outros (Novo)</option> </select> </div> <div class="mb-3"> <label for="add-tarefa-tag-modal" class="form-label">Tag</label> <select class="form-select" id="add-tarefa-tag-modal" name="tag"> <option value="">Sem Tag</option> <option value="Ação interna">Ação interna</option> <option value="Reunião">Reunião</option> <option value="Outro">Outro</option> </select> </div> </div> <div class="modal-footer header-bg"> <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button> <button type="submit" class="btn btn-primary">Adicionar</button> </div> </form> </div> </div> </div>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"> <div class="modal-body"> <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}"> <div class="mb-3"> <label for="add-tarefa-filho-modal" class="form-label">Nome</label> <input type="text" class="form-control" id="add-tarefa-filho-modal" name="tarefa_filho" required> </div> <div class="mb-3"> <label for="add-tarefa-pai-modal" class="form-label">Módulo</label> <select class="form-select" id="add-tarefa-pai-modal" name="tarefa_pai" required> <option value="">Selecione...</option> {% for modulo in todos_modulos %} <option value="{{ modulo }}">{{ modulo }}</option> {% endfor %} </select> </div> <div class="mb-3"> <label for="add-tarefa-tag-modal" class="form-label">Tag</label> <select class="form-select" id="add-tarefa-tag-modal" name="tag"> <option value="Ação interna">Ação interna</option> <option value="Reunião">Reunião</option> </select> </div> </div> <div class="modal-footer header-bg"> <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button> <button type="submit" class="btn btn-primary">Adicionar</button> </div> </form> </div> </div> </div>
 {% if is_manager %} <div class="modal fade" id="modalTransferir" tabindex="-1"> <div class="modal-dialog"> <div class="modal-content"> <div class="modal-header header-bg"><h5 class="modal-title">Transferir</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div> <form action="{{ url_for('actions.transferir_implantacao') }}" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"> <div class="modal-body"> <p>Transferir <strong>{{ implantacao.nome_empresa }}</strong> de <strong>{{ implantacao.usuario_cs }}</strong> para:</p> <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}"> <div class="mb-3"> <label for="novo_usuario_cs" class="form-label">Novo CS</label> <select class="form-select" id="novo_usuario_cs" name="novo_usuario_cs" required> <option value="">Selecione...</option> {% for user in all_cs_users %} {% if user.usuario != implantacao.usuario_cs %} <option value="{{ user.usuario }}">{{ user.nome }} ({{ user.usuario }})</option> {% endif %} {% endfor %} </select> </div> </div> <div class="modal-footer header-bg"> <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button> <button type="submit" class="btn btn-info">Confirmar</button> </div> </form> </div> </div> </div> {% endif %}
 <div class="modal fade" id="modalExcluirImplantacao" tabindex="-1"> <div class="modal-dialog"> <div class="modal-content"> <div class="modal-header header-bg"><h5 class="modal-title text-danger">Excluir Implantação</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div> <form action="{{ url_for('actions.excluir_implantacao') }}" method="POST">
@@ -351,7 +356,10 @@
                     
                     <div class="mb-3">
                         <label for="data_cancelamento" class="form-label fw-bold">Data do Cancelamento <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="data_cancelamento" name="data_cancelamento" required placeholder="DD/MM/AAAA" inputmode="numeric" pattern="\d{2}/\d{2}/\d{4}">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="data_cancelamento" name="data_cancelamento" required placeholder="DD/MM/AAAA" inputmode="numeric" pattern="\d{2}/\d{2}/\d{4}">
+                            <button class="btn btn-outline-secondary" type="button" id="btn_cal_data_cancelamento" aria-label="Abrir calendário"><i class="bi bi-calendar3"></i></button>
+                        </div>
                     </div>
 
                     <div class="mb-3">
@@ -376,12 +384,18 @@
     
     <script>
     (function() {
-        function brToIsoDate(str) {
+        function normalizeDate(str) {
             if (!str) return null;
-            var m = str.trim().match(/^([0-3]\d)\/([01]\d)\/(\d{4})$/);
-            if (!m) return null;
-            var d = m[1], mo = m[2], y = m[3];
-            return y + '-' + mo + '-' + d; // YYYY-MM-DD
+            var s = str.trim();
+            var mBr = s.match(/^([0-3]\d)\/([01]\d)\/(\d{4})$/);
+            if (mBr) {
+                return mBr[3] + '-' + mBr[2] + '-' + mBr[1];
+            }
+            var mIso = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (mIso) {
+                return s;
+            }
+            return null;
         }
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -390,7 +404,7 @@
                 formParar.addEventListener('submit', function(ev) {
                     var inp = formParar.querySelector('#data_parada');
                     if (inp) {
-                        var iso = brToIsoDate(inp.value);
+                        var iso = normalizeDate(inp.value);
                         if (!iso) {
                             ev.preventDefault();
                             alert('Informe a data da parada em formato DD/MM/AAAA.');
@@ -407,7 +421,7 @@
                 formCancelar.addEventListener('submit', function(ev) {
                     var inp = formCancelar.querySelector('#data_cancelamento');
                     if (inp) {
-                        var iso = brToIsoDate(inp.value);
+                        var iso = normalizeDate(inp.value);
                         if (!iso) {
                             ev.preventDefault();
                             alert('Informe a data do cancelamento em formato DD/MM/AAAA.');
@@ -416,6 +430,15 @@
                         }
                         inp.value = iso;
                     }
+                });
+            }
+
+            // Atualização da UI após exclusão de implantação (segue redirecionamento para dashboard)
+            var formExcluir = document.querySelector('#modalExcluirImplantacao form');
+            if (formExcluir) {
+                formExcluir.addEventListener('submit', function(ev) {
+                    // Mantém comportamento padrão de submissão para garantir atualização completa do dashboard
+                    // e exibição correta de mensagens flash. Nenhuma alteração necessária aqui.
                 });
             }
         });
@@ -456,7 +479,8 @@
 
 
 {% block scripts_extra %}
-{# Removido CDN do Sortable; a página usa fallback caso Sortable não esteja disponível #}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
 // Fallback de carregamento para Sortable caso CDN falhe
 (function(){
@@ -475,6 +499,164 @@
   }
   loadNext();
 })();
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  if (window.flatpickr) {
+    var fpParada = window.flatpickr('#data_parada', { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true });
+    var fpCancel = window.flatpickr('#data_cancelamento', { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true });
+    var btnParada = document.getElementById('btn_cal_data_parada');
+    var btnCancel = document.getElementById('btn_cal_data_cancelamento');
+    if (btnParada && fpParada) btnParada.addEventListener('click', function(){ fpParada.open(); });
+    if (btnCancel && fpCancel) btnCancel.addEventListener('click', function(){ fpCancel.open(); });
+    function attachMask(fp){
+      var alt = fp && fp._input ? fp._input : null;
+      if (!alt) return;
+      alt.addEventListener('input', function(e){
+        var v = e.target.value.replace(/[^\d]/g,'').slice(0,8);
+        var out = '';
+        if (v.length >= 2) out = v.slice(0,2);
+        if (v.length >= 4) out += '/' + v.slice(2,4);
+        else if (v.length > 2) out += '/' + v.slice(2);
+        if (v.length > 4) out += '/' + v.slice(4);
+        e.target.value = out;
+      });
+      alt.addEventListener('blur', function(e){
+        var m = e.target.value.match(/^([0-3]\d)\/([01]\d)\/(\d{4})$/);
+        if (!m) { e.target.setCustomValidity('Data inválida'); e.target.reportValidity(); return; }
+        e.target.setCustomValidity('');
+        var d = parseInt(m[1],10), mo = parseInt(m[2],10), y = parseInt(m[3],10);
+        var dt = new Date(y, mo-1, d);
+        if (dt.getFullYear() !== y || dt.getMonth() !== mo-1 || dt.getDate() !== d) { e.target.setCustomValidity('Data inválida'); e.target.reportValidity(); }
+      });
+    }
+    attachMask(fpParada);
+    attachMask(fpCancel);
+  }
+  function computeProgress(){
+    var boxes = document.querySelectorAll('.task-checkbox');
+    var total = boxes.length;
+    var done = 0;
+    boxes.forEach(function(b){ if (b.checked) done++; });
+    var pct = total ? Math.round((done/total)*100) : 0;
+    var bar = document.getElementById('progress-total-bar');
+    if (bar){ bar.style.width = pct + '%'; bar.setAttribute('aria-valuenow', pct); bar.textContent = pct + '%'; }
+    var btn = document.querySelector('#modalFinalizar form button[type="submit"]');
+    if (btn) btn.disabled = !(done === total && total > 0);
+  }
+  document.body.addEventListener('change', function(ev){
+    if (ev.target && ev.target.classList && ev.target.classList.contains('task-checkbox')){ computeProgress(); }
+  });
+  function collectTaskIds(container, checkedState){
+    var boxes = container.querySelectorAll('.task-checkbox');
+    var ids = [];
+    boxes.forEach(function(b){ if (!!b.checked === checkedState){ var id = (b.id||'').replace('task-',''); if (id) ids.push(id); } });
+    return ids;
+  }
+  function postToggleIds(ids){
+    if (!window.htmx){ console.warn('HTMX não disponível para operação em lote'); return; }
+    if (!ids || ids.length === 0) return;
+    window.htmx.ajax('POST', '/api/toggle_tarefas', { values: { ids: ids.join(',') } });
+  }
+  document.body.addEventListener('click', function(ev){
+    var btn = ev.target.closest('button');
+    if (!btn) return;
+    var header = btn.closest('.module-header');
+    if (!header) return;
+    var container = header.nextElementSibling;
+    if (!container || !container.classList.contains('module-content-collapse')) return;
+    if (btn.classList.contains('btn-marcar-todas')){
+      var ids = collectTaskIds(container, false);
+      postToggleIds(ids);
+    }
+  });
+  document.body.addEventListener('progress_update', function(ev){ computeProgress(); });
+  document.body.addEventListener('htmx:afterSwap', function(){ computeProgress(); });
+  document.body.addEventListener('comment_saved', function(ev){
+    try {
+      var data = ev.detail || {};
+      var msg = 'Comentário salvo com sucesso.';
+      var alert = document.createElement('div');
+      alert.className = 'alert alert-success alert-dismissible fade show my-2';
+      alert.innerHTML = msg + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+      var container = document.querySelector('#detalhesTabContent');
+      (container || document.body).prepend(alert);
+      setTimeout(function(){ try { var alertInst = bootstrap.Alert.getOrCreateInstance(alert); alertInst.close(); } catch(e){} }, 2500);
+    } catch(e){}
+  });
+  document.body.addEventListener('comment_saved_fallback', function(){
+    try {
+      var alert = document.createElement('div');
+      alert.className = 'alert alert-success alert-dismissible fade show my-2';
+      alert.innerHTML = 'Comentário salvo com sucesso.' + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+      var container = document.querySelector('#detalhesTabContent');
+      (container || document.body).prepend(alert);
+      setTimeout(function(){ try { var alertInst = bootstrap.Alert.getOrCreateInstance(alert); alertInst.close(); } catch(e){} }, 2500);
+    } catch(e){}
+  });
+  var finForm = document.querySelector('#modalFinalizar form');
+  if (finForm){
+    finForm.addEventListener('submit', function(ev){
+      var boxes = document.querySelectorAll('.task-checkbox');
+      var pending = [];
+      boxes.forEach(function(b){ if (!b.checked){ var lbl = finForm.closest('body').querySelector('label[for="'+b.id+'"]'); if (lbl) pending.push(lbl.textContent.trim()); }});
+      if (pending.length > 0){
+        ev.preventDefault();
+        var msg = 'Ainda há tarefas pendentes:\n- ' + pending.slice(0,10).join('\n- ');
+        alert(msg);
+      }
+    });
+  }
+  computeProgress();
+  document.addEventListener('submit', function(ev){
+    var form = ev.target;
+    if (!form || !form.matches('form.comment-form')) return;
+    ev.preventDefault();
+    try {
+      var vis = getVisibilidade(form);
+      if (vis === 'externo') {
+        var emailResp = form.getAttribute('data-email-responsavel') || '';
+        if (!emailResp) {
+          alert('E-mail do responsável não está definido nos Detalhes da Empresa. O envio por e-mail não será possível.');
+        }
+        var ok1 = window.confirm('Este comentário será preparado para envio por e-mail ao responsável. Confirmar?');
+        if (!ok1) { return; }
+      }
+    } catch(e){}
+    var postUrl = form.getAttribute('hx-post');
+    var targetSel = form.getAttribute('hx-target');
+    var swapMode = (form.getAttribute('hx-swap')||'beforeend').toLowerCase();
+    var target = targetSel ? document.querySelector(targetSel) : null;
+    if (!postUrl || !target){ try{ form.submit(); }catch(e){} return; }
+    var btn = form.querySelector('button[type="submit"]');
+    if (btn){ btn.disabled = true; btn.classList.add('disabled'); }
+    var fd = new FormData(form);
+    fetch(postUrl, { method: 'POST', body: fd, headers: { 'HX-Request':'true' } })
+      .then(function(r){ return r.text(); })
+      .then(function(html){
+        var temp = document.createElement('div');
+        temp.innerHTML = html;
+        if (swapMode === 'beforeend') Array.from(temp.childNodes).forEach(function(n){ target.appendChild(n); });
+        else if (swapMode === 'outerhtml') target.outerHTML = html;
+        else target.innerHTML = html;
+        var placeholder = target.querySelector('[id^="no-comment-"]');
+        if (placeholder) placeholder.remove();
+        var e = new CustomEvent('comment_saved');
+        document.body.dispatchEvent(e);
+        form.reset();
+      })
+      .catch(function(){
+        var alert = document.createElement('div');
+        alert.className = 'alert alert-danger alert-dismissible fade show my-2';
+        alert.innerHTML = 'Falha ao salvar comentário.' + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+        var container = document.querySelector('#detalhesTabContent');
+        (container || document.body).prepend(alert);
+        setTimeout(function(){ try { var a = bootstrap.Alert.getOrCreateInstance(alert); a.close(); } catch(e){} }, 3000);
+      })
+      .finally(function(){ if (btn){ btn.disabled = false; btn.classList.remove('disabled'); } });
+  }, true);
+});
 </script>
 
 <script src="{{ url_for('static', filename='js/implantacao_detalhes.js') }}"></script>

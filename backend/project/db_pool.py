@@ -52,10 +52,11 @@ def get_db_connection():
     use_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
     
     if use_sqlite:
-        # SQLite: cria nova conexão (sem pool)
         try:
             base_dir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
-            db_path = os.path.join(base_dir, 'dashboard_simples.db')
+            is_testing = current_app.config.get('TESTING', False)
+            db_filename = 'dashboard_simples_test.db' if is_testing else 'dashboard_simples.db'
+            db_path = os.path.join(base_dir, db_filename)
             conn = sqlite3.connect(db_path, isolation_level=None)
             conn.row_factory = sqlite3.Row
             return conn, 'sqlite'
@@ -63,17 +64,24 @@ def get_db_connection():
             current_app.logger.error(f"SQLite connection error: {e}")
             raise
     else:
-        # PostgreSQL: usa pool de conexões
-        if 'db_conn' not in g:
-            try:
-                if _pg_pool is None:
-                    raise RuntimeError("Connection pool not initialized")
+        try:
+            if _pg_pool is None:
+                raise RuntimeError("Connection pool not initialized")
+            if 'db_conn' not in g:
                 g.db_conn = _pg_pool.getconn()
                 g.db_type = 'postgres'
-            except Exception as e:
-                current_app.logger.error(f"Failed to get connection from pool: {e}")
-                raise
-        
+            else:
+                try:
+                    if getattr(g.db_conn, 'closed', 1) != 0:
+                        g.db_conn = _pg_pool.getconn()
+                        g.db_type = 'postgres'
+                except Exception:
+                    g.db_conn = _pg_pool.getconn()
+                    g.db_type = 'postgres'
+        except Exception as e:
+            current_app.logger.error(f"Failed to get connection from pool: {e}")
+            raise
+
         return g.db_conn, g.db_type
 
 
@@ -87,10 +95,15 @@ def close_db_connection(error=None):
     
     if db_conn is not None:
         if db_type == 'postgres' and _pg_pool is not None:
-            # Retorna conexão ao pool
-            _pg_pool.putconn(db_conn)
+            try:
+                is_closed = getattr(db_conn, 'closed', 1) != 0
+                _pg_pool.putconn(db_conn, close=is_closed)
+            except Exception:
+                try:
+                    db_conn.close()
+                except Exception:
+                    pass
         elif db_type == 'sqlite':
-            # Fecha conexão SQLite
             db_conn.close()
 
 

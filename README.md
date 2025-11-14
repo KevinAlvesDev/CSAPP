@@ -139,3 +139,27 @@ profile.py: Rotas para edição de perfil do usuário.
 CSAPP/static/: Arquivos estáticos (CSS, Imagens).
 
 CSAPP/templates/: Arquivos de template HTML (Jinja2).
+
+6. FLUXO DE TRABALHO DE IMPLANTAÇÕES
+
+Estados principais:
+- Nova: criada e aguardando início.
+- Futura: agendada com data de início prevista.
+- Em Andamento: iniciada com data de início efetivo.
+- Parada: interrompida com data retroativa e motivo.
+- Concluída: finalizada com todas as tarefas obrigatórias/treinamento concluídas.
+- Atrasada: categoria derivada para implantações em andamento com tempo acima do limite.
+
+Transições e validações:
+- Nova → Em Andamento: permitido ao dono; registra data de início efetivo.
+- Nova → Futura: agendamento requerido; grava data de início previsto.
+- Futura → Em Andamento: permitido ao dono; limpa data prevista.
+- Em Andamento → Parada: exige data da parada e motivo; registra na timeline.
+- Parada → Em Andamento: retoma e limpa data de finalização/motivo da parada.
+- Em Andamento → Concluída: só se tarefas obrigatórias/treinamento estiverem 100% concluídas.
+- Finalizada → Em Andamento: reabertura permitida ao dono.
+
+Regras de autorização e logs:
+- Ações de status são permitidas ao dono da implantação ou perfis de gestão quando aplicável.
+- Alterações registradas em timeline e nos logs da aplicação com usuário, implantação e resultado.
+- Em desenvolvimento, o cache do dashboard é invalidado após cada alteração para refletir imediatamente.

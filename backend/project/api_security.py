@@ -24,6 +24,11 @@ def validate_api_origin(f):
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        try:
+            if current_app.config.get('DEBUG', False) or current_app.config.get('USE_SQLITE_LOCALLY', False):
+                return f(*args, **kwargs)
+        except Exception:
+            pass
         # Ignora validação para métodos seguros (GET, HEAD, OPTIONS)
         if request.method in ['GET', 'HEAD', 'OPTIONS']:
             return f(*args, **kwargs)

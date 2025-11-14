@@ -247,6 +247,21 @@ input[type="file"]::-webkit-file-upload-button:hover {
 }
 /* --- FIM DO ESTILO DAS ABAS --- */
 
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 1rem;
+}
+@media (max-width: 1400px) {
+    .metrics-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 992px) {
+    .metrics-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 576px) {
+    .metrics-grid { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+}
+
 /* --- Agenda (estilo inspirado no Google Calendar) --- */
 .agenda-date-header {
     font-size: 0.95rem;

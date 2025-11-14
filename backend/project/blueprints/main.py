@@ -49,6 +49,10 @@ def home():
         return redirect(url_for('main.dashboard'))
     # Passa flag para o template evitar acessar current_app diretamente
     auth0_enabled = current_app.config.get('AUTH0_ENABLED', True)
+    try:
+        session.pop('_flashes', None)
+    except Exception:
+        pass
     return render_template(
         'login.html',
         auth0_enabled=auth0_enabled,

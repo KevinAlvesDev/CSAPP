@@ -31,4 +31,15 @@
             Excluir
         </button>
     {% endif %}
+    {% if comentario.visibilidade and comentario.visibilidade == 'externo' %}
+        <button 
+            class="btn btn-sm btn-link text-primary p-0 small mt-1 ms-2"
+            hx-post="{{ url_for('api.enviar_email_comentario', comentario_id=comentario.id) }}"
+            hx-target="#comment-list-{{ comentario.tarefa_id }}"
+            hx-swap="beforeend"
+            hx-confirm="Deseja enviar este comentário por e-mail ao responsável?"
+        >
+            Enviar e-mail ao responsável
+        </button>
+    {% endif %}
 </div>

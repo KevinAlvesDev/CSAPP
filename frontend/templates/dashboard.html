@@ -46,14 +46,15 @@
         </div>
         {% endif %}
         <h2 class="h5 mb-3 text-center">Resumo Rápido {% if current_cs_filter and is_manager %}(Filtrado){% endif %}</h2>
-        <div class="row row-cols-1 row-cols-md-3 row-cols-lg-6 g-3 mb-4">
+        <div class="metrics-grid mb-4">
             {% set m = metrics or {} %}
-            <div class="col"><div class="card p-3 text-center"><h6 class="text-secondary">Novas</h6><h4 class="mb-0 text-dark">{{ m.impl_novas | default(0) }}</h4></div></div>
-            <div class="col"><div class="card p-3 text-center"><h6 class="text-secondary">Em Andamento</h6><h4 class="mb-0 text-primary">{{ m.impl_andamento_total | default(0) }}</h4></div></div>
-            <div class="col"><div class="card p-3 text-center"><h6 class="text-secondary">Atrasadas (> 25d)</h6><h4 class="mb-0 text-danger">{{ m.implantacoes_atrasadas | default(0) }}</h4></div></div>
-            <div class="col"><div class="card p-3 text-center"><h6 class="text-secondary">Futuras</h6><h4 class="mb-0 text-info">{{ m.implantacoes_futuras | default(0) }}</h4></div></div>
-            <div class="col"><div class="card p-3 text-center"><h6 class="text-secondary">Concluídas</h6><h4 class="mb-0 text-success">{{ m.impl_finalizadas | default(0) }}</h4></div></div>
-            <div class="col"><div class="card p-3 text-center"><h6 class="text-secondary">Paradas</h6><h4 class="mb-0 text-danger">{{ m.impl_paradas | default(0) }}</h4></div></div>
+            <div class="card p-3 text-center"><h6 class="text-secondary">Novas</h6><h4 class="mb-0 text-dark">{{ m.impl_novas | default(0) }}</h4></div>
+            <div class="card p-3 text-center"><h6 class="text-secondary">Em Andamento</h6><h4 class="mb-0 text-primary">{{ m.impl_andamento_total | default(0) }}</h4></div>
+            <div class="card p-3 text-center"><h6 class="text-secondary">Atrasadas (> 25d)</h6><h4 class="mb-0 text-danger">{{ m.implantacoes_atrasadas | default(0) }}</h4></div>
+            <div class="card p-3 text-center"><h6 class="text-secondary">Paradas</h6><h4 class="mb-0 text-danger">{{ m.impl_paradas | default(0) }}</h4></div>
+            <div class="card p-3 text-center"><h6 class="text-secondary">Futuras</h6><h4 class="mb-0 text-info">{{ m.implantacoes_futuras | default(0) }}</h4></div>
+            <div class="card p-3 text-center"><h6 class="text-secondary">Concluídas</h6><h4 class="mb-0 text-success">{{ m.impl_finalizadas | default(0) }}</h4></div>
+            <div class="card p-3 text-center"><h6 class="text-secondary">Módulos</h6><h4 class="mb-0 text-dark">{{ m.modulos_total | default(0) }}</h4></div>
         </div>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -342,7 +343,7 @@
                         </td> 
                         <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or impl.usuario_cs }}</td>
                         <td><span class="badge bg-info text-dark">{{ 'Módulo' if impl.tipo == 'modulo' else 'Completa' }}</span></td>
-                        <td class="text-nowrap"> <span class="badge bg-secondary text-dark">{{ impl.dias_passados | int }} dias</span> </td> <td> <div class="progress" style="height: 20px;"> <div class="progress-bar progress-bar-striped bg-warning text-dark" role="progressbar" style="width: {{ impl.progresso }}%;" aria-valuenow="{{ impl.progresso }}">{{ impl.progresso }}%</div> </div> </td> <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_atribuido|float) if impl.valor_atribuido else 'N/A' }}</td> <td> <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver Detalhes</a> </td> </tr> {% endfor %} </tbody> </table> </div> {% endif %}
+                        <td class="text-nowrap"> <span class="badge bg-secondary text-dark js-dias-badge" data-impl-id="{{ impl.id }}" data-start-iso="{{ impl.data_inicio_efetivo_iso }}" data-status="andamento">{{ impl.dias_passados | int }} dias</span> </td> <td> <div class="progress" style="height: 20px;"> <div class="progress-bar progress-bar-striped bg-warning text-dark" role="progressbar" style="width: {{ impl.progresso }}%;" aria-valuenow="{{ impl.progresso }}">{{ impl.progresso }}%</div> </div> </td> <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_atribuido|float) if impl.valor_atribuido else 'N/A' }}</td> <td> <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver Detalhes</a> </td> </tr> {% endfor %} </tbody> </table> </div> {% endif %}
                     </div>
         
                     <div class="tab-pane fade" id="atrasadas" role="tabpanel" aria-labelledby="atrasadas-tab">
@@ -379,7 +380,7 @@
                         </td>
                         <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or impl.usuario_cs }}</td>
                         <td><span class="badge bg-info text-dark">{{ 'Módulo' if impl.tipo == 'modulo' else 'Completa' }}</span></td>
-                        <td><span class="badge bg-danger">{{ impl.dias_passados | int }} dias</span></td> <td> {% if impl.status == 'parada' %} <span class="badge bg-danger">Parada</span> {% else %} <span class="badge bg-warning text-dark">Em Andamento</span> {% endif %} </td> <td> <div class="progress" style="height: 20px;"> <div class="progress-bar progress-bar-striped bg-danger" role="progressbar" style="width: {{ impl.progresso }}%;" aria-valuenow="{{ impl.progresso }}">{{ impl.progresso }}%</div> </div> </td> <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_atribuido|float) if impl.valor_atribuido else 'N/A' }}</td> <td> <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver Detalhes</a> </td> </tr> {% endfor %} </tbody> </table> </div> {% endif %}
+                        <td><span class="badge bg-danger js-dias-badge" data-impl-id="{{ impl.id }}" data-start-iso="{{ impl.data_inicio_efetivo_iso }}" data-status="atrasada">{{ impl.dias_passados | int }} dias</span></td> <td> {% if impl.status == 'parada' %} <span class="badge bg-danger js-status-badge" data-impl-id="{{ impl.id }}">Parada</span> {% else %} <span class="badge bg-warning text-dark js-status-badge" data-impl-id="{{ impl.id }}">Em Andamento</span> {% endif %} </td> <td> <div class="progress" style="height: 20px;"> <div class="progress-bar progress-bar-striped bg-danger" role="progressbar" style="width: {{ impl.progresso }}%;" aria-valuenow="{{ impl.progresso }}">{{ impl.progresso }}%</div> </div> </td> <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_atribuido|float) if impl.valor_atribuido else 'N/A' }}</td> <td> <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver Detalhes</a> </td> </tr> {% endfor %} </tbody> </table> </div> {% endif %}
                     </div>
         
                     <div class="tab-pane fade" id="futuras" role="tabpanel" aria-labelledby="futuras-tab">
@@ -526,7 +527,7 @@
                         </td> 
                         <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or impl.usuario_cs }}</td>
                         <td><span class="badge bg-info text-dark">{{ 'Módulo' if impl.tipo == 'modulo' else 'Completa' }}</span></td>
-                        <td><span class="badge bg-danger">{{ impl.dias_parada | int }} dias</span></td>
+                        <td><span class="badge bg-danger js-dias-badge" data-impl-id="{{ impl.id }}" data-start-iso="{{ impl.data_finalizacao | default('') }}" data-status="parada">{{ impl.dias_parada | int }} dias</span></td>
                         <td class="text-truncate" style="max-width: 200px;">{{ impl.motivo_parada | default('N/A') }}</td> <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_atribuido|float) if impl.valor_atribuido else 'N/A' }}</td> 
                         <td class="text-nowrap"> 
                             <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver Detalhes</a> 
@@ -653,7 +654,10 @@
                     <input type="hidden" name="implantacao_id" id="agendarImplId" value="">
                     <div class="mb-3">
                         <label for="data_inicio_previsto" class="form-label">Data de Início Previsto</label>
-                        <input type="date" class="form-control" id="data_inicio_previsto" name="data_inicio_previsto" required>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="data_inicio_previsto" name="data_inicio_previsto" placeholder="DD/MM/AAAA" inputmode="numeric" pattern="\d{2}/\d{2}/\d{4}" required>
+                            <button class="btn btn-outline-secondary" type="button" id="btn-cal-data_inicio_previsto" aria-label="Abrir calendário"><i class="bi bi-calendar3"></i></button>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer header-bg">
@@ -729,7 +733,71 @@
                     dateInput.setAttribute('min', today);
                 }
             });
+            var agendarForm = agendarModal.querySelector('form');
+            if (agendarForm) {
+                agendarForm.addEventListener('submit', function (e) {
+                    var input = agendarForm.querySelector('#data_inicio_previsto');
+                    if (!input) return;
+                    var v = (input.value || '').trim();
+                    var m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+                    if (!m) return;
+                    input.value = m[3] + '-' + m[2] + '-' + m[1];
+                });
+            }
+
+            if (window.flatpickr) {
+                var fpPrevisto = window.flatpickr('#data_inicio_previsto', { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true });
+                var btnPrevisto = document.getElementById('btn-cal-data_inicio_previsto');
+                if (btnPrevisto && fpPrevisto) btnPrevisto.addEventListener('click', function(){ fpPrevisto.open(); });
+                var alt = fpPrevisto && fpPrevisto._input ? fpPrevisto._input : null;
+                if (alt) {
+                    alt.addEventListener('input', function(e){
+                        var v = e.target.value.replace(/[^\d]/g,'').slice(0,8);
+                        var out = '';
+                        if (v.length >= 2) out = v.slice(0,2);
+                        if (v.length >= 4) out = out + '/' + v.slice(2,4);
+                        if (v.length >= 5) out = out + '/' + v.slice(4,8);
+                        e.target.value = out;
+                    });
+                }
+            }
         }
+    });
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function(){
+        function parseISODate(iso){
+            if (!iso) return null;
+            var s = String(iso).split('T')[0];
+            var parts = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (!parts) return null;
+            return new Date(parts[1] + '-' + parts[2] + '-' + parts[3] + 'T00:00:00');
+        }
+        function diffDays(start){
+            if (!start) return 0;
+            var now = new Date();
+            var ms = now.getTime() - start.getTime();
+            var d = Math.floor(ms / 86400000);
+            return d < 0 ? 0 : d;
+        }
+        function updateBadges(){
+            var els = document.querySelectorAll('.js-dias-badge');
+            els.forEach(function(el){
+                var iso = el.getAttribute('data-start-iso');
+                var id = el.getAttribute('data-impl-id');
+                var status = el.getAttribute('data-status');
+                var dt = parseISODate(iso);
+                var d = diffDays(dt);
+                el.textContent = d + ' dias';
+                if (status === 'andamento' && d > 25){
+                    var sb = document.querySelector('.js-status-badge[data-impl-id="'+id+'"]');
+                    if (sb){ sb.className = 'badge bg-danger js-status-badge'; sb.textContent = 'Atrasada'; }
+                    fetch('/api/v1/implantacoes/'+id+'/status/atrasada', { method: 'POST' }).catch(function(){});
+                }
+            });
+        }
+        updateBadges();
+        setInterval(updateBadges, 60000);
     });
 </script>
 {% endblock %}

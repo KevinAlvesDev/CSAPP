@@ -6,10 +6,13 @@
     <title>{% block title %}CS Onboarding{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     
     <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     
     {% block head_extra %}{% endblock %}
 </head>
@@ -75,6 +78,186 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <!-- HTMX para habilitar hx-post, hx-target, hx-swap nos templates -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script>
+      (function(){
+        function ensureHTMX(){
+          if (window.htmx) return true;
+          var urls = [
+            'https://cdn.jsdelivr.net/npm/htmx.org@1.9.10/dist/htmx.min.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/htmx/1.9.10/htmx.min.js'
+          ];
+          var i = 0;
+          function loadNext(){
+            if (window.htmx) return;
+            if (i >= urls.length) { console.warn('HTMX não pôde ser carregado dos CDNs alternativos. Ativando fallback simples para formulários.'); polyfillHTMX(); return; }
+            var s = document.createElement('script'); s.src = urls[i++]; s.async = true;
+            s.onload = function(){ console.log('HTMX carregado via fallback'); };
+            s.onerror = function(){ loadNext(); };
+            document.head.appendChild(s);
+          }
+          loadNext();
+          return !!window.htmx;
+        }
+        function polyfillHTMX(){
+          // Fallback mínimo: intercepta formulários de comentário e envia via fetch
+          document.addEventListener('submit', function(ev){
+            var form = ev.target;
+            if (!form || !form.matches('form.comment-form')) return;
+            ev.preventDefault();
+            try {
+              var targetSel = form.getAttribute('hx-target');
+              var postUrl = form.getAttribute('hx-post');
+              var swapMode = (form.getAttribute('hx-swap')||'beforeend').toLowerCase();
+              var target = targetSel ? document.querySelector(targetSel) : null;
+              if (!postUrl || !target) { form.submit(); return; }
+              var fd = new FormData(form);
+              fetch(postUrl, { method: 'POST', body: fd, headers: { 'HX-Request':'true' } })
+                .then(function(r){ return r.text(); })
+                .then(function(html){
+                  var temp = document.createElement('div'); temp.innerHTML = html;
+                  var nodes = Array.from(temp.childNodes);
+                  if (swapMode === 'beforeend') nodes.forEach(function(n){ target.appendChild(n); });
+                  else if (swapMode === 'outerhtml') { target.outerHTML = html; }
+                  else { target.innerHTML = html; }
+                  var evt = new Event('comment_saved_fallback'); document.body.dispatchEvent(evt);
+                })
+                .catch(function(e){ console.error('Falha ao enviar comentário:', e); alert('Erro ao salvar comentário.'); });
+            } catch (e2) { console.error('Fallback HTMX falhou:', e2); form.submit(); }
+          }, true);
+          document.addEventListener('click', function(ev){
+            var el = ev.target && ev.target.closest('[hx-post]');
+            if (!el) return;
+            if (el.closest('form')) return;
+            if (!(el.tagName === 'BUTTON' || el.tagName === 'A')) return;
+            ev.preventDefault();
+            var confirmMsg = el.getAttribute('hx-confirm');
+            if (confirmMsg && !window.confirm(confirmMsg)) return;
+            var postUrl = el.getAttribute('hx-post');
+            var targetSel = el.getAttribute('hx-target');
+            var swapMode = (el.getAttribute('hx-swap')||'innerHTML').toLowerCase();
+            var target = targetSel ? document.querySelector(targetSel) : null;
+            if (!postUrl || !target) return;
+            try { el.disabled = true; } catch(e){}
+            fetch(postUrl, { method: 'POST', headers: { 'HX-Request':'true' } })
+              .then(function(r){ return r.text(); })
+              .then(function(html){
+                if (swapMode === 'outerhtml') { target.outerHTML = html; }
+                else if (swapMode === 'beforeend') {
+                  var temp = document.createElement('div'); temp.innerHTML = html;
+                  Array.from(temp.childNodes).forEach(function(n){ target.appendChild(n); });
+                } else { target.innerHTML = html; }
+              })
+              .catch(function(){
+                try {
+                  var alert = document.createElement('div');
+                  alert.className = 'alert alert-danger alert-dismissible fade show my-2';
+                  alert.innerHTML = 'Falha ao excluir comentário.' + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+                  var container = document.querySelector('.container') || document.body;
+                  container.prepend(alert);
+                  setTimeout(function(){ try { var ai = bootstrap.Alert.getOrCreateInstance(alert); ai.close(); } catch(e){} }, 3000);
+                } catch(e){}
+              })
+              .finally(function(){ try { el.disabled = false; } catch(e){} });
+          }, true);
+        }
+        if (!window.htmx) {
+          if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', ensureHTMX); }
+          else { ensureHTMX(); }
+        }
+        document.addEventListener('click', function(ev){
+          var el = ev.target && ev.target.closest('button[hx-post], a[hx-post]');
+          if (!el) return;
+          var postUrl = el.getAttribute('hx-post');
+          if (!postUrl || postUrl.indexOf('/api/excluir_comentario/') === -1) return;
+          ev.preventDefault();
+          ev.stopPropagation();
+          try { ev.stopImmediatePropagation(); } catch(e){}
+          var confirmMsg = el.getAttribute('hx-confirm');
+          if (confirmMsg && !window.confirm(confirmMsg)) return;
+          var targetSel = el.getAttribute('hx-target');
+          var swapMode = (el.getAttribute('hx-swap')||'outerHTML').toLowerCase();
+          var target = targetSel ? document.querySelector(targetSel) : null;
+          if (!target) return;
+          try { el.disabled = true; } catch(e){}
+          fetch(postUrl, { method: 'POST', headers: { 'HX-Request':'true' } })
+            .then(function(r){ if (!r.ok) throw new Error('HTTP '+r.status); return r.text(); })
+            .then(function(html){
+              if (swapMode === 'outerhtml') { target.outerHTML = html; }
+              else if (swapMode === 'beforeend') {
+                var temp = document.createElement('div'); temp.innerHTML = html;
+                Array.from(temp.childNodes).forEach(function(n){ target.appendChild(n); });
+              } else { target.innerHTML = html; }
+            })
+            .catch(function(){
+              try {
+                var alert = document.createElement('div');
+                alert.className = 'alert alert-danger alert-dismissible fade show my-2';
+                alert.innerHTML = 'Falha ao excluir comentário.' + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+                var container = document.querySelector('.container') || document.body;
+                container.prepend(alert);
+                setTimeout(function(){ try { var ai = bootstrap.Alert.getOrCreateInstance(alert); ai.close(); } catch(e){} }, 3000);
+              } catch(e){}
+            })
+            .finally(function(){ try { el.disabled = false; } catch(e){} });
+        }, true);
+        document.addEventListener('click', function(ev){
+          var el = ev.target && ev.target.closest('button[hx-post], a[hx-post]');
+          if (!el) return;
+          var postUrl = el.getAttribute('hx-post');
+          if (!postUrl || postUrl.indexOf('/api/enviar_email_comentario/') === -1) return;
+          ev.preventDefault();
+          var confirmMsg = el.getAttribute('hx-confirm');
+          if (confirmMsg && !window.confirm(confirmMsg)) return;
+          var targetSel = el.getAttribute('hx-target');
+          var swapMode = (el.getAttribute('hx-swap')||'beforeend').toLowerCase();
+          var target = targetSel ? document.querySelector(targetSel) : null;
+          if (!target) return;
+          try { el.disabled = true; } catch(e){}
+          fetch(postUrl, { method: 'POST', headers: { 'HX-Request':'true' } })
+            .then(function(r){ if (!r.ok) throw new Error('HTTP '+r.status); return r.text(); })
+            .then(function(html){
+              if (swapMode === 'outerhtml') { target.outerHTML = html; }
+              else if (swapMode === 'beforeend') {
+                var temp = document.createElement('div'); temp.innerHTML = html;
+                Array.from(temp.childNodes).forEach(function(n){ target.appendChild(n); });
+              } else { target.innerHTML = html; }
+              try {
+                var ok = /text-success/.test(html);
+                var msg = ok ? 'E-mail enviado ao responsável.' : 'Falha ao enviar e-mail ao responsável.';
+                var cls = ok ? 'alert-success' : 'alert-danger';
+                var alert = document.createElement('div');
+                alert.className = 'alert '+cls+' alert-dismissible fade show my-2';
+                alert.innerHTML = msg + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+                var container = document.querySelector('#detalhesTabContent') || document.querySelector('.container') || document.body;
+                container.prepend(alert);
+                setTimeout(function(){ try { var ai = bootstrap.Alert.getOrCreateInstance(alert); ai.close(); } catch(e){} }, 3000);
+              } catch(e){}
+            })
+            .catch(function(){
+              try {
+                var alert = document.createElement('div');
+                alert.className = 'alert alert-danger alert-dismissible fade show my-2';
+                alert.innerHTML = 'Falha ao enviar e-mail ao responsável.' + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+                var container = document.querySelector('#detalhesTabContent') || document.querySelector('.container') || document.body;
+                container.prepend(alert);
+                setTimeout(function(){ try { var ai = bootstrap.Alert.getOrCreateInstance(alert); ai.close(); } catch(e){} }, 3000);
+              } catch(e){}
+            })
+            .finally(function(){ try { el.disabled = false; } catch(e){} });
+        }, true);
+        document.addEventListener('htmx:responseError', function(ev){
+          try {
+            var alert = document.createElement('div');
+            alert.className = 'alert alert-danger alert-dismissible fade show my-2';
+            alert.innerHTML = 'Falha ao salvar. Tente novamente.' + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+            var container = document.querySelector('.container') || document.body;
+            container.prepend(alert);
+            setTimeout(function(){ try { var alertInst = bootstrap.Alert.getOrCreateInstance(alert); alertInst.close(); } catch(e){} }, 3000);
+          } catch(e){}
+        });
+      })();
+    </script>
     
     <!-- Removidos carregamentos via CDN de jQuery/bigSlide; usamos fallback nativo abaixo -->
     <!-- Fallback nativo sem jQuery/bigSlide -->
@@ -258,29 +441,16 @@
                     const button = event.relatedTarget;
                     if (!button || !button.getAttribute('data-id')) return;
                     const getData = (key, defaultVal = '') => { const val = button.getAttribute(`data-${key}`); return (val === 'null' || val === 'undefined' || val === null || val === 'None' || val === undefined || val === '') ? defaultVal : val; };
-                    // Helper: formata 'YYYY-MM-DD' para 'DD/MM/YYYY' (padrão BR)
-                    const formatDateBrSimple = (iso) => {
-                        if (!iso || typeof iso !== 'string') return '';
-                        const onlyDate = iso.split('T')[0];
-                        const parts = onlyDate.split('-');
-                        if (parts.length !== 3) return onlyDate;
-                        const [yyyy, mm, dd] = parts;
-                        return `${dd.padStart(2, '0')}/${mm.padStart(2, '0')}/${yyyy}`;
-                    };
                     const modal = modalDetalhesEmpresa;
+                    const implId = getData('id');
 
-                    modal.querySelector('#modal-implantacao_id').value = getData('id');
+                    modal.querySelector('#modal-implantacao_id').value = implId;
                     modal.querySelector('#modal-responsavel_cliente').value = getData('responsavel');
                     modal.querySelector('#modal-cargo_responsavel').value = getData('cargo');
                     modal.querySelector('#modal-telefone_responsavel').value = getData('telefone');
                     modal.querySelector('#modal-email_responsavel').value = getData('email');
-                    // Preenche datas visíveis no padrão BR (DD/MM/AAAA)
-                    const inicioProducaoIso = getData('inicio-producao');
-                    const finalImplantacaoIso = getData('final-implantacao');
-                    const inicioProducaoInput = modal.querySelector('#modal-data_inicio_producao');
-                    const finalImplantacaoInput = modal.querySelector('#modal-data_final_implantacao');
-                    if (inicioProducaoInput) inicioProducaoInput.value = formatDateBrSimple(inicioProducaoIso);
-                    if (finalImplantacaoInput) finalImplantacaoInput.value = formatDateBrSimple(finalImplantacaoIso);
+                    const inicioProducaoIsoAttr = getData('inicio-producao');
+                    const finalImplantacaoIsoAttr = getData('final-implantacao');
                     modal.querySelector('#modal-id_favorecido').value = getData('id-favorecido');
                     modal.querySelector('#modal-chave_oamd').value = getData('chave-oamd');
                     modal.querySelector('#modal-tela_apoio_link').value = getData('tela-apoio-link');
@@ -310,18 +480,36 @@
                     const contatosInput = modal.querySelector('#modal-contatos'); if (contatosInput) contatosInput.value = getData('contatos');
                     const respEstrategicoObsInput = modal.querySelector('#modal-resp_estrategico_obs'); if (respEstrategicoObsInput) respEstrategicoObsInput.value = getData('resp-estrategico-obs');
                     
-                    // --- INÍCIO DA CORREÇÃO ---
-                    // A linha abaixo estava buscando 'inicio-efetivo' em vez de 'inicio-efetivo-iso'
-                    const inicioEfetivoValueFromAttr = getData('inicio-efetivo-iso');
-                    // --- FIM DA CORREÇÃO ---
+                    const inicioEfetivoIsoAttr = getData('inicio-efetivo-iso');
 
+                    const normalizeToISO = (s) => {
+                        if (!s) return '';
+                        const t = String(s).trim();
+                        let m = t.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+                        if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+                        m = t.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                        if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+                        return '';
+                    };
+                    const setFpDate = (fp, s) => { const iso = normalizeToISO(s); if (fp && iso) { fp.setDate(iso, true, 'Y-m-d'); } };
+                    setFpDate(window.fpInicioEfetivo, inicioEfetivoIsoAttr);
+                    setFpDate(window.fpInicioProd, inicioProducaoIsoAttr);
+                    setFpDate(window.fpFinalImpl, finalImplantacaoIsoAttr);
+
+                    const inicioImplantacaoIso = getData('inicio-implantacao');
                     const dataCadastroInput = modal.querySelector('#modal-data_cadastro');
-                    if (dataCadastroInput) {
-                        const inicioImplantacaoIso = getData('inicio-implantacao');
-                        dataCadastroInput.value = formatDateBrSimple(inicioImplantacaoIso);
-                    }
-                    const inicioEfetivoInput = modal.querySelector('#modal-inicio_efetivo');
-                    if (inicioEfetivoInput) inicioEfetivoInput.value = formatDateBrSimple(inicioEfetivoValueFromAttr);
+                    if (dataCadastroInput) dataCadastroInput.value = (function(iso){ if (!iso) return ''; var p = iso.split('T')[0].split('-'); if (p.length!==3) return ''; return p[2].padStart(2,'0')+'/'+p[1].padStart(2,'0')+'/'+p[0]; })(inicioImplantacaoIso);
+
+                    fetch(`/api/v1/implantacoes/${implId}`)
+                      .then(r => r.ok ? r.json() : Promise.reject(new Error('Falha ao carregar implantação')))
+                      .then(j => {
+                        if (!j || !j.ok || !j.data || !j.data.implantacao) return;
+                        const impl = j.data.implantacao;
+                        setFpDate(window.fpInicioEfetivo, impl.data_inicio_efetivo);
+                        setFpDate(window.fpInicioProd, impl.data_inicio_producao);
+                        setFpDate(window.fpFinalImpl, impl.data_final_implantacao);
+                      })
+                      .catch(() => {});
                     
                     formatarTelefone(modal.querySelector('#modal-telefone_responsavel'));
                     const modalRedirect = modal.querySelector('#modal-redirect_to'); const isDetailsPage = document.getElementById('checklist-area-treinamento'); modalRedirect.value = isDetailsPage ? 'detalhes' : 'dashboard';
@@ -352,10 +540,65 @@
                     const inicioEfetivo = modalForm.querySelector('#modal-inicio_efetivo');
                     const dataInicioProd = modalForm.querySelector('#modal-data_inicio_producao');
                     const dataFinalImpl = modalForm.querySelector('#modal-data_final_implantacao');
+
+                    if (window.fpInicioEfetivo && window.fpInicioEfetivo._input) {
+                        const v = window.fpInicioEfetivo._input.value;
+                        if (v) {
+                            const iso = toIso(v);
+                            if (iso) { window.fpInicioEfetivo.setDate(iso, true, 'Y-m-d'); }
+                        }
+                    }
+                    if (window.fpInicioProd && window.fpInicioProd._input) {
+                        const v = window.fpInicioProd._input.value;
+                        if (v) {
+                            const iso = toIso(v);
+                            if (iso) { window.fpInicioProd.setDate(iso, true, 'Y-m-d'); }
+                        }
+                    }
+                    if (window.fpFinalImpl && window.fpFinalImpl._input) {
+                        const v = window.fpFinalImpl._input.value;
+                        if (v) {
+                            const iso = toIso(v);
+                            if (iso) { window.fpFinalImpl.setDate(iso, true, 'Y-m-d'); }
+                        }
+                    }
+
                     if (inicioEfetivo && inicioEfetivo.value) inicioEfetivo.value = toIso(inicioEfetivo.value);
                     if (dataInicioProd && dataInicioProd.value) dataInicioProd.value = toIso(dataInicioProd.value);
                     if (dataFinalImpl && dataFinalImpl.value) dataFinalImpl.value = toIso(dataFinalImpl.value);
                 });
+            })();
+
+            // Inicializa calendário e máscara nos campos do modal Detalhes
+            (function initModalCalendars(){
+                if (!window.flatpickr) return;
+                const fpInicioEfetivo = window.flatpickr('#modal-inicio_efetivo', { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true });
+                const fpInicioProd = window.flatpickr('#modal-data_inicio_producao', { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true });
+                const fpFinalImpl = window.flatpickr('#modal-data_final_implantacao', { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true });
+                window.fpInicioEfetivo = fpInicioEfetivo;
+                window.fpInicioProd = fpInicioProd;
+                window.fpFinalImpl = fpFinalImpl;
+                const btnInicioEfetivo = document.getElementById('btn-cal-inicio_efetivo');
+                const btnInicioProd = document.getElementById('btn-cal-data_inicio_producao');
+                const btnFinalImpl = document.getElementById('btn-cal-data_final_implantacao');
+                if (btnInicioEfetivo && fpInicioEfetivo) btnInicioEfetivo.addEventListener('click', function(){ fpInicioEfetivo.open(); });
+                if (btnInicioProd && fpInicioProd) btnInicioProd.addEventListener('click', function(){ fpInicioProd.open(); });
+                if (btnFinalImpl && fpFinalImpl) btnFinalImpl.addEventListener('click', function(){ fpFinalImpl.open(); });
+                function attachMask(fp){
+                    var alt = fp && fp._input ? fp._input : null;
+                    if (!alt) return;
+                    alt.addEventListener('input', function(e){
+                        var v = e.target.value.replace(/[^\d]/g,'').slice(0,8);
+                        var out = '';
+                        if (v.length >= 2) out = v.slice(0,2);
+                        if (v.length >= 4) out = out + '/' + v.slice(2,4);
+                        if (v.length >= 5) out = out + '/' + v.slice(4,8);
+                        e.target.value = out;
+                    });
+                }
+                attachMask(fpInicioEfetivo);
+                attachMask(fpInicioProd);
+                attachMask(fpFinalImpl);
             })();
 
             const modalGerenciarUsuarios = document.getElementById('modalGerenciarUsuarios');

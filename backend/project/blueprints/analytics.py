@@ -52,27 +52,39 @@ def analytics_dashboard():
     end_date = None
     
     try:
-        # Valida e sanitiza o email do CS
         cs_email_param = request.args.get('cs_email')
         if cs_email_param:
-            cs_email = validate_email(cs_email_param)
-            
-        # Valida e sanitiza o filtro de status
+            try:
+                cs_email = validate_email(cs_email_param)
+            except ValidationError:
+                cs_email = None
+                flash('Erro nos filtros: Email inválido — ignorado', 'warning')
         status_filter_param = request.args.get('status_filter', 'todas')
-        status_filter = sanitize_string(status_filter_param, max_length=20)
-        
-        # Valida as datas
+        try:
+            status_filter = sanitize_string(status_filter_param, max_length=20)
+        except ValidationError:
+            status_filter = 'todas'
+            flash('Erro nos filtros: Status inválido — ignorado', 'warning')
         start_date_param = request.args.get('start_date')
         if start_date_param:
-            start_date = validate_date(start_date_param)
-            
+            try:
+                start_date = validate_date(start_date_param)
+            except ValidationError:
+                start_date = None
+                flash('Erro nos filtros: Data inicial inválida — ignorada', 'warning')
         end_date_param = request.args.get('end_date')
         if end_date_param:
-            end_date = validate_date(end_date_param)
-            
-    except ValidationError as e:
+            try:
+                end_date = validate_date(end_date_param)
+            except ValidationError:
+                end_date = None
+                flash('Erro nos filtros: Data final inválida — ignorada', 'warning')
+    except Exception as e:
         flash(f'Erro nos filtros: {str(e)}', 'warning')
-        return redirect(url_for('analytics.analytics_dashboard'))
+        cs_email = None
+        status_filter = 'todas'
+        start_date = None
+        end_date = None
     
     # --- INÍCIO AJUSTE 2: Captura dos Filtros de Produtividade ---
     task_cs_email = None
@@ -80,23 +92,28 @@ def analytics_dashboard():
     task_end_date = None
     
     try:
-        # Valida e sanitiza o email do CS para tarefas
         task_cs_email_param = request.args.get('task_cs_email')
         if task_cs_email_param:
-            task_cs_email = validate_email(task_cs_email_param)
-            
-        # Valida as datas das tarefas
+            try:
+                task_cs_email = validate_email(task_cs_email_param)
+            except ValidationError:
+                task_cs_email = None
         task_start_date_param = request.args.get('task_start_date')
         if task_start_date_param:
-            task_start_date = validate_date(task_start_date_param)
-            
+            try:
+                task_start_date = validate_date(task_start_date_param)
+            except ValidationError:
+                task_start_date = None
         task_end_date_param = request.args.get('task_end_date')
         if task_end_date_param:
-            task_end_date = validate_date(task_end_date_param)
-            
-    except ValidationError as e:
-        flash(f'Erro nos filtros de tarefas: {str(e)}', 'warning')
-        return redirect(url_for('analytics.analytics_dashboard'))
+            try:
+                task_end_date = validate_date(task_end_date_param)
+            except ValidationError:
+                task_end_date = None
+    except Exception:
+        task_cs_email = None
+        task_start_date = None
+        task_end_date = None
     # --- FIM AJUSTE 2 ---
     
     # Se o usuário não for gerencial, ele só pode ver os próprios dados

@@ -53,6 +53,8 @@ def clear_user_cache(user_email):
     if cache:
         # Limpa cache do dashboard do usuário
         cache.delete(f'dashboard_data_{user_email}')
+        # Também remove a chave usada pelo serviço quando sem filtro
+        cache.delete(f'dashboard_data_{user_email}_all_pNone_ppNone')
         cache.delete(f'user_profile_{user_email}')
         cache.delete(f'user_implantacoes_{user_email}')
 

@@ -56,17 +56,26 @@ def calculate_time_in_status(impl_id, status_target='parada'):
     return None 
 
 
-def _format_date_for_query(date_str, is_end_date=False, is_sqlite=False):
-    if not date_str:
+def _format_date_for_query(val, is_end_date=False, is_sqlite=False):
+    if not val:
         return None, None
 
-    try:
-        date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
-        if is_end_date and not is_sqlite:
-            return '<', (date_obj + timedelta(days=1)).strftime('%Y-%m-%d')
-        return '<=' if is_end_date else '>=', date_str
-    except ValueError:
-        return None, None
+    if isinstance(val, datetime):
+        date_obj = val.date()
+        date_str = date_obj.strftime('%Y-%m-%d')
+    elif isinstance(val, date):
+        date_obj = val
+        date_str = val.strftime('%Y-%m-%d')
+    else:
+        date_str = str(val)
+        try:
+            date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return None, None
+
+    if is_end_date and not is_sqlite:
+        return '<', (date_obj + timedelta(days=1)).strftime('%Y-%m-%d')
+    return '<=' if is_end_date else '>=', date_str
 
 # Helpers globais para expressões de data (compatíveis com PostgreSQL/SQLite)
 def date_col_expr(col: str) -> str:
@@ -161,14 +170,24 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
                     except ValueError:
                         return None
         return None
+    
+    query_modules = """
+        SELECT i.*, p.nome as cs_nome, p.cargo as cs_cargo, p.perfil_acesso as cs_perfil
+        FROM implantacoes i
+        LEFT JOIN perfil_usuario p ON i.usuario_cs = p.usuario
+        WHERE i.tipo = 'modulo'
+    """
+    args_modules = []
+    if target_cs_email:
+        query_modules += " AND i.usuario_cs = %s "
+        args_modules.append(target_cs_email)
+    modules_rows = query_db(query_modules, tuple(args_modules)) or []
 
-    for impl in impl_list:
-        if not isinstance(impl, dict) or impl.get('tipo') != 'modulo':
+    for impl in modules_rows:
+        if not isinstance(impl, dict):
             continue
-
         status = impl.get('status')
         dias = 0
-
         if status == 'parada':
             try:
                 dias_parada = calculate_time_in_status(impl.get('id'), 'parada')
@@ -220,8 +239,8 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
     default_task_start_date_str = primeiro_dia_mes.strftime('%Y-%m-%d')
     default_task_end_date_str = agora.strftime('%Y-%m-%d')
 
-    task_start_date_to_query = task_start_date or default_task_start_date_str
-    task_end_date_to_query = task_end_date or default_task_end_date_str
+    task_start_date_to_query = (task_start_date.strftime('%Y-%m-%d') if isinstance(task_start_date, (date, datetime)) else task_start_date) or default_task_start_date_str
+    task_end_date_to_query = (task_end_date.strftime('%Y-%m-%d') if isinstance(task_end_date, (date, datetime)) else task_end_date) or default_task_end_date_str
 
     query_tasks = """
         SELECT
@@ -558,16 +577,24 @@ def get_implants_by_day(start_date=None, end_date=None, cs_email=None):
         query += " AND i.usuario_cs = %s"
         args.append(cs_email)
 
-    def _fmt(date_str, is_end=False):
-        if not date_str:
+    def _fmt(val, is_end=False):
+        if not val:
             return None, None
-        try:
-            dt = datetime.strptime(date_str, '%Y-%m-%d').date()
-            if is_end and not is_sqlite:
-                return '<', (dt + timedelta(days=1)).strftime('%Y-%m-%d')
-            return '<=' if is_end else '>=', date_str
-        except ValueError:
-            return None, None
+        if isinstance(val, datetime):
+            dt = val.date()
+            ds = dt.strftime('%Y-%m-%d')
+        elif isinstance(val, date):
+            dt = val
+            ds = val.strftime('%Y-%m-%d')
+        else:
+            ds = str(val)
+            try:
+                dt = datetime.strptime(ds, '%Y-%m-%d').date()
+            except ValueError:
+                return None, None
+        if is_end and not is_sqlite:
+            return '<', (dt + timedelta(days=1)).strftime('%Y-%m-%d')
+        return '<=' if is_end else '>=', ds
 
     if start_date:
         op, val = _fmt(start_date, is_end=False)
@@ -603,16 +630,24 @@ def get_funnel_counts(start_date=None, end_date=None, cs_email=None):
         query += " AND i.usuario_cs = %s"
         args.append(cs_email)
 
-    def _fmt(date_str, is_end=False):
-        if not date_str:
+    def _fmt(val, is_end=False):
+        if not val:
             return None, None
-        try:
-            dt = datetime.strptime(date_str, '%Y-%m-%d').date()
-            if is_end and not is_sqlite:
-                return '<', (dt + timedelta(days=1)).strftime('%Y-%m-%d')
-            return '<=' if is_end else '>=', date_str
-        except ValueError:
-            return None, None
+        if isinstance(val, datetime):
+            dt = val.date()
+            ds = dt.strftime('%Y-%m-%d')
+        elif isinstance(val, date):
+            dt = val
+            ds = val.strftime('%Y-%m-%d')
+        else:
+            ds = str(val)
+            try:
+                dt = datetime.strptime(ds, '%Y-%m-%d').date()
+            except ValueError:
+                return None, None
+        if is_end and not is_sqlite:
+            return '<', (dt + timedelta(days=1)).strftime('%Y-%m-%d')
+        return '<=' if is_end else '>=', ds
 
     if start_date:
         op, val = _fmt(start_date, is_end=False)

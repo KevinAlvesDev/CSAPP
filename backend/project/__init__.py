@@ -49,6 +49,14 @@ def create_app():
     from .config import Config
     app.config.from_object(Config)
 
+    try:
+        if app.config.get('USE_SQLITE_LOCALLY', False) or app.config.get('DEBUG', False):
+            app.config['RATELIMIT_ENABLED'] = False
+        else:
+            app.config['RATELIMIT_ENABLED'] = True
+    except Exception:
+        app.config['RATELIMIT_ENABLED'] = True
+
     # i18n básico
     from .i18n import get_translator
     translator = get_translator(app)
@@ -153,14 +161,20 @@ def create_app():
                 # Semeia usuário administrador padrão, se não existir
                 try:
                     admin_exists = query_db("SELECT usuario FROM usuarios WHERE usuario = %s", (ADMIN_EMAIL,), one=True)
+                    from werkzeug.security import generate_password_hash
+                    seeded_hash = generate_password_hash('323397041')
                     if not admin_exists:
-                        execute_db("INSERT INTO usuarios (usuario, senha) VALUES (%s, %s)", (ADMIN_EMAIL, 'dev'))
+                        execute_db("INSERT INTO usuarios (usuario, senha) VALUES (%s, %s)", (ADMIN_EMAIL, seeded_hash))
+                    else:
+                        execute_db("UPDATE usuarios SET senha = %s WHERE usuario = %s", (seeded_hash, ADMIN_EMAIL))
                     perfil_exists = query_db("SELECT usuario FROM perfil_usuario WHERE usuario = %s", (ADMIN_EMAIL,), one=True)
                     if not perfil_exists:
                         execute_db(
                             "INSERT INTO perfil_usuario (usuario, nome, cargo, perfil_acesso, foto_url) VALUES (%s, %s, %s, %s, %s)",
                             (ADMIN_EMAIL, 'Admin Dev', None, PERFIL_ADMIN, None)
                         )
+                    else:
+                        execute_db("UPDATE perfil_usuario SET perfil_acesso = %s WHERE usuario = %s", (PERFIL_ADMIN, ADMIN_EMAIL))
                 except Exception as e_seed:
                     print(f"AVISO: Falha ao semear admin padrão: {e_seed}")
     except Exception as e_dbinit:

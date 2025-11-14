@@ -246,6 +246,60 @@ def toggle_tarefas_bulk():
         finalizada, log_finalizacao = auto_finalizar_implantacao(implantacao_id, usuario_cs_email)
         novo_prog, _, _ = _get_progress(implantacao_id)
 
+        # Para HTMX: devolve fragmentos OOB dos itens atualizados + barra de progresso
+        if request.headers.get('HX-Request') == 'true':
+            nome = g.perfil.get('nome', usuario_cs_email)
+            log_tarefa = query_db(
+                "SELECT *, %s as usuario_nome FROM timeline_log "
+                "WHERE implantacao_id = %s AND tipo_evento = 'tarefa_alterada' "
+                "ORDER BY id DESC LIMIT 1",
+                (nome, implantacao_id), one=True
+            )
+            if log_tarefa:
+                log_tarefa['data_criacao'] = format_date_iso_for_json(log_tarefa.get('data_criacao'))
+
+            implantacao_info = query_db(
+                "SELECT nome_empresa, email_responsavel FROM implantacoes WHERE id = %s",
+                (implantacao_id,), one=True
+            ) or {}
+            implantacao = {
+                'nome_empresa': implantacao_info.get('nome_empresa', ''),
+                'email_responsavel': implantacao_info.get('email_responsavel', '')
+            }
+
+            fragments = []
+            for tarefa in tarefas_info:
+                tid = tarefa['id']
+                tarefa_atualizada = query_db(
+                    "SELECT id, tarefa_filho, tag, concluida FROM tarefas WHERE id = %s",
+                    (tid,), one=True
+                )
+                comentarios = query_db(
+                    """
+                    SELECT c.*, p.nome as usuario_nome
+                    FROM comentarios c
+                    LEFT JOIN perfil_usuario p ON c.usuario_cs = p.usuario
+                    WHERE c.tarefa_id = %s
+                    ORDER BY c.id ASC
+                    """,
+                    (tid,)
+                ) or []
+                tarefa_atualizada['comentarios'] = comentarios
+                fragments.append(render_template('partials/_task_item_wrapper.html', tarefa=tarefa_atualizada, implantacao=implantacao, oob=True))
+
+            progress_html = render_template('partials/_progress_total_bar.html', progresso_percent=novo_prog)
+            hx_payload = {
+                'progress_update': {
+                    'novo_progresso': novo_prog,
+                    'log_tarefa': log_tarefa,
+                    'implantacao_finalizada': finalizada,
+                    'log_finalizacao': log_finalizacao
+                }
+            }
+            resp = make_response("".join(fragments) + progress_html)
+            resp.headers['HX-Trigger-After-Swap'] = json.dumps(hx_payload)
+            return resp
+
         # Resposta JSON
         return jsonify({
             'ok': True,
@@ -454,13 +508,110 @@ def adicionar_comentario(tarefa_id):
                 notice_html = render_template('partials/_comment_email_notice.html', comentario=novo_comentario_dados)
         except Exception:
             notice_html = ''
-        return make_response(item_html + oob_stub + (notice_html or ''), 200)
+        resp = make_response(item_html + oob_stub + (notice_html or ''), 200)
+        try:
+            payload = {
+                'comment_saved': {
+                    'tarefa_id': tarefa_id,
+                    'comentario_id': novo_id,
+                    'visibilidade': visibilidade
+                }
+            }
+            resp.headers['HX-Trigger-After-Swap'] = json.dumps(payload)
+        except Exception:
+            pass
+        return resp
         
     except Exception as e:
         api_logger.error(f"Erro ao salvar comentário para tarefa {tarefa_id}: {e}", exc_info=True)
         if request.headers.get('HX-Request') == 'true':
             return render_hx_error(f"Erro interno do servidor: {e}", 500)
         return jsonify({'ok': False, 'error': f"Erro interno do servidor: {e}"}), 500
+
+@api_bp.route('/enviar_email_comentario/<int:comentario_id>', methods=['POST'])
+@login_required
+@validate_api_origin
+@limiter.limit("20 per minute", key_func=lambda: g.user_email or get_remote_address())
+def enviar_email_comentario(comentario_id):
+    def render_inline_notice(comentario_ctx):
+        try:
+            html = render_template('partials/_comment_email_notice.html', comentario=comentario_ctx, oob=False)
+            return make_response(html, 200)
+        except Exception as e:
+            return make_response(f"<div class='list-group-item py-2'><small class='text-danger'>Falha ao renderizar aviso: {e}</small></div>", 200)
+
+    usuario_cs_email = g.user_email
+    try:
+        comentario_id = validate_integer(comentario_id, min_value=1)
+    except ValidationError as e:
+        api_logger.warning(f"ID inválido em enviar_email_comentario: {e} - User: {g.user_email}")
+        return render_inline_notice({'email_send_status': 'error', 'email_send_error': f'ID inválido: {e}', 'tarefa_id': 0})
+
+    try:
+        dados = query_db(
+            """
+            SELECT c.id, c.texto, c.imagem_url, c.visibilidade, c.tarefa_id,
+                   t.tarefa_filho,
+                   i.id as impl_id, i.nome_empresa, i.email_responsavel, i.usuario_cs as implantacao_owner
+            FROM comentarios c
+            JOIN tarefas t ON c.tarefa_id = t.id
+            JOIN implantacoes i ON t.implantacao_id = i.id
+            WHERE c.id = %s
+            """,
+            (comentario_id,), one=True
+        )
+        if not dados:
+            return render_inline_notice({'email_send_status': 'error', 'email_send_error': 'Comentário não encontrado.', 'tarefa_id': 0})
+
+        is_owner = dados.get('usuario_cs') == usuario_cs_email if 'usuario_cs' in dados else True
+        is_impl_owner = dados.get('implantacao_owner') == usuario_cs_email
+        is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
+        if not (is_owner or is_impl_owner or is_manager):
+            security_logger.warning(f"Permissão negada ao enviar email do comentário {comentario_id} por {g.user_email}")
+            return render_inline_notice({'email_send_status': 'error', 'email_send_error': 'Permissão negada.', 'tarefa_id': dados.get('tarefa_id')})
+
+        if str(dados.get('visibilidade', 'interno')).lower() != 'externo':
+            return render_inline_notice({'email_send_status': 'error', 'email_send_error': 'Comentário não é externo.', 'tarefa_id': dados.get('tarefa_id')})
+
+        to_email = dados.get('email_responsavel')
+        if not to_email:
+            return render_inline_notice({'email_send_status': 'error', 'email_send_error': 'E-mail do responsável não configurado.', 'tarefa_id': dados.get('tarefa_id')})
+
+        if not current_app.config.get('EMAIL_CONFIGURADO'):
+            api_logger.warning("Tentativa de envio mas EMAIL_CONFIGURADO está falso.")
+            return render_inline_notice({'email_send_status': 'error', 'email_send_error': 'Serviço de e-mail não configurado.', 'tarefa_id': dados.get('tarefa_id'), 'responsavel_email': to_email})
+
+        subject = f"Resumo de reunião - {dados.get('nome_empresa') or 'Academia'}"
+        texto = dados.get('texto') or ''
+        img_url = dados.get('imagem_url')
+        corpo_txt = f"Olá,\n\nCompartilhamos o resumo da reunião referente à implantação.\n\nResumo:\n{texto}\n\n"
+        if img_url:
+            corpo_txt += f"Imagem: {img_url}\n\n"
+        corpo_html = f"<p>Olá,</p><p>Compartilhamos o resumo da reunião referente à implantação.</p><p><strong>Resumo:</strong></p><div>{texto.replace('\n','<br>')}</div>" + (f"<p><a href='{img_url}' target='_blank'>Ver imagem</a></p>" if img_url else "")
+
+        api_logger.info(f"Tentando enviar e-mail de comentário externo (comentario_id={comentario_id}) para {to_email}")
+        try:
+            from ..email_utils import send_email_global
+            send_email_global(
+                subject=subject,
+                body_html=corpo_html,
+                recipients=[to_email],
+                reply_to=usuario_cs_email,
+                from_name=g.perfil.get('nome') if (g.perfil and isinstance(g.perfil, dict)) else usuario_cs_email,
+                body_text=corpo_txt
+            )
+            logar_timeline(dados['impl_id'], usuario_cs_email, 'email_comentario_enviado', f"E-mail enviado para responsável com resumo de '{dados['tarefa_filho']}'.")
+            api_logger.info(f"E-mail enviado (comentario_id={comentario_id}) para {to_email}")
+            ctx = {'email_send_status': 'ok', 'tarefa_id': dados.get('tarefa_id'), 'responsavel_email': to_email, 'responsavel_nome': None}
+            return render_inline_notice(ctx)
+        except Exception as e:
+            api_logger.error(f"Falha ao enviar e-mail (comentario_id={comentario_id}) para {to_email}: {e}", exc_info=True)
+            ctx = {'email_send_status': 'error', 'email_send_error': str(e), 'tarefa_id': dados.get('tarefa_id'), 'responsavel_email': to_email}
+            return render_inline_notice(ctx)
+
+    except Exception as e:
+        api_logger.error(f"Erro inesperado em enviar_email_comentario {comentario_id}: {e}", exc_info=True)
+        return render_inline_notice({'email_send_status': 'error', 'email_send_error': f'Erro interno: {e}', 'tarefa_id': 0})
 
 @api_bp.route('/excluir_comentario/<int:comentario_id>', methods=['POST'])
 @login_required

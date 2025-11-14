@@ -6,7 +6,7 @@ Protege contra SQL Injection, XSS e outros ataques.
 
 import re
 import html
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import Optional, Union, List, Any
 
 
@@ -289,15 +289,41 @@ def validate_date(value: Any, allow_none: bool = False,
     if value is None and allow_none:
         return None
     
-    if isinstance(value, date):
+    if isinstance(value, date) and not isinstance(value, datetime):
         date_value = value
+    elif isinstance(value, datetime):
+        dt = value
+        if dt.tzinfo:
+            dt = dt.astimezone(timezone.utc)
+        date_value = dt.date()
     elif isinstance(value, str):
+        v = value.strip()
         try:
-            date_value = datetime.strptime(value, '%Y-%m-%d').date()
+            date_value = datetime.strptime(v, '%Y-%m-%d').date()
         except ValueError:
-            raise ValidationError("Data deve estar no formato YYYY-MM-DD")
+            try:
+                if 'T' in v or ' ' in v:
+                    v2 = v.replace('Z', '+00:00')
+                    dt = datetime.fromisoformat(v2)
+                    if dt.tzinfo:
+                        dt = dt.astimezone(timezone.utc)
+                    date_value = dt.date()
+                else:
+                    raise ValueError()
+            except ValueError:
+                m = re.match(r'^(\d{2})\/(\d{2})\/(\d{4})$', v)
+                if not m:
+                    raise ValidationError("Data inválida. Formatos aceitos: DD/MM/AAAA, MM/DD/AAAA, AAAA-MM-DD")
+                dd, mm, yyyy = int(m.group(1)), int(m.group(2)), int(m.group(3))
+                try:
+                    date_value = datetime.strptime(f"{dd:02d}/{mm:02d}/{yyyy}", '%d/%m/%Y').date()
+                except ValueError:
+                    try:
+                        date_value = datetime.strptime(f"{mm:02d}/{dd:02d}/{yyyy}", '%m/%d/%Y').date()
+                    except ValueError:
+                        raise ValidationError("Data inválida. Formatos aceitos: DD/MM/AAAA, MM/DD/AAAA, AAAA-MM-DD")
     else:
-        raise ValidationError("Data deve ser uma string no formato YYYY-MM-DD ou um objeto date")
+        raise ValidationError("Data inválida. Formatos aceitos: DD/MM/AAAA, MM/DD/AAAA, AAAA-MM-DD")
     
     if min_date and date_value < min_date:
         raise ValidationError(f"Data deve ser no mínimo {min_date}")
