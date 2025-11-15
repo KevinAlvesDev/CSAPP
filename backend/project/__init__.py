@@ -404,6 +404,13 @@ def create_app():
         response.headers.setdefault('Content-Security-Policy', csp)
         # Permissions-Policy (desativa features não usadas)
         response.headers.setdefault('Permissions-Policy', "geolocation=(), microphone=(), camera=(), fullscreen=(*)")
+        try:
+            if request.endpoint in ('auth.login', 'auth.dev_login', 'auth.dev_login_as', 'main.home', 'auth.register', 'auth.forgot_password', 'auth.reset_password'):
+                response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0, private'
+                response.headers['Pragma'] = 'no-cache'
+                response.headers['Expires'] = '0'
+        except Exception:
+            pass
         return response
 
     return app

@@ -3,7 +3,7 @@
 from functools import wraps
 from flask import (
     Blueprint, redirect, url_for, session, render_template, g, flash,
-    current_app, request, abort
+    current_app, request, abort, jsonify
 )
 from werkzeug.security import generate_password_hash, check_password_hash
 from urllib.parse import urlencode
@@ -276,9 +276,8 @@ def forgot_password():
 
     usuario = query_db("SELECT usuario FROM usuarios WHERE usuario = %s", (email,), one=True)
     if not usuario:
-        # Não revelar se usuário existe; mensagem genérica
-        flash('Se o e-mail existir, você receberá um link de reset.', 'info')
-        return redirect(url_for('auth.login'))
+        flash('E-mail não encontrado.', 'error')
+        return render_template('forgot_password.html', auth0_enabled=False)
 
     # Gera token temporário
     s = _get_reset_serializer()
@@ -309,6 +308,17 @@ def forgot_password():
         flash(reset_url, 'info')
 
     return redirect(url_for('auth.login'))
+
+@auth_bp.route('/check-email', methods=['GET'])
+def check_email():
+    email = (request.args.get('email') or '').strip().lower()
+    try:
+        from ..validation import validate_email
+        email = validate_email(email)
+    except Exception:
+        return jsonify({'valid': False, 'exists': False})
+    usuario = query_db("SELECT usuario FROM usuarios WHERE usuario = %s", (email,), one=True)
+    return jsonify({'valid': True, 'exists': bool(usuario)})
 
 @auth_bp.route('/reset-password/<token>', methods=['GET', 'POST'])
 @rate_limit("5 per minute")  # SEGURANÇA: Reduzido de 10 para 5 tentativas/min
@@ -362,67 +372,51 @@ def reset_password(token):
         return render_template('reset_password.html', auth0_enabled=False)
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
-@rate_limit("5 per minute")  # SEGURANÇA: Reduzido de 30 para 5 tentativas/min (previne força bruta)
+@rate_limit("5 per minute")
 def login():
-    """Página de login próprio ou redireciona para Auth0."""
-    # Se Auth0 estiver habilitado, redireciona para Auth0
-    if current_app.config.get('AUTH0_ENABLED', True):
-        from ..extensions import oauth
-        session.clear()
-        redirect_uri = url_for('auth.callback', _external=True)
-        auth0 = oauth.create_client('auth0')
-        return auth0.authorize_redirect(redirect_uri=redirect_uri)
-    
-    # Sistema de login próprio
     if request.method == 'GET':
         try:
             session.pop('_flashes', None)
         except Exception:
             pass
         return render_template('login.html', auth0_enabled=False, use_custom_auth=True)
-    
-    # POST: processa login
+
     email = (request.form.get('email') or '').strip().lower()
     password = request.form.get('password', '')
-    
+
     if not email or not password:
         flash('Por favor, preencha todos os campos.', 'error')
         return render_template('login.html', auth0_enabled=False, use_custom_auth=True)
-    
-    # Valida email
+
     try:
         from ..validation import validate_email
         email = validate_email(email)
-    except Exception as e:
+    except Exception:
         flash('E-mail inválido.', 'error')
         return render_template('login.html', auth0_enabled=False, use_custom_auth=True)
-    
-    # Busca usuário no banco
+
     usuario = query_db("SELECT usuario, senha FROM usuarios WHERE usuario = %s", (email,), one=True)
-    
+
     if not usuario:
         auth_logger.warning(f'Login attempt with non-existent email: {email}')
         flash('E-mail ou senha incorretos.', 'error')
         return render_template('login.html', auth0_enabled=False, use_custom_auth=True)
-    
-    # Verifica senha
+
     if not check_password_hash(usuario.get('senha'), password):
         auth_logger.warning(f'Failed login attempt for: {email}')
         flash('E-mail ou senha incorretos.', 'error')
         return render_template('login.html', auth0_enabled=False, use_custom_auth=True)
-    
-    # Busca perfil do usuário
+
     perfil = query_db("SELECT nome FROM perfil_usuario WHERE usuario = %s", (email,), one=True)
     nome = perfil.get('nome') if perfil else email
-    
-    # Cria sessão
+
     session['user'] = {
         'email': email,
         'name': nome,
         'sub': f'local|{email}'
     }
     session.permanent = True
-    
+
     auth_logger.info(f'User logged in successfully: {email}')
     flash(f'Bem-vindo, {nome}!', 'success')
     return redirect(url_for('main.dashboard'))

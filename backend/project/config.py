@@ -48,14 +48,7 @@ class Config:
     AUTH0_CLIENT_ID = os.environ.get('AUTH0_CLIENT_ID')
     AUTH0_CLIENT_SECRET = os.environ.get('AUTH0_CLIENT_SECRET')
 
-    # Permite desativar Auth0 em desenvolvimento para evitar chamadas externas
-    DISABLE_AUTH0 = os.environ.get('DISABLE_AUTH0', '').lower() in ('1', 'true', 'yes')
-    AUTH0_ENABLED = not DISABLE_AUTH0
-
-    if AUTH0_ENABLED and not all([AUTH0_DOMAIN, AUTH0_CLIENT_ID, AUTH0_CLIENT_SECRET]):
-        raise ValueError("Uma ou mais variáveis de ambiente do Auth0 (DOMAIN, CLIENT_ID, CLIENT_SECRET) não estão definidas.")
-    if not AUTH0_ENABLED:
-        print("Config: Auth0 desativado (DESENVOLVIMENTO). Rotas de login usarão dev_login.")
+    AUTH0_ENABLED = False
 
     # --- Configuração do R2 (Cloudflare) (CORRIGIDO para bater com o .env) ---
     # O .env usa 'CLOUDFLARE_...'

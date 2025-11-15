@@ -104,7 +104,7 @@
           // Fallback mínimo: intercepta formulários de comentário e envia via fetch
           document.addEventListener('submit', function(ev){
             var form = ev.target;
-            if (!form || !form.matches('form.comment-form')) return;
+            if (!form || !form.matches('form[hx-post]')) return;
             ev.preventDefault();
             try {
               var targetSel = form.getAttribute('hx-target');
@@ -166,6 +166,29 @@
           if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', ensureHTMX); }
           else { ensureHTMX(); }
         }
+        document.addEventListener('submit', function(ev){
+          var form = ev.target;
+          if (!form || !form.matches('#modalGerenciarUsuarios form[hx-post]')) return;
+          ev.preventDefault();
+          try {
+            var targetSel = form.getAttribute('hx-target');
+            var postUrl = form.getAttribute('hx-post');
+            var swapMode = (form.getAttribute('hx-swap')||'innerHTML').toLowerCase();
+            var target = targetSel ? document.querySelector(targetSel) : null;
+            if (!postUrl || !target) return;
+            var fd = new FormData(form);
+            fetch(postUrl, { method: 'POST', body: fd, headers: { 'HX-Request':'true' } })
+              .then(function(r){ return r.text(); })
+              .then(function(html){
+                if (swapMode === 'outerhtml') { target.outerHTML = html; }
+                else if (swapMode === 'beforeend') {
+                  var temp = document.createElement('div'); temp.innerHTML = html;
+                  Array.from(temp.childNodes).forEach(function(n){ target.appendChild(n); });
+                } else { target.innerHTML = html; }
+              })
+              .catch(function(e){ console.error('Falha no envio do formulário do modal:', e); });
+          } catch(e) { console.error('Erro ao processar submit do modal:', e); }
+        }, true);
         document.addEventListener('click', function(ev){
           var el = ev.target && ev.target.closest('button[hx-post], a[hx-post]');
           if (!el) return;

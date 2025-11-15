@@ -187,6 +187,14 @@ def update_user_perfil():
 
     if usuario_alvo is None:
         flash('Usuário não especificado.', 'error')
+        if request.headers.get('HX-Request') == 'true':
+            users_data = query_db(
+                "SELECT usuario as usuario, nome, perfil_acesso FROM perfil_usuario ORDER BY nome"
+            ) or []
+            perfis_disponiveis = current_app.config.get(
+                'PERFIS_DE_ACESSO', ['Visitante', 'Implantador', 'Gestor', 'Administrador']
+            )
+            return render_template('_manage_users_content.html', users=users_data, perfis_list=perfis_disponiveis)
         return redirect(url_for('management.manage_users'))
 
     # Tratar opção "Nenhum" como None
@@ -197,13 +205,28 @@ def update_user_perfil():
     if usuario_alvo == g.user_email:
         security_logger.warning(f"Admin {g.user_email} tentou alterar o próprio perfil via 'update_user_perfil'")
         flash('Você não pode alterar o seu próprio perfil por esta interface.', 'warning')
+        if request.headers.get('HX-Request') == 'true':
+            users_data = query_db(
+                "SELECT usuario as usuario, nome, perfil_acesso FROM perfil_usuario ORDER BY nome"
+            ) or []
+            perfis_disponiveis = current_app.config.get(
+                'PERFIS_DE_ACESSO', ['Visitante', 'Implantador', 'Gestor', 'Administrador']
+            )
+            return render_template('_manage_users_content.html', users=users_data, perfis_list=perfis_disponiveis)
         return redirect(url_for('management.manage_users'))
 
     # Regra específica: não permitir rebaixar o administrador principal
     if usuario_alvo == ADMIN_EMAIL and (novo_perfil is None or novo_perfil != PERFIL_ADMIN):
         security_logger.warning("Tentativa de rebaixar administrador detectada por " + str(g.user_email))
-        # Compat: redireciona com flash
         flash('Não é permitido alterar o perfil do administrador principal.', 'warning')
+        if request.headers.get('HX-Request') == 'true':
+            users_data = query_db(
+                "SELECT usuario as usuario, nome, perfil_acesso FROM perfil_usuario ORDER BY nome"
+            ) or []
+            perfis_disponiveis = current_app.config.get(
+                'PERFIS_DE_ACESSO', ['Visitante', 'Implantador', 'Gestor', 'Administrador']
+            )
+            return render_template('_manage_users_content.html', users=users_data, perfis_list=perfis_disponiveis)
         return redirect(url_for('management.manage_users'))
 
     # Valida o perfil (se não for None, deve estar na lista de constantes)
@@ -213,6 +236,14 @@ def update_user_perfil():
             f"Tentativa de atribuir perfil inválido '{novo_perfil}' para {usuario_alvo} por {g.user_email}"
         )
         flash('Perfil de acesso inválido.', 'error')
+        if request.headers.get('HX-Request') == 'true':
+            users_data = query_db(
+                "SELECT usuario as usuario, nome, perfil_acesso FROM perfil_usuario ORDER BY nome"
+            ) or []
+            perfis_disponiveis = current_app.config.get(
+                'PERFIS_DE_ACESSO', ['Visitante', 'Implantador', 'Gestor', 'Administrador']
+            )
+            return render_template('_manage_users_content.html', users=users_data, perfis_list=perfis_disponiveis)
         return redirect(url_for('management.manage_users'))
 
     try:
@@ -220,6 +251,14 @@ def update_user_perfil():
         user_exists = query_db("SELECT 1 FROM perfil_usuario WHERE usuario = %s", (usuario_alvo,), one=True)
         if not user_exists:
             flash('Usuário não encontrado.', 'error')
+            if request.headers.get('HX-Request') == 'true':
+                users_data = query_db(
+                    "SELECT usuario as usuario, nome, perfil_acesso FROM perfil_usuario ORDER BY nome"
+                ) or []
+                perfis_disponiveis = current_app.config.get(
+                    'PERFIS_DE_ACESSO', ['Visitante', 'Implantador', 'Gestor', 'Administrador']
+                )
+                return render_template('_manage_users_content.html', users=users_data, perfis_list=perfis_disponiveis)
             return redirect(url_for('management.manage_users'))
 
         # Regra: impedir usuário não-admin de alterar admin
@@ -236,6 +275,14 @@ def update_user_perfil():
         if target_is_admin and (g.perfil or {}).get('perfil_acesso') != PERFIL_ADMIN:
             auth_security_logger.warning("Tentativa de rebaixar administrador detectada por " + str(g.user_email))
             flash('Apenas Administradores podem alterar perfis de Administradores.', 'warning')
+            if request.headers.get('HX-Request') == 'true':
+                users_data = query_db(
+                    "SELECT usuario as usuario, nome, perfil_acesso FROM perfil_usuario ORDER BY nome"
+                ) or []
+                perfis_disponiveis = current_app.config.get(
+                    'PERFIS_DE_ACESSO', ['Visitante', 'Implantador', 'Gestor', 'Administrador']
+                )
+                return render_template('_manage_users_content.html', users=users_data, perfis_list=perfis_disponiveis)
             return redirect(url_for('management.manage_users'))
 
         execute_db(
@@ -244,11 +291,27 @@ def update_user_perfil():
         )
         management_logger.info(f"Admin {g.user_email} atualizou o perfil de {usuario_alvo} para {novo_perfil}")
         flash('Perfil atualizado com sucesso.', 'success')
+        if request.headers.get('HX-Request') == 'true':
+            users_data = query_db(
+                "SELECT usuario as usuario, nome, perfil_acesso FROM perfil_usuario ORDER BY nome"
+            ) or []
+            perfis_disponiveis = current_app.config.get(
+                'PERFIS_DE_ACESSO', ['Visitante', 'Implantador', 'Gestor', 'Administrador']
+            )
+            return render_template('_manage_users_content.html', users=users_data, perfis_list=perfis_disponiveis)
         return redirect(url_for('management.manage_users'))
 
     except Exception as e:
         management_logger.error(f"Erro ao atualizar perfil de {usuario_alvo} por {g.user_email}: {e}")
         flash(f'Erro de banco de dados: {e}', 'error')
+        if request.headers.get('HX-Request') == 'true':
+            users_data = query_db(
+                "SELECT usuario as usuario, nome, perfil_acesso FROM perfil_usuario ORDER BY nome"
+            ) or []
+            perfis_disponiveis = current_app.config.get(
+                'PERFIS_DE_ACESSO', ['Visitante', 'Implantador', 'Gestor', 'Administrador']
+            )
+            return render_template('_manage_users_content.html', users=users_data, perfis_list=perfis_disponiveis)
         return redirect(url_for('management.manage_users'))
 
 @management_bp.route('/users/delete', methods=['POST'])
