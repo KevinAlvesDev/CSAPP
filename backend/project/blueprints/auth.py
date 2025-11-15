@@ -203,7 +203,7 @@ def rate_limit(max_requests):
     return decorator
 
 @auth_bp.route('/change-password', methods=['GET', 'POST'])
-@rate_limit("10 per minute")  # SEGURANÇA: Reduzido de 15 para 10 tentativas/min
+@rate_limit("100 per minute")
 @login_required
 def change_password():
     """Permite ao usuário autenticado alterar sua senha."""
@@ -256,7 +256,7 @@ def change_password():
         return render_template('change_password.html', auth0_enabled=False)
 
 @auth_bp.route('/forgot-password', methods=['GET', 'POST'])
-@rate_limit("5 per minute")  # SEGURANÇA: Reduzido de 10 para 5 tentativas/min (previne abuso)
+@rate_limit("100 per minute")
 def forgot_password():
     """Solicita recuperação de senha via e-mail com token."""
     if request.method == 'GET':
@@ -321,7 +321,7 @@ def check_email():
     return jsonify({'valid': True, 'exists': bool(usuario)})
 
 @auth_bp.route('/reset-password/<token>', methods=['GET', 'POST'])
-@rate_limit("5 per minute")  # SEGURANÇA: Reduzido de 10 para 5 tentativas/min
+@rate_limit("100 per minute")
 def reset_password(token):
     """Redefine a senha usando token temporário."""
     # Valida token (expira em 3600s)
@@ -372,7 +372,7 @@ def reset_password(token):
         return render_template('reset_password.html', auth0_enabled=False)
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
-@rate_limit("5 per minute")
+@rate_limit("100 per minute")
 def login():
     if request.method == 'GET':
         try:
@@ -422,7 +422,7 @@ def login():
     return redirect(url_for('main.dashboard'))
 
 @auth_bp.route('/callback')
-@rate_limit("5 per minute")  # Limite de 5 callbacks por minuto
+@rate_limit("100 per minute")
 def callback():
     """Manipula o retorno do Auth0 após o login."""
     # Se Auth0 estiver desativado, retorna para dashboard
@@ -599,7 +599,7 @@ def dev_login_as():
     return redirect(url_for('main.dashboard'))
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
-@rate_limit("10 per minute")  # SEGURANÇA: Reduzido de 20 para 10 registros/min (previne spam)
+@rate_limit("100 per minute")
 def register():
     """Página de registro de novos usuários."""
     # Se Auth0 estiver habilitado, redireciona para login
