@@ -138,3 +138,9 @@ class Config:
     # --- Internacionalização básica ---
     # Defina LANG=pt ou LANG=en no ambiente
     LANG = os.environ.get('LANG', 'pt')
+
+    # --- Logs ---
+    LOG_DIR = os.environ.get('LOG_DIR')
+    LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
+    LOG_ROTATION_ENABLED = os.environ.get('LOG_ROTATION_ENABLED', 'true').lower() in ('1','true','yes')
+    LOG_RETENTION_DAYS = int(os.environ.get('LOG_RETENTION_DAYS', '14'))

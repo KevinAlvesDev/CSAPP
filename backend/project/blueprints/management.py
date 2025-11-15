@@ -7,6 +7,14 @@ from ..db import query_db, execute_db
 from ..logging_config import management_logger, security_logger
 from ..constants import ADMIN_EMAIL, PERFIL_ADMIN
 from ..extensions import r2_client
+from ..db_pool import get_db_connection
+from ..db import db_connection
+import os
+import io
+import csv
+import zipfile
+import shutil
+from datetime import datetime
 
 management_bp = Blueprint('management', __name__, url_prefix='/management')
 
@@ -59,6 +67,78 @@ def manage_users_modal():
     except Exception as e:
         management_logger.error(f"Erro ao carregar conteúdo do modal de usuários: {e}")
         return ("Erro ao carregar usuários", 500)
+
+
+@management_bp.route('/backup/db', methods=['POST'])
+def backup_database():
+    """Gera um backup do banco de dados atual.
+    - SQLite: copia o arquivo .db para backend/backups com timestamp
+    - PostgreSQL: exporta tabelas principais para CSV dentro de um ZIP
+    Retorna JSON com caminho relativo do backup.
+    """
+    try:
+        result = perform_backup()
+        return jsonify({'ok': True, **result})
+    except Exception as e:
+        management_logger.error(f"Erro ao gerar backup do banco: {e}", exc_info=True)
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+def perform_backup():
+    """Executa o backup do banco e retorna dict com tipo e caminho do arquivo."""
+    # Diretório de backups
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    backup_dir = os.path.join(base_dir, 'backups')
+    os.makedirs(backup_dir, exist_ok=True)
+
+    ts = datetime.now().strftime('%Y%m%d-%H%M%S')
+
+    # Verifica tipo de banco
+    with db_connection() as (conn, db_type):
+        if db_type == 'sqlite':
+            # Reconstrói caminho do arquivo conforme db_pool
+            sqlite_base = os.path.abspath(os.path.dirname(base_dir))
+            is_testing = current_app.config.get('TESTING', False)
+            db_filename = 'dashboard_simples_test.db' if is_testing else 'dashboard_simples.db'
+            db_path = os.path.join(sqlite_base, db_filename)
+            if not os.path.exists(db_path):
+                raise FileNotFoundError(f"Arquivo SQLite não encontrado: {db_path}")
+
+            target = os.path.join(backup_dir, f'db-sqlite-{ts}.sqlite')
+            shutil.copy2(db_path, target)
+            management_logger.info(f"SQLite backup criado: {target}")
+            return {'type': 'sqlite', 'backup_file': target.replace(base_dir+os.sep, '')}
+
+        elif db_type == 'postgres':
+            tables = [
+                'usuarios', 'perfil_usuario', 'implantacoes', 'tarefas', 'comentarios',
+                'timeline_log', 'gamificacao_regras', 'gamificacao_metricas_mensais'
+            ]
+            zip_path = os.path.join(backup_dir, f'db-postgres-{ts}.zip')
+            with zipfile.ZipFile(zip_path, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
+                cur = conn.cursor()
+                for tbl in tables:
+                    try:
+                        cur.execute(f'SELECT * FROM {tbl}')
+                        rows = cur.fetchall() or []
+                        if hasattr(cur, 'description') and cur.description:
+                            headers = [col.name if hasattr(col, 'name') else col[0] for col in cur.description]
+                        else:
+                            headers = []
+                        buf = io.StringIO()
+                        writer = csv.writer(buf)
+                        if headers:
+                            writer.writerow(headers)
+                        for r in rows:
+                            writer.writerow(list(r))
+                        zf.writestr(f'{tbl}.csv', buf.getvalue())
+                    except Exception as te:
+                        management_logger.error(f"Falha ao exportar tabela {tbl}: {te}")
+                cur.close()
+            management_logger.info(f"PostgreSQL backup criado: {zip_path}")
+            return {'type': 'postgres', 'backup_file': zip_path.replace(base_dir+os.sep, '')}
+        else:
+            raise RuntimeError(f"Tipo de banco desconhecido: {db_type}")
 
 @management_bp.route('/users/update_profile', methods=['POST'])
 def update_user_profile():
@@ -177,18 +257,47 @@ def delete_user():
     usuario_alvo = request.form.get('usuario_email')
     if not usuario_alvo:
         flash('Usuário não especificado.', 'error')
+        # Se for requisição HTMX, recarrega conteúdo do modal
+        if request.headers.get('HX-Request') == 'true':
+            users_data = query_db(
+                "SELECT usuario as usuario, nome, perfil_acesso FROM perfil_usuario ORDER BY nome"
+            ) or []
+            perfis_disponiveis = current_app.config.get(
+                'PERFIS_DE_ACESSO', ['Visitante', 'Implantador', 'Gestor', 'Administrador']
+            )
+            return render_template(
+                '_manage_users_content.html',
+                users=users_data,
+                perfis_list=perfis_disponiveis
+            )
         return redirect(url_for('management.manage_users'))
 
     # Regra de segurança: não pode excluir a si mesmo
     if usuario_alvo == g.user_email:
         security_logger.warning(f"Tentativa de exclusão do próprio usuário por {g.user_email}")
         flash('Você não pode excluir a si mesmo.', 'warning')
+        if request.headers.get('HX-Request') == 'true':
+            users_data = query_db(
+                "SELECT usuario as usuario, nome, perfil_acesso FROM perfil_usuario ORDER BY nome"
+            ) or []
+            perfis_disponiveis = current_app.config.get(
+                'PERFIS_DE_ACESSO', ['Visitante', 'Implantador', 'Gestor', 'Administrador']
+            )
+            return render_template('_manage_users_content.html', users=users_data, perfis_list=perfis_disponiveis)
         return redirect(url_for('management.manage_users'))
 
     # Regra: não pode excluir o administrador principal
     if usuario_alvo == ADMIN_EMAIL:
         security_logger.warning("Tentativa de exclusão do administrador principal detectada por " + str(g.user_email))
         flash('Não é permitido excluir o administrador principal.', 'warning')
+        if request.headers.get('HX-Request') == 'true':
+            users_data = query_db(
+                "SELECT usuario as usuario, nome, perfil_acesso FROM perfil_usuario ORDER BY nome"
+            ) or []
+            perfis_disponiveis = current_app.config.get(
+                'PERFIS_DE_ACESSO', ['Visitante', 'Implantador', 'Gestor', 'Administrador']
+            )
+            return render_template('_manage_users_content.html', users=users_data, perfis_list=perfis_disponiveis)
         return redirect(url_for('management.manage_users'))
 
     try:
@@ -206,15 +315,51 @@ def delete_user():
                     # Falha ao excluir arquivo não deve impedir exclusão do usuário
                     pass
 
-        # Exclui registros simples (detalhes de cascata dependem do schema real)
+        # Exclui implantações do usuário antes de remover o usuário (garante cascata de tarefas/comentários)
+        implantacoes_ids = query_db("SELECT id FROM implantacoes WHERE usuario_cs = %s", (usuario_alvo,)) or []
+        for impl in implantacoes_ids:
+            execute_db("DELETE FROM implantacoes WHERE id = %s", (impl['id'],))
+
+        # Exclui registros de usuário
         execute_db("DELETE FROM perfil_usuario WHERE usuario = %s", (usuario_alvo,))
         execute_db("DELETE FROM usuarios WHERE usuario = %s", (usuario_alvo,))
 
-        management_logger.info(f"Usuário {usuario_alvo} excluído por {g.user_email}")
-        flash('Usuário excluído com sucesso.', 'success')
+        management_logger.info(f"Usuário {usuario_alvo} excluído por {g.user_email} (implantações vinculadas removidas: {len(implantacoes_ids)})")
+        flash(f"Usuário e {len(implantacoes_ids)} implantações vinculadas excluídos.", 'success')
+        if request.headers.get('HX-Request') == 'true':
+            users_data = query_db(
+                "SELECT usuario as usuario, nome, perfil_acesso FROM perfil_usuario ORDER BY nome"
+            ) or []
+            perfis_disponiveis = current_app.config.get(
+                'PERFIS_DE_ACESSO', ['Visitante', 'Implantador', 'Gestor', 'Administrador']
+            )
+            return render_template('_manage_users_content.html', users=users_data, perfis_list=perfis_disponiveis)
         return redirect(url_for('management.manage_users'))
 
     except Exception as e:
         management_logger.error(f"Erro ao excluir usuário {usuario_alvo} por {g.user_email}: {e}")
         flash(f'Erro de banco de dados: {e}', 'error')
+        if request.headers.get('HX-Request') == 'true':
+            users_data = query_db(
+                "SELECT usuario as usuario, nome, perfil_acesso FROM perfil_usuario ORDER BY nome"
+            ) or []
+            perfis_disponiveis = current_app.config.get(
+                'PERFIS_DE_ACESSO', ['Visitante', 'Implantador', 'Gestor', 'Administrador']
+            )
+            return render_template('_manage_users_content.html', users=users_data, perfis_list=perfis_disponiveis)
+        return redirect(url_for('management.manage_users'))
+
+@management_bp.route('/cleanup/orphan-implantacoes', methods=['POST'])
+def cleanup_orphan_implantacoes():
+    """Remove implantações órfãs (sem usuário proprietário). Admin-only."""
+    try:
+        stats = query_db("SELECT COUNT(*) as c FROM implantacoes WHERE usuario_cs IS NULL", (), one=True) or {'c': 0}
+        execute_db("DELETE FROM implantacoes WHERE usuario_cs IS NULL")
+        count = stats.get('c', 0)
+        management_logger.info(f"Admin {g.user_email} removeu {count} implantações órfãs")
+        flash(f"{count} implantações órfãs removidas.", 'success')
+        return redirect(url_for('management.manage_users'))
+    except Exception as e:
+        management_logger.error(f"Erro ao remover implantações órfãs por {g.user_email}: {e}")
+        flash(f"Erro ao remover implantações órfãs: {e}", 'error')
         return redirect(url_for('management.manage_users'))

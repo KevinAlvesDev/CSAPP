@@ -79,8 +79,8 @@ def toggle_tarefa(tarefa_id):
         
         api_logger.info(f'Task {tarefa_id} status changed to {novo_status_bool} by user {g.user_email}')
         
-        # Calcula progresso e verifica auto-finalização (chamada única)
-        finalizada, log_finalizacao = auto_finalizar_implantacao(tarefa['implantacao_id'], usuario_cs_email)
+        # Calcula progresso sem auto-finalizar a implantação
+        finalizada, log_finalizacao = False, None
         novo_prog, _, _ = _get_progress(tarefa['implantacao_id'])
 
         # Recupera o último log correspondente à alteração da tarefa
@@ -242,8 +242,8 @@ def toggle_tarefas_bulk():
             logar_timeline(implantacao_id, usuario_cs_email, 'tarefa_alterada', detalhe)
             updated += 1
 
-        # Calcula progresso e tenta auto-finalização uma única vez
-        finalizada, log_finalizacao = auto_finalizar_implantacao(implantacao_id, usuario_cs_email)
+        # Calcula progresso sem auto-finalizar a implantação
+        finalizada, log_finalizacao = False, None
         novo_prog, _, _ = _get_progress(implantacao_id)
 
         # Para HTMX: devolve fragmentos OOB dos itens atualizados + barra de progresso

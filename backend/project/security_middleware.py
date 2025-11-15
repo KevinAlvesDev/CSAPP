@@ -26,9 +26,9 @@ def init_security_headers(app):
         # Permite scripts inline (necessário para alguns templates), mas restringe origens
         csp_directives = [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' cdn.jsdelivr.net cdnjs.cloudflare.com",
-            "style-src 'self' 'unsafe-inline' cdn.jsdelivr.net cdnjs.cloudflare.com fonts.googleapis.com",
-            "font-src 'self' fonts.gstatic.com cdnjs.cloudflare.com",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com",
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com",
+            "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
             "img-src 'self' data: https: blob:",
             "connect-src 'self'",
             "frame-ancestors 'none'",

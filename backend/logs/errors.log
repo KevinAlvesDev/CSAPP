@@ -13203,3 +13203,207 @@ Traceback (most recent call last):
     cursor.execute(query, args)
     ~~~~~~~~~~~~~~^^^^^^^^^^^^^
 sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+2025-11-14 21:43:55 - ERROR - suporte01.cs@gmail.com - Suporte 01 (Administrador) - project - Database execution error: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+Traceback (most recent call last):
+  File "C:\Users\kevin\Desktop\ajustes-finais\CSAPP\backend\project\db.py", line 152, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+2025-11-14 21:43:55 - ERROR - suporte01.cs@gmail.com - Suporte 01 (Administrador) - project - Database execution error: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+Traceback (most recent call last):
+  File "C:\Users\kevin\Desktop\ajustes-finais\CSAPP\backend\project\db.py", line 152, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+2025-11-14 21:54:45 - ERROR - suporte01.cs@gmail.com - Suporte 01 (Administrador) - project - Database execution error: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+Traceback (most recent call last):
+  File "C:\Users\kevin\Desktop\ajustes-finais\CSAPP\backend\project\db.py", line 152, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+2025-11-14 21:54:45 - ERROR - suporte01.cs@gmail.com - Suporte 01 (Administrador) - project - Database execution error: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+Traceback (most recent call last):
+  File "C:\Users\kevin\Desktop\ajustes-finais\CSAPP\backend\project\db.py", line 152, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+2025-11-14 22:01:46 - ERROR - suporte01.cs@gmail.com - Suporte 01 (Administrador) - project - Database execution error: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+Traceback (most recent call last):
+  File "C:\Users\kevin\Desktop\ajustes-finais\CSAPP\backend\project\db.py", line 152, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+2025-11-14 22:01:46 - ERROR - suporte01.cs@gmail.com - Suporte 01 (Administrador) - project - Database execution error: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+Traceback (most recent call last):
+  File "C:\Users\kevin\Desktop\ajustes-finais\CSAPP\backend\project\db.py", line 152, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+2025-11-14 23:54:10 - ERROR - suporte01.cs@gmail.com - Suporte 01 (Administrador) - project - Database execution error: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+Traceback (most recent call last):
+  File "C:\Users\kevin\Desktop\ajustes-finais\CSAPP\backend\project\db.py", line 152, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+2025-11-14 23:54:10 - ERROR - suporte01.cs@gmail.com - Suporte 01 (Administrador) - project - Database execution error: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+Traceback (most recent call last):
+  File "C:\Users\kevin\Desktop\ajustes-finais\CSAPP\backend\project\db.py", line 152, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+2025-11-15 01:12:42 - ERROR - suporte01.cs@gmail.com - Suporte 01 (Administrador) - project - Database execution error: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+Traceback (most recent call last):
+  File "C:\Users\kevin\Desktop\ajustes-finais\CSAPP\backend\project\db.py", line 152, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+2025-11-15 01:12:42 - ERROR - suporte01.cs@gmail.com - Suporte 01 (Administrador) - project - Database execution error: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+Traceback (most recent call last):
+  File "C:\Users\kevin\Desktop\ajustes-finais\CSAPP\backend\project\db.py", line 152, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+2025-11-15 01:25:07 - ERROR - suporte01.cs@gmail.com - Suporte 01 (Administrador) - project - Database execution error: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+Traceback (most recent call last):
+  File "C:\Users\kevin\Desktop\ajustes-finais\CSAPP\backend\project\db.py", line 152, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+2025-11-15 01:25:07 - ERROR - suporte01.cs@gmail.com - Suporte 01 (Administrador) - project - Database execution error: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+Traceback (most recent call last):
+  File "C:\Users\kevin\Desktop\ajustes-finais\CSAPP\backend\project\db.py", line 152, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+2025-11-15 01:30:46 - ERROR - suporte01.cs@gmail.com - Suporte 01 (Administrador) - project - Database execution error: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+Traceback (most recent call last):
+  File "C:\Users\kevin\Desktop\ajustes-finais\CSAPP\backend\project\db.py", line 152, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+2025-11-15 01:30:46 - ERROR - suporte01.cs@gmail.com - Suporte 01 (Administrador) - project - Database execution error: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+Traceback (most recent call last):
+  File "C:\Users\kevin\Desktop\ajustes-finais\CSAPP\backend\project\db.py", line 152, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+2025-11-15 02:09:21 - ERROR - suporte01.cs@gmail.com - Suporte 01 (Administrador) - project - Database execution error: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+Traceback (most recent call last):
+  File "C:\Users\kevin\Desktop\ajustes-finais\CSAPP\backend\project\db.py", line 152, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+2025-11-15 02:09:21 - ERROR - suporte01.cs@gmail.com - Suporte 01 (Administrador) - project - Database execution error: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+Traceback (most recent call last):
+  File "C:\Users\kevin\Desktop\ajustes-finais\CSAPP\backend\project\db.py", line 152, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+2025-11-15 02:36:27 - ERROR - suporte01.cs@gmail.com - Suporte 01 (Administrador) - project - Database execution error: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+Traceback (most recent call last):
+  File "C:\Users\kevin\Desktop\ajustes-finais\CSAPP\backend\project\db.py", line 152, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+2025-11-15 02:36:27 - ERROR - suporte01.cs@gmail.com - Suporte 01 (Administrador) - project - Database execution error: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+Traceback (most recent call last):
+  File "C:\Users\kevin\Desktop\ajustes-finais\CSAPP\backend\project\db.py", line 152, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+2025-11-15 02:59:03 - ERROR - suporte01.cs@gmail.com - Suporte 01 (Administrador) - project - Database execution error: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+Traceback (most recent call last):
+  File "C:\Users\kevin\Desktop\ajustes-finais\CSAPP\backend\project\db.py", line 152, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+2025-11-15 02:59:03 - ERROR - suporte01.cs@gmail.com - Suporte 01 (Administrador) - project - Database execution error: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+Traceback (most recent call last):
+  File "C:\Users\kevin\Desktop\ajustes-finais\CSAPP\backend\project\db.py", line 152, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+2025-11-15 03:24:32 - ERROR - suporte01.cs@gmail.com - Suporte 01 (Administrador) - project - Database execution error: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+Traceback (most recent call last):
+  File "C:\Users\kevin\Desktop\ajustes-finais\CSAPP\backend\project\db.py", line 152, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+2025-11-15 03:24:32 - ERROR - suporte01.cs@gmail.com - Suporte 01 (Administrador) - project - Database execution error: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+Traceback (most recent call last):
+  File "C:\Users\kevin\Desktop\ajustes-finais\CSAPP\backend\project\db.py", line 152, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+2025-11-15 03:30:26 - ERROR - suporte01.cs@gmail.com - Suporte 01 (Administrador) - project - Database execution error: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+Traceback (most recent call last):
+  File "C:\Users\kevin\Desktop\ajustes-finais\CSAPP\backend\project\db.py", line 152, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+2025-11-15 03:30:26 - ERROR - suporte01.cs@gmail.com - Suporte 01 (Administrador) - project - Database execution error: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+Traceback (most recent call last):
+  File "C:\Users\kevin\Desktop\ajustes-finais\CSAPP\backend\project\db.py", line 152, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+2025-11-15 03:38:16 - ERROR - suporte01.cs@gmail.com - Suporte 01 (Administrador) - project - Database execution error: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+Traceback (most recent call last):
+  File "C:\Users\kevin\Desktop\ajustes-finais\CSAPP\backend\project\db.py", line 152, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+2025-11-15 03:38:16 - ERROR - suporte01.cs@gmail.com - Suporte 01 (Administrador) - project - Database execution error: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+Traceback (most recent call last):
+  File "C:\Users\kevin\Desktop\ajustes-finais\CSAPP\backend\project\db.py", line 152, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+2025-11-15 03:43:41 - ERROR - suporte01.cs@gmail.com - Suporte 01 (Administrador) - project - Database execution error: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+Traceback (most recent call last):
+  File "C:\Users\kevin\Desktop\ajustes-finais\CSAPP\backend\project\db.py", line 152, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+2025-11-15 03:43:41 - ERROR - suporte01.cs@gmail.com - Suporte 01 (Administrador) - project - Database execution error: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+Traceback (most recent call last):
+  File "C:\Users\kevin\Desktop\ajustes-finais\CSAPP\backend\project\db.py", line 152, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+2025-11-15 03:49:57 - ERROR - suporte01.cs@gmail.com - Suporte 01 (Administrador) - project - Database execution error: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+Traceback (most recent call last):
+  File "C:\Users\kevin\Desktop\ajustes-finais\CSAPP\backend\project\db.py", line 152, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+2025-11-15 03:49:57 - ERROR - suporte01.cs@gmail.com - Suporte 01 (Administrador) - project - Database execution error: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+Traceback (most recent call last):
+  File "C:\Users\kevin\Desktop\ajustes-finais\CSAPP\backend\project\db.py", line 152, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+2025-11-15 03:53:22 - ERROR - suporte01.cs@gmail.com - Suporte 01 (Administrador) - project - Database execution error: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+Traceback (most recent call last):
+  File "C:\Users\kevin\Desktop\ajustes-finais\CSAPP\backend\project\db.py", line 152, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+2025-11-15 03:53:22 - ERROR - suporte01.cs@gmail.com - Suporte 01 (Administrador) - project - Database execution error: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+Traceback (most recent call last):
+  File "C:\Users\kevin\Desktop\ajustes-finais\CSAPP\backend\project\db.py", line 152, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+2025-11-15 03:55:37 - ERROR - suporte01.cs@gmail.com - Suporte 01 (Administrador) - project - Database execution error: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+Traceback (most recent call last):
+  File "C:\Users\kevin\Desktop\ajustes-finais\CSAPP\backend\project\db.py", line 152, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+2025-11-15 03:55:37 - ERROR - suporte01.cs@gmail.com - Suporte 01 (Administrador) - project - Database execution error: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+Traceback (most recent call last):
+  File "C:\Users\kevin\Desktop\ajustes-finais\CSAPP\backend\project\db.py", line 152, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')

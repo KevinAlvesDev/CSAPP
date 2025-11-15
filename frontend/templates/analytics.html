@@ -31,8 +31,9 @@
             <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm btn-outline-primary me-2">
                 <i class="bi bi-arrow-left me-1"></i> Dashboard Pessoal
             </a>
-            
-            {# Botão do menu offcanvas antigo removido #}
+            <a href="{{ url_for('analytics.cancelamentos_dashboard', cs_email=current_cs_email, start_date=current_start_date, end_date=current_end_date) }}" class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-x-circle me-1"></i> Cancelamentos
+            </a>
         </div>
     </header>
 

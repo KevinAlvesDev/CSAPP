@@ -228,6 +228,14 @@ input[type="file"]::-webkit-file-upload-button:hover {
 .sidebar-info-list li, .sidebar-info-list strong {
     color: var(--body-color) !important;
 }
+.sidebar-info-list {
+    word-break: break-word;
+}
+.sidebar-info-list li {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    max-width: 100%;
+}
 
 /* --- ESTILO DAS ABAS (NAV-PILLS) MODERNAS --- */
 .nav-pills .nav-link {

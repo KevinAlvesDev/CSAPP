@@ -183,13 +183,15 @@
                         <div id="checklist-area-treinamento" class="pt-2">
                             {% if not tarefas_agrupadas_treinamento %} <div class="alert alert-light text-center small py-2" role="alert">Nenhuma tarefa de treinamento encontrada. Use "Adicionar Tarefa" na sidebar.</div> {% endif %}
                             {% for modulo, tarefas in tarefas_agrupadas_treinamento.items() %}
-                                <div class="module-header" data-bs-toggle="collapse" data-bs-target="#collapse-trein-{{ loop.index }}" aria-expanded="false">
+                                <div class="module-header" aria-expanded="false">
                                     <h5 class="mb-0 fs-6">{{ modulo }}</h5>
                                     <div>
                                         <button class="btn btn-outline-success btn-marcar-todas me-2" type="button" title="Marcar todas"> <i class="bi bi-check-all"></i> Todas </button>
-                                        
+                                        <button class="btn btn-outline-secondary btn-desmarcar-todas btn-marcar-todas me-2" type="button" title="Desmarcar todas"> <i class="bi bi-x-circle"></i> Todas </button>
                                         <button class="btn btn-outline-danger btn-marcar-todas me-2" type="button" title="Excluir todas"> <i class="bi bi-trash"></i> Todas </button>
-                                        <i class="bi bi-chevron-down"></i>
+                                        <button class="btn btn-link collapse-toggle align-middle" type="button" title="Detalhar" data-bs-toggle="collapse" data-bs-target="#collapse-trein-{{ loop.index }}" aria-expanded="false" aria-label="Detalhar">
+                                            <i class="bi bi-chevron-down me-1"></i> Detalhar
+                                        </button>
                                     </div>
                                 </div>
                                 <div id="collapse-trein-{{ loop.index }}" class="collapse module-content-collapse" data-modulo="{{ modulo }}">
@@ -209,13 +211,15 @@
                         <div id="checklist-area-obrigatorio" class="pt-2">
                             {% if not tarefas_agrupadas_obrigatorio %} <div class="alert alert-light text-center small py-2" role="alert">Nenhuma tarefa obrigatória encontrada. Use "Adicionar Tarefa" na sidebar.</div> {% endif %}
                             {% for modulo, tarefas in tarefas_agrupadas_obrigatorio.items() %}
-                                <div class="module-header" data-bs-toggle="collapse" data-bs-target="#collapse-obrig-{{ loop.index }}" aria-expanded="false">
+                                <div class="module-header" aria-expanded="false">
                                     <h5 class="mb-0 fs-6">{{ modulo }}</h5>
                                     <div>
                                         <button class="btn btn-outline-success btn-marcar-todas me-2" type="button" title="Marcar todas"> <i class="bi bi-check-all"></i> Todas </button>
-                                        
+                                        <button class="btn btn-outline-secondary btn-desmarcar-todas btn-marcar-todas me-2" type="button" title="Desmarcar todas"> <i class="bi bi-x-circle"></i> Todas </button>
                                         <button class="btn btn-outline-danger btn-marcar-todas me-2" type="button" title="Excluir todas"> <i class="bi bi-trash"></i> Todas </button>
-                                        <i class="bi bi-chevron-down"></i>
+                                        <button class="btn btn-link collapse-toggle align-middle" type="button" title="Detalhar" data-bs-toggle="collapse" data-bs-target="#collapse-obrig-{{ loop.index }}" aria-expanded="false" aria-label="Detalhar">
+                                            <i class="bi bi-chevron-down me-1"></i> Detalhar
+                                        </button>
                                     </div>
                                 </div>
                                 <div id="collapse-obrig-{{ loop.index }}" class="collapse module-content-collapse" data-modulo="{{ modulo }}">
@@ -235,10 +239,12 @@
                         <div id="checklist-area-pendencias" class="pt-2">
                             {% if not tarefas_agrupadas_pendencias %} <div class="alert alert-light text-center small py-2" role="alert">Nenhuma pendência registrada. Use "Adicionar Tarefa" na sidebar.</div>
                             {% else %} {% for modulo, tarefas in tarefas_agrupadas_pendencias.items() %}
-                            <div class="module-header" data-bs-toggle="collapse" data-bs-target="#collapse-pend-{{ loop.index }}" aria-expanded="true"> <h5 class="mb-0 fs-6">{{ modulo }}</h5>
+                            <div class="module-header" aria-expanded="true"> <h5 class="mb-0 fs-6">{{ modulo }}</h5>
                                 <div>
                                     <button class="btn btn-outline-danger btn-marcar-todas" type="button" title="Excluir todas"> <i class="bi bi-trash"></i> Todas </button>
-                                    <i class="bi bi-chevron-down"></i>
+                                    <button class="btn btn-link collapse-toggle align-middle" type="button" title="Detalhar" data-bs-toggle="collapse" data-bs-target="#collapse-pend-{{ loop.index }}" aria-expanded="true" aria-label="Detalhar">
+                                        <i class="bi bi-chevron-down me-1"></i> Detalhar
+                                    </button>
                                 </div>
                             </div>
                             <div id="collapse-pend-{{ loop.index }}" class="collapse show module-content-collapse" data-modulo="{{ modulo }}"> <ul class="list-group list-group-flush list-group-sortable tasks-list-group" id="sortable-list-pend-{{ loop.index }}">
@@ -557,7 +563,7 @@ document.addEventListener('DOMContentLoaded', function(){
   function postToggleIds(ids){
     if (!window.htmx){ console.warn('HTMX não disponível para operação em lote'); return; }
     if (!ids || ids.length === 0) return;
-    window.htmx.ajax('POST', '/api/toggle_tarefas', { values: { ids: ids.join(',') } });
+    window.htmx.ajax('POST', '/api/toggle_tarefas', { values: { ids: ids.join(',') }, swap: 'none' });
   }
   document.body.addEventListener('click', function(ev){
     var btn = ev.target.closest('button');
@@ -566,6 +572,11 @@ document.addEventListener('DOMContentLoaded', function(){
     if (!header) return;
     var container = header.nextElementSibling;
     if (!container || !container.classList.contains('module-content-collapse')) return;
+    if (btn.classList.contains('btn-desmarcar-todas')){
+      var idsDes = collectTaskIds(container, true);
+      postToggleIds(idsDes);
+      return;
+    }
     if (btn.classList.contains('btn-marcar-todas')){
       var ids = collectTaskIds(container, false);
       postToggleIds(ids);

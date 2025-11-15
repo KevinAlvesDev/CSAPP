@@ -1,4 +1,5 @@
 import logging
+from logging.handlers import TimedRotatingFileHandler
 import os
 from datetime import datetime
 from flask import g, current_app
@@ -35,7 +36,7 @@ def setup_logging(app):
 
     # Diretório e nível vindos da configuração quando disponível
     default_dir = os.path.join(os.path.dirname(__file__), '..', 'logs')
-    log_dir = app.config.get('LOG_DIR', default_dir)
+    log_dir = app.config.get('LOG_DIR') or default_dir
     os.makedirs(log_dir, exist_ok=True)
 
     log_level_str = app.config.get('LOG_LEVEL', 'INFO')
@@ -46,13 +47,25 @@ def setup_logging(app):
     date_format = '%Y-%m-%d %H:%M:%S'
     formatter = logging.Formatter(log_format, date_format)
 
-    # Handlers de arquivo simples (compatível com testes que mockam FileHandler)
-    file_handler = logging.FileHandler(os.path.join(log_dir, 'app.log'))
+    # Rotação de logs diária
+    rotation_enabled = bool(app.config.get('LOG_ROTATION_ENABLED', True))
+    retention_days = int(app.config.get('LOG_RETENTION_DAYS', 14))
+
+    if rotation_enabled:
+        file_handler = TimedRotatingFileHandler(
+            os.path.join(log_dir, 'app.log'), when='midnight', backupCount=retention_days, encoding='utf-8'
+        )
+        error_handler = TimedRotatingFileHandler(
+            os.path.join(log_dir, 'errors.log'), when='midnight', backupCount=retention_days, encoding='utf-8'
+        )
+        error_handler.setLevel(logging.ERROR)
+    else:
+        file_handler = logging.FileHandler(os.path.join(log_dir, 'app.log'), encoding='utf-8')
+        error_handler = logging.FileHandler(os.path.join(log_dir, 'errors.log'), encoding='utf-8')
+        error_handler.setLevel(logging.ERROR)
+
     file_handler.setFormatter(formatter)
     file_handler.addFilter(ContextFilter())
-
-    error_handler = logging.FileHandler(os.path.join(log_dir, 'errors.log'))
-    error_handler.setLevel(logging.ERROR)
     error_handler.setFormatter(formatter)
     error_handler.addFilter(ContextFilter())
 

@@ -9,6 +9,7 @@ from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from .logging_config import setup_logging
+import click
 
 csrf = CSRFProtect()
 
@@ -284,6 +285,18 @@ def create_app():
         print(f"ERRO CRÍTICO: Falha ao carregar regras de gamificação na inicialização: {e}")
         app.gamification_rules = {} # Define como vazio para evitar falhas
     # --- FIM DA CORREÇÃO ---
+
+    # Comando CLI para backup de banco (para agendamento externo)
+    @app.cli.command('backup-db')
+    def backup_db_command():
+        """Gera um backup do banco e imprime o caminho do arquivo."""
+        try:
+            from .blueprints.management import perform_backup
+            result = perform_backup()
+            click.echo(result.get('backup_file'))
+        except Exception as e:
+            click.echo(f"Erro ao executar backup: {e}")
+            raise
 
     @app.before_request
     def load_logged_in_user():

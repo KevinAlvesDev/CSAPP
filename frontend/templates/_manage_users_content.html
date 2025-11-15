@@ -68,12 +68,15 @@
                     {# Lógica de restrição: checa se g.perfil.perfil_acesso é 'Administrador' E se não é o próprio usuário E se não é o ADMIN_EMAIL #}
                     {% set can_delete = g.perfil.perfil_acesso == 'Administrador' and user.usuario != g.user_email and user.usuario != ADMIN_EMAIL %}
                     
-                    <form method="POST" action="{{ url_for('management.delete_user') }}" style="display:inline;"
-                          onsubmit="return confirm('ATENÇÃO: A exclusão de {{ user.usuario }} é IRREVERSÍVEL e removerá todos os dados! Tem certeza?');">
+                    <form method="POST" action="{{ url_for('management.delete_user') }}" style="display:inline;">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="usuario_email" value="{{ user.usuario }}">
                         
-                        <button type="submit" class="btn btn-danger btn-sm" 
+                        <button type="button" class="btn btn-danger btn-sm" 
+                            hx-post="{{ url_for('management.delete_user') }}"
+                            hx-target="#users-management-content"
+                            hx-swap="innerHTML"
+                            hx-confirm="ATENÇÃO: A exclusão de {{ user.usuario }} é IRREVERSÍVEL e removerá todos os dados! Tem certeza?"
                             {% if not can_delete %}disabled title="Você não pode excluir a si mesmo ou este usuário."{% endif %}>
                             <i class="bi bi-trash"></i> Excluir
                         </button>
