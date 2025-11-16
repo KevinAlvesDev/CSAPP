@@ -70,7 +70,6 @@ def save_profile():
             (nome, cargo, foto_url, g.user_email)
         )
         
-        # Atualiza a sessão para refletir o novo nome/foto imediatamente
         session['user'] = session.get('user', {})
         session['user']['name'] = nome
         session['user']['picture'] = foto_url
@@ -82,6 +81,8 @@ def save_profile():
         app_logger.error(f"Erro ao salvar perfil no DB para {g.user_email}: {e}")
         flash("Erro ao salvar perfil no banco de dados.", "error")
 
+    if request.headers.get('HX-Request') == 'true':
+        return render_template('modals/_perfil_content.html', r2_configurado=g.R2_CONFIGURED)
     return redirect(url_for('profile.profile'))
 
 # Rotas de configuração pessoal de e-mail foram removidas. O sistema usa SMTP global.

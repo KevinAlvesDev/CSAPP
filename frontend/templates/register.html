@@ -41,7 +41,12 @@
             </div>
             <div class="mb-3">
                 <label for="password" class="form-label">Senha</label>
-                <input type="password" class="form-control" id="password" name="password" required>
+                <div class="input-group">
+                    <input type="password" class="form-control" id="password" name="password" required>
+                    <button class="btn btn-outline-secondary" type="button" id="togglePasswordREG" aria-label="Mostrar senha">
+                        <i class="bi bi-eye"></i>
+                    </button>
+                </div>
                 <div id="password-rules" class="form-text mt-2">
                     <ul class="list-unstyled">
                         <li id="rule-len" class="text-danger"><i class="bi bi-x-circle me-1"></i>Mínimo de 8 caracteres</li>
@@ -57,7 +62,12 @@
             </div>
             <div class="mb-3">
                 <label for="password_confirm" class="form-label">Confirmar Senha</label>
-                <input type="password" class="form-control" id="password_confirm" name="password_confirm" required minlength="6">
+                <div class="input-group">
+                    <input type="password" class="form-control" id="password_confirm" name="password_confirm" required minlength="6">
+                    <button class="btn btn-outline-secondary" type="button" id="toggleConfirmPasswordREG" aria-label="Mostrar senha">
+                        <i class="bi bi-eye"></i>
+                    </button>
+                </div>
             </div>
             <button type="submit" class="btn btn-login btn-lg w-100">
                 <i class="bi bi-person-plus me-2"></i> Criar Conta
@@ -77,6 +87,8 @@
         const submitBtn = form.querySelector('button[type="submit"]');
         const pwd = document.getElementById('password');
         const pwdConfirm = document.getElementById('password_confirm');
+        const togglePwd = document.getElementById('togglePasswordREG');
+        const toggleConfirm = document.getElementById('toggleConfirmPasswordREG');
 
         const COMMON_PASSWORDS = new Set([
             '123456','123456789','12345678','12345','1234567890','111111','000000','123123','1234567','1234','password','password1','password123','Password1','Password123','qwerty','qwerty123','qwertyuiop','asdfgh','zxcvbn','qwerty1','asdfghjkl','1qaz2wsx','abc123','welcome','monkey','dragon','master','sunshine','princess','letmein','shadow','admin','iloveyou','football','baseball','superman','batman','passw0rd','p@ssw0rd','p@ssword','123qwe','qwe123','admin123','root','toor','test','guest','2024','2023','2022','2021','2020'
@@ -163,6 +175,18 @@
         form.addEventListener('submit', function(e) {
             if (submitBtn.disabled) { e.preventDefault(); }
         });
+        function bindToggle(btn, input) {
+            if (!btn || !input) return;
+            btn.addEventListener('click', function(){
+                const showing = input.type === 'text';
+                input.type = showing ? 'password' : 'text';
+                const icon = btn.querySelector('i');
+                if (icon) icon.className = showing ? 'bi bi-eye' : 'bi bi-eye-slash';
+                btn.setAttribute('aria-label', showing ? 'Mostrar senha' : 'Ocultar senha');
+            });
+        }
+        bindToggle(togglePwd, pwd);
+        bindToggle(toggleConfirm, pwdConfirm);
     </script>
 </body>
 </html>

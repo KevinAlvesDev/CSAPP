@@ -654,6 +654,21 @@
                         .catch(error => { console.error('Erro ao carregar perfil:', error); contentDiv.innerHTML = `<div class="alert alert-danger">Falha ao carregar o perfil. Detalhes: ${error.message}</div>`; });
                 };
                 modalPerfil.addEventListener('shown.bs.modal', loadProfileContent);
+                modalPerfil.addEventListener('submit', function(ev){
+                    const form = ev.target;
+                    if (!form || !modalPerfil.contains(form)) return;
+                    ev.preventDefault();
+                    try {
+                        const contentDiv = document.getElementById('profile-content');
+                        const postUrl = form.getAttribute('hx-post') || form.getAttribute('action');
+                        if (!postUrl) { form.submit(); return; }
+                        const fd = new FormData(form);
+                        fetch(postUrl, { method: 'POST', body: fd, headers: { 'HX-Request':'true' } })
+                            .then(function(r){ return r.text(); })
+                            .then(function(html){ contentDiv.innerHTML = html; })
+                            .catch(function(err){ console.error('Falha ao salvar perfil no modal:', err); });
+                    } catch(e){ console.error('Erro ao interceptar submit no modal Perfil:', e); }
+                }, true);
                 if (shouldOpenProfileModal) {
                     setTimeout(() => {
                         const bsModal = bootstrap.Modal.getOrCreateInstance(modalPerfil);

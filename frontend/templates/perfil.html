@@ -59,8 +59,12 @@
                                 </div>
                                 <div class="mb-3">
                                     <label for="cargo" class="form-label">Cargo</label>
-                                    <input type="text" id="cargo" name="cargo" class="form-control" 
-                                           value="{{ g.perfil.cargo or '' }}" required>
+                                    <select id="cargo" name="cargo" class="form-select" required>
+                                        <option value="">Selecione...</option>
+                                        <option value="Júnior" {% if (g.perfil.cargo or '') == 'Júnior' %}selected{% endif %}>Júnior</option>
+                                        <option value="Pleno" {% if (g.perfil.cargo or '') == 'Pleno' %}selected{% endif %}>Pleno</option>
+                                        <option value="Sênior" {% if (g.perfil.cargo or '') == 'Sênior' %}selected{% endif %}>Sênior</option>
+                                    </select>
                                 </div>
                                 <div class="mb-3">
                                     <label for="perfil_acesso" class="form-label">Perfil de Acesso</label>
