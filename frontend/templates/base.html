@@ -231,6 +231,8 @@
           var postUrl = el.getAttribute('hx-post');
           if (!postUrl || postUrl.indexOf('/api/enviar_email_comentario/') === -1) return;
           ev.preventDefault();
+          ev.stopPropagation();
+          try { ev.stopImmediatePropagation(); } catch(e){}
           var confirmMsg = el.getAttribute('hx-confirm');
           if (confirmMsg && !window.confirm(confirmMsg)) return;
           var targetSel = el.getAttribute('hx-target');
@@ -686,7 +688,6 @@
             
         });
     </script>
-    <script src="https://unpkg.com/htmx.org@1.9.10" integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC" crossorigin="anonymous"></script>
     {% block scripts_extra %}{% endblock %}
 </body>
 </html>

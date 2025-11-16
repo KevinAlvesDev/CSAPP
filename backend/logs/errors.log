@@ -13407,3 +13407,41 @@ Traceback (most recent call last):
     cursor.execute(query, args)
     ~~~~~~~~~~~~~~^^^^^^^^^^^^^
 sqlite3.IntegrityError: CHECK constraint failed: status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')
+2025-11-15 17:25:45 - ERROR - system - system - project - Function error_func failed after 0.00s: Test error
+2025-11-15 17:25:45 - ERROR - system - system - project - Function error_func failed after 0.00s: Test error
+2025-11-15 17:25:45 - ERROR - system - system - project - Function error_func failed after 0.00s: Test error
+2025-11-15 17:25:45 - ERROR - system - system - project - Function error_func failed after 0.00s: Test error
+2025-11-15 17:25:45 - ERROR - system - system - project - Function error_func failed after 0.00s: Test error
+2025-11-15 17:25:45 - ERROR - system - system - project - Function error_func failed after 0.00s: Test error
+2025-11-15 17:25:45 - ERROR - system - system - project - Function error_func failed after 0.00s: Test error
+2025-11-15 17:25:45 - ERROR - system - system - project - Function error_func failed after 0.00s: Test error
+2025-11-15 17:25:45 - ERROR - system - system - project - Function error_func failed after 0.00s: Test error
+2025-11-15 17:25:45 - ERROR - system - system - project - Function error_func failed after 0.00s: Test error
+2025-11-15 17:25:45 - ERROR - system - system - project - Function error_func failed after 0.00s: Test error
+2025-11-15 17:25:45 - ERROR - system - system - project - Function error_func failed after 0.00s: Test error
+2025-11-15 17:25:45 - ERROR - system - system - project - Function error_func failed after 0.00s: Test error
+2025-11-15 17:25:45 - ERROR - system - system - project - Function error_func failed after 0.00s: Test error
+2025-11-15 17:25:45 - ERROR - system - system - project - Function error_func failed after 0.00s: Test error
+2025-11-15 17:25:45 - ERROR - system - system - project - Function error_func failed after 0.00s: Test error
+2025-11-15 17:25:45 - ERROR - system - system - project - Function error_func failed after 0.00s: Test error
+2025-11-15 17:25:45 - ERROR - system - system - project - Function error_func failed after 0.00s: Test error
+2025-11-15 17:25:45 - ERROR - system - system - project - Function error_func failed after 0.00s: Test error
+2025-11-15 17:25:45 - ERROR - system - system - project - Function error_func failed after 0.00s: Test error
+2025-11-15 17:30:42 - ERROR - system - system - werkzeug - 127.0.0.1 - - [15/Nov/2025 17:30:42] code 400, message Bad request version ('3\x92^Ó\x02\x13:B^§bæ\x18d\x83;0\x15\x8a;')
+2025-11-15 17:30:42 - ERROR - system - system - werkzeug - 127.0.0.1 - - [15/Nov/2025 17:30:42] code 400, message Bad request version ('õ\x95\x98\x81X\x93')
+2025-11-15 17:30:44 - ERROR - system - system - werkzeug - 127.0.0.1 - - [15/Nov/2025 17:30:44] code 400, message Bad request version ('ºº\x13\x01\x13\x02\x13\x03À+À/À,À0Ì©Ì¨À\x13À\x14\x00\x9c\x00\x9d\x00/\x005\x01\x00\x063')
+2025-11-15 17:30:44 - ERROR - system - system - werkzeug - 127.0.0.1 - - [15/Nov/2025 17:30:44] code 400, message Bad request version ('T\x04kÎ\x996\x9dÊVVt')
+2025-11-15 17:30:44 - ERROR - system - system - werkzeug - 127.0.0.1 - - [15/Nov/2025 17:30:44] code 400, message Bad request version ('\x00\x02\x01\x00\x00-\x00\x02\x01\x01\x003\x04ï\x04íJJ\x00\x01\x00\x11ì\x04Àû\x19\x80W\x80\x98\x87Ò\x06¯¼Ã\x99')
+2025-11-15 17:30:44 - ERROR - system - system - werkzeug - 127.0.0.1 - - [15/Nov/2025 17:30:44] code 400, message Bad request version ('\x00\x12\x00\x10\x04\x03\x08\x04\x04\x01\x05\x03\x08\x05\x05\x01\x08\x06\x06\x01\x003\x04ï\x04í\x9a\x9a\x00\x01\x00\x11ì\x04À_z\x95\x83À(õÃ",\x81\x96s¥\x9fº\x15\x01ª´\x07ºµ@°U\x87\x01\x95<þâ\x11')
+2025-11-15 17:30:44 - ERROR - system - system - werkzeug - 127.0.0.1 - - [15/Nov/2025 17:30:44] code 400, message Bad request version ('ÚÚ\x13\x01\x13\x02\x13\x03À+À/À,À0Ì©Ì¨À\x13À\x14\x00\x9c\x00\x9d\x00/\x005\x01\x00\x06\x93')
+2025-11-15 17:30:44 - ERROR - system - system - werkzeug - 127.0.0.1 - - [15/Nov/2025 17:30:44] code 400, message Bad request version (',')
+2025-11-15 17:30:44 - ERROR - system - system - werkzeug - 127.0.0.1 - - [15/Nov/2025 17:30:44] code 400, message Bad request version ('\x1a\x1a\x13\x01\x13\x02\x13\x03À+À/À,À0Ì©Ì¨À\x13À\x14\x00\x9c\x00\x9d\x00/\x005\x01\x00\x06S::\x00\x00\x00')
+2025-11-15 17:30:44 - ERROR - system - system - werkzeug - 127.0.0.1 - - [15/Nov/2025 17:30:44] code 400, message Bad request version ('\x00\x12\x00\x10\x04\x03\x08\x04\x04\x01\x05\x03\x08\x05\x05\x01\x08\x06\x06\x01\x00\x17\x00\x00\x00\x05\x00\x05\x01\x00\x00\x00\x00\x00')
+2025-11-15 17:30:44 - ERROR - system - system - werkzeug - 127.0.0.1 - - [15/Nov/2025 17:30:44] code 400, message Bad request version ('Á\x89Ö\x0e\x99')
+2025-11-15 17:30:44 - ERROR - system - system - werkzeug - 127.0.0.1 - - [15/Nov/2025 17:30:44] code 400, message Bad request version ('gêóþe\x00')
+2025-11-15 17:30:44 - ERROR - system - system - werkzeug - 127.0.0.1 - - [15/Nov/2025 17:30:44] code 400, message Bad request version ('6h\x8a,&:-')
+2025-11-15 17:30:44 - ERROR - system - system - werkzeug - 127.0.0.1 - - [15/Nov/2025 17:30:44] code 400, message Bad HTTP/0.9 request type ('\x16\x03\x01\x06à\x01\x00\x06Ü\x03\x03²%ËnÃOÂE\x8f\x1a\x07¦¾T«\x90úÿ')
+2025-11-15 17:35:06 - ERROR - system - system - werkzeug - 127.0.0.1 - - [15/Nov/2025 17:35:06] code 400, message Bad request version ('Þàî¬Ôb¾nå\x93i>^<g\x03_µG\x16\x93\x86\x04\x9aµ.5ÙÓt\x07G\x13\x08K¬\x981Æ¬ÂØ')
+2025-11-15 17:35:06 - ERROR - system - system - werkzeug - 127.0.0.1 - - [15/Nov/2025 17:35:06] code 400, message Bad request version ('\x00\x12\x00\x10\x04\x03\x08\x04\x04\x01\x05\x03\x08\x05\x05\x01\x08\x06\x06\x01\x00\x1b\x00\x03\x02\x00\x02\x00')
+2025-11-15 17:35:06 - ERROR - system - system - werkzeug - 127.0.0.1 - - [15/Nov/2025 17:35:06] code 400, message Bad request version ('QiëÙÊ]\x95Íê¢ÎåYNF\x814sLj%Ô')
+2025-11-15 17:35:06 - ERROR - system - system - werkzeug - 127.0.0.1 - - [15/Nov/2025 17:35:06] code 400, message Bad request version ('K{[KQ\x02\x0fd\x9c"q\x9e¼\x81×N')

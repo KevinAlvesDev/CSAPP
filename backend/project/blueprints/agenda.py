@@ -176,7 +176,6 @@ def agenda_list_calendars():
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 @agenda_bp.route('/agenda/callback')
-@login_required
 def agenda_callback():
     if not _google_oauth_configured():
         flash('Integração com Google Agenda não está configurada.', 'warning')

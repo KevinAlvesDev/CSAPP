@@ -462,22 +462,7 @@
             return 'Este comentário será enviado por e-mail ao responsável definido na implantação.\n\nConfirma o envio externo?';
         }
 
-        // Confirmação antes da requisição HTMX (sem necessidade de clicar "Salvar" novamente)
-        document.body.addEventListener('htmx:beforeRequest', function(ev) {
-            var elt = ev.detail && ev.detail.elt;
-            if (!elt || !elt.matches('form.comment-form')) return;
-
-            var vis = getVisibilidade(elt);
-            if (vis !== 'externo') return;
-
-            var msg = buildConfirmMessage(elt);
-            var ok = window.confirm(msg);
-            if (!ok) {
-                // Usuário cancelou: bloqueia o envio
-                ev.preventDefault();
-            }
-            // Se confirmou, não impedimos: HTMX prossegue com a requisição original
-        });
+        
     })();
     </script>
 
@@ -622,19 +607,10 @@ document.addEventListener('DOMContentLoaded', function(){
   computeProgress();
   document.addEventListener('submit', function(ev){
     var form = ev.target;
+    if (window.htmx) return;
     if (!form || !form.matches('form.comment-form')) return;
     ev.preventDefault();
-    try {
-      var vis = getVisibilidade(form);
-      if (vis === 'externo') {
-        var emailResp = form.getAttribute('data-email-responsavel') || '';
-        if (!emailResp) {
-          alert('E-mail do responsável não está definido nos Detalhes da Empresa. O envio por e-mail não será possível.');
-        }
-        var ok1 = window.confirm('Este comentário será preparado para envio por e-mail ao responsável. Confirmar?');
-        if (!ok1) { return; }
-      }
-    } catch(e){}
+    try { /* confirmação removida para comentários externos */ } catch(e){}
     var postUrl = form.getAttribute('hx-post');
     var targetSel = form.getAttribute('hx-target');
     var swapMode = (form.getAttribute('hx-swap')||'beforeend').toLowerCase();

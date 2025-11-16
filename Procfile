@@ -1,1 +1,1 @@
-web: gunicorn "run:app" --preload --timeout 60
+web: gunicorn "run:app" --bind 0.0.0.0:$PORT --preload --timeout 60
