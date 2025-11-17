@@ -16,7 +16,7 @@ from ..db import query_db, execute_db, logar_timeline, execute_and_fetch_one
 from ..extensions import r2_client, limiter # <--- CORREÇÃO: Importação faltante + limiter
 # --- INÍCIO DA CORREÇÃO (Refatoração) ---
 # Importa da camada de domínio/serviço específica
-from ..domain.implantacao_service import auto_finalizar_implantacao, _get_progress
+from ..domain.implantacao_service import _get_progress
 # --- FIM DA CORREÇÃO ---
 from ..utils import allowed_file, format_date_iso_for_json, format_date_br
 from ..constants import PERFIS_COM_GESTAO
@@ -758,8 +758,8 @@ def excluir_tarefa(tarefa_id):
         
         api_logger.info(f'Task {tarefa_id} deleted by user {g.user_email}')
         
-        # Verifica se a implantação deve ser auto-finalizada
-        finalizada, log_finalizacao = auto_finalizar_implantacao(impl_id, usuario_cs_email)
+        # Não auto-finaliza após exclusão; apenas recalcula progresso
+        finalizada, log_finalizacao = False, None
         novo_prog, _, _ = _get_progress(impl_id)
         
         # Prepara resposta
@@ -914,8 +914,8 @@ def excluir_tarefas_modulo():
         
         api_logger.info(f'All tasks from module {tarefa_pai} in implantation {impl_id} deleted by user {g.user_email}')
         
-        # 7. Recalcular Progresso e verificar Auto-Finalização
-        finalizada, log_finalizacao = auto_finalizar_implantacao(impl_id, usuario_cs_email)
+        # 7. Recalcular Progresso sem auto-finalização
+        finalizada, log_finalizacao = False, None
         novo_prog, _, _ = _get_progress(impl_id)
         
         # 8. Buscar Log para retornar à UI

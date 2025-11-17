@@ -751,6 +751,11 @@ def excluir_implantacao():
             print("Aviso: R2 não configurado ou variáveis ausentes; exclusão seguirá apenas no banco de dados.")
         execute_db("DELETE FROM implantacoes WHERE id = %s", (implantacao_id,)) #
         flash('Implantação e todos os dados associados foram excluídos com sucesso.', 'success')
+        try:
+            clear_user_cache(usuario_cs_email)
+            clear_implantacao_cache(implantacao_id)
+        except Exception:
+            pass
     except Exception as e:
         print(f"Erro ao excluir implantação ID {implantacao_id}: {e}")
         flash('Erro ao excluir implantação.', 'error')

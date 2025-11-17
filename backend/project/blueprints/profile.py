@@ -9,6 +9,8 @@ from werkzeug.utils import secure_filename
 import smtplib
 from ..email_utils import load_smtp_settings
 from ..logging_config import app_logger
+import os
+import time
 
 profile_bp = Blueprint('profile', __name__, url_prefix='/profile')
 
@@ -42,7 +44,7 @@ def save_profile():
 
     foto_url = g.perfil.get('foto_url') # Mantém a foto existente por padrão
 
-    if foto and g.R2_CONFIGURED:
+    if foto and g.R2_CONFIGURED and r2_client:
         try:
             filename = secure_filename(foto.filename)
             # Define um 'caminho' no R2, ex: 'fotos_perfil/usuario_email.ext'
@@ -63,6 +65,32 @@ def save_profile():
         except Exception as e:
             app_logger.error(f"Falha no upload para o R2 para {g.user_email}: {e}")
             flash("Erro ao fazer upload da foto.", "error")
+            try:
+                filename = secure_filename(foto.filename)
+                unique_name = f"{g.user_email}_{int(time.time())}_{filename}"
+                static_dir = current_app.static_folder
+                target_dir = os.path.join(static_dir, 'uploads', 'profile')
+                os.makedirs(target_dir, exist_ok=True)
+                save_path = os.path.join(target_dir, unique_name)
+                foto.save(save_path)
+                foto_url = f"/static/uploads/profile/{unique_name}"
+                app_logger.info(f"Foto de perfil salva localmente para {g.user_email} em {foto_url}")
+            except Exception as e2:
+                app_logger.error(f"Falha ao salvar foto local para {g.user_email}: {e2}")
+    elif foto:
+        try:
+            filename = secure_filename(foto.filename)
+            unique_name = f"{g.user_email}_{int(time.time())}_{filename}"
+            static_dir = current_app.static_folder
+            target_dir = os.path.join(static_dir, 'uploads', 'profile')
+            os.makedirs(target_dir, exist_ok=True)
+            save_path = os.path.join(target_dir, unique_name)
+            foto.save(save_path)
+            foto_url = f"/static/uploads/profile/{unique_name}"
+            app_logger.info(f"Foto de perfil salva localmente para {g.user_email} em {foto_url}")
+        except Exception as e:
+            app_logger.error(f"Falha ao salvar foto local para {g.user_email}: {e}")
+            flash("Erro ao salvar foto local.", "error")
 
     try:
         execute_db(

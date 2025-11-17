@@ -12,11 +12,10 @@ if backend_dir not in sys.path:
 
 # Importa 'create_app' de 'backend.project'
 try:
-    # Esta importação agora encontrará 'backend/project/__init__.py'
-    from project import create_app
+    from backend.project import create_app
 except ImportError:
     print("\n--- ERRO DE IMPORTAÇÃO ---")
-    print(f"Não foi possível encontrar 'project.create_app'.")
+    print(f"Não foi possível encontrar 'backend.project.create_app'.")
     print(f"Certifique-se que o seu código principal está em: {os.path.join(backend_dir, 'project')}")
     print("--------------------------\n")
     sys.exit(1)
