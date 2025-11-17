@@ -164,7 +164,7 @@
                                                       <form method="POST" action="{{ url_for('actions.iniciar_implantacao') }}">
                                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                         <div class="modal-body">
-                                                          <p>Tem certeza que deseja iniciar a implantação de <strong>{{ impl.nome_empresa }}</strong> agora?</p>
+                                                          <p class="text-break">Tem certeza que deseja iniciar a implantação de <strong>{{ impl.nome_empresa }}</strong> agora?</p>
                                                           <input type="hidden" name="implantacao_id" value="{{ impl.id }}">
                                                           <input type="hidden" name="redirect_to" value="dashboard">
                                                         </div>
