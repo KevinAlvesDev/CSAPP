@@ -284,6 +284,16 @@
         });
       })();
     </script>
+    <script>
+      (function(){
+        document.addEventListener('DOMContentLoaded', function(){
+          try {
+            var tooltipEls = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipEls.forEach(function(el){ bootstrap.Tooltip.getOrCreateInstance(el); });
+          } catch(e) {}
+        });
+      })();
+    </script>
     
     <!-- Removidos carregamentos via CDN de jQuery/bigSlide; usamos fallback nativo abaixo -->
     <!-- Fallback nativo sem jQuery/bigSlide -->
