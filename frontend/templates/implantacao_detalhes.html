@@ -114,11 +114,11 @@
             </ul>
             <h6 class="text-secondary border-bottom pb-2 mb-3 mt-3">Datas e Atributos</h6>
             <ul class="list-unstyled small sidebar-info-list">
-                <li><i class="bi bi-play-circle-fill me-2"></i><strong>Início Produção:</strong> {{ implantacao.data_inicio_producao_fmt_d }}</li>
-                <li><i class="bi bi-calendar-check-fill me-2"></i><strong>Final Previsto:</strong> {{ implantacao.data_final_implantacao_fmt_d }}</li>
-                <li><i class="bi bi-key me-2"></i><strong>Chave OAMD:</strong> {{ implantacao.chave_oamd | default('N/A') }}</li>
-                <li><i class="bi bi-hdd-stack me-2"></i><strong>Catraca:</strong> {{ implantacao.catraca | default('N/A') }}</li>
-                <li><i class="bi bi-person-bounding-box me-2"></i><strong>Facial:</strong> {{ implantacao.facial | default('N/A') }}</li>
+                <li><i class="bi bi-play-circle-fill me-2"></i><strong>Início Produção:</strong> {{ implantacao.data_inicio_producao_fmt_d or 'N/A' }}</li>
+                <li><i class="bi bi-calendar-check-fill me-2"></i><strong>Final Previsto:</strong> {{ implantacao.data_final_implantacao_fmt_d or 'N/A' }}</li>
+                <li><i class="bi bi-key me-2"></i><strong>Chave OAMD:</strong> {{ implantacao.chave_oamd if implantacao.chave_oamd and implantacao.chave_oamd|lower != 'none' else 'Não preenchido' }}</li>
+                <li><i class="bi bi-hdd-stack me-2"></i><strong>Catraca:</strong> {{ implantacao.catraca if implantacao.catraca and implantacao.catraca|lower != 'none' else 'Não preenchido' }}</li>
+                <li><i class="bi bi-person-bounding-box me-2"></i><strong>Facial:</strong> {{ implantacao.facial if implantacao.facial and implantacao.facial|lower != 'none' else 'Não preenchido' }}</li>
             </ul>
             <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-secondary mt-auto w-100"> <i class="bi bi-box-arrow-right me-2"></i> Sair </a>
         </div>

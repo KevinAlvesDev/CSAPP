@@ -158,12 +158,23 @@
                  {% else %}
                      <div class="table-responsive limited-height-table">
                      <table class="table table-sm table-hover align-middle caption-top">
-                            <caption class="small text-muted">Listando {{ implantacoes_lista_detalhada | length }} implantações (ordenadas por nome da empresa).</caption>
+                            <caption class="small text-muted">
+                                Listando {{ implantacoes_lista_detalhada | length }} implantações
+                                {% if current_sort_impl_date in ['asc','desc'] %}
+                                    (ordenadas por data de implantação {{ 'mais antiga' if current_sort_impl_date == 'asc' else 'mais recente' }})
+                                {% else %}
+                                    (ordenadas por nome da empresa)
+                                {% endif %}.
+                            </caption>
                             <thead class="table-light" style="position: sticky; top: 0;">
                                 <tr>
                                     <th scope="col">Empresa</th>
                                     <th scope="col">Implantador</th>
-                                    <th scope="col">Início da Implantação</th>
+                                    <th scope="col">
+                                        Início da Implantação
+                                        <a href="{{ url_for('analytics.analytics_dashboard', cs_email=current_cs_email, status_filter=current_status_filter, start_date=current_start_date, end_date=current_end_date, sort_impl_date='desc') }}" class="ms-1" title="Ordenar por mais recente"><i class="bi bi-sort-down-alt"></i></a>
+                                        <a href="{{ url_for('analytics.analytics_dashboard', cs_email=current_cs_email, status_filter=current_status_filter, start_date=current_start_date, end_date=current_end_date, sort_impl_date='asc') }}" class="ms-1" title="Ordenar por mais antiga"><i class="bi bi-sort-up"></i></a>
+                                    </th>
                                     <th scope="col">Início em Produção</th>
                                     <th scope="col">Status</th>
                                     <th scope="col">Ações</th>

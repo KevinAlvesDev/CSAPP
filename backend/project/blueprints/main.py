@@ -53,6 +53,12 @@ def home():
         use_custom_auth=not auth0_enabled
     )
 
+@main_bp.route('/uploads/<path:filename>')
+@login_required
+def serve_upload(filename):
+    base_dir = os.path.join(os.path.dirname(current_app.root_path), 'uploads')
+    return send_from_directory(base_dir, filename)
+
 @main_bp.route('/dashboard')
 @login_required
 def dashboard():
@@ -64,31 +70,39 @@ def dashboard():
     is_manager = perfil_acesso in PERFIS_COM_GESTAO
 
     current_cs_filter = None
+    sort_days = None
     try:
         cs_filter_param = request.args.get('cs_filter', None)
         if cs_filter_param and is_manager:
             current_cs_filter = sanitize_string(cs_filter_param, max_length=100)
+        sort_days_param = request.args.get('sort_days', None)
+        if sort_days_param:
+            sort_days = sanitize_string(sort_days_param, max_length=4)
     except ValidationError as e:
         flash(f"Filtro inválido: {str(e)}", "warning")
         current_cs_filter = None
+        sort_days = None
 
     try:
+        refresh = request.args.get('refresh')
 
+        dashboard_data, metrics = get_dashboard_data(
+            user_email,
+            filtered_cs_email=current_cs_filter,
+            use_cache=False
+        )
 
-        if current_cs_filter is None and cache:
-
-            cache_key = f'dashboard_data_{user_email}'
-            cached_result = cache.get(cache_key)
-
-            if cached_result:
-                dashboard_data, metrics = cached_result
-            else:
-                dashboard_data, metrics = get_dashboard_data(user_email, filtered_cs_email=None)
-
-                cache.set(cache_key, (dashboard_data, metrics), timeout=300)
-        else:
-
-            dashboard_data, metrics = get_dashboard_data(user_email, filtered_cs_email=current_cs_filter)
+        if sort_days in ['asc', 'desc']:
+            andamento_list = dashboard_data.get('andamento', [])
+            try:
+                andamento_list_sorted = sorted(
+                    andamento_list,
+                    key=lambda x: (x.get('dias_passados') or 0),
+                    reverse=(sort_days == 'desc')
+                )
+                dashboard_data['andamento'] = andamento_list_sorted
+            except Exception:
+                pass
         
         perfil_data = g.perfil if g.perfil else {}  
         default_metrics = { 'nome': user_info.get('name', user_email), 'impl_andamento': 0, 'impl_finalizadas': 0, 'impl_paradas': 0, 'progresso_medio_carteira': 0, 'impl_andamento_total': 0, 'implantacoes_atrasadas': 0, 'implantacoes_futuras': 0, 'implantacoes_sem_previsao': 0, 'total_valor_sem_previsao': 0.0 }
@@ -121,7 +135,8 @@ def dashboard():
             all_cs_users=all_cs_users,
             
             is_manager=is_manager,
-            current_cs_filter=current_cs_filter
+            current_cs_filter=current_cs_filter,
+            sort_days=sort_days
         )
         
     except Exception as e:

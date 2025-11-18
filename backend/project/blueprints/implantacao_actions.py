@@ -34,6 +34,7 @@ from ..constants import (
 
 from .. import utils
 from ..extensions import r2_client                                      
+import re
 from ..extensions import limiter
 from flask_limiter.util import get_remote_address
 from ..validation import validate_integer, sanitize_string, validate_date, ValidationError
@@ -334,7 +335,7 @@ def agendar_implantacao():
         print(f"Erro ao agendar implantação ID {implantacao_id}: {e}")
         flash(f'Erro ao agendar implantação: {e}', 'error')
     
-    return redirect(url_for('main.dashboard'))
+    return redirect(url_for('main.dashboard', refresh='1'))
 
 
 @implantacao_actions_bp.route('/marcar_sem_previsao', methods=['POST'])
@@ -342,7 +343,12 @@ def agendar_implantacao():
 @limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 def marcar_sem_previsao():
     usuario_cs_email = g.user_email
-    implantacao_id = request.form.get('implantacao_id')
+    implantacao_id_raw = request.form.get('implantacao_id')
+    try:
+        implantacao_id = validate_integer(int(implantacao_id_raw), min_value=1)
+    except Exception:
+        flash('ID da implantação inválido.', 'error')
+        return redirect(url_for('main.dashboard', refresh='1'))
 
     try:
         impl = query_db(
@@ -358,10 +364,19 @@ def marcar_sem_previsao():
             flash('Apenas implantações "Novas" podem ser marcadas como Sem previsão.', 'warning')
             return redirect(url_for('main.dashboard'))
 
-        execute_db(
+        updated = execute_db(
             "UPDATE implantacoes SET status = 'sem_previsao', data_inicio_previsto = NULL WHERE id = %s",
             (implantacao_id,)
         )
+        if not updated:
+            raise Exception('Falha ao atualizar status para Sem previsão.')
+
+        ver = query_db(
+            "SELECT status FROM implantacoes WHERE id = %s",
+            (implantacao_id,), one=True
+        )
+        if not ver or ver.get('status') != 'sem_previsao':
+            raise Exception('Atualização não persistida. Tente novamente.')
         logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Implantação "{impl.get("nome_empresa")}" marcada como "Sem previsão".')
         flash(f'Implantação "{impl.get("nome_empresa")}" marcada como "Sem previsão".', 'success')
         try:
@@ -373,7 +388,7 @@ def marcar_sem_previsao():
         print(f"Erro ao marcar sem previsão implantação ID {implantacao_id}: {e}")
         flash(f'Erro ao marcar sem previsão: {e}', 'error')
 
-    return redirect(url_for('main.dashboard'))
+    return redirect(url_for('main.dashboard', refresh='1'))
 
 
 @implantacao_actions_bp.route('/finalizar_implantacao', methods=['POST'])
@@ -886,14 +901,31 @@ def cancelar_implantacao():
             nome_base, extensao = os.path.splitext(filename)
             nome_unico = f"cancel_proof_{implantacao_id}_{int(time.time())}{extensao}"
             object_name = f"comprovantes_cancelamento/{nome_unico}"
-            
-            r2_client.upload_fileobj(
-                file,
-                current_app.config['CLOUDFLARE_BUCKET_NAME'],
-                object_name,
-                ExtraArgs={'ContentType': file.content_type}
-            )
-            comprovante_url = f"{current_app.config['CLOUDFLARE_PUBLIC_URL']}/{object_name}"
+
+            bucket_name = current_app.config.get('CLOUDFLARE_BUCKET_NAME')
+            public_url = current_app.config.get('CLOUDFLARE_PUBLIC_URL')
+            r2_ok = bool(r2_client) and bool(bucket_name) and bool(public_url) and bool(current_app.config.get('R2_CONFIGURADO')) and bool(re.match(r'^[a-zA-Z0-9.\-_]{1,255}$', bucket_name))
+
+            if r2_ok:
+                r2_client.upload_fileobj(
+                    file,
+                    bucket_name,
+                    object_name,
+                    ExtraArgs={'ContentType': file.content_type}
+                )
+                comprovante_url = f"{public_url}/{object_name}"
+            else:
+                base_dir = os.path.join(os.path.dirname(current_app.root_path), 'uploads')
+                target_dir = os.path.join(base_dir, 'comprovantes_cancelamento')
+                try:
+                    os.makedirs(target_dir, exist_ok=True)
+                except Exception:
+                    pass
+                local_path = os.path.join(target_dir, nome_unico)
+                file.stream.seek(0)
+                with open(local_path, 'wb') as f_out:
+                    f_out.write(file.stream.read())
+                comprovante_url = url_for('main.serve_upload', filename=f'comprovantes_cancelamento/{nome_unico}')
         else:
              flash('Tipo de arquivo inválido para o comprovante.', 'error')
              return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))

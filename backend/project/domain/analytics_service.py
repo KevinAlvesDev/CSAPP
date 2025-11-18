@@ -85,7 +85,8 @@ def date_param_expr() -> str:
     return "date(%s)" if is_sqlite else "CAST(%s AS DATE)"
 
 def get_analytics_data(target_cs_email=None, target_status=None, start_date=None, end_date=None, target_tag=None,
-                       task_cs_email=None, task_start_date=None, task_end_date=None
+                       task_cs_email=None, task_start_date=None, task_end_date=None,
+                       sort_impl_date=None
                        ):
     """Busca e processa dados de TODA a carteira (ou filtrada) para o módulo Gerencial."""
 
@@ -136,7 +137,11 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
         args_impl.append(end_date_val)
 
 
-    query_impl += " ORDER BY i.nome_empresa "
+    if sort_impl_date in ['asc', 'desc']:
+        order_dir = 'ASC' if sort_impl_date == 'asc' else 'DESC'
+        query_impl += f" ORDER BY {date_col_expr('i.data_criacao')} {order_dir}, i.nome_empresa "
+    else:
+        query_impl += " ORDER BY i.nome_empresa "
 
     impl_list = query_db(query_impl, tuple(args_impl))
     impl_list = impl_list if impl_list is not None else []
@@ -734,7 +739,13 @@ def get_cancelamentos_data(cs_email=None, start_date=None, end_date=None):
     for r in rows:
         dc = _to_dt(r.get('data_cancelamento'))
         cri = _to_dt(r.get('data_criacao'))
-        r['tempo_permanencia_dias'] = (dc - cri).days if dc and cri else None
+        if dc and cri:
+            try:
+                r['tempo_permanencia_dias'] = max(0, (dc.date() - cri.date()).days)
+            except Exception:
+                r['tempo_permanencia_dias'] = max(0, (dc - cri).days)
+        else:
+            r['tempo_permanencia_dias'] = None
     motivos = {}
     for r in rows:
         m = (r.get('motivo_cancelamento') or '').strip().lower()

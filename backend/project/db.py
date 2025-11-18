@@ -278,7 +278,7 @@ def init_db():
                 id SERIAL PRIMARY KEY,
                 usuario_cs VARCHAR(255) REFERENCES usuarios(usuario) ON DELETE SET NULL,
                 nome_empresa TEXT NOT NULL,
-                status VARCHAR(50) DEFAULT 'nova' CHECK(status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')),
+                status VARCHAR(50) DEFAULT 'nova' CHECK(status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada', 'sem_previsao')),
                 tipo VARCHAR(50) DEFAULT 'completa' CHECK(tipo IN ('completa', 'modulo')),
                 data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 data_inicio_efetivo TIMESTAMP DEFAULT NULL,
@@ -431,7 +431,7 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 usuario_cs VARCHAR(255) REFERENCES usuarios(usuario) ON DELETE SET NULL,
                 nome_empresa TEXT NOT NULL,
-                status VARCHAR(50) DEFAULT 'nova' CHECK(status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada')),
+                status VARCHAR(50) DEFAULT 'nova' CHECK(status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada', 'sem_previsao')),
                 tipo VARCHAR(50) DEFAULT 'completa' CHECK(tipo IN ('completa', 'modulo')),
                 data_criacao DATETIME DEFAULT CURRENT_TIMESTAMP,
                 data_inicio_efetivo DATETIME DEFAULT NULL,
@@ -473,6 +473,92 @@ def init_db():
                 contatos TEXT DEFAULT NULL
             );
             """)
+
+            try:
+                cursor.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='implantacoes'")
+                row = cursor.fetchone()
+                schema_sql = row[0] if row else ''
+                if schema_sql and "sem_previsao" not in schema_sql:
+                    current_app.logger.info("Migrando tabela 'implantacoes' para incluir status 'sem_previsao' (SQLite)")
+                    cursor.execute("PRAGMA foreign_keys=OFF")
+                    cursor.execute("BEGIN TRANSACTION")
+                    cursor.execute(
+                        """
+                        CREATE TABLE IF NOT EXISTS implantacoes_new (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            usuario_cs VARCHAR(255) REFERENCES usuarios(usuario) ON DELETE SET NULL,
+                            nome_empresa TEXT NOT NULL,
+                            status VARCHAR(50) DEFAULT 'nova' CHECK(status IN ('nova', 'andamento', 'futura', 'finalizada', 'parada', 'cancelada', 'sem_previsao')),
+                            tipo VARCHAR(50) DEFAULT 'completa' CHECK(tipo IN ('completa', 'modulo')),
+                            data_criacao DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            data_inicio_efetivo DATETIME DEFAULT NULL,
+                            data_finalizacao DATETIME DEFAULT NULL,
+                            data_inicio_previsto TEXT DEFAULT NULL,
+                            motivo_parada TEXT DEFAULT NULL,
+                            data_cancelamento DATETIME DEFAULT NULL,
+                            motivo_cancelamento TEXT DEFAULT NULL,
+                            comprovante_cancelamento_url TEXT DEFAULT NULL,
+                            responsavel_cliente TEXT DEFAULT NULL,
+                            cargo_responsavel TEXT DEFAULT NULL,
+                            telefone_responsavel VARCHAR(50) DEFAULT NULL,
+                            email_responsavel VARCHAR(255) DEFAULT NULL,
+                            data_inicio_producao TEXT DEFAULT NULL,
+                            data_final_implantacao TEXT DEFAULT NULL,
+                            chave_oamd TEXT DEFAULT NULL,
+                            catraca VARCHAR(20) DEFAULT 'Não definido',
+                            facial VARCHAR(20) DEFAULT 'Não definido',
+                            nivel_receita VARCHAR(100) DEFAULT NULL,
+                            valor_atribuido VARCHAR(100) DEFAULT NULL,
+                            id_favorecido VARCHAR(50) DEFAULT NULL,
+                            tela_apoio_link TEXT DEFAULT NULL,
+                            seguimento VARCHAR(100) DEFAULT NULL,
+                            tipos_planos VARCHAR(100) DEFAULT NULL,
+                            modalidades VARCHAR(100) DEFAULT NULL,
+                            horarios_func VARCHAR(100) DEFAULT NULL,
+                            formas_pagamento VARCHAR(100) DEFAULT NULL,
+                            diaria VARCHAR(20) DEFAULT 'Não definido',
+                            freepass VARCHAR(20) DEFAULT 'Não definido',
+                            alunos_ativos INTEGER DEFAULT 0,
+                            sistema_anterior VARCHAR(100) DEFAULT NULL,
+                            importacao VARCHAR(20) DEFAULT 'Não definido',
+                            recorrencia_usa VARCHAR(100) DEFAULT NULL,
+                            boleto VARCHAR(20) DEFAULT 'Não definido',
+                            nota_fiscal VARCHAR(20) DEFAULT 'Não definido',
+                            resp_estrategico_nome VARCHAR(255) DEFAULT NULL,
+                            resp_onb_nome VARCHAR(255) DEFAULT NULL,
+                            resp_estrategico_obs TEXT DEFAULT NULL,
+                            contatos TEXT DEFAULT NULL
+                        );
+                        """
+                    )
+                    cursor.execute(
+                        """
+                        INSERT INTO implantacoes_new (
+                            id, usuario_cs, nome_empresa, status, tipo, data_criacao, data_inicio_efetivo, data_finalizacao,
+                            data_inicio_previsto, motivo_parada, data_cancelamento, motivo_cancelamento, comprovante_cancelamento_url,
+                            responsavel_cliente, cargo_responsavel, telefone_responsavel, email_responsavel, data_inicio_producao,
+                            data_final_implantacao, chave_oamd, catraca, facial, nivel_receita, valor_atribuido, id_favorecido,
+                            tela_apoio_link, seguimento, tipos_planos, modalidades, horarios_func, formas_pagamento, diaria, freepass,
+                            alunos_ativos, sistema_anterior, importacao, recorrencia_usa, boleto, nota_fiscal, resp_estrategico_nome,
+                            resp_onb_nome, resp_estrategico_obs, contatos
+                        )
+                        SELECT 
+                            id, usuario_cs, nome_empresa, status, tipo, data_criacao, data_inicio_efetivo, data_finalizacao,
+                            data_inicio_previsto, motivo_parada, data_cancelamento, motivo_cancelamento, comprovante_cancelamento_url,
+                            responsavel_cliente, cargo_responsavel, telefone_responsavel, email_responsavel, data_inicio_producao,
+                            data_final_implantacao, chave_oamd, catraca, facial, nivel_receita, valor_atribuido, id_favorecido,
+                            tela_apoio_link, seguimento, tipos_planos, modalidades, horarios_func, formas_pagamento, diaria, freepass,
+                            alunos_ativos, sistema_anterior, importacao, recorrencia_usa, boleto, nota_fiscal, resp_estrategico_nome,
+                            resp_onb_nome, resp_estrategico_obs, contatos
+                        FROM implantacoes;
+                        """
+                    )
+                    cursor.execute("DROP TABLE implantacoes")
+                    cursor.execute("ALTER TABLE implantacoes_new RENAME TO implantacoes")
+                    cursor.execute("COMMIT")
+                    cursor.execute("PRAGMA foreign_keys=ON")
+            except Exception as mig_err:
+                current_app.logger.error(f"Falha na migração de status 'sem_previsao': {mig_err}")
             
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS tarefas (

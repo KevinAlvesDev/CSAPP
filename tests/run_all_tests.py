@@ -3,6 +3,11 @@ import sys
 import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+# Garantir que o pacote 'project' (backend) esteja no PYTHONPATH
+BACKEND_DIR = os.path.join(os.path.dirname(__file__), '..', 'backend')
+if BACKEND_DIR not in sys.path:
+    sys.path.insert(0, BACKEND_DIR)
+os.environ.setdefault('PYTHONPATH', 'backend')
 
 from test_validation import TestValidation
 from test_logging import TestLoggingConfig, TestLoggerIntegration

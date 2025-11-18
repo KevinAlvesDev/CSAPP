@@ -18,6 +18,7 @@ _SUBMODULES = [
     'validation',
     'utils',
     'db',
+    'db_pool',
     'domain',\
     'task_definitions',
     'blueprints',

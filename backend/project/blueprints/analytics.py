@@ -48,6 +48,7 @@ def analytics_dashboard():
     status_filter = 'todas'
     start_date = None
     end_date = None
+    sort_impl_date = None
     
     try:
         cs_email_param = request.args.get('cs_email')
@@ -63,6 +64,12 @@ def analytics_dashboard():
         except ValidationError:
             status_filter = 'todas'
             flash('Erro nos filtros: Status inválido — ignorado', 'warning')
+        sort_param = request.args.get('sort_impl_date')
+        if sort_param:
+            try:
+                sort_impl_date = sanitize_string(sort_param, max_length=4)
+            except ValidationError:
+                sort_impl_date = None
         start_date_param = request.args.get('start_date')
         if start_date_param:
             try:
@@ -127,7 +134,8 @@ def analytics_dashboard():
 
             task_cs_email=task_cs_email,
             task_start_date=task_start_date,
-            task_end_date=task_end_date
+            task_end_date=task_end_date,
+            sort_impl_date=sort_impl_date
 
         )
         
@@ -171,6 +179,7 @@ def analytics_dashboard():
             current_status_filter=status_filter,
             current_start_date=start_date,
             current_end_date=end_date,
+            current_sort_impl_date=sort_impl_date,
             user_info=g.user,
             user_perfil=user_perfil
         )

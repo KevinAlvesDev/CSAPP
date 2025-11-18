@@ -9,7 +9,7 @@ from ..utils import format_date_iso_for_json, format_date_br
 from ..cache_config import cache
 from datetime import datetime, date
 
-def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=None):
+def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=None, use_cache=True):
     """
     Busca e processa todos os dados para o dashboard.
     Agora com cache e suporte opcional a paginação.
@@ -30,7 +30,7 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
 
     cache_key = f'dashboard_data_{user_email}_{filtered_cs_email or "all"}_p{page}_pp{per_page}'
 
-    if cache:
+    if cache and use_cache:
         cached_data = cache.get(cache_key)
         if cached_data:
             return cached_data
@@ -326,7 +326,7 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
     else:
         result = (dashboard_data, metrics)
 
-    if cache:
+    if cache and use_cache:
         cache.set(cache_key, result, timeout=300)
 
     return result
