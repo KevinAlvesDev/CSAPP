@@ -372,6 +372,13 @@ input[type="file"]::-webkit-file-upload-button:hover {
     padding: var(--space-3) var(--space-4);
 }
 
+/* Garantir quebra de texto em modais de confirmação longos */
+.modal .modal-body p,
+.modal .modal-body strong {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
 .alert {
     border-radius: var(--border-radius-sm);
 }

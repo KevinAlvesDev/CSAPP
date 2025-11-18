@@ -156,7 +156,7 @@
                                                 </button>
                                                 
                                                 <div class="modal fade" id="modalIniciarImplantacao-{{ impl.id }}" tabindex="-1" aria-labelledby="modalIniciarImplantacaoLabel-{{ impl.id }}" aria-hidden="true">
-                                                  <div class="modal-dialog">
+                                                  <div class="modal-dialog modal-lg">
                                                     <div class="modal-content">
                                                       <div class="modal-header header-bg">
                                                         <h5 class="modal-title" id="modalIniciarImplantacaoLabel-{{ impl.id }}">Iniciar Implantação</h5>
@@ -165,7 +165,7 @@
                                                       <form method="POST" action="{{ url_for('actions.iniciar_implantacao') }}">
                                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                         <div class="modal-body">
-                                                          <p class="text-break">Tem certeza que deseja iniciar a implantação de <strong>{{ impl.nome_empresa }}</strong> agora?</p>
+                                                          <p class="text-break">Tem certeza que deseja iniciar a implantação de <strong class="text-break">{{ impl.nome_empresa }}</strong> agora?</p>
                                                           <input type="hidden" name="implantacao_id" value="{{ impl.id }}">
                                                           <input type="hidden" name="redirect_to" value="dashboard">
                                                         </div>
@@ -714,11 +714,7 @@
                 </div>
                 <div class="modal-footer header-bg">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <form action="{{ url_for('actions.marcar_sem_previsao') }}" method="POST" style="display:inline;">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <input type="hidden" name="implantacao_id" id="semPrevImplId" value="">
-                        <button type="submit" class="btn btn-outline-warning">Sem previsão</button>
-                    </form>
+                    <button type="submit" class="btn btn-outline-warning" formaction="{{ url_for('actions.marcar_sem_previsao') }}" formmethod="POST" formnovalidate>Sem previsão</button>
                     <button type="submit" class="btn btn-primary">Agendar</button>
                 </div>
             </form>
