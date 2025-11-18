@@ -1,4 +1,4 @@
-\
+
 """
 Middleware de segurança para adicionar headers de proteção.
 Implementa CSP, HSTS, X-Frame-Options, etc.
@@ -18,12 +18,11 @@ def init_security_headers(app):
         """
         Adiciona headers de segurança em todas as respostas.
         """
-        \
+
         use_sqlite = app.config.get('USE_SQLITE_LOCALLY', False)
         is_production = not use_sqlite
-        
-                \
-\
+
+
         csp_directives = [
             "default-src 'self'",
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com",
@@ -36,20 +35,15 @@ def init_security_headers(app):
             "form-action 'self'"
         ]
         response.headers['Content-Security-Policy'] = "; ".join(csp_directives)
-        
-                \
+
         response.headers['X-Content-Type-Options'] = 'nosniff'
-        
-                \
+
         response.headers['X-Frame-Options'] = 'DENY'
-        
-                \
+
         response.headers['X-XSS-Protection'] = '1; mode=block'
-        
-                \
+
         response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
-        
-                \
+
         permissions = [
             "geolocation=()",
             "microphone=()",
@@ -61,10 +55,9 @@ def init_security_headers(app):
             "accelerometer=()"
         ]
         response.headers['Permissions-Policy'] = ", ".join(permissions)
-        
-                \
+
         if is_production:
-            \
+
             response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains; preload'
 
         if any(path in request.path for path in ['/login', '/perfil', '/management']):
@@ -87,7 +80,7 @@ def init_rate_limiting_headers(app):
         """
         Adiciona headers de rate limiting quando aplicável.
         """
-        \
+
         from flask import g
         
         if hasattr(g, 'rate_limit_info'):

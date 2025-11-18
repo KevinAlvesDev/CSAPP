@@ -1,5 +1,4 @@
-\
-\
+
 
 import pytest
 import sys
@@ -43,12 +42,10 @@ class TestPerformanceMonitor:
     def test_monitor_coleta_metricas(self, app):
         """Testa que monitor coleta métricas de requests."""
         client = app.test_client()
-        
-                \
+
         client.get('/health')
         client.get('/health/ready')
-        
-                \
+
         with app.app_context():
             from project.performance_monitoring import performance_monitor
             assert len(performance_monitor.metrics) >= 2
@@ -56,11 +53,9 @@ class TestPerformanceMonitor:
     def test_monitor_metricas_contem_dados_corretos(self, app):
         """Testa que métricas contêm dados corretos."""
         client = app.test_client()
-        
-                \
+
         response = client.get('/health')
-        
-                \
+
         with app.app_context():
             from project.performance_monitoring import performance_monitor
             if len(performance_monitor.metrics) > 0:
@@ -78,8 +73,7 @@ class TestPerformanceMonitor:
     def test_monitor_summary(self, app):
         """Testa geração de resumo de métricas."""
         client = app.test_client()
-        
-                \
+
         for _ in range(5):
             client.get('/health')
         
@@ -178,8 +172,8 @@ class TestPerformanceIntegration:
     
     def test_request_lento_e_logado(self, app):
         """Testa que requests lentos são logados."""
-        \
-\
+
+
         client = app.test_client()
         
         response = client.get('/health')
@@ -187,11 +181,10 @@ class TestPerformanceIntegration:
     
     def test_metricas_endpoint_admin(self, app):
         """Testa endpoint de métricas (admin)."""
-        \
-\
+
+
         client = app.test_client()
-        
-                \
+
         response = client.get('/admin/metrics')
         assert response.status_code in [302, 403, 401]
 

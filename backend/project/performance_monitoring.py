@@ -1,5 +1,4 @@
-\
-\
+
 
 import time
 from functools import wraps
@@ -31,15 +30,13 @@ class PerformanceMonitor:
         app.before_request(self.before_request)
         app.after_request(self.after_request)
         app.teardown_request(self.teardown_request)
-        
-                \
+
         @app.route('/admin/metrics')
         def view_metrics():
             """Endpoint para visualizar métricas (apenas admin)."""
             from .blueprints.auth import login_required
             from .constants import PERFIL_ADMIN
-            
-                        \
+
             if not hasattr(g, 'perfil') or g.perfil.get('perfil_acesso') != PERFIL_ADMIN:
                 return "Acesso negado", 403
             
@@ -60,8 +57,7 @@ class PerformanceMonitor:
         """Executado após cada request."""
         if hasattr(g, 'start_time'):
             elapsed = time.time() - g.start_time
-            
-                        \
+
             metric = {
                 'timestamp': datetime.now().isoformat(),
                 'method': request.method,
@@ -73,11 +69,9 @@ class PerformanceMonitor:
                 'cache_misses': getattr(g, 'cache_misses', 0),
                 'user': getattr(g, 'user_email', 'anonymous')
             }
-            
-                        \
+
             self.metrics.append(metric)
-            
-                        \
+
             if len(self.metrics) > self.max_metrics:
                 self.metrics = self.metrics[-self.max_metrics:]
             
@@ -92,7 +86,7 @@ class PerformanceMonitor:
     def teardown_request(self, exception=None):
         """Executado no teardown da request."""
         if exception:
-            \
+
             current_app.logger.error(f"Request exception: {exception}")
     
     def get_summary(self):

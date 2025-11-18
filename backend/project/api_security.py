@@ -1,4 +1,4 @@
-\
+
 """
 Middleware de segurança para APIs REST.
 Implementa validação de Origin/Referer para prevenir CSRF em APIs.
@@ -34,8 +34,7 @@ def validate_api_origin(f):
         
         origin = request.headers.get('Origin')
         referer = request.headers.get('Referer')
-        
-                \
+
         if not origin and not referer:
             current_app.logger.warning(
                 f'API request without Origin/Referer: {request.method} {request.path} '
@@ -47,8 +46,7 @@ def validate_api_origin(f):
             }), 403
         
         allowed_origins = _get_allowed_origins()
-        
-                \
+
         if origin:
             if not _is_origin_allowed(origin, allowed_origins):
                 current_app.logger.warning(
@@ -84,16 +82,15 @@ def _get_allowed_origins():
     Returns:
         Lista de origens permitidas (ex: ['http://localhost:5000', 'https://app.com'])
     """
-    \
+
     allowed = [
         'http://localhost:5000',
         'http://127.0.0.1:5000',
         'http://localhost:8000',
         'http://127.0.0.1:8000',
     ]
-    
-        \
-\
+
+
     if request.host_url:
         allowed.append(request.host_url.rstrip('/'))
     
@@ -122,8 +119,7 @@ def _is_origin_allowed(origin, allowed_origins):
         return False
     
     origin = origin.rstrip('/')
-    
-        \
+
     for allowed in allowed_origins:
         if origin == allowed.rstrip('/'):
             return True

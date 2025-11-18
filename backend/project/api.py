@@ -9,7 +9,6 @@ intentionally lightweight and do not depend on Flask request context.
 from datetime import datetime
 import re
 
-\
 class _DummyG:
     pass
 
@@ -21,8 +20,6 @@ def jsonify(obj):
 from .db import get_db_connection                                             
 from .logging_config import api_logger, security_logger
 
-
-\
 def validate_integer(value):
     """Return int(value) or None if invalid (no exceptions)."""
     try:
@@ -36,7 +33,7 @@ def validate_date(value):
     if not isinstance(value, str) or not value:
         return None
     try:
-        \
+
         datetime.strptime(value, "%Y-%m-%d")
         return value
     except ValueError:
@@ -49,14 +46,14 @@ def sanitize_string(value):
         return ""
     s = value.strip()
     s = s.replace("\r", " ").replace("\n", " ")
-    \
+
     s = re.sub(r"\s+", " ", s)
     return s
 
 
 def toggle_tarefa(tarefa_id):
     """Toggle task completion with minimal DB interaction and permission checks."""
-    \
+
     tarefa_id_val = validate_integer(tarefa_id)
     if tarefa_id_val is None:
         api_logger.warning("ID de tarefa inválido")

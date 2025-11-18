@@ -1,4 +1,4 @@
-\
+
 """
 Configuração do Sentry para monitoramento de erros em produção.
 
@@ -11,7 +11,6 @@ Sentry captura automaticamente:
 
 import os
 
-\
 try:
     import sentry_sdk
     from sentry_sdk.integrations.flask import FlaskIntegration
@@ -36,50 +35,41 @@ def init_sentry(app):
         SENTRY_DSN=https://abc123@o123456.ingest.sentry.io/123456
         FLASK_ENV=production
     """
-    \
+
     if not SENTRY_AVAILABLE:
         app.logger.info("Sentry não disponível (sentry-sdk não instalado)")
         return
 
     sentry_dsn = app.config.get('SENTRY_DSN') or os.environ.get('SENTRY_DSN')
 
-    \
     if not sentry_dsn:
         app.logger.info("Sentry não configurado (SENTRY_DSN não definido)")
         return
     
     environment = app.config.get('FLASK_ENV', 'production')
-    
-        \
+
     logging_integration = LoggingIntegration(
         level=None,\
         event_level='ERROR'\
     )
-    
-        \
+
     sentry_sdk.init(
         dsn=sentry_dsn,
         integrations=[
             FlaskIntegration(),
             logging_integration,
         ],
-        
-            \
+
         traces_sample_rate=0.1,\
-        
-            \
+
         environment=environment,
-        
-            \
+
         release=app.config.get('APP_VERSION', 'unknown'),
-        
-            \
+
         send_default_pii=False,\
-        
-            \
+
         max_breadcrumbs=50,
-        
-            \
+
         before_send=before_send_filter,
     )
     
@@ -102,8 +92,7 @@ def before_send_filter(event, hint):
     Returns:
         event modificado ou None para ignorar
     """
-    
-        \
+
     if event.get('level') == 'error':
         exception = event.get('exception', {}).get('values', [{}])[0]
         if exception.get('type') == 'NotFound':
@@ -111,8 +100,7 @@ def before_send_filter(event, hint):
     
     if 'request' in event:
         headers = event['request'].get('headers', {})
-        
-                \
+
         if 'Authorization' in headers:
             headers['Authorization'] = '[Filtered]'
         

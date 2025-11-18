@@ -1,4 +1,4 @@
-\
+
 """
 Exceções customizadas para o projeto CSAPP.
 Facilita tratamento de erros específicos e melhora debugging.

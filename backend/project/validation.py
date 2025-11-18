@@ -1,4 +1,4 @@
-\
+
 """
 Módulo de validação para sanitização e validação de inputs.
 Protege contra SQL Injection, XSS e outros ataques.
@@ -16,22 +16,22 @@ class ValidationError(Exception):
 
 
 COMMON_PASSWORDS = {
-\
+
     '123456', '123456789', '12345678', '12345', '1234567890',
     '111111', '000000', '123123', '1234567', '1234',
-\
+
     'password', 'password1', 'password123', 'Password1', 'Password123',
-\
+
     'qwerty', 'qwerty123', 'qwertyuiop', 'asdfgh', 'zxcvbn',
     'qwerty1', 'asdfghjkl', '1qaz2wsx',
-\
+
     'abc123', 'welcome', 'monkey', 'dragon', 'master',
     'sunshine', 'princess', 'letmein', 'shadow', 'admin',
     'iloveyou', 'football', 'baseball', 'superman', 'batman',
-\
+
     'passw0rd', 'p@ssw0rd', 'p@ssword', '123qwe', 'qwe123',
     'admin123', 'root', 'toor', 'test', 'guest',
-\
+
     '2024', '2023', '2022', '2021', '2020',
 }
 
@@ -125,8 +125,7 @@ def sanitize_string(value: str, max_length: int = None, min_length: int = 0,
         raise ValidationError("Valor deve ser uma string")
     
     value = value.strip()
-    
-        \
+
     if min_length > 0 and len(value) < min_length:
         raise ValidationError(f"String deve ter no mínimo {min_length} caracteres")
     
@@ -134,12 +133,11 @@ def sanitize_string(value: str, max_length: int = None, min_length: int = 0,
         raise ValidationError(f"String deve ter no máximo {max_length} caracteres")
     
     value = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', value)
-    
-        \
+
     if not allow_html:
         value = html.escape(value)
     else:
-        \
+
         allowed_tags = ['<b>', '</b>', '<i>', '</i>', '<u>', '</u>', '<br>', '<br/>']
         for tag in allowed_tags:
             value = value.replace(tag, tag.lower())
@@ -169,8 +167,7 @@ def validate_email(email: str) -> str:
         raise ValidationError("Email deve ser uma string")
     
     email = email.strip().lower()
-    
-        \
+
     email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     
     if not re.match(email_regex, email):
@@ -249,7 +246,7 @@ def validate_float(value: Any, min_value: float = None, max_value: float = None,
         raise ValidationError(f"Valor deve ser no máximo {max_value}")
     
     if decimal_places is not None:
-        \
+
         str_value = str(float_value)
         if '.' in str_value:
             decimal_part = str_value.split('.')[1]
@@ -371,11 +368,10 @@ def validate_sql_injection(value: str) -> str:
     ]
     
     value_lower = value.lower()
-    
-        \
+
     for keyword in sql_keywords:
         if keyword in value_lower:
-            \
+
             if re.search(rf'\b{keyword}\b', value_lower):
                 raise ValidationError(f"Caracteres inválidos detectados: {keyword}")
     

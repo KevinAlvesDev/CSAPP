@@ -6,13 +6,10 @@ Mantém `from project ...` funcionando após mover o backend para `backend/proje
 import importlib
 import sys
 
-\
 _backend_project = importlib.import_module('backend.project')
 
-\
 create_app = getattr(_backend_project, 'create_app')
 
-\
 _SUBMODULES = [
     'api',
     'extensions',

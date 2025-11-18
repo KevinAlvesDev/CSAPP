@@ -1,4 +1,4 @@
-\
+
 """
 Configuração de cache para a aplicação.
 Usa Flask-Caching com backend configurável (Redis em produção, Simple em desenvolvimento).
@@ -7,7 +7,6 @@ Usa Flask-Caching com backend configurável (Redis em produção, Simple em dese
 from flask_caching import Cache
 import os
 
-\
 cache = None
 
 
@@ -23,7 +22,7 @@ def init_cache(app):
     redis_url = os.environ.get('REDIS_URL')
     
     if redis_url:
-        \
+
         cache_config = {
             'CACHE_TYPE': 'redis',
             'CACHE_REDIS_URL': redis_url,
@@ -32,7 +31,7 @@ def init_cache(app):
         }
         app.logger.info("Cache initialized with Redis backend")
     else:
-        \
+
         cache_config = {
             'CACHE_TYPE': 'SimpleCache',
             'CACHE_DEFAULT_TIMEOUT': 300,\
@@ -51,9 +50,9 @@ def clear_user_cache(user_email):
     Útil quando dados do usuário são atualizados.
     """
     if cache:
-        \
+
         cache.delete(f'dashboard_data_{user_email}')
-        \
+
         cache.delete(f'dashboard_data_{user_email}_all_pNone_ppNone')
         cache.delete(f'user_profile_{user_email}')
         cache.delete(f'user_implantacoes_{user_email}')

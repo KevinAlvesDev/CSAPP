@@ -1,4 +1,4 @@
-\
+
 """
 Módulo de Connection Pooling para PostgreSQL.
 Melhora performance e evita esgotamento de conexões.
@@ -12,7 +12,6 @@ from flask import current_app, g
 import os
 from threading import Lock
 
-\
 _pg_pool = None
 _pool_lock = Lock()
 
@@ -23,15 +22,14 @@ def init_connection_pool(app):
     Chamado durante a inicialização da aplicação.
     """
     global _pg_pool
-    
-        \
+
     if not app.config.get('USE_SQLITE_LOCALLY', False):
         database_url = app.config.get('DATABASE_URL')
         if database_url:
             try:
                 with _pool_lock:
                     if _pg_pool is None:
-                        \
+
                         _pg_pool = pool.ThreadedConnectionPool(
                             minconn=5,
                             maxconn=20,

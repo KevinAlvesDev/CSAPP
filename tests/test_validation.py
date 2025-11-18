@@ -4,7 +4,6 @@ import os
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime
 
-\
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from project.validation import validate_email, validate_integer, sanitize_string, validate_date, ValidationError
@@ -70,7 +69,7 @@ class TestValidation:
         invalid_values = ['abc', [], {}]
         
         for value in invalid_values:
-            \
+
             with pytest.raises(ValidationError):
                 validate_integer(value)
         
@@ -95,11 +94,10 @@ class TestValidation:
     
     def test_sanitize_string_with_length_constraints(self):
         """Testa sanitização de string com restrições de tamanho"""
-        \
+
         result = sanitize_string('Hello', min_length=3, max_length=10)
         assert result == 'Hello'
-        
-                \
+
         with pytest.raises(ValidationError):
             sanitize_string('Hi', min_length=3)
         
@@ -108,11 +106,10 @@ class TestValidation:
     
     def test_sanitize_string_empty(self):
         """Testa sanitização de string vazia"""
-        \
+
         result = sanitize_string('')
         assert result == ''
-        
-                \
+
         with pytest.raises(ValidationError):
             sanitize_string('', min_length=1)
     
@@ -126,7 +123,7 @@ class TestValidation:
         
         for date_str in valid_dates:
             result = validate_date(date_str)
-            \
+
             expected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
             assert result == expected_date
     
@@ -150,29 +147,26 @@ class TestValidationEdgeCases:
     
     def test_validate_email_edge_cases(self):
         """Testa casos extremos para validação de email"""
-        \
+
         long_email = 'a' * 100 + '@example.com'
         result = validate_email(long_email)
         assert result == long_email
-        
-                \
+
         special_email = 'user+tag.name@sub-domain.example.com'
         result = validate_email(special_email)
         assert result == special_email
     
     def test_sanitize_string_edge_cases(self):
         """Testa casos extremos para sanitização de string"""
-        \
+
         long_string = 'a' * 1000
         result = sanitize_string(long_string)
         assert result == long_string
 
-        \
         multi_space = '   multiple   spaces   '
         result = sanitize_string(multi_space)
         assert result == 'multiple   spaces'                                             
-        
-                \
+
         html_string = '<script>alert("xss")</script>'
         result = sanitize_string(html_string)
         assert '&lt;script&gt;' in result
@@ -180,14 +174,13 @@ class TestValidationEdgeCases:
     
     def test_validate_integer_edge_cases(self):
         """Testa casos extremos para validação de inteiro"""
-        \
+
         result = validate_integer(1, min_value=1)
         assert result == 1
         
         result = validate_integer(10, max_value=10)
         assert result == 10
-        
-                \
+
         result = validate_integer(0, min_value=0)
         assert result == 0
 

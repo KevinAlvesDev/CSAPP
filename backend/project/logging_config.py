@@ -24,7 +24,7 @@ class ContextFilter(logging.Filter):
                 nome = perfil.get('nome', user_email)
                 record.user_profile = f"{nome} ({perfil_acesso})"
             else:
-                \
+
                 record.user_profile = user_email
         else:
             record.user_email = 'system'
@@ -34,7 +34,6 @@ class ContextFilter(logging.Filter):
 def setup_logging(app):
     """Configura o sistema de logs para a aplicação."""
 
-    \
     default_dir = os.path.join(os.path.dirname(__file__), '..', 'logs')
     log_dir = app.config.get('LOG_DIR') or default_dir
     os.makedirs(log_dir, exist_ok=True)
@@ -42,12 +41,10 @@ def setup_logging(app):
     log_level_str = app.config.get('LOG_LEVEL', 'INFO')
     log_level = getattr(logging, str(log_level_str).upper(), logging.INFO)
 
-    \
     log_format = '%(asctime)s - %(levelname)s - %(user_email)s - %(user_profile)s - %(name)s - %(message)s'
     date_format = '%Y-%m-%d %H:%M:%S'
     formatter = logging.Formatter(log_format, date_format)
 
-    \
     rotation_enabled = bool(app.config.get('LOG_ROTATION_ENABLED', True))
     retention_days = int(app.config.get('LOG_RETENTION_DAYS', 14))
 
@@ -69,26 +66,22 @@ def setup_logging(app):
     error_handler.setFormatter(formatter)
     error_handler.addFilter(ContextFilter())
 
-    \
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
     console_handler.addFilter(ContextFilter())
 
-    \
     root_logger = logging.getLogger('root')
     root_logger.setLevel(log_level)
     root_logger.addHandler(file_handler)
     root_logger.addHandler(error_handler)
     root_logger.addHandler(console_handler)
 
-    \
     app.logger.setLevel(log_level)
     app.logger.addHandler(file_handler)
     app.logger.addHandler(error_handler)
     app.logger.addHandler(console_handler)
     app.logger.addFilter(ContextFilter())
 
-    \
     for name in ['app', 'auth', 'api', 'database', 'implantacao', 'gamification', 'analytics', 'security', 'management']:
         named_logger = logging.getLogger(name)
         named_logger.setLevel(log_level)

@@ -4,7 +4,6 @@ import os
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime
 
-\
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from project.api import (
@@ -55,17 +54,15 @@ class TestAPITarefas:
     @patch('project.api.g')
     def test_toggle_tarefa_success(self, mock_g, mock_get_db):
         """Testa toggle_tarefa com sucesso"""
-        \
+
         mock_g.user_email = 'test@example.com'
         mock_g.perfil = {'nome': 'Test User', 'perfil_acesso': 'Administrador'}
-        
-                \
+
         mock_conn = Mock()
         mock_cursor = Mock()
         mock_conn.cursor.return_value = mock_cursor
         mock_get_db.return_value = mock_conn
-        
-                \
+
         mock_cursor.fetchone.return_value = {
             'id': 1,
             'concluida': False,
@@ -95,14 +92,12 @@ class TestAPITarefas:
     def test_toggle_tarefa_not_found(self, mock_g, mock_get_db):
         """Testa toggle_tarefa quando a tarefa não existe"""
         mock_g.user_email = 'test@example.com'
-        
-                \
+
         mock_conn = Mock()
         mock_cursor = Mock()
         mock_conn.cursor.return_value = mock_cursor
         mock_get_db.return_value = mock_conn
-        
-                \
+
         mock_cursor.fetchone.return_value = None
         
         with patch('project.api.api_logger') as mock_logger:
@@ -136,14 +131,12 @@ class TestAPIComentarios:
         """Testa adicionar_comentario com sucesso"""
         mock_g.user_email = 'test@example.com'
         mock_g.perfil = {'nome': 'Test User', 'perfil_acesso': 'Administrador'}
-        
-                \
+
         mock_conn = Mock()
         mock_cursor = Mock()
         mock_conn.cursor.return_value = mock_cursor
         mock_get_db.return_value = mock_conn
-        
-                \
+
         mock_cursor.fetchone.return_value = {'id': 1}
         
         with patch('project.api.api_logger') as mock_logger:
@@ -159,7 +152,7 @@ class TestAPIComentarios:
         mock_g.user_email = 'test@example.com'
         
         with patch('project.api.api_logger') as mock_logger:
-            \
+
             result = adicionar_comentario(1, "")
             
             assert result is None
@@ -171,14 +164,12 @@ class TestAPIComentarios:
         """Testa excluir_comentario com sucesso"""
         mock_g.user_email = 'test@example.com'
         mock_g.perfil = {'nome': 'Test User', 'perfil_acesso': 'Administrador'}
-        
-                \
+
         mock_conn = Mock()
         mock_cursor = Mock()
         mock_conn.cursor.return_value = mock_cursor
         mock_get_db.return_value = mock_conn
-        
-                \
+
         mock_cursor.fetchone.return_value = {'id': 1, 'usuario_email': 'test@example.com'}
         
         with patch('project.api.api_logger') as mock_logger:
@@ -204,14 +195,12 @@ class TestAPIComentarios:
         """Testa excluir_comentario quando o usuário não tem permissão"""
         mock_g.user_email = 'user@example.com'
         mock_g.perfil = {'nome': 'User', 'perfil_acesso': 'Usuário', 'permissoes': {}}
-        
-                \
+
         mock_conn = Mock()
         mock_cursor = Mock()
         mock_conn.cursor.return_value = mock_cursor
         mock_get_db.return_value = mock_conn
-        
-                \
+
         mock_cursor.fetchone.return_value = {'id': 1, 'usuario_email': 'admin@example.com'}
         
         with patch('project.api.security_logger') as mock_logger:

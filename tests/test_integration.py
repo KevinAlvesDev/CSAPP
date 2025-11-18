@@ -1,11 +1,9 @@
-\
-\
+
 
 import pytest
 import sys
 import os
 
-\
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backend')))
 
 from project import create_app
@@ -22,19 +20,17 @@ def app():
         'WTF_CSRF_ENABLED': False,\
         'AUTH0_ENABLED': False,\
     })
-    
-        \
+
     with app.app_context():
         from project.db import init_db
         init_db()
     
     yield app
-    
-        \
+
     with app.app_context():
         conn, _ = get_db_connection()
         cursor = conn.cursor()
-        \
+
         cursor.execute("DELETE FROM comentarios")
         cursor.execute("DELETE FROM tarefas")
         cursor.execute("DELETE FROM implantacoes")
@@ -54,19 +50,17 @@ def client(app):
 def auth_client(client, app):
     """Cria um cliente autenticado."""
     with app.app_context():
-        \
+
         from werkzeug.security import generate_password_hash
         
         test_email = 'test@example.com'
         test_password = 'testpassword123'
-        
-                \
+
         execute_db(
             "INSERT OR IGNORE INTO usuarios (usuario, senha) VALUES (?, ?)",
             (test_email, generate_password_hash(test_password))
         )
-        
-                \
+
         execute_db(
             """INSERT OR IGNORE INTO perfil_usuario 
                (usuario, nome, cargo, perfil_acesso) 
@@ -90,7 +84,7 @@ class TestImplantacaoFlowIntegration:
     def test_criar_implantacao_completo(self, auth_client, app):
         """Testa o fluxo completo de criação de implantação."""
         with app.app_context():
-            \
+
             response = auth_client.post('/criar_implantacao', data={
                 'nome_empresa': 'Empresa Teste Integração',
                 'email_responsavel': 'responsavel@teste.com',
@@ -100,8 +94,7 @@ class TestImplantacaoFlowIntegration:
             }, follow_redirects=True)
             
             assert response.status_code == 200
-            
-                        \
+
             impl = query_db(
                 "SELECT * FROM implantacoes WHERE nome_empresa = ?",
                 ('Empresa Teste Integração',),
@@ -113,8 +106,7 @@ class TestImplantacaoFlowIntegration:
             assert impl['status'] == 'andamento'
             
             impl_id = impl['id']
-            
-                        \
+
             tarefas = query_db(
                 "SELECT * FROM tarefas WHERE implantacao_id = ?",
                 (impl_id,)
@@ -122,16 +114,14 @@ class TestImplantacaoFlowIntegration:
             
             assert len(tarefas) > 0
             assert any(t['tarefa_pai'] == 'Checklist Obrigatório' for t in tarefas)
-            
-                        \
+
             tarefa_id = tarefas[0]['id']
             response = auth_client.post(f'/api/toggle_tarefa/{tarefa_id}')
             
             assert response.status_code == 200
             data = response.get_json()
             assert data['ok'] is True
-            
-                        \
+
             tarefa_atualizada = query_db(
                 "SELECT * FROM tarefas WHERE id = ?",
                 (tarefa_id,),
@@ -143,7 +133,7 @@ class TestImplantacaoFlowIntegration:
     def test_adicionar_comentario_completo(self, auth_client, app):
         """Testa o fluxo completo de adicionar comentário."""
         with app.app_context():
-            \
+
             execute_db(
                 """INSERT INTO implantacoes 
                    (nome_empresa, email_responsavel, usuario_cs, status) 
@@ -157,8 +147,7 @@ class TestImplantacaoFlowIntegration:
                 one=True
             )
             impl_id = impl['id']
-            
-                        \
+
             execute_db(
                 """INSERT INTO tarefas 
                    (implantacao_id, tarefa_pai, tarefa_filho, ordem) 
@@ -172,8 +161,7 @@ class TestImplantacaoFlowIntegration:
                 one=True
             )
             tarefa_id = tarefa['id']
-            
-                        \
+
             response = auth_client.post(
                 f'/api/adicionar_comentario/{tarefa_id}',
                 data={
@@ -184,8 +172,7 @@ class TestImplantacaoFlowIntegration:
             )
             
             assert response.status_code == 200
-            
-                        \
+
             comentarios = query_db(
                 "SELECT * FROM comentarios WHERE tarefa_id = ?",
                 (tarefa_id,)
@@ -197,7 +184,7 @@ class TestImplantacaoFlowIntegration:
 
     def test_parar_implantacao_validacao_data(self, auth_client, app):
         with app.app_context():
-            \
+
             execute_db(
                 """INSERT INTO implantacoes 
                    (nome_empresa, email_responsavel, usuario_cs, status) 
@@ -222,7 +209,6 @@ class TestImplantacaoFlowIntegration:
         assert upd['status'] == 'parada'
         assert str(upd['data_finalizacao']).startswith('2023-12-25')
 
-        \
         with app.app_context():
             execute_db("UPDATE implantacoes SET status='andamento', data_finalizacao=NULL WHERE id = ?", (impl_id,))
         resp_br = auth_client.post('/parar_implantacao', data={
@@ -238,7 +224,7 @@ class TestImplantacaoFlowIntegration:
 
     def test_excluir_implantacao_status_200(self, auth_client, app):
         with app.app_context():
-            \
+
             execute_db(
                 """INSERT INTO implantacoes 
                    (nome_empresa, email_responsavel, usuario_cs, status) 

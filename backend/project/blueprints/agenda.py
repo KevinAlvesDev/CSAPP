@@ -25,7 +25,7 @@ def _google_oauth_configured():
 @agenda_bp.route('/agenda')
 @login_required
 def agenda_home():
-    \
+
     try:
         agenda_logger.debug(f"Google OAuth configurado: {_google_oauth_configured()}")
     except Exception:
@@ -65,7 +65,6 @@ def agenda_home():
     week_start = base_day - timedelta(days=days_to_subtract)
     week_end = week_start + timedelta(days=6)
 
-    \
     time_min = f"{week_start.isoformat()}T00:00:00Z"
     time_max = f"{week_end.isoformat()}T23:59:59Z"
 
@@ -90,7 +89,7 @@ def agenda_home():
         )
         agenda_logger.debug(f"Resposta Google Calendar status={resp.status_code}")
         if resp.status_code == 401:
-            \
+
             flash('Sessão do Google expirou. Conecte novamente a Agenda.', 'warning')
             return render_template('agenda.html', events=[], google_connected=False)
         resp.raise_for_status()
@@ -125,7 +124,7 @@ def agenda_home():
 @agenda_bp.route('/agenda/connect')
 @login_required
 def agenda_connect():
-    \
+
     if not _google_oauth_configured():
         flash('Integração com Google Agenda não está configurada.', 'warning')
         return redirect(url_for('agenda.agenda_home'))
@@ -156,7 +155,7 @@ def agenda_list_calendars():
             return jsonify({'ok': False, 'error': resp.text}), resp.status_code
         data = resp.json()
         items = data.get('items', [])
-        \
+
         calendars = [
             {
                 'id': it.get('id'),
@@ -230,7 +229,7 @@ def agenda_create_event():
         event_body['description'] = description
 
     if all_day:
-        \
+
         event_body['start'] = { 'date': date_str }
         event_body['end'] = { 'date': date_str }
     else:
@@ -244,7 +243,6 @@ def agenda_create_event():
     recurrence = payload.get('recurrence')
     reminders = payload.get('reminders')
 
-    \
     if recurrence is not None:
         event_body['recurrence'] = recurrence
     if reminders is not None:
@@ -259,7 +257,7 @@ def agenda_create_event():
                 'conferenceSolutionKey': { 'type': 'hangoutsMeet' }
             }
         }
-        \
+
         extra_params = { 'conferenceDataVersion': 1 }
 
     try:
@@ -331,7 +329,6 @@ def agenda_update_event(event_id):
     payload = request.get_json(silent=True) or {}
     calendar_id = payload.get('calendarId') or request.args.get('calendarId') or 'primary'
 
-    \
     summary = payload.get('summary')
     description = payload.get('description')
     location = payload.get('location')

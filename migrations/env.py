@@ -8,22 +8,18 @@ from sqlalchemy import pool
 
 from alembic import context
 
-\
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-\
 load_dotenv()
 
-\
-\
+
 config = context.config
 
-\
 database_url = os.environ.get('DATABASE_URL')
 if database_url:
     config.set_main_option('sqlalchemy.url', database_url)
 else:
-    \
+
     base_dir = os.path.dirname(os.path.dirname(__file__))
     sqlite_path = os.path.join(base_dir, 'backend', 'dashboard_simples.db')
     config.set_main_option('sqlalchemy.url', f'sqlite:///{sqlite_path}')
@@ -33,10 +29,7 @@ if config.config_file_name is not None:
 
 target_metadata = None
 
-\
-\
-\
-\
+
 
 
 def run_migrations_offline() -> None:

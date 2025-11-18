@@ -1,12 +1,9 @@
-\
-\
+
 
 from flask import current_app
 from ..db import query_db
 from ..constants import NIVEIS_RECEITA 
 from datetime import datetime, timedelta, date 
-
-\
 
 def calculate_time_in_status(impl_id, status_target='parada'):
     """
@@ -97,7 +94,6 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
     agora = datetime.now() 
     ano_corrente = agora.year
 
-    \
     query_impl = """
         SELECT i.*,
                p.nome as cs_nome, p.cargo as cs_cargo, p.perfil_acesso as cs_perfil
@@ -142,12 +138,11 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
 
     query_impl += " ORDER BY i.nome_empresa "
 
-    \
     impl_list = query_db(query_impl, tuple(args_impl))
     impl_list = impl_list if impl_list is not None else []
-    \
+
     impl_completas = [impl for impl in impl_list if isinstance(impl, dict) and impl.get('tipo') == 'completa']
-    \
+
     modules_implantacao_lista = []
     def _to_dt(val):
         if not val:
@@ -230,8 +225,6 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
     all_cs_profiles = query_db("SELECT usuario, nome, cargo, perfil_acesso FROM perfil_usuario")
     all_cs_profiles = all_cs_profiles if all_cs_profiles is not None else [] 
 
-\
-
     primeiro_dia_mes = agora.replace(day=1)
     default_task_start_date_str = primeiro_dia_mes.strftime('%Y-%m-%d')
     default_task_end_date_str = agora.strftime('%Y-%m-%d')
@@ -271,7 +264,6 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
 
     query_tasks += " GROUP BY i.usuario_cs, p.nome, t.tag ORDER BY cs_nome, t.tag "
 
-    \
     tasks_summary_raw = query_db(query_tasks, tuple(args_tasks))
     tasks_summary_raw = tasks_summary_raw if tasks_summary_raw is not None else []
 
@@ -297,9 +289,7 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
             task_summary_processed[email]['Reunião'] = total
             
     task_summary_list = list(task_summary_processed.values())
-    
-    \
-    
+
     cs_metrics_ranking = {p['usuario']: {
         'email': p['usuario'], 'nome': p['nome'] or p['usuario'], 'cargo': p['cargo'] or 'N/A',
         'perfil': p['perfil_acesso'] or 'Nenhum',
@@ -554,8 +544,6 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
         'default_task_start_date': default_task_start_date_str,
         'default_task_end_date': default_task_end_date_str,
     }
-
-\
 
 def get_implants_by_day(start_date=None, end_date=None, cs_email=None):
     """Contagem de implantações finalizadas por dia, com filtros opcionais."""

@@ -1,5 +1,4 @@
-\
-\
+
 
 from flask import g, current_app
 from ..db import query_db, execute_db
@@ -9,8 +8,6 @@ from ..constants import (
 from ..utils import format_date_iso_for_json, format_date_br
 from ..cache_config import cache
 from datetime import datetime, date
-
-\
 
 def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=None):
     """
@@ -27,13 +24,12 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
         Se page é None: (dashboard_data, metrics) - comportamento original
         Se page é fornecido: (dashboard_data, metrics, pagination) - com paginação
     """
-    \
+
     if page is not None and per_page is None:
         per_page = 100
 
     cache_key = f'dashboard_data_{user_email}_{filtered_cs_email or "all"}_p{page}_pp{per_page}'
 
-    \
     if cache:
         cached_data = cache.get(cache_key)
         if cached_data:
@@ -44,8 +40,7 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
 
     is_manager_view = perfil_acesso in manager_profiles
 
-    \
-\
+
     query_sql = """
         SELECT
             i.*,
@@ -83,10 +78,9 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
                  END, i.data_criacao DESC
     """
 
-    \
     pagination = None
     if page is not None:
-        \
+
         count_sql = """
             SELECT COUNT(*) as total
             FROM implantacoes i
@@ -103,11 +97,9 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
         total_result = query_db(count_sql, tuple(count_args), one=True)
         total = total_result.get('total', 0) if total_result else 0
 
-        \
         from ..pagination import Pagination
         pagination = Pagination(page=page, per_page=per_page, total=total)
 
-        \
         query_sql += " LIMIT %s OFFSET %s"
         args.extend([pagination.limit, pagination.offset])
 
@@ -133,8 +125,6 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
         'total_valor_novas': 0.0, 
     }
 
-\
-\
 
     agora = datetime.now() 
 
@@ -158,7 +148,6 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
         impl['data_inicio_producao_iso'] = format_date_iso_for_json(impl.get('data_inicio_producao'), only_date=True)
         impl['data_final_implantacao_iso'] = format_date_iso_for_json(impl.get('data_final_implantacao'), only_date=True)
 
-        \
         total_tasks = impl.get('total_tarefas', 0) or 0
         done_tasks = impl.get('tarefas_concluidas', 0) or 0
         impl['progresso'] = int(round((done_tasks / total_tasks) * 100)) if total_tasks > 0 else 0
@@ -213,7 +202,7 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
             metrics['impl_finalizadas'] += 1
             metrics['total_valor_finalizadas'] += impl_valor
         elif status == 'parada':
-            \
+
             dias_parada = 0
             data_finalizacao_obj = impl.get('data_finalizacao')
             if data_finalizacao_obj:

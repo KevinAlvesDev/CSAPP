@@ -1,6 +1,5 @@
-\
-\
-\
+
+
 
 import subprocess
 import sys
@@ -38,8 +37,7 @@ def check_dependencies():
 def run_tests_with_coverage():
     """Executa todos os testes com coverage."""
     print_header("EXECUTANDO TODOS OS TESTES COM COVERAGE")
-    
-        \
+
     result = subprocess.run([
         sys.executable, '-m', 'pytest',
         'tests/',
@@ -94,8 +92,7 @@ def run_specific_test_suites():
                 'output': result.stdout,
                 'file': test_file
             }
-            
-                        \
+
             if result.returncode == 0:
                 print(f"   ✅ PASSOU")
             else:
@@ -142,8 +139,7 @@ def generate_report(results):
         print(f"{name:50} {status}")
     
     print("-" * 80)
-    
-        \
+
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     report_file = f'test_report_{timestamp}.txt'
     
@@ -180,8 +176,7 @@ def generate_report(results):
                 f.write("\n" + "-" * 80 + "\n")
     
     print(f"\n📄 Relatório salvo em: {report_file}")
-    
-        \
+
     if os.path.exists('coverage.json'):
         try:
             with open('coverage.json', 'r') as f:
@@ -198,11 +193,9 @@ def generate_report(results):
 def main():
     """Função principal."""
     print_header(f"SUÍTE COMPLETA DE TESTES - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    
-        \
+
     check_dependencies()
-    
-        \
+
     results = run_specific_test_suites()
     all_passed = generate_report(results)
     

@@ -1,5 +1,4 @@
-\
-\
+
 
 """
 API v1 - Endpoints versionados
@@ -56,8 +55,7 @@ def list_implantacoes():
     try:
         user_email = g.user_email
         status_filter = request.args.get('status')
-        
-                \
+
         try:
             page = int(request.args.get('page', 1))
             per_page = int(request.args.get('per_page', 50))
@@ -67,8 +65,7 @@ def list_implantacoes():
             per_page = 50
         
         offset = (page - 1) * per_page
-        
-                \
+
         query = """
             SELECT i.*, p.nome as cs_nome
             FROM implantacoes i
@@ -76,8 +73,7 @@ def list_implantacoes():
             WHERE i.usuario_cs = %s
         """
         args = [user_email]
-        
-                \
+
         if status_filter:
             query += " AND i.status = %s"
             args.append(status_filter)
@@ -86,8 +82,7 @@ def list_implantacoes():
         args.extend([per_page, offset])
         
         implantacoes = query_db(query, tuple(args)) or []
-        
-                \
+
         count_query = "SELECT COUNT(*) as total FROM implantacoes WHERE usuario_cs = %s"
         count_args = [user_email]
         if status_filter:

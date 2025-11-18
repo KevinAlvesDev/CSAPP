@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, g, flash, redirect, url_for, request, jsonify, make_response
 from ..blueprints.auth import permission_required
-\
+
 from ..domain.analytics_service import get_analytics_data
 from ..domain.analytics_service import (
     get_implants_by_day,
@@ -8,7 +8,7 @@ from ..domain.analytics_service import (
     get_gamification_rank,
     get_cancelamentos_data,
 )
-\
+
 from ..db import query_db
 from ..constants import PERFIS_COM_ANALYTICS, PERFIS_COM_GESTAO
 from ..validation import validate_email, sanitize_string, validate_date, ValidationError
@@ -22,7 +22,7 @@ def get_all_customer_success():
 
     PERFORMANCE: Cacheado por 10 minutos (600s) pois lista de CS muda raramente.
     """
-    \
+
     if cache:
         cache_key = 'all_customer_success'
         cached_result = cache.get(cache_key)
@@ -32,7 +32,6 @@ def get_all_customer_success():
     result = query_db("SELECT usuario, nome, perfil_acesso FROM perfil_usuario WHERE perfil_acesso IS NOT NULL AND perfil_acesso != '' ORDER BY nome", ())
     result = result if result is not None else []
 
-    \
     if cache:
         cache.set(cache_key, result, timeout=600)
 
@@ -44,8 +43,7 @@ def analytics_dashboard():
     """Rota para o dashboard gerencial de métricas e relatórios, com filtros."""
     
     user_perfil = g.perfil.get('perfil_acesso')
-    
-        \
+
     cs_email = None
     status_filter = 'todas'
     start_date = None
@@ -113,30 +111,28 @@ def analytics_dashboard():
         task_cs_email = None
         task_start_date = None
         task_end_date = None
-\
-    
+
     if user_perfil not in PERFIS_COM_GESTAO:
         cs_email = g.user_email
         task_cs_email = g.user_email                                                   
     
     try:
-        \
+
         analytics_data = get_analytics_data(
             target_cs_email=cs_email, 
             target_status=status_filter,
             start_date=start_date,
             end_date=end_date,
             target_tag=None,
-        \
+
             task_cs_email=task_cs_email,
             task_start_date=task_start_date,
             task_end_date=task_end_date
-        \
+
         )
         
         all_cs = get_all_customer_success()
-        
-                \
+
         status_options = [
             {'value': 'todas', 'label': 'Todas as Implantações'},
             {'value': 'nova', 'label': 'Novas'},
@@ -145,35 +141,30 @@ def analytics_dashboard():
             {'value': 'futura', 'label': 'Futuras'},
             {'value': 'finalizada', 'label': 'Finalizadas'},
             {'value': 'parada', 'label': 'Paradas'},
-        \
+
             {'value': 'cancelada', 'label': 'Canceladas'}
         ]
-        
-                \
-\
+
+
         current_task_cs_email = task_cs_email
         current_task_start_date = task_start_date or analytics_data.get('default_task_start_date')
         current_task_end_date = task_end_date or analytics_data.get('default_task_end_date')
-\
 
         return render_template(
             'analytics.html',
-        \
+
             kpi_cards=analytics_data.get('kpi_cards', {}),
             implantacoes_lista_detalhada=analytics_data.get('implantacoes_lista_detalhada', []),
             modules_implantacao_lista=analytics_data.get('modules_implantacao_lista', []),
             chart_data=analytics_data.get('chart_data', {}),
             implantacoes_paradas_lista=analytics_data.get('implantacoes_paradas_lista', []),
             implantacoes_canceladas_lista=analytics_data.get('implantacoes_canceladas_lista', []),
-            
-                    \
+
             task_summary_data=analytics_data.get('task_summary_data', []),
             current_task_cs_email=current_task_cs_email,
             current_task_start_date=current_task_start_date,
             current_task_end_date=current_task_end_date,
-\
 
-        \
             all_cs=all_cs,
             status_options=status_options,
             current_cs_email=cs_email,
@@ -190,8 +181,6 @@ def analytics_dashboard():
         logger.error(f"Erro ao carregar dashboard de analytics: {e}", exc_info=True)
         flash(f"Erro interno ao carregar os dados de relatórios: {e}", "error")
         return redirect(url_for('main.dashboard'))
-
-\
 
 @analytics_bp.route('/analytics/implants_by_day')
 @permission_required(PERFIS_COM_ANALYTICS)
@@ -324,7 +313,6 @@ def api_gamification_rank():
         month = request.args.get('month')
         year = request.args.get('year')
 
-        \
         if month:
             month = int(sanitize_string(month, max_length=2))
         if year:

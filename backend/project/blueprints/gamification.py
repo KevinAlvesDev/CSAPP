@@ -2,9 +2,8 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for,
 from ..blueprints.auth import permission_required
 from ..db import query_db, execute_db
 
-\
-\
-\
+
+
 from ..domain.gamification_service import (
     _get_all_gamification_rules_grouped,
     get_gamification_report_data, 
@@ -14,7 +13,6 @@ from ..domain.gamification_service import (
 
 from ..constants import PERFIS_COM_GESTAO
 from ..validation import validate_email, validate_integer, sanitize_string, ValidationError
-\
 
 from ..constants import PERFIS_COM_GESTAO
 from datetime import datetime, timedelta 
@@ -30,10 +28,8 @@ def _get_all_cs_users_for_gamification():
     result = query_db("SELECT usuario, nome, cargo FROM perfil_usuario WHERE perfil_acesso IS NOT NULL AND perfil_acesso != '' ORDER BY nome", ())
     return result if result is not None else []
 
-\
-\
-\
-\
+
+
 
 @gamification_bp.route('/save-rules-modal', methods=['POST'])
 @permission_required(PERFIS_COM_GESTAO)
@@ -51,7 +47,7 @@ def save_gamification_rules_from_modal():
             if key.startswith('regra-'):
                 regra_id = key.replace('regra-', '')
                 try:
-                    \
+
                     regra_id = sanitize_string(regra_id, max_length=50)
                     valor_pontos = validate_integer(value, min_value=-1000, max_value=10000)
                     updates_to_make.append((valor_pontos, regra_id))
@@ -88,16 +84,12 @@ def save_gamification_rules_from_modal():
 @limiter.limit("100 per minute", key_func=lambda: g.user_email or get_remote_address())
 def manage_gamification_metrics():
     """Rota para gestores inserirem/atualizarem as métricas manuais de um CS."""
-    
-    \
-    
+
     all_cs_users = _get_all_cs_users_for_gamification()
-    
-        \
-\
+
+
     regras_agrupadas = _get_all_gamification_rules_grouped()
-    
-        \
+
     target_cs_email = None
     try:
         cs_email_param = request.args.get('cs_email')
@@ -124,16 +116,15 @@ def manage_gamification_metrics():
     metricas_automaticas = {}
     
     if target_cs_email:
-        \
+
         metricas_atuais = query_db(
             "SELECT * FROM gamificacao_metricas_mensais WHERE usuario_cs = %s AND mes = %s AND ano = %s",
             (target_cs_email, target_mes, target_ano),
             one=True
         )
-        
-                \
+
         try:
-            \
+
             primeiro_dia = datetime(target_ano, target_mes, 1)
             dias_no_mes = calendar.monthrange(target_ano, target_mes)[1]
             ultimo_dia = datetime(target_ano, target_mes, dias_no_mes)
@@ -142,17 +133,14 @@ def manage_gamification_metrics():
             primeiro_dia_str = primeiro_dia.isoformat()
             fim_ultimo_dia_str = fim_ultimo_dia.isoformat()
 
-            \
             tma_data_map, iniciadas_map, tarefas_map = _get_gamification_automatic_data_bulk(
                 target_mes, target_ano, primeiro_dia_str, fim_ultimo_dia_str, target_cs_email
             )
-            
-                        \
+
             dados_tma = tma_data_map.get(target_cs_email, {})
             count_iniciadas = iniciadas_map.get(target_cs_email, 0)
             dados_tarefas = tarefas_map.get(target_cs_email, {})
 
-            \
             count_finalizadas = dados_tma.get('count', 0)
             tma_total_dias = dados_tma.get('total_dias', 0)
             tma_medio = round(tma_total_dias / count_finalizadas, 1) if count_finalizadas > 0 else 0.0
@@ -164,12 +152,12 @@ def manage_gamification_metrics():
             media_acoes_dia = round(count_acao_interna / dias_no_mes, 2) if dias_no_mes > 0 else 0.0
 
             metricas_automaticas = {
-            \
-\
+
+
                 'impl_finalizadas_mes': count_finalizadas,
                 'tma_medio_mes_raw': tma_medio, 
                 'tma_medio_mes': f"{tma_medio} dias" if tma_medio > 0 else "N/A",\
-\
+
                 'impl_iniciadas_mes': count_iniciadas,
                 'reunioes_concluidas_dia_media': f"{media_reunioes_dia:.2f}",
                 'acoes_concluidas_dia_media': f"{media_acoes_dia:.2f}"
@@ -196,9 +184,8 @@ def manage_gamification_metrics():
                 'ano': target_ano,
                 'data_registro': datetime.now()
             }
-            
-                        \
-\
+
+
             float_fields = [
                 'nota_qualidade', 'assiduidade', 'planos_sucesso_perc', 'satisfacao_processo',
                 'tma_medio_mes', 'reunioes_concluidas_dia_media', 'acoes_concluidas_dia_media'
@@ -211,9 +198,7 @@ def manage_gamification_metrics():
                 'perda_sla_grupo', 'finalizacao_incompleta',
                 'impl_finalizadas_mes', 'impl_iniciadas_mes'
             ]
-\
 
-            \
             for field in float_fields:
                 value_str = request.form.get(field)
                 if value_str:
@@ -227,7 +212,7 @@ def manage_gamification_metrics():
             for field in int_fields:
                 value_str = request.form.get(field)
                 try:
-                    \
+
                     if value_str is not None and value_str != '':
                         data_to_save[field] = int(value_str)
                     else:
@@ -243,7 +228,7 @@ def manage_gamification_metrics():
                     return redirect(url_for('gamification.manage_gamification_metrics', cs_email=target_cs_email, mes=target_mes, ano=target_ano))
 
             try:
-                \
+
                 tma_raw = float(metricas_automaticas.get('tma_medio_mes_raw', 0) or 0)
                 data_to_save['tma_medio_mes'] = tma_raw
             except Exception:
@@ -325,17 +310,14 @@ def manage_gamification_metrics():
 @permission_required(PERFIS_COM_GESTAO)
 def gamification_report():
     """Rota para exibir o relatório de pontuação da gamificação."""
-    
-    \
-    
+
     all_cs_users = _get_all_cs_users_for_gamification()
     
     hoje = datetime.now()
     
     default_mes = int(request.args.get('mes', hoje.month))
     default_ano = int(request.args.get('ano', hoje.year))
-    
-        \
+
     try:
         selected_month = validate_integer(default_mes, min_value=1, max_value=12)
         selected_year = validate_integer(default_ano, min_value=2020, max_value=hoje.year + 10)

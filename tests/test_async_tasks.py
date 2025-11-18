@@ -1,5 +1,4 @@
-\
-\
+
 
 import pytest
 import sys
@@ -38,8 +37,7 @@ class TestBackgroundTask:
             event.set()
         
         BackgroundTask.run(test_func, x=2, y=3)
-        
-                \
+
         event.wait(timeout=2)
         
         assert result_container['value'] == 5
@@ -54,8 +52,7 @@ class TestBackgroundTask:
         BackgroundTask.run(slow_func)
         
         elapsed = time.time() - start_time
-        
-                \
+
         assert elapsed < 0.1
     
     def test_background_task_com_app_context(self, app):
@@ -84,11 +81,9 @@ class TestBackgroundTask:
             raise ValueError("Test error")
         
         BackgroundTask.run(error_func)
-        
-                \
+
         event.wait(timeout=2)
-        
-                \
+
         assert True
 
 
@@ -107,14 +102,13 @@ class TestSendEmailAsync:
             )
             
             elapsed = time.time() - start_time
-            
-                        \
+
             assert elapsed < 0.1
     
     def test_send_email_async_com_parametros(self, app):
         """Testa envio de email com todos os parâmetros."""
         with app.app_context():
-            \
+
             send_email_async(
                 subject='Test Email',
                 body_html='<p>Test HTML</p>',
@@ -123,8 +117,7 @@ class TestSendEmailAsync:
                 from_name='Test Sender',
                 body_text='Test plain text'
             )
-            
-                        \
+
             assert True
 
 
@@ -165,8 +158,7 @@ class TestAsyncTasksIntegration:
             data_dict={'a': 1, 'b': 2, 'c': 3},
             data_list=[10, 20, 30]
         )
-        
-                \
+
         event.wait(timeout=2)
         
         assert result_container['data']['dict_sum'] == 6

@@ -1,4 +1,4 @@
-\
+
 import os
 import time
 from flask import (
@@ -8,22 +8,20 @@ from datetime import datetime
 from botocore.exceptions import ClientError
 from werkzeug.utils import secure_filename
 
-\
 from ..blueprints.auth import login_required, permission_required 
- \
-\
+
+
 from ..db import query_db, execute_db, logar_timeline, execute_and_fetch_one
 from ..cache_config import clear_user_cache, clear_implantacao_cache
-\
-\
+
+
 from ..domain.implantacao_service import _get_progress, _create_default_tasks
 
-\
-\
+
 from ..task_definitions import (
     MODULO_OBRIGATORIO, MODULO_PENDENCIAS, TAREFAS_TREINAMENTO_PADRAO
 )
-\
+
 from ..constants import (
     JUSTIFICATIVAS_PARADA, CARGOS_RESPONSAVEL, PERFIS_COM_CRIACAO,
     NIVEIS_RECEITA, SEGUIMENTOS_LIST, TIPOS_PLANOS, MODALIDADES_LIST,
@@ -33,7 +31,6 @@ from ..constants import (
     SIM_NAO_OPTIONS,
     PERFIS_COM_GESTAO
 )
-\
 
 from .. import utils
 from ..extensions import r2_client                                      
@@ -42,24 +39,19 @@ from flask_limiter.util import get_remote_address
 from ..validation import validate_integer, sanitize_string, validate_date, ValidationError
 from ..logging_config import app_logger
 
-\
 implantacao_actions_bp = Blueprint('actions', __name__)
 
-
-\
-\
 
 @implantacao_actions_bp.route('/criar_implantacao', methods=['POST'])
 @login_required
 @permission_required(PERFIS_COM_CRIACAO)  
 @limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 def criar_implantacao():
-\
-    
+
     usuario_criador = g.user_email                    
     
     try:
-        \
+
         nome_empresa = sanitize_string(request.form.get('nome_empresa', ''), max_length=200)
         if not nome_empresa:
             raise ValidationError('Nome da empresa é obrigatório.')
@@ -72,12 +64,11 @@ def criar_implantacao():
         return redirect(url_for('main.dashboard'))
     
     tipo = 'completa'
-    \
+
     status = 'nova'
-    \
+
     data_inicio_previsto = None
     data_inicio_efetivo = None
-\
 
     if not nome_empresa:
         flash('Nome da empresa é obrigatório.', 'error')
@@ -109,31 +100,29 @@ def criar_implantacao():
 
     try:
         agora = datetime.now()
-        
-                \
-\
+
+
         result = execute_and_fetch_one(
             "INSERT INTO implantacoes (usuario_cs, nome_empresa, tipo, data_criacao, status, data_inicio_previsto, data_inicio_efetivo) "
             "VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id",
             (usuario_atribuido, nome_empresa, tipo, agora, status, data_inicio_previsto, data_inicio_efetivo)
         )
-\
 
         implantacao_id = result.get('id') if result else None
         
         if not implantacao_id:
-            \
+
             raise Exception("Falha ao obter ID da nova implantação.")
 
         logar_timeline(implantacao_id, usuario_criador, 'implantacao_criada', f'Implantação "{nome_empresa}" ({tipo.capitalize()}) criada e atribuída a {usuario_atribuido}.')  
         
         tasks_added = 0
-        \
+
         if tipo == 'completa': 
             tasks_added = _create_default_tasks(implantacao_id)  
             
         flash(f'Implantação "{nome_empresa}" criada com {tasks_added} tarefas padrão.', 'success')
-        \
+
         try:
             clear_user_cache(usuario_criador)
             if usuario_atribuido and usuario_atribuido != usuario_criador:
@@ -156,7 +145,7 @@ def criar_implantacao_modulo():
     usuario_criador = g.user_email                    
     
     try:
-        \
+
         nome_empresa = sanitize_string(request.form.get('nome_empresa_modulo', ''), max_length=200)
         if not nome_empresa:
             raise ValidationError('Nome da empresa é obrigatório.')
@@ -180,10 +169,9 @@ def criar_implantacao_modulo():
         return redirect(url_for('main.dashboard'))
     
     tipo = 'modulo'
-    \
+
     status = 'nova'
 
-    \
     try:
         existente = query_db(
             """
@@ -206,15 +194,13 @@ def criar_implantacao_modulo():
 
     try:
         agora = datetime.now()
-        
-                \
-\
+
+
         result = execute_and_fetch_one(
             "INSERT INTO implantacoes (usuario_cs, nome_empresa, tipo, data_criacao, status, data_inicio_previsto, data_inicio_efetivo) "
             "VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id",
             (usuario_atribuido, nome_empresa, tipo, agora, status, None, None)
         )
-\
 
         implantacao_id = result.get('id') if result else None
         
@@ -223,7 +209,7 @@ def criar_implantacao_modulo():
 
         modulo_label = modulo_opcoes.get(modulo_tipo, modulo_tipo)
         logar_timeline(implantacao_id, usuario_criador, 'implantacao_criada', f'Implantação de Módulo "{nome_empresa}" (módulo: {modulo_label}) criada e atribuída a {usuario_atribuido}.')
-        \
+
         try:
             clear_user_cache(usuario_criador)
             if usuario_atribuido and usuario_atribuido != usuario_criador:
@@ -231,10 +217,8 @@ def criar_implantacao_modulo():
             clear_implantacao_cache(implantacao_id)
         except Exception:
             pass
-        
-        \
-\
-        
+
+
         flash(f'Implantação de Módulo "{nome_empresa}" (módulo: {modulo_label}) criada e atribuída a {usuario_atribuido}.', 'success')
         return redirect(url_for('main.dashboard'))
 
@@ -250,7 +234,7 @@ def iniciar_implantacao():
     usuario_cs_email = g.user_email  
     
     try:
-        \
+
         implantacao_id = validate_integer(request.form.get('implantacao_id'), min_value=1)
     except ValidationError as e:
         flash(f'ID de implantação inválido: {str(e)}', 'error')
@@ -266,8 +250,7 @@ def iniciar_implantacao():
             "SELECT usuario_cs, nome_empresa, status, tipo FROM implantacoes WHERE id = %s",
             (implantacao_id,), one=True
         )
-        
-                \
+
         if not impl or impl.get('usuario_cs') != usuario_cs_email:
              flash('Operação negada. Implantação não pertence a você.', 'error')
              return redirect(request.referrer or dest_url_fallback)
@@ -277,10 +260,9 @@ def iniciar_implantacao():
             return redirect(request.referrer or dest_url_fallback)
 
         agora = datetime.now()
-        
-                \
-\
-\
+
+
+
         novo_tipo = impl.get('tipo')
         if novo_tipo == 'futura':                                             
             novo_tipo = 'completa' 
@@ -429,7 +411,6 @@ def finalizar_implantacao():
             (implantacao_id, 0), one=True
         )
 
-        \
         total_tasks_row = query_db(
             "SELECT COUNT(*) as total FROM tarefas WHERE implantacao_id = %s",
             (implantacao_id,), one=True
@@ -493,9 +474,9 @@ def parar_implantacao():
     usuario_cs_email = g.user_email
     implantacao_id = request.form.get('implantacao_id')
     motivo = request.form.get('motivo_parada', '').strip()
-    \
+
     data_parada = request.form.get('data_parada')
-    \
+
     dest_url = url_for('main.ver_implantacao', impl_id=implantacao_id)
 
     if not motivo:
@@ -660,7 +641,6 @@ def atualizar_detalhes_empresa():
     modalidades_val = ','.join(request.form.getlist('modalidades')) or None
     horarios_val = ','.join(request.form.getlist('horarios_func')) or None
     formas_pagamento_val = ','.join(request.form.getlist('formas_pagamento')) or None
-\
 
     try:
         def normalize_date_str(s):
@@ -861,8 +841,7 @@ def cancelar_implantacao():
     implantacao_id = request.form.get('implantacao_id')
     data_cancelamento = request.form.get('data_cancelamento')
     motivo = request.form.get('motivo_cancelamento', '').strip()
-    
-        \
+
     if not r2_client:
          flash('Erro: Serviço de armazenamento R2 não configurado. Não é possível fazer upload do comprovante obrigatório.', 'error')
          return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
@@ -885,8 +864,7 @@ def cancelar_implantacao():
 
     try:
         impl = query_db("SELECT usuario_cs, nome_empresa, status FROM implantacoes WHERE id = %s", (implantacao_id,), one=True)
-        
-                \
+
         is_owner = impl and impl.get('usuario_cs') == usuario_cs_email
         is_manager = g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
         

@@ -1,5 +1,4 @@
-\
-\
+
 
 import pytest
 import sys
@@ -25,19 +24,16 @@ class TestPagination:
     
     def test_pagination_pages_calculation(self):
         """Testa cálculo de número de páginas."""
-        \
+
         p1 = Pagination(page=1, per_page=10, total=100)
         assert p1.pages == 10
-        
-                \
+
         p2 = Pagination(page=1, per_page=10, total=95)
         assert p2.pages == 10
-        
-                \
+
         p3 = Pagination(page=1, per_page=10, total=5)
         assert p3.pages == 1
-        
-                \
+
         p4 = Pagination(page=1, per_page=10, total=0)
         assert p4.pages == 0
     
@@ -114,11 +110,9 @@ class TestPagination:
         """Testa iteração de páginas."""
         p = Pagination(page=5, per_page=10, total=100)
         pages = list(p.iter_pages())
-        
-                \
+
         assert 5 in pages
-        
-                \
+
         assert None in pages or len(pages) > 0
     
     def test_pagination_to_dict(self):

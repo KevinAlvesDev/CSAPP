@@ -41,7 +41,7 @@ def auth_client(client, app):
                    ('Empresa Fin', 'resp@fin.com', email, 'andamento'))
         impl = query_db("SELECT * FROM implantacoes WHERE nome_empresa = ?", ('Empresa Fin',), one=True)
         impl_id = impl['id']
-        \
+
         execute_db("INSERT INTO tarefas (implantacao_id, tarefa_pai, tarefa_filho, ordem, concluida) VALUES (?, ?, ?, ?, ?)", (impl_id, 'Treinamentos', 'T1', 1, 1))
         execute_db("INSERT INTO tarefas (implantacao_id, tarefa_pai, tarefa_filho, ordem, concluida) VALUES (?, ?, ?, ?, ?)", (impl_id, 'Treinamentos', 'T2', 2, 1))
     resp = client.post('/login', data={'email': 'final_date@example.com', 'password': 'pass123456'}, follow_redirects=True)
@@ -70,7 +70,7 @@ def test_manual_finalize_sets_provided_date(auth_client, app):
 
 def test_100_percent_does_not_finalize_automatically(auth_client, app):
     with app.app_context():
-        \
+
         execute_db("INSERT INTO implantacoes (nome_empresa, email_responsavel, usuario_cs, status) VALUES (?, ?, ?, ?)",
                    ('Empresa 100', 'resp@100.com', 'final_date@example.com', 'andamento'))
         impl = query_db("SELECT * FROM implantacoes WHERE nome_empresa = ?", ('Empresa 100',), one=True)

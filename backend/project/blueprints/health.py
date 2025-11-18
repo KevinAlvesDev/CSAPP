@@ -1,4 +1,4 @@
-\
+
 """
 Blueprint para health checks e monitoramento.
 """
@@ -21,8 +21,7 @@ def check_database_connection():
     
     try:
         from ..db import query_db
-        
-                \
+
         result = query_db("SELECT 1 as test", one=True)
         
         end_time = datetime.now()
@@ -66,13 +65,11 @@ def health_check():
     Endpoint de health check para monitoramento.
     Retorna status da aplicação, banco de dados e serviços externos.
     """
-    \
+
     db_status, db_message, db_response_time = check_database_connection()
-    
-        \
+
     r2_status, r2_message = check_r2_connection()
-    
-        \
+
     overall_status = "healthy" if db_status else "unhealthy"
     
     response = {
@@ -95,8 +92,7 @@ def health_check():
             "debug_mode": current_app.debug
         }
     }
-    
-        \
+
     status_code = 200 if overall_status == "healthy" else 503
     
     return jsonify(response), status_code

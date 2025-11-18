@@ -1,5 +1,4 @@
-\
-\
+
 
 import pytest
 import sys
@@ -34,8 +33,7 @@ def app():
         init_db()
     
     yield app
-    
-        \
+
     with app.app_context():
         conn, _ = from project.db import get_db_connection
         conn, _ = get_db_connection()
@@ -51,19 +49,17 @@ class TestSoftDelete:
     def test_soft_delete_marca_registro(self, app):
         """Testa que soft delete marca registro como excluído."""
         with app.app_context():
-            \
+
             impl_id = execute_db(
                 """INSERT INTO implantacoes 
                    (nome_empresa, email_responsavel, usuario_cs, status) 
                    VALUES (?, ?, ?, ?)""",
                 ('Test Company Soft Delete', 'test@test.com', 'test@example.com', 'andamento')
             )
-            
-                        \
+
             result = soft_delete('implantacoes', impl_id)
             assert result is True
-            
-                        \
+
             impl = query_db(
                 "SELECT * FROM implantacoes WHERE id = ?",
                 (impl_id,),
@@ -76,26 +72,24 @@ class TestSoftDelete:
     def test_soft_delete_nao_duplica(self, app):
         """Testa que soft delete não duplica marcação."""
         with app.app_context():
-            \
+
             impl_id = execute_db(
                 """INSERT INTO implantacoes 
                    (nome_empresa, email_responsavel, usuario_cs, status) 
                    VALUES (?, ?, ?, ?)""",
                 ('Test Company Duplicate', 'test@test.com', 'test@example.com', 'andamento')
             )
-            
-                        \
+
             result1 = soft_delete('implantacoes', impl_id)
             assert result1 is True
-            
-                        \
+
             result2 = soft_delete('implantacoes', impl_id)
             assert result2 is False                      
     
     def test_restore_recupera_registro(self, app):
         """Testa que restore recupera registro excluído."""
         with app.app_context():
-            \
+
             impl_id = execute_db(
                 """INSERT INTO implantacoes 
                    (nome_empresa, email_responsavel, usuario_cs, status) 
@@ -104,12 +98,10 @@ class TestSoftDelete:
             )
             
             soft_delete('implantacoes', impl_id)
-            
-                        \
+
             result = restore('implantacoes', impl_id)
             assert result is True
-            
-                        \
+
             impl = query_db(
                 "SELECT * FROM implantacoes WHERE id = ?",
                 (impl_id,),
@@ -122,7 +114,7 @@ class TestSoftDelete:
     def test_get_deleted_records(self, app):
         """Testa listagem de registros excluídos."""
         with app.app_context():
-            \
+
             impl_id1 = execute_db(
                 """INSERT INTO implantacoes 
                    (nome_empresa, email_responsavel, usuario_cs, status) 
@@ -139,8 +131,7 @@ class TestSoftDelete:
             
             soft_delete('implantacoes', impl_id1)
             soft_delete('implantacoes', impl_id2)
-            
-                        \
+
             deleted = get_deleted_records('implantacoes')
             
             assert len(deleted) >= 2
@@ -150,12 +141,11 @@ class TestSoftDelete:
     
     def test_exclude_deleted_filter(self):
         """Testa filtro exclude_deleted."""
-        \
+
         query1 = "SELECT * FROM implantacoes"
         result1 = exclude_deleted(query1)
         assert "WHERE deleted_at IS NULL" in result1
-        
-                \
+
         query2 = "SELECT * FROM implantacoes WHERE usuario_cs = %s"
         result2 = exclude_deleted(query2)
         assert "AND deleted_at IS NULL" in result2

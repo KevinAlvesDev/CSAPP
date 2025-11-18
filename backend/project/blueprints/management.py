@@ -1,4 +1,4 @@
-\
+
 from flask import (
     Blueprint, render_template, request, flash, redirect, url_for, g, jsonify, current_app
 )
@@ -28,7 +28,7 @@ def before_request():
 def manage_users():
     """Renderiza a página principal de gerenciamento de usuários."""
     try:
-        \
+
         users_data = query_db(
             "SELECT usuario as usuario, nome, perfil_acesso FROM perfil_usuario ORDER BY nome"
         ) or []
@@ -43,7 +43,7 @@ def manage_users():
             perfis_list=perfis_disponiveis
         )
     except Exception as e:
-        \
+
         management_logger.error(f"Erro ao carregar a lista de usuários: {e}")
         return ("Erro ao carregar a lista de usuários", 500)
 
@@ -86,17 +86,16 @@ def backup_database():
 
 def perform_backup():
     """Executa o backup do banco e retorna dict com tipo e caminho do arquivo."""
-    \
+
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
     backup_dir = os.path.join(base_dir, 'backups')
     os.makedirs(backup_dir, exist_ok=True)
 
     ts = datetime.now().strftime('%Y%m%d-%H%M%S')
 
-    \
     with db_connection() as (conn, db_type):
         if db_type == 'sqlite':
-            \
+
             sqlite_base = os.path.abspath(os.path.dirname(base_dir))
             is_testing = current_app.config.get('TESTING', False)
             db_filename = 'dashboard_simples_test.db' if is_testing else 'dashboard_simples.db'
@@ -150,7 +149,6 @@ def update_user_profile():
     usuario_alvo = data['usuario']
     novo_perfil = data['perfil']
 
-    \
     perfis_disponiveis = current_app.config.get('PERFIS_DE_ACESSO', [])
     if novo_perfil not in perfis_disponiveis:
         security_logger.warning(f"Tentativa de atribuir perfil inválido '{novo_perfil}' para {usuario_alvo} por {g.user_email}")
@@ -161,7 +159,7 @@ def update_user_profile():
         return jsonify({'ok': False, 'error': 'Não pode alterar o seu próprio perfil por esta interface.'}), 403
 
     try:
-        \
+
         user_exists = query_db("SELECT 1 FROM perfil_usuario WHERE usuario = %s", (usuario_alvo,), one=True)
         if not user_exists:
             return jsonify({'ok': False, 'error': 'Usuário não encontrado'}), 404
@@ -180,7 +178,7 @@ def update_user_profile():
 @management_bp.route('/users/update_perfil', methods=['POST'])
 def update_user_perfil():
     """Atualiza o perfil via formulário HTML (compatível com manage_users.html)."""
-    \
+
     usuario_alvo = request.form.get('usuario_email')
     novo_perfil = request.form.get('new_perfil')
 
@@ -242,7 +240,7 @@ def update_user_perfil():
         return redirect(url_for('management.manage_users'))
 
     try:
-        \
+
         user_exists = query_db("SELECT 1 FROM perfil_usuario WHERE usuario = %s", (usuario_alvo,), one=True)
         if not user_exists:
             flash('Usuário não encontrado.', 'error')
@@ -314,7 +312,7 @@ def delete_user():
     usuario_alvo = request.form.get('usuario_email')
     if not usuario_alvo:
         flash('Usuário não especificado.', 'error')
-        \
+
         if request.headers.get('HX-Request') == 'true':
             users_data = query_db(
                 "SELECT usuario as usuario, nome, perfil_acesso FROM perfil_usuario ORDER BY nome"
@@ -356,7 +354,7 @@ def delete_user():
         return redirect(url_for('management.manage_users'))
 
     try:
-        \
+
         perfil = query_db("SELECT foto_url FROM perfil_usuario WHERE usuario = %s", (usuario_alvo,), one=True)
         public_base = current_app.config.get('CLOUDFLARE_PUBLIC_URL')
         bucket = current_app.config.get('CLOUDFLARE_BUCKET_NAME')
@@ -367,7 +365,7 @@ def delete_user():
                 try:
                     r2_client.delete_object(Bucket=bucket, Key=key)
                 except Exception:
-                    \
+
                     pass
 
         implantacoes_ids = query_db("SELECT id FROM implantacoes WHERE usuario_cs = %s", (usuario_alvo,)) or []

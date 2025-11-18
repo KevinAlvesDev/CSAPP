@@ -3,20 +3,18 @@ from flask import (
     Blueprint, render_template, request, flash, redirect, url_for, g, session,
     current_app, send_from_directory, jsonify\
 )
-\
-\
 
-\
+
 from ..blueprints.auth import login_required, permission_required 
 from ..db import query_db, execute_db, logar_timeline, get_db_connection                                   
-\
-\
+
+
 from ..domain.dashboard_service import get_dashboard_data
 from ..domain.implantacao_service import get_implantacao_details
-\
+
 from ..constants import (
-\
-\
+
+
     CARGOS_RESPONSAVEL, PERFIS_COM_CRIACAO,
     NIVEIS_RECEITA, SEGUIMENTOS_LIST, TIPOS_PLANOS, MODALIDADES_LIST,
     HORARIOS_FUNCIONAMENTO, FORMAS_PAGAMENTO, SISTEMAS_ANTERIORES,
@@ -25,23 +23,20 @@ from ..constants import (
     SIM_NAO_OPTIONS,
     PERFIS_COM_GESTAO
 )
-\
+
 from .. import utils
 from ..validation import validate_integer, sanitize_string, ValidationError
 from ..cache_config import cache
 
 main_bp = Blueprint('main', __name__)
 
-\
-\
-\
+
+
 def _get_all_cs_users():
     """Busca todos os usuários com perfil que podem receber implantações."""
-    \
+
     result = query_db("SELECT usuario, nome FROM perfil_usuario WHERE perfil_acesso IS NOT NULL AND perfil_acesso != '' ORDER BY nome")
     return result if result is not None else []
-
-\
 
 @main_bp.route('/')
 def home():
@@ -61,15 +56,13 @@ def home():
 @main_bp.route('/dashboard')
 @login_required
 def dashboard():
-\
-    
+
     user_email = g.user_email  
     user_info = g.user  
     
     perfil_acesso = g.perfil.get('perfil_acesso') if g.get('perfil') else None
     is_manager = perfil_acesso in PERFIS_COM_GESTAO
-    
-        \
+
     current_cs_filter = None
     try:
         cs_filter_param = request.args.get('cs_filter', None)
@@ -80,10 +73,10 @@ def dashboard():
         current_cs_filter = None
 
     try:
-        \
-\
+
+
         if current_cs_filter is None and cache:
-            \
+
             cache_key = f'dashboard_data_{user_email}'
             cached_result = cache.get(cache_key)
 
@@ -91,10 +84,10 @@ def dashboard():
                 dashboard_data, metrics = cached_result
             else:
                 dashboard_data, metrics = get_dashboard_data(user_email, filtered_cs_email=None)
-                \
+
                 cache.set(cache_key, (dashboard_data, metrics), timeout=300)
         else:
-            \
+
             dashboard_data, metrics = get_dashboard_data(user_email, filtered_cs_email=current_cs_filter)
         
         perfil_data = g.perfil if g.perfil else {}  
@@ -152,34 +145,33 @@ def dashboard():
 @main_bp.route('/implantacao/<int:impl_id>')
 @login_required
 def ver_implantacao(impl_id):
-    \
+
     try:
         impl_id = validate_integer(impl_id, min_value=1)
     except ValidationError as e:
         flash(f"ID de implantação inválido: {str(e)}", "error")
         return redirect(url_for('main.dashboard'))
     try:
-        \
+
         context_data = get_implantacao_details(
             impl_id=impl_id,
             usuario_cs_email=g.user_email,
             user_perfil=g.perfil
         )
-        
-                \
-\
+
+
         return render_template( 
             'implantacao_detalhes.html', 
             **context_data
         )
         
     except ValueError as e:
-        \
+
         flash(str(e), 'error')
         return redirect(url_for('main.dashboard'))
         
     except Exception as e:
-        \
+
         from ..logging_config import get_logger
         logger = get_logger('main')
         logger.error(f"Erro ao carregar detalhes da implantação ID {impl_id}: {e}", exc_info=True)

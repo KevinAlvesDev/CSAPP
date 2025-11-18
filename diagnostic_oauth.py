@@ -1,19 +1,17 @@
-\
+
 """
 Script de diagnóstico para verificar configuração do Google OAuth
 """
 import os
 import sys
 
-\
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
 
 try:
     from project.config import Config
     
     print("=== DIAGNÓSTICO GOOGLE OAUTH ===\n")
-    
-        \
+
     print("1. Variáveis de Ambiente:")
     print(f"   GOOGLE_CLIENT_ID: {'✅ Definido' if os.environ.get('GOOGLE_CLIENT_ID') else '❌ Não definido'}")
     print(f"   GOOGLE_CLIENT_SECRET: {'✅ Definido' if os.environ.get('GOOGLE_CLIENT_SECRET') else '❌ Não definido'}")

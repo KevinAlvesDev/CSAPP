@@ -1,5 +1,4 @@
-\
-\
+
 
 MODULO_OBRIGATORIO = "Obrigações para finalização"
 CHECKLIST_OBRIGATORIO_ITEMS = [
@@ -11,11 +10,11 @@ CHECKLIST_OBRIGATORIO_ITEMS = [
 MODULO_PENDENCIAS = "Pendências"
 
 TAREFAS_TREINAMENTO_PADRAO = {
-\
+
     "Definição de carteira": [
         {'nome': "Definição de carteira", 'tag': "Ação interna"}
     ],
-\
+
     "Welcome": [
         {'nome': "Contato Inicial Whatsapp/Grupo", 'tag': "Ação interna"},
         {'nome': "Criar Banco de Dados", 'tag': "Ação interna"},

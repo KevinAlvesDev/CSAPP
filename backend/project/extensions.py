@@ -4,17 +4,12 @@ from botocore.client import Config as BotocoreConfig
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from cachetools import TTLCache
-\
 
 oauth = OAuth()
 
-\
-
-\
 r2_client = None
 limiter = None
 
-\
 gamification_rules_cache = TTLCache(maxsize=10, ttl=3600)
 
 def init_limiter(app):
@@ -27,19 +22,19 @@ def init_limiter(app):
     global limiter
 
     try:
-        \
+
         limiter = Limiter(
             key_func=get_remote_address,
-        \
+
             default_limits=["100 per minute"],
             storage_uri="memory://",
             strategy="fixed-window",
-        \
+
             headers_enabled=True,
-        \
+
             default_limits_exempt_when=lambda: False,
         )
-        \
+
         limiter.init_app(app)
         print("Extensão Limiter inicializada (limite global: 100 req/min).")
     except Exception as e:
@@ -51,9 +46,9 @@ def init_r2(app):
     global r2_client
     
     try:
-        \
+
         if app.config.get('R2_CONFIGURADO', False):
-            \
+
             r2_client = boto3.client(
                 's3',
                 endpoint_url=app.config['R2_ENDPOINT_URL'],
@@ -70,5 +65,5 @@ def init_r2(app):
             print("Extensão R2: Configurações ausentes, cliente não inicializado.")
     except Exception as e:
         print(f"ERRO CRÍTICO: Falha ao inicializar a extensão R2 (boto3): {e}")
-        \
+
         pass

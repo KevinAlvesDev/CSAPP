@@ -1,16 +1,14 @@
-\
-\
+
 
 from flask import g
 from ..db import query_db, execute_db, logar_timeline
 
-\
-\
+
 from ..task_definitions import (
     CHECKLIST_OBRIGATORIO_ITEMS, MODULO_OBRIGATORIO,
     TAREFAS_TREINAMENTO_PADRAO, MODULO_PENDENCIAS
 )
-\
+
 from ..constants import (
     PERFIS_COM_GESTAO, 
     JUSTIFICATIVAS_PARADA, CARGOS_RESPONSAVEL, NIVEIS_RECEITA, 
@@ -18,18 +16,15 @@ from ..constants import (
     HORARIOS_FUNCIONAMENTO, FORMAS_PAGAMENTO, SISTEMAS_ANTERIORES,
     RECORRENCIA_USADA, SIM_NAO_OPTIONS
 )
-\
 
 from ..utils import format_date_iso_for_json, format_date_br
 from datetime import datetime
 from collections import OrderedDict 
 
-\
-
 def _create_default_tasks(impl_id):
     """Cria as tarefas padrão (Obrigatórias e Treinamento) para uma nova implantação."""
     tasks_added = 0
-    \
+
     for i, tarefa_nome in enumerate(CHECKLIST_OBRIGATORIO_ITEMS, 1):
         execute_db(
             "INSERT INTO tarefas (implantacao_id, tarefa_pai, tarefa_filho, ordem, tag) VALUES (%s, %s, %s, %s, %s)",
@@ -66,7 +61,7 @@ def auto_finalizar_implantacao(impl_id, usuario_cs_email):
     Verifica se todas as tarefas (exceto pendências) estão concluídas
     e, em caso afirmativo, finaliza a implantação.
     """
-    \
+
     pending_tasks = query_db(
         "SELECT COUNT(*) as total FROM tarefas "
         "WHERE implantacao_id = %s AND concluida = %s AND (tarefa_pai != %s OR tarefa_pai IS NULL)",
@@ -74,7 +69,6 @@ def auto_finalizar_implantacao(impl_id, usuario_cs_email):
         one=True
     )
 
-    \
     total_nonpend_tasks = query_db(
         "SELECT COUNT(*) as total FROM tarefas "
         "WHERE implantacao_id = %s AND (tarefa_pai != %s OR tarefa_pai IS NULL)",
@@ -175,7 +169,6 @@ def _get_tarefas_and_comentarios(impl_id, is_owner=False, is_manager=False):
             ORDER BY c.data_criacao DESC """, (impl_id,)
     )
 
-    \
     if not (is_owner or is_manager):
         comentarios_raw = [c for c in (comentarios_raw or []) if (c.get('visibilidade') != 'interno')]
 
@@ -202,7 +195,6 @@ def _get_tarefas_and_comentarios(impl_id, is_owner=False, is_manager=False):
         if mp in tarefas_agrupadas_treinamento: ordered_treinamento[mp] = tarefas_agrupadas_treinamento.pop(mp)
     for mr in sorted(tarefas_agrupadas_treinamento.keys()): ordered_treinamento[mr] = tarefas_agrupadas_treinamento[mr]
 
-    \
     if MODULO_OBRIGATORIO in todos_modulos_temp:
         try:
             todos_modulos_temp.remove(MODULO_OBRIGATORIO)

@@ -1,4 +1,4 @@
-\
+
 import smtplib
 import socket
 from email.mime.text import MIMEText
@@ -11,15 +11,12 @@ from flask import current_app
 from .logging_config import security_logger, app_logger
 import re
 
-\
 class NetworkError(Exception):
     pass
 
-\
-\
-\
-\
-\
+
+
+
 
 def _hash_password(password):
     """Gera um hash para a senha."""
@@ -33,8 +30,6 @@ def _check_password(hashed_password, provided_password):
         return False
     return check_password_hash(hashed_password, provided_password)
 
-\
-
 def detect_smtp_settings(user_email):
     """
     Detecta automaticamente host/porta/SSL/TLS com base no domínio do e-mail.
@@ -47,30 +42,29 @@ def detect_smtp_settings(user_email):
 
     domain = user_email.split('@', 1)[1].lower().strip()
 
-    \
     COMMON = {
-    \
+
         'gmail.com': ('smtp.gmail.com', 587, True, False),
         'googlemail.com': ('smtp.gmail.com', 587, True, False),
-    \
+
         'outlook.com': ('smtp.office365.com', 587, True, False),
         'hotmail.com': ('smtp.office365.com', 587, True, False),
         'live.com': ('smtp.office365.com', 587, True, False),
         'office365.com': ('smtp.office365.com', 587, True, False),
         'msn.com': ('smtp.office365.com', 587, True, False),
-    \
+
         'yahoo.com': ('smtp.mail.yahoo.com', 587, True, False),
         'yahoo.com.br': ('smtp.mail.yahoo.com', 587, True, False),
-    \
+
         'icloud.com': ('smtp.mail.me.com', 587, True, False),
         'me.com': ('smtp.mail.me.com', 587, True, False),
         'mac.com': ('smtp.mail.me.com', 587, True, False),
-    \
+
         'zoho.com': ('smtp.zoho.com', 587, True, False),
-    \
+
         'yandex.com': ('smtp.yandex.com', 587, True, False),
         'yandex.ru': ('smtp.yandex.ru', 587, True, False),
-    \
+
         'uol.com.br': ('smtp.uol.com.br', 587, True, False),
         'bol.com.br': ('smtp.bol.com.br', 587, True, False),
         'terra.com.br': ('smtp.terra.com.br', 587, True, False),
@@ -101,8 +95,7 @@ def detect_smtp_settings(user_email):
         f"mail.{domain}",
     ]
 
-    \
-\
+
     chosen = candidates[0]
     app_logger.info(f"Detecção SMTP: domínio desconhecido '{domain}', usando heurística -> {chosen}:587 (TLS)")
     return {
@@ -121,8 +114,8 @@ def load_smtp_settings(user_email):
         return None
         
     try:
-        \
-\
+
+
         settings = query_db(
             'SELECT host, port, "user", password as hashed_password, use_tls, use_ssl FROM smtp_settings WHERE usuario_email = %s',
             (user_email,),
@@ -149,13 +142,12 @@ def save_smtp_settings(user_email, data):
         raise ValueError("Dados de SMTP incompletos para salvar.")
 
     try:
-        \
-\
+
+
         if password:
             hashed_password_to_save = _hash_password(password)
-            
-                        \
-\
+
+
             sql = """
                 INSERT INTO smtp_settings (usuario_email, host, port, "user", password, use_tls, use_ssl)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
@@ -170,8 +162,8 @@ def save_smtp_settings(user_email, data):
             params = (user_email, host, int(port), user, hashed_password_to_save, use_tls, use_ssl)
         
         else:
-            \
-\
+
+
             sql = """
                 INSERT INTO smtp_settings (usuario_email, host, port, "user", use_tls, use_ssl)
                 VALUES (%s, %s, %s, %s, %s, %s)
@@ -204,8 +196,7 @@ def test_smtp_connection(settings, plain_password):
         raise ValueError("Configurações não encontradas.")
         
     hashed_password = settings.get('hashed_password')
-    
-        \
+
     if not _check_password(hashed_password, plain_password):
         security_logger.warning(f"Falha no teste SMTP (Senha não confere com o HASH salvo) para usuário {settings.get('user')}")
         raise smtplib.SMTPAuthenticationError(535, b"Senha invalida. Nao corresponde a configuracao salva.")
@@ -237,7 +228,7 @@ def test_smtp_connection(settings, plain_password):
         raise                                         
         
     except (OSError, socket.gaierror, smtplib.SMTPConnectError, smtplib.SMTPServerDisconnected, TimeoutError) as e:
-        \
+
         app_logger.warning(f"Falha de conectividade SMTP para {user} em {host}:{port}: {e}")
         raise NetworkError(f"Erro de conexao: {e}")
     
@@ -251,10 +242,8 @@ def send_email(subject, body_html, recipients, smtp_settings, plain_password, fr
     Envia um e-mail real usando as configurações validadas.
     Requer a senha em texto plano, pois ela não é armazenada de forma reversível.
     """
-    
-    \
-\
-    
+
+
     host = smtp_settings.get('host')
     port = int(smtp_settings.get('port', 587))
     user = smtp_settings.get('user')
@@ -336,7 +325,6 @@ def send_email_global(subject, body_html, recipients, from_name=None, reply_to=N
     cfg = current_app.config
     driver = (cfg.get('EMAIL_DRIVER') or 'smtp').lower()
 
-    \
     from_addr = cfg.get('SMTP_FROM') or cfg.get('SMTP_USER')
     if not from_addr:
         raise ValueError('Configuração de e-mail inválida: remetente (SMTP_FROM) ausente.')
@@ -347,12 +335,12 @@ def send_email_global(subject, body_html, recipients, from_name=None, reply_to=N
             raise ValueError('SendGrid não configurado: defina SENDGRID_API_KEY.')
 
         content = []
-        \
+
         if body_text:
             content.append({"type": "text/plain", "value": body_text})
         elif body_html:
             try:
-                \
+
                 plain_fallback = re.sub(r"<[^>]+>", "", body_html)
                 content.append({"type": "text/plain", "value": plain_fallback})
             except Exception:
@@ -391,7 +379,7 @@ def send_email_global(subject, body_html, recipients, from_name=None, reply_to=N
                     "open_tracking": {"enable": False}
                 }
         except Exception:
-            \
+
             pass
 
         try:
@@ -406,7 +394,7 @@ def send_email_global(subject, body_html, recipients, from_name=None, reply_to=N
                 json=payload,
                 timeout=10,
             )
-            \
+
             if resp.status_code == 202:
                 msg_id = resp.headers.get('X-Message-Id') or resp.headers.get('X-Message-ID')
                 if msg_id:
@@ -415,10 +403,10 @@ def send_email_global(subject, body_html, recipients, from_name=None, reply_to=N
                     app_logger.info(f"E-mail global (SendGrid) enviado para {recipients}")
                 return True
             else:
-                \
+
                 raise RuntimeError(f"SendGrid falhou ({resp.status_code}): {resp.text}")
         except requests.RequestException as e:
-            \
+
             app_logger.error(f"Falha de rede no envio via SendGrid: {e}")
             raise
 
@@ -489,9 +477,6 @@ def send_external_comment_notification(implantacao, comentario):
     )
     return False
 
-\
-\
-\
-\
-\
-        
+
+
+

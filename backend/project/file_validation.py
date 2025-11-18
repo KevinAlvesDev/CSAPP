@@ -1,4 +1,4 @@
-\
+
 """
 Validação avançada de arquivos enviados.
 Verifica não apenas extensão, mas também conteúdo (MIME type).
@@ -9,17 +9,14 @@ import magic
 from werkzeug.utils import secure_filename
 from flask import current_app
 
-
-\
 ALLOWED_EXTENSIONS = {
-\
+
     'png': ['image/png'],
     'jpg': ['image/jpeg'],
     'jpeg': ['image/jpeg'],
     'gif': ['image/gif'],
     'webp': ['image/webp'],
-    
-    \
+
     'pdf': ['application/pdf'],
     'doc': ['application/msword'],
     'docx': ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
@@ -27,17 +24,14 @@ ALLOWED_EXTENSIONS = {
     'xlsx': ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
     'ppt': ['application/vnd.ms-powerpoint'],
     'pptx': ['application/vnd.openxmlformats-officedocument.presentationml.presentation'],
-    
-    \
+
     'txt': ['text/plain'],
     'csv': ['text/csv', 'text/plain'],
-    
-    \
+
     'zip': ['application/zip'],
     'rar': ['application/x-rar-compressed'],
 }
 
-\
 MAX_FILE_SIZE = 10 * 1024 * 1024         
 
 
@@ -64,7 +58,7 @@ def validate_file_content(file_stream, filename):
     Retorna (is_valid: bool, error_message: str, mime_type: str)
     """
     try:
-        \
+
         extension = get_file_extension(filename)
         if not extension:
             return False, "Arquivo sem extensão", None
@@ -75,12 +69,10 @@ def validate_file_content(file_stream, filename):
         file_stream.seek(0)
         file_header = file_stream.read(2048)
         file_stream.seek(0)                   
-        
-                \
+
         mime = magic.Magic(mime=True)
         detected_mime = mime.from_buffer(file_header)
-        
-                \
+
         allowed_mimes = ALLOWED_EXTENSIONS[extension]
         
         if detected_mime not in allowed_mimes:
@@ -103,7 +95,7 @@ def validate_file_size(file_stream, max_size=MAX_FILE_SIZE):
     Retorna (is_valid: bool, error_message: str, file_size: int)
     """
     try:
-        \
+
         file_stream.seek(0, os.SEEK_END)
         file_size = file_stream.tell()
         file_stream.seek(0)                   
@@ -139,8 +131,7 @@ def validate_uploaded_file(file, filename=None):
         return False, "Nome de arquivo inválido", None
     
     safe_filename = secure_filename(filename)
-    
-        \
+
     if not allowed_file(filename):
         extension = get_file_extension(filename)
         return False, f"Tipo de arquivo não permitido: .{extension}", None

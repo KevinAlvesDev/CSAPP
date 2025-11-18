@@ -6,7 +6,7 @@ def _convert_to_date_or_datetime(dt_obj):
         return dt_obj
     original_str = dt_obj
     try:
-        \
+
         if ' ' in dt_obj or 'T' in dt_obj:
              dt_obj = dt_obj.replace('Z', '').split('+')[0].split('.')[0]
              for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S'):
@@ -48,7 +48,7 @@ def format_date_iso_for_json(dt_obj, only_date=False):
     if only_date:
         output_fmt = '%Y-%m-%d'
     else:
-        \
+
         if isinstance(dt_obj, date) and not isinstance(dt_obj, datetime):
             dt_obj = datetime.combine(dt_obj, datetime.min.time())
         output_fmt = '%Y-%m-%d %H:%M:%S'
@@ -100,7 +100,7 @@ def calcular_dias_decorridos(data_inicio):
 
     agora = datetime.now()
     if isinstance(data_inicio, datetime):
-        \
+
         agora_naive = agora.replace(tzinfo=None) if agora.tzinfo else agora
         inicio_naive = data_inicio.replace(tzinfo=None) if data_inicio.tzinfo else data_inicio
         delta = agora_naive - inicio_naive
@@ -143,7 +143,6 @@ def load_profiles_list(exclude_self=True):
         from flask import g
         from .db import query_db
 
-        \
         users = query_db(
             """
             SELECT
@@ -161,12 +160,11 @@ def load_profiles_list(exclude_self=True):
             (), one=False
         ) or []
 
-        \
         if exclude_self:
             current_user = getattr(g, 'user_email', None)
             users = [u for u in users if u.get('usuario') != current_user]
 
         return users
     except Exception:
-        \
+
         return []

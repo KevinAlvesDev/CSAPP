@@ -2,7 +2,6 @@ import pytest
 import sys
 import os
 
-\
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backend')))
 
 from project import create_app
@@ -49,20 +48,17 @@ def test_excluir_modulo_nao_finaliza_implantacao(auth_client, app):
         impl = query_db("SELECT * FROM implantacoes WHERE nome_empresa = ?", ('Empresa Auto',), one=True)
         impl_id = impl['id']
 
-        \
         execute_db("INSERT INTO tarefas (implantacao_id, tarefa_pai, tarefa_filho, ordem, concluida) VALUES (?, ?, ?, ?, ?)", (impl_id, 'Modulo A', 'T1', 1, 1))
         execute_db("INSERT INTO tarefas (implantacao_id, tarefa_pai, tarefa_filho, ordem, concluida) VALUES (?, ?, ?, ?, ?)", (impl_id, 'Modulo A', 'T2', 2, 1))
         execute_db("INSERT INTO tarefas (implantacao_id, tarefa_pai, tarefa_filho, ordem, concluida) VALUES (?, ?, ?, ?, ?)", (impl_id, 'Modulo B', 'T3', 1, 0))
         execute_db("INSERT INTO tarefas (implantacao_id, tarefa_pai, tarefa_filho, ordem, concluida) VALUES (?, ?, ?, ?, ?)", (impl_id, 'Modulo B', 'T4', 2, 0))
 
-        \
         r = auth_client.post('/api/excluir_tarefas_modulo', json={'implantacao_id': impl_id, 'tarefa_pai': 'Modulo B'})
         assert r.status_code == 200
         data = r.get_json()
         assert data['ok'] is True
         assert data['implantacao_finalizada'] is False
 
-        \
         impl_after = query_db("SELECT status FROM implantacoes WHERE id = ?", (impl_id,), one=True)
         assert impl_after['status'] == 'andamento'
 

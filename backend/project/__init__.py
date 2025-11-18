@@ -1,8 +1,6 @@
-\
 import os
 from dotenv import load_dotenv, find_dotenv
 from flask import Flask, session, g, render_template, request, flash, redirect, url_for, current_app, jsonify
-\
 from werkzeug.middleware.proxy_fix import ProxyFix                          
 from .extensions import oauth, init_r2, init_limiter, limiter
 from flask_wtf.csrf import CSRFProtect
@@ -13,11 +11,8 @@ import click
 
 csrf = CSRFProtect()
 
-\
-\
-\
-\
-\
+
+
 
 
 def create_app():
@@ -25,12 +20,10 @@ def create_app():
                 static_folder='../../frontend/static', 
                 template_folder='../../frontend/templates')
 
-    \
     app.wsgi_app = ProxyFix(
         app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1
     )
     
-        \
     try:
         _dotenv_path = find_dotenv()
         if _dotenv_path:
@@ -85,19 +78,15 @@ def create_app():
     from .utils import format_date_br, format_date_iso_for_json
     from .constants import PERFIS_COM_GESTAO, PERFIL_ADMIN, ADMIN_EMAIL
     from .db import query_db, execute_db
-\
 
-    \
     app.jinja_env.filters['format_date_br'] = format_date_br
     app.jinja_env.filters['format_date_iso'] = format_date_iso_for_json
 
-    \
-\
+
     oauth.init_app(app)
     init_r2(app)
     db.init_app(app)
 
-    \
     try:
         from .sentry_config import init_sentry
         init_sentry(app)
@@ -114,43 +103,32 @@ def create_app():
     app.config['COMPRESS_LEVEL'] = 6                                       
     app.config['COMPRESS_MIN_SIZE'] = 500                                         
 
-    \
     from .performance_monitoring import performance_monitor
     performance_monitor.init_app(app)
 
-    \
     from .db_pool import init_connection_pool, close_db_connection
     if not app.config.get('USE_SQLITE_LOCALLY', False):
         init_connection_pool(app)
 
     app.teardown_appcontext(close_db_connection)
 
-    \
     init_limiter(app)
 
-    \
     csrf.init_app(app)
 
-    \
     setup_logging(app)
 
-    \
     from .security_middleware import init_security_headers
     init_security_headers(app)
 
-    \
     from .cache_config import init_cache
     init_cache(app)
 
-    \
-\
     try:
         if app.config.get('USE_SQLITE_LOCALLY', False):
             with app.app_context():
-                \
                 db.init_db()
                 
-                                \
                 try:
                     admin_exists = query_db("SELECT usuario FROM usuarios WHERE usuario = %s", (ADMIN_EMAIL,), one=True)
                     from werkzeug.security import generate_password_hash
@@ -173,7 +151,6 @@ def create_app():
         print(f"AVISO: Falha ao inicializar DB automaticamente: {e_dbinit}")
     
     if app.config.get('AUTH0_ENABLED', True):
-        \
         raw_domain = (app.config.get('AUTH0_DOMAIN') or '').strip().strip('`').strip()
         if raw_domain.startswith('http://') or raw_domain.startswith('https://'):
             raw_domain = raw_domain.split('://', 1)[1]
@@ -201,7 +178,6 @@ def create_app():
 
     try:
         if app.config.get('GOOGLE_OAUTH_ENABLED', False):
-            \
             oauth.register(
                 name='google',
                 client_id=app.config['GOOGLE_CLIENT_ID'],
@@ -210,14 +186,13 @@ def create_app():
                 access_token_url='https://oauth2.googleapis.com/token',
                 server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
                 client_kwargs={
-            \
                     'scope': app.config.get('GOOGLE_OAUTH_SCOPES', 'openid email profile https://www.googleapis.com/auth/calendar'),
                     'prompt': 'consent',
                     'access_type': 'offline',
                 },
             )
             print('OAuth Google registrado (Agenda).')
-            \
+            
             gi = app.config.get('GOOGLE_CLIENT_ID')
             gs = app.config.get('GOOGLE_CLIENT_SECRET')
             gr = app.config.get('GOOGLE_REDIRECT_URI')
@@ -240,7 +215,6 @@ def create_app():
     from .blueprints.health import health_bp
     from .api_docs import api_docs_bp
 
-    \
     try:
         csrf.exempt(api_bp)
         csrf.exempt(api_v1_bp)                              
@@ -262,15 +236,13 @@ def create_app():
     app.register_blueprint(health_bp)
     app.register_blueprint(api_docs_bp)
 
-    \
-\
+
     try:
         with app.app_context():
             app.gamification_rules = _get_all_gamification_rules_grouped()
     except Exception as e:
         print(f"ERRO CRÍTICO: Falha ao carregar regras de gamificação na inicialização: {e}")
         app.gamification_rules = {}                                       
-\
 
     @app.cli.command('backup-db')
     def backup_db_command():
@@ -294,8 +266,8 @@ def create_app():
                 g.perfil = query_db("SELECT * FROM perfil_usuario WHERE usuario = %s", (g.user_email,), one=True)
             except Exception as e:
                 print(f"ALERTA: Falha ao buscar perfil no before_request para {g.user_email}: {e}")
-                \
-\
+
+
                 if not current_app.config.get('AUTH0_ENABLED', True) and g.user_email == ADMIN_EMAIL:
                     g.perfil = {
                         'nome': g.user.get('name', g.user_email) if g.user else 'Dev',
@@ -329,19 +301,17 @@ def create_app():
         g.PERFIS_COM_GESTAO = PERFIS_COM_GESTAO
         g.PERFIL_ADMIN = PERFIL_ADMIN
 
-        \
-\
-\
+
+
         try:
             g.gamification_rules = current_app.gamification_rules
         except Exception as e:
             print(f"ALERTA: Falha ao carregar regras de gamificação no before_request (a partir do app.context): {e}")
             g.gamification_rules = {} 
- \
-    
+
     @app.errorhandler(404)
     def page_not_found(e):
-        \
+
         if request.path.startswith('/api'):
             return jsonify({'ok': False, 'error': 'Recurso não encontrado'}), 404
         flash("Página não encontrada. Redirecionando para o Dashboard.", "warning")
@@ -350,7 +320,7 @@ def create_app():
     @app.errorhandler(500)
     def internal_server_error(e):
         print(f"ERRO 500: {e}")
-        \
+
         if request.path.startswith('/api'):
             return jsonify({'ok': False, 'error': 'Erro interno do servidor'}), 500
         flash("Ocorreu um erro interno no servidor. Redirecionando para o Dashboard.", "error")
@@ -358,31 +328,31 @@ def create_app():
 
     @app.after_request
     def set_security_headers(response):
-        \
+
         response.headers.setdefault('X-Content-Type-Options', 'nosniff')
         response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
         response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
-        \
+
         if request.headers.get('X-Forwarded-Proto', 'http') == 'https' or request.is_secure:
-            \
+
             response.headers.setdefault('Strict-Transport-Security', 'max-age=15552000; includeSubDomains')
         csp = (
             "default-src 'self'; "
-        \
+
             "img-src 'self' data: https:; "
-        \
+
             "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com https://fonts.gstatic.com https://www.gstatic.com; "
-        \
+
             "style-src-elem 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com https://fonts.gstatic.com https://www.gstatic.com; "
-        \
+
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com https://www.gstatic.com; "
-        \
+
             "font-src 'self' data: https://cdn.jsdelivr.net https://fonts.gstatic.com; "
-        \
+
             "connect-src 'self' https:"
         )
         response.headers.setdefault('Content-Security-Policy', csp)
-        \
+
         response.headers.setdefault('Permissions-Policy', "geolocation=(), microphone=(), camera=(), fullscreen=(*)")
         try:
             if request.endpoint in ('auth.login', 'auth.dev_login', 'auth.dev_login_as', 'main.home', 'auth.register', 'auth.forgot_password', 'auth.reset_password'):

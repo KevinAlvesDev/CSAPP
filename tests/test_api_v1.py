@@ -1,5 +1,4 @@
-\
-\
+
 
 import pytest
 import sys
@@ -27,8 +26,7 @@ def app():
         init_db()
     
     yield app
-    
-        \
+
     with app.app_context():
         from project.db import get_db_connection
         conn, _ = get_db_connection()
@@ -51,8 +49,7 @@ def auth_client(client, app):
     """Cria um cliente autenticado."""
     with app.app_context():
         from werkzeug.security import generate_password_hash
-        
-                \
+
         execute_db(
             "INSERT OR IGNORE INTO usuarios (usuario, senha) VALUES (?, ?)",
             ('apiv1@test.com', generate_password_hash('testpass'))
@@ -94,8 +91,7 @@ class TestAPIv1Implantacoes:
     def test_list_implantacoes_sem_autenticacao(self, client):
         """Testa listagem sem autenticação."""
         response = client.get('/api/v1/implantacoes')
-        
-                \
+
         assert response.status_code in [302, 401]
     
     def test_list_implantacoes_vazia(self, auth_client):
@@ -113,7 +109,7 @@ class TestAPIv1Implantacoes:
     def test_list_implantacoes_com_dados(self, auth_client, app):
         """Testa listagem com dados."""
         with app.app_context():
-            \
+
             for i in range(5):
                 execute_db(
                     """INSERT INTO implantacoes 
@@ -134,7 +130,7 @@ class TestAPIv1Implantacoes:
     def test_list_implantacoes_com_paginacao(self, auth_client, app):
         """Testa listagem com paginação."""
         with app.app_context():
-            \
+
             for i in range(15):
                 execute_db(
                     """INSERT INTO implantacoes 
@@ -151,8 +147,7 @@ class TestAPIv1Implantacoes:
         assert data1['pagination']['page'] == 1
         assert data1['pagination']['per_page'] == 10
         assert data1['pagination']['total'] >= 15
-        
-                \
+
         response2 = auth_client.get('/api/v1/implantacoes?page=2&per_page=10')
         data2 = json.loads(response2.data)
         
@@ -163,7 +158,7 @@ class TestAPIv1Implantacoes:
     def test_list_implantacoes_com_filtro_status(self, auth_client, app):
         """Testa listagem com filtro de status."""
         with app.app_context():
-            \
+
             execute_db(
                 """INSERT INTO implantacoes 
                    (nome_empresa, email_responsavel, usuario_cs, status) 
@@ -182,14 +177,14 @@ class TestAPIv1Implantacoes:
         data = json.loads(response.data)
         
         assert data['ok'] is True
-        \
+
         for impl in data['data']:
             assert impl['status'] == 'andamento'
     
     def test_get_implantacao_detalhes(self, auth_client, app):
         """Testa detalhes de uma implantação."""
         with app.app_context():
-            \
+
             impl_id = execute_db(
                 """INSERT INTO implantacoes 
                    (nome_empresa, email_responsavel, usuario_cs, status) 

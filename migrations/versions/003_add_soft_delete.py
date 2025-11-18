@@ -10,8 +10,6 @@ Adiciona suporte a soft delete (exclusão lógica) nas tabelas principais.
 from alembic import op
 import sqlalchemy as sa
 
-
-\
 revision = '003'
 down_revision = '002'
 branch_labels = None
@@ -32,7 +30,7 @@ def upgrade():
     dialect = conn.dialect.name
     
     if dialect == 'postgresql':
-        \
+
         op.execute("""
             ALTER TABLE implantacoes 
             ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP NULL;
@@ -47,8 +45,7 @@ def upgrade():
             ALTER TABLE comentarios 
             ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP NULL;
         """)
-        
-                \
+
         op.execute("""
             CREATE INDEX IF NOT EXISTS idx_impl_deleted 
             ON implantacoes(deleted_at);
@@ -65,10 +62,9 @@ def upgrade():
         """)
         
     elif dialect == 'sqlite':
-\
-\
-\
-        
+
+
+
         try:
             op.execute("""
                 ALTER TABLE implantacoes 
@@ -114,21 +110,20 @@ def downgrade():
     
     conn = op.get_bind()
     dialect = conn.dialect.name
-    
-        \
+
     op.execute("DROP INDEX IF EXISTS idx_impl_deleted;")
     op.execute("DROP INDEX IF EXISTS idx_tarefas_deleted;")
     op.execute("DROP INDEX IF EXISTS idx_comentarios_deleted;")
     
     if dialect == 'postgresql':
-        \
+
         op.execute("ALTER TABLE implantacoes DROP COLUMN IF EXISTS deleted_at;")
         op.execute("ALTER TABLE tarefas DROP COLUMN IF EXISTS deleted_at;")
         op.execute("ALTER TABLE comentarios DROP COLUMN IF EXISTS deleted_at;")
     
     elif dialect == 'sqlite':
-        \
-\
-\
+
+
+
         pass
 

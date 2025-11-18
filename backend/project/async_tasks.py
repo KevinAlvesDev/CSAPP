@@ -1,5 +1,4 @@
-\
-\
+
 
 import threading
 from flask import current_app
@@ -69,7 +68,7 @@ class BackgroundTask:
                 try:
                     func(*args, **kwargs)
                 except Exception as e:
-                    \
+
                     app.logger.error(f"Background task error: {e}")
         
         thread = threading.Thread(target=wrapper, daemon=True)
@@ -104,8 +103,7 @@ def send_email_async(subject: str, body_html: str, recipients: list,
         )
     """
     from .email_utils import send_email_global
-    
-        \
+
     app = current_app._get_current_object()
     
     def _send():
@@ -151,7 +149,7 @@ def send_notification_async(user_email: str, notification_type: str, data: Dict[
     def _notify():
         with app.app_context():
             try:
-                \
+
                 app.logger.info(f"Notification sent: {notification_type} to {user_email}")
             except Exception as e:
                 app.logger.error(f"Notification failed: {e}")

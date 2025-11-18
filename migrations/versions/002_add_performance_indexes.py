@@ -10,8 +10,6 @@ Adiciona índices para melhorar performance de queries frequentes.
 from alembic import op
 import sqlalchemy as sa
 
-
-\
 revision = '002'
 down_revision = '001'
 branch_labels = None
@@ -28,13 +26,12 @@ def upgrade():
     - gamificacao_metricas_mensais: ano, mes (para queries de período)
     - timeline_log: data_evento (para ordenação cronológica)
     """
-    
-        \
+
     conn = op.get_bind()
     dialect = conn.dialect.name
     
     if dialect == 'postgresql':
-        \
+
         op.execute("""
             CREATE INDEX IF NOT EXISTS idx_impl_data_criacao 
             ON implantacoes(data_criacao);
@@ -64,15 +61,14 @@ def upgrade():
             CREATE INDEX IF NOT EXISTS idx_timeline_data 
             ON timeline_log(data_evento);
         """)
-        
-                \
+
         op.execute("""
             CREATE INDEX IF NOT EXISTS idx_gamificacao_user_period 
             ON gamificacao_metricas_mensais(usuario_cs, ano, mes);
         """)
         
     elif dialect == 'sqlite':
-        \
+
         op.execute("""
             CREATE INDEX IF NOT EXISTS idx_impl_data_criacao 
             ON implantacoes(data_criacao);
@@ -114,8 +110,7 @@ def downgrade():
     
     conn = op.get_bind()
     dialect = conn.dialect.name
-    
-        \
+
     op.execute("DROP INDEX IF EXISTS idx_impl_data_criacao;")
     op.execute("DROP INDEX IF EXISTS idx_impl_data_finalizacao;")
     op.execute("DROP INDEX IF EXISTS idx_comentarios_visibilidade;")

@@ -1,6 +1,5 @@
-\
-\
-\
+
+
 
 JUSTIFICATIVAS_PARADA = [
     "Pausa solicitada pelo cliente",
@@ -18,39 +17,30 @@ CARGOS_RESPONSAVEL = [
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf'}
 
-\
 NAO_DEFINIDO_BOOL = "Não definido" 
 
-\
 SIM_NAO_OPTIONS = [NAO_DEFINIDO_BOOL, "Sim", "Não"]
 
-\
-\
+
 import os
 ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'admin@example.com')
 
-\
 CARGOS_LIST = ["Júnior", "Pleno", "Sênior"] 
 
-\
 PERFIL_ADMIN = "Administrador"
 PERFIL_GERENTE = "Gerente"
 PERFIL_COORDENADOR = "Coordenador"
 PERFIL_IMPLANTADOR = "Implantador"                    
-\
+
 PERFIS_ACESSO_LIST = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR, PERFIL_IMPLANTADOR]                       
 
 PERFIS_COM_GESTAO = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR] 
 
-\
-\
+
 PERFIS_COM_CRIACAO = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
 
-\
 PERFIS_COM_ANALYTICS = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
 
-
-\
 NIVEIS_RECEITA = [
     "Prata (MRR go grupo abaixo de R$699,99)",
     "Ouro (MRR go grupo entre R$700,00 a R$999,99)",
@@ -58,7 +48,6 @@ NIVEIS_RECEITA = [
     "Diamante (MRR go grupo acima de R$2000,00)",
     "Grandes contas"
 ]
-\
 
 SEGUIMENTOS_LIST = [
     "Natação", "Estúdio/Boutique", "Pilates", "Cross", "Low Cost", 

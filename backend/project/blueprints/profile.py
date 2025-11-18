@@ -1,4 +1,4 @@
-\
+
 from flask import (
     Blueprint, render_template, request, flash, redirect, url_for, g, current_app, session
 )
@@ -47,7 +47,7 @@ def save_profile():
     if foto and g.R2_CONFIGURED and r2_client:
         try:
             filename = secure_filename(foto.filename)
-            \
+
             s3_key = f"fotos_perfil/{g.user_email}_{filename}"
             
             r2_client.upload_fileobj(
@@ -56,7 +56,7 @@ def save_profile():
                 s3_key,
                 ExtraArgs={'ContentType': foto.content_type}
             )
-            \
+
             base_public_url = current_app.config['CLOUDFLARE_PUBLIC_URL']
             foto_url = f"{base_public_url}/{s3_key}"
             

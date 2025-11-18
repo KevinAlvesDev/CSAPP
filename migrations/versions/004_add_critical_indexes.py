@@ -18,8 +18,6 @@ Reduz tempo de resposta do dashboard de ~2-5s para ~200-500ms.
 from alembic import op
 import sqlalchemy as sa
 
-
-\
 revision = '004'
 down_revision = '003'
 branch_labels = None
@@ -34,11 +32,10 @@ def upgrade():
     COMPATIBILIDADE: Funciona em PostgreSQL e SQLite.
     """
 
-    \
     def safe_create_index(index_name, table_name, columns, desc=False):
         try:
             if desc and isinstance(columns, list) and len(columns) == 1:
-                \
+
                 op.execute(f"CREATE INDEX {index_name} ON {table_name}({columns[0]} DESC)")
             else:
                 op.create_index(index_name, table_name, columns)
@@ -50,25 +47,20 @@ def upgrade():
     safe_create_index('idx_implantacoes_data_criacao', 'implantacoes', ['data_criacao'], desc=True)
     safe_create_index('idx_implantacoes_usuario_status', 'implantacoes', ['usuario_cs', 'status'])
 
-    \
     safe_create_index('idx_tarefas_implantacao_id', 'tarefas', ['implantacao_id'])
     safe_create_index('idx_tarefas_concluida', 'tarefas', ['concluida'])
     safe_create_index('idx_tarefas_data_conclusao', 'tarefas', ['data_conclusao'], desc=True)
     safe_create_index('idx_tarefas_impl_concluida', 'tarefas', ['implantacao_id', 'concluida'])
     safe_create_index('idx_tarefas_tag', 'tarefas', ['tag'])
 
-    \
     safe_create_index('idx_comentarios_tarefa_id', 'comentarios', ['tarefa_id'])
     safe_create_index('idx_comentarios_data_criacao', 'comentarios', ['data_criacao'], desc=True)
 
-    \
     safe_create_index('idx_perfil_usuario_perfil_acesso', 'perfil_usuario', ['perfil_acesso'])
 
-    \
     safe_create_index('idx_timeline_implantacao_id', 'timeline', ['implantacao_id'])
     safe_create_index('idx_timeline_data_evento', 'timeline', ['data_evento'], desc=True)
 
-    \
     safe_create_index('idx_gamificacao_usuario_mes', 'gamificacao_metricas_mensais', ['usuario', 'mes', 'ano'])
     
     print("✅ Índices de performance criados com sucesso!")
@@ -80,7 +72,6 @@ def downgrade():
     Remove os índices criados (rollback).
     """
 
-    \
     def safe_drop_index(index_name):
         try:
             op.drop_index(index_name)
@@ -92,25 +83,20 @@ def downgrade():
     safe_drop_index('idx_implantacoes_data_criacao')
     safe_drop_index('idx_implantacoes_usuario_status')
 
-    \
     safe_drop_index('idx_tarefas_implantacao_id')
     safe_drop_index('idx_tarefas_concluida')
     safe_drop_index('idx_tarefas_data_conclusao')
     safe_drop_index('idx_tarefas_impl_concluida')
     safe_drop_index('idx_tarefas_tag')
 
-    \
     safe_drop_index('idx_comentarios_tarefa_id')
     safe_drop_index('idx_comentarios_data_criacao')
 
-    \
     safe_drop_index('idx_perfil_usuario_perfil_acesso')
 
-    \
     safe_drop_index('idx_timeline_implantacao_id')
     safe_drop_index('idx_timeline_data_evento')
 
-    \
     safe_drop_index('idx_gamificacao_usuario_mes')
 
     print("✅ Índices de performance removidos")

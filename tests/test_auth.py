@@ -4,7 +4,6 @@ import os
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime
 
-\
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from project.blueprints.auth import login_required, permission_required
@@ -18,8 +17,7 @@ class TestAuth:
         self.app = Flask(__name__)
         self.app.config['TESTING'] = True
         self.client = self.app.test_client()
-        
-                \
+
         self.mock_g = Mock()
         self.mock_g.user_email = 'test@example.com'
         self.mock_g.perfil = {'nome': 'Test User', 'perfil_acesso': 'Administrador'}
@@ -107,7 +105,7 @@ class TestAuthLogging:
     def test_duplicate_login_logging(self):
         """Testa se logs de login duplicado são gerados corretamente"""
         with patch('project.blueprints.auth.auth_logger') as mock_logger:
-            \
+
             try:
                 raise ValueError("Usuário já existe")
             except ValueError as e:
@@ -118,7 +116,7 @@ class TestAuthLogging:
     def test_admin_enforcement_logging(self):
         """Testa se logs de reforço de admin são gerados corretamente"""
         with patch('project.blueprints.auth.auth_logger') as mock_logger:
-            \
+
             mock_logger.info("Reforçando papel de administrador para usuário: admin@example.com")
             
             mock_logger.info.assert_called_with("Reforçando papel de administrador para usuário: admin@example.com")
@@ -126,7 +124,7 @@ class TestAuthLogging:
     def test_profile_sync_error_logging(self):
         """Testa se logs de erro de sincronização são gerados corretamente"""
         with patch('project.blueprints.auth.auth_logger') as mock_logger:
-            \
+
             db_error = Exception("Erro de conexão com banco de dados")
             mock_logger.error(f"Erro crítico durante sincronização do perfil: {str(db_error)}")
             
