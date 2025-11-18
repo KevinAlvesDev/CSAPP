@@ -1,7 +1,7 @@
 import os
 from flask import (
     Blueprint, render_template, request, flash, redirect, url_for, g, session,
-    current_app, send_from_directory, jsonify\
+    current_app, send_from_directory, jsonify
 )
 
 
@@ -50,7 +50,7 @@ def home():
     return render_template(
         'login.html',
         auth0_enabled=auth0_enabled,
-        use_custom_auth=not auth0_enabled\
+        use_custom_auth=not auth0_enabled
     )
 
 @main_bp.route('/dashboard')
@@ -96,29 +96,29 @@ def dashboard():
         
         all_cs_users = _get_all_cs_users()
 
-            return render_template(
-                'dashboard.html',\
+        return render_template(
+            'dashboard.html',
                 user_info=user_info, 
                 metrics=final_metrics, 
                 implantacoes_andamento=dashboard_data.get('andamento', []), 
-                implantacoes_novas=dashboard_data.get('novas', []),\
+                implantacoes_novas=dashboard_data.get('novas', []),
                 implantacoes_futuras=dashboard_data.get('futuras', []), 
                 implantacoes_sem_previsao=dashboard_data.get('sem_previsao', []), 
                 implantacoes_finalizadas=dashboard_data.get('finalizadas', []), 
                 implantacoes_paradas=dashboard_data.get('paradas', []), 
                 implantacoes_atrasadas=dashboard_data.get('atrasadas', []), 
-            cargos_responsavel=CARGOS_RESPONSAVEL,\
-            PERFIS_COM_CRIACAO=PERFIS_COM_CRIACAO, \
-            NIVEIS_RECEITA=NIVEIS_RECEITA,\
-            SEGUIMENTOS_LIST=SEGUIMENTOS_LIST,\
-            TIPOS_PLANOS=TIPOS_PLANOS,\
-            MODALIDADES_LIST=MODALIDADES_LIST,\
-            HORARIOS_FUNCIONAMENTO=HORARIOS_FUNCIONAMENTO,\
-            FORMAS_PAGAMENTO=FORMAS_PAGAMENTO,\
-            SISTEMAS_ANTERIORES=SISTEMAS_ANTERIORES,\
-            RECORRENCIA_USADA=RECORRENCIA_USADA,\
-            SIM_NAO_OPTIONS=SIM_NAO_OPTIONS,\
-            all_cs_users=all_cs_users,\
+            cargos_responsavel=CARGOS_RESPONSAVEL,
+            PERFIS_COM_CRIACAO=PERFIS_COM_CRIACAO,
+            NIVEIS_RECEITA=NIVEIS_RECEITA,
+            SEGUIMENTOS_LIST=SEGUIMENTOS_LIST,
+            TIPOS_PLANOS=TIPOS_PLANOS,
+            MODALIDADES_LIST=MODALIDADES_LIST,
+            HORARIOS_FUNCIONAMENTO=HORARIOS_FUNCIONAMENTO,
+            FORMAS_PAGAMENTO=FORMAS_PAGAMENTO,
+            SISTEMAS_ANTERIORES=SISTEMAS_ANTERIORES,
+            RECORRENCIA_USADA=RECORRENCIA_USADA,
+            SIM_NAO_OPTIONS=SIM_NAO_OPTIONS,
+            all_cs_users=all_cs_users,
             
             is_manager=is_manager,
             current_cs_filter=current_cs_filter
