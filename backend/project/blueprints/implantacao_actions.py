@@ -421,9 +421,21 @@ def finalizar_implantacao():
             flash(f'Não é possível finalizar: {total_pendentes} tarefa(s) pendente(s). Pendentes: {nomes_txt}...', 'error')
             return redirect(dest_url)
 
+        # Data de finalização informada manualmente
+        data_finalizacao = request.form.get('data_finalizacao')
+        if not data_finalizacao:
+            flash('A data da finalização é obrigatória.', 'error')
+            return redirect(dest_url)
+        try:
+            data_final_dt = validate_date(data_finalizacao)
+            data_final_iso = data_final_dt.isoformat()
+        except ValidationError:
+            flash('Data da finalização inválida. Formatos aceitos: DD/MM/AAAA, MM/DD/AAAA, AAAA-MM-DD.', 'error')
+            return redirect(dest_url)
+
         execute_db(
-            "UPDATE implantacoes SET status = 'finalizada', data_finalizacao = CURRENT_TIMESTAMP WHERE id = %s",
-            (implantacao_id,)
+            "UPDATE implantacoes SET status = 'finalizada', data_finalizacao = %s WHERE id = %s",
+            (data_final_iso, implantacao_id)
         )
         logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Implantação "{impl.get("nome_empresa", "N/A")}" finalizada manually.') #
         flash('Implantação finalizada com sucesso!', 'success')
@@ -847,6 +859,10 @@ def cancelar_implantacao():
              
         if impl.get('status') in ['finalizada', 'cancelada']:
              flash(f'Implantação já está {impl.get("status")}.', 'warning')
+             return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
+
+        if impl.get('status') == 'nova':
+             flash('Ações indisponíveis para implantações "Nova". Inicie a implantação para habilitar cancelamento.', 'warning')
              return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
 
         # Processo de Upload do Comprovante

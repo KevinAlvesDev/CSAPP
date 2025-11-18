@@ -82,7 +82,7 @@
                     <li class="list-group-item"> <button class="btn btn-sm btn-link text-warning text-decoration-none p-0" data-bs-toggle="modal" data-bs-target="#modalReabrir"> <i class="bi bi-folder-symlink me-2"></i> Reabrir </button> </li>
                 {% endif %}
 
-                {% if implantacao.status not in ['finalizada', 'cancelada'] %}
+                {% if implantacao.status not in ['finalizada', 'cancelada', 'nova'] %}
                 <li class="list-group-item"> 
                     <button class="btn btn-sm btn-link text-dark text-decoration-none p-0" data-bs-toggle="modal" data-bs-target="#modalCancelar"> 
                         <i class="bi bi-x-circle me-2"></i> Cancelar Implantação 
@@ -296,7 +296,15 @@
 </div>
 
 <div class="modal fade" id="modalFinalizar" tabindex="-1"> <div class="modal-dialog"> <div class="modal-content"> <div class="modal-header header-bg"><h5 class="modal-title">Finalizar</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div> <form action="{{ url_for('actions.finalizar_implantacao') }}" method="POST">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"> <div class="modal-body"> <p>Tem certeza?</p> <p class="small text-danger">Só permitido se tarefas obrig./trein. concluídas.</p> <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}"> <input type="hidden" name="redirect_to" value="detalhes"> </div> <div class="modal-footer header-bg"> <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button> <button type="submit" class="btn btn-success">Confirmar</button> </div> </form> </div> </div> </div>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"> <div class="modal-body"> <p>Tem certeza?</p> <p class="small text-danger">Só permitido se tarefas obrig./trein. concluídas.</p> <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}"> <input type="hidden" name="redirect_to" value="detalhes"> 
+                <div class="mb-3">
+                    <label for="data_finalizacao" class="form-label fw-bold">Data da Finalização <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="data_finalizacao" name="data_finalizacao" required placeholder="DD/MM/AAAA" inputmode="numeric" pattern="\d{2}/\d{2}/\d{4}">
+                        <button class="btn btn-outline-secondary" type="button" id="btn_cal_data_finalizacao" aria-label="Abrir calendário"><i class="bi bi-calendar3"></i></button>
+                    </div>
+                </div>
+                </div> <div class="modal-footer header-bg"> <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button> <button type="submit" class="btn btn-success">Confirmar</button> </div> </form> </div> </div> </div>
 
 <div class="modal fade" id="modalParar" tabindex="-1"> 
     <div class="modal-dialog"> 
@@ -497,10 +505,13 @@ document.addEventListener('DOMContentLoaded', function(){
   if (window.flatpickr) {
     var fpParada = window.flatpickr('#data_parada', { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true });
     var fpCancel = window.flatpickr('#data_cancelamento', { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true });
+    var fpFinal = window.flatpickr('#data_finalizacao', { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true });
     var btnParada = document.getElementById('btn_cal_data_parada');
     var btnCancel = document.getElementById('btn_cal_data_cancelamento');
+    var btnFinal = document.getElementById('btn_cal_data_finalizacao');
     if (btnParada && fpParada) btnParada.addEventListener('click', function(){ fpParada.open(); });
     if (btnCancel && fpCancel) btnCancel.addEventListener('click', function(){ fpCancel.open(); });
+    if (btnFinal && fpFinal) btnFinal.addEventListener('click', function(){ fpFinal.open(); });
     function attachMask(fp){
       var alt = fp && fp._input ? fp._input : null;
       if (!alt) return;
@@ -524,6 +535,7 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     attachMask(fpParada);
     attachMask(fpCancel);
+    attachMask(fpFinal);
   }
   function computeProgress(){
     var boxes = document.querySelectorAll('.task-checkbox');
