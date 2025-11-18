@@ -1,5 +1,5 @@
-# tests/test_performance.py
-# Testes para monitoramento de performance (APM)
+\
+\
 
 import pytest
 import sys
@@ -44,11 +44,11 @@ class TestPerformanceMonitor:
         """Testa que monitor coleta métricas de requests."""
         client = app.test_client()
         
-        # Faz algumas requests
+                \
         client.get('/health')
         client.get('/health/ready')
         
-        # Verifica que métricas foram coletadas
+                \
         with app.app_context():
             from project.performance_monitoring import performance_monitor
             assert len(performance_monitor.metrics) >= 2
@@ -57,10 +57,10 @@ class TestPerformanceMonitor:
         """Testa que métricas contêm dados corretos."""
         client = app.test_client()
         
-        # Faz request
+                \
         response = client.get('/health')
         
-        # Verifica métrica
+                \
         with app.app_context():
             from project.performance_monitoring import performance_monitor
             if len(performance_monitor.metrics) > 0:
@@ -79,11 +79,10 @@ class TestPerformanceMonitor:
         """Testa geração de resumo de métricas."""
         client = app.test_client()
         
-        # Faz várias requests
+                \
         for _ in range(5):
             client.get('/health')
         
-        # Verifica resumo
         with app.app_context():
             from project.performance_monitoring import performance_monitor
             summary = performance_monitor.get_summary()
@@ -157,10 +156,9 @@ class TestMonitorFunction:
         with app.app_context():
             @monitor_function
             def slow_func():
-                time.sleep(0.6)  # > 500ms
+                time.sleep(0.6)           
                 return True
             
-            # Deve logar (> 500ms)
             result = slow_func()
             assert result is True
     
@@ -180,8 +178,8 @@ class TestPerformanceIntegration:
     
     def test_request_lento_e_logado(self, app):
         """Testa que requests lentos são logados."""
-        # Este teste seria melhor com um endpoint que demora > 1s
-        # Por enquanto, apenas verifica que o sistema está funcionando
+        \
+\
         client = app.test_client()
         
         response = client.get('/health')
@@ -189,11 +187,11 @@ class TestPerformanceIntegration:
     
     def test_metricas_endpoint_admin(self, app):
         """Testa endpoint de métricas (admin)."""
-        # Nota: Este teste requer autenticação como admin
-        # Por enquanto, apenas verifica que o endpoint existe
+        \
+\
         client = app.test_client()
         
-        # Sem autenticação, deve retornar 302 (redirect) ou 403
+                \
         response = client.get('/admin/metrics')
         assert response.status_code in [302, 403, 401]
 

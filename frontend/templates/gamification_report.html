@@ -15,7 +15,7 @@
                 <i class="bi bi-pencil-square me-1"></i> Lançar Métricas
             </a>
             
-            {# Botão do menu offcanvas antigo removido #}
+            
         </div>
     </header>
 
@@ -31,7 +31,7 @@
             {% endif %}
         {% endwith %}
 
-        {# Formulário de Filtro #}
+        
         <div class="metric-card p-3 rounded shadow-sm mb-4">
             <h5 class="mb-3 border-bottom pb-2">Filtrar Relatório</h5>
             <form method="GET" action="{{ url_for('gamification.gamification_report') }}" id="report-filter-form">
@@ -80,7 +80,7 @@
             </form>
         </div>
 
-        {# Tabela de Resultados #}
+        
         <div class="metric-card p-3 rounded shadow-sm">
             <h2 class="h5 mb-3">Pontuação de Gamificação - {{ "%02d"|format(selected_month) }}/{{ selected_year }}</h2>
             
@@ -113,7 +113,7 @@
                             <td>{{ data.impl_finalizadas_mes }}</td>
                             <td><span class="badge bg-success fs-6">Elegível</span></td>
                             <td>
-                                {# Cálculo da comissão baseado na tabela de referência #}
+                                
                                 {% set pts = data.pontuacao_final or 0 %}
                                 {% set cargo_lower = (data.cargo or '') | lower %}
                                 {% set is_senior = 'sênior' in cargo_lower or 'senior' in cargo_lower %}

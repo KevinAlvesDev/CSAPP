@@ -11,7 +11,7 @@ from alembic import op
 import sqlalchemy as sa
 
 
-# revision identifiers, used by Alembic.
+\
 revision = '002'
 down_revision = '001'
 branch_labels = None
@@ -29,12 +29,12 @@ def upgrade():
     - timeline_log: data_evento (para ordenação cronológica)
     """
     
-    # Verifica se estamos usando PostgreSQL ou SQLite
+        \
     conn = op.get_bind()
     dialect = conn.dialect.name
     
     if dialect == 'postgresql':
-        # PostgreSQL: Cria índices se não existirem
+        \
         op.execute("""
             CREATE INDEX IF NOT EXISTS idx_impl_data_criacao 
             ON implantacoes(data_criacao);
@@ -65,14 +65,14 @@ def upgrade():
             ON timeline_log(data_evento);
         """)
         
-        # Índice composto para queries de usuário + período
+                \
         op.execute("""
             CREATE INDEX IF NOT EXISTS idx_gamificacao_user_period 
             ON gamificacao_metricas_mensais(usuario_cs, ano, mes);
         """)
         
     elif dialect == 'sqlite':
-        # SQLite: Cria índices se não existirem
+        \
         op.execute("""
             CREATE INDEX IF NOT EXISTS idx_impl_data_criacao 
             ON implantacoes(data_criacao);
@@ -115,7 +115,7 @@ def downgrade():
     conn = op.get_bind()
     dialect = conn.dialect.name
     
-    # Remove índices (funciona em PostgreSQL e SQLite)
+        \
     op.execute("DROP INDEX IF EXISTS idx_impl_data_criacao;")
     op.execute("DROP INDEX IF EXISTS idx_impl_data_finalizacao;")
     op.execute("DROP INDEX IF EXISTS idx_comentarios_visibilidade;")

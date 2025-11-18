@@ -1,25 +1,25 @@
-# backend/project/file_validation.py
+\
 """
 Validação avançada de arquivos enviados.
 Verifica não apenas extensão, mas também conteúdo (MIME type).
 """
 
 import os
-import magic  # python-magic-bin
+import magic                    
 from werkzeug.utils import secure_filename
 from flask import current_app
 
 
-# Extensões permitidas e seus MIME types correspondentes
+\
 ALLOWED_EXTENSIONS = {
-    # Imagens
+\
     'png': ['image/png'],
     'jpg': ['image/jpeg'],
     'jpeg': ['image/jpeg'],
     'gif': ['image/gif'],
     'webp': ['image/webp'],
     
-    # Documentos
+    \
     'pdf': ['application/pdf'],
     'doc': ['application/msword'],
     'docx': ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
@@ -28,17 +28,17 @@ ALLOWED_EXTENSIONS = {
     'ppt': ['application/vnd.ms-powerpoint'],
     'pptx': ['application/vnd.openxmlformats-officedocument.presentationml.presentation'],
     
-    # Texto
+    \
     'txt': ['text/plain'],
     'csv': ['text/csv', 'text/plain'],
     
-    # Compactados
+    \
     'zip': ['application/zip'],
     'rar': ['application/x-rar-compressed'],
 }
 
-# Tamanho máximo de arquivo (em bytes)
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+\
+MAX_FILE_SIZE = 10 * 1024 * 1024         
 
 
 def allowed_file(filename):
@@ -64,7 +64,7 @@ def validate_file_content(file_stream, filename):
     Retorna (is_valid: bool, error_message: str, mime_type: str)
     """
     try:
-        # Obtém a extensão do arquivo
+        \
         extension = get_file_extension(filename)
         if not extension:
             return False, "Arquivo sem extensão", None
@@ -72,16 +72,15 @@ def validate_file_content(file_stream, filename):
         if extension not in ALLOWED_EXTENSIONS:
             return False, f"Extensão .{extension} não permitida", None
         
-        # Lê os primeiros bytes para detectar o MIME type
         file_stream.seek(0)
         file_header = file_stream.read(2048)
-        file_stream.seek(0)  # Volta ao início
+        file_stream.seek(0)                   
         
-        # Detecta o MIME type real do arquivo
+                \
         mime = magic.Magic(mime=True)
         detected_mime = mime.from_buffer(file_header)
         
-        # Verifica se o MIME type detectado corresponde à extensão
+                \
         allowed_mimes = ALLOWED_EXTENSIONS[extension]
         
         if detected_mime not in allowed_mimes:
@@ -104,10 +103,10 @@ def validate_file_size(file_stream, max_size=MAX_FILE_SIZE):
     Retorna (is_valid: bool, error_message: str, file_size: int)
     """
     try:
-        # Vai para o final do arquivo para obter o tamanho
+        \
         file_stream.seek(0, os.SEEK_END)
         file_size = file_stream.tell()
-        file_stream.seek(0)  # Volta ao início
+        file_stream.seek(0)                   
         
         if file_size > max_size:
             max_size_mb = max_size / (1024 * 1024)
@@ -134,31 +133,26 @@ def validate_uploaded_file(file, filename=None):
     if not file:
         return False, "Nenhum arquivo enviado", None
     
-    # Usa o filename fornecido ou pega do objeto file
     filename = filename or file.filename
     
     if not filename or filename == '':
         return False, "Nome de arquivo inválido", None
     
-    # Sanitiza o nome do arquivo
     safe_filename = secure_filename(filename)
     
-    # Valida extensão
+        \
     if not allowed_file(filename):
         extension = get_file_extension(filename)
         return False, f"Tipo de arquivo não permitido: .{extension}", None
     
-    # Valida tamanho
     size_valid, size_error, file_size = validate_file_size(file.stream)
     if not size_valid:
         return False, size_error, None
     
-    # Valida conteúdo (MIME type)
     content_valid, content_error, mime_type = validate_file_content(file.stream, filename)
     if not content_valid:
         return False, content_error, None
     
-    # Retorna sucesso com metadados
     metadata = {
         'original_filename': filename,
         'safe_filename': safe_filename,

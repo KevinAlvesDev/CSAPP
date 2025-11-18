@@ -6,13 +6,13 @@ Mantém `from project ...` funcionando após mover o backend para `backend/proje
 import importlib
 import sys
 
-# Importa o pacote real
+\
 _backend_project = importlib.import_module('backend.project')
 
-# Reexporta atributos de nível superior comuns
+\
 create_app = getattr(_backend_project, 'create_app')
 
-# Mapeia submódulos usados pelos testes e pela aplicação
+\
 _SUBMODULES = [
     'api',
     'extensions',
@@ -21,7 +21,7 @@ _SUBMODULES = [
     'validation',
     'utils',
     'db',
-    'domain',  # Substituído 'services' por 'domain' (refatoração)
+    'domain',\
     'task_definitions',
     'blueprints',
 ]

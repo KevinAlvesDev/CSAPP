@@ -4,7 +4,7 @@ import os
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime
 
-# Adiciona o diretório CSAPP ao path do Python
+\
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from project.blueprints.management import manage_users, update_user_perfil, delete_user
@@ -94,7 +94,7 @@ class TestManagement:
                     result = update_user_perfil()
                     assert hasattr(result, 'status_code') and result.status_code == 302
                     mock_logger.warning.assert_called()
-                    # Call again within patched context to ensure consistent redirect behavior
+                    \
                     result = update_user_perfil()
                     assert hasattr(result, 'status_code') and result.status_code == 302
                     mock_logger.warning.assert_called()
@@ -167,7 +167,7 @@ class TestManagement:
             g.user_email = 'admin@example.com'
             g.perfil = {'perfil_acesso': 'Administrador'}
             g.user = {'name': 'Admin', 'sub': 'sub-id'}
-            # Configs necessárias para limpeza R2
+            \
             current_app.config['CLOUDFLARE_PUBLIC_URL'] = 'https://public.example.com'
             current_app.config['CLOUDFLARE_BUCKET_NAME'] = 'bucket'
             with patch('project.blueprints.management.query_db') as mock_query_db:

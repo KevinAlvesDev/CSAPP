@@ -4,17 +4,17 @@ from botocore.client import Config as BotocoreConfig
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from cachetools import TTLCache
-# 'current_app' não é mais necessário aqui no import time
+\
 
 oauth = OAuth()
 
-# --- INÍCIO DA CORREÇÃO (Mover para init_app) ---
+\
 
-# Define o placeholder no escopo global
+\
 r2_client = None
 limiter = None
 
-# Cache para gamification rules (TTL de 1 hora = 3600 segundos)
+\
 gamification_rules_cache = TTLCache(maxsize=10, ttl=3600)
 
 def init_limiter(app):
@@ -27,19 +27,19 @@ def init_limiter(app):
     global limiter
 
     try:
-        # Cria o limiter com limite global moderado
+        \
         limiter = Limiter(
             key_func=get_remote_address,
-            # SEGURANÇA: Limite global de 100 req/min por IP (previne DoS básico)
+        \
             default_limits=["100 per minute"],
             storage_uri="memory://",
             strategy="fixed-window",
-            # Headers para informar o cliente sobre limites
+        \
             headers_enabled=True,
-            # Mensagem customizada quando limite é excedido
+        \
             default_limits_exempt_when=lambda: False,
         )
-        # Inicializa com o app
+        \
         limiter.init_app(app)
         print("Extensão Limiter inicializada (limite global: 100 req/min).")
     except Exception as e:
@@ -51,9 +51,9 @@ def init_r2(app):
     global r2_client
     
     try:
-        # A configuração é lida de app.config (passado pelo create_app)
+        \
         if app.config.get('R2_CONFIGURADO', False):
-            # Usamos os nomes de variáveis do config.py (que lê do .env)
+            \
             r2_client = boto3.client(
                 's3',
                 endpoint_url=app.config['R2_ENDPOINT_URL'],
@@ -61,15 +61,14 @@ def init_r2(app):
                 aws_secret_access_key=app.config['R2_SECRET_ACCESS_KEY'],
                 config=BotocoreConfig(
                     signature_version='s3v4',
-                    s3={'addressing_style': 'virtual'} # Necessário para R2
+                    s3={'addressing_style': 'virtual'}\
                 ),
-                region_name='auto' # R2 geralmente usa 'auto'
+                region_name='auto'\
             )
             print("Extensão R2 (boto3 client) inicializada.")
         else:
             print("Extensão R2: Configurações ausentes, cliente não inicializado.")
     except Exception as e:
         print(f"ERRO CRÍTICO: Falha ao inicializar a extensão R2 (boto3): {e}")
-        # Se falhar, r2_client permanece None
+        \
         pass
-# --- FIM DA CORREÇÃO ---

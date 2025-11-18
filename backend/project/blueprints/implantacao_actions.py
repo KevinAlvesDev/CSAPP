@@ -1,4 +1,4 @@
-# app2/CSAPP/project/blueprints/implantacao_actions.py
+\
 import os
 import time
 from flask import (
@@ -8,22 +8,22 @@ from datetime import datetime
 from botocore.exceptions import ClientError
 from werkzeug.utils import secure_filename
 
-# Importações internas do projeto
+\
 from ..blueprints.auth import login_required, permission_required 
-# --- INÍCIO DA CORREÇÃO (BUG 4) ---
-# Importa a nova função 'execute_and_fetch_one'
+ \
+\
 from ..db import query_db, execute_db, logar_timeline, execute_and_fetch_one
 from ..cache_config import clear_user_cache, clear_implantacao_cache
-# --- FIM DA CORREÇÃO (BUG 4) ---
-# Importa dos novos arquivos de serviço no domínio
+\
+\
 from ..domain.implantacao_service import _get_progress, _create_default_tasks
 
-# --- INÍCIO DA CORREÇÃO (Refatoração Passo 4) ---
-# Importa as definições de tarefas do novo arquivo
+\
+\
 from ..task_definitions import (
     MODULO_OBRIGATORIO, MODULO_PENDENCIAS, TAREFAS_TREINAMENTO_PADRAO
 )
-# Importa as constantes restantes do arquivo constants
+\
 from ..constants import (
     JUSTIFICATIVAS_PARADA, CARGOS_RESPONSAVEL, PERFIS_COM_CRIACAO,
     NIVEIS_RECEITA, SEGUIMENTOS_LIST, TIPOS_PLANOS, MODALIDADES_LIST,
@@ -33,33 +33,33 @@ from ..constants import (
     SIM_NAO_OPTIONS,
     PERFIS_COM_GESTAO
 )
-# --- FIM DA CORREÇÃO ---
+\
 
 from .. import utils
-from ..extensions import r2_client # Necessário para excluir_implantacao
+from ..extensions import r2_client                                      
 from ..extensions import limiter
 from flask_limiter.util import get_remote_address
 from ..validation import validate_integer, sanitize_string, validate_date, ValidationError
 from ..logging_config import app_logger
 
-# --- CORREÇÃO: Renomeado de 'actions_bp' para 'implantacao_actions_bp' ---
+\
 implantacao_actions_bp = Blueprint('actions', __name__)
 
 
-# --- Rotas de Ação (POST de Formulários) ---
-# (Movidas de main.py)
+\
+\
 
 @implantacao_actions_bp.route('/criar_implantacao', methods=['POST'])
 @login_required
-@permission_required(PERFIS_COM_CRIACAO) #
+@permission_required(PERFIS_COM_CRIACAO)  
 @limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 def criar_implantacao():
-    # A importação de _create_default_tasks foi movida para o topo do arquivo
+\
     
-    usuario_criador = g.user_email # Quem está criando
+    usuario_criador = g.user_email                    
     
     try:
-        # Valida e sanitiza os campos obrigatórios
+        \
         nome_empresa = sanitize_string(request.form.get('nome_empresa', ''), max_length=200)
         if not nome_empresa:
             raise ValidationError('Nome da empresa é obrigatório.')
@@ -71,15 +71,13 @@ def criar_implantacao():
         flash(f'Erro nos dados: {str(e)}', 'error')
         return redirect(url_for('main.dashboard'))
     
-    # --- AJUSTE 1 (Início) ---
-    # O tipo agora é 'completa' (para diferenciar de 'modulo')
     tipo = 'completa'
-    # O status inicial é SEMPRE 'nova'
+    \
     status = 'nova'
-    # As datas de início são NULAS até o implantador agir
+    \
     data_inicio_previsto = None
     data_inicio_efetivo = None
-    # --- AJUSTE 1 (Fim) ---
+\
 
     if not nome_empresa:
         flash('Nome da empresa é obrigatório.', 'error')
@@ -89,7 +87,6 @@ def criar_implantacao():
          flash('Usuário a ser atribuído não foi selecionado.', 'error')
          return redirect(url_for('main.dashboard'))
 
-    # --- VALIDAÇÃO: Evitar duplicidade de empresa ativa ---
     try:
         existente = query_db(
             """
@@ -113,30 +110,30 @@ def criar_implantacao():
     try:
         agora = datetime.now()
         
-        # --- INÍCIO DA CORREÇÃO (BUG 4) ---
-        # Usa a nova função 'execute_and_fetch_one' em vez de 'query_db'
+                \
+\
         result = execute_and_fetch_one(
             "INSERT INTO implantacoes (usuario_cs, nome_empresa, tipo, data_criacao, status, data_inicio_previsto, data_inicio_efetivo) "
             "VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id",
             (usuario_atribuido, nome_empresa, tipo, agora, status, data_inicio_previsto, data_inicio_efetivo)
         )
-        # --- FIM DA CORREÇÃO (BUG 4) ---
+\
 
         implantacao_id = result.get('id') if result else None
         
         if not implantacao_id:
-            # Captura a falha na inserção, que antes era capturada erroneamente.
+            \
             raise Exception("Falha ao obter ID da nova implantação.")
 
-        logar_timeline(implantacao_id, usuario_criador, 'implantacao_criada', f'Implantação "{nome_empresa}" ({tipo.capitalize()}) criada e atribuída a {usuario_atribuido}.') #
+        logar_timeline(implantacao_id, usuario_criador, 'implantacao_criada', f'Implantação "{nome_empresa}" ({tipo.capitalize()}) criada e atribuída a {usuario_atribuido}.')  
         
         tasks_added = 0
-        # O implantacao_id agora é um inteiro válido (PostgreSQL ou SQLite), permitindo a criação de tarefas
+        \
         if tipo == 'completa': 
-            tasks_added = _create_default_tasks(implantacao_id) #
+            tasks_added = _create_default_tasks(implantacao_id)  
             
         flash(f'Implantação "{nome_empresa}" criada com {tasks_added} tarefas padrão.', 'success')
-        # Invalida caches relacionados para refletir imediatamente no dashboard
+        \
         try:
             clear_user_cache(usuario_criador)
             if usuario_atribuido and usuario_atribuido != usuario_criador:
@@ -144,8 +141,6 @@ def criar_implantacao():
             clear_implantacao_cache(implantacao_id)
         except Exception:
             pass
-        # --- AJUSTE 1 (Redirecionamento) ---
-        # Redireciona para o dashboard, não para os detalhes
         return redirect(url_for('main.dashboard'))
 
     except Exception as e:
@@ -158,10 +153,10 @@ def criar_implantacao():
 @permission_required(PERFIS_COM_CRIACAO)
 @limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 def criar_implantacao_modulo():
-    usuario_criador = g.user_email # Quem está criando
+    usuario_criador = g.user_email                    
     
     try:
-        # Valida e sanitiza os campos obrigatórios
+        \
         nome_empresa = sanitize_string(request.form.get('nome_empresa_modulo', ''), max_length=200)
         if not nome_empresa:
             raise ValidationError('Nome da empresa é obrigatório.')
@@ -185,10 +180,10 @@ def criar_implantacao_modulo():
         return redirect(url_for('main.dashboard'))
     
     tipo = 'modulo'
-    # O status inicial é SEMPRE 'nova'
+    \
     status = 'nova'
 
-    # --- VALIDAÇÃO: Evitar duplicidade de empresa ativa ---
+    \
     try:
         existente = query_db(
             """
@@ -212,14 +207,14 @@ def criar_implantacao_modulo():
     try:
         agora = datetime.now()
         
-        # --- INÍCIO DA CORREÇÃO (BUG 4) ---
-        # Usa a nova função 'execute_and_fetch_one' em vez de 'query_db'
+                \
+\
         result = execute_and_fetch_one(
             "INSERT INTO implantacoes (usuario_cs, nome_empresa, tipo, data_criacao, status, data_inicio_previsto, data_inicio_efetivo) "
             "VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id",
             (usuario_atribuido, nome_empresa, tipo, agora, status, None, None)
         )
-        # --- FIM DA CORREÇÃO (BUG 4) ---
+\
 
         implantacao_id = result.get('id') if result else None
         
@@ -228,7 +223,7 @@ def criar_implantacao_modulo():
 
         modulo_label = modulo_opcoes.get(modulo_tipo, modulo_tipo)
         logar_timeline(implantacao_id, usuario_criador, 'implantacao_criada', f'Implantação de Módulo "{nome_empresa}" (módulo: {modulo_label}) criada e atribuída a {usuario_atribuido}.')
-        # Invalida caches relacionados
+        \
         try:
             clear_user_cache(usuario_criador)
             if usuario_atribuido and usuario_atribuido != usuario_criador:
@@ -237,8 +232,8 @@ def criar_implantacao_modulo():
         except Exception:
             pass
         
-        # NOTA: Módulos não criam tarefas padrão, apenas a "Obrigações para Finalização"
-        # que deve ser adicionada manualmente ou em outro lugar.
+        \
+\
         
         flash(f'Implantação de Módulo "{nome_empresa}" (módulo: {modulo_label}) criada e atribuída a {usuario_atribuido}.', 'success')
         return redirect(url_for('main.dashboard'))
@@ -252,51 +247,49 @@ def criar_implantacao_modulo():
 @login_required
 @limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 def iniciar_implantacao():
-    usuario_cs_email = g.user_email #
+    usuario_cs_email = g.user_email  
     
     try:
-        # Valida o ID da implantação
+        \
         implantacao_id = validate_integer(request.form.get('implantacao_id'), min_value=1)
     except ValidationError as e:
         flash(f'ID de implantação inválido: {str(e)}', 'error')
         return redirect(url_for('main.dashboard'))
     
-    # O 'redirect_to' é usado em caso de falha. Em caso de sucesso, sempre vai para 'ver_implantacao'
     redirect_to_fallback = request.form.get('redirect_to', 'dashboard')
     dest_url_fallback = url_for('main.dashboard')
     if redirect_to_fallback == 'detalhes':
         dest_url_fallback = url_for('main.ver_implantacao', impl_id=implantacao_id)
         
     try:
-        impl = query_db( #
+        impl = query_db(\
             "SELECT usuario_cs, nome_empresa, status, tipo FROM implantacoes WHERE id = %s",
             (implantacao_id,), one=True
         )
         
-        # O usuário deve ser o dono
+                \
         if not impl or impl.get('usuario_cs') != usuario_cs_email:
              flash('Operação negada. Implantação não pertence a você.', 'error')
              return redirect(request.referrer or dest_url_fallback)
              
-        # Só pode iniciar se estiver 'nova' ou 'futura'
-        if impl.get('status') not in ['nova', 'futura']:
+        if impl.get('status') not in ['nova', 'futura', 'sem_previsao']:
             flash(f'Operação negada. Implantação com status "{impl.get("status")}" não pode ser iniciada.', 'error')
             return redirect(request.referrer or dest_url_fallback)
 
         agora = datetime.now()
         
-        # Define o tipo para 'completa' se for 'futura' (pois 'futura' só vem de 'completa')
-        # ou mantém 'modulo' se for 'modulo'.
-        # Se for 'nova' e tipo 'completa', mantém 'completa'.
+                \
+\
+\
         novo_tipo = impl.get('tipo')
-        if novo_tipo == 'futura': # Tipo 'futura' era um erro de lógica antigo
+        if novo_tipo == 'futura':                                             
             novo_tipo = 'completa' 
         
-        execute_db( #
+        execute_db(\
             "UPDATE implantacoes SET tipo = %s, status = 'andamento', data_inicio_efetivo = %s, data_inicio_previsto = NULL WHERE id = %s",
             (novo_tipo, agora, implantacao_id)
         )
-        logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Implantação "{impl.get("nome_empresa", "N/A")}" iniciada.') #
+        logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Implantação "{impl.get("nome_empresa", "N/A")}" iniciada.')  
         flash('Implantação iniciada com sucesso!', 'success')
         try:
             clear_user_cache(usuario_cs_email)
@@ -304,7 +297,6 @@ def iniciar_implantacao():
         except Exception:
             pass
         
-        # Após iniciar, sempre vai para a página de detalhes
         return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
 
     except Exception as e:
@@ -363,11 +355,50 @@ def agendar_implantacao():
     return redirect(url_for('main.dashboard'))
 
 
+@implantacao_actions_bp.route('/marcar_sem_previsao', methods=['POST'])
+@login_required
+@limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
+def marcar_sem_previsao():
+    usuario_cs_email = g.user_email
+    implantacao_id = request.form.get('implantacao_id')
+
+    try:
+        impl = query_db(
+            "SELECT usuario_cs, nome_empresa, status FROM implantacoes WHERE id = %s",
+            (implantacao_id,), one=True
+        )
+
+        if not impl or impl.get('usuario_cs') != usuario_cs_email:
+            flash('Operação negada. Implantação não pertence a você.', 'error')
+            return redirect(url_for('main.dashboard'))
+
+        if impl.get('status') != 'nova':
+            flash('Apenas implantações "Novas" podem ser marcadas como Sem previsão.', 'warning')
+            return redirect(url_for('main.dashboard'))
+
+        execute_db(
+            "UPDATE implantacoes SET status = 'sem_previsao', data_inicio_previsto = NULL WHERE id = %s",
+            (implantacao_id,)
+        )
+        logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Implantação "{impl.get("nome_empresa")}" marcada como "Sem previsão".')
+        flash(f'Implantação "{impl.get("nome_empresa")}" marcada como "Sem previsão".', 'success')
+        try:
+            clear_user_cache(usuario_cs_email)
+            clear_implantacao_cache(implantacao_id)
+        except Exception:
+            pass
+    except Exception as e:
+        print(f"Erro ao marcar sem previsão implantação ID {implantacao_id}: {e}")
+        flash(f'Erro ao marcar sem previsão: {e}', 'error')
+
+    return redirect(url_for('main.dashboard'))
+
+
 @implantacao_actions_bp.route('/finalizar_implantacao', methods=['POST'])
 @login_required
 @limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 def finalizar_implantacao():
-    usuario_cs_email = g.user_email #
+    usuario_cs_email = g.user_email  
     implantacao_id = request.form.get('implantacao_id')
     redirect_target = request.form.get('redirect_to', 'dashboard')
     dest_url = url_for('main.dashboard')
@@ -393,13 +424,12 @@ def finalizar_implantacao():
             flash(f"Operação não permitida: status atual é '{impl.get('status')}'. Retome ou inicie antes de finalizar.", 'warning')
             return redirect(dest_url)
 
-        # Conta tarefas pendentes fora do módulo "Pendências" e inclui tarefas sem módulo (NULL)
         pending_tasks = query_db(
             "SELECT COUNT(*) as total FROM tarefas WHERE implantacao_id = %s AND concluida = %s",
             (implantacao_id, 0), one=True
         )
 
-        # Garante que existam tarefas obrigatórias/treinamento cadastradas (fora de Pendências)
+        \
         total_tasks_row = query_db(
             "SELECT COUNT(*) as total FROM tarefas WHERE implantacao_id = %s",
             (implantacao_id,), one=True
@@ -421,7 +451,6 @@ def finalizar_implantacao():
             flash(f'Não é possível finalizar: {total_pendentes} tarefa(s) pendente(s). Pendentes: {nomes_txt}...', 'error')
             return redirect(dest_url)
 
-        # Data de finalização informada manualmente
         data_finalizacao = request.form.get('data_finalizacao')
         if not data_finalizacao:
             flash('A data da finalização é obrigatória.', 'error')
@@ -437,7 +466,7 @@ def finalizar_implantacao():
             "UPDATE implantacoes SET status = 'finalizada', data_finalizacao = %s WHERE id = %s",
             (data_final_iso, implantacao_id)
         )
-        logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Implantação "{impl.get("nome_empresa", "N/A")}" finalizada manually.') #
+        logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Implantação "{impl.get("nome_empresa", "N/A")}" finalizada manually.')  
         flash('Implantação finalizada com sucesso!', 'success')
         try:
             clear_user_cache(usuario_cs_email)
@@ -464,16 +493,15 @@ def parar_implantacao():
     usuario_cs_email = g.user_email
     implantacao_id = request.form.get('implantacao_id')
     motivo = request.form.get('motivo_parada', '').strip()
-    # --- NOVO CAMPO RETROATIVO ---
+    \
     data_parada = request.form.get('data_parada')
-    # ------------------------------
+    \
     dest_url = url_for('main.ver_implantacao', impl_id=implantacao_id)
 
     if not motivo:
         flash('O motivo da parada é obrigatório.', 'error')
         return redirect(dest_url)
     
-    # --- VALIDAÇÃO DE DATA ---
     if not data_parada:
         flash('A data da parada é obrigatória.', 'error')
         return redirect(dest_url)
@@ -492,7 +520,6 @@ def parar_implantacao():
         if not impl or impl.get('usuario_cs') != usuario_cs_email or impl.get('status') != 'andamento':
             raise Exception('Operação negada. Implantação não está "em andamento".')
 
-        # --- UPDATE: Usa data_parada validada (ISO) ---
         execute_db(
             "UPDATE implantacoes SET status = 'parada', data_finalizacao = %s, motivo_parada = %s WHERE id = %s",
             (data_parada_iso, motivo, implantacao_id)
@@ -515,7 +542,7 @@ def parar_implantacao():
 @login_required
 @limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 def retomar_implantacao():
-    usuario_cs_email = g.user_email #
+    usuario_cs_email = g.user_email  
     implantacao_id = request.form.get('implantacao_id')
     redirect_to = request.form.get('redirect_to', 'dashboard')
 
@@ -524,7 +551,7 @@ def retomar_implantacao():
         dest_url = url_for('main.ver_implantacao', impl_id=implantacao_id)
 
     try:
-        impl = query_db( #
+        impl = query_db(\
             "SELECT usuario_cs, nome_empresa, status FROM implantacoes WHERE id = %s",
             (implantacao_id,), one=True
         )
@@ -532,11 +559,11 @@ def retomar_implantacao():
             flash('Apenas implantações "Paradas" podem ser retomadas.', 'warning')
             return redirect(request.referrer or url_for('main.dashboard'))
 
-        execute_db( #
+        execute_db(\
             "UPDATE implantacoes SET status = 'andamento', data_finalizacao = NULL, motivo_parada = '' WHERE id = %s",
             (implantacao_id,)
         )
-        logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Implantação "{impl.get("nome_empresa", "N/A")}" retomada.') #
+        logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Implantação "{impl.get("nome_empresa", "N/A")}" retomada.')  
         flash('Implantação retomada e movida para "Em Andamento".', 'success')
         try:
             clear_user_cache(usuario_cs_email)
@@ -554,7 +581,7 @@ def retomar_implantacao():
 @login_required
 @limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 def reabrir_implantacao():
-    usuario_cs_email = g.user_email #
+    usuario_cs_email = g.user_email  
     implantacao_id = request.form.get('implantacao_id')
     redirect_to = request.form.get('redirect_to', 'dashboard')
 
@@ -563,7 +590,7 @@ def reabrir_implantacao():
         dest_url = url_for('main.ver_implantacao', impl_id=implantacao_id)
 
     try:
-        impl = query_db( #
+        impl = query_db(\
             "SELECT usuario_cs, nome_empresa, status FROM implantacoes WHERE id = %s",
             (implantacao_id,), one=True
         )
@@ -575,11 +602,11 @@ def reabrir_implantacao():
             flash('Apenas implantações "Finalizadas" podem ser reabertas.', 'warning')
             return redirect(dest_url)
 
-        execute_db( #
+        execute_db(\
             "UPDATE implantacoes SET status = 'andamento', data_finalizacao = NULL WHERE id = %s",
             (implantacao_id,)
         )
-        logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Implantação "{impl.get("nome_empresa", "N/A")}" reaberta.') #
+        logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Implantação "{impl.get("nome_empresa", "N/A")}" reaberta.')  
         flash('Implantação reaberta com sucesso e movida para "Em Andamento".', 'success')
         try:
             clear_user_cache(usuario_cs_email)
@@ -597,18 +624,18 @@ def reabrir_implantacao():
 @login_required
 @limiter.limit("100 per minute", key_func=lambda: g.user_email or get_remote_address())
 def atualizar_detalhes_empresa():
-    usuario_cs_email = g.user_email #
+    usuario_cs_email = g.user_email  
     implantacao_id = request.form.get('implantacao_id')
     redirect_to = request.form.get('redirect_to', 'dashboard')
-    user_perfil_acesso = g.perfil.get('perfil_acesso') #
+    user_perfil_acesso = g.perfil.get('perfil_acesso')  
 
     dest_url = url_for('main.dashboard')
     if redirect_to == 'detalhes':
         dest_url = url_for('main.ver_implantacao', impl_id=implantacao_id)
 
-    impl = query_db("SELECT id, usuario_cs FROM implantacoes WHERE id = %s", (implantacao_id,), one=True) #
+    impl = query_db("SELECT id, usuario_cs FROM implantacoes WHERE id = %s", (implantacao_id,), one=True)  
     is_owner = impl and impl.get('usuario_cs') == usuario_cs_email
-    is_manager = user_perfil_acesso in PERFIS_COM_GESTAO #
+    is_manager = user_perfil_acesso in PERFIS_COM_GESTAO  
     
     if not (is_owner or is_manager):
         flash('Permissão negada.', 'error')
@@ -620,8 +647,8 @@ def atualizar_detalhes_empresa():
         return value
     
     def get_boolean_value(key):
-        value = request.form.get(key, NAO_DEFINIDO_BOOL).strip() #
-        if value == NAO_DEFINIDO_BOOL or value == "": return None #
+        value = request.form.get(key, NAO_DEFINIDO_BOOL).strip()  
+        if value == NAO_DEFINIDO_BOOL or value == "": return None  
         return value
     
     try:
@@ -630,14 +657,10 @@ def atualizar_detalhes_empresa():
     except (ValueError, TypeError):
         alunos_ativos = 0
 
-    # *** INÍCIO DA ALTERAÇÃO ***
-    # Coleta valores dos campos de lista (que agora são tags)
-    # request.form.getlist() pega todos os valores de um campo com o mesmo nome
-    # O 'or None' garante que um campo vazio seja salvo como NULL
     modalidades_val = ','.join(request.form.getlist('modalidades')) or None
     horarios_val = ','.join(request.form.getlist('horarios_func')) or None
     formas_pagamento_val = ','.join(request.form.getlist('formas_pagamento')) or None
-    # *** FIM DA ALTERAÇÃO ***
+\
 
     try:
         def normalize_date_str(s):
@@ -651,6 +674,16 @@ def atualizar_detalhes_empresa():
                 return d.date().isoformat()
             except Exception:
                 return d.isoformat().split('T')[0]
+
+        valor_raw = get_form_value('valor_atribuido')
+        if valor_raw is not None:
+            v = valor_raw.replace('R$','').strip()
+            v = v.replace('.', '').replace(',', '.')
+            try:
+                v_float = float(v)
+                valor_raw = f"{v_float:.2f}"
+            except Exception:
+                pass
 
         campos = {
             'responsavel_cliente': get_form_value('responsavel_cliente'),
@@ -679,20 +712,27 @@ def atualizar_detalhes_empresa():
             'nota_fiscal': get_boolean_value('nota_fiscal'), 
             'catraca': get_boolean_value('catraca'), 
             'facial': get_boolean_value('facial'),
-            'valor_atribuido': get_form_value('valor_atribuido'), 
+            'valor_atribuido': valor_raw, 
             'resp_estrategico_nome': get_form_value('resp_estrategico_nome'),
             'resp_onb_nome': get_form_value('resp_onb_nome'),
             'resp_estrategico_obs': get_form_value('resp_estrategico_obs'),
             'contatos': get_form_value('contatos'),
         }
         set_clauses = [f"{k} = %s" for k in campos.keys()]
-        query = f"UPDATE implantacoes SET {', '.join(set_clauses)} WHERE id = %s" # Removido AND usuario_cs = %s
+        query = f"UPDATE implantacoes SET {', '.join(set_clauses)} WHERE id = %s"                               
         args = list(campos.values())
-        args.append(implantacao_id) # ID é o último argumento
+        args.append(implantacao_id)                          
         
-        execute_db(query, tuple(args)) #
-        logar_timeline(implantacao_id, usuario_cs_email, 'detalhes_alterados', 'Detalhes da empresa/cliente foram atualizados.') #
+        execute_db(query, tuple(args))  
+        logar_timeline(implantacao_id, usuario_cs_email, 'detalhes_alterados', 'Detalhes da empresa/cliente foram atualizados.')  
         flash('Detalhes da implantação atualizados com sucesso!', 'success')
+        try:
+            clear_user_cache(usuario_cs_email)
+            if impl and impl.get('usuario_cs'):
+                clear_user_cache(impl.get('usuario_cs'))
+            clear_implantacao_cache(implantacao_id)
+        except Exception:
+            pass
     except Exception as e:
         print(f"Erro ao atualizar detalhes (Impl. ID {implantacao_id}): {e}")
         flash(f'Erro ao atualizar detalhes: {e}', 'error')
@@ -700,10 +740,10 @@ def atualizar_detalhes_empresa():
 
 @implantacao_actions_bp.route('/transferir_implantacao', methods=['POST'])
 @login_required
-@permission_required(PERFIS_COM_GESTAO) #
+@permission_required(PERFIS_COM_GESTAO)  
 @limiter.limit("30 per minute", key_func=lambda: g.user_email or get_remote_address())
 def transferir_implantacao():
-    usuario_cs_email = g.user_email #
+    usuario_cs_email = g.user_email  
     implantacao_id = request.form.get('implantacao_id')
     novo_usuario_cs = request.form.get('novo_usuario_cs')
     dest_url = url_for('main.ver_implantacao', impl_id=implantacao_id)
@@ -711,13 +751,13 @@ def transferir_implantacao():
         flash('Dados inválidos para transferência.', 'error')
         return redirect(dest_url)
     try:
-        impl = query_db("SELECT nome_empresa, usuario_cs FROM implantacoes WHERE id = %s", (implantacao_id,), one=True) #
+        impl = query_db("SELECT nome_empresa, usuario_cs FROM implantacoes WHERE id = %s", (implantacao_id,), one=True)  
         if not impl:
             flash('Implantação não encontrada.', 'error')
             return redirect(url_for('main.dashboard'))
         antigo_usuario_cs = impl.get('usuario_cs', 'Ninguém')
-        execute_db("UPDATE implantacoes SET usuario_cs = %s WHERE id = %s", (novo_usuario_cs, implantacao_id)) #
-        logar_timeline(implantacao_id, usuario_cs_email, 'detalhes_alterados', f'Implantação "{impl.get("nome_empresa")}" transferida de {antigo_usuario_cs} para {novo_usuario_cs} por {usuario_cs_email}.') #
+        execute_db("UPDATE implantacoes SET usuario_cs = %s WHERE id = %s", (novo_usuario_cs, implantacao_id))  
+        logar_timeline(implantacao_id, usuario_cs_email, 'detalhes_alterados', f'Implantação "{impl.get("nome_empresa")}" transferida de {antigo_usuario_cs} para {novo_usuario_cs} por {usuario_cs_email}.')  
         flash(f'Implantação transferida para {novo_usuario_cs} com sucesso!', 'success')
         if antigo_usuario_cs == usuario_cs_email:
             return redirect(url_for('main.dashboard'))
@@ -730,23 +770,22 @@ def transferir_implantacao():
 @login_required
 @limiter.limit("100 per minute", key_func=lambda: g.user_email or get_remote_address())
 def excluir_implantacao():
-    usuario_cs_email = g.user_email #
+    usuario_cs_email = g.user_email  
     implantacao_id = request.form.get('implantacao_id')
-    user_perfil_acesso = g.perfil.get('perfil_acesso') #
-    impl = query_db("SELECT id, usuario_cs FROM implantacoes WHERE id = %s", (implantacao_id,), one=True) #
+    user_perfil_acesso = g.perfil.get('perfil_acesso')  
+    impl = query_db("SELECT id, usuario_cs FROM implantacoes WHERE id = %s", (implantacao_id,), one=True)  
     is_owner = impl and impl.get('usuario_cs') == usuario_cs_email
-    is_manager = user_perfil_acesso in PERFIS_COM_GESTAO #
+    is_manager = user_perfil_acesso in PERFIS_COM_GESTAO  
     if not (is_owner or is_manager):
         flash('Permissão negada.', 'error')
         return redirect(url_for('main.dashboard'))
     
-    # R2 opcional: continua a exclusão mesmo sem armazenamento configurado
     try:
-        comentarios_img = query_db( #
+        comentarios_img = query_db(\
             """ SELECT c.imagem_url FROM comentarios c JOIN tarefas t ON c.tarefa_id = t.id WHERE t.implantacao_id = %s AND c.imagem_url IS NOT NULL AND c.imagem_url != '' """, (implantacao_id,)
         )
-        public_url_base = current_app.config.get('CLOUDFLARE_PUBLIC_URL') #
-        bucket_name = current_app.config.get('CLOUDFLARE_BUCKET_NAME') #
+        public_url_base = current_app.config.get('CLOUDFLARE_PUBLIC_URL')  
+        bucket_name = current_app.config.get('CLOUDFLARE_BUCKET_NAME')  
         if r2_client and public_url_base and bucket_name:
             for c in comentarios_img:
                 imagem_url = c.get('imagem_url')
@@ -754,14 +793,14 @@ def excluir_implantacao():
                     try:
                         object_key = imagem_url.replace(f"{public_url_base}/", "")
                         if object_key:
-                            r2_client.delete_object(Bucket=bucket_name, Key=object_key) #
+                            r2_client.delete_object(Bucket=bucket_name, Key=object_key)  
                     except ClientError as e_delete:
                         print(f"Aviso: Falha ao excluir R2 (key: {object_key}). Erro: {e_delete.response['Error']['Code']}")
                     except Exception as e_delete:
                         print(f"Aviso: Falha ao excluir R2 (key: {object_key}). Erro: {e_delete}")
         else:
             print("Aviso: R2 não configurado ou variáveis ausentes; exclusão seguirá apenas no banco de dados.")
-        execute_db("DELETE FROM implantacoes WHERE id = %s", (implantacao_id,)) #
+        execute_db("DELETE FROM implantacoes WHERE id = %s", (implantacao_id,))  
         flash('Implantação e todos os dados associados foram excluídos com sucesso.', 'success')
         try:
             clear_user_cache(usuario_cs_email)
@@ -776,39 +815,39 @@ def excluir_implantacao():
 @implantacao_actions_bp.route('/adicionar_tarefa', methods=['POST'])
 @login_required
 def adicionar_tarefa():
-    usuario_cs_email = g.user_email #
+    usuario_cs_email = g.user_email  
     implantacao_id = request.form.get('implantacao_id')
     tarefa_filho = request.form.get('tarefa_filho', '').strip()
     tarefa_pai = request.form.get('tarefa_pai', '').strip()
     tag = request.form.get('tag', '').strip()
-    user_perfil_acesso = g.perfil.get('perfil_acesso') #
-    anchor = 'pendencias-content' if tarefa_pai == MODULO_PENDENCIAS else 'checklist-treinamentos-content' #
+    user_perfil_acesso = g.perfil.get('perfil_acesso')  
+    anchor = 'pendencias-content' if tarefa_pai == MODULO_PENDENCIAS else 'checklist-treinamentos-content'  
     dest_url = url_for('main.ver_implantacao', impl_id=implantacao_id, _anchor=anchor) 
     if not all([implantacao_id, tarefa_filho, tarefa_pai]):
         flash('Dados inválidos para adicionar tarefa (ID, Nome, Módulo).', 'error')
         return redirect(request.referrer or dest_url) 
     try:
-        impl = query_db( #
+        impl = query_db(\
             "SELECT id, nome_empresa, status, usuario_cs FROM implantacoes WHERE id = %s", (implantacao_id,), one=True
         )
         is_owner = impl and impl.get('usuario_cs') == usuario_cs_email
-        is_manager = user_perfil_acesso in PERFIS_COM_GESTAO #
+        is_manager = user_perfil_acesso in PERFIS_COM_GESTAO  
         if not (is_owner or is_manager):
             flash('Permissão negada ou implantação não encontrada.', 'error')
             return redirect(url_for('main.dashboard'))
         if impl.get('status') == 'finalizada':
             flash('Não é possível adicionar tarefas a implantações finalizadas.', 'warning')
             return redirect(dest_url)
-        max_ordem = query_db( #
+        max_ordem = query_db(\
             "SELECT MAX(ordem) as max_o FROM tarefas WHERE implantacao_id = %s AND tarefa_pai = %s",
             (implantacao_id, tarefa_pai), one=True
         )
         nova_ordem = (max_ordem.get('max_o') or 0) + 1
-        execute_db( #
+        execute_db(\
             "INSERT INTO tarefas (implantacao_id, tarefa_pai, tarefa_filho, tag, ordem, concluida) VALUES (%s, %s, %s, %s, %s, %s)",
             (implantacao_id, tarefa_pai, tarefa_filho, tag, nova_ordem, 0)
         )
-        logar_timeline(implantacao_id, usuario_cs_email, 'tarefa_adicionada', f"Tarefa '{tarefa_filho}' adicionada ao módulo '{tarefa_pai}'.") #
+        logar_timeline(implantacao_id, usuario_cs_email, 'tarefa_adicionada', f"Tarefa '{tarefa_filho}' adicionada ao módulo '{tarefa_pai}'.")  
         flash('Tarefa adicionada com sucesso!', 'success')
     except Exception as e:
         print(f"Erro ao adicionar tarefa para implantação ID {implantacao_id}: {e}")
@@ -823,17 +862,15 @@ def cancelar_implantacao():
     data_cancelamento = request.form.get('data_cancelamento')
     motivo = request.form.get('motivo_cancelamento', '').strip()
     
-    # Verifica R2 antes de tudo, pois o arquivo é obrigatório
+        \
     if not r2_client:
          flash('Erro: Serviço de armazenamento R2 não configurado. Não é possível fazer upload do comprovante obrigatório.', 'error')
          return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
 
-    # Validação de campos obrigatórios
     if not all([implantacao_id, data_cancelamento, motivo]):
         flash('Todos os campos (Data, Motivo Resumo) são obrigatórios para cancelar.', 'error')
         return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
 
-    # Validação de data
     try:
         data_cancel_dt = validate_date(data_cancelamento)
         data_cancel_iso = data_cancel_dt.isoformat()
@@ -849,7 +886,7 @@ def cancelar_implantacao():
     try:
         impl = query_db("SELECT usuario_cs, nome_empresa, status FROM implantacoes WHERE id = %s", (implantacao_id,), one=True)
         
-        # Permissões (Dono ou Gestor)
+                \
         is_owner = impl and impl.get('usuario_cs') == usuario_cs_email
         is_manager = g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
         
@@ -865,7 +902,6 @@ def cancelar_implantacao():
              flash('Ações indisponíveis para implantações "Nova". Inicie a implantação para habilitar cancelamento.', 'warning')
              return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
 
-        # Processo de Upload do Comprovante
         comprovante_url = None
         if file and utils.allowed_file(file.filename):
             filename = secure_filename(file.filename)
@@ -884,7 +920,6 @@ def cancelar_implantacao():
              flash('Tipo de arquivo inválido para o comprovante.', 'error')
              return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
 
-        # Atualiza DB
         execute_db(
             "UPDATE implantacoes SET status = 'cancelada', data_cancelamento = %s, motivo_cancelamento = %s, comprovante_cancelamento_url = %s, data_finalizacao = CURRENT_TIMESTAMP WHERE id = %s",
             (data_cancel_iso, motivo, comprovante_url, implantacao_id)

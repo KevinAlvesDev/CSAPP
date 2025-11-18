@@ -1,6 +1,6 @@
-#!/usr/bin/env python
-# run_complete_tests.py
-# Script completo para executar todos os testes com relatório detalhado
+\
+\
+\
 
 import subprocess
 import sys
@@ -39,7 +39,7 @@ def run_tests_with_coverage():
     """Executa todos os testes com coverage."""
     print_header("EXECUTANDO TODOS OS TESTES COM COVERAGE")
     
-    # Executa pytest com verbose e coverage
+        \
     result = subprocess.run([
         sys.executable, '-m', 'pytest',
         'tests/',
@@ -51,7 +51,7 @@ def run_tests_with_coverage():
         '--cov-report=html:htmlcov',
         '--cov-report=json:coverage.json',
         '-p', 'no:warnings',
-        '--maxfail=5'  # Para após 5 falhas
+        '--maxfail=5'\
     ])
     
     return result.returncode
@@ -95,7 +95,7 @@ def run_specific_test_suites():
                 'file': test_file
             }
             
-            # Mostra resumo
+                        \
             if result.returncode == 0:
                 print(f"   ✅ PASSOU")
             else:
@@ -143,7 +143,7 @@ def generate_report(results):
     
     print("-" * 80)
     
-    # Salva relatório em arquivo
+        \
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     report_file = f'test_report_{timestamp}.txt'
     
@@ -181,7 +181,7 @@ def generate_report(results):
     
     print(f"\n📄 Relatório salvo em: {report_file}")
     
-    # Verifica coverage se existir
+        \
     if os.path.exists('coverage.json'):
         try:
             with open('coverage.json', 'r') as f:
@@ -199,10 +199,10 @@ def main():
     """Função principal."""
     print_header(f"SUÍTE COMPLETA DE TESTES - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
-    # Verifica dependências
+        \
     check_dependencies()
     
-    # Executa testes por suíte
+        \
     results = run_specific_test_suites()
     all_passed = generate_report(results)
     

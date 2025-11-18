@@ -1,5 +1,5 @@
-# project/async_tasks.py
-# Tarefas assíncronas usando threading (sem dependência de Celery/Redis)
+\
+\
 
 import threading
 from flask import current_app
@@ -34,7 +34,7 @@ class BackgroundTask:
             target=func,
             args=args,
             kwargs=kwargs,
-            daemon=True  # Thread morre quando app termina
+            daemon=True\
         )
         thread.start()
         return thread
@@ -69,7 +69,7 @@ class BackgroundTask:
                 try:
                     func(*args, **kwargs)
                 except Exception as e:
-                    # Log do erro (dentro do contexto do app)
+                    \
                     app.logger.error(f"Background task error: {e}")
         
         thread = threading.Thread(target=wrapper, daemon=True)
@@ -105,7 +105,7 @@ def send_email_async(subject: str, body_html: str, recipients: list,
     """
     from .email_utils import send_email_global
     
-    # Captura o app atual antes de criar a thread
+        \
     app = current_app._get_current_object()
     
     def _send():
@@ -151,9 +151,8 @@ def send_notification_async(user_email: str, notification_type: str, data: Dict[
     def _notify():
         with app.app_context():
             try:
-                # Aqui você pode implementar diferentes tipos de notificação
+                \
                 app.logger.info(f"Notification sent: {notification_type} to {user_email}")
-                # TODO: Implementar lógica de notificação
             except Exception as e:
                 app.logger.error(f"Notification failed: {e}")
     

@@ -1,4 +1,4 @@
-# Simple i18n utility without external dependencies
+\
 from typing import Callable
 
 

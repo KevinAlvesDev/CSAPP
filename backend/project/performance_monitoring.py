@@ -1,5 +1,5 @@
-# project/performance_monitoring.py
-# Application Performance Monitoring (APM) básico
+\
+\
 
 import time
 from functools import wraps
@@ -21,7 +21,7 @@ class PerformanceMonitor:
     
     def __init__(self, app=None):
         self.metrics = []
-        self.max_metrics = 1000  # Mantém últimas 1000 métricas em memória
+        self.max_metrics = 1000                                           
         
         if app:
             self.init_app(app)
@@ -32,21 +32,20 @@ class PerformanceMonitor:
         app.after_request(self.after_request)
         app.teardown_request(self.teardown_request)
         
-        # Adiciona rota para visualizar métricas
+                \
         @app.route('/admin/metrics')
         def view_metrics():
             """Endpoint para visualizar métricas (apenas admin)."""
             from .blueprints.auth import login_required
             from .constants import PERFIL_ADMIN
             
-            # Verifica se é admin
+                        \
             if not hasattr(g, 'perfil') or g.perfil.get('perfil_acesso') != PERFIL_ADMIN:
                 return "Acesso negado", 403
             
-            # Retorna métricas em JSON
             return {
                 'total_requests': len(self.metrics),
-                'recent_metrics': self.metrics[-100:],  # Últimas 100
+                'recent_metrics': self.metrics[-100:],\
                 'summary': self.get_summary()
             }
     
@@ -62,7 +61,7 @@ class PerformanceMonitor:
         if hasattr(g, 'start_time'):
             elapsed = time.time() - g.start_time
             
-            # Coleta métrica
+                        \
             metric = {
                 'timestamp': datetime.now().isoformat(),
                 'method': request.method,
@@ -75,14 +74,13 @@ class PerformanceMonitor:
                 'user': getattr(g, 'user_email', 'anonymous')
             }
             
-            # Adiciona à lista de métricas
+                        \
             self.metrics.append(metric)
             
-            # Limita tamanho da lista
+                        \
             if len(self.metrics) > self.max_metrics:
                 self.metrics = self.metrics[-self.max_metrics:]
             
-            # Log de requests lentos (> 1 segundo)
             if elapsed > 1.0:
                 current_app.logger.warning(
                     f"Slow request: {request.method} {request.path} "
@@ -94,7 +92,7 @@ class PerformanceMonitor:
     def teardown_request(self, exception=None):
         """Executado no teardown da request."""
         if exception:
-            # Log de exceções
+            \
             current_app.logger.error(f"Request exception: {exception}")
     
     def get_summary(self):
@@ -113,7 +111,7 @@ class PerformanceMonitor:
             'min_duration_ms': min(durations),
             'avg_queries_per_request': round(sum(queries) / total, 2),
             'total_queries': sum(queries),
-            'slow_requests': len([d for d in durations if d > 1000]),  # > 1s
+            'slow_requests': len([d for d in durations if d > 1000]),\
             'error_requests': len([m for m in self.metrics if m['status_code'] >= 400])
         }
 
@@ -152,7 +150,7 @@ def monitor_function(func):
             result = func(*args, **kwargs)
             elapsed = time.time() - start
             
-            if elapsed > 0.5:  # Log se > 500ms
+            if elapsed > 0.5:                  
                 current_app.logger.info(
                     f"Function {func.__name__} took {elapsed:.2f}s"
                 )
@@ -168,6 +166,5 @@ def monitor_function(func):
     return wrapper
 
 
-# Instância global do monitor
 performance_monitor = PerformanceMonitor()
 

@@ -1,5 +1,5 @@
-# tests/test_utils.py
-# Testes unitários para funções utilitárias
+\
+\
 
 import pytest
 import sys
@@ -39,12 +39,12 @@ class TestFormatDateBr:
     def test_format_date_br_with_none(self):
         """Testa formatação com None."""
         result = format_date_br(None)
-        assert result == 'N/A'  # Função retorna 'N/A' para None
+        assert result == 'N/A'                                  
 
     def test_format_date_br_with_empty_string(self):
         """Testa formatação com string vazia."""
         result = format_date_br('')
-        assert result == 'N/A'  # Função retorna 'N/A' para string vazia
+        assert result == 'N/A'                                          
 
 
 class TestFormatDateIsoForJson:
@@ -54,12 +54,12 @@ class TestFormatDateIsoForJson:
         """Testa formatação ISO com datetime."""
         dt = datetime(2025, 1, 13, 15, 30, 45)
         result = format_date_iso_for_json(dt)
-        assert result == '2025-01-13 15:30:45'  # Formato com espaço, não 'T'
+        assert result == '2025-01-13 15:30:45'                               
 
     def test_format_date_iso_with_string(self):
         """Testa formatação ISO com string."""
         result = format_date_iso_for_json('2025-01-13')
-        assert result == '2025-01-13 00:00:00'  # Converte para datetime completo
+        assert result == '2025-01-13 00:00:00'                                   
     
     def test_format_date_iso_with_none(self):
         """Testa formatação ISO com None."""
@@ -88,12 +88,12 @@ class TestCalcularProgresso:
     def test_progresso_um_terco_concluido(self):
         """Testa progresso com um terço concluído."""
         result = calcular_progresso(1, 3)
-        assert result == 33  # Arredondado
+        assert result == 33               
     
     def test_progresso_arredondamento(self):
         """Testa arredondamento de progresso."""
         result = calcular_progresso(2, 3)
-        assert result == 67  # 66.666... arredondado
+        assert result == 67                         
 
 
 class TestCalcularDiasDecorridos:

@@ -17,12 +17,12 @@
     {% block head_extra %}{% endblock %}
 </head>
 <body>
-    <!-- Toggle do menu responsivo bigSlide -->
+    
     <a href="#menu" class="menu-link menu-toggle btn btn-outline-secondary btn-sm" title="Menu">
         <i class="bi bi-list"></i>
     </a>
 
-    <!-- Painel lateral bigSlide -->
+    
     <nav id="menu" class="bigslide-panel" role="navigation">
         <div class="d-flex align-items-center mb-3">
             <div class="user-profile-btn-sidebar me-2">
@@ -40,7 +40,7 @@
             <li class="nav-item"><a class="nav-link {% if request.endpoint == 'main.ver_implantacao' %}active{% endif %}" href="{{ url_for('main.ver_implantacao', impl_id=implantacao.id) }}"><i class="bi bi-kanban me-2"></i> Detalhes da Implantação</a></li>
             {% endif %}
             <li class="nav-item"><a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#modalPerfil"><i class="bi bi-person-circle me-2"></i> Perfil</a></li>
-            <!-- Agenda visível para todos usuários autenticados -->
+            
             <li class="nav-item"><a class="nav-link {% if request.endpoint and request.endpoint.startswith('agenda.') %}active{% endif %}" href="{{ url_for('agenda.agenda_home') }}"><i class="bi bi-calendar-week me-2"></i> Agenda</a></li>
 
             {% if g.perfil and g.perfil.perfil_acesso in g.PERFIS_COM_GESTAO %}
@@ -70,14 +70,14 @@
         </div>
     </div>
     {% endblock %}
-    </div> <!-- fim .push -->
+    </div> 
     
     {% include 'modals/_detalhes_empresa.html' %}
     {% include 'modals/_gamificacao_regras.html' %}
     {% include 'modals/_gerenciar_usuarios.html' %}
     {% include 'modals/_perfil.html' %}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- HTMX para habilitar hx-post, hx-target, hx-swap nos templates -->
+    
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
@@ -295,8 +295,8 @@
       })();
     </script>
     
-    <!-- Removidos carregamentos via CDN de jQuery/bigSlide; usamos fallback nativo abaixo -->
-    <!-- Fallback nativo sem jQuery/bigSlide -->
+    
+    
     <script>
       (function(){
         function nativeInit(){
@@ -359,7 +359,7 @@
         // Além disso, se o evento "bigslide-ready" nunca ocorrer, já teremos o fallback ativo
       })();
     </script>
-    <!-- Garantir que qualquer modal feche o menu para evitar sobreposição/flicker -->
+    
     <script>
       document.addEventListener('show.bs.modal', function(){
         try {

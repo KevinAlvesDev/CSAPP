@@ -1,12 +1,12 @@
-# project/domain/analytics_service.py
-# (Funções movidas de project/services.py)
+\
+\
 
 from flask import current_app
 from ..db import query_db
 from ..constants import NIVEIS_RECEITA 
 from datetime import datetime, timedelta, date 
 
-# --- Funções de Analytics (Lógica de Negócio) ---
+\
 
 def calculate_time_in_status(impl_id, status_target='parada'):
     """
@@ -77,7 +77,6 @@ def _format_date_for_query(val, is_end_date=False, is_sqlite=False):
         return '<', (date_obj + timedelta(days=1)).strftime('%Y-%m-%d')
     return '<=' if is_end_date else '>=', date_str
 
-# Helpers globais para expressões de data (compatíveis com PostgreSQL/SQLite)
 def date_col_expr(col: str) -> str:
     """Retorna expressão SQL para extrair a porção de data da coluna conforme o banco."""
     is_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
@@ -98,7 +97,7 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
     agora = datetime.now() 
     ano_corrente = agora.year
 
-    # --- LÓGICA DE FILTRO PRINCIPAL (PARA GRÁFICOS E LISTA DETALHADA) ---
+    \
     query_impl = """
         SELECT i.*,
                p.nome as cs_nome, p.cargo as cs_cargo, p.perfil_acesso as cs_perfil
@@ -116,7 +115,7 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
         if target_status == 'atrasadas_status':
             if is_sqlite:
                 query_impl += " AND i.status = 'andamento' AND i.data_inicio_efetivo IS NOT NULL AND date(i.data_inicio_efetivo) <= date('now', '-26 days') " 
-            else: # PostgreSQL
+            else:             
                 query_impl += " AND i.status = 'andamento' AND i.data_inicio_efetivo IS NOT NULL AND i.data_inicio_efetivo <= NOW() - INTERVAL '26 days' " 
         elif target_status == 'nova':
             query_impl += " AND i.status = 'nova' "
@@ -128,7 +127,6 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
             query_impl += " AND i.status = %s "
             args_impl.append(target_status)
 
-    # Para canceladas, usamos a data_finalizacao como referência de filtro de data
     date_field_to_filter = "i.data_finalizacao" if target_status in ['finalizada', 'cancelada'] else "i.data_criacao"
 
     start_op, start_date_val = _format_date_for_query(start_date, is_sqlite=is_sqlite)
@@ -144,12 +142,12 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
 
     query_impl += " ORDER BY i.nome_empresa "
 
-    # 1. BUSCA PRINCIPAL DE IMPLANTAÇÕES (FILTRADAS PELO FILTRO PRINCIPAL)
+    \
     impl_list = query_db(query_impl, tuple(args_impl))
     impl_list = impl_list if impl_list is not None else []
-    # Separa por tipo para uso específico em gráficos/cards (completas) e na lista de módulos
+    \
     impl_completas = [impl for impl in impl_list if isinstance(impl, dict) and impl.get('tipo') == 'completa']
-    # Monta lista de módulos com cálculo de dias em status
+    \
     modules_implantacao_lista = []
     def _to_dt(val):
         if not val:
@@ -229,11 +227,10 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
             'dias': dias,
         })
     
-    # 2. BUSCA DE TODOS OS PERFIS DE CS (PARA RANKING E FILTROS)
     all_cs_profiles = query_db("SELECT usuario, nome, cargo, perfil_acesso FROM perfil_usuario")
     all_cs_profiles = all_cs_profiles if all_cs_profiles is not None else [] 
 
-    # --- LÓGICA DO RELATÓRIO DE PRODUTIVIDADE ---
+\
 
     primeiro_dia_mes = agora.replace(day=1)
     default_task_start_date_str = primeiro_dia_mes.strftime('%Y-%m-%d')
@@ -274,7 +271,7 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
 
     query_tasks += " GROUP BY i.usuario_cs, p.nome, t.tag ORDER BY cs_nome, t.tag "
 
-    # 3. BUSCA DE TAREFAS (FILTRADAS PELO NOVO FILTRO DE TAREFAS)
+    \
     tasks_summary_raw = query_db(query_tasks, tuple(args_tasks))
     tasks_summary_raw = tasks_summary_raw if tasks_summary_raw is not None else []
 
@@ -301,7 +298,7 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
             
     task_summary_list = list(task_summary_processed.values())
     
-    # 4. PROCESSAMENTO E CÁLCULO DE MÉTRICAS GLOBAIS (Baseado na busca 1)
+    \
     
     cs_metrics_ranking = {p['usuario']: {
         'email': p['usuario'], 'nome': p['nome'] or p['usuario'], 'cargo': p['cargo'] or 'N/A',
@@ -320,7 +317,7 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
     if is_sqlite:
          query_impl_ano += " AND strftime('%Y', i.data_finalizacao) = %s "
          args_impl_ano.append(str(ano_corrente))
-    else: # Postgres
+    else:           
          query_impl_ano += " AND EXTRACT(YEAR FROM i.data_finalizacao) = %s "
          args_impl_ano.append(ano_corrente)
          
@@ -356,7 +353,6 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
             chart_data_ranking_periodo[dt_finalizacao_datetime.month] += 1
             
 
-    # 5. PROCESSAMENTO DA LISTA FILTRADA (impl_list)
     total_impl_global = 0
     total_finalizadas = 0
     total_andamento_global = 0
@@ -364,7 +360,7 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
     total_novas_global = 0
     total_futuras_global = 0 
     total_atrasadas_status = 0
-    total_canceladas_global = 0 # NOVO CONTADOR
+    total_canceladas_global = 0                
     tma_dias_sum = 0
     implantacoes_paradas_detalhadas = []
     implantacoes_canceladas_detalhadas = []
@@ -455,7 +451,7 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
         elif status == 'futura': 
             total_futuras_global += 1
             
-        elif status == 'cancelada': # NOVO BLOCO
+        elif status == 'cancelada':             
             total_canceladas_global += 1
             implantacoes_canceladas_detalhadas.append({
                 'id': impl_id,
@@ -496,7 +492,6 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
             if dias_passados > 25:
                 total_atrasadas_status += 1
 
-    # 6. MONTAGEM DOS DADOS DE KPI (kpi_cards)
     global_metrics = {
         'total_clientes': total_impl_global, 
         'total_finalizadas': total_finalizadas,
@@ -504,7 +499,7 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
         'total_paradas': total_paradas,
         'total_novas': total_novas_global,
         'total_futuras': total_futuras_global,
-        'total_canceladas': total_canceladas_global, # NOVO KPI
+        'total_canceladas': total_canceladas_global,\
         'total_sem_previsao': total_novas_global, 
         'total_atrasadas': total_atrasadas_status, 
         'media_tma': round(tma_dias_sum / total_finalizadas, 1) if total_finalizadas > 0 and tma_dias_sum is not None else 0, 
@@ -517,7 +512,7 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
         'Paradas': total_paradas,
         'Futuras': total_futuras_global,
         'Atrasadas': total_atrasadas_status,
-        'Canceladas': total_canceladas_global # NOVO DADO PARA O GRÁFICO
+        'Canceladas': total_canceladas_global\
     }
     
     ranking_colab_data = sorted(
@@ -560,7 +555,7 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
         'default_task_end_date': default_task_end_date_str,
     }
 
-# --- NOVAS FUNÇÕES: API de Analytics ---
+\
 
 def get_implants_by_day(start_date=None, end_date=None, cs_email=None):
     """Contagem de implantações finalizadas por dia, com filtros opcionais."""

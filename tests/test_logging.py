@@ -4,7 +4,7 @@ import os
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime
 
-# Adiciona o diretório CSAPP ao path do Python
+\
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from project.logging_config import ContextFilter, setup_logging
@@ -15,7 +15,7 @@ class TestLoggingConfig:
     
     def test_context_filter_with_flask_context(self):
         """Testa ContextFilter com contexto Flask"""
-        # Mock do contexto Flask
+        \
         mock_g = Mock()
         mock_g.user_email = 'test@example.com'
         mock_g.perfil = {'nome': 'Test User', 'perfil_acesso': 'Administrador'}
@@ -63,7 +63,7 @@ class TestLoggingConfig:
     
     def test_context_filter_with_partial_context(self):
         """Testa ContextFilter com contexto parcial"""
-        # Mock do contexto Flask com informações parciais
+        \
         mock_g = Mock()
         mock_g.user_email = 'test@example.com'
         mock_g.perfil = None
@@ -88,7 +88,7 @@ class TestLoggingConfig:
     
     def test_setup_logging_creates_loggers(self):
         """Testa se setup_logging cria os loggers corretamente"""
-        # Mock do app Flask
+        \
         mock_app = Mock()
         mock_app.config = {
             'LOG_LEVEL': 'INFO',
@@ -101,7 +101,7 @@ class TestLoggingConfig:
              patch('logging.StreamHandler'), \
              patch('logging.Formatter'):
             
-            # Mock para os loggers específicos
+                        \
             mock_auth_logger = Mock()
             mock_api_logger = Mock()
             mock_db_logger = Mock()
@@ -121,15 +121,15 @@ class TestLoggingConfig:
                 
                 mock_get_logger.side_effect = get_logger_side_effect
                 
-                # Executa a função
+                                \
                 setup_logging(mock_app)
                 
-                # Verifica se os loggers foram criados
+                                \
                 assert mock_get_logger.call_count >= 5
     
     def test_log_levels_configuration(self):
         """Testa configuração de níveis de log"""
-        # Mock do app Flask
+        \
         mock_app = Mock()
         mock_app.config = {
             'LOG_LEVEL': 'DEBUG',
@@ -147,12 +147,12 @@ class TestLoggingConfig:
             
             setup_logging(mock_app)
             
-            # Verifica se o nível de log foi configurado
+                        \
             mock_logger.setLevel.assert_called_with(logging.DEBUG)
     
     def test_log_directory_creation(self):
         """Testa criação do diretório de logs"""
-        # Mock do app Flask
+        \
         mock_app = Mock()
         mock_app.config = {
             'LOG_LEVEL': 'INFO',
@@ -167,7 +167,7 @@ class TestLoggingConfig:
             
             setup_logging(mock_app)
             
-            # Verifica se o diretório foi criado
+                        \
             mock_makedirs.assert_called_with('/tmp/test_logs', exist_ok=True)
 
 class TestLoggerIntegration:
@@ -177,7 +177,7 @@ class TestLoggerIntegration:
         """Testa se os loggers podem ser importados corretamente"""
         try:
             from project.logging_config import auth_logger, api_logger, db_logger, security_logger, management_logger
-            # Se chegou aqui, os imports funcionaram
+            \
             assert True
         except ImportError as e:
             pytest.fail(f"Failed to import loggers: {e}")

@@ -11,7 +11,7 @@ from alembic import op
 import sqlalchemy as sa
 
 
-# revision identifiers, used by Alembic.
+\
 revision = '003'
 down_revision = '002'
 branch_labels = None
@@ -32,7 +32,7 @@ def upgrade():
     dialect = conn.dialect.name
     
     if dialect == 'postgresql':
-        # PostgreSQL: Adiciona colunas TIMESTAMP
+        \
         op.execute("""
             ALTER TABLE implantacoes 
             ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP NULL;
@@ -48,7 +48,7 @@ def upgrade():
             ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP NULL;
         """)
         
-        # Cria índices para melhorar performance de queries com deleted_at
+                \
         op.execute("""
             CREATE INDEX IF NOT EXISTS idx_impl_deleted 
             ON implantacoes(deleted_at);
@@ -65,9 +65,9 @@ def upgrade():
         """)
         
     elif dialect == 'sqlite':
-        # SQLite: Adiciona colunas DATETIME
-        # Nota: SQLite não suporta ALTER TABLE ADD COLUMN IF NOT EXISTS
-        # Então usamos try/except implícito via SQL
+\
+\
+\
         
         try:
             op.execute("""
@@ -75,7 +75,7 @@ def upgrade():
                 ADD COLUMN deleted_at DATETIME NULL;
             """)
         except:
-            pass  # Coluna já existe
+            pass                    
         
         try:
             op.execute("""
@@ -93,7 +93,6 @@ def upgrade():
         except:
             pass
         
-        # Cria índices
         op.execute("""
             CREATE INDEX IF NOT EXISTS idx_impl_deleted 
             ON implantacoes(deleted_at);
@@ -116,20 +115,20 @@ def downgrade():
     conn = op.get_bind()
     dialect = conn.dialect.name
     
-    # Remove índices
+        \
     op.execute("DROP INDEX IF EXISTS idx_impl_deleted;")
     op.execute("DROP INDEX IF EXISTS idx_tarefas_deleted;")
     op.execute("DROP INDEX IF EXISTS idx_comentarios_deleted;")
     
     if dialect == 'postgresql':
-        # PostgreSQL: Remove colunas
+        \
         op.execute("ALTER TABLE implantacoes DROP COLUMN IF EXISTS deleted_at;")
         op.execute("ALTER TABLE tarefas DROP COLUMN IF EXISTS deleted_at;")
         op.execute("ALTER TABLE comentarios DROP COLUMN IF EXISTS deleted_at;")
     
     elif dialect == 'sqlite':
-        # SQLite não suporta DROP COLUMN facilmente
-        # Seria necessário recriar as tabelas
-        # Por segurança, não fazemos downgrade automático no SQLite
+        \
+\
+\
         pass
 

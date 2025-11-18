@@ -1,6 +1,6 @@
-/* Minimalista e fluído: ajustes leves sobre Bootstrap */
+
 :root {
-  /* Tokens de sombra alinham com elevações globais */
+  
   --shadow-sm: var(--elevation-1);
   --shadow-md: var(--elevation-2);
 }
@@ -9,7 +9,7 @@ body {
   background-color: var(--body-bg);
 }
 
-/* Títulos centralizados e tipografia sutil */
+
 .main-title {
   text-align: center;
   letter-spacing: 0.3px;
@@ -20,18 +20,18 @@ body {
   text-align: center;
 }
 
-/* Cards com cantos suaves e sombra leve */
+
 .card {
   border: 0;
 }
-/* hover revertido: sem sombra adicional */
 
-/* Cabeçalho suave */
+
+
 header.header-bg {
   background-color: var(--header-bg);
 }
 
-/* Botões com micro interação */
+
 .btn {
   transition: transform 0.08s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
@@ -39,27 +39,27 @@ header.header-bg {
   transform: translateY(1px);
 }
 
-/* Tabelas mais limpas */
+
 .table thead th {
   font-weight: 600;
   color: var(--body-color);
   background-color: var(--table-header-bg);
 }
 .table tbody tr:hover {
-  background-color: var(--table-bg) !important; /* mantém escuro no hover */
+  background-color: var(--table-bg) !important; 
 }
 .table-hover > tbody > tr:hover {
-  background-color: var(--table-bg) !important; /* mantém escuro no hover */
+  background-color: var(--table-bg) !important; 
 }
 .table-hover > tbody > tr:hover > * {
-  background-color: var(--table-bg) !important; /* mantém escuro no hover */
+  background-color: var(--table-bg) !important; 
   color: var(--body-color) !important;
 }
 
-/* Tema escuro para o corpo da tabela */
+
 .table {
   color: var(--body-color);
-  /* Força variáveis do Bootstrap para tema escuro por padrão */
+  
   --bs-table-bg: var(--table-bg);
   --bs-table-color: var(--body-color);
   --bs-table-border-color: var(--table-border-color);
@@ -76,23 +76,23 @@ header.header-bg {
   padding: var(--space-3);
 }
 
-/* Botão de perfil mais elegante */
+
 .user-profile-btn {
   width: 40px;
   height: 40px;
   box-shadow: var(--shadow-sm);
 }
 
-/* Pequenos utilitários */
+
 .rounded-3 { border-radius: var(--radius-lg) !important; }
 .shadow-soft { box-shadow: var(--shadow-sm) !important; }
 
-/* Toggle visível do menu responsivo */
+
 .menu-toggle {
   position: fixed;
   top: 12px;
   left: 12px;
-  z-index: 1020; /* abaixo do modal (1050) e acima do conteúdo */
+  z-index: 1020; 
   background: var(--container-bg);
   border: 1px solid var(--table-border-color);
   color: var(--body-color);
@@ -102,11 +102,11 @@ header.header-bg {
   line-height: 1;
 }
 
-/* Painel lateral bigSlide */
+
 #menu.bigslide-panel {
   position: fixed;
   top: 0;
-  left: -280px; /* posição inicial fora da tela */
+  left: -280px; 
   width: 280px;
   height: 100vh;
   background: var(--container-bg);
@@ -114,22 +114,20 @@ header.header-bg {
   border-right: 1px solid var(--table-border-color);
   padding: 1rem;
   overflow-y: auto;
-  z-index: 1030; /* abaixo do modal-backdrop (1040) e do modal (1050) */
+  z-index: 1030; 
   transition: left 0.3s ease;
 }
 
-/* Estado aberto para fallback nativo */
+
 body.menu-open #menu.bigslide-panel {
   left: 0;
 }
 
-/* Removidas sobrescritas de texto do tema escuro.
-   Mantemos o comportamento padrão do Bootstrap.
-   Links e textos herdam das variáveis globais definidas em style.css. */
+
 .nav-link { color: var(--body-color); }
 .nav-link:hover { color: var(--accent-color); }
 
-/* Componentes comuns */
+
 .progress .progress-bar { color: #000000; }
 .list-group-item {
   color: var(--body-color);
@@ -151,7 +149,7 @@ body.menu-open #menu.bigslide-panel {
   margin: 0.75rem 0;
 }
 
-/* Backdrop para o menu responsivo */
+
 .bigslide-backdrop {
   position: fixed;
   top: 0;
@@ -161,23 +159,23 @@ body.menu-open #menu.bigslide-panel {
   width: 100%;
   height: 100%;
   background: rgba(16, 24, 40, 0.3);
-  z-index: 1025; /* abaixo do modal-backdrop (1040) e acima do conteúdo */
+  z-index: 1025; 
 }
 
-/* Empurrar conteúdo para direita no fallback */
+
 .push {
   transition: margin-left 0.3s ease;
 }
 .push.push-shifted {
   margin-left: 280px;
 }
-/* Mantém títulos com cor padrão herdada das variáveis globais */
+
 .table th,
 .table td {
   color: var(--body-color) !important;
 }
 
-/* Forçar fundo escuro em tabelas que não usam classe .table */
+
 table {
   background-color: var(--table-bg) !important;
   color: var(--body-color) !important;
@@ -188,7 +186,7 @@ table > :not(caption) > * > * {
   border-color: var(--table-border-color) !important;
 }
 
-/* Neutralizar variantes claras no tema escuro */
+
 .table-light,
 .table-light > :not(caption) > * > * {
   --bs-table-bg: var(--table-bg);
@@ -198,7 +196,7 @@ table > :not(caption) > * > * {
   color: var(--body-color) !important;
 }
 
-/* Garantir listras escuras */
+
 .table-striped {
   --bs-table-striped-bg: var(--table-bg);
 }
@@ -206,17 +204,17 @@ table > :not(caption) > * > * {
   background-color: var(--table-bg) !important;
 }
 
-/* Utilitários claros ajustados ao tema escuro */
+
 .bg-light, .bg-white {
   background-color: var(--card-bg) !important;
   color: var(--body-color) !important;
 }
 
-/* Texto dos botões segue o tema claro */
+
 .btn { color: #000000 !important; }
 .btn:hover,
 .btn:focus { color: #000000 !important; }
-/* Variantes outline com texto escuro (legível no tema claro) */
+
 .btn-outline-primary,
 .btn-outline-secondary,
 .btn-outline-success,
@@ -226,16 +224,16 @@ table > :not(caption) > * > * {
 .btn-outline-light,
 .btn-outline-dark { color: #000000 !important; }
 
-/* Ajuste solicitado: btn-outline-primary deve aparecer azul */
+
 .btn-outline-primary {
   color: #0d6efd !important;
   border-color: #0d6efd !important;
 }
-/* Ícone de fechar do modal sem inversão */
+
 .btn-close { filter: none; opacity: 0.85; }
 .btn-close:hover { opacity: 1; }
 
-/* Link de empresa nos cards/tabelas do Dashboard */
+
 .btn-edit-empresa {
   color: #0d6efd;
 }

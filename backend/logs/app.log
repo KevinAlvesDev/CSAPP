@@ -809,3 +809,523 @@ authlib.integrations.base_client.errors.MismatchingStateError: mismatching_state
 2025-11-16 17:26:51 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
 2025-11-16 17:26:51 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
 2025-11-16 17:26:51 - INFO - system - system - werkzeug - 127.0.0.1 - - [16/Nov/2025 17:26:51] "GET /dashboard HTTP/1.1" 200 -
+2025-11-17 20:17:41 - INFO - system - system - backend.project - Sistema de logging configurado com sucesso
+2025-11-17 20:17:41 - INFO - system - system - backend.project - Sistema de logging configurado com sucesso
+2025-11-17 20:17:41 - INFO - system - system - backend.project - Security headers middleware initialized
+2025-11-17 20:17:41 - INFO - system - system - backend.project - Security headers middleware initialized
+2025-11-17 20:17:49 - INFO - system - system - backend.project - Sistema de logging configurado com sucesso
+2025-11-17 20:17:49 - INFO - system - system - backend.project - Sistema de logging configurado com sucesso
+2025-11-17 20:17:49 - INFO - system - system - backend.project - Security headers middleware initialized
+2025-11-17 20:17:49 - INFO - system - system - backend.project - Security headers middleware initialized
+2025-11-17 20:18:33 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-17 20:18:33 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-17 20:18:33 - INFO - system - system - project - Security headers middleware initialized
+2025-11-17 20:18:33 - INFO - system - system - project - Security headers middleware initialized
+2025-11-17 20:18:44 - INFO - system - system - backend.project - Sistema de logging configurado com sucesso
+2025-11-17 20:18:44 - INFO - system - system - backend.project - Sistema de logging configurado com sucesso
+2025-11-17 20:18:44 - INFO - system - system - backend.project - Security headers middleware initialized
+2025-11-17 20:18:44 - INFO - system - system - backend.project - Security headers middleware initialized
+2025-11-17 20:19:14 - INFO - system - system - backend.project - Sistema de logging configurado com sucesso
+2025-11-17 20:19:14 - INFO - system - system - backend.project - Sistema de logging configurado com sucesso
+2025-11-17 20:19:14 - INFO - system - system - backend.project - Security headers middleware initialized
+2025-11-17 20:19:14 - INFO - system - system - backend.project - Security headers middleware initialized
+2025-11-17 20:19:14 - INFO - system - system - backend.project - Cache initialized with SimpleCache backend (development)
+2025-11-17 20:19:14 - INFO - system - system - backend.project - Cache initialized with SimpleCache backend (development)
+2025-11-17 20:19:24 - INFO - system - system - backend.project - Sistema de logging configurado com sucesso
+2025-11-17 20:19:24 - INFO - system - system - backend.project - Sistema de logging configurado com sucesso
+2025-11-17 20:19:24 - INFO - system - system - backend.project - Security headers middleware initialized
+2025-11-17 20:19:24 - INFO - system - system - backend.project - Security headers middleware initialized
+2025-11-17 20:19:24 - INFO - system - system - backend.project - Cache initialized with SimpleCache backend (development)
+2025-11-17 20:19:24 - INFO - system - system - backend.project - Cache initialized with SimpleCache backend (development)
+2025-11-17 20:19:24 - INFO - system - system - werkzeug - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.15.6:5000
+2025-11-17 20:19:24 - INFO - system - system - werkzeug - [33mPress CTRL+C to quit[0m
+2025-11-17 20:19:24 - INFO - system - system - werkzeug -  * Restarting with stat
+2025-11-17 20:19:25 - INFO - system - system - backend.project - Sistema de logging configurado com sucesso
+2025-11-17 20:19:25 - INFO - system - system - backend.project - Sistema de logging configurado com sucesso
+2025-11-17 20:19:25 - INFO - system - system - backend.project - Security headers middleware initialized
+2025-11-17 20:19:25 - INFO - system - system - backend.project - Security headers middleware initialized
+2025-11-17 20:19:25 - INFO - system - system - backend.project - Cache initialized with SimpleCache backend (development)
+2025-11-17 20:19:25 - INFO - system - system - backend.project - Cache initialized with SimpleCache backend (development)
+2025-11-17 20:19:26 - WARNING - system - system - werkzeug -  * Debugger is active!
+2025-11-17 20:19:26 - INFO - system - system - werkzeug -  * Debugger PIN: 134-067-626
+2025-11-17 20:19:43 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:19:43] "GET /?ide_webview_request_time=1763421581807 HTTP/1.1" 200 -
+2025-11-17 20:19:43 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:19:43] "GET /static/css/login.css HTTP/1.1" 200 -
+2025-11-17 20:19:44 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:19:44] "[32mGET /@vite/client HTTP/1.1[0m" 302 -
+2025-11-17 20:19:44 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-17 20:19:44 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-17 20:19:44 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:19:44] "[32mGET /dashboard HTTP/1.1[0m" 302 -
+2025-11-17 20:19:44 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:19:44] "GET /login HTTP/1.1" 200 -
+2025-11-17 20:19:55 - WARNING - system - system - auth - Failed login attempt for: suporte01.cs@gmail.com
+2025-11-17 20:19:55 - WARNING - system - system - auth - Failed login attempt for: suporte01.cs@gmail.com
+2025-11-17 20:19:55 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:19:55] "POST /login HTTP/1.1" 200 -
+2025-11-17 20:19:56 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:19:56] "GET /static/css/login.css HTTP/1.1" 200 -
+2025-11-17 20:19:56 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:19:56] "[32mGET /@vite/client HTTP/1.1[0m" 302 -
+2025-11-17 20:19:56 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-17 20:19:56 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-17 20:19:56 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:19:56] "[32mGET /dashboard HTTP/1.1[0m" 302 -
+2025-11-17 20:19:56 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:19:56] "GET /login HTTP/1.1" 200 -
+2025-11-17 20:20:03 - INFO - system - system - auth - User logged in successfully: suporte01.cs@gmail.com
+2025-11-17 20:20:03 - INFO - system - system - auth - User logged in successfully: suporte01.cs@gmail.com
+2025-11-17 20:20:03 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:20:03] "[32mPOST /login HTTP/1.1[0m" 302 -
+2025-11-17 20:20:03 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-17 20:20:03 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-17 20:20:04 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:20:04] "GET /dashboard HTTP/1.1" 200 -
+2025-11-17 20:20:04 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:20:04] "GET /static/css/style.css HTTP/1.1" 200 -
+2025-11-17 20:20:04 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:20:04] "GET /static/css/theme.css HTTP/1.1" 200 -
+2025-11-17 20:20:04 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:20:04] "[32mGET /@vite/client HTTP/1.1[0m" 302 -
+2025-11-17 20:20:04 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-17 20:20:04 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-17 20:20:04 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:20:04] "GET /dashboard HTTP/1.1" 200 -
+2025-11-17 20:20:08 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /criar_implantacao
+2025-11-17 20:20:08 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /criar_implantacao
+2025-11-17 20:20:08 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /criar_implantacao
+2025-11-17 20:20:08 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /criar_implantacao
+2025-11-17 20:20:08 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:20:08] "[32mPOST /criar_implantacao HTTP/1.1[0m" 302 -
+2025-11-17 20:20:08 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-17 20:20:08 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-17 20:20:08 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:20:08] "GET /dashboard HTTP/1.1" 200 -
+2025-11-17 20:20:08 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:20:08] "GET /static/css/style.css HTTP/1.1" 200 -
+2025-11-17 20:20:08 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:20:08] "GET /static/css/theme.css HTTP/1.1" 200 -
+2025-11-17 20:20:08 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:20:08] "[32mGET /@vite/client HTTP/1.1[0m" 302 -
+2025-11-17 20:20:09 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-17 20:20:09 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-17 20:20:09 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:20:09] "GET /dashboard HTTP/1.1" 200 -
+2025-11-17 20:20:11 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /iniciar_implantacao
+2025-11-17 20:20:11 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /iniciar_implantacao
+2025-11-17 20:20:11 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:20:11] "[32mPOST /iniciar_implantacao HTTP/1.1[0m" 302 -
+2025-11-17 20:20:11 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /implantacao/1
+2025-11-17 20:20:11 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /implantacao/1
+2025-11-17 20:20:11 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:20:11] "GET /implantacao/1 HTTP/1.1" 200 -
+2025-11-17 20:20:12 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:20:12] "GET /static/css/style.css HTTP/1.1" 200 -
+2025-11-17 20:20:12 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:20:12] "GET /static/css/theme.css HTTP/1.1" 200 -
+2025-11-17 20:20:12 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:20:12] "GET /static/css/implantacao_detalhes.css?v=2 HTTP/1.1" 200 -
+2025-11-17 20:20:12 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:20:12] "GET /static/js/implantacao_detalhes.js HTTP/1.1" 200 -
+2025-11-17 20:20:12 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:20:12] "[32mGET /@vite/client HTTP/1.1[0m" 302 -
+2025-11-17 20:20:12 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-17 20:20:12 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-17 20:20:12 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:20:12] "GET /dashboard HTTP/1.1" 200 -
+2025-11-17 20:20:51 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /api/toggle_tarefas
+2025-11-17 20:20:51 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /api/toggle_tarefas
+2025-11-17 20:20:51 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:20:51] "POST /api/toggle_tarefas HTTP/1.1" 200 -
+2025-11-17 20:20:54 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /api/toggle_tarefas
+2025-11-17 20:20:54 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /api/toggle_tarefas
+2025-11-17 20:20:54 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:20:54] "POST /api/toggle_tarefas HTTP/1.1" 200 -
+2025-11-17 20:20:57 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /api/toggle_tarefas
+2025-11-17 20:20:57 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /api/toggle_tarefas
+2025-11-17 20:20:57 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:20:57] "POST /api/toggle_tarefas HTTP/1.1" 200 -
+2025-11-17 20:21:01 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /api/toggle_tarefas
+2025-11-17 20:21:01 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /api/toggle_tarefas
+2025-11-17 20:21:01 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:21:01] "POST /api/toggle_tarefas HTTP/1.1" 200 -
+2025-11-17 20:23:03 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-17 20:23:03 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-17 20:23:03 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:23:03] "GET /dashboard HTTP/1.1" 200 -
+2025-11-17 20:23:03 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:23:03] "GET /static/css/style.css HTTP/1.1" 200 -
+2025-11-17 20:23:03 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:23:03] "GET /static/css/theme.css HTTP/1.1" 200 -
+2025-11-17 20:23:03 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:23:03] "[32mGET /@vite/client HTTP/1.1[0m" 302 -
+2025-11-17 20:23:03 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-17 20:23:03 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-17 20:23:03 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:23:03] "GET /dashboard HTTP/1.1" 200 -
+2025-11-17 20:23:34 - INFO - system - system - werkzeug -  * Detected change in 'C:\\Users\\Usuário\\Documents\\app\\CSAPP\\backend\\project\\blueprints\\api.py', reloading
+2025-11-17 20:23:34 - INFO - system - system - werkzeug -  * Restarting with stat
+2025-11-17 20:23:35 - INFO - system - system - backend.project - Sistema de logging configurado com sucesso
+2025-11-17 20:23:35 - INFO - system - system - backend.project - Sistema de logging configurado com sucesso
+2025-11-17 20:23:35 - INFO - system - system - backend.project - Security headers middleware initialized
+2025-11-17 20:23:35 - INFO - system - system - backend.project - Security headers middleware initialized
+2025-11-17 20:23:35 - INFO - system - system - backend.project - Cache initialized with SimpleCache backend (development)
+2025-11-17 20:23:35 - INFO - system - system - backend.project - Cache initialized with SimpleCache backend (development)
+2025-11-17 20:23:36 - WARNING - system - system - werkzeug -  * Debugger is active!
+2025-11-17 20:23:36 - INFO - system - system - werkzeug -  * Debugger PIN: 134-067-626
+2025-11-17 20:23:47 - INFO - system - system - backend.project - Sistema de logging configurado com sucesso
+2025-11-17 20:23:47 - INFO - system - system - backend.project - Sistema de logging configurado com sucesso
+2025-11-17 20:23:47 - INFO - system - system - backend.project - Security headers middleware initialized
+2025-11-17 20:23:47 - INFO - system - system - backend.project - Security headers middleware initialized
+2025-11-17 20:23:47 - INFO - system - system - backend.project - Cache initialized with SimpleCache backend (development)
+2025-11-17 20:23:47 - INFO - system - system - backend.project - Cache initialized with SimpleCache backend (development)
+2025-11-17 20:23:47 - INFO - system - system - werkzeug - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.15.6:5000
+2025-11-17 20:23:47 - INFO - system - system - werkzeug - [33mPress CTRL+C to quit[0m
+2025-11-17 20:23:47 - INFO - system - system - werkzeug -  * Restarting with stat
+2025-11-17 20:23:48 - INFO - system - system - backend.project - Sistema de logging configurado com sucesso
+2025-11-17 20:23:48 - INFO - system - system - backend.project - Sistema de logging configurado com sucesso
+2025-11-17 20:23:48 - INFO - system - system - backend.project - Security headers middleware initialized
+2025-11-17 20:23:48 - INFO - system - system - backend.project - Security headers middleware initialized
+2025-11-17 20:23:48 - INFO - system - system - backend.project - Cache initialized with SimpleCache backend (development)
+2025-11-17 20:23:48 - INFO - system - system - backend.project - Cache initialized with SimpleCache backend (development)
+2025-11-17 20:23:48 - WARNING - system - system - werkzeug -  * Debugger is active!
+2025-11-17 20:23:48 - INFO - system - system - werkzeug -  * Debugger PIN: 134-067-626
+2025-11-17 20:23:51 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:23:51] "[32mGET /?ide_webview_request_time=1763421831682 HTTP/1.1[0m" 302 -
+2025-11-17 20:23:52 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-17 20:23:52 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-17 20:23:52 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:23:52] "GET /dashboard HTTP/1.1" 200 -
+2025-11-17 20:23:52 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:23:52] "GET /static/css/style.css HTTP/1.1" 200 -
+2025-11-17 20:23:52 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:23:52] "GET /static/css/theme.css HTTP/1.1" 200 -
+2025-11-17 20:23:53 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:23:53] "[32mGET /@vite/client HTTP/1.1[0m" 302 -
+2025-11-17 20:23:53 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-17 20:23:53 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-17 20:23:53 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:23:53] "GET /dashboard HTTP/1.1" 200 -
+2025-11-17 20:24:10 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /implantacao/1
+2025-11-17 20:24:10 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /implantacao/1
+2025-11-17 20:24:10 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:24:10] "GET /implantacao/1 HTTP/1.1" 200 -
+2025-11-17 20:24:10 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:24:10] "GET /static/css/style.css HTTP/1.1" 200 -
+2025-11-17 20:24:10 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:24:10] "GET /static/css/theme.css HTTP/1.1" 200 -
+2025-11-17 20:24:10 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:24:10] "GET /static/css/implantacao_detalhes.css?v=2 HTTP/1.1" 200 -
+2025-11-17 20:24:10 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:24:10] "GET /static/js/implantacao_detalhes.js HTTP/1.1" 200 -
+2025-11-17 20:24:10 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:24:10] "[32mGET /@vite/client HTTP/1.1[0m" 302 -
+2025-11-17 20:24:11 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-17 20:24:11 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-17 20:24:11 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:24:11] "GET /dashboard HTTP/1.1" 200 -
+2025-11-17 20:24:12 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /api/excluir_tarefas_modulo
+2025-11-17 20:24:12 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /api/excluir_tarefas_modulo
+2025-11-17 20:24:12 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - api - All tasks from module Welcome in implantation 1 deleted by user suporte01.cs@gmail.com
+2025-11-17 20:24:12 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - api - All tasks from module Welcome in implantation 1 deleted by user suporte01.cs@gmail.com
+2025-11-17 20:24:12 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:24:12] "POST /api/excluir_tarefas_modulo HTTP/1.1" 200 -
+2025-11-17 20:24:14 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /api/excluir_tarefas_modulo
+2025-11-17 20:24:14 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /api/excluir_tarefas_modulo
+2025-11-17 20:24:14 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - api - All tasks from module Estruturação de BD in implantation 1 deleted by user suporte01.cs@gmail.com
+2025-11-17 20:24:14 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - api - All tasks from module Estruturação de BD in implantation 1 deleted by user suporte01.cs@gmail.com
+2025-11-17 20:24:14 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:24:14] "POST /api/excluir_tarefas_modulo HTTP/1.1" 200 -
+2025-11-17 20:24:14 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /api/toggle_tarefas
+2025-11-17 20:24:14 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /api/toggle_tarefas
+2025-11-17 20:24:14 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:24:14] "POST /api/toggle_tarefas HTTP/1.1" 200 -
+2025-11-17 20:24:16 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /api/excluir_tarefas_modulo
+2025-11-17 20:24:16 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /api/excluir_tarefas_modulo
+2025-11-17 20:24:16 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - api - All tasks from module Importação de dados in implantation 1 deleted by user suporte01.cs@gmail.com
+2025-11-17 20:24:16 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - api - All tasks from module Importação de dados in implantation 1 deleted by user suporte01.cs@gmail.com
+2025-11-17 20:24:16 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:24:16] "POST /api/excluir_tarefas_modulo HTTP/1.1" 200 -
+2025-11-17 20:24:17 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /api/v1/implantacoes/1
+2025-11-17 20:24:17 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /api/v1/implantacoes/1
+2025-11-17 20:24:17 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:24:17] "GET /api/v1/implantacoes/1 HTTP/1.1" 200 -
+2025-11-17 20:24:24 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /api/toggle_tarefas
+2025-11-17 20:24:24 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /api/toggle_tarefas
+2025-11-17 20:24:24 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:24:24] "POST /api/toggle_tarefas HTTP/1.1" 200 -
+2025-11-17 20:24:24 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /api/excluir_tarefas_modulo
+2025-11-17 20:24:24 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /api/excluir_tarefas_modulo
+2025-11-17 20:24:24 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - api - All tasks from module Conclusão in implantation 1 deleted by user suporte01.cs@gmail.com
+2025-11-17 20:24:24 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - api - All tasks from module Conclusão in implantation 1 deleted by user suporte01.cs@gmail.com
+2025-11-17 20:24:24 - INFO - system - system - werkzeug - 127.0.0.1 - - [17/Nov/2025 20:24:24] "POST /api/excluir_tarefas_modulo HTTP/1.1" 200 -
+2025-11-17 20:25:02 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-17 20:25:02 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-17 20:25:02 - INFO - system - system - project - Security headers middleware initialized
+2025-11-17 20:25:02 - INFO - system - system - project - Security headers middleware initialized
+2025-11-17 20:25:02 - INFO - system - system - project - Cache initialized with SimpleCache backend (development)
+2025-11-17 20:25:02 - INFO - system - system - project - Cache initialized with SimpleCache backend (development)
+2025-11-17 20:25:03 - INFO - system - system - auth - User logged in successfully: test_auto@example.com
+2025-11-17 20:25:03 - INFO - system - system - auth - User logged in successfully: test_auto@example.com
+2025-11-17 20:25:03 - INFO - test_auto@example.com - Tester (Implantador) - auth - User authenticated: test_auto@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 20:25:03 - INFO - test_auto@example.com - Tester (Implantador) - auth - User authenticated: test_auto@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 20:25:03 - INFO - test_auto@example.com - Tester (Implantador) - auth - User authenticated: test_auto@example.com, Role: Implantador, Path: /api/excluir_tarefas_modulo
+2025-11-17 20:25:03 - INFO - test_auto@example.com - Tester (Implantador) - auth - User authenticated: test_auto@example.com, Role: Implantador, Path: /api/excluir_tarefas_modulo
+2025-11-17 20:25:03 - INFO - test_auto@example.com - Tester (Implantador) - api - All tasks from module Modulo B in implantation 1 deleted by user test_auto@example.com
+2025-11-17 20:25:03 - INFO - test_auto@example.com - Tester (Implantador) - api - All tasks from module Modulo B in implantation 1 deleted by user test_auto@example.com
+2025-11-17 20:29:32 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-17 20:29:32 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-17 20:29:32 - INFO - system - system - project - Security headers middleware initialized
+2025-11-17 20:29:32 - INFO - system - system - project - Security headers middleware initialized
+2025-11-17 20:29:33 - INFO - system - system - project - Cache initialized with SimpleCache backend (development)
+2025-11-17 20:29:33 - INFO - system - system - project - Cache initialized with SimpleCache backend (development)
+2025-11-17 20:29:33 - INFO - system - system - auth - User logged in successfully: photo_local@example.com
+2025-11-17 20:29:33 - INFO - system - system - auth - User logged in successfully: photo_local@example.com
+2025-11-17 20:29:33 - INFO - photo_local@example.com - User (Implantador) - auth - User authenticated: photo_local@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 20:29:33 - INFO - photo_local@example.com - User (Implantador) - auth - User authenticated: photo_local@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 20:29:33 - INFO - photo_local@example.com - User (Implantador) - auth - User authenticated: photo_local@example.com, Role: Implantador, Path: /profile/save
+2025-11-17 20:29:33 - INFO - photo_local@example.com - User (Implantador) - auth - User authenticated: photo_local@example.com, Role: Implantador, Path: /profile/save
+2025-11-17 20:29:33 - ERROR - photo_local@example.com - User (Implantador) - app - Falha no upload para o R2 para photo_local@example.com: Parameter validation failed:
+Invalid bucket name "*": Bucket name must match the regex "^[a-zA-Z0-9.\-_]{1,255}$" or be an ARN matching the regex "^arn:(aws).*:(s3|s3-object-lambda):[a-z\-0-9]*:[0-9]{12}:accesspoint[/:][a-zA-Z0-9\-.]{1,63}$|^arn:(aws).*:s3-outposts:[a-z\-0-9]+:[0-9]{12}:outpost[/:][a-zA-Z0-9\-]{1,63}[/:]accesspoint[/:][a-zA-Z0-9\-]{1,63}$"
+2025-11-17 20:29:33 - ERROR - photo_local@example.com - User (Implantador) - app - Falha no upload para o R2 para photo_local@example.com: Parameter validation failed:
+Invalid bucket name "*": Bucket name must match the regex "^[a-zA-Z0-9.\-_]{1,255}$" or be an ARN matching the regex "^arn:(aws).*:(s3|s3-object-lambda):[a-z\-0-9]*:[0-9]{12}:accesspoint[/:][a-zA-Z0-9\-.]{1,63}$|^arn:(aws).*:s3-outposts:[a-z\-0-9]+:[0-9]{12}:outpost[/:][a-zA-Z0-9\-]{1,63}[/:]accesspoint[/:][a-zA-Z0-9\-]{1,63}$"
+2025-11-17 20:29:33 - INFO - photo_local@example.com - User (Implantador) - auth - User authenticated: photo_local@example.com, Role: Implantador, Path: /profile/
+2025-11-17 20:29:33 - INFO - photo_local@example.com - User (Implantador) - auth - User authenticated: photo_local@example.com, Role: Implantador, Path: /profile/
+2025-11-17 20:29:33 - INFO - system - system - project - Sentry não disponível (sentry-sdk não instalado)
+2025-11-17 20:29:33 - INFO - system - system - project - Sentry não disponível (sentry-sdk não instalado)
+2025-11-17 20:29:33 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-17 20:29:33 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-17 20:29:33 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-17 20:29:33 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-17 20:29:33 - INFO - system - system - project - Security headers middleware initialized
+2025-11-17 20:29:33 - INFO - system - system - project - Security headers middleware initialized
+2025-11-17 20:29:33 - INFO - system - system - project - Security headers middleware initialized
+2025-11-17 20:29:33 - INFO - system - system - project - Security headers middleware initialized
+2025-11-17 20:29:33 - INFO - system - system - project - Cache initialized with SimpleCache backend (development)
+2025-11-17 20:29:33 - INFO - system - system - project - Cache initialized with SimpleCache backend (development)
+2025-11-17 20:29:33 - INFO - system - system - project - Cache initialized with SimpleCache backend (development)
+2025-11-17 20:29:33 - INFO - system - system - project - Cache initialized with SimpleCache backend (development)
+2025-11-17 20:29:34 - INFO - system - system - auth - User logged in successfully: del_cache@example.com
+2025-11-17 20:29:34 - INFO - system - system - auth - User logged in successfully: del_cache@example.com
+2025-11-17 20:29:34 - INFO - system - system - auth - User logged in successfully: del_cache@example.com
+2025-11-17 20:29:34 - INFO - system - system - auth - User logged in successfully: del_cache@example.com
+2025-11-17 20:29:34 - INFO - del_cache@example.com - User (Implantador) - auth - User authenticated: del_cache@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 20:29:34 - INFO - del_cache@example.com - User (Implantador) - auth - User authenticated: del_cache@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 20:29:34 - INFO - del_cache@example.com - User (Implantador) - auth - User authenticated: del_cache@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 20:29:34 - INFO - del_cache@example.com - User (Implantador) - auth - User authenticated: del_cache@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 20:29:34 - INFO - del_cache@example.com - User (Implantador) - auth - User authenticated: del_cache@example.com, Role: Implantador, Path: /excluir_implantacao
+2025-11-17 20:29:34 - INFO - del_cache@example.com - User (Implantador) - auth - User authenticated: del_cache@example.com, Role: Implantador, Path: /excluir_implantacao
+2025-11-17 20:29:34 - INFO - del_cache@example.com - User (Implantador) - auth - User authenticated: del_cache@example.com, Role: Implantador, Path: /excluir_implantacao
+2025-11-17 20:29:34 - INFO - del_cache@example.com - User (Implantador) - auth - User authenticated: del_cache@example.com, Role: Implantador, Path: /excluir_implantacao
+2025-11-17 20:29:34 - INFO - del_cache@example.com - User (Implantador) - auth - User authenticated: del_cache@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 20:29:34 - INFO - del_cache@example.com - User (Implantador) - auth - User authenticated: del_cache@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 20:29:34 - INFO - del_cache@example.com - User (Implantador) - auth - User authenticated: del_cache@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 20:29:34 - INFO - del_cache@example.com - User (Implantador) - auth - User authenticated: del_cache@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 20:29:51 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-17 20:29:51 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-17 20:29:51 - INFO - system - system - project - Security headers middleware initialized
+2025-11-17 20:29:51 - INFO - system - system - project - Security headers middleware initialized
+2025-11-17 20:29:51 - INFO - system - system - project - Cache initialized with SimpleCache backend (development)
+2025-11-17 20:29:51 - INFO - system - system - project - Cache initialized with SimpleCache backend (development)
+2025-11-17 20:29:52 - INFO - system - system - auth - User logged in successfully: photo_local@example.com
+2025-11-17 20:29:52 - INFO - system - system - auth - User logged in successfully: photo_local@example.com
+2025-11-17 20:29:52 - INFO - photo_local@example.com - User (Implantador) - auth - User authenticated: photo_local@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 20:29:52 - INFO - photo_local@example.com - User (Implantador) - auth - User authenticated: photo_local@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 20:29:52 - INFO - photo_local@example.com - User (Implantador) - auth - User authenticated: photo_local@example.com, Role: Implantador, Path: /profile/save
+2025-11-17 20:29:52 - INFO - photo_local@example.com - User (Implantador) - auth - User authenticated: photo_local@example.com, Role: Implantador, Path: /profile/save
+2025-11-17 20:29:52 - ERROR - photo_local@example.com - User (Implantador) - app - Falha no upload para o R2 para photo_local@example.com: Parameter validation failed:
+Invalid bucket name "*": Bucket name must match the regex "^[a-zA-Z0-9.\-_]{1,255}$" or be an ARN matching the regex "^arn:(aws).*:(s3|s3-object-lambda):[a-z\-0-9]*:[0-9]{12}:accesspoint[/:][a-zA-Z0-9\-.]{1,63}$|^arn:(aws).*:s3-outposts:[a-z\-0-9]+:[0-9]{12}:outpost[/:][a-zA-Z0-9\-]{1,63}[/:]accesspoint[/:][a-zA-Z0-9\-]{1,63}$"
+2025-11-17 20:29:52 - ERROR - photo_local@example.com - User (Implantador) - app - Falha no upload para o R2 para photo_local@example.com: Parameter validation failed:
+Invalid bucket name "*": Bucket name must match the regex "^[a-zA-Z0-9.\-_]{1,255}$" or be an ARN matching the regex "^arn:(aws).*:(s3|s3-object-lambda):[a-z\-0-9]*:[0-9]{12}:accesspoint[/:][a-zA-Z0-9\-.]{1,63}$|^arn:(aws).*:s3-outposts:[a-z\-0-9]+:[0-9]{12}:outpost[/:][a-zA-Z0-9\-]{1,63}[/:]accesspoint[/:][a-zA-Z0-9\-]{1,63}$"
+2025-11-17 20:29:52 - INFO - photo_local@example.com - User (Implantador) - auth - User authenticated: photo_local@example.com, Role: Implantador, Path: /profile/
+2025-11-17 20:29:52 - INFO - photo_local@example.com - User (Implantador) - auth - User authenticated: photo_local@example.com, Role: Implantador, Path: /profile/
+2025-11-17 20:30:11 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-17 20:30:11 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-17 20:30:11 - INFO - system - system - project - Security headers middleware initialized
+2025-11-17 20:30:11 - INFO - system - system - project - Security headers middleware initialized
+2025-11-17 20:30:11 - INFO - system - system - project - Cache initialized with SimpleCache backend (development)
+2025-11-17 20:30:11 - INFO - system - system - project - Cache initialized with SimpleCache backend (development)
+2025-11-17 20:30:11 - INFO - system - system - auth - User logged in successfully: photo_local@example.com
+2025-11-17 20:30:11 - INFO - system - system - auth - User logged in successfully: photo_local@example.com
+2025-11-17 20:30:11 - INFO - photo_local@example.com - User (Implantador) - auth - User authenticated: photo_local@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 20:30:11 - INFO - photo_local@example.com - User (Implantador) - auth - User authenticated: photo_local@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 20:30:11 - INFO - photo_local@example.com - User (Implantador) - auth - User authenticated: photo_local@example.com, Role: Implantador, Path: /profile/save
+2025-11-17 20:30:11 - INFO - photo_local@example.com - User (Implantador) - auth - User authenticated: photo_local@example.com, Role: Implantador, Path: /profile/save
+2025-11-17 20:30:11 - ERROR - photo_local@example.com - User (Implantador) - app - Falha no upload para o R2 para photo_local@example.com: Parameter validation failed:
+Invalid bucket name "*": Bucket name must match the regex "^[a-zA-Z0-9.\-_]{1,255}$" or be an ARN matching the regex "^arn:(aws).*:(s3|s3-object-lambda):[a-z\-0-9]*:[0-9]{12}:accesspoint[/:][a-zA-Z0-9\-.]{1,63}$|^arn:(aws).*:s3-outposts:[a-z\-0-9]+:[0-9]{12}:outpost[/:][a-zA-Z0-9\-]{1,63}[/:]accesspoint[/:][a-zA-Z0-9\-]{1,63}$"
+2025-11-17 20:30:11 - ERROR - photo_local@example.com - User (Implantador) - app - Falha no upload para o R2 para photo_local@example.com: Parameter validation failed:
+Invalid bucket name "*": Bucket name must match the regex "^[a-zA-Z0-9.\-_]{1,255}$" or be an ARN matching the regex "^arn:(aws).*:(s3|s3-object-lambda):[a-z\-0-9]*:[0-9]{12}:accesspoint[/:][a-zA-Z0-9\-.]{1,63}$|^arn:(aws).*:s3-outposts:[a-z\-0-9]+:[0-9]{12}:outpost[/:][a-zA-Z0-9\-]{1,63}[/:]accesspoint[/:][a-zA-Z0-9\-]{1,63}$"
+2025-11-17 20:30:11 - INFO - photo_local@example.com - User (Implantador) - auth - User authenticated: photo_local@example.com, Role: Implantador, Path: /profile/
+2025-11-17 20:30:11 - INFO - photo_local@example.com - User (Implantador) - auth - User authenticated: photo_local@example.com, Role: Implantador, Path: /profile/
+2025-11-17 20:30:39 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-17 20:30:39 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-17 20:30:39 - INFO - system - system - project - Security headers middleware initialized
+2025-11-17 20:30:39 - INFO - system - system - project - Security headers middleware initialized
+2025-11-17 20:30:39 - INFO - system - system - project - Cache initialized with SimpleCache backend (development)
+2025-11-17 20:30:39 - INFO - system - system - project - Cache initialized with SimpleCache backend (development)
+2025-11-17 20:30:39 - INFO - system - system - auth - User logged in successfully: photo_local@example.com
+2025-11-17 20:30:39 - INFO - system - system - auth - User logged in successfully: photo_local@example.com
+2025-11-17 20:30:39 - INFO - photo_local@example.com - User (Implantador) - auth - User authenticated: photo_local@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 20:30:39 - INFO - photo_local@example.com - User (Implantador) - auth - User authenticated: photo_local@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 20:30:40 - INFO - photo_local@example.com - User (Implantador) - auth - User authenticated: photo_local@example.com, Role: Implantador, Path: /profile/save
+2025-11-17 20:30:40 - INFO - photo_local@example.com - User (Implantador) - auth - User authenticated: photo_local@example.com, Role: Implantador, Path: /profile/save
+2025-11-17 20:30:40 - ERROR - photo_local@example.com - User (Implantador) - app - Falha no upload para o R2 para photo_local@example.com: Parameter validation failed:
+Invalid bucket name "*": Bucket name must match the regex "^[a-zA-Z0-9.\-_]{1,255}$" or be an ARN matching the regex "^arn:(aws).*:(s3|s3-object-lambda):[a-z\-0-9]*:[0-9]{12}:accesspoint[/:][a-zA-Z0-9\-.]{1,63}$|^arn:(aws).*:s3-outposts:[a-z\-0-9]+:[0-9]{12}:outpost[/:][a-zA-Z0-9\-]{1,63}[/:]accesspoint[/:][a-zA-Z0-9\-]{1,63}$"
+2025-11-17 20:30:40 - ERROR - photo_local@example.com - User (Implantador) - app - Falha no upload para o R2 para photo_local@example.com: Parameter validation failed:
+Invalid bucket name "*": Bucket name must match the regex "^[a-zA-Z0-9.\-_]{1,255}$" or be an ARN matching the regex "^arn:(aws).*:(s3|s3-object-lambda):[a-z\-0-9]*:[0-9]{12}:accesspoint[/:][a-zA-Z0-9\-.]{1,63}$|^arn:(aws).*:s3-outposts:[a-z\-0-9]+:[0-9]{12}:outpost[/:][a-zA-Z0-9\-]{1,63}[/:]accesspoint[/:][a-zA-Z0-9\-]{1,63}$"
+2025-11-17 20:30:40 - INFO - photo_local@example.com - User (Implantador) - auth - User authenticated: photo_local@example.com, Role: Implantador, Path: /profile/
+2025-11-17 20:30:40 - INFO - photo_local@example.com - User (Implantador) - auth - User authenticated: photo_local@example.com, Role: Implantador, Path: /profile/
+2025-11-17 20:31:37 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-17 20:31:37 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-17 20:31:37 - INFO - system - system - project - Security headers middleware initialized
+2025-11-17 20:31:37 - INFO - system - system - project - Security headers middleware initialized
+2025-11-17 20:31:37 - INFO - system - system - project - Cache initialized with SimpleCache backend (development)
+2025-11-17 20:31:37 - INFO - system - system - project - Cache initialized with SimpleCache backend (development)
+2025-11-17 20:31:38 - INFO - system - system - auth - User logged in successfully: photo_local@example.com
+2025-11-17 20:31:38 - INFO - system - system - auth - User logged in successfully: photo_local@example.com
+2025-11-17 20:31:38 - INFO - photo_local@example.com - User (Implantador) - auth - User authenticated: photo_local@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 20:31:38 - INFO - photo_local@example.com - User (Implantador) - auth - User authenticated: photo_local@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 20:31:38 - INFO - photo_local@example.com - User (Implantador) - auth - User authenticated: photo_local@example.com, Role: Implantador, Path: /profile/save
+2025-11-17 20:31:38 - INFO - photo_local@example.com - User (Implantador) - auth - User authenticated: photo_local@example.com, Role: Implantador, Path: /profile/save
+2025-11-17 20:31:38 - ERROR - photo_local@example.com - User (Implantador) - app - Falha no upload para o R2 para photo_local@example.com: Parameter validation failed:
+Invalid bucket name "*": Bucket name must match the regex "^[a-zA-Z0-9.\-_]{1,255}$" or be an ARN matching the regex "^arn:(aws).*:(s3|s3-object-lambda):[a-z\-0-9]*:[0-9]{12}:accesspoint[/:][a-zA-Z0-9\-.]{1,63}$|^arn:(aws).*:s3-outposts:[a-z\-0-9]+:[0-9]{12}:outpost[/:][a-zA-Z0-9\-]{1,63}[/:]accesspoint[/:][a-zA-Z0-9\-]{1,63}$"
+2025-11-17 20:31:38 - ERROR - photo_local@example.com - User (Implantador) - app - Falha no upload para o R2 para photo_local@example.com: Parameter validation failed:
+Invalid bucket name "*": Bucket name must match the regex "^[a-zA-Z0-9.\-_]{1,255}$" or be an ARN matching the regex "^arn:(aws).*:(s3|s3-object-lambda):[a-z\-0-9]*:[0-9]{12}:accesspoint[/:][a-zA-Z0-9\-.]{1,63}$|^arn:(aws).*:s3-outposts:[a-z\-0-9]+:[0-9]{12}:outpost[/:][a-zA-Z0-9\-]{1,63}[/:]accesspoint[/:][a-zA-Z0-9\-]{1,63}$"
+2025-11-17 20:31:38 - ERROR - photo_local@example.com - User (Implantador) - app - Falha ao salvar foto local para photo_local@example.com: I/O operation on closed file.
+2025-11-17 20:31:38 - ERROR - photo_local@example.com - User (Implantador) - app - Falha ao salvar foto local para photo_local@example.com: I/O operation on closed file.
+2025-11-17 20:31:38 - INFO - photo_local@example.com - User (Implantador) - auth - User authenticated: photo_local@example.com, Role: Implantador, Path: /profile/
+2025-11-17 20:31:38 - INFO - photo_local@example.com - User (Implantador) - auth - User authenticated: photo_local@example.com, Role: Implantador, Path: /profile/
+2025-11-17 21:12:24 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-17 21:12:24 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-17 21:12:24 - INFO - system - system - project - Security headers middleware initialized
+2025-11-17 21:12:24 - INFO - system - system - project - Security headers middleware initialized
+2025-11-17 21:12:24 - INFO - system - system - project - Cache initialized with SimpleCache backend (development)
+2025-11-17 21:12:24 - INFO - system - system - project - Cache initialized with SimpleCache backend (development)
+2025-11-17 21:12:24 - INFO - system - system - auth - User logged in successfully: nova@example.com
+2025-11-17 21:12:24 - INFO - system - system - auth - User logged in successfully: nova@example.com
+2025-11-17 21:12:24 - INFO - nova@example.com - User (Implantador) - auth - User authenticated: nova@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 21:12:24 - INFO - nova@example.com - User (Implantador) - auth - User authenticated: nova@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 21:12:24 - INFO - nova@example.com - User (Implantador) - auth - User authenticated: nova@example.com, Role: Implantador, Path: /cancelar_implantacao
+2025-11-17 21:12:24 - INFO - nova@example.com - User (Implantador) - auth - User authenticated: nova@example.com, Role: Implantador, Path: /cancelar_implantacao
+2025-11-17 21:12:24 - INFO - nova@example.com - User (Implantador) - auth - User authenticated: nova@example.com, Role: Implantador, Path: /implantacao/3
+2025-11-17 21:12:24 - INFO - nova@example.com - User (Implantador) - auth - User authenticated: nova@example.com, Role: Implantador, Path: /implantacao/3
+2025-11-17 21:12:24 - INFO - nova@example.com - User (Implantador) - auth - User authenticated: nova@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 21:12:24 - INFO - nova@example.com - User (Implantador) - auth - User authenticated: nova@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 21:17:28 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-17 21:17:28 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-17 21:17:28 - INFO - system - system - project - Security headers middleware initialized
+2025-11-17 21:17:28 - INFO - system - system - project - Security headers middleware initialized
+2025-11-17 21:17:28 - INFO - system - system - project - Cache initialized with SimpleCache backend (development)
+2025-11-17 21:17:28 - INFO - system - system - project - Cache initialized with SimpleCache backend (development)
+2025-11-17 21:17:28 - INFO - system - system - auth - User logged in successfully: final_date@example.com
+2025-11-17 21:17:28 - INFO - system - system - auth - User logged in successfully: final_date@example.com
+2025-11-17 21:17:28 - INFO - final_date@example.com - User (Implantador) - auth - User authenticated: final_date@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 21:17:28 - INFO - final_date@example.com - User (Implantador) - auth - User authenticated: final_date@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 21:17:28 - INFO - final_date@example.com - User (Implantador) - auth - User authenticated: final_date@example.com, Role: Implantador, Path: /finalizar_implantacao
+2025-11-17 21:17:28 - INFO - final_date@example.com - User (Implantador) - auth - User authenticated: final_date@example.com, Role: Implantador, Path: /finalizar_implantacao
+2025-11-17 21:17:28 - INFO - final_date@example.com - User (Implantador) - app - Finalizar solicitada por final_date@example.com para implantacao_id=4
+2025-11-17 21:17:28 - INFO - final_date@example.com - User (Implantador) - app - Finalizar solicitada por final_date@example.com para implantacao_id=4
+2025-11-17 21:17:28 - INFO - final_date@example.com - User (Implantador) - app - Finalizar validação tarefas: total=2 pendentes=0 id=4 user=final_date@example.com
+2025-11-17 21:17:28 - INFO - final_date@example.com - User (Implantador) - app - Finalizar validação tarefas: total=2 pendentes=0 id=4 user=final_date@example.com
+2025-11-17 21:17:28 - INFO - final_date@example.com - User (Implantador) - app - Finalizar concluída id=4 user=final_date@example.com
+2025-11-17 21:17:28 - INFO - final_date@example.com - User (Implantador) - app - Finalizar concluída id=4 user=final_date@example.com
+2025-11-17 21:17:28 - INFO - final_date@example.com - User (Implantador) - auth - User authenticated: final_date@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 21:17:28 - INFO - final_date@example.com - User (Implantador) - auth - User authenticated: final_date@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 21:17:28 - INFO - system - system - project - Sentry não disponível (sentry-sdk não instalado)
+2025-11-17 21:17:28 - INFO - system - system - project - Sentry não disponível (sentry-sdk não instalado)
+2025-11-17 21:17:28 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-17 21:17:28 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-17 21:17:28 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-17 21:17:28 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-17 21:17:28 - INFO - system - system - project - Security headers middleware initialized
+2025-11-17 21:17:28 - INFO - system - system - project - Security headers middleware initialized
+2025-11-17 21:17:28 - INFO - system - system - project - Security headers middleware initialized
+2025-11-17 21:17:28 - INFO - system - system - project - Security headers middleware initialized
+2025-11-17 21:17:28 - INFO - system - system - project - Cache initialized with SimpleCache backend (development)
+2025-11-17 21:17:28 - INFO - system - system - project - Cache initialized with SimpleCache backend (development)
+2025-11-17 21:17:28 - INFO - system - system - project - Cache initialized with SimpleCache backend (development)
+2025-11-17 21:17:28 - INFO - system - system - project - Cache initialized with SimpleCache backend (development)
+2025-11-17 21:17:29 - INFO - system - system - auth - User logged in successfully: final_date@example.com
+2025-11-17 21:17:29 - INFO - system - system - auth - User logged in successfully: final_date@example.com
+2025-11-17 21:17:29 - INFO - system - system - auth - User logged in successfully: final_date@example.com
+2025-11-17 21:17:29 - INFO - system - system - auth - User logged in successfully: final_date@example.com
+2025-11-17 21:17:29 - INFO - final_date@example.com - User (Implantador) - auth - User authenticated: final_date@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 21:17:29 - INFO - final_date@example.com - User (Implantador) - auth - User authenticated: final_date@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 21:17:29 - INFO - final_date@example.com - User (Implantador) - auth - User authenticated: final_date@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 21:17:29 - INFO - final_date@example.com - User (Implantador) - auth - User authenticated: final_date@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 21:18:47 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-17 21:18:47 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-17 21:18:47 - INFO - system - system - project - Security headers middleware initialized
+2025-11-17 21:18:47 - INFO - system - system - project - Security headers middleware initialized
+2025-11-17 21:18:47 - INFO - system - system - project - Cache initialized with SimpleCache backend (development)
+2025-11-17 21:18:47 - INFO - system - system - project - Cache initialized with SimpleCache backend (development)
+2025-11-17 21:18:47 - INFO - system - system - auth - User logged in successfully: final_date@example.com
+2025-11-17 21:18:47 - INFO - system - system - auth - User logged in successfully: final_date@example.com
+2025-11-17 21:18:47 - INFO - final_date@example.com - User (Implantador) - auth - User authenticated: final_date@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 21:18:47 - INFO - final_date@example.com - User (Implantador) - auth - User authenticated: final_date@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 21:18:48 - INFO - final_date@example.com - User (Implantador) - auth - User authenticated: final_date@example.com, Role: Implantador, Path: /finalizar_implantacao
+2025-11-17 21:18:48 - INFO - final_date@example.com - User (Implantador) - auth - User authenticated: final_date@example.com, Role: Implantador, Path: /finalizar_implantacao
+2025-11-17 21:18:48 - INFO - final_date@example.com - User (Implantador) - app - Finalizar solicitada por final_date@example.com para implantacao_id=4
+2025-11-17 21:18:48 - INFO - final_date@example.com - User (Implantador) - app - Finalizar solicitada por final_date@example.com para implantacao_id=4
+2025-11-17 21:18:48 - WARNING - final_date@example.com - User (Implantador) - app - Finalizar negada: status atual='finalizada' id=4 user=final_date@example.com
+2025-11-17 21:18:48 - WARNING - final_date@example.com - User (Implantador) - app - Finalizar negada: status atual='finalizada' id=4 user=final_date@example.com
+2025-11-17 21:18:48 - INFO - final_date@example.com - User (Implantador) - auth - User authenticated: final_date@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 21:18:48 - INFO - final_date@example.com - User (Implantador) - auth - User authenticated: final_date@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 21:18:48 - INFO - system - system - project - Sentry não disponível (sentry-sdk não instalado)
+2025-11-17 21:18:48 - INFO - system - system - project - Sentry não disponível (sentry-sdk não instalado)
+2025-11-17 21:18:48 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-17 21:18:48 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-17 21:18:48 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-17 21:18:48 - INFO - system - system - project - Sistema de logging configurado com sucesso
+2025-11-17 21:18:48 - INFO - system - system - project - Security headers middleware initialized
+2025-11-17 21:18:48 - INFO - system - system - project - Security headers middleware initialized
+2025-11-17 21:18:48 - INFO - system - system - project - Security headers middleware initialized
+2025-11-17 21:18:48 - INFO - system - system - project - Security headers middleware initialized
+2025-11-17 21:18:48 - INFO - system - system - project - Cache initialized with SimpleCache backend (development)
+2025-11-17 21:18:48 - INFO - system - system - project - Cache initialized with SimpleCache backend (development)
+2025-11-17 21:18:48 - INFO - system - system - project - Cache initialized with SimpleCache backend (development)
+2025-11-17 21:18:48 - INFO - system - system - project - Cache initialized with SimpleCache backend (development)
+2025-11-17 21:18:48 - INFO - system - system - auth - User logged in successfully: final_date@example.com
+2025-11-17 21:18:48 - INFO - system - system - auth - User logged in successfully: final_date@example.com
+2025-11-17 21:18:48 - INFO - system - system - auth - User logged in successfully: final_date@example.com
+2025-11-17 21:18:48 - INFO - system - system - auth - User logged in successfully: final_date@example.com
+2025-11-17 21:18:48 - INFO - final_date@example.com - User (Implantador) - auth - User authenticated: final_date@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 21:18:48 - INFO - final_date@example.com - User (Implantador) - auth - User authenticated: final_date@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 21:18:48 - INFO - final_date@example.com - User (Implantador) - auth - User authenticated: final_date@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 21:18:48 - INFO - final_date@example.com - User (Implantador) - auth - User authenticated: final_date@example.com, Role: Implantador, Path: /dashboard
+2025-11-17 21:30:26 - INFO - system - system - backend.project - Sistema de logging configurado com sucesso
+2025-11-17 21:30:26 - INFO - system - system - backend.project - Sistema de logging configurado com sucesso
+2025-11-17 21:30:26 - INFO - system - system - backend.project - Security headers middleware initialized
+2025-11-17 21:30:26 - INFO - system - system - backend.project - Security headers middleware initialized
+2025-11-17 21:30:26 - INFO - system - system - backend.project - Cache initialized with SimpleCache backend (development)
+2025-11-17 21:30:26 - INFO - system - system - backend.project - Cache initialized with SimpleCache backend (development)
+2025-11-17 21:30:26 - INFO - system - system - werkzeug - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.15.6:5000
+2025-11-17 21:30:26 - INFO - system - system - werkzeug - [33mPress CTRL+C to quit[0m
+2025-11-17 21:30:26 - INFO - system - system - werkzeug -  * Restarting with stat
+2025-11-17 21:30:27 - INFO - system - system - backend.project - Sistema de logging configurado com sucesso
+2025-11-17 21:30:27 - INFO - system - system - backend.project - Sistema de logging configurado com sucesso
+2025-11-17 21:30:27 - INFO - system - system - backend.project - Security headers middleware initialized
+2025-11-17 21:30:27 - INFO - system - system - backend.project - Security headers middleware initialized
+2025-11-17 21:30:27 - INFO - system - system - backend.project - Cache initialized with SimpleCache backend (development)
+2025-11-17 21:30:27 - INFO - system - system - backend.project - Cache initialized with SimpleCache backend (development)
+2025-11-17 21:30:27 - WARNING - system - system - werkzeug -  * Debugger is active!
+2025-11-17 21:30:27 - INFO - system - system - werkzeug -  * Debugger PIN: 753-667-044
+2025-11-17 21:30:57 - INFO - system - system - werkzeug - 192.168.15.6 - - [17/Nov/2025 21:30:57] "GET / HTTP/1.1" 200 -
+2025-11-17 21:30:57 - INFO - system - system - werkzeug - 192.168.15.6 - - [17/Nov/2025 21:30:57] "GET /static/css/login.css HTTP/1.1" 200 -
+2025-11-17 21:30:58 - INFO - system - system - werkzeug - 192.168.15.6 - - [17/Nov/2025 21:30:58] "[32mGET /@vite/client HTTP/1.1[0m" 302 -
+2025-11-17 21:30:58 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-17 21:30:58 - INFO - system - system - auth - Login required: anonymous access to /dashboard
+2025-11-17 21:30:58 - INFO - system - system - werkzeug - 192.168.15.6 - - [17/Nov/2025 21:30:58] "[32mGET /dashboard HTTP/1.1[0m" 302 -
+2025-11-17 21:30:58 - INFO - system - system - werkzeug - 192.168.15.6 - - [17/Nov/2025 21:30:58] "GET /login HTTP/1.1" 200 -
+2025-11-17 21:31:32 - INFO - system - system - auth - User logged in successfully: suporte01.cs@gmail.com
+2025-11-17 21:31:32 - INFO - system - system - auth - User logged in successfully: suporte01.cs@gmail.com
+2025-11-17 21:31:32 - INFO - system - system - werkzeug - 192.168.15.6 - - [17/Nov/2025 21:31:32] "[32mPOST /login HTTP/1.1[0m" 302 -
+2025-11-17 21:31:32 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-17 21:31:32 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-17 21:31:32 - INFO - system - system - werkzeug - 192.168.15.6 - - [17/Nov/2025 21:31:32] "GET /dashboard HTTP/1.1" 200 -
+2025-11-17 21:31:32 - INFO - system - system - werkzeug - 192.168.15.6 - - [17/Nov/2025 21:31:32] "GET /static/css/theme.css HTTP/1.1" 200 -
+2025-11-17 21:31:32 - INFO - system - system - werkzeug - 192.168.15.6 - - [17/Nov/2025 21:31:32] "GET /static/css/style.css HTTP/1.1" 200 -
+2025-11-17 21:31:33 - INFO - system - system - werkzeug - 192.168.15.6 - - [17/Nov/2025 21:31:33] "[32mGET /@vite/client HTTP/1.1[0m" 302 -
+2025-11-17 21:31:33 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-17 21:31:33 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-17 21:31:33 - INFO - system - system - werkzeug - 192.168.15.6 - - [17/Nov/2025 21:31:33] "GET /dashboard HTTP/1.1" 200 -
+2025-11-17 21:31:56 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /implantacao/1
+2025-11-17 21:31:56 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /implantacao/1
+2025-11-17 21:31:56 - INFO - system - system - werkzeug - 192.168.15.6 - - [17/Nov/2025 21:31:56] "GET /implantacao/1 HTTP/1.1" 200 -
+2025-11-17 21:31:56 - INFO - system - system - werkzeug - 192.168.15.6 - - [17/Nov/2025 21:31:56] "GET /static/css/style.css HTTP/1.1" 200 -
+2025-11-17 21:31:56 - INFO - system - system - werkzeug - 192.168.15.6 - - [17/Nov/2025 21:31:56] "GET /static/css/theme.css HTTP/1.1" 200 -
+2025-11-17 21:31:56 - INFO - system - system - werkzeug - 192.168.15.6 - - [17/Nov/2025 21:31:56] "GET /static/css/implantacao_detalhes.css?v=2 HTTP/1.1" 200 -
+2025-11-17 21:31:56 - INFO - system - system - werkzeug - 192.168.15.6 - - [17/Nov/2025 21:31:56] "GET /static/js/implantacao_detalhes.js HTTP/1.1" 200 -
+2025-11-17 21:31:56 - INFO - system - system - werkzeug - 192.168.15.6 - - [17/Nov/2025 21:31:56] "[32mGET /@vite/client HTTP/1.1[0m" 302 -
+2025-11-17 21:31:56 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-17 21:31:56 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-17 21:31:56 - INFO - system - system - werkzeug - 192.168.15.6 - - [17/Nov/2025 21:31:56] "GET /dashboard HTTP/1.1" 200 -
+2025-11-17 21:31:57 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-17 21:31:57 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-17 21:31:57 - INFO - system - system - werkzeug - 192.168.15.6 - - [17/Nov/2025 21:31:57] "GET /dashboard HTTP/1.1" 200 -
+2025-11-17 21:31:57 - INFO - system - system - werkzeug - 192.168.15.6 - - [17/Nov/2025 21:31:57] "GET /static/css/style.css HTTP/1.1" 200 -
+2025-11-17 21:31:57 - INFO - system - system - werkzeug - 192.168.15.6 - - [17/Nov/2025 21:31:57] "GET /static/css/theme.css HTTP/1.1" 200 -
+2025-11-17 21:31:58 - INFO - system - system - werkzeug - 192.168.15.6 - - [17/Nov/2025 21:31:58] "[32mGET /@vite/client HTTP/1.1[0m" 302 -
+2025-11-17 21:31:58 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-17 21:31:58 - INFO - suporte01.cs@gmail.com - Admin Dev (Administrador) - auth - User authenticated: suporte01.cs@gmail.com, Role: Administrador, Path: /dashboard
+2025-11-17 21:31:58 - INFO - system - system - werkzeug - 192.168.15.6 - - [17/Nov/2025 21:31:58] "GET /dashboard HTTP/1.1" 200 -
+2025-11-17 21:48:34 - INFO - system - system - werkzeug -  * Detected change in 'C:\\Users\\Usuário\\Documents\\app\\CSAPP\\backend\\project\\blueprints\\implantacao_actions.py', reloading
+2025-11-17 21:48:35 - INFO - system - system - werkzeug -  * Restarting with stat
+2025-11-17 21:48:36 - INFO - system - system - backend.project - Sistema de logging configurado com sucesso
+2025-11-17 21:48:36 - INFO - system - system - backend.project - Sistema de logging configurado com sucesso
+2025-11-17 21:48:36 - INFO - system - system - backend.project - Security headers middleware initialized
+2025-11-17 21:48:36 - INFO - system - system - backend.project - Security headers middleware initialized
+2025-11-17 21:48:36 - INFO - system - system - backend.project - Cache initialized with SimpleCache backend (development)
+2025-11-17 21:48:36 - INFO - system - system - backend.project - Cache initialized with SimpleCache backend (development)
+2025-11-17 21:48:36 - WARNING - system - system - werkzeug -  * Debugger is active!
+2025-11-17 21:48:36 - INFO - system - system - werkzeug -  * Debugger PIN: 753-667-044
+2025-11-17 21:48:44 - INFO - system - system - werkzeug -  * Detected change in 'C:\\Users\\Usuário\\Documents\\app\\CSAPP\\backend\\project\\domain\\dashboard_service.py', reloading
+2025-11-17 21:48:44 - INFO - system - system - werkzeug -  * Restarting with stat
+2025-11-17 21:48:45 - INFO - system - system - backend.project - Sistema de logging configurado com sucesso
+2025-11-17 21:48:45 - INFO - system - system - backend.project - Sistema de logging configurado com sucesso
+2025-11-17 21:48:45 - INFO - system - system - backend.project - Security headers middleware initialized
+2025-11-17 21:48:45 - INFO - system - system - backend.project - Security headers middleware initialized
+2025-11-17 21:48:45 - INFO - system - system - backend.project - Cache initialized with SimpleCache backend (development)
+2025-11-17 21:48:45 - INFO - system - system - backend.project - Cache initialized with SimpleCache backend (development)
+2025-11-17 21:48:45 - WARNING - system - system - werkzeug -  * Debugger is active!
+2025-11-17 21:48:45 - INFO - system - system - werkzeug -  * Debugger PIN: 753-667-044
+2025-11-17 21:48:54 - INFO - system - system - werkzeug -  * Detected change in 'C:\\Users\\Usuário\\Documents\\app\\CSAPP\\backend\\project\\blueprints\\main.py', reloading
+2025-11-17 21:48:54 - INFO - system - system - werkzeug -  * Restarting with stat
+2025-11-17 21:48:55 - INFO - system - system - backend.project - Sistema de logging configurado com sucesso
+2025-11-17 21:48:55 - INFO - system - system - backend.project - Sistema de logging configurado com sucesso
+2025-11-17 21:48:55 - INFO - system - system - backend.project - Security headers middleware initialized
+2025-11-17 21:48:55 - INFO - system - system - backend.project - Security headers middleware initialized
+2025-11-17 21:48:55 - INFO - system - system - backend.project - Cache initialized with SimpleCache backend (development)
+2025-11-17 21:48:55 - INFO - system - system - backend.project - Cache initialized with SimpleCache backend (development)

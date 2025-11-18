@@ -1,5 +1,5 @@
-# project/task_definitions.py
-# (Constantes de definição de tarefas movidas de constants.py)
+\
+\
 
 MODULO_OBRIGATORIO = "Obrigações para finalização"
 CHECKLIST_OBRIGATORIO_ITEMS = [
@@ -11,11 +11,11 @@ CHECKLIST_OBRIGATORIO_ITEMS = [
 MODULO_PENDENCIAS = "Pendências"
 
 TAREFAS_TREINAMENTO_PADRAO = {
-    # AJUSTE 4: NOVO MÓDULO ADICIONADO
+\
     "Definição de carteira": [
         {'nome': "Definição de carteira", 'tag': "Ação interna"}
     ],
-    # FIM DO AJUSTE 4
+\
     "Welcome": [
         {'nome': "Contato Inicial Whatsapp/Grupo", 'tag': "Ação interna"},
         {'nome': "Criar Banco de Dados", 'tag': "Ação interna"},

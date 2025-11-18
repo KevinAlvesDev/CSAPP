@@ -1,4 +1,4 @@
-{# templates/partials/_task_item.html #}
+
 <div class="d-flex flex-column flex-grow-1 me-3">
     <div class="d-flex align-items-center mb-2">
         <input 
@@ -49,7 +49,7 @@
         </div>
     </div>
     <div class="mt-1" style="margin-left: calc(1.25em + 0.75rem);">
-        {# A seção de comentários permanece, mas a lógica de adicionar/excluir pode ser refatorada com HTMX no futuro #}
+        
         <label class="form-label small text-secondary mb-1">Comentários</label>
         <form 
             hx-post="{{ url_for('api.adicionar_comentario', tarefa_id=tarefa.id) }}"

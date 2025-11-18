@@ -15,7 +15,7 @@
                 <i class="bi bi-clipboard-data me-1"></i> Ver Relatório
             </a>
             
-            {# Botão do menu offcanvas antigo removido #}
+            
         </div>
     </header>
 
@@ -31,7 +31,7 @@
             {% endif %}
         {% endwith %}
 
-        {# Formulário de Filtro #}
+        
         <div class="card mb-4 rounded-3">
             <div class="card-body">
             <h5 class="card-title mb-3 border-bottom pb-2">Selecionar Mês e Colaborador</h5>
@@ -81,7 +81,7 @@
             </div>
         </div>
 
-        {# Formulário de Métricas #}
+        
         {% if current_cs_email %}
         <div class="card rounded-3">
             <div class="card-body">
@@ -132,7 +132,7 @@
                     </div>
                 </div>
 
-                {# Script de Pontos de Performance (Mantido) #}
+                
                 <script>
                     // Pontos: Qualidade
                     pontosRegrasManuais['pts_qualidade'] = {
@@ -178,7 +178,7 @@
                     Os valores automáticos são sugeridos, mas podem ser sobrescritos manualmente.
                 </p>
                 
-                {# Novo campo adicionado #}
+                
                 <div class="row mb-3 align-items-center">
                     <label for="impl_finalizadas_mes" class="col-md-7 col-form-label text-md-end">Implantações / Planos Finalizados (Unid.)</label>
                     <div class="col-md-5">
@@ -223,7 +223,7 @@
                                data-regra-id="pts_reunioes">
                     </div>
                 </div>
-                {# Script de Pontos Automáticos (Adicionado) #}
+                
                 <script>
                     pontosRegrasManuais['pts_tma'] = {
                         30: {{ regras_agrupadas['Pontos: TMA'] | selectattr('regra_id', 'equalto', 'pts_tma_30') | map(attribute='valor_pontos') | first | default(0) }},
@@ -256,7 +256,7 @@
                 </script>
                 
                 
-                {# Campos de Bônus (Layout de Lista) #}
+                
                 {% if regras_agrupadas['Bônus'] or regras_agrupadas['Bônus: Reuniões Pres.'] %}
                     <hr class="my-3">
                     <div class="row">
@@ -266,7 +266,7 @@
                         </div>
                     </div>
                     
-                    {# Loop Bônus Padrão #}
+                    
                     {% if regras_agrupadas['Bônus'] %}
                         {% for regra in regras_agrupadas['Bônus'] %}
                             {% set field_name = regra.regra_id | replace('bonus_', '') %}
@@ -282,7 +282,7 @@
                         {% endfor %}
                     {% endif %}
 
-                    {# Loop Bônus: Reuniões Presenciais #}
+                    
                     {% if regras_agrupadas['Bônus: Reuniões Pres.'] %}
                         {% set field_name = 'reunioes_presenciais' %}
                         <div class="row mb-3 align-items-center">
@@ -304,7 +304,7 @@
                 {% endif %}
 
 
-                {# Campos de Penalidade (Layout de Lista) #}
+                
                 {% if regras_agrupadas['Penalidades'] %}
                     <hr class="my-3">
                     <div class="row">
@@ -331,7 +331,7 @@
 
                 <hr class="tw-my-3">
                 
-                {# Total (Layout de Lista) #}
+                
                 <div class="row mb-3 align-items-center justify-content-end">
                     <label for="total_pontos_manuais" class="col-md-7 col-form-label text-md-end fs-5">Total de Pontos (Performance + Bônus/Penal.)</label>
  
@@ -365,7 +365,7 @@
 {% endblock %}
 
 
-{# Scripts de cálculo (sem alteração) #}
+
 {% block scripts_extra %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {

@@ -1,4 +1,4 @@
-# project/validation.py
+\
 """
 Módulo de validação para sanitização e validação de inputs.
 Protege contra SQL Injection, XSS e outros ataques.
@@ -15,24 +15,23 @@ class ValidationError(Exception):
     pass
 
 
-# Lista expandida de senhas comuns para bloqueio (Top 50 senhas mais usadas)
 COMMON_PASSWORDS = {
-    # Sequências numéricas
+\
     '123456', '123456789', '12345678', '12345', '1234567890',
     '111111', '000000', '123123', '1234567', '1234',
-    # Senhas baseadas em "password"
+\
     'password', 'password1', 'password123', 'Password1', 'Password123',
-    # Teclado QWERTY
+\
     'qwerty', 'qwerty123', 'qwertyuiop', 'asdfgh', 'zxcvbn',
     'qwerty1', 'asdfghjkl', '1qaz2wsx',
-    # Palavras comuns
+\
     'abc123', 'welcome', 'monkey', 'dragon', 'master',
     'sunshine', 'princess', 'letmein', 'shadow', 'admin',
     'iloveyou', 'football', 'baseball', 'superman', 'batman',
-    # Variações
+\
     'passw0rd', 'p@ssw0rd', 'p@ssword', '123qwe', 'qwe123',
     'admin123', 'root', 'toor', 'test', 'guest',
-    # Anos comuns
+\
     '2024', '2023', '2022', '2021', '2020',
 }
 
@@ -70,18 +69,15 @@ def validate_password_strength(password: str, min_length: int = 8, max_length: i
     if not isinstance(password, str):
         raise ValidationError('Senha deve ser uma string')
 
-    # Validação de comprimento
     if len(password) < min_length:
         raise ValidationError(f'A senha deve ter no mínimo {min_length} caracteres.')
 
     if len(password) > max_length:
         raise ValidationError(f'A senha deve ter no máximo {max_length} caracteres.')
 
-    # Verifica senhas comuns (case-insensitive)
     if password.lower() in COMMON_PASSWORDS:
         raise ValidationError('Senha muito comum. Escolha uma senha mais segura.')
 
-    # Validação de complexidade
     if not re.search(r'[A-Z]', password):
         raise ValidationError('A senha deve conter pelo menos uma letra maiúscula (A-Z).')
 
@@ -94,11 +90,9 @@ def validate_password_strength(password: str, min_length: int = 8, max_length: i
     if not re.search(r'[!@#$%^&*(),.?":{}|<>\-_+=\[\]\\\/;\'`~]', password):
         raise ValidationError('A senha deve conter pelo menos um símbolo (!@#$%^&*(),.?":{}|<>).')
 
-    # Verifica caracteres repetidos consecutivos (ex: "aaaa", "1111")
     if re.search(r'(.)\1{3,}', password):
         raise ValidationError('A senha não pode ter mais de 3 caracteres iguais consecutivos.')
 
-    # Verifica sequências simples (ex: "123456", "abcdef")
     sequences = ['0123456789', 'abcdefghijklmnopqrstuvwxyz', 'qwertyuiop', 'asdfghjkl', 'zxcvbnm']
     password_lower = password.lower()
     for seq in sequences:
@@ -130,31 +124,27 @@ def sanitize_string(value: str, max_length: int = None, min_length: int = 0,
     if not isinstance(value, str):
         raise ValidationError("Valor deve ser uma string")
     
-    # Remove espaços extras
     value = value.strip()
     
-    # Verifica comprimento
+        \
     if min_length > 0 and len(value) < min_length:
         raise ValidationError(f"String deve ter no mínimo {min_length} caracteres")
     
     if max_length and len(value) > max_length:
         raise ValidationError(f"String deve ter no máximo {max_length} caracteres")
     
-    # Remove caracteres de controle perigosos
     value = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', value)
     
-    # Se não permitir HTML, escapa caracteres especiais
+        \
     if not allow_html:
         value = html.escape(value)
     else:
-        # Permite apenas tags HTML básicas seguras
+        \
         allowed_tags = ['<b>', '</b>', '<i>', '</i>', '<u>', '</u>', '<br>', '<br/>']
         for tag in allowed_tags:
             value = value.replace(tag, tag.lower())
-        # Remove qualquer outra tag HTML
         value = re.sub(r'<[^>]*>', '', value)
     
-    # Verifica caracteres permitidos adicionais
     if allowed_chars:
         if not re.match(f'^[a-zA-Z0-9\\s{allowed_chars}]+$', value):
             raise ValidationError(f"Caracteres inválidos detectados. Use apenas: {allowed_chars}")
@@ -180,13 +170,13 @@ def validate_email(email: str) -> str:
     
     email = email.strip().lower()
     
-    # Regex para email válido
+        \
     email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     
     if not re.match(email_regex, email):
         raise ValidationError("Email inválido")
     
-    if len(email) > 254:  # RFC 5321
+    if len(email) > 254:            
         raise ValidationError("Email muito longo")
     
     return email
@@ -259,7 +249,7 @@ def validate_float(value: Any, min_value: float = None, max_value: float = None,
         raise ValidationError(f"Valor deve ser no máximo {max_value}")
     
     if decimal_places is not None:
-        # Verifica casas decimais
+        \
         str_value = str(float_value)
         if '.' in str_value:
             decimal_part = str_value.split('.')[1]
@@ -374,7 +364,6 @@ def validate_sql_injection(value: str) -> str:
     if not isinstance(value, str):
         return value
     
-    # Palavras-chave SQL perigosas (case insensitive)
     sql_keywords = [
         'select', 'insert', 'update', 'delete', 'drop', 'create', 'alter',
         'exec', 'execute', 'script', 'declare', 'union', 'where', 'or 1=1',
@@ -383,14 +372,13 @@ def validate_sql_injection(value: str) -> str:
     
     value_lower = value.lower()
     
-    # Verifica padrões suspeitos
+        \
     for keyword in sql_keywords:
         if keyword in value_lower:
-            # Verifica se é parte de uma palavra maior ou comando suspeito
+            \
             if re.search(rf'\b{keyword}\b', value_lower):
                 raise ValidationError(f"Caracteres inválidos detectados: {keyword}")
     
-    # Verifica múltiplos espaços ou quebras de linha suspeitas
     if re.search(r'(\s{2,}|\n|\r)', value):
         raise ValidationError("Caracteres de espaçamento inválidos detectados")
     

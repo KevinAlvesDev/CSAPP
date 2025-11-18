@@ -1,5 +1,5 @@
-# project/domain/dashboard_service.py
-# (Função movida de project/services.py)
+\
+\
 
 from flask import g, current_app
 from ..db import query_db, execute_db
@@ -10,7 +10,7 @@ from ..utils import format_date_iso_for_json, format_date_br
 from ..cache_config import cache
 from datetime import datetime, date
 
-# --- Função de Lógica do Dashboard ---
+\
 
 def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=None):
     """
@@ -27,14 +27,13 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
         Se page é None: (dashboard_data, metrics) - comportamento original
         Se page é fornecido: (dashboard_data, metrics, pagination) - com paginação
     """
-    # Ajusta per_page padrão
+    \
     if page is not None and per_page is None:
         per_page = 100
 
-    # Cria chave de cache única baseada nos parâmetros (incluindo paginação)
     cache_key = f'dashboard_data_{user_email}_{filtered_cs_email or "all"}_p{page}_pp{per_page}'
 
-    # Tenta buscar do cache
+    \
     if cache:
         cached_data = cache.get(cache_key)
         if cached_data:
@@ -45,8 +44,8 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
 
     is_manager_view = perfil_acesso in manager_profiles
 
-    # 1. Busca implantações com contagens de tarefas (otimização N+1)
-    # PERFORMANCE: Usa subquery para evitar problemas com GROUP BY
+    \
+\
     query_sql = """
         SELECT
             i.*,
@@ -73,7 +72,6 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
         query_sql += " WHERE i.usuario_cs = %s "
         args.append(filtered_cs_email)
 
-    # Ordenação (sem GROUP BY pois usamos subquery)
     query_sql += """
         ORDER BY CASE i.status
                      WHEN 'nova' THEN 1
@@ -85,10 +83,10 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
                  END, i.data_criacao DESC
     """
 
-    # Se paginação está ativada, busca total e adiciona LIMIT/OFFSET
+    \
     pagination = None
     if page is not None:
-        # Busca total de registros para paginação
+        \
         count_sql = """
             SELECT COUNT(*) as total
             FROM implantacoes i
@@ -105,11 +103,11 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
         total_result = query_db(count_sql, tuple(count_args), one=True)
         total = total_result.get('total', 0) if total_result else 0
 
-        # Cria objeto de paginação
+        \
         from ..pagination import Pagination
         pagination = Pagination(page=page, per_page=per_page, total=total)
 
-        # Adiciona LIMIT e OFFSET à query
+        \
         query_sql += " LIMIT %s OFFSET %s"
         args.extend([pagination.limit, pagination.offset])
 
@@ -118,24 +116,25 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
 
 
     dashboard_data = {
-        'andamento': [], 'atrasadas': [], 'futuras': [],
+        'andamento': [], 'atrasadas': [], 'futuras': [], 'sem_previsao': [],
         'finalizadas': [], 'paradas': [], 'novas': [] 
     }
     metrics = {
         'impl_andamento_total': 0, 'implantacoes_atrasadas': 0,
-        'implantacoes_futuras': 0, 'impl_finalizadas': 0, 'impl_paradas': 0,
+        'implantacoes_futuras': 0, 'implantacoes_sem_previsao': 0, 'impl_finalizadas': 0, 'impl_paradas': 0,
         'impl_novas': 0,
         'modulos_total': 0,
         'total_valor_andamento': 0.0,
         'total_valor_atrasadas': 0.0,
         'total_valor_futuras': 0.0,
+        'total_valor_sem_previsao': 0.0,
         'total_valor_finalizadas': 0.0,
         'total_valor_paradas': 0.0,
         'total_valor_novas': 0.0, 
     }
 
-    # PERFORMANCE: Código removido - tarefas já vêm agregadas no JOIN principal
-    # Isso elimina N+1 queries (antes: 1 query por implantação, agora: 1 query total)
+\
+\
 
     agora = datetime.now() 
 
@@ -149,7 +148,7 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
 
         status = impl.get('status')
         try:
-            if impl.get('tipo') == 'modulo' and status in ['nova','andamento','atrasada','parada','futura']:
+            if impl.get('tipo') == 'modulo' and status in ['nova','andamento','atrasada','parada','futura','sem_previsao']:
                 metrics['modulos_total'] += 1
         except Exception:
             pass
@@ -159,7 +158,7 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
         impl['data_inicio_producao_iso'] = format_date_iso_for_json(impl.get('data_inicio_producao'), only_date=True)
         impl['data_final_implantacao_iso'] = format_date_iso_for_json(impl.get('data_final_implantacao'), only_date=True)
 
-        # PERFORMANCE: Usa contagens já calculadas no JOIN (evita loop)
+        \
         total_tasks = impl.get('total_tarefas', 0) or 0
         done_tasks = impl.get('tarefas_concluidas', 0) or 0
         impl['progresso'] = int(round((done_tasks / total_tasks) * 100)) if total_tasks > 0 else 0
@@ -214,7 +213,7 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
             metrics['impl_finalizadas'] += 1
             metrics['total_valor_finalizadas'] += impl_valor
         elif status == 'parada':
-            # Calcula dias de parada com base em data_finalizacao (marcada na pausa)
+            \
             dias_parada = 0
             data_finalizacao_obj = impl.get('data_finalizacao')
             if data_finalizacao_obj:
@@ -279,6 +278,11 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
             metrics['impl_novas'] += 1
             metrics['total_valor_novas'] += impl_valor
 
+        elif status == 'sem_previsao':
+            dashboard_data['sem_previsao'].append(impl)
+            metrics['implantacoes_sem_previsao'] += 1
+            metrics['total_valor_sem_previsao'] += impl_valor
+
         elif status == 'andamento':
             metrics['impl_andamento_total'] += 1 
             if dias_passados > 25:
@@ -328,7 +332,6 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
         except Exception as update_err:
             current_app.logger.error(f"Failed to update metrics for user {user_email}: {update_err}")
 
-    # Armazena resultado no cache (5 minutos)
     if pagination:
         result = (dashboard_data, metrics, pagination)
     else:

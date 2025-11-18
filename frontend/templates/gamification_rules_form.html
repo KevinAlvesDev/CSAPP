@@ -12,7 +12,7 @@
                 <i class="bi bi-arrow-left me-1"></i> Voltar (Métricas)
             </a>
             
-            {# Botão do menu offcanvas antigo removido #}
+            
         </div>
     </header>
 
@@ -44,7 +44,7 @@
                     Os valores são aplicados no próximo cálculo de relatório de gamificação.
                 </p>
 
-                {# O loop assume que a rota passará 'regras_agrupadas' #}
+                
                 {% if not regras_agrupadas %}
                     <div class="alert alert-warning">Nenhuma regra de gamificação encontrada no banco de dados.</div>
                 {% endif %}
@@ -54,12 +54,12 @@
                     
                     {% for regra in regras %}
                     <div class="row mb-2">
-                        {# Label (Descrição da Regra) #}
+                        
                         <label for="regra-{{ regra.regra_id }}" class="col-md-7 col-form-label text-md-end">
                             {{ regra.descricao }}
                         </label>
                         
-                        {# Input (Valor da Regra) #}
+                        
                         <div class="col-md-5">
                             <div class="input-group">
                                 <input type="number" 
@@ -70,7 +70,7 @@
                                        step="1"
                                        required>
                                 
-                                {# Sufixo (o que o número significa) #}
+                                
                                 {% set suffix = 'pontos' %}
                                 {% if regra.tipo_valor == 'percentual' %}
                                     {% set suffix = '%' %}

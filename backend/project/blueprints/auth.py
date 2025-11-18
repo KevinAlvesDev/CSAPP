@@ -1,4 +1,4 @@
-# app4/CSAPP/project/blueprints/auth.py
+\
 
 from functools import wraps
 from flask import (
@@ -8,16 +8,16 @@ from flask import (
 from werkzeug.security import generate_password_hash, check_password_hash
 from urllib.parse import urlencode
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
-# NOVO: Importar exceções específicas do DB, se possível (exemplo genérico)
+\
 from psycopg2 import IntegrityError as Psycopg2IntegrityError
 from sqlite3 import IntegrityError as Sqlite3IntegrityError
 
 
-# --- CORREÇÃO: 'oauth' REMOVIDO do topo ---
-# from ..extensions import oauth (REMOVIDO DAQUI)
+\
+\
 
 from ..db import query_db, execute_db
-from ..constants import ADMIN_EMAIL, PERFIL_ADMIN, PERFIL_IMPLANTADOR, PERFIS_COM_GESTAO # <-- ALTERADO
+from ..constants import ADMIN_EMAIL, PERFIL_ADMIN, PERFIL_IMPLANTADOR, PERFIS_COM_GESTAO               
 from ..extensions import limiter
 from ..logging_config import auth_logger, security_logger
 
@@ -30,19 +30,19 @@ def _get_reset_serializer():
 def _sync_user_profile(user_email, user_name, auth0_user_id):
     """Garante que o usuário do Auth0 exista no DB local e defina o perfil inicial."""
     try:
-        # Verifica se o usuário já existe na tabela principal 'usuarios'
+        \
         usuario_existente = query_db("SELECT usuario FROM usuarios WHERE usuario = %s", (user_email,), one=True)
         
         perfil_existente = query_db("SELECT nome FROM perfil_usuario WHERE usuario = %s", (user_email,), one=True)
 
-        # Define o perfil de acesso inicial
-        perfil_acesso_final = None # Padrão NULL para novos usuários
+        \
+        perfil_acesso_final = None                                  
         if user_email == ADMIN_EMAIL:
             perfil_acesso_final = PERFIL_ADMIN
             auth_logger.info(f'Admin user {user_email} detected')
 
         if not usuario_existente:
-            # Tenta criar o registro na tabela 'usuarios'
+            \
             try:
                 senha_placeholder = generate_password_hash(auth0_user_id + current_app.secret_key)
                 execute_db(
@@ -52,16 +52,16 @@ def _sync_user_profile(user_email, user_name, auth0_user_id):
                 auth_logger.info(f'User account created: {user_email}')
                 print(f"Registro de usuário criado: {user_email}.")
             except (Psycopg2IntegrityError, Sqlite3IntegrityError) as e:
-                 # Se der erro de duplicação aqui (apesar da checagem), informa o usuário
+                 \
                  print(f"AVISO: Tentativa de inserir usuário duplicado {user_email}: {e}")
-                 # Não precisa flash aqui, a rota callback tratará
-                 raise ValueError("Usuário já cadastrado") # Lança erro para ser pego no callback
+                 \
+                 raise ValueError("Usuário já cadastrado")                                       
             except Exception as db_error:
                 print(f"ERRO ao inserir usuário {user_email}: {db_error}")
-                raise db_error # Lança outros erros
+                raise db_error                     
 
         if not perfil_existente:
-             # Cria o perfil associado se ele não existir
+            \
             execute_db(
                 "INSERT INTO perfil_usuario (usuario, nome, perfil_acesso) VALUES (%s, %s, %s)",
                 (user_email, user_name, perfil_acesso_final)
@@ -69,26 +69,25 @@ def _sync_user_profile(user_email, user_name, auth0_user_id):
             auth_logger.info(f'User profile created: {user_email} with role {perfil_acesso_final}')
             print(f"Perfil criado: {user_email} com perfil: {perfil_acesso_final}.")
         elif user_email == ADMIN_EMAIL:
-            # Garante que o ADMIN_EMAIL fixo seja sempre Administrador
+            \
             perfil_acesso_atual = query_db("SELECT perfil_acesso FROM perfil_usuario WHERE usuario = %s", (user_email,), one=True)
             if perfil_acesso_atual.get('perfil_acesso') != PERFIL_ADMIN:
                 execute_db("UPDATE perfil_usuario SET perfil_acesso = %s WHERE usuario = %s", (PERFIL_ADMIN, user_email))
                 auth_logger.info(f'Admin role enforced for user: {user_email}')
                 print(f"Perfil de acesso atualizado: {user_email} forçado para {PERFIL_ADMIN}.")
 
-    except ValueError as ve: # Captura o erro específico lançado acima
+    except ValueError as ve:                                          
         raise ve
     except Exception as db_error:
         auth_logger.error(f'Critical error syncing user profile {user_email}: {str(db_error)}')
         print(f"ERRO CRÍTICO ao sincronizar perfil {user_email}: {db_error}")
         flash("Erro ao sincronizar perfil do usuário com o banco de dados.", "warning")
-        # Re-lança para que o chamador saiba que a sincronização falhou criticamente
+        \
         raise db_error 
 
 
-# --- Decoradores de Autenticação e Permissão ---
+\
 
-# --- INÍCIO DA MELHORIA 1 ---
 def login_required(f):
     """
     Decorator para proteger rotas que exigem login.
@@ -96,34 +95,29 @@ def login_required(f):
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # g.user_email foi carregado em @app.before_request
+        \
         if not g.user_email:
-            # Evita erro em ambientes de teste sem SECRET_KEY
+            \
             try:
                 if current_app.secret_key:
                     flash('Login necessário para acessar esta página.', 'info')
             except Exception:
                 pass
-            # Registra tentativa de acesso sem autenticação
             try:
                 auth_logger.info(f'Login required: anonymous access to {request.path}')
             except Exception:
                 pass
             return redirect(url_for('auth.login'))
         
-        # O @app.before_request criou g.perfil (do DB ou um placeholder).
-        # Se 'perfil_acesso' for None, significa que o perfil ainda não
-        # foi totalmente sincronizado (é um placeholder de 1º login).
-        # Vamos tentar sincronizar agora.
         if g.perfil.get('perfil_acesso') is None:
             try:
-                # Tenta a sincronização (que pode criar o perfil)
+                \
                 _sync_user_profile(g.user_email, g.user.get('name', g.user_email), g.user.get('sub'))
                 
-                # Recarrega o g.perfil após a tentativa de sincronização
+                                \
                 g.perfil = query_db("SELECT * FROM perfil_usuario WHERE usuario = %s", (g.user_email,), one=True)
 
-                # Se AINDA ASSIM não encontrar (improvável), mantém o placeholder
+                \
                 if not g.perfil:
                      g.perfil = {
                         'nome': g.user.get('name', g.user_email),
@@ -133,22 +127,21 @@ def login_required(f):
                         'perfil_acesso': None
                     }
             
-            except ValueError as ve: # Pega o erro de usuário duplicado
-                 flash(str(ve), "error") # Mostra "Usuário já cadastrado"
-                 session.clear() # Limpa a sessão para evitar loop
+            except ValueError as ve:                                   
+                 flash(str(ve), "error")                                 
+                 session.clear()                                  
                  return redirect(url_for('auth.login'))
             except Exception as e:
                  print(f"Erro no _sync_user_profile durante o fallback do @login_required: {e}")
-                 # Mantém o perfil placeholder e continua
+\
         
-        # O debug print foi mantido pois é útil
         perfil_acesso_debug = g.perfil.get('perfil_acesso') if g.perfil else 'NÃO CARREGADO'
         auth_logger.info(f'User authenticated: {g.user_email}, Role: {perfil_acesso_debug}, Path: {request.path}')
         print(f"\n[DEBUG] Usuário logado: {g.user_email}, Perfil de Acesso: {perfil_acesso_debug}, Rota: {request.path}\n")
         
         return f(*args, **kwargs)
     return decorated_function
-# --- FIM DA MELHORIA 1 ---
+\
 
 def permission_required(required_profiles):
     """Decorator para proteger rotas por Perfil de Acesso."""
@@ -156,12 +149,12 @@ def permission_required(required_profiles):
         @wraps(f)
         @login_required
         def decorated_function(*args, **kwargs):
-            # g.perfil já foi carregado (pelo before_request ou pelo login_required)
+            \
             user_perfil = g.perfil.get('perfil_acesso') if g.perfil else None
             
-            # Se o perfil for NULL (None), o acesso é negado para rotas protegidas
+                        \
             if user_perfil is None or user_perfil not in required_profiles:
-                # Mensagem específica para criar implantação/acesso a analytics/gestão
+                \
                 if any(p in required_profiles for p in PERFIS_COM_GESTAO):
                      try:
                          if current_app.secret_key:
@@ -181,12 +174,11 @@ def permission_required(required_profiles):
         return decorated_function
     return decorator
 
-# Decorador específico para Administrador
 def admin_required(f):
     """Protege rotas que exigem perfil Administrador."""
     return permission_required([PERFIL_ADMIN])(f)
 
-# --- Rotas de Autenticação ---
+\
 
 def rate_limit(max_requests):
     """Decorator condicional para rate limiting."""
@@ -214,7 +206,6 @@ def change_password():
             pass
         return render_template('change_password.html', auth0_enabled=False)
 
-    # POST
     current_password = request.form.get('current_password', '')
     new_password = request.form.get('new_password', '')
     new_password_confirm = request.form.get('new_password_confirm', '')
@@ -234,7 +225,6 @@ def change_password():
         flash('As senhas novas não coincidem.', 'error')
         return render_template('change_password.html', auth0_enabled=False)
 
-    # Busca senha atual do usuário
     usuario = query_db("SELECT usuario, senha FROM usuarios WHERE usuario = %s", (g.user_email,), one=True)
     if not usuario:
         flash('Conta não encontrada.', 'error')
@@ -279,12 +269,11 @@ def forgot_password():
         flash('E-mail não encontrado.', 'error')
         return render_template('forgot_password.html', auth0_enabled=False)
 
-    # Gera token temporário
     s = _get_reset_serializer()
     token = s.dumps({'email': email})
     reset_url = url_for('auth.reset_password', token=token, _external=True)
 
-    # Tenta enviar e-mail via SMTP global
+    \
     try:
         from ..email_utils import send_email_global
         subject = 'Recuperação de senha - CS Onboarding'
@@ -324,7 +313,7 @@ def check_email():
 @rate_limit("100 per minute")
 def reset_password(token):
     """Redefine a senha usando token temporário."""
-    # Valida token (expira em 3600s)
+    \
     s = _get_reset_serializer()
     try:
         data = s.loads(token, max_age=3600)
@@ -425,12 +414,11 @@ def login():
 @rate_limit("100 per minute")
 def callback():
     """Manipula o retorno do Auth0 após o login."""
-    # Se Auth0 estiver desativado, retorna para dashboard
+    \
     if not current_app.config.get('AUTH0_ENABLED', True):
         flash('Auth0 desativado no ambiente de desenvolvimento. Use dev_login.', 'info')
         return redirect(url_for('main.dashboard'))
 
-    # --- CORREÇÃO: Importa 'oauth' aqui ---
     from ..extensions import oauth
 
     try:
@@ -443,29 +431,29 @@ def callback():
         
         session['user'] = userinfo
         
-        # --- INÍCIO DA MELHORIA 1 ---
-        # Define a sessão como permanente IMEDIATAMENTE no login
+                \
+\
         session.permanent = True
-        # --- FIM DA MELHORIA 1 ---
+\
 
         user_email = userinfo.get('email')
         user_name = userinfo.get('name', user_email)
         auth0_user_id = userinfo.get('sub')
 
-        # Garante que o usuário existe no nosso DB
+        \
         _sync_user_profile(user_email, user_name, auth0_user_id)
         
         auth_logger.info(f'User logged in successfully: {user_email}')
         return redirect(url_for('main.dashboard'))
         
-    except ValueError as ve: # Pega o erro de usuário duplicado
+    except ValueError as ve:                                   
         auth_logger.error(f'Erro no callback (duplicação): {ve}')
-        flash(str(ve), "error") # Mostra "Usuário já cadastrado"
+        flash(str(ve), "error")                                 
         session.clear()
-        return redirect(url_for('auth.login')) # Volta para a tela de login
+        return redirect(url_for('auth.login'))                             
     except Exception as e:
         auth_logger.error(f'Erro no callback do Auth0: {e}', exc_info=True)
-        # Mensagem genérica para outros erros
+        \
         flash(f"Erro durante a autenticação: Algo deu errado, por favor tente novamente.", "error")
         session.clear()
         return redirect(url_for('main.home'))
@@ -475,7 +463,7 @@ def logout():
     """Desloga o usuário da sessão local e do Auth0."""
     session.clear()
     
-    # Parâmetros para o logout do Auth0
+        \
     if current_app.config.get('AUTH0_ENABLED', True):
         params = {
             'returnTo': url_for('main.home', _external=True),
@@ -494,32 +482,30 @@ def dev_login():
     SEGURANÇA: Esta rota só funciona em ambiente de desenvolvimento.
     Em produção, retorna 404 para evitar acesso não autorizado.
     """
-    # PROTEÇÃO CRÍTICA: Bloqueia em produção
+    \
     import os
     if current_app.config.get('AUTH0_ENABLED', True):
         return redirect(url_for('auth.login'))
 
-    # Verifica se está em ambiente de desenvolvimento
     flask_env = os.environ.get('FLASK_ENV', 'production')
     flask_debug = current_app.config.get('DEBUG', False)
     use_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
 
-    # Bloqueia se não estiver em desenvolvimento
+    \
     if flask_env == 'production' or (not flask_debug and not use_sqlite):
         security_logger.warning(f'Tentativa de acesso a /dev-login em ambiente de produção')
-        abort(404)  # Retorna 404 para não revelar que a rota existe
+        abort(404)                                                  
 
-    # Usuário de desenvolvimento com acesso total (Administrador)
-    dev_email = ADMIN_EMAIL  # garante perfil Administrador pelo sincronizador
+    dev_email = ADMIN_EMAIL                                                   
     session['user'] = {
         'email': dev_email,
         'name': 'Dev User',
         'sub': 'dev|local'
     }
-    # Mantém a sessão entre reinícios do servidor dev
+    \
     session.permanent = True
 
-    # Garante existência da conta e perfil com privilégios (Administrador)
+    \
     try:
         _sync_user_profile(dev_email, 'Dev User', 'dev|local')
     except Exception as e:
@@ -536,20 +522,19 @@ def dev_login_as():
     SEGURANÇA: Esta rota só funciona em ambiente de desenvolvimento.
     Em produção, retorna 404 para evitar acesso não autorizado.
     """
-    # PROTEÇÃO CRÍTICA: Bloqueia em produção
+    \
     import os
     if current_app.config.get('AUTH0_ENABLED', True):
         return redirect(url_for('auth.login'))
 
-    # Verifica se está em ambiente de desenvolvimento
     flask_env = os.environ.get('FLASK_ENV', 'production')
     flask_debug = current_app.config.get('DEBUG', False)
     use_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
 
-    # Bloqueia se não estiver em desenvolvimento
+    \
     if flask_env == 'production' or (not flask_debug and not use_sqlite):
         security_logger.warning(f'Tentativa de acesso a /dev-login-as em ambiente de produção')
-        abort(404)  # Retorna 404 para não revelar que a rota existe
+        abort(404)                                                  
 
     if request.method == 'GET':
         try:
@@ -558,7 +543,6 @@ def dev_login_as():
             pass
         return render_template('dev_login.html', auth0_enabled=False)
 
-    # POST: processa formulário
     email = (request.form.get('email') or '').strip()
     name = (request.form.get('name') or email).strip()
 
@@ -566,7 +550,6 @@ def dev_login_as():
         flash('Informe um e-mail válido.', 'error')
         return redirect(url_for('auth.dev_login_as'))
 
-    # Validação mínima de e-mail usando util interno, se disponível
     try:
         from ..validation import validate_email
         email = validate_email(email)
@@ -583,7 +566,7 @@ def dev_login_as():
 
     try:
         _sync_user_profile(email, name or email, 'dev|manual')
-        # Em desenvolvimento, concede permissão inicial de Implantador para novos usuários
+        \
         if email != ADMIN_EMAIL:
             try:
                 execute_db(
@@ -602,7 +585,7 @@ def dev_login_as():
 @rate_limit("100 per minute")
 def register():
     """Página de registro de novos usuários."""
-    # Se Auth0 estiver habilitado, redireciona para login
+    \
     if current_app.config.get('AUTH0_ENABLED', True):
         flash('Registro via Auth0. Use o botão de login para se registrar.', 'info')
         return redirect(url_for('auth.login'))
@@ -614,18 +597,16 @@ def register():
             pass
         return render_template('register.html', auth0_enabled=False)
     
-    # POST: processa registro
     email = (request.form.get('email') or '').strip().lower()
     nome = (request.form.get('nome') or '').strip()
     password = request.form.get('password', '')
     password_confirm = request.form.get('password_confirm', '')
     
-    # Validações básicas
+        \
     if not all([email, nome, password, password_confirm]):
         flash('Por favor, preencha todos os campos.', 'error')
         return render_template('register.html', auth0_enabled=False)
     
-    # Valida email
     try:
         from ..validation import validate_email
         email = validate_email(email)
@@ -633,16 +614,14 @@ def register():
         flash(f'E-mail inválido: {str(e)}', 'error')
         return render_template('register.html', auth0_enabled=False)
     
-    # Valida nome (sem escape HTML, apenas sanitização básica)
     try:
         from ..validation import sanitize_string
-        # Permite HTML básico para nomes (não escapa, apenas remove tags perigosas)
+        \
         nome = sanitize_string(nome, min_length=2, max_length=100, allow_html=False)
     except Exception as e:
         flash(f'Nome inválido: {str(e)}', 'error')
         return render_template('register.html', auth0_enabled=False)
     
-    # Valida senha (complexidade)
     try:
         from ..validation import validate_password_strength, ValidationError
         validate_password_strength(password)
@@ -654,13 +633,11 @@ def register():
         flash('As senhas não coincidem.', 'error')
         return render_template('register.html', auth0_enabled=False)
     
-    # Verifica se usuário já existe
     usuario_existente = query_db("SELECT usuario FROM usuarios WHERE usuario = %s", (email,), one=True)
     if usuario_existente:
         flash('Este e-mail já está cadastrado. Faça login ou use outro e-mail.', 'error')
         return render_template('register.html', auth0_enabled=False)
     
-    # Cria usuário
     try:
         senha_hash = generate_password_hash(password)
         execute_db(
@@ -668,7 +645,7 @@ def register():
             (email, senha_hash)
         )
         
-        # Cria perfil (sem perfil de acesso inicial - será definido por admin)
+                \
         execute_db(
             "INSERT INTO perfil_usuario (usuario, nome, perfil_acesso) VALUES (%s, %s, %s)",
             (email, nome, None)

@@ -1,4 +1,4 @@
-# testo/CSAPP/backend/project/blueprints/profile.py
+\
 from flask import (
     Blueprint, render_template, request, flash, redirect, url_for, g, current_app, session
 )
@@ -42,12 +42,12 @@ def save_profile():
         flash("Nome e Cargo são obrigatórios.", "error")
         return redirect(url_for('profile.profile'))
 
-    foto_url = g.perfil.get('foto_url') # Mantém a foto existente por padrão
+    foto_url = g.perfil.get('foto_url')                                     
 
     if foto and g.R2_CONFIGURED and r2_client:
         try:
             filename = secure_filename(foto.filename)
-            # Define um 'caminho' no R2, ex: 'fotos_perfil/usuario_email.ext'
+            \
             s3_key = f"fotos_perfil/{g.user_email}_{filename}"
             
             r2_client.upload_fileobj(
@@ -56,7 +56,7 @@ def save_profile():
                 s3_key,
                 ExtraArgs={'ContentType': foto.content_type}
             )
-            # URL pública do R2 (configurada no .env)
+            \
             base_public_url = current_app.config['CLOUDFLARE_PUBLIC_URL']
             foto_url = f"{base_public_url}/{s3_key}"
             
@@ -113,4 +113,3 @@ def save_profile():
         return render_template('modals/_perfil_content.html', r2_configurado=g.R2_CONFIGURED)
     return redirect(url_for('profile.profile'))
 
-# Rotas de configuração pessoal de e-mail foram removidas. O sistema usa SMTP global.

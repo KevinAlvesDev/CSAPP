@@ -1,7 +1,7 @@
-// static/js/implantacao_detalhes.js
 
-// --- Funções Helper para UI ---
-// (Estas funções não precisam de dados do Flask)
+
+
+
 function formatDataComentario(dataStr) { if (!dataStr) return ''; try { const dateObj = new Date(dataStr.replace(' ', 'T') + 'Z'); if (isNaN(dateObj.getTime())) throw new Error("Inválida"); const day = String(dateObj.getDate()).padStart(2, '0'); const month = String(dateObj.getMonth() + 1).padStart(2, '0'); const year = dateObj.getFullYear(); return `${day}/${month}/${year}`; } catch (e) { console.error("Erro data:", dataStr, e); return 'Inválida'; } }
 function formatDataLog(dataStr) { if (!dataStr) return ''; try { const dateObj = new Date(dataStr.replace(' ', 'T') + 'Z'); if (isNaN(dateObj.getTime())) throw new Error("Inválida"); return dateObj.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(',', ' às'); } catch (e) { console.error("Erro data log:", dataStr, e); return 'Inválida'; } }
 function toggleComment(button, elementId) { const textElement = document.getElementById(elementId); if (!textElement) return; const isExpanded = textElement.classList.toggle('expanded'); button.textContent = isExpanded ? 'Ver menos...' : 'Ver mais...'; }
@@ -10,7 +10,6 @@ function adicionarLogNaTimeline(log) { if (!log) return; const timelineList = do
 
 function updateProgressBar(progress) { const progressBar = document.querySelector('#progress-total-bar'); if (progressBar) { const progressNum = parseInt(progress) || 0; progressBar.style.width = progressNum + '%'; progressBar.setAttribute('aria-valuenow', progressNum); progressBar.textContent = progressNum + '%'; } }
 
-// Confirmação com modal Bootstrap (fallback para window.confirm)
 function confirmWithModal(message) {
     return new Promise((resolve) => {
         if (!window.bootstrap) { resolve(window.confirm(message)); return; }
@@ -39,7 +38,6 @@ function confirmWithModal(message) {
     });
 }
 
-// --- Funções de Ação (Adaptadas para ler URLs do objeto CONFIG) ---
 async function excluirTarefa(tarefaId, button, CONFIG) { 
     const ok = await confirmWithModal('Excluir tarefa e comentários?'); 
     if (!ok) return; 
@@ -80,8 +78,7 @@ async function excluirTodasDoModulo(button, moduloNome, CONFIG) {
     const cardElement = button.closest('.module-header'); // Procura o .module-header
     const collapseElement = cardElement ? cardElement.nextElementSibling : null; // Pega o .collapse
     const originalBtnHTML = button.innerHTML; button.disabled = true; button.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Excluindo...`; 
-    
-    // Aplica opacidade ao cabeçalho E ao conteúdo
+
     if (cardElement) cardElement.style.opacity = '0.5';
     if (collapseElement) collapseElement.style.opacity = '0.5';
 
@@ -90,7 +87,7 @@ function marcarTodasDoModulo(button, collapseId, CONFIG) {
     const collapseElement = document.getElementById(collapseId); if (!collapseElement) return; const bsCollapse = bootstrap.Collapse.getOrCreateInstance(collapseElement); bsCollapse.show(); setTimeout(async () => { const checkboxesNaoMarcadas = Array.from(collapseElement.querySelectorAll('.task-checkbox:not(:checked)')); if (checkboxesNaoMarcadas.length === 0) { alert('Todas já concluídas.'); return; } const ok = await confirmWithModal(`Marcar ${checkboxesNaoMarcadas.length} tarefa(s) como concluída(s)?`); if (!ok) return; const originalBtnHTML = button.innerHTML; button.disabled = true; button.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Marcando...`; let promises = []; let errors = []; let ultimaFinalizada = false; let ultimoLogTarefa = null; let ultimoLogFinalizacao = null; let ultimoProgresso = null; checkboxesNaoMarcadas.forEach(checkbox => { const tarefaId = parseInt(checkbox.closest('li').dataset.id); if (isNaN(tarefaId)) return; 
     const endpointUrl = CONFIG.endpoints.toggleTarefa + tarefaId;
     checkbox.disabled = true; const promise = fetch(endpointUrl, { method: 'POST' }).then(response => response.json()).then(data => { if (data.ok) { const label = checkbox.closest('li').querySelector('label.form-check-label'); checkbox.checked = true; if(label) label.classList.add('text-decoration-line-through', 'text-success'); ultimoProgresso = data.novo_progresso; ultimoLogTarefa = data.log_tarefa; if(data.implantacao_finalizada) { ultimaFinalizada = true; ultimoLogFinalizacao = data.log_finalizacao; } return { success: true }; } else { throw new Error(data.error || 'Erro'); } }).catch(error => { console.error(`Erro ${tarefaId}:`, error); 
-        // Guarda o motivo real do erro para exibir ao usuário
+
         errors.push(error?.message || 'Erro ao marcar tarefa'); 
         checkbox.checked = false; const label = checkbox.closest('li').querySelector('label.form-check-label'); if(label) label.classList.remove('text-decoration-line-through', 'text-success'); return { success: false }; }).finally(() => { checkbox.disabled = false; }); promises.push(promise); }); Promise.all(promises).then(() => { button.innerHTML = originalBtnHTML; button.disabled = false; if (ultimoProgresso !== null) updateProgressBar(ultimoProgresso); if (ultimoLogTarefa) adicionarLogNaTimeline(ultimoLogTarefa); if (ultimaFinalizada) { if (ultimoLogFinalizacao) adicionarLogNaTimeline(ultimoLogFinalizacao); window.location.reload(); return; } if (errors.length > 0) { 
         const uniqueReasons = Array.from(new Set(errors.filter(Boolean)));
@@ -101,10 +98,8 @@ function marcarTodasDoModulo(button, collapseId, CONFIG) {
         }
     } }); }, 300); }
 
-// --- Inicialização da Página ---
 document.addEventListener('DOMContentLoaded', function() {
-    
-    // 1. LÊ AS CONFIGURAÇÕES DO JINJA2 A PARTIR DA TAG <main>
+
     const mainContent = document.getElementById('main-content');
     if (!mainContent) {
         console.error("Elemento #main-content não encontrado. A página de detalhes não funcionará.");
@@ -127,12 +122,10 @@ document.addEventListener('DOMContentLoaded', function() {
          return;
     }
 
-    // 2. ATRIBUI OS EVENTOS (LISTENERS) AOS BOTÕES
-    // (Esta é a parte que substitui os onclicks inline)
+
     document.body.addEventListener('click', function(event) {
         const target = event.target;
-        
-        // Botão Excluir Tarefa
+
         const deleteTaskButton = target.closest('button[title="Excluir Tarefa"]');
         if (deleteTaskButton) {
             const tarefaId = parseInt(target.closest('li[data-id]').dataset.id);
@@ -140,38 +133,34 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Botão Marcar Todas
         const markAllButton = target.closest('button[title="Marcar todas"]');
         if (markAllButton) {
-             // --- INÍCIO DA CORREÇÃO ---
+
              event.stopPropagation(); // Impede o clique de "borbulhar" para o .module-header
-             // --- FIM DA CORREÇÃO ---
+
              const collapseId = markAllButton.closest('.module-header').getAttribute('data-bs-target').substring(1);
              if(collapseId) window.marcarTodasDoModulo(markAllButton, collapseId, CONFIG);
              return;
         }
 
-        // Botão Excluir Todas
         const deleteAllButton = target.closest('button[title="Excluir todas"]');
         if (deleteAllButton) {
-             // --- INÍCIO DA CORREÇÃO ---
+
              event.stopPropagation(); // Impede o clique de "borbulhar" para o .module-header
-             // --- FIM DA CORREÇÃO ---
+
              const moduloNome = deleteAllButton.closest('.module-header').nextElementSibling.dataset.modulo;
              if(moduloNome) window.excluirTodasDoModulo(deleteAllButton, moduloNome, CONFIG);
              return;
         }
 
-        // --- INÍCIO DA CORREÇÃO (BUG 3) ---
-        // Botão "Ver mais..." (comentário) - REFACTORIZADO
+
         const toggleCommentButton = target.closest('button[data-action="toggle-comment"]');
         if (toggleCommentButton) {
             const targetId = toggleCommentButton.dataset.targetId;
             if(targetId) window.toggleComment(toggleCommentButton, targetId); // A função helper toggleComment ainda é útil
             return;
         }
-        
-        // Botão Excluir Comentário - REFACTORIZADO
+
         const deleteCommentButton = target.closest('button[data-action="delete-comment"]');
         if (deleteCommentButton) {
             const commentId = parseInt(deleteCommentButton.dataset.commentId);
@@ -181,14 +170,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             return;
         }
-        // --- FIM DA CORREÇÃO (BUG 3) ---
+
     });
-    
-    
 
 
-    // 3. INICIALIZA FUNCIONALIDADES DA PÁGINA (Sortable, Tabs)
-    // (Atribui as funções à 'window' para que os 'onclick' gerados dinamicamente funcionem)
     window.toggleComment = toggleComment; 
     window.excluirTarefa = excluirTarefa; 
     window.marcarTodasDoModulo = marcarTodasDoModulo; 
@@ -250,9 +235,8 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.comment-text').forEach(textEl => { const wrapper = textEl.closest('.comment-content-wrapper'); let button = wrapper ? wrapper.querySelector('button[onclick^="toggleComment"]') : null; const maxHeight = parseFloat(window.getComputedStyle(textEl).maxHeight); const isOverflowing = textEl.scrollHeight > maxHeight + 5; if (isOverflowing && !button) { const newButton = document.createElement('button'); newButton.className = 'btn btn-sm btn-link p-0 small'; newButton.textContent = 'Ver mais...'; newButton.onclick = function() { toggleComment(this, textEl.id); }; textElement.parentNode.insertBefore(newButton, textEl.nextSibling); } else if (!isOverflowing && button) { button.remove(); } else if (isOverflowing && button) { button.textContent = textEl.classList.contains('expanded') ? 'Ver menos...' : 'Ver mais...'; } });
     document.querySelectorAll('.module-header[data-bs-toggle="collapse"]').forEach(header => { const collapseId = header.getAttribute('data-bs-target'); const collapseElement = document.querySelector(collapseId); const icon = header.querySelector('i.bi-chevron-down, i.bi-chevron-up'); if (collapseElement && icon) { collapseElement.addEventListener('show.bs.collapse', () => { icon.classList.replace('bi-chevron-down','bi-chevron-up'); }); collapseElement.addEventListener('hide.bs.collapse', () => { icon.classList.replace('bi-chevron-up','bi-chevron-down'); }); if (collapseElement.classList.contains('show')) { icon.classList.replace('bi-chevron-down','bi-chevron-up'); } } });
 
-    // 4. Atualiza progresso/timeline após requisições HTMX (toggle individual)
-    // HTMX dispara eventos customizados quando HX-Trigger-After-Swap está presente
-    // Escutamos o evento progress_update que é disparado pelo HTMX
+
+
     document.addEventListener('progress_update', function(event) {
         const data = event.detail || {};
         if (data.novo_progresso !== undefined) {
@@ -266,28 +250,27 @@ document.addEventListener('DOMContentLoaded', function() {
             window.location.reload();
         }
     });
-    
-    // Intercepta respostas HTMX para atualizar a barra de progresso quando uma tarefa é marcada individualmente
-    // O backend envia um fragmento OOB com a barra de progresso atualizada via hx-swap-oob="true"
+
+
     document.body.addEventListener('htmx:afterSwap', function(event) {
-        // Verifica se a resposta veio de um toggle de tarefa (checkbox individual)
+
         const target = event.detail.target;
         if (target && target.id && target.id.startsWith('task-item-')) {
-            // O backend envia um fragmento OOB que atualiza a barra de progresso
-            // Após o swap, o HTMX deve ter atualizado o elemento #progress-total-bar
-            // Mas vamos garantir que está sincronizado lendo o valor atualizado
+
+
+
             setTimeout(function() {
                 const progressBar = document.querySelector('#progress-total-bar');
                 if (progressBar) {
-                    // Extrai o progresso do elemento atualizado pelo HTMX OOB
+
                     const progressText = progressBar.textContent.trim();
                     const progressMatch = progressText.match(/(\d+)%/);
                     if (progressMatch) {
                         const progressNum = parseInt(progressMatch[1]);
-                        // Atualiza a barra para garantir que está sincronizada
+
                         updateProgressBar(progressNum);
                     } else {
-                        // Se não conseguir extrair do texto, tenta do atributo aria-valuenow
+
                         const ariaValue = progressBar.getAttribute('aria-valuenow');
                         if (ariaValue) {
                             updateProgressBar(parseInt(ariaValue));
@@ -297,15 +280,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 50); // Pequeno delay para garantir que o HTMX processou o OOB
         }
 
-        // Após adicionar comentário, limpar formulário e rolar lista para o final
         if (target && target.id && target.id.startsWith('comment-list-')) {
             try {
-                // scroll até o último item
+
                 target.scrollTop = target.scrollHeight;
-                // limpar textarea e input file do form imediatamente anterior
+
                 const form = target.previousElementSibling;
                 if (form && form.classList && form.classList.contains('comment-form')) {
-                    // limpa via reset para também limpar <select>
+
                     form.reset();
                 }
             } catch (e) {

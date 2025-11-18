@@ -1,5 +1,5 @@
-# tests/test_pagination.py
-# Testes para sistema de paginação
+\
+\
 
 import pytest
 import sys
@@ -25,19 +25,19 @@ class TestPagination:
     
     def test_pagination_pages_calculation(self):
         """Testa cálculo de número de páginas."""
-        # 100 itens, 10 por página = 10 páginas
+        \
         p1 = Pagination(page=1, per_page=10, total=100)
         assert p1.pages == 10
         
-        # 95 itens, 10 por página = 10 páginas (arredonda para cima)
+                \
         p2 = Pagination(page=1, per_page=10, total=95)
         assert p2.pages == 10
         
-        # 5 itens, 10 por página = 1 página
+                \
         p3 = Pagination(page=1, per_page=10, total=5)
         assert p3.pages == 1
         
-        # 0 itens = 0 páginas
+                \
         p4 = Pagination(page=1, per_page=10, total=0)
         assert p4.pages == 0
     
@@ -115,10 +115,10 @@ class TestPagination:
         p = Pagination(page=5, per_page=10, total=100)
         pages = list(p.iter_pages())
         
-        # Deve incluir a página atual
+                \
         assert 5 in pages
         
-        # Deve incluir None para reticências
+                \
         assert None in pages or len(pages) > 0
     
     def test_pagination_to_dict(self):
@@ -172,6 +172,6 @@ class TestGetPageArgs:
 
         with app.test_request_context('/?page=-1&per_page=-10'):
             page, per_page = get_page_args()
-            assert page == 1  # Converte para mínimo
-            assert per_page == 1  # Converte para mínimo (não padrão)
+            assert page == 1                        
+            assert per_page == 1                                     
 

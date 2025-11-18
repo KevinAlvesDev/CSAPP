@@ -1,4 +1,4 @@
-# backend/project/api_docs.py
+\
 """
 Documentação da API usando especificação OpenAPI 3.0.
 Acessível em /api/docs
@@ -8,7 +8,7 @@ from flask import Blueprint, jsonify, render_template_string
 
 api_docs_bp = Blueprint('api_docs', __name__)
 
-# Especificação OpenAPI 3.0
+\
 OPENAPI_SPEC = {
     "openapi": "3.0.0",
     "info": {

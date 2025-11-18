@@ -1,5 +1,5 @@
-# tests/test_async_tasks.py
-# Testes para tarefas assíncronas
+\
+\
 
 import pytest
 import sys
@@ -39,7 +39,7 @@ class TestBackgroundTask:
         
         BackgroundTask.run(test_func, x=2, y=3)
         
-        # Aguarda execução (máximo 2 segundos)
+                \
         event.wait(timeout=2)
         
         assert result_container['value'] == 5
@@ -55,7 +55,7 @@ class TestBackgroundTask:
         
         elapsed = time.time() - start_time
         
-        # Deve retornar imediatamente (< 0.1s)
+                \
         assert elapsed < 0.1
     
     def test_background_task_com_app_context(self, app):
@@ -71,7 +71,6 @@ class TestBackgroundTask:
         with app.app_context():
             BackgroundTask.run_with_app_context(test_func_with_context)
         
-        # Aguarda execução
         event.wait(timeout=2)
         
         assert result_container['value'] is True
@@ -84,13 +83,12 @@ class TestBackgroundTask:
             event.set()
             raise ValueError("Test error")
         
-        # Não deve propagar exceção para thread principal
         BackgroundTask.run(error_func)
         
-        # Aguarda execução
+                \
         event.wait(timeout=2)
         
-        # Thread principal continua normalmente
+                \
         assert True
 
 
@@ -110,13 +108,13 @@ class TestSendEmailAsync:
             
             elapsed = time.time() - start_time
             
-            # Deve retornar imediatamente (< 0.1s)
+                        \
             assert elapsed < 0.1
     
     def test_send_email_async_com_parametros(self, app):
         """Testa envio de email com todos os parâmetros."""
         with app.app_context():
-            # Não deve gerar erro
+            \
             send_email_async(
                 subject='Test Email',
                 body_html='<p>Test HTML</p>',
@@ -126,7 +124,7 @@ class TestSendEmailAsync:
                 body_text='Test plain text'
             )
             
-            # Se chegou aqui, não houve erro
+                        \
             assert True
 
 
@@ -143,11 +141,9 @@ class TestAsyncTasksIntegration:
             if results['count'] == 5:
                 event.set()
         
-        # Executa 5 tasks
         for _ in range(5):
             BackgroundTask.run(increment)
         
-        # Aguarda todas completarem
         event.wait(timeout=3)
         
         assert results['count'] == 5
@@ -170,7 +166,7 @@ class TestAsyncTasksIntegration:
             data_list=[10, 20, 30]
         )
         
-        # Aguarda execução
+                \
         event.wait(timeout=2)
         
         assert result_container['data']['dict_sum'] == 6

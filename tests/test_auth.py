@@ -4,7 +4,7 @@ import os
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime
 
-# Adiciona o diretório CSAPP ao path do Python
+\
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from project.blueprints.auth import login_required, permission_required
@@ -19,7 +19,7 @@ class TestAuth:
         self.app.config['TESTING'] = True
         self.client = self.app.test_client()
         
-        # Mock do contexto Flask
+                \
         self.mock_g = Mock()
         self.mock_g.user_email = 'test@example.com'
         self.mock_g.perfil = {'nome': 'Test User', 'perfil_acesso': 'Administrador'}
@@ -107,7 +107,7 @@ class TestAuthLogging:
     def test_duplicate_login_logging(self):
         """Testa se logs de login duplicado são gerados corretamente"""
         with patch('project.blueprints.auth.auth_logger') as mock_logger:
-            # Simula um erro de login duplicado
+            \
             try:
                 raise ValueError("Usuário já existe")
             except ValueError as e:
@@ -118,7 +118,7 @@ class TestAuthLogging:
     def test_admin_enforcement_logging(self):
         """Testa se logs de reforço de admin são gerados corretamente"""
         with patch('project.blueprints.auth.auth_logger') as mock_logger:
-            # Simula reforço de papel de admin
+            \
             mock_logger.info("Reforçando papel de administrador para usuário: admin@example.com")
             
             mock_logger.info.assert_called_with("Reforçando papel de administrador para usuário: admin@example.com")
@@ -126,7 +126,7 @@ class TestAuthLogging:
     def test_profile_sync_error_logging(self):
         """Testa se logs de erro de sincronização são gerados corretamente"""
         with patch('project.blueprints.auth.auth_logger') as mock_logger:
-            # Simula um erro de sincronização
+            \
             db_error = Exception("Erro de conexão com banco de dados")
             mock_logger.error(f"Erro crítico durante sincronização do perfil: {str(db_error)}")
             

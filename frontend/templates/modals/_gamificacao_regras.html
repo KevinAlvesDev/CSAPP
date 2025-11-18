@@ -1,16 +1,16 @@
-{# templates/modals/_gamificacao_regras.html #}
-{# Este ficheiro contém o HTML do modal "Critérios Gamificação", extraído de base.html #}
+
+
 
 <div class="modal fade" id="modalGamificacao" tabindex="-1" aria-labelledby="modalGamificacaoLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable"> 
         <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);">
         
-        {# g.is_manager e g.gamification_rules vêm do __init__.py #}
         
-        {# Apenas 'Administrador' pode editar #}
+        
+        
         {% if g.perfil and g.perfil.perfil_acesso == 'Administrador' %}
 
-            {# 1. MODO GESTOR: Formulário de Edição #}
+            
             <form action="{{ url_for('gamification.save_gamification_rules_from_modal') }}" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-header header-bg">
@@ -56,7 +56,7 @@
                         {% endfor %}
                     {% endfor %}
                 
-                {# Referência em formato de lista (solicitado) - manter dentro da modal-body para scroll #}
+                
                 <div class="px-3">
                     <hr class="my-3">
                     <h6 class="mb-2">Referência – valores por implantação</h6>
@@ -112,20 +112,20 @@
             </form>
 
         {% else %}
-            {# 2. MODO PADRÃO (INCLUINDO GERENTES/COORD): Visualização (Estático) #}
+            
             <div class="modal-header header-bg">
                 <h5 class="modal-title" id="modalGamificacaoLabel" style="color: var(--body-color);">Gamificação - Critérios e Pontuação</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
              <div class="modal-body">
-                {# Mostra as regras do DB de forma estática se não for admin #}
+                
                 {% if not g.gamification_rules %}
                     <div class="alert alert-info">Carregando regras...</div>
                 {% endif %}
 
-                {# Exibição simplificada: somente a tabela de referência solicitada #}
                 
-                {# Referência em formato de lista (solicitado) - não administradores #}
+                
+                
                 <div class="px-3">
                     <hr class="my-3">
                     <h6 class="mb-2">Referência – valores por implantação</h6>

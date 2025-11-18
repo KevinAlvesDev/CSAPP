@@ -1,4 +1,4 @@
-# project/db.py
+\
 import sqlite3
 import psycopg2
 from psycopg2.extras import DictCursor
@@ -9,10 +9,10 @@ import click
 from flask.cli import with_appcontext
 from contextlib import contextmanager
 
-# Importa o módulo de connection pooling
+\
 from .db_pool import get_db_connection as get_pooled_connection
 
-# Importa exceções customizadas
+\
 from .exceptions import DatabaseError
 
 def get_db_connection():
@@ -20,7 +20,7 @@ def get_db_connection():
     Retorna uma conexão com o banco de dados (SQLite ou PostgreSQL).
     Agora usa connection pooling para PostgreSQL.
     """
-    # Delega para o módulo de pooling
+    \
     return get_pooled_connection()
 
 
@@ -50,7 +50,7 @@ def db_connection():
             conn.rollback()
         raise
     finally:
-        # Para SQLite, fecha a conexão. Para PostgreSQL, o pooling cuida disso.
+        \
         if use_sqlite and conn:
             conn.close()
 
@@ -72,12 +72,12 @@ def query_db(query, args=(), one=False, raise_on_error=False):
 
     Nota: Usa connection pooling e logging adequado.
     """
-    # Rastreia query para APM
+    \
     try:
         from .performance_monitoring import track_query
         track_query()
     except:
-        pass  # APM não disponível
+        pass                      
 
     conn, db_type = None, None
     use_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
@@ -99,19 +99,18 @@ def query_db(query, args=(), one=False, raise_on_error=False):
             return [dict(row) for row in results] if results else []
 
     except Exception as e:
-        # Usa logging em vez de print
+        \
         current_app.logger.error(f"Database query error: {e}", exc_info=True)
-        current_app.logger.debug(f"Query: {query[:100]}...")  # Trunca query longa
+        current_app.logger.debug(f"Query: {query[:100]}...")                      
         if conn:
             conn.rollback()
 
-        # Se raise_on_error=True, lança exceção
         if raise_on_error:
             raise DatabaseError(f"Erro ao executar query: {e}", {'query': query[:100], 'args': args}) from e
 
         return None if one else []
     finally:
-        # Para SQLite, fecha a conexão. Para PostgreSQL, o pooling cuida disso.
+        \
         if use_sqlite and conn:
             conn.close()
 
@@ -132,12 +131,12 @@ def execute_db(query, args=(), raise_on_error=False):
 
     Nota: Usa connection pooling e logging adequado.
     """
-    # Rastreia query para APM
+    \
     try:
         from .performance_monitoring import track_query
         track_query()
     except:
-        pass  # APM não disponível
+        pass                      
 
     conn, db_type = None, None
     use_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
@@ -157,19 +156,18 @@ def execute_db(query, args=(), raise_on_error=False):
         return True
 
     except Exception as e:
-        # Usa logging em vez de print
+        \
         current_app.logger.error(f"Database execution error: {e}", exc_info=True)
-        current_app.logger.debug(f"Query: {query[:100]}...")  # Trunca query longa
+        current_app.logger.debug(f"Query: {query[:100]}...")                      
         if conn:
             conn.rollback()
 
-        # Se raise_on_error=True, lança exceção
         if raise_on_error:
             raise DatabaseError(f"Erro ao executar query: {e}", {'query': query[:100], 'args': args}) from e
 
         return None
     finally:
-        # Para SQLite, fecha a conexão. Para PostgreSQL, o pooling cuida disso.
+        \
         if use_sqlite and conn:
             conn.close()
 
@@ -196,14 +194,14 @@ def execute_and_fetch_one(query, args=()):
         return dict(result) if result else None
 
     except Exception as e:
-        # Usa logging em vez de print
+        \
         current_app.logger.error(f"Database execute_and_fetch error: {e}")
-        current_app.logger.debug(f"Query: {query[:100]}...")  # Trunca query longa
+        current_app.logger.debug(f"Query: {query[:100]}...")                      
         if conn:
             conn.rollback()
         return None
     finally:
-        # Para SQLite, fecha a conexão. Para PostgreSQL, o pooling cuida disso.
+        \
         if use_sqlite and conn:
             conn.close()
 
@@ -236,7 +234,7 @@ def init_db():
         cursor = conn.cursor()
 
         if db_type == 'postgres':
-            # --- Sintaxe PostgreSQL ---
+            \
             print("Executando init_db para PostgreSQL...")
             
             cursor.execute("""
@@ -263,7 +261,7 @@ def init_db():
             );
             """)
 
-            # Configurações SMTP por usuário (necessárias para quick-setup e testes)
+            \
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS smtp_settings (
                 usuario_email VARCHAR(255) PRIMARY KEY REFERENCES usuarios(usuario) ON DELETE CASCADE,
@@ -350,7 +348,7 @@ def init_db():
             );
             """)
 
-            # Adiciona coluna de visibilidade (retrofit), ignorando erro se já existir
+            \
             try:
                 cursor.execute("ALTER TABLE comentarios ADD COLUMN visibilidade VARCHAR(20) DEFAULT 'externo';")
             except Exception as e:
@@ -429,7 +427,7 @@ def init_db():
 
         
         elif db_type == 'sqlite':
-            # --- Sintaxe SQLite ---
+            \
             print("Executando init_db para SQLite...")
             
             cursor.execute("""
@@ -504,7 +502,7 @@ def init_db():
             );
             """)
 
-            # Adiciona coluna de visibilidade (retrofit), ignorando erro se já existir
+            \
             try:
                 cursor.execute("ALTER TABLE comentarios ADD COLUMN visibilidade VARCHAR(20) DEFAULT 'externo'")
             except Exception as e:
@@ -545,7 +543,7 @@ def init_db():
             );
             """)
 
-            # Configurações SMTP por usuário (necessárias para quick-setup e testes)
+            \
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS smtp_settings (
                 usuario_email VARCHAR(255) PRIMARY KEY,
@@ -609,7 +607,6 @@ def init_db():
             );
             """)
 
-        # Popula regras de gamificação se vazio (Comum a ambos os DBs)
         sql_check = "SELECT COUNT(*) as c FROM gamificacao_regras"
         cursor.execute(sql_check)
         count_result = cursor.fetchone()
@@ -701,7 +698,7 @@ def init_db():
         if conn:
             conn.close()
 
-# --- COMANDOS FLASK CLI ---
+\
 
 @click.command('init-db')
 @with_appcontext

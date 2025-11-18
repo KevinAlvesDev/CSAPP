@@ -1,5 +1,5 @@
-# project/pagination.py
-# Utilitários para paginação de queries
+\
+\
 
 from flask import request
 
@@ -27,9 +27,9 @@ class Pagination:
             per_page: Itens por página
             total: Total de itens
         """
-        self.page = max(1, page)  # Garante que página seja >= 1
-        self.per_page = max(1, per_page)  # Garante que per_page seja >= 1
-        self.total = max(0, total)  # Garante que total seja >= 0
+        self.page = max(1, page)                                
+        self.per_page = max(1, per_page)                                  
+        self.total = max(0, total)                               
         
     @property
     def pages(self):
@@ -129,13 +129,13 @@ def get_page_args(page_param='page', per_page_param='per_page', default_per_page
     """
     try:
         page = int(request.args.get(page_param, 1))
-        page = max(1, page)  # Garante >= 1
+        page = max(1, page)                
     except (TypeError, ValueError):
         page = 1
     
     try:
         per_page = int(request.args.get(per_page_param, default_per_page))
-        per_page = max(1, min(per_page, max_per_page))  # Entre 1 e max_per_page
+        per_page = max(1, min(per_page, max_per_page))                          
     except (TypeError, ValueError):
         per_page = default_per_page
     

@@ -1,5 +1,5 @@
-# tests/test_dashboard_service.py
-# Testes para serviço de dashboard
+\
+\
 
 import pytest
 import sys
@@ -25,7 +25,7 @@ def app():
         from project.db import init_db
         init_db()
         
-        # Cria usuário de teste
+                \
         execute_db(
             "INSERT OR IGNORE INTO usuarios (usuario, senha) VALUES (?, ?)",
             ('dashboard@test.com', 'test123')
@@ -40,7 +40,7 @@ def app():
     
     yield app
     
-    # Cleanup
+        \
     with app.app_context():
         from project.db import get_db_connection
         conn, _ = get_db_connection()
@@ -67,7 +67,7 @@ class TestDashboardService:
     def test_get_dashboard_data_com_implantacoes(self, app):
         """Testa dashboard com implantações."""
         with app.app_context():
-            # Cria implantações de teste
+            \
             execute_db(
                 """INSERT INTO implantacoes 
                    (nome_empresa, email_responsavel, usuario_cs, status) 
@@ -91,7 +91,7 @@ class TestDashboardService:
     def test_get_dashboard_data_com_paginacao(self, app):
         """Testa dashboard com paginação."""
         with app.app_context():
-            # Cria várias implantações
+            \
             for i in range(15):
                 execute_db(
                     """INSERT INTO implantacoes 
@@ -100,7 +100,6 @@ class TestDashboardService:
                     (f'Dashboard Pagination Test {i}', f'test{i}@test.com', 'dashboard@test.com', 'andamento')
                 )
             
-            # Busca primeira página (10 itens)
             data, pagination = get_dashboard_data('dashboard@test.com', page=1, per_page=10)
             
             assert data is not None
@@ -112,7 +111,7 @@ class TestDashboardService:
             assert pagination.total >= 15
             assert pagination.has_next is True
             
-            # Busca segunda página
+                        \
             data2, pagination2 = get_dashboard_data('dashboard@test.com', page=2, per_page=10)
             
             assert len(data2) >= 5
@@ -122,7 +121,7 @@ class TestDashboardService:
     def test_get_dashboard_data_filtrado_por_cs(self, app):
         """Testa dashboard filtrado por CS."""
         with app.app_context():
-            # Cria outro usuário CS
+            \
             execute_db(
                 "INSERT OR IGNORE INTO usuarios (usuario, senha) VALUES (?, ?)",
                 ('other_cs@test.com', 'test123')
@@ -135,7 +134,7 @@ class TestDashboardService:
                 ('other_cs@test.com', 'Other CS', 'Tester', 'Implantador')
             )
             
-            # Cria implantações para ambos
+                        \
             execute_db(
                 """INSERT INTO implantacoes 
                    (nome_empresa, email_responsavel, usuario_cs, status) 
@@ -150,11 +149,11 @@ class TestDashboardService:
                 ('Dashboard CS Filter 2', 'test@test.com', 'other_cs@test.com', 'andamento')
             )
             
-            # Busca filtrado
+                        \
             data = get_dashboard_data('dashboard@test.com', filtered_cs_email='dashboard@test.com')
             
             assert data is not None
-            # Deve retornar apenas implantações do dashboard@test.com
+            \
             for impl in data:
                 assert impl['usuario_cs'] == 'dashboard@test.com'
 

@@ -25,7 +25,7 @@ def _google_oauth_configured():
 @agenda_bp.route('/agenda')
 @login_required
 def agenda_home():
-    # Se OAuth Google não estiver configurado, mostra instruções
+    \
     try:
         agenda_logger.debug(f"Google OAuth configurado: {_google_oauth_configured()}")
     except Exception:
@@ -50,7 +50,6 @@ def agenda_home():
     if not access_token:
         return render_template('agenda.html', events=[], google_connected=False)
 
-    # Visualização: padrão "semana" com navegação via query param ?start=YYYY-MM-DD
     view = request.args.get('view', 'semana')
     start_qs = request.args.get('start')
     calendar_id = request.args.get('cal', 'primary')
@@ -61,13 +60,12 @@ def agenda_home():
     except Exception:
         base_day = date.today()
 
-    # Semana iniciando no domingo, para refletir o Google Calendar
-    weekday = base_day.weekday()  # 0=Mon .. 6=Sun
+    weekday = base_day.weekday()                  
     days_to_subtract = (weekday + 1) % 7
     week_start = base_day - timedelta(days=days_to_subtract)
     week_end = week_start + timedelta(days=6)
 
-    # timeMin/timeMax para o range da semana (UTC)
+    \
     time_min = f"{week_start.isoformat()}T00:00:00Z"
     time_max = f"{week_end.isoformat()}T23:59:59Z"
 
@@ -80,7 +78,6 @@ def agenda_home():
     }
     if query_text:
         params['q'] = query_text
-    # Remove None values
     params = {k: v for k, v in params.items() if v is not None}
 
     try:
@@ -93,7 +90,7 @@ def agenda_home():
         )
         agenda_logger.debug(f"Resposta Google Calendar status={resp.status_code}")
         if resp.status_code == 401:
-            # Token expirado; pedir reconexão
+            \
             flash('Sessão do Google expirou. Conecte novamente a Agenda.', 'warning')
             return render_template('agenda.html', events=[], google_connected=False)
         resp.raise_for_status()
@@ -103,7 +100,6 @@ def agenda_home():
             agenda_logger.info(f"Eventos carregados: {len(events)} para {g.user_email}")
         except Exception:
             pass
-        # Prepara dias da semana para o template
         week_days = [(week_start + timedelta(days=i)).isoformat() for i in range(7)]
         return render_template(
             'agenda.html',
@@ -129,7 +125,7 @@ def agenda_home():
 @agenda_bp.route('/agenda/connect')
 @login_required
 def agenda_connect():
-    # Estado SP1: fluxo simples via Authlib
+    \
     if not _google_oauth_configured():
         flash('Integração com Google Agenda não está configurada.', 'warning')
         return redirect(url_for('agenda.agenda_home'))
@@ -160,7 +156,7 @@ def agenda_list_calendars():
             return jsonify({'ok': False, 'error': resp.text}), resp.status_code
         data = resp.json()
         items = data.get('items', [])
-        # Normaliza saída essencial
+        \
         calendars = [
             {
                 'id': it.get('id'),
@@ -195,14 +191,12 @@ def agenda_callback():
         agenda_logger.error(f"Erro no callback OAuth Google: {e}", exc_info=True)
         flash('Falha na conexão com Google.', 'error')
 
-    # Se houver um destino específico após a conexão (ex.: página de e-mail), redireciona para lá
     dest = session.pop('oauth_next', None)
     if dest:
         return redirect(dest)
     return redirect(url_for('agenda.agenda_home'))
 
 
-# --- API para criar e excluir eventos no Google Calendar ---
 @agenda_bp.route('/agenda/events', methods=['POST'])
 @login_required
 def agenda_create_event():
@@ -217,9 +211,9 @@ def agenda_create_event():
 
     payload = request.get_json(silent=True) or {}
     summary = (payload.get('summary') or 'Compromisso').strip()
-    date_str = payload.get('date')  # YYYY-MM-DD
-    start_time = payload.get('startTime')  # HH:MM
-    end_time = payload.get('endTime')      # HH:MM
+    date_str = payload.get('date')              
+    start_time = payload.get('startTime')         
+    end_time = payload.get('endTime')             
     time_zone = payload.get('timeZone') or 'UTC'
     location = payload.get('location')
     all_day = bool(payload.get('allDay'))
@@ -236,7 +230,7 @@ def agenda_create_event():
         event_body['description'] = description
 
     if all_day:
-        # Evento de dia inteiro usa campos 'date'
+        \
         event_body['start'] = { 'date': date_str }
         event_body['end'] = { 'date': date_str }
     else:
@@ -247,17 +241,15 @@ def agenda_create_event():
         event_body['start'] = { 'dateTime': start_dt, 'timeZone': time_zone }
         event_body['end']   = { 'dateTime': end_dt,   'timeZone': time_zone }
 
-    # Recorrência e lembretes (alinha com a UI que envia estes campos)
     recurrence = payload.get('recurrence')
     reminders = payload.get('reminders')
 
-    # Aplica recorrência e lembretes se fornecidos
+    \
     if recurrence is not None:
         event_body['recurrence'] = recurrence
     if reminders is not None:
         event_body['reminders'] = reminders
 
-    # Opcional: gerar link de reunião (Google Meet)
     conference = bool((payload.get('conference') is True) or (payload.get('createMeetLink') is True))
     extra_params = None
     if conference:
@@ -267,7 +259,7 @@ def agenda_create_event():
                 'conferenceSolutionKey': { 'type': 'hangoutsMeet' }
             }
         }
-        # Necessário para ativar conferenceData na API
+        \
         extra_params = { 'conferenceDataVersion': 1 }
 
     try:
@@ -339,7 +331,7 @@ def agenda_update_event(event_id):
     payload = request.get_json(silent=True) or {}
     calendar_id = payload.get('calendarId') or request.args.get('calendarId') or 'primary'
 
-    # Campos opcionais
+    \
     summary = payload.get('summary')
     description = payload.get('description')
     location = payload.get('location')

@@ -1,4 +1,4 @@
-# backend/project/api_security.py
+\
 """
 Middleware de segurança para APIs REST.
 Implementa validação de Origin/Referer para prevenir CSRF em APIs.
@@ -29,15 +29,13 @@ def validate_api_origin(f):
                 return f(*args, **kwargs)
         except Exception:
             pass
-        # Ignora validação para métodos seguros (GET, HEAD, OPTIONS)
         if request.method in ['GET', 'HEAD', 'OPTIONS']:
             return f(*args, **kwargs)
         
-        # Obtém Origin ou Referer
         origin = request.headers.get('Origin')
         referer = request.headers.get('Referer')
         
-        # Se não tem nem Origin nem Referer, bloqueia
+                \
         if not origin and not referer:
             current_app.logger.warning(
                 f'API request without Origin/Referer: {request.method} {request.path} '
@@ -48,10 +46,9 @@ def validate_api_origin(f):
                 'error': 'Origin ou Referer header obrigatório'
             }), 403
         
-        # Valida Origin/Referer contra lista de origens permitidas
         allowed_origins = _get_allowed_origins()
         
-        # Verifica Origin
+                \
         if origin:
             if not _is_origin_allowed(origin, allowed_origins):
                 current_app.logger.warning(
@@ -63,7 +60,6 @@ def validate_api_origin(f):
                     'error': 'Origin não autorizado'
                 }), 403
         
-        # Verifica Referer (se Origin não estiver presente)
         elif referer:
             referer_origin = _extract_origin_from_referer(referer)
             if not _is_origin_allowed(referer_origin, allowed_origins):
@@ -88,7 +84,7 @@ def _get_allowed_origins():
     Returns:
         Lista de origens permitidas (ex: ['http://localhost:5000', 'https://app.com'])
     """
-    # Origens padrão (localhost para desenvolvimento)
+    \
     allowed = [
         'http://localhost:5000',
         'http://127.0.0.1:5000',
@@ -96,12 +92,11 @@ def _get_allowed_origins():
         'http://127.0.0.1:8000',
     ]
     
-    # Adiciona origem de produção se configurada
-    # Obtém do request.host_url ou de variável de ambiente
+        \
+\
     if request.host_url:
         allowed.append(request.host_url.rstrip('/'))
     
-    # Adiciona origens customizadas do .env (se configurado)
     custom_origins = current_app.config.get('CORS_ALLOWED_ORIGINS', '')
     if custom_origins:
         for origin in custom_origins.split(','):
@@ -126,10 +121,9 @@ def _is_origin_allowed(origin, allowed_origins):
     if not origin:
         return False
     
-    # Normaliza origem (remove trailing slash)
     origin = origin.rstrip('/')
     
-    # Verifica se está na lista
+        \
     for allowed in allowed_origins:
         if origin == allowed.rstrip('/'):
             return True

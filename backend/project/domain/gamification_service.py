@@ -1,22 +1,22 @@
-# project/domain/gamification_service.py
-# (Funções movidas de project/services.py)
+\
+\
 
 from flask import current_app
 from ..db import query_db, execute_db
 from datetime import datetime, timedelta, date 
 import calendar 
-from collections import OrderedDict # <-- ADICIONADO
+from collections import OrderedDict                 
 
-# --- CORREÇÃO: Linha de auto-importação removida ---
-# (A linha "from ..domain.gamification_service import ..." foi removida daqui)
+\
+\
 
-# --- Funções de Gamificação (Lógica de Negócio) ---
+\
 
 def _get_gamification_rules_as_dict():
     """Busca todas as regras do DB e retorna um dicionário (com cache)."""
     from ..extensions import gamification_rules_cache
     
-    # Verifica se já existe no cache
+        \
     cache_key = 'gamification_rules_dict'
     if cache_key in gamification_rules_cache:
         return gamification_rules_cache[cache_key]
@@ -29,7 +29,6 @@ def _get_gamification_rules_as_dict():
         else:
             result = {r['regra_id']: r['valor_pontos'] for r in regras_raw}
         
-        # Armazena no cache
         gamification_rules_cache[cache_key] = result
         return result
         
@@ -37,12 +36,11 @@ def _get_gamification_rules_as_dict():
         print(f"ERRO CRÍTICO ao buscar regras de gamificação: {e}")
         return {}
 
-# --- FUNÇÃO MOVIDA PARA CÁ (DE blueprints/gamification.py) ---
 def _get_all_gamification_rules_grouped():
     """Busca todas as regras de gamificação e as agrupa por categoria (com cache)."""
     from ..extensions import gamification_rules_cache
     
-    # Verifica se já existe no cache
+        \
     cache_key = 'gamification_rules_grouped'
     if cache_key in gamification_rules_cache:
         return gamification_rules_cache[cache_key]
@@ -59,16 +57,15 @@ def _get_all_gamification_rules_grouped():
             regras_agrupadas[categoria].append(regra)
         result = regras_agrupadas
     
-    # Armazena no cache
     gamification_rules_cache[cache_key] = result
     return result
-# --- FIM DA FUNÇÃO MOVIDA ---
+\
 
 
 def _get_gamification_automatic_data_bulk(mes, ano, primeiro_dia_str, fim_ultimo_dia_str, target_cs_email=None):
     """(NOVA) Busca todos os dados automáticos de todos os usuários de uma vez."""
     
-    # 1. Implantações Finalizadas e TMA (para todos)
+        \
     sql_finalizadas = """
         SELECT usuario_cs, data_criacao, data_finalizacao FROM implantacoes
         WHERE status = 'finalizada'
@@ -82,8 +79,8 @@ def _get_gamification_automatic_data_bulk(mes, ano, primeiro_dia_str, fim_ultimo
     impl_finalizadas_raw = query_db(sql_finalizadas, tuple(args_finalizadas))
     impl_finalizadas_raw = impl_finalizadas_raw if impl_finalizadas_raw is not None else []
     
-    # Processa TMA
-    tma_data_map = {} # { email: {'total_dias': X, 'count': Y} }
+        \
+    tma_data_map = {}                                           
     for impl in impl_finalizadas_raw:
         if not isinstance(impl, dict): continue
         email = impl.get('usuario_cs')
@@ -95,7 +92,6 @@ def _get_gamification_automatic_data_bulk(mes, ano, primeiro_dia_str, fim_ultimo
         if email not in tma_data_map:
             tma_data_map[email] = {'total_dias': 0, 'count': 0}
             
-        # (Lógica de cálculo de data copiada da função original)
         dt_criacao_datetime = None
         dt_finalizacao_datetime = None
         if isinstance(dt_criacao, str):
@@ -129,7 +125,6 @@ def _get_gamification_automatic_data_bulk(mes, ano, primeiro_dia_str, fim_ultimo
                 tma_data_map[email]['count'] += 1
             except TypeError: pass 
 
-    # 2. Implantações Iniciadas (para todos)
     sql_iniciadas = "SELECT usuario_cs, COUNT(*) as total FROM implantacoes WHERE data_inicio_efetivo >= %s AND data_inicio_efetivo <= %s"
     args_iniciadas = [primeiro_dia_str, fim_ultimo_dia_str]
     if target_cs_email:
@@ -141,7 +136,7 @@ def _get_gamification_automatic_data_bulk(mes, ano, primeiro_dia_str, fim_ultimo
     impl_iniciadas_raw = impl_iniciadas_raw if impl_iniciadas_raw is not None else []
     iniciadas_map = {row['usuario_cs']: row['total'] for row in impl_iniciadas_raw if isinstance(row, dict)}
     
-    # 3. Tarefas Concluídas (para todos)
+        \
     sql_tarefas = """
         SELECT i.usuario_cs, t.tag, COUNT(t.id) as total 
         FROM tarefas t
@@ -158,7 +153,7 @@ def _get_gamification_automatic_data_bulk(mes, ano, primeiro_dia_str, fim_ultimo
     tarefas_concluidas_raw = query_db(sql_tarefas, tuple(args_tarefas))
     tarefas_concluidas_raw = tarefas_concluidas_raw if tarefas_concluidas_raw is not None else []
     
-    tarefas_map = {} # { email: {'Ação interna': X, 'Reunião': Y} }
+    tarefas_map = {}                                               
     for row in tarefas_concluidas_raw:
         if not isinstance(row, dict): continue
         email = row.get('usuario_cs')
@@ -206,7 +201,7 @@ def _check_eligibility(metricas_manuais, regras_db, count_finalizadas, media_reu
     elif psp < min_planos_sucesso: elegivel = False; motivo_inelegibilidade.append(f"Planos Sucesso < {min_planos_sucesso}%")
 
     min_reunioes_dia = regras_db.get('eleg_reunioes_min', 3)
-    # Trata None com segurança: se não houver média calculada, considera 0
+    \
     media_reunioes_dia_safe = media_reunioes_dia if media_reunioes_dia is not None else 0
     if media_reunioes_dia_safe < min_reunioes_dia:
         elegivel = False
@@ -216,7 +211,6 @@ def _check_eligibility(metricas_manuais, regras_db, count_finalizadas, media_reu
         elegivel = False
         motivo_inelegibilidade.append(f"Impl. Finalizadas ({count_finalizadas}) < {min_processos_concluidos} ({cargo})")
 
-    # Normaliza valores None para 0 antes de comparações com >=
     reclamacoes = metricas_manuais.get('reclamacoes')
     reclamacoes = 0 if reclamacoes is None else reclamacoes
     if reclamacoes >= max_reclamacoes + 1:
@@ -254,7 +248,7 @@ def _calculate_user_gamification_score(
     
     cargo = perfil.get('cargo', 'N/A') 
 
-    # 1. Definir Padrões para Métricas Manuais
+    \
     metricas_manuais.setdefault('nota_qualidade', None)
     metricas_manuais.setdefault('assiduidade', None)
     metricas_manuais.setdefault('planos_sucesso_perc', None)
@@ -275,51 +269,46 @@ def _calculate_user_gamification_score(
     metricas_manuais.setdefault('perda_sla_grupo', 0)
     metricas_manuais.setdefault('finalizacao_incompleta', 0)
     
-    # --- INÍCIO DA CORREÇÃO (Sobrescrita Manual) ---
-    # Define padrões para os campos que agora podem ser manuais
+        \
+\
     metricas_manuais.setdefault('impl_finalizadas_mes', None)
     metricas_manuais.setdefault('tma_medio_mes', None)
     metricas_manuais.setdefault('impl_iniciadas_mes', None)
     metricas_manuais.setdefault('reunioes_concluidas_dia_media', None)
     metricas_manuais.setdefault('acoes_concluidas_dia_media', None)
-    # --- FIM DA CORREÇÃO ---
+\
 
-    # 2. Processar Dados Automáticos Recebidos
+\
     
-    # --- INÍCIO DA CORREÇÃO (Prioriza Manual) ---
+    \
     
-    # Se 'impl_finalizadas_mes' foi salvo manualmente (não é None), usa esse valor. Senão, calcula.
+        \
     count_finalizadas = metricas_manuais['impl_finalizadas_mes']
     if count_finalizadas is None:
         count_finalizadas = dados_tma.get('count', 0)
 
-    # Se 'tma_medio_mes' foi salvo manualmente, usa esse valor. Senão, calcula.
     tma_medio = metricas_manuais['tma_medio_mes']
     if tma_medio is None:
         tma_total_dias = dados_tma.get('total_dias', 0)
         tma_medio = round(tma_total_dias / count_finalizadas, 1) if count_finalizadas > 0 else None
 
-    # Se 'impl_iniciadas_mes' foi salvo manualmente, usa esse valor. Senão, usa o calculado.
     count_iniciadas_final = metricas_manuais['impl_iniciadas_mes']
     if count_iniciadas_final is None:
-        count_iniciadas_final = count_iniciadas # 'count_iniciadas' é o valor automático passado para a função
+        count_iniciadas_final = count_iniciadas                                                               
 
-    # Se 'reunioes_concluidas_dia_media' foi salvo, usa. Senão, calcula.
     media_reunioes_dia = metricas_manuais['reunioes_concluidas_dia_media']
     if media_reunioes_dia is None:
         count_reuniao = dados_tarefas.get('Reunião', 0)
         media_reunioes_dia = round(count_reuniao / dias_no_mes, 2) if dias_no_mes > 0 else 0.0
     
-    # Se 'acoes_concluidas_dia_media' foi salvo, usa. Senão, calcula.
     media_acoes_dia = metricas_manuais['acoes_concluidas_dia_media']
     if media_acoes_dia is None:
         count_acao_interna = dados_tarefas.get('Ação interna', 0)
         media_acoes_dia = round(count_acao_interna / dias_no_mes, 2) if dias_no_mes > 0 else 0.0
     
-    # --- FIM DA CORREÇÃO ---
+    \
     
     
-    # 3. Verificar Elegibilidade (usando métricas manuais, automáticas e regras_db)
     elegivel, motivo_inelegibilidade = _check_eligibility(metricas_manuais, regras_db, count_finalizadas, media_reunioes_dia, cargo)
 
 
@@ -425,7 +414,7 @@ def _calculate_user_gamification_score(
     
     cargo = perfil.get('cargo', 'N/A') 
 
-    # 1. Definir Padrões para Métricas Manuais
+    \
     metricas_manuais.setdefault('nota_qualidade', None)
     metricas_manuais.setdefault('assiduidade', None)
     metricas_manuais.setdefault('planos_sucesso_perc', None)
@@ -446,54 +435,49 @@ def _calculate_user_gamification_score(
     metricas_manuais.setdefault('perda_sla_grupo', 0)
     metricas_manuais.setdefault('finalizacao_incompleta', 0)
     
-    # --- INÍCIO DA CORREÇÃO (Sobrescrita Manual) ---
-    # Define padrões para os campos que agora podem ser manuais
+        \
+\
     metricas_manuais.setdefault('impl_finalizadas_mes', None)
     metricas_manuais.setdefault('tma_medio_mes', None)
     metricas_manuais.setdefault('impl_iniciadas_mes', None)
     metricas_manuais.setdefault('reunioes_concluidas_dia_media', None)
     metricas_manuais.setdefault('acoes_concluidas_dia_media', None)
-    # --- FIM DA CORREÇÃO ---
+\
 
-    # 2. Processar Dados Automáticos Recebidos
+\
     
-    # --- INÍCIO DA CORREÇÃO (Prioriza Manual) ---
+    \
     
-    # Se 'impl_finalizadas_mes' foi salvo manualmente (não é None), usa esse valor. Senão, calcula.
+        \
     count_finalizadas = metricas_manuais['impl_finalizadas_mes']
     if count_finalizadas is None:
         count_finalizadas = dados_tma.get('count', 0)
 
-    # Se 'tma_medio_mes' foi salvo manualmente, usa esse valor. Senão, calcula.
     tma_medio = metricas_manuais['tma_medio_mes']
     if tma_medio is None:
         tma_total_dias = dados_tma.get('total_dias', 0)
         tma_medio = round(tma_total_dias / count_finalizadas, 1) if count_finalizadas > 0 else None
 
-    # Se 'impl_iniciadas_mes' foi salvo manualmente, usa esse valor. Senão, usa o calculado.
     count_iniciadas_final = metricas_manuais['impl_iniciadas_mes']
     if count_iniciadas_final is None:
-        count_iniciadas_final = count_iniciadas # 'count_iniciadas' é o valor automático passado para a função
+        count_iniciadas_final = count_iniciadas                                                               
 
-    # Se 'reunioes_concluidas_dia_media' foi salvo, usa. Senão, calcula.
     media_reunioes_dia = metricas_manuais['reunioes_concluidas_dia_media']
     if media_reunioes_dia is None:
         count_reuniao = dados_tarefas.get('Reunião', 0)
         media_reunioes_dia = round(count_reuniao / dias_no_mes, 2) if dias_no_mes > 0 else 0.0
     
-    # Se 'acoes_concluidas_dia_media' foi salvo, usa. Senão, calcula.
     media_acoes_dia = metricas_manuais['acoes_concluidas_dia_media']
     if media_acoes_dia is None:
         count_acao_interna = dados_tarefas.get('Ação interna', 0)
         media_acoes_dia = round(count_acao_interna / dias_no_mes, 2) if dias_no_mes > 0 else 0.0
     
-    # --- FIM DA CORREÇÃO ---
+    \
     
     
-    # 3. Verificar Elegibilidade (usando métricas manuais, automáticas e regras_db)
     elegivel, motivo_inelegibilidade = _check_eligibility(metricas_manuais, regras_db, count_finalizadas, media_reunioes_dia, cargo)
 
-    # 4. Calcular Pontuação (APENAS SE ELEGÍVEL)
+    \
     pontos = 0
     detalhamento_pontos = {} 
 
@@ -558,7 +542,7 @@ def _calculate_user_gamification_score(
     
     cargo = perfil.get('cargo', 'N/A') 
 
-    # 1. Definir Padrões para Métricas Manuais
+    \
     metricas_manuais.setdefault('nota_qualidade', None)
     metricas_manuais.setdefault('assiduidade', None)
     metricas_manuais.setdefault('planos_sucesso_perc', None)
@@ -579,54 +563,49 @@ def _calculate_user_gamification_score(
     metricas_manuais.setdefault('perda_sla_grupo', 0)
     metricas_manuais.setdefault('finalizacao_incompleta', 0)
     
-    # --- INÍCIO DA CORREÇÃO (Sobrescrita Manual) ---
-    # Define padrões para os campos que agora podem ser manuais
+        \
+\
     metricas_manuais.setdefault('impl_finalizadas_mes', None)
     metricas_manuais.setdefault('tma_medio_mes', None)
     metricas_manuais.setdefault('impl_iniciadas_mes', None)
     metricas_manuais.setdefault('reunioes_concluidas_dia_media', None)
     metricas_manuais.setdefault('acoes_concluidas_dia_media', None)
-    # --- FIM DA CORREÇÃO ---
+\
 
-    # 2. Processar Dados Automáticos Recebidos
+\
     
-    # --- INÍCIO DA CORREÇÃO (Prioriza Manual) ---
+    \
     
-    # Se 'impl_finalizadas_mes' foi salvo manualmente (não é None), usa esse valor. Senão, calcula.
+        \
     count_finalizadas = metricas_manuais['impl_finalizadas_mes']
     if count_finalizadas is None:
         count_finalizadas = dados_tma.get('count', 0)
 
-    # Se 'tma_medio_mes' foi salvo manualmente, usa esse valor. Senão, calcula.
     tma_medio = metricas_manuais['tma_medio_mes']
     if tma_medio is None:
         tma_total_dias = dados_tma.get('total_dias', 0)
         tma_medio = round(tma_total_dias / count_finalizadas, 1) if count_finalizadas > 0 else None
 
-    # Se 'impl_iniciadas_mes' foi salvo manualmente, usa esse valor. Senão, usa o calculado.
     count_iniciadas_final = metricas_manuais['impl_iniciadas_mes']
     if count_iniciadas_final is None:
-        count_iniciadas_final = count_iniciadas # 'count_iniciadas' é o valor automático passado para a função
+        count_iniciadas_final = count_iniciadas                                                               
 
-    # Se 'reunioes_concluidas_dia_media' foi salvo, usa. Senão, calcula.
     media_reunioes_dia = metricas_manuais['reunioes_concluidas_dia_media']
     if media_reunioes_dia is None:
         count_reuniao = dados_tarefas.get('Reunião', 0)
         media_reunioes_dia = round(count_reuniao / dias_no_mes, 2) if dias_no_mes > 0 else 0.0
     
-    # Se 'acoes_concluidas_dia_media' foi salvo, usa. Senão, calcula.
     media_acoes_dia = metricas_manuais['acoes_concluidas_dia_media']
     if media_acoes_dia is None:
         count_acao_interna = dados_tarefas.get('Ação interna', 0)
         media_acoes_dia = round(count_acao_interna / dias_no_mes, 2) if dias_no_mes > 0 else 0.0
     
-    # --- FIM DA CORREÇÃO ---
+    \
     
     
-    # 3. Verificar Elegibilidade (usando métricas manuais, automáticas e regras_db)
     elegivel, motivo_inelegibilidade = _check_eligibility(metricas_manuais, regras_db, count_finalizadas, media_reunioes_dia, cargo)
 
-    # 4. Calcular Pontuação (APENAS SE ELEGÍVEL)
+    \
     pontos = 0
     detalhamento_pontos = {} 
 
@@ -706,7 +685,7 @@ def _calculate_user_gamification_score(
     
     cargo = perfil.get('cargo', 'N/A') 
 
-    # 1. Definir Padrões para Métricas Manuais
+    \
     metricas_manuais.setdefault('nota_qualidade', None)
     metricas_manuais.setdefault('assiduidade', None)
     metricas_manuais.setdefault('planos_sucesso_perc', None)
@@ -727,54 +706,49 @@ def _calculate_user_gamification_score(
     metricas_manuais.setdefault('perda_sla_grupo', 0)
     metricas_manuais.setdefault('finalizacao_incompleta', 0)
     
-    # --- INÍCIO DA CORREÇÃO (Sobrescrita Manual) ---
-    # Define padrões para os campos que agora podem ser manuais
+        \
+\
     metricas_manuais.setdefault('impl_finalizadas_mes', None)
     metricas_manuais.setdefault('tma_medio_mes', None)
     metricas_manuais.setdefault('impl_iniciadas_mes', None)
     metricas_manuais.setdefault('reunioes_concluidas_dia_media', None)
     metricas_manuais.setdefault('acoes_concluidas_dia_media', None)
-    # --- FIM DA CORREÇÃO ---
+\
 
-    # 2. Processar Dados Automáticos Recebidos
+\
     
-    # --- INÍCIO DA CORREÇÃO (Prioriza Manual) ---
+    \
     
-    # Se 'impl_finalizadas_mes' foi salvo manualmente (não é None), usa esse valor. Senão, calcula.
+        \
     count_finalizadas = metricas_manuais['impl_finalizadas_mes']
     if count_finalizadas is None:
         count_finalizadas = dados_tma.get('count', 0)
 
-    # Se 'tma_medio_mes' foi salvo manualmente, usa esse valor. Senão, calcula.
     tma_medio = metricas_manuais['tma_medio_mes']
     if tma_medio is None:
         tma_total_dias = dados_tma.get('total_dias', 0)
         tma_medio = round(tma_total_dias / count_finalizadas, 1) if count_finalizadas > 0 else None
 
-    # Se 'impl_iniciadas_mes' foi salvo manualmente, usa esse valor. Senão, usa o calculado.
     count_iniciadas_final = metricas_manuais['impl_iniciadas_mes']
     if count_iniciadas_final is None:
-        count_iniciadas_final = count_iniciadas # 'count_iniciadas' é o valor automático passado para a função
+        count_iniciadas_final = count_iniciadas                                                               
 
-    # Se 'reunioes_concluidas_dia_media' foi salvo, usa. Senão, calcula.
     media_reunioes_dia = metricas_manuais['reunioes_concluidas_dia_media']
     if media_reunioes_dia is None:
         count_reuniao = dados_tarefas.get('Reunião', 0)
         media_reunioes_dia = round(count_reuniao / dias_no_mes, 2) if dias_no_mes > 0 else 0.0
     
-    # Se 'acoes_concluidas_dia_media' foi salvo, usa. Senão, calcula.
     media_acoes_dia = metricas_manuais['acoes_concluidas_dia_media']
     if media_acoes_dia is None:
         count_acao_interna = dados_tarefas.get('Ação interna', 0)
         media_acoes_dia = round(count_acao_interna / dias_no_mes, 2) if dias_no_mes > 0 else 0.0
     
-    # --- FIM DA CORREÇÃO ---
+    \
     
     
-    # 3. Verificar Elegibilidade (usando métricas manuais, automáticas e regras_db)
     elegivel, motivo_inelegibilidade = _check_eligibility(metricas_manuais, regras_db, count_finalizadas, media_reunioes_dia, cargo)
 
-    # 4. Calcular Pontuação (APENAS SE ELEGÍVEL)
+    \
     pontos = 0
     detalhamento_pontos = {} 
 
@@ -790,7 +764,6 @@ def _calculate_user_gamification_score(
         detalhamento_pontos.update(detalhamento_penalidades)
  
 
-    # 5. Preparar Resultado Final
     resultado = {
         'elegivel': elegivel,
         'motivo_inelegibilidade': ", ".join(motivo_inelegibilidade) if motivo_inelegibilidade else None,
@@ -804,19 +777,19 @@ def _calculate_user_gamification_score(
         'metricas_manuais_usadas': metricas_manuais 
     }
     
-    # Prepara os dados automáticos para salvar no DB
+        \
     dados_automaticos_calculados = {
         'pontuacao_calculada': resultado['pontuacao_final'],
         'elegivel': resultado['elegivel'],
         
-        # --- INÍCIO DA CORREÇÃO (Evita sobrescrever manual) ---
-        # Só salva o valor calculado se NÃO houver valor manual
+            \
+\
         'impl_finalizadas_mes': count_finalizadas if metricas_manuais.get('impl_finalizadas_mes') is None else None,
         'tma_medio_mes': tma_medio if metricas_manuais.get('tma_medio_mes') is None else None, 
         'impl_iniciadas_mes': count_iniciadas_final if metricas_manuais.get('impl_iniciadas_mes') is None else None,
         'reunioes_concluidas_dia_media': media_reunioes_dia if metricas_manuais.get('reunioes_concluidas_dia_media') is None else None,
         'acoes_concluidas_dia_media': media_acoes_dia if metricas_manuais.get('acoes_concluidas_dia_media') is None else None
-        # --- FIM DA CORREÇÃO ---
+    \
     }
 
     return resultado, dados_automaticos_calculados
@@ -828,12 +801,11 @@ def get_gamification_report_data(mes, ano, target_cs_email=None, all_cs_users_li
     Resolve o problema N+1 ao buscar todos os dados em massa.
     """
     
-    # 1. Obter Regras
+        \
     regras_db = _get_gamification_rules_as_dict()
     if not regras_db:
         raise ValueError("Falha ao carregar as regras de pontuação da gamificação do banco de dados.")
 
-    # 2. Definir Período
     try:
         primeiro_dia = date(ano, mes, 1)
         ultimo_dia_mes = calendar.monthrange(ano, mes)[1]
@@ -844,11 +816,11 @@ def get_gamification_report_data(mes, ano, target_cs_email=None, all_cs_users_li
         raise ValueError(f"Mês ({mes}) ou Ano ({ano}) inválido.")
     
     primeiro_dia_str = primeiro_dia.isoformat()
-    fim_ultimo_dia_str = fim_ultimo_dia.isoformat() # Usar fim do dia para queries <=
+    fim_ultimo_dia_str = fim_ultimo_dia.isoformat()                                  
 
-    # 3. Buscar Usuários e Métricas Manuais (Query em Massa 1)
+\
     
-    # Se all_cs_users_list não foi fornecida, busca do DB
+        \
     if all_cs_users_list is None:
         sql_users = "SELECT usuario, nome, cargo FROM perfil_usuario WHERE perfil_acesso IS NOT NULL AND perfil_acesso != ''"
         args_users = []
@@ -860,7 +832,6 @@ def get_gamification_report_data(mes, ano, target_cs_email=None, all_cs_users_li
         all_cs_users_list = query_db(sql_users, tuple(args_users))
         all_cs_users_list = all_cs_users_list if all_cs_users_list is not None else []
     
-    # Busca métricas manuais para todos os usuários filtrados
     usuarios_filtrados = [u['usuario'] for u in all_cs_users_list if isinstance(u, dict)]
     metricas_manuais_map = {}
     
@@ -876,12 +847,11 @@ def get_gamification_report_data(mes, ano, target_cs_email=None, all_cs_users_li
             if isinstance(metrica, dict):
                 metricas_manuais_map[metrica['usuario_cs']] = metrica
 
-    # 4. Buscar Dados Automáticos (Queries em Massa 2, 3, 4)
     tma_data_map, iniciadas_map, tarefas_map = _get_gamification_automatic_data_bulk(
         mes, ano, primeiro_dia_str, fim_ultimo_dia_str, target_cs_email
     )
 
-    # 5. Iterar, Calcular e Salvar
+    \
     report_data = []
     
     for user_profile in all_cs_users_list:
@@ -890,13 +860,13 @@ def get_gamification_report_data(mes, ano, target_cs_email=None, all_cs_users_li
         if not user_email: continue
             
         try:
-            # Pega os dados pré-buscados para este usuário
+            \
             metricas_manuais = metricas_manuais_map.get(user_email, {})
             dados_tma = tma_data_map.get(user_email, {})
             count_iniciadas = iniciadas_map.get(user_email, 0)
             dados_tarefas = tarefas_map.get(user_email, {})
             
-            # Chama a função de CÁLCULO (sem queries)
+                        \
             resultado, dados_automaticos_calculados = _calculate_user_gamification_score(
                 user_profile,
                 metricas_manuais,
@@ -907,7 +877,7 @@ def get_gamification_report_data(mes, ano, target_cs_email=None, all_cs_users_li
                 dados_tarefas
             )
             
-            # Adiciona ao relatório
+                        \
             report_data.append({
                 'usuario_nome': user_profile.get('nome', user_email),
                 'cargo': user_profile.get('cargo', 'N/A'),
@@ -915,38 +885,38 @@ def get_gamification_report_data(mes, ano, target_cs_email=None, all_cs_users_li
                 'mes': mes,
                 'ano': ano,
                 'status_calculo': 'Calculado/Atualizado',
-                **resultado # Adiciona chaves: 'elegivel', 'pontuacao_final', 'motivo_inelegibilidade', etc.
+                **resultado\
             })
 
-            # 6. Salvar os resultados calculados no DB (a lógica que estava no final da função antiga)
+            \
             try:
-                # --- INÍCIO DA CORREÇÃO ---
-                # Filtra dados_automaticos_calculados para remover chaves onde o valor é None
-                # Isso impede que a gente sobrescreva um valor manual com NULL
+                \
+\
+\
                 dados_para_salvar = {
                     key: value for key, value in dados_automaticos_calculados.items()
                     if value is not None
                 }
-                # Adiciona data_registro
+                \
                 dados_para_salvar['data_registro'] = datetime.now()
-                # --- FIM DA CORREÇÃO ---
+\
 
                 existing_record_id = metricas_manuais.get('id')
                 
                 if existing_record_id:
-                    # Atualiza o registro existente
+                    \
                     set_clauses_calc = [f"{key} = %s" for key in dados_para_salvar.keys()]
                     
-                    # --- INÍCIO DA CORREÇÃO ---
-                    # Só executa o update se houver algo para atualizar
+                                        \
+\
                     if set_clauses_calc:
                         sql_update_calc = f"UPDATE gamificacao_metricas_mensais SET {', '.join(set_clauses_calc)} WHERE id = %s"
                         args_update_calc = list(dados_para_salvar.values()) + [existing_record_id]
                         execute_db(sql_update_calc, tuple(args_update_calc))
-                    # --- FIM DA CORREÇÃO ---
+\
                 
                 elif metricas_manuais:
-                    # Se existia métrica manual mas sem ID (improvável, mas seguro)
+                    \
                     print(f"AVISO: Métrica manual para {user_email} não tinha ID. Ignorando salvamento automático.")
                 
             except Exception as db_update_err:
@@ -967,7 +937,6 @@ def get_gamification_report_data(mes, ano, target_cs_email=None, all_cs_users_li
                 'status_calculo': 'Erro Crítico'
             })
 
-    # 7. Ordenar e Retornar
     report_data_sorted = sorted(report_data, key=lambda x: x['pontuacao_final'], reverse=True)
     return report_data_sorted
 

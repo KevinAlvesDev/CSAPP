@@ -1,4 +1,4 @@
-# backend/project/sentry_config.py
+\
 """
 Configuração do Sentry para monitoramento de erros em produção.
 
@@ -11,7 +11,7 @@ Sentry captura automaticamente:
 
 import os
 
-# Importações opcionais (Sentry pode não estar instalado)
+\
 try:
     import sentry_sdk
     from sentry_sdk.integrations.flask import FlaskIntegration
@@ -36,28 +36,27 @@ def init_sentry(app):
         SENTRY_DSN=https://abc123@o123456.ingest.sentry.io/123456
         FLASK_ENV=production
     """
-    # Verifica se Sentry está disponível
+    \
     if not SENTRY_AVAILABLE:
         app.logger.info("Sentry não disponível (sentry-sdk não instalado)")
         return
 
     sentry_dsn = app.config.get('SENTRY_DSN') or os.environ.get('SENTRY_DSN')
 
-    # Só inicializa se DSN estiver configurado
+    \
     if not sentry_dsn:
         app.logger.info("Sentry não configurado (SENTRY_DSN não definido)")
         return
     
-    # Determina ambiente
     environment = app.config.get('FLASK_ENV', 'production')
     
-    # Configuração de logging
+        \
     logging_integration = LoggingIntegration(
-        level=None,  # Captura todos os níveis
-        event_level='ERROR'  # Envia eventos apenas para ERROR e acima
+        level=None,\
+        event_level='ERROR'\
     )
     
-    # Inicializa Sentry
+        \
     sentry_sdk.init(
         dsn=sentry_dsn,
         integrations=[
@@ -65,22 +64,22 @@ def init_sentry(app):
             logging_integration,
         ],
         
-        # Configurações de performance
-        traces_sample_rate=0.1,  # 10% das transações (ajuste conforme necessário)
+            \
+        traces_sample_rate=0.1,\
         
-        # Configurações de ambiente
+            \
         environment=environment,
         
-        # Release (versão da aplicação)
+            \
         release=app.config.get('APP_VERSION', 'unknown'),
         
-        # Configurações de privacidade
-        send_default_pii=False,  # Não envia informações pessoais por padrão
+            \
+        send_default_pii=False,\
         
-        # Configurações de breadcrumbs
+            \
         max_breadcrumbs=50,
         
-        # Filtros de eventos
+            \
         before_send=before_send_filter,
     )
     
@@ -104,24 +103,22 @@ def before_send_filter(event, hint):
         event modificado ou None para ignorar
     """
     
-    # Ignora erros 404 (Not Found) - muito comuns e não são bugs
+        \
     if event.get('level') == 'error':
         exception = event.get('exception', {}).get('values', [{}])[0]
         if exception.get('type') == 'NotFound':
             return None
     
-    # Remove informações sensíveis de headers
     if 'request' in event:
         headers = event['request'].get('headers', {})
         
-        # Remove tokens de autenticação
+                \
         if 'Authorization' in headers:
             headers['Authorization'] = '[Filtered]'
         
         if 'Cookie' in headers:
             headers['Cookie'] = '[Filtered]'
     
-    # Adiciona contexto do usuário (se disponível)
     try:
         from flask import g
         if hasattr(g, 'user_email'):

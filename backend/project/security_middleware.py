@@ -1,4 +1,4 @@
-# backend/project/security_middleware.py
+\
 """
 Middleware de segurança para adicionar headers de proteção.
 Implementa CSP, HSTS, X-Frame-Options, etc.
@@ -18,12 +18,12 @@ def init_security_headers(app):
         """
         Adiciona headers de segurança em todas as respostas.
         """
-        # Só aplica em produção (quando não estiver usando SQLite)
+        \
         use_sqlite = app.config.get('USE_SQLITE_LOCALLY', False)
         is_production = not use_sqlite
         
-        # Content Security Policy (CSP)
-        # Permite scripts inline (necessário para alguns templates), mas restringe origens
+                \
+\
         csp_directives = [
             "default-src 'self'",
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com",
@@ -37,19 +37,19 @@ def init_security_headers(app):
         ]
         response.headers['Content-Security-Policy'] = "; ".join(csp_directives)
         
-        # X-Content-Type-Options: previne MIME sniffing
+                \
         response.headers['X-Content-Type-Options'] = 'nosniff'
         
-        # X-Frame-Options: previne clickjacking
+                \
         response.headers['X-Frame-Options'] = 'DENY'
         
-        # X-XSS-Protection: proteção adicional contra XSS (legacy, mas ainda útil)
+                \
         response.headers['X-XSS-Protection'] = '1; mode=block'
         
-        # Referrer-Policy: controla informações de referrer
+                \
         response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
         
-        # Permissions-Policy: controla features do browser
+                \
         permissions = [
             "geolocation=()",
             "microphone=()",
@@ -62,12 +62,11 @@ def init_security_headers(app):
         ]
         response.headers['Permissions-Policy'] = ", ".join(permissions)
         
-        # HSTS (HTTP Strict Transport Security) - apenas em produção
+                \
         if is_production:
-            # max-age=31536000 = 1 ano
+            \
             response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains; preload'
 
-        # Cache-Control para páginas sensíveis (login, perfil, etc)
         if any(path in request.path for path in ['/login', '/perfil', '/management']):
             response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, private'
             response.headers['Pragma'] = 'no-cache'
@@ -88,7 +87,7 @@ def init_rate_limiting_headers(app):
         """
         Adiciona headers de rate limiting quando aplicável.
         """
-        # Verifica se há informações de rate limit no contexto
+        \
         from flask import g
         
         if hasattr(g, 'rate_limit_info'):

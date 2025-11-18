@@ -11,7 +11,7 @@ import os
 import sys
 from werkzeug.security import generate_password_hash
 
-# Garante que o diretório 'backend' esteja no PYTHONPATH
+\
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 BACKEND_DIR = os.path.dirname(CURRENT_DIR)
 if BACKEND_DIR not in sys.path:
@@ -32,7 +32,7 @@ def main():
         print(f"[Admin Seed] Processando usuário: {EMAIL}")
         senha_hash = generate_password_hash(PLAIN_PASSWORD)
 
-        # Verifica se usuário existe
+        \
         usuario = query_db("SELECT usuario FROM usuarios WHERE usuario = %s", (EMAIL,), one=True)
         if usuario:
             execute_db("UPDATE usuarios SET senha = %s WHERE usuario = %s", (senha_hash, EMAIL))
@@ -41,13 +41,12 @@ def main():
             execute_db("INSERT INTO usuarios (usuario, senha) VALUES (%s, %s)", (EMAIL, senha_hash))
             print("[Admin Seed] Usuário criado.")
 
-        # Garante perfil admin
         perfil = query_db("SELECT usuario, perfil_acesso FROM perfil_usuario WHERE usuario = %s", (EMAIL,), one=True)
         if perfil:
             execute_db("UPDATE perfil_usuario SET perfil_acesso = %s WHERE usuario = %s", (PERFIL_ADMIN, EMAIL))
             print("[Admin Seed] Perfil atualizado para Administrador.")
         else:
-            # Usa nome a partir do e-mail
+            \
             nome = EMAIL.split('@')[0].replace('.', ' ').title()
             execute_db(
                 "INSERT INTO perfil_usuario (usuario, nome, perfil_acesso) VALUES (%s, %s, %s)",

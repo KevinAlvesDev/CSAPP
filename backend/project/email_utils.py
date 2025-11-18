@@ -1,4 +1,4 @@
-# testo/CSAPP/backend/project/email_utils.py
+\
 import smtplib
 import socket
 from email.mime.text import MIMEText
@@ -11,15 +11,15 @@ from flask import current_app
 from .logging_config import security_logger, app_logger
 import re
 
-# Exceção específica para falhas de rede ao tentar acessar o provedor SMTP
+\
 class NetworkError(Exception):
     pass
 
-# --- CRIPTOGRAFIA (Simples) ---
-# Em um cenário ideal, usaríamos uma biblioteca de criptografia real (ex: cryptography.fernet)
-# Mas para manter a simplicidade e evitar dependências de chaves, usaremos hash + verificação
-# NOTA: Isto é apenas para ofuscar, NÃO é criptografia reversível.
-# A senha SÓ PODE SER INSERIDA, não pode ser lida de volta para o formulário.
+\
+\
+\
+\
+\
 
 def _hash_password(password):
     """Gera um hash para a senha."""
@@ -33,7 +33,7 @@ def _check_password(hashed_password, provided_password):
         return False
     return check_password_hash(hashed_password, provided_password)
 
-# --- FUNÇÕES DE LÓGICA DE E-MAIL ---
+\
 
 def detect_smtp_settings(user_email):
     """
@@ -47,30 +47,30 @@ def detect_smtp_settings(user_email):
 
     domain = user_email.split('@', 1)[1].lower().strip()
 
-    # Mapeamentos comuns (TLS 587 por padrão)
+    \
     COMMON = {
-        # Google
+    \
         'gmail.com': ('smtp.gmail.com', 587, True, False),
         'googlemail.com': ('smtp.gmail.com', 587, True, False),
-        # Microsoft 365 / Outlook
+    \
         'outlook.com': ('smtp.office365.com', 587, True, False),
         'hotmail.com': ('smtp.office365.com', 587, True, False),
         'live.com': ('smtp.office365.com', 587, True, False),
         'office365.com': ('smtp.office365.com', 587, True, False),
         'msn.com': ('smtp.office365.com', 587, True, False),
-        # Yahoo
+    \
         'yahoo.com': ('smtp.mail.yahoo.com', 587, True, False),
         'yahoo.com.br': ('smtp.mail.yahoo.com', 587, True, False),
-        # iCloud / Apple
+    \
         'icloud.com': ('smtp.mail.me.com', 587, True, False),
         'me.com': ('smtp.mail.me.com', 587, True, False),
         'mac.com': ('smtp.mail.me.com', 587, True, False),
-        # Zoho
+    \
         'zoho.com': ('smtp.zoho.com', 587, True, False),
-        # Yandex
+    \
         'yandex.com': ('smtp.yandex.com', 587, True, False),
         'yandex.ru': ('smtp.yandex.ru', 587, True, False),
-        # Provedores BR (comuns)
+    \
         'uol.com.br': ('smtp.uol.com.br', 587, True, False),
         'bol.com.br': ('smtp.bol.com.br', 587, True, False),
         'terra.com.br': ('smtp.terra.com.br', 587, True, False),
@@ -88,8 +88,6 @@ def detect_smtp_settings(user_email):
             'use_ssl': use_ssl,
         }
 
-    # Heurística para Microsoft 365 com domínio customizado (muito comum)
-    # MX costuma apontar para *.protection.outlook.com, mas sem consultar DNS, assumimos office365
     if re.search(r"(\.onmicrosoft\.com|\.office365\.com)$", domain):
         return {
             'host': 'smtp.office365.com',
@@ -98,14 +96,13 @@ def detect_smtp_settings(user_email):
             'use_ssl': False,
         }
 
-    # Fallback: tentar padronizar por subdomínios comuns
     candidates = [
         f"smtp.{domain}",
         f"mail.{domain}",
     ]
 
-    # Não conectamos aqui; deixamos a validação para test_smtp_connection
-    # Retornamos o primeiro candidato com TLS na porta 587
+    \
+\
     chosen = candidates[0]
     app_logger.info(f"Detecção SMTP: domínio desconhecido '{domain}', usando heurística -> {chosen}:587 (TLS)")
     return {
@@ -124,8 +121,8 @@ def load_smtp_settings(user_email):
         return None
         
     try:
-        # --- CORREÇÃO AQUI ---
-        # A coluna "user" precisa de aspas no SQL
+        \
+\
         settings = query_db(
             'SELECT host, port, "user", password as hashed_password, use_tls, use_ssl FROM smtp_settings WHERE usuario_email = %s',
             (user_email,),
@@ -143,8 +140,8 @@ def save_smtp_settings(user_email, data):
     """
     host = data.get('host')
     port = data.get('port')
-    user = data.get('user') # O nome do campo do formulário (que será salvo na coluna "user")
-    password = data.get('password') # Senha em texto plano do formulário
+    user = data.get('user')                                                                  
+    password = data.get('password')                                     
     use_tls = data.get('use_tls', 'true').lower() == 'true'
     use_ssl = data.get('use_ssl', 'false').lower() == 'true'
 
@@ -152,13 +149,13 @@ def save_smtp_settings(user_email, data):
         raise ValueError("Dados de SMTP incompletos para salvar.")
 
     try:
-        # Se uma nova senha foi fornecida, faz o hash dela.
-        # Se a senha estiver vazia, tentamos manter a antiga.
+        \
+\
         if password:
             hashed_password_to_save = _hash_password(password)
             
-            # --- CORREÇÃO AQUI ---
-            # A coluna "user" precisa de aspas no SQL
+                        \
+\
             sql = """
                 INSERT INTO smtp_settings (usuario_email, host, port, "user", password, use_tls, use_ssl)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
@@ -173,8 +170,8 @@ def save_smtp_settings(user_email, data):
             params = (user_email, host, int(port), user, hashed_password_to_save, use_tls, use_ssl)
         
         else:
-            # Query para salvar SEM atualizar a senha (mantém a existente)
-            # --- CORREÇÃO AQUI ---
+            \
+\
             sql = """
                 INSERT INTO smtp_settings (usuario_email, host, port, "user", use_tls, use_ssl)
                 VALUES (%s, %s, %s, %s, %s, %s)
@@ -208,15 +205,14 @@ def test_smtp_connection(settings, plain_password):
         
     hashed_password = settings.get('hashed_password')
     
-    # Etapa 1: Verificar se a senha fornecida no teste corresponde ao hash salvo
+        \
     if not _check_password(hashed_password, plain_password):
         security_logger.warning(f"Falha no teste SMTP (Senha não confere com o HASH salvo) para usuário {settings.get('user')}")
         raise smtplib.SMTPAuthenticationError(535, b"Senha invalida. Nao corresponde a configuracao salva.")
 
-    # Etapa 2: Se a senha bate com o HASH, tentamos a conexão real com o provedor
     host = settings.get('host')
     port = int(settings.get('port', 587))
-    user = settings.get('user') # O Python.get() lê a chave 'user' do dicionário (correto)
+    user = settings.get('user')                                                           
     use_tls = settings.get('use_tls', True)
     use_ssl = settings.get('use_ssl', False)
     
@@ -231,7 +227,6 @@ def test_smtp_connection(settings, plain_password):
             if use_tls:
                 server.starttls()
         
-        # Usamos a senha em texto plano (verificada) para o login real
         server.login(user, plain_password)
         server.quit()
         app_logger.info(f"Autenticação SMTP bem-sucedida para {user}")
@@ -239,10 +234,10 @@ def test_smtp_connection(settings, plain_password):
     
     except smtplib.SMTPAuthenticationError as e:
         security_logger.warning(f"Falha de autenticacao SMTP (provedor rejeitou) para {user}: {e}")
-        raise # Re-lança a exceção original do smtplib
+        raise                                         
         
     except (OSError, socket.gaierror, smtplib.SMTPConnectError, smtplib.SMTPServerDisconnected, TimeoutError) as e:
-        # Falhas de egress/conectividade típicas em ambientes PaaS (ex.: Railway)
+        \
         app_logger.warning(f"Falha de conectividade SMTP para {user} em {host}:{port}: {e}")
         raise NetworkError(f"Erro de conexao: {e}")
     
@@ -257,8 +252,8 @@ def send_email(subject, body_html, recipients, smtp_settings, plain_password, fr
     Requer a senha em texto plano, pois ela não é armazenada de forma reversível.
     """
     
-    # Esta função só pode ser chamada se a autenticação (teste) foi bem-sucedida
-    # e a senha em texto plano está disponível na memória (vinda do formulário).
+    \
+\
     
     host = smtp_settings.get('host')
     port = int(smtp_settings.get('port', 587))
@@ -341,7 +336,7 @@ def send_email_global(subject, body_html, recipients, from_name=None, reply_to=N
     cfg = current_app.config
     driver = (cfg.get('EMAIL_DRIVER') or 'smtp').lower()
 
-    # Endereço do remetente (usado por ambos os drivers)
+    \
     from_addr = cfg.get('SMTP_FROM') or cfg.get('SMTP_USER')
     if not from_addr:
         raise ValueError('Configuração de e-mail inválida: remetente (SMTP_FROM) ausente.')
@@ -351,21 +346,19 @@ def send_email_global(subject, body_html, recipients, from_name=None, reply_to=N
         if not api_key:
             raise ValueError('SendGrid não configurado: defina SENDGRID_API_KEY.')
 
-        # Monta payload para SendGrid
         content = []
-        # Inclui texto plano sempre que possível para melhorar entregabilidade
+        \
         if body_text:
             content.append({"type": "text/plain", "value": body_text})
         elif body_html:
             try:
-                # Fallback simples: remove tags HTML para gerar texto plano
+                \
                 plain_fallback = re.sub(r"<[^>]+>", "", body_html)
                 content.append({"type": "text/plain", "value": plain_fallback})
             except Exception:
                 pass
         if body_html:
             content.append({"type": "text/html", "value": body_html})
-        # Garante pelo menos um conteúdo
         if not content:
             content = [{"type": "text/plain", "value": subject or "Mensagem"}]
 
@@ -380,7 +373,6 @@ def send_email_global(subject, body_html, recipients, from_name=None, reply_to=N
         if reply_to:
             payload["reply_to"] = {"email": reply_to}
 
-        # Opcional: desabilitar tracking (cliques/aberturas) para destinatários corporativos
         try:
             disable_tracking_env = str(cfg.get('SENDGRID_DISABLE_TRACKING', '')).lower() in ('1', 'true', 'yes')
             domains_cfg = cfg.get('EMAIL_DISABLE_TRACKING_DOMAINS')
@@ -399,7 +391,7 @@ def send_email_global(subject, body_html, recipients, from_name=None, reply_to=N
                     "open_tracking": {"enable": False}
                 }
         except Exception:
-            # Falha silenciosa na configuração opcional de tracking
+            \
             pass
 
         try:
@@ -414,7 +406,7 @@ def send_email_global(subject, body_html, recipients, from_name=None, reply_to=N
                 json=payload,
                 timeout=10,
             )
-            # SendGrid retorna 202 para aceito
+            \
             if resp.status_code == 202:
                 msg_id = resp.headers.get('X-Message-Id') or resp.headers.get('X-Message-ID')
                 if msg_id:
@@ -423,14 +415,13 @@ def send_email_global(subject, body_html, recipients, from_name=None, reply_to=N
                     app_logger.info(f"E-mail global (SendGrid) enviado para {recipients}")
                 return True
             else:
-                # Inclui resposta do provider para diagnóstico
+                \
                 raise RuntimeError(f"SendGrid falhou ({resp.status_code}): {resp.text}")
         except requests.RequestException as e:
-            # Erros de rede aqui geralmente são resolvidos em PaaS (porta 443)
+            \
             app_logger.error(f"Falha de rede no envio via SendGrid: {e}")
             raise
 
-    # Driver SMTP padrão
     host = cfg.get('SMTP_HOST')
     port = int(cfg.get('SMTP_PORT', 587))
     user = cfg.get('SMTP_USER')
@@ -441,7 +432,6 @@ def send_email_global(subject, body_html, recipients, from_name=None, reply_to=N
     if not host:
         raise ValueError('SMTP global não configurado (host ausente).')
 
-    # Usa MIMEMultipart para permitir alternativas de texto
     msg = MIMEMultipart('alternative')
     msg['Subject'] = subject
     msg['From'] = f"{from_name} <{from_addr}>" if from_name else from_addr
@@ -473,9 +463,6 @@ def send_email_global(subject, body_html, recipients, from_name=None, reply_to=N
         raise
     
 
-# -------------------------------------------------------------------
-# FUNÇÃO ANTIGA (LEGADO) - REQUER REVISÃO
-# -------------------------------------------------------------------
 def send_external_comment_notification(implantacao, comentario):
     """
     Envia notificação de um novo comentário externo.
@@ -502,10 +489,9 @@ def send_external_comment_notification(implantacao, comentario):
     )
     return False
 
-    # --- CÓDIGO ANTIGO E QUEBRADO ---
-    # settings = load_smtp_settings() # <-- Isto não funciona mais, espera user_email
-    # if not settings:
-    #     app_logger.error("Falha ao enviar notificacao de comentario: SMTP global nao configurado.")
-    #     return False
+\
+\
+\
+\
+\
         
-    # ... (logica de envio) ...

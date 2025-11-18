@@ -1,5 +1,5 @@
-# tests/test_soft_delete.py
-# Testes para sistema de soft delete
+\
+\
 
 import pytest
 import sys
@@ -35,7 +35,7 @@ def app():
     
     yield app
     
-    # Cleanup
+        \
     with app.app_context():
         conn, _ = from project.db import get_db_connection
         conn, _ = get_db_connection()
@@ -51,7 +51,7 @@ class TestSoftDelete:
     def test_soft_delete_marca_registro(self, app):
         """Testa que soft delete marca registro como excluído."""
         with app.app_context():
-            # Cria registro de teste
+            \
             impl_id = execute_db(
                 """INSERT INTO implantacoes 
                    (nome_empresa, email_responsavel, usuario_cs, status) 
@@ -59,11 +59,11 @@ class TestSoftDelete:
                 ('Test Company Soft Delete', 'test@test.com', 'test@example.com', 'andamento')
             )
             
-            # Soft delete
+                        \
             result = soft_delete('implantacoes', impl_id)
             assert result is True
             
-            # Verifica que deleted_at foi setado
+                        \
             impl = query_db(
                 "SELECT * FROM implantacoes WHERE id = ?",
                 (impl_id,),
@@ -76,7 +76,7 @@ class TestSoftDelete:
     def test_soft_delete_nao_duplica(self, app):
         """Testa que soft delete não duplica marcação."""
         with app.app_context():
-            # Cria registro
+            \
             impl_id = execute_db(
                 """INSERT INTO implantacoes 
                    (nome_empresa, email_responsavel, usuario_cs, status) 
@@ -84,18 +84,18 @@ class TestSoftDelete:
                 ('Test Company Duplicate', 'test@test.com', 'test@example.com', 'andamento')
             )
             
-            # Primeiro soft delete
+                        \
             result1 = soft_delete('implantacoes', impl_id)
             assert result1 is True
             
-            # Segundo soft delete (não deve fazer nada)
+                        \
             result2 = soft_delete('implantacoes', impl_id)
-            assert result2 is False  # Já estava excluído
+            assert result2 is False                      
     
     def test_restore_recupera_registro(self, app):
         """Testa que restore recupera registro excluído."""
         with app.app_context():
-            # Cria e exclui registro
+            \
             impl_id = execute_db(
                 """INSERT INTO implantacoes 
                    (nome_empresa, email_responsavel, usuario_cs, status) 
@@ -105,11 +105,11 @@ class TestSoftDelete:
             
             soft_delete('implantacoes', impl_id)
             
-            # Restaura
+                        \
             result = restore('implantacoes', impl_id)
             assert result is True
             
-            # Verifica que deleted_at foi removido
+                        \
             impl = query_db(
                 "SELECT * FROM implantacoes WHERE id = ?",
                 (impl_id,),
@@ -122,7 +122,7 @@ class TestSoftDelete:
     def test_get_deleted_records(self, app):
         """Testa listagem de registros excluídos."""
         with app.app_context():
-            # Cria e exclui registros
+            \
             impl_id1 = execute_db(
                 """INSERT INTO implantacoes 
                    (nome_empresa, email_responsavel, usuario_cs, status) 
@@ -140,7 +140,7 @@ class TestSoftDelete:
             soft_delete('implantacoes', impl_id1)
             soft_delete('implantacoes', impl_id2)
             
-            # Lista excluídos
+                        \
             deleted = get_deleted_records('implantacoes')
             
             assert len(deleted) >= 2
@@ -150,12 +150,12 @@ class TestSoftDelete:
     
     def test_exclude_deleted_filter(self):
         """Testa filtro exclude_deleted."""
-        # Query sem WHERE
+        \
         query1 = "SELECT * FROM implantacoes"
         result1 = exclude_deleted(query1)
         assert "WHERE deleted_at IS NULL" in result1
         
-        # Query com WHERE
+                \
         query2 = "SELECT * FROM implantacoes WHERE usuario_cs = %s"
         result2 = exclude_deleted(query2)
         assert "AND deleted_at IS NULL" in result2

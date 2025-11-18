@@ -4,7 +4,7 @@ import os
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime
 
-# Adiciona o diretório CSAPP ao path do Python
+\
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from project.api import (
@@ -36,8 +36,8 @@ class TestAPIValidation:
     
     def test_validate_date_invalid(self):
         """Testa validate_date com datas inválidas"""
-        assert validate_date("2024-13-01") is None  # Mês inválido
-        assert validate_date("2024-01-32") is None  # Dia inválido
+        assert validate_date("2024-13-01") is None                
+        assert validate_date("2024-01-32") is None                
         assert validate_date("invalid-date") is None
         assert validate_date("") is None
     
@@ -55,17 +55,17 @@ class TestAPITarefas:
     @patch('project.api.g')
     def test_toggle_tarefa_success(self, mock_g, mock_get_db):
         """Testa toggle_tarefa com sucesso"""
-        # Mock do contexto
+        \
         mock_g.user_email = 'test@example.com'
         mock_g.perfil = {'nome': 'Test User', 'perfil_acesso': 'Administrador'}
         
-        # Mock da conexão do banco
+                \
         mock_conn = Mock()
         mock_cursor = Mock()
         mock_conn.cursor.return_value = mock_cursor
         mock_get_db.return_value = mock_conn
         
-        # Mock da tarefa existente
+                \
         mock_cursor.fetchone.return_value = {
             'id': 1,
             'concluida': False,
@@ -96,13 +96,13 @@ class TestAPITarefas:
         """Testa toggle_tarefa quando a tarefa não existe"""
         mock_g.user_email = 'test@example.com'
         
-        # Mock da conexão do banco
+                \
         mock_conn = Mock()
         mock_cursor = Mock()
         mock_conn.cursor.return_value = mock_cursor
         mock_get_db.return_value = mock_conn
         
-        # Mock da tarefa não encontrada
+                \
         mock_cursor.fetchone.return_value = None
         
         with patch('project.api.api_logger') as mock_logger:
@@ -137,13 +137,13 @@ class TestAPIComentarios:
         mock_g.user_email = 'test@example.com'
         mock_g.perfil = {'nome': 'Test User', 'perfil_acesso': 'Administrador'}
         
-        # Mock da conexão do banco
+                \
         mock_conn = Mock()
         mock_cursor = Mock()
         mock_conn.cursor.return_value = mock_cursor
         mock_get_db.return_value = mock_conn
         
-        # Mock da tarefa existente
+                \
         mock_cursor.fetchone.return_value = {'id': 1}
         
         with patch('project.api.api_logger') as mock_logger:
@@ -159,7 +159,7 @@ class TestAPIComentarios:
         mock_g.user_email = 'test@example.com'
         
         with patch('project.api.api_logger') as mock_logger:
-            # Testa comentário inválido
+            \
             result = adicionar_comentario(1, "")
             
             assert result is None
@@ -172,13 +172,13 @@ class TestAPIComentarios:
         mock_g.user_email = 'test@example.com'
         mock_g.perfil = {'nome': 'Test User', 'perfil_acesso': 'Administrador'}
         
-        # Mock da conexão do banco
+                \
         mock_conn = Mock()
         mock_cursor = Mock()
         mock_conn.cursor.return_value = mock_cursor
         mock_get_db.return_value = mock_conn
         
-        # Mock do comentário existente
+                \
         mock_cursor.fetchone.return_value = {'id': 1, 'usuario_email': 'test@example.com'}
         
         with patch('project.api.api_logger') as mock_logger:
@@ -205,13 +205,13 @@ class TestAPIComentarios:
         mock_g.user_email = 'user@example.com'
         mock_g.perfil = {'nome': 'User', 'perfil_acesso': 'Usuário', 'permissoes': {}}
         
-        # Mock da conexão do banco
+                \
         mock_conn = Mock()
         mock_cursor = Mock()
         mock_conn.cursor.return_value = mock_cursor
         mock_get_db.return_value = mock_conn
         
-        # Mock do comentário de outro usuário
+                \
         mock_cursor.fetchone.return_value = {'id': 1, 'usuario_email': 'admin@example.com'}
         
         with patch('project.api.security_logger') as mock_logger:

@@ -1,5 +1,5 @@
-# project/blueprints/api_v1.py
-# API v1 - Versão estável da API
+\
+\
 
 """
 API v1 - Endpoints versionados
@@ -57,18 +57,18 @@ def list_implantacoes():
         user_email = g.user_email
         status_filter = request.args.get('status')
         
-        # Paginação
+                \
         try:
             page = int(request.args.get('page', 1))
             per_page = int(request.args.get('per_page', 50))
-            per_page = min(per_page, 200)  # Máximo 200 por página
+            per_page = min(per_page, 200)                         
         except (TypeError, ValueError):
             page = 1
             per_page = 50
         
         offset = (page - 1) * per_page
         
-        # Query base
+                \
         query = """
             SELECT i.*, p.nome as cs_nome
             FROM implantacoes i
@@ -77,18 +77,17 @@ def list_implantacoes():
         """
         args = [user_email]
         
-        # Filtro de status
+                \
         if status_filter:
             query += " AND i.status = %s"
             args.append(status_filter)
         
-        # Ordenação e paginação
         query += " ORDER BY i.data_criacao DESC LIMIT %s OFFSET %s"
         args.extend([per_page, offset])
         
         implantacoes = query_db(query, tuple(args)) or []
         
-        # Total para paginação
+                \
         count_query = "SELECT COUNT(*) as total FROM implantacoes WHERE usuario_cs = %s"
         count_args = [user_email]
         if status_filter:
@@ -153,7 +152,6 @@ def get_implantacao(impl_id):
         if not impl:
             return jsonify({'ok': False, 'error': 'Implantação não encontrada'}), 404
         
-        # Busca tarefas
         tarefas = query_db(
             "SELECT * FROM tarefas WHERE implantacao_id = %s ORDER BY tarefa_pai, ordem",
             (impl_id,)

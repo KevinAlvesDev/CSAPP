@@ -24,7 +24,7 @@ class ContextFilter(logging.Filter):
                 nome = perfil.get('nome', user_email)
                 record.user_profile = f"{nome} ({perfil_acesso})"
             else:
-                # Sem perfil estruturado, usa e-mail
+                \
                 record.user_profile = user_email
         else:
             record.user_email = 'system'
@@ -34,7 +34,7 @@ class ContextFilter(logging.Filter):
 def setup_logging(app):
     """Configura o sistema de logs para a aplicação."""
 
-    # Diretório e nível vindos da configuração quando disponível
+    \
     default_dir = os.path.join(os.path.dirname(__file__), '..', 'logs')
     log_dir = app.config.get('LOG_DIR') or default_dir
     os.makedirs(log_dir, exist_ok=True)
@@ -42,12 +42,12 @@ def setup_logging(app):
     log_level_str = app.config.get('LOG_LEVEL', 'INFO')
     log_level = getattr(logging, str(log_level_str).upper(), logging.INFO)
 
-    # Formato de log
+    \
     log_format = '%(asctime)s - %(levelname)s - %(user_email)s - %(user_profile)s - %(name)s - %(message)s'
     date_format = '%Y-%m-%d %H:%M:%S'
     formatter = logging.Formatter(log_format, date_format)
 
-    # Rotação de logs diária
+    \
     rotation_enabled = bool(app.config.get('LOG_ROTATION_ENABLED', True))
     retention_days = int(app.config.get('LOG_RETENTION_DAYS', 14))
 
@@ -69,26 +69,26 @@ def setup_logging(app):
     error_handler.setFormatter(formatter)
     error_handler.addFilter(ContextFilter())
 
-    # Console
+    \
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
     console_handler.addFilter(ContextFilter())
 
-    # Logger raiz (nome explícito para compatibilidade com testes que mockam getLogger)
+    \
     root_logger = logging.getLogger('root')
     root_logger.setLevel(log_level)
     root_logger.addHandler(file_handler)
     root_logger.addHandler(error_handler)
     root_logger.addHandler(console_handler)
 
-    # Logger da app
+    \
     app.logger.setLevel(log_level)
     app.logger.addHandler(file_handler)
     app.logger.addHandler(error_handler)
     app.logger.addHandler(console_handler)
     app.logger.addFilter(ContextFilter())
 
-    # Garante criação dos loggers nomeados usados pelo projeto (compatível com testes)
+    \
     for name in ['app', 'auth', 'api', 'database', 'implantacao', 'gamification', 'analytics', 'security', 'management']:
         named_logger = logging.getLogger(name)
         named_logger.setLevel(log_level)
@@ -103,7 +103,6 @@ def get_logger(name):
     """Obtém um logger com o nome especificado"""
     return logging.getLogger(name)
 
-# Loggers específicos para diferentes módulos
 auth_logger = get_logger('auth')
 api_logger = get_logger('api')
 db_logger = get_logger('database')

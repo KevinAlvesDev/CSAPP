@@ -1,6 +1,6 @@
-# project/constants.py
-# Definições Globais
-# (Definições de tarefas movidas para project/task_definitions.py)
+\
+\
+\
 
 JUSTIFICATIVAS_PARADA = [
     "Pausa solicitada pelo cliente",
@@ -18,39 +18,39 @@ CARGOS_RESPONSAVEL = [
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf'}
 
-# --- Valor Padrão para Sim/Não (Booleans) ---
+\
 NAO_DEFINIDO_BOOL = "Não definido" 
 
-# --- Opções para Seleção Sim/Não no Front-end ---
+\
 SIM_NAO_OPTIONS = [NAO_DEFINIDO_BOOL, "Sim", "Não"]
 
-# --- Cargos e Perfis de Acesso ---
-# ADMIN_EMAIL agora vem de variável de ambiente (ver config.py)
+\
+\
 import os
 ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'admin@example.com')
 
-# Cargos (Função na empresa, editável pelo usuário no perfil)
+\
 CARGOS_LIST = ["Júnior", "Pleno", "Sênior"] 
 
-# Perfis de Acesso (Permissão no sistema, editável apenas pelo Admin/Gerente/Coordenador)
+\
 PERFIL_ADMIN = "Administrador"
 PERFIL_GERENTE = "Gerente"
 PERFIL_COORDENADOR = "Coordenador"
-PERFIL_IMPLANTADOR = "Implantador" # <-- NOME ALTERADO
-# PERFIL_VISUALIZADOR = "Visualizador" # REMOVIDO
-PERFIS_ACESSO_LIST = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR, PERFIL_IMPLANTADOR] # <-- LISTA ATUALIZADA
+PERFIL_IMPLANTADOR = "Implantador"                    
+\
+PERFIS_ACESSO_LIST = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR, PERFIL_IMPLANTADOR]                       
 
 PERFIS_COM_GESTAO = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR] 
 
-# Perfis que podem criar implantações (Exclui visualizador e perfis NULL)
-# <-- 'PERFIL_IMPLANTADOR' REMOVIDO DESTA LISTA
+\
+\
 PERFIS_COM_CRIACAO = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
 
-# Perfis que podem ver a tela de Analytics (Gerentes e acima)
+\
 PERFIS_COM_ANALYTICS = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
 
 
-# INÍCIO DA CORREÇÃO (Dropdown "Nível de Receita")
+\
 NIVEIS_RECEITA = [
     "Prata (MRR go grupo abaixo de R$699,99)",
     "Ouro (MRR go grupo entre R$700,00 a R$999,99)",
@@ -58,7 +58,7 @@ NIVEIS_RECEITA = [
     "Diamante (MRR go grupo acima de R$2000,00)",
     "Grandes contas"
 ]
-# FIM DA CORREÇÃO
+\
 
 SEGUIMENTOS_LIST = [
     "Natação", "Estúdio/Boutique", "Pilates", "Cross", "Low Cost", 

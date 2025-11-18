@@ -1,16 +1,16 @@
-# project/domain/implantacao_service.py
-# (Funções movidas de project/services.py)
+\
+\
 
 from flask import g
 from ..db import query_db, execute_db, logar_timeline
 
-# --- INÍCIO DA CORREÇÃO (Refatoração Passo 4) ---
-# Importa as definições de tarefas do novo arquivo
+\
+\
 from ..task_definitions import (
     CHECKLIST_OBRIGATORIO_ITEMS, MODULO_OBRIGATORIO,
     TAREFAS_TREINAMENTO_PADRAO, MODULO_PENDENCIAS
 )
-# Importa as constantes restantes do arquivo constants
+\
 from ..constants import (
     PERFIS_COM_GESTAO, 
     JUSTIFICATIVAS_PARADA, CARGOS_RESPONSAVEL, NIVEIS_RECEITA, 
@@ -18,18 +18,18 @@ from ..constants import (
     HORARIOS_FUNCIONAMENTO, FORMAS_PAGAMENTO, SISTEMAS_ANTERIORES,
     RECORRENCIA_USADA, SIM_NAO_OPTIONS
 )
-# --- FIM DA CORREÇÃO ---
+\
 
 from ..utils import format_date_iso_for_json, format_date_br
 from datetime import datetime
 from collections import OrderedDict 
 
-# --- Funções de Lógica de Implantação ---
+\
 
 def _create_default_tasks(impl_id):
     """Cria as tarefas padrão (Obrigatórias e Treinamento) para uma nova implantação."""
     tasks_added = 0
-    # Tarefas Obrigatórias
+    \
     for i, tarefa_nome in enumerate(CHECKLIST_OBRIGATORIO_ITEMS, 1):
         execute_db(
             "INSERT INTO tarefas (implantacao_id, tarefa_pai, tarefa_filho, ordem, tag) VALUES (%s, %s, %s, %s, %s)",
@@ -37,7 +37,6 @@ def _create_default_tasks(impl_id):
         )
         tasks_added += 1
 
-    # Tarefas de Treinamento
     for modulo, tarefas_info in TAREFAS_TREINAMENTO_PADRAO.items():
         for i, tarefa_info in enumerate(tarefas_info, 1):
             execute_db(
@@ -67,7 +66,7 @@ def auto_finalizar_implantacao(impl_id, usuario_cs_email):
     Verifica se todas as tarefas (exceto pendências) estão concluídas
     e, em caso afirmativo, finaliza a implantação.
     """
-    # Conta tarefas pendentes fora do módulo "Pendências" e inclui tarefas sem módulo (NULL)
+    \
     pending_tasks = query_db(
         "SELECT COUNT(*) as total FROM tarefas "
         "WHERE implantacao_id = %s AND concluida = %s AND (tarefa_pai != %s OR tarefa_pai IS NULL)",
@@ -75,7 +74,7 @@ def auto_finalizar_implantacao(impl_id, usuario_cs_email):
         one=True
     )
 
-    # Garante que existam tarefas obrigatórias/treinamento cadastradas (fora de Pendências)
+    \
     total_nonpend_tasks = query_db(
         "SELECT COUNT(*) as total FROM tarefas "
         "WHERE implantacao_id = %s AND (tarefa_pai != %s OR tarefa_pai IS NULL)",
@@ -121,7 +120,6 @@ def auto_finalizar_implantacao(impl_id, usuario_cs_email):
     return False, None
 
 
-# --- NOVA FUNÇÃO ADICIONADA (LÓGICA MOVIDA DE main.py) ---
 def _get_implantacao_and_validate_access(impl_id, usuario_cs_email, user_perfil):
     user_perfil_acesso = user_perfil.get('perfil_acesso') if user_perfil else None
     implantacao = query_db("SELECT * FROM implantacoes WHERE id = %s", (impl_id,), one=True)
@@ -177,7 +175,7 @@ def _get_tarefas_and_comentarios(impl_id, is_owner=False, is_manager=False):
             ORDER BY c.data_criacao DESC """, (impl_id,)
     )
 
-    # Filtra comentários internos se usuário não for dono nem gestor
+    \
     if not (is_owner or is_manager):
         comentarios_raw = [c for c in (comentarios_raw or []) if (c.get('visibilidade') != 'interno')]
 
@@ -204,7 +202,7 @@ def _get_tarefas_and_comentarios(impl_id, is_owner=False, is_manager=False):
         if mp in tarefas_agrupadas_treinamento: ordered_treinamento[mp] = tarefas_agrupadas_treinamento.pop(mp)
     for mr in sorted(tarefas_agrupadas_treinamento.keys()): ordered_treinamento[mr] = tarefas_agrupadas_treinamento[mr]
 
-    # Remove o módulo obrigatório da lista de seleção do modal "Adicionar Tarefa"
+    \
     if MODULO_OBRIGATORIO in todos_modulos_temp:
         try:
             todos_modulos_temp.remove(MODULO_OBRIGATORIO)
@@ -274,7 +272,6 @@ def get_implantacao_details(impl_id, usuario_cs_email, user_perfil):
         all_cs_users = all_cs_users if all_cs_users is not None else []
 
 
-    # Retorna um dicionário 'context' pronto para o template
     return {
         'user_info': g.user,
         'implantacao': implantacao,
@@ -318,7 +315,6 @@ def get_implantacao_details(impl_id, usuario_cs_email, user_perfil):
         all_cs_users = all_cs_users if all_cs_users is not None else []
 
 
-    # Retorna um dicionário 'context' pronto para o template
     return {
         'user_info': g.user,
         'implantacao': implantacao,

@@ -1,12 +1,12 @@
-# project/soft_delete.py
-# Utilitários para soft delete (exclusão lógica)
+\
+\
 
 from datetime import datetime
 from flask import current_app
 from .db import execute_db, query_db
 
-# SEGURANÇA: Whitelist de tabelas permitidas para operações de soft delete
-# Previne SQL Injection ao validar nomes de tabelas
+\
+\
 ALLOWED_TABLES = [
     'usuarios',
     'perfil_usuario',
@@ -19,7 +19,7 @@ ALLOWED_TABLES = [
     'smtp_settings'
 ]
 
-# Whitelist de colunas de ID permitidas
+\
 ALLOWED_ID_COLUMNS = ['id', 'usuario', 'usuario_email']
 
 
@@ -83,13 +83,13 @@ def soft_delete(table: str, record_id: int, id_column: str = 'id') -> bool:
         soft_delete('tarefas', 456)
     """
     try:
-        # SEGURANÇA: Valida nome da tabela e coluna
+        \
         table = _validate_table_name(table)
         id_column = _validate_id_column(id_column)
 
         now = datetime.now()
 
-        # Agora é seguro usar f-string pois os valores foram validados
+        \
         query = f"UPDATE {table} SET deleted_at = %s WHERE {id_column} = %s AND deleted_at IS NULL"
         rows_affected = execute_db(query, (now, record_id))
 
@@ -101,7 +101,7 @@ def soft_delete(table: str, record_id: int, id_column: str = 'id') -> bool:
             return False
 
     except ValueError as ve:
-        # Erro de validação (tabela/coluna não permitida)
+        \
         current_app.logger.error(f"Validation error in soft_delete: {ve}")
         return False
 
@@ -128,7 +128,7 @@ def restore(table: str, record_id: int, id_column: str = 'id') -> bool:
         restore('implantacoes', 123)
     """
     try:
-        # SEGURANÇA: Valida nome da tabela e coluna
+        \
         table = _validate_table_name(table)
         id_column = _validate_id_column(id_column)
 
@@ -143,7 +143,7 @@ def restore(table: str, record_id: int, id_column: str = 'id') -> bool:
             return False
 
     except ValueError as ve:
-        # Erro de validação (tabela/coluna não permitida)
+        \
         current_app.logger.error(f"Validation error in restore: {ve}")
         return False
 
@@ -171,7 +171,7 @@ def hard_delete(table: str, record_id: int, id_column: str = 'id') -> bool:
         hard_delete('implantacoes', 123)
     """
     try:
-        # SEGURANÇA: Valida nome da tabela e coluna
+        \
         table = _validate_table_name(table)
         id_column = _validate_id_column(id_column)
 
@@ -186,7 +186,7 @@ def hard_delete(table: str, record_id: int, id_column: str = 'id') -> bool:
             return False
 
     except ValueError as ve:
-        # Erro de validação (tabela/coluna não permitida)
+        \
         current_app.logger.error(f"Validation error in hard_delete: {ve}")
         return False
 
@@ -212,7 +212,7 @@ def get_deleted_records(table: str, limit: int = 100) -> list:
         deleted = get_deleted_records('implantacoes')
     """
     try:
-        # SEGURANÇA: Valida nome da tabela
+        \
         table = _validate_table_name(table)
 
         query = f"SELECT * FROM {table} WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC LIMIT %s"
@@ -220,7 +220,7 @@ def get_deleted_records(table: str, limit: int = 100) -> list:
         return records or []
 
     except ValueError as ve:
-        # Erro de validação (tabela não permitida)
+        \
         current_app.logger.error(f"Validation error in get_deleted_records: {ve}")
         return []
 
@@ -247,10 +247,10 @@ def cleanup_old_deleted_records(table: str, days: int = 30) -> int:
         cleanup_old_deleted_records('implantacoes', days=30)
     """
     try:
-        # SEGURANÇA: Valida nome da tabela
+        \
         table = _validate_table_name(table)
 
-        # Calcula data limite
+        \
         from datetime import timedelta
         cutoff_date = datetime.now() - timedelta(days=days)
 
@@ -264,7 +264,7 @@ def cleanup_old_deleted_records(table: str, days: int = 30) -> int:
             return 0
 
     except ValueError as ve:
-        # Erro de validação (tabela não permitida)
+        \
         current_app.logger.error(f"Validation error in cleanup_old_deleted_records: {ve}")
         return 0
 
@@ -273,7 +273,6 @@ def cleanup_old_deleted_records(table: str, days: int = 30) -> int:
         return 0
 
 
-# Decorador para adicionar filtro de soft delete automaticamente
 def exclude_deleted(query: str) -> str:
     """
     Adiciona filtro WHERE deleted_at IS NULL a uma query.
@@ -289,7 +288,7 @@ def exclude_deleted(query: str) -> str:
         query = exclude_deleted(query)
         # Resultado: "SELECT * FROM implantacoes WHERE usuario_cs = %s AND deleted_at IS NULL"
     """
-    # Detecta se já tem WHERE
+    \
     if 'WHERE' in query.upper():
         return query + " AND deleted_at IS NULL"
     else:

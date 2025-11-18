@@ -1,4 +1,4 @@
-# backend/project/blueprints/health.py
+\
 """
 Blueprint para health checks e monitoramento.
 """
@@ -22,11 +22,11 @@ def check_database_connection():
     try:
         from ..db import query_db
         
-        # Tenta fazer uma query simples
+                \
         result = query_db("SELECT 1 as test", one=True)
         
         end_time = datetime.now()
-        response_time = (end_time - start_time).total_seconds() * 1000  # em ms
+        response_time = (end_time - start_time).total_seconds() * 1000         
         
         if result and result.get('test') == 1:
             db_type = 'SQLite' if use_sqlite else 'PostgreSQL'
@@ -51,7 +51,6 @@ def check_r2_connection():
         if r2_client is None:
             return False, "R2 client not initialized"
         
-        # Verifica se está configurado
         if current_app.config.get('R2_CONFIGURADO', False):
             return True, "R2 configured"
         else:
@@ -67,13 +66,13 @@ def health_check():
     Endpoint de health check para monitoramento.
     Retorna status da aplicação, banco de dados e serviços externos.
     """
-    # Verifica banco de dados
+    \
     db_status, db_message, db_response_time = check_database_connection()
     
-    # Verifica R2
+        \
     r2_status, r2_message = check_r2_connection()
     
-    # Status geral
+        \
     overall_status = "healthy" if db_status else "unhealthy"
     
     response = {
@@ -97,7 +96,7 @@ def health_check():
         }
     }
     
-    # Retorna 200 se saudável, 503 se não
+        \
     status_code = 200 if overall_status == "healthy" else 503
     
     return jsonify(response), status_code
