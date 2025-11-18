@@ -53,6 +53,7 @@
             <div class="card p-3 text-center"><h6 class="text-secondary">Atrasadas (> 25d)</h6><h4 class="mb-0 text-danger">{{ m.implantacoes_atrasadas | default(0) }}</h4></div>
             <div class="card p-3 text-center"><h6 class="text-secondary">Paradas</h6><h4 class="mb-0 text-danger">{{ m.impl_paradas | default(0) }}</h4></div>
             <div class="card p-3 text-center"><h6 class="text-secondary">Futuras</h6><h4 class="mb-0 text-info">{{ m.implantacoes_futuras | default(0) }}</h4></div>
+            <div class="card p-3 text-center"><h6 class="text-secondary">Sem previsão</h6><h4 class="mb-0 text-warning">{{ m.implantacoes_sem_previsao | default(0) }}</h4></div>
             <div class="card p-3 text-center"><h6 class="text-secondary">Concluídas</h6><h4 class="mb-0 text-success">{{ m.impl_finalizadas | default(0) }}</h4></div>
             <div class="card p-3 text-center"><h6 class="text-secondary">Módulos</h6><h4 class="mb-0 text-dark">{{ m.modulos_total | default(0) }}</h4></div>
         </div>
