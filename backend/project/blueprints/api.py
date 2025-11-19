@@ -25,7 +25,12 @@ from flask_limiter.util import get_remote_address
 
 from ..api_security import validate_api_origin
 
-api_bp = Blueprint('api', __name__, url_prefix='/api')               
+api_bp = Blueprint('api', __name__, url_prefix='/api')
+
+
+@api_bp.before_request
+def _api_origin_guard():
+    return validate_api_origin(lambda: None)()
 
 @api_bp.route('/toggle_tarefa/<int:tarefa_id>', methods=['POST'])
 @login_required

@@ -7,6 +7,7 @@ from flask import Blueprint, jsonify, current_app
 from datetime import datetime
 import psycopg2
 import sqlite3
+from botocore.exceptions import ClientError
 
 health_bp = Blueprint('health', __name__)
 
@@ -51,7 +52,17 @@ def check_r2_connection():
             return False, "R2 client not initialized"
         
         if current_app.config.get('R2_CONFIGURADO', False):
-            return True, "R2 configured"
+            try:
+                bucket = current_app.config.get('CLOUDFLARE_BUCKET_NAME')
+                if bucket:
+                    r2_client.list_objects_v2(Bucket=bucket, MaxKeys=1)
+                    return True, "R2 operational"
+                return True, "R2 configured"
+            except ClientError as e:
+                code = getattr(e, 'response', {}).get('Error', {}).get('Code')
+                return False, f"R2 operation failed: {code}"
+            except Exception as e:
+                return False, f"R2 operation failed: {str(e)}"
         else:
             return False, "R2 not configured"
             

@@ -11,6 +11,7 @@ from ..email_utils import load_smtp_settings
 from ..logging_config import app_logger
 import os
 import time
+import io
 
 profile_bp = Blueprint('profile', __name__, url_prefix='/profile')
 
@@ -46,12 +47,20 @@ def save_profile():
 
     if foto and g.R2_CONFIGURED and r2_client:
         try:
+            try:
+                foto_bytes = foto.read()
+            except Exception:
+                foto_bytes = None
             filename = secure_filename(foto.filename)
 
             s3_key = f"fotos_perfil/{g.user_email}_{filename}"
             
+            if foto_bytes is None:
+                raise ValueError("Falha ao ler bytes da foto para upload")
+            data_stream = io.BytesIO(foto_bytes)
+            data_stream.seek(0)
             r2_client.upload_fileobj(
-                foto,
+                data_stream,
                 current_app.config['CLOUDFLARE_BUCKET_NAME'],
                 s3_key,
                 ExtraArgs={'ContentType': foto.content_type}
@@ -72,20 +81,35 @@ def save_profile():
                 target_dir = os.path.join(static_dir, 'uploads', 'profile')
                 os.makedirs(target_dir, exist_ok=True)
                 save_path = os.path.join(target_dir, unique_name)
-                foto.save(save_path)
+                if 'foto_bytes' not in locals() or foto_bytes is None:
+                    try:
+                        foto_bytes = foto.read()
+                    except Exception:
+                        foto_bytes = None
+                if foto_bytes is None:
+                    raise ValueError("Falha ao obter conteúdo da foto para salvar localmente")
+                with open(save_path, 'wb') as f_out:
+                    f_out.write(foto_bytes)
                 foto_url = f"/static/uploads/profile/{unique_name}"
                 app_logger.info(f"Foto de perfil salva localmente para {g.user_email} em {foto_url}")
             except Exception as e2:
                 app_logger.error(f"Falha ao salvar foto local para {g.user_email}: {e2}")
     elif foto:
         try:
+            try:
+                foto_bytes = foto.read()
+            except Exception:
+                foto_bytes = None
             filename = secure_filename(foto.filename)
             unique_name = f"{g.user_email}_{int(time.time())}_{filename}"
             static_dir = current_app.static_folder
             target_dir = os.path.join(static_dir, 'uploads', 'profile')
             os.makedirs(target_dir, exist_ok=True)
             save_path = os.path.join(target_dir, unique_name)
-            foto.save(save_path)
+            if foto_bytes is None:
+                raise ValueError("Falha ao obter conteúdo da foto para salvar localmente")
+            with open(save_path, 'wb') as f_out:
+                f_out.write(foto_bytes)
             foto_url = f"/static/uploads/profile/{unique_name}"
             app_logger.info(f"Foto de perfil salva localmente para {g.user_email} em {foto_url}")
         except Exception as e:

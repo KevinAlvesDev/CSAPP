@@ -27,6 +27,12 @@ from datetime import datetime, date
 api_v1_bp = Blueprint('api_v1', __name__, url_prefix='/api/v1')
 
 
+@api_v1_bp.before_request
+def _api_v1_origin_guard():
+    from ..api_security import validate_api_origin
+    return validate_api_origin(lambda: None)()
+
+
 @api_v1_bp.route('/health', methods=['GET'])
 def health():
     """Health check endpoint para API v1."""

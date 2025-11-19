@@ -58,3 +58,8 @@ def test_upload_profile_photo_local(auth_client, app):
         static_path = os.path.join(app.static_folder, url.replace('/static/', ''))
         assert os.path.exists(static_path)
 
+        page = auth_client.get('/profile/')
+        assert page.status_code == 200
+        html = page.get_data(as_text=True)
+        assert url in html
+

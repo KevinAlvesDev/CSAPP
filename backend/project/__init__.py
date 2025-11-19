@@ -336,19 +336,19 @@ def create_app():
         if request.headers.get('X-Forwarded-Proto', 'http') == 'https' or request.is_secure:
 
             response.headers.setdefault('Strict-Transport-Security', 'max-age=15552000; includeSubDomains')
+        is_prod = not current_app.config.get('DEBUG', False) and not current_app.config.get('USE_SQLITE_LOCALLY', False)
+        script_src = (
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://www.gstatic.com; "
+            if is_prod
+            else "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com https://www.gstatic.com; "
+        )
         csp = (
             "default-src 'self'; "
-
             "img-src 'self' data: https:; "
-
             "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com https://fonts.gstatic.com https://www.gstatic.com; "
-
             "style-src-elem 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com https://fonts.gstatic.com https://www.gstatic.com; "
-
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com https://www.gstatic.com; "
-
+            + script_src +
             "font-src 'self' data: https://cdn.jsdelivr.net https://fonts.gstatic.com; "
-
             "connect-src 'self' https:"
         )
         response.headers.setdefault('Content-Security-Policy', csp)

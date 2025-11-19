@@ -31,20 +31,26 @@ class PerformanceMonitor:
         app.after_request(self.after_request)
         app.teardown_request(self.teardown_request)
 
-        @app.route('/admin/metrics')
-        def view_metrics():
-            """Endpoint para visualizar métricas (apenas admin)."""
-            from .blueprints.auth import login_required
-            from .constants import PERFIL_ADMIN
+        if 'view_metrics' not in app.view_functions:
+            @app.route('/admin/metrics')
+            def view_metrics():
+                """Endpoint para visualizar métricas (apenas admin)."""
+                from .blueprints.auth import login_required
+                from .constants import PERFIL_ADMIN
 
-            if not hasattr(g, 'perfil') or g.perfil.get('perfil_acesso') != PERFIL_ADMIN:
-                return "Acesso negado", 403
-            
-            return {
-                'total_requests': len(self.metrics),
-                'recent_metrics': self.metrics[-100:],\
-                'summary': self.get_summary()
-            }
+                decorated = login_required(lambda: None)
+                res = decorated()
+                if res is not None:
+                    return res
+
+                if not hasattr(g, 'perfil') or g.perfil.get('perfil_acesso') != PERFIL_ADMIN:
+                    return "Acesso negado", 403
+                
+                return {
+                    'total_requests': len(self.metrics),
+                    'recent_metrics': self.metrics[-100:],\
+                    'summary': self.get_summary()
+                }
     
     def before_request(self):
         """Executado antes de cada request."""
