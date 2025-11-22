@@ -1,0 +1,137 @@
+[33m46e3467[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Dashboard: garantir 8 cards do Resumo Rápido em uma linha (grid com overflow-x)
+[33m349c276[m Dashboard: Resumo Rápido exibe totais monetários por status
+[33m6a2f235[m Security hardening and profile photo fix: - Conditional CSP (remove 'unsafe-eval' in production) - API origin guard on /api and /api/v1 - Protect /admin/metrics with login_required - R2 healthcheck performs real operation - Standardize run.py imports and R2 check - Fix profile photo upload fallback (robust stream/bytes handling) - Consolidate Bootstrap Icons CDN links - Add profile photo test coverage
+[33m67181bc[m Cancelamentos: Tempo(dias) >= 0, data formatada BR, remove card P50/P75/P90 e colunas Segmento/Plano; Dashboard/Detalhes: confirmação extra Iniciar em 'Sem previsão' e 'Não preenchido' em Catraca/Facial; ações de 'Ver detalhes' ajustadas
+[33meee6784[m Dashboard: adicionar card 'Sem previsão' no resumo e destacar métricas correspondentes. Garante exibição das implantações com status 'Sem previsão' na aba dedicada.
+[33ma7ddc92[m UI: tornar texto da confirmação responsivo e corrigir 'Sem previsão' sem exigir data
+[33mb486992[m Commit técnico: ajustes finais pós-higienização
+[33mb3bd23b[m Corrigir indentação e barras invertidas no main.py
+[33m2c5bbe7[m Remover barras invertidas isoladas de arquivos Python
+[33m56e4aaa[m Remover comentários do código
+[33m9c88e9e[m chore: commit de verificação pós ajustes de finalização manual e acesso admin
+[33m67ca7bf[m Finalização manual com data e remoção da auto-finalização\n\n- Remove auto-finalização ao atingir 100% de tarefas.\n- Adiciona campo de data no modal de Finalizar (retroativa permitida).\n- Backend valida e grava data informada pelo usuário.\n- Testes cobrindo finalização manual e ausência de auto-finalização.\n
+[33m675c3c4[m Correções:\n\n- Evita finalizar implantação ao excluir tarefa/módulo (apenas recalcula progresso).\n- Atualiza foto de perfil com fallback local quando R2 indisponível/erro.\n- Limpa cache do dashboard ao excluir implantação para refletir imediatamente.\n- Ajuste em run.py para import do create_app (robustez local).\n\nTestes:\n- Adicionado teste para não auto-finalizar em exclusão de módulo.\n- Adicionado teste para upload local de foto de perfil.\n- Adicionado teste para exclusão de implantação e verificação no banco.\n
+[33m93daea2[m Dashboard: garantir quebra de linha do nome da empresa no card de Iniciar Implantação (Bootstrap text-break)
+[33m42414e4[m UI: alinhar títulos de métricas; remover sufixos; adicionar ícones de alerta com tooltips de checklist nas tarefas (Kick-Off, ADM Operacional 1/2, Verificação de Importação, Treinamento Gerencial, Treino Estrutural/Operacional/Gerencial/App, CRM Estrutural/Operacional/Gerencial, Financeiro Simplificado/Avançado); habilitar inicialização global de tooltips
+[33m070db66[m Agenda: renderizar grade vazia; linhas por hora visíveis; liberar callback sem exigir login; comentários: evitar duplicação HTMX, remover confirmação em externos, botão excluir em erro; envio de e-mail: evitar duplicação e adicionar botão excluir na notificação; base: ajuste handlers HTMX; Procfile: bind atualizado
+[33m459cbe2[m UI: toggles de senha; modal Perfil permanece; botão Esqueci menor; link Lançar Métricas azul; seletor Cargo (Júnior/Pleno/Sênior)
+[33ma77c0e3[m Aumenta rate limit nas rotas de autenticação para 100/min; mantém limiter global 100/min e RATELIMIT_ENABLED desligado em dev.
+[33m72e74c8[m Auth & modal fixes: disable Auth0, enforce local auth; prevent login cache; email checks; dynamic password rules; HTMX handling in user management
+[33m037ef3c[m feat: ajustes de tarefas e UX; corrige modal de usuários; desativa auto-finalização; corrige overflow de e-mail; melhora botão Detalhar
+[33m2640e13[m # Please enter the commit message for your changes. Lines starting # with '#' will be ignored, and an empty message aborts the commit. # # On branch main # Your branch is up to date with 'origin/main'. # # Changes to be committed: #	deleted:    AUDITORIA_SQL.md #	deleted:    BACKUP_GUIDE.md #	deleted:    COMO_APLICAR_EM_PRODUCAO.md #	deleted:    DEPLOY_NOTES.md #	deleted:    FASE_1_COMPLETA.md #	deleted:    FASE_2_COMPLETA.md #	deleted:    FASE_3_COMPLETA.md #	deleted:    FASE_4_COMPLETA.md #	deleted:    GUIA_EXECUCAO_TESTES.md #	deleted:    GUIA_NOVAS_FUNCIONALIDADES.md #	deleted:    GUIA_RAPIDO.md #	deleted:    INSTRUCOES_FINAIS.md #	deleted:    MELHORIAS_IMPLEMENTADAS.md #	deleted:    MELHORIAS_ROUND_2_IMPLEMENTADAS.md #	deleted:    PLANO_MELHORIAS.md #	deleted:    PROBLEMAS_CORRIGIDOS.md #	deleted:    PROXIMAS_MELHORIAS.md #	modified:   README.md #	deleted:    README_MELHORIAS.md #	deleted:    RESUMO_FASE_1.md #	deleted:    RESUMO_FINAL.md #	deleted:    RESUMO_FINAL_TESTES.md #	deleted:    RESUMO_IMPLEMENTACAO_COMPLETA.md #	deleted:    SEGURANCA_CREDENCIAIS.md #	deleted:    TESTES_IMPLEMENTADOS.md #	deleted:    TODAS_MELHORIAS_IMPLEMENTADAS.md #	deleted:    VERIFICACAO_FINAL.md #	modified:   backend/logs/app.log #	modified:   backend/logs/errors.log #	modified:   backend/project/__init__.py #	modified:   backend/project/api_security.py #	modified:   backend/project/blueprints/analytics.py #	modified:   backend/project/blueprints/api.py #	modified:   backend/project/blueprints/api_v1.py #	modified:   backend/project/blueprints/auth.py #	modified:   backend/project/blueprints/implantacao_actions.py #	modified:   backend/project/blueprints/main.py #	modified:   backend/project/cache_config.py #	modified:   backend/project/constants.py #	modified:   backend/project/db.py #	modified:   backend/project/db_pool.py #	modified:   backend/project/domain/analytics_service.py #	modified:   backend/project/domain/dashboard_service.py #	modified:   backend/project/domain/implantacao_service.py #	modified:   backend/project/validation.py #	modified:   frontend/static/css/style.css #	modified:   frontend/static/js/implantacao_detalhes.js #	modified:   frontend/templates/analytics.html #	modified:   frontend/templates/base.html #	modified:   frontend/templates/change_password.html #	modified:   frontend/templates/dashboard.html #	modified:   frontend/templates/forgot_password.html #	modified:   frontend/templates/implantacao_detalhes.html #	modified:   frontend/templates/login.html #	modified:   frontend/templates/modals/_detalhes_empresa.html #	modified:   frontend/templates/partials/_comment_email_notice.html #	modified:   frontend/templates/partials/_comment_item.html #	modified:   frontend/templates/partials/_progress_total_bar.html #	modified:   frontend/templates/partials/_task_item_wrapper.html #	deleted:    migrations/README_MIGRATIONS.md #	new file:   tests/test_date_validation_flows.py #	modified:   tests/test_integration.py #
+[33mc92b66d[m feat: implementar melhorias críticas de segurança, performance e qualidade
+[33md5539c6[m fix: CRÍTICO - Corrige AttributeError em security_middleware
+[33m845731c[m fix: Corrige dependência python-magic para produção (Linux)
+[33m85d493b[m feat: Implementação completa de 20 melhorias + suíte de testes
+[33mc6a6572[m feat(analytics): ajustar lista de módulos (Empresa|Responsável|Status|Dias|Ações); calcular 'dias' no backend; padronizar badges de status\n\nfeat(dashboard): reordenar abas e adicionar aba 'Módulos'\nstyle(theme): link de empresa azul consistente\nchore: preparar versão para deploy
+[33m165efc1[m UI: Datas em BR na modal Detalhes da Empresa
+[33m78b799e[m UI: remover linha inferior do card (.module-header) e destacar cards na lista de tarefas
+[33m6ddc88d[m Email: fallback texto plano e tracking opcional por domínio; atualiza .env.example
+[33m749fbdf[m teste-email2
+[33mb76b4b0[m teste-email
+[33me1711e0[m teste-email-comentario
+[33m8b42b07[m módulos
+[33m5e5c9bb[m xxx
+[33m4962ef1[m Ajusta limites de taxa nas rotas: implantações (50/min na maioria; detalhes 100/min; transferir 30/min; excluir 100/min), autenticação (login 30/min; registro 20/min), gamificação (regras 50/min; métricas 100/min). Atualiza templates de login/registro conforme ajustes.
+[33m2af0bc4[m Corrige bugs críticos: atualização de progresso e erro 500 no toggle de tarefas
+[33mdd11dcc[m 1234
+[33m553574d[m ...
+[33m9aaa574[m Resolve merge conflicts: keep per-user SMTP implementation
+[33m5ccb2bd[m feat(profile): send test email using user SMTP settings
+[33m16018cb[m fim-segunda
+[33m66f7583[m email3
+[33m24b53f1[m e-mail2
+[33m7a7f34e[m gmail
+[33m9f51bde[m ...
+[33mf57b4ad[m configurar-email
+[33ma6fcfc2[m nova-função
+[33m6f00c07[m ajuste-regra
+[33m64251e1[m tarefas
+[33m0c79f6b[m agenda-geral
+[33m61a5e75[m domingo-finalizado
+[33mea4cee1[m agenda3
+[33m97eb35f[m agenda2
+[33md252054[m agenda
+[33mce9b570[m ajuste-final-08-11
+[33m676a580[m está ficando legal
+[33mc65cac4[m leve-ajuste
+[33maec17c1[m big-ajuste
+[33m76d1adf[m ajustes
+[33m9080184[m novo-ajuste
+[33m2f49fb8[m teste55
+[33m44acfb0[m ajuste-final
+[33m228a7d7[m ajuste2
+[33mbb17aed[m ajuste
+[33m2b4cb7c[m Funcionalidade Cancelar + Correção Timeout Inicialização
+[33m9546006[m cancelamento
+[33m60fc2e8[m teste1
+[33mf09bca6[m teste
+[33m9385691[m FINALMENTE!
+[33m4b40b43[m Fix: Remove arquivos de runtime, .db e .env do repositório
+[33mbc080cd[m 3
+[33ma6fdde0[m 2
+[33mcf42acc[m 111111
+[33m7f5e9db[m 11111
+[33m8c875ec[m 1111
+[33ma43d9ef[m 111
+[33m1358ed9[m ajuste-06-11-ta-top
+[33m97b0c5e[m leve-ajuste
+[33mc31c639[m admin6
+[33m5d96251[m admin5
+[33m60a7637[m admin4
+[33m04296fa[m admin3
+[33m0cee1ef[m admin2
+[33mff2d920[m admin
+[33m0e505ba[m teste
+[33mc03bf85[m email-suporte
+[33m91c12e4[m email-admin
+[33m3cece21[m ajuste2.0
+[33m16d532d[m ajuste-db
+[33mc80166e[m app
+[33mc482096[m Remover ficheiros .db do repositório
+[33mdb41489[m refatorado
+[33m1b360a3[m Revert "app"
+[33md8bea3a[m app
+[33m8673ca4[m ajuste-regras
+[33m73232fe[m ajuste-menu
+[33mb9f6f0b[m alterar-data-inicio
+[33mb057c84[m pequeno-ajuste-2
+[33m60e6ffd[m pequeno-ajuste
+[33m30e09e5[m acho-que-ta-pronto
+[33m90b70a1[m ajuste-do-ajuste
+[33me855d3a[m produto-semi-pronto
+[33mdfcb7dc[m quase-pronto
+[33m064e8da[m Revertendo projeto para o estado do commit 8de172d
+[33m6884e13[m novo-app
+[33mb7116d4[m novo-app
+[33m3e1487b[m ajustes 3
+[33m5fa4cb6[m nova-tarefa-2
+[33m23dfb4b[m nova-tarefa
+[33m5f24667[m PROVISÓRIO
+[33mfd7f40f[m nova-pagina-inicial
+[33m8de172d[m transferir-implantação
+[33m36fce85[m gamificação-detalhada
+[33mc49fc01[m Gerenciamento-de-suários
+[33m7a5b788[m excluir-tds-tarefas
+[33m346a570[m ajuste-final-domingo
+[33mc3a30da[m novas-correções
+[33mee717b4[m novas-infos
+[33m434146c[m atualizaçãoGerencial
+[33maa5509b[m DASHBOARDGERENCIAL
+[33mafc8855[m refatorado4
+[33m31d789d[m Refatorado3
+[33m5bf9bd8[m REFATORADO2
+[33m37dce36[m Refatorado
+[33mac48ca2[m Add gunicorn for deployment
+[33m5a3c0c6[m FotoPerfil
+[33m735441f[m RegraFinalização
+[33mbd5c4aa[m gamificação
+[33m6940cf3[m logout
+[33m6b0e612[m novosite
+[33m9bed106[m Commit inicial do projeto CSAPP
+[33mb0bdf6f[m auth0
+[33m11791af[m Adiciona a versão final do projeto
+[33m76073c0[m first commit
+[33m00da755[m att.0.0.02
+[33m46fc0dd[m att.0.0.1
+[33m4cffba2[m primeiro commit

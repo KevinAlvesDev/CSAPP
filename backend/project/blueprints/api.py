@@ -16,6 +16,12 @@ from ..extensions import r2_client, limiter
 
 
 from ..domain.implantacao_service import _get_progress
+from ..dominio.hierarquia_service import (
+    toggle_subtarefa,
+    calcular_progresso_implantacao,
+    adicionar_comentario_tarefa,
+    get_comentarios_tarefa
+)
 
 from ..utils import allowed_file, format_date_iso_for_json, format_date_br
 from ..constants import PERFIS_COM_GESTAO
@@ -888,3 +894,305 @@ def excluir_tarefas_modulo():
     except Exception as e:
         api_logger.error(f'Erro ao excluir tarefas do módulo {tarefa_pai} (Impl. ID {impl_id}): {e} - User: {g.user_email}', exc_info=True)
         return jsonify({'ok': False, 'error': f"Erro interno do servidor: {e}"}), 500
+@api_bp.route('/toggle_subtarefa_h/<int:sub_id>', methods=['POST'])
+@login_required
+@validate_api_origin
+@limiter.limit("100 per minute", key_func=lambda: g.user_email or get_remote_address())
+def toggle_subtarefa_h(sub_id):
+    usuario_cs_email = g.user_email
+    try:
+        sub_id = validate_integer(sub_id, min_value=1)
+    except ValidationError as e:
+        return jsonify({'ok': False, 'error': f'ID inválido: {str(e)}'}), 400
+    try:
+        row = query_db(
+            """
+            SELECT s.id as sub_id, s.concluido, i.id as implantacao_id, i.usuario_cs, i.status
+            FROM subtarefas_h s
+            JOIN tarefas_h th ON s.tarefa_id = th.id
+            JOIN grupos g ON th.grupo_id = g.id
+            JOIN fases f ON g.fase_id = f.id
+            JOIN implantacoes i ON f.implantacao_id = i.id
+            WHERE s.id = %s
+            """,
+            (sub_id,), one=True
+        )
+        if not row:
+            return jsonify({'ok': False, 'error': 'Subtarefa não encontrada'}), 404
+        is_owner = row.get('usuario_cs') == usuario_cs_email
+        is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
+        if not (is_owner or is_manager):
+            return jsonify({'ok': False, 'error': 'Permissão negada.'}), 403
+        if row.get('status') in ['finalizada', 'parada', 'cancelada']:
+            return jsonify({'ok': False, 'error': 'Implantação bloqueada para alterações.'}), 400
+        novo = 0 if row.get('concluido') else 1
+        execute_db("UPDATE subtarefas_h SET concluido = %s WHERE id = %s", (novo, sub_id))
+        detalhe = f"Subtarefa {sub_id}: {'Concluída' if novo else 'Não Concluída'}."
+        logar_timeline(row['implantacao_id'], usuario_cs_email, 'tarefa_alterada', detalhe)
+        tarefa_atualizada = query_db("SELECT id, nome, concluido FROM subtarefas_h WHERE id = %s", (sub_id,), one=True)
+        implantacao_info = query_db("SELECT nome_empresa, email_responsavel FROM implantacoes WHERE id = %s", (row['implantacao_id'],), one=True) or {}
+        novo_prog, _, _ = _get_progress(row['implantacao_id'])
+        tarefa_payload = {
+            'id': tarefa_atualizada.get('id'),
+            'tarefa_filho': tarefa_atualizada.get('nome'),
+            'tag': '',
+            'concluida': bool(tarefa_atualizada.get('concluido')),
+            'comentarios': [],
+            'toggle_url': f"/api/toggle_subtarefa_h/{tarefa_atualizada.get('id')}"
+        }
+        implantacao = {
+            'nome_empresa': implantacao_info.get('nome_empresa', ''),
+            'email_responsavel': implantacao_info.get('email_responsavel', '')
+        }
+        item_html = render_template('partials/_task_item_wrapper.html', tarefa=tarefa_payload, implantacao=implantacao)
+        progress_html = render_template('partials/_progress_total_bar.html', progresso_percent=novo_prog)
+        hx_payload = { 'progress_update': { 'novo_progresso': novo_prog } }
+        resp = make_response(item_html + progress_html)
+        resp.headers['HX-Trigger-After-Swap'] = json.dumps(hx_payload)
+        return resp
+    except Exception as e:
+        return jsonify({'ok': False, 'error': f"Erro interno: {e}"}), 500
+
+@api_bp.route('/toggle_tarefa_h/<int:tarefa_h_id>', methods=['POST'])
+@login_required
+@validate_api_origin
+@limiter.limit("100 per minute", key_func=lambda: g.user_email or get_remote_address())
+def toggle_tarefa_h(tarefa_h_id):
+    usuario_cs_email = g.user_email
+    try:
+        tarefa_h_id = validate_integer(tarefa_h_id, min_value=1)
+    except ValidationError as e:
+        return jsonify({'ok': False, 'error': f'ID inválido: {str(e)}'}), 400
+    try:
+        row = query_db(
+            """
+            SELECT th.id as tarefa_id, th.status, i.id as implantacao_id, i.usuario_cs, i.status as impl_status
+            FROM tarefas_h th
+            JOIN grupos g ON th.grupo_id = g.id
+            JOIN fases f ON g.fase_id = f.id
+            JOIN implantacoes i ON f.implantacao_id = i.id
+            WHERE th.id = %s
+            """,
+            (tarefa_h_id,), one=True
+        )
+        if not row:
+            return jsonify({'ok': False, 'error': 'Tarefa não encontrada'}), 404
+        is_owner = row.get('usuario_cs') == usuario_cs_email
+        is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
+        if not (is_owner or is_manager):
+            return jsonify({'ok': False, 'error': 'Permissão negada.'}), 403
+        if row.get('impl_status') in ['finalizada', 'parada', 'cancelada']:
+            return jsonify({'ok': False, 'error': 'Implantação bloqueada para alterações.'}), 400
+        curr = (row.get('status') or '').lower()
+        novo_status = 'concluida' if curr != 'concluida' else 'pendente'
+        execute_db("UPDATE tarefas_h SET status = %s WHERE id = %s", (novo_status, tarefa_h_id))
+        detalhe = f"TarefaH {tarefa_h_id}: {novo_status}."
+        logar_timeline(row['implantacao_id'], usuario_cs_email, 'tarefa_alterada', detalhe)
+        th = query_db("SELECT id, nome, status FROM tarefas_h WHERE id = %s", (tarefa_h_id,), one=True)
+        implantacao_info = query_db("SELECT nome_empresa, email_responsavel FROM implantacoes WHERE id = %s", (row['implantacao_id'],), one=True) or {}
+        tarefa_payload = {
+            'id': th.get('id'),
+            'tarefa_filho': th.get('nome'),
+            'tag': '',
+            'concluida': (th.get('status') or '').lower() == 'concluida',
+            'comentarios': [],
+            'toggle_url': f"/api/toggle_tarefa_h/{th.get('id')}"
+        }
+        implantacao = {
+            'nome_empresa': implantacao_info.get('nome_empresa', ''),
+            'email_responsavel': implantacao_info.get('email_responsavel', '')
+        }
+        item_html = render_template('partials/_task_item_wrapper.html', tarefa=tarefa_payload, implantacao=implantacao)
+        progress_html = render_template('partials/_progress_total_bar.html', progresso_percent=novo_prog)
+        hx_payload = { 'progress_update': { 'novo_progresso': novo_prog } }
+        resp = make_response(item_html + progress_html)
+        resp.headers['HX-Trigger-After-Swap'] = json.dumps(hx_payload)
+        return resp
+    except Exception as e:
+        return jsonify({'ok': False, 'error': f"Erro interno: {e}"}), 500
+
+@api_bp.route('/excluir_subtarefa_h/<int:sub_id>', methods=['POST'])
+@login_required
+@validate_api_origin
+@limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
+def excluir_subtarefa_h(sub_id):
+    usuario_cs_email = g.user_email
+    try:
+        sub_id = validate_integer(sub_id, min_value=1)
+    except ValidationError as e:
+        return jsonify({'ok': False, 'error': f'ID inválido: {str(e)}'}), 400
+    try:
+        row = query_db(
+            """
+            SELECT s.id as sub_id, s.nome, i.id as implantacao_id, i.usuario_cs, i.status
+            FROM subtarefas_h s
+            JOIN tarefas_h th ON s.tarefa_id = th.id
+            JOIN grupos g ON th.grupo_id = g.id
+            JOIN fases f ON g.fase_id = f.id
+            JOIN implantacoes i ON f.implantacao_id = i.id
+            WHERE s.id = %s
+            """,
+            (sub_id,), one=True
+        )
+        if not row:
+            return jsonify({'ok': False, 'error': 'Subtarefa não encontrada'}), 404
+        is_owner = row.get('usuario_cs') == usuario_cs_email
+        is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
+        if not (is_owner or is_manager):
+            return jsonify({'ok': False, 'error': 'Permissão negada.'}), 403
+        if row.get('status') in ['finalizada', 'parada', 'cancelada']:
+            return jsonify({'ok': False, 'error': 'Implantação bloqueada para alterações.'}), 400
+        execute_db("DELETE FROM subtarefas_h WHERE id = %s", (sub_id,))
+        logar_timeline(row['implantacao_id'], usuario_cs_email, 'tarefa_excluida', f"Subtarefa '{row.get('nome','')}' foi excluída.")
+        nome = g.perfil.get('nome', usuario_cs_email)
+        log_exclusao = query_db(
+            "SELECT *, %s as usuario_nome FROM timeline_log WHERE implantacao_id = %s AND tipo_evento = 'tarefa_excluida' ORDER BY id DESC LIMIT 1",
+            (nome, row['implantacao_id']), one=True
+        )
+        if log_exclusao:
+            log_exclusao['data_criacao'] = format_date_iso_for_json(log_exclusao.get('data_criacao'))
+        return jsonify({'ok': True, 'log_exclusao': log_exclusao})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': f"Erro interno: {e}"}), 500
+
+@api_bp.route('/excluir_tarefa_h/<int:tarefa_h_id>', methods=['POST'])
+@login_required
+@validate_api_origin
+@limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
+def excluir_tarefa_h(tarefa_h_id):
+    usuario_cs_email = g.user_email
+    try:
+        tarefa_h_id = validate_integer(tarefa_h_id, min_value=1)
+    except ValidationError as e:
+        return jsonify({'ok': False, 'error': f'ID inválido: {str(e)}'}), 400
+    try:
+        row = query_db(
+            """
+            SELECT th.id as tarefa_id, th.nome, i.id as implantacao_id, i.usuario_cs, i.status
+            FROM tarefas_h th
+            JOIN grupos g ON th.grupo_id = g.id
+            JOIN fases f ON g.fase_id = f.id
+            JOIN implantacoes i ON f.implantacao_id = i.id
+            WHERE th.id = %s
+            """,
+            (tarefa_h_id,), one=True
+        )
+        if not row:
+            return jsonify({'ok': False, 'error': 'Tarefa não encontrada'}), 404
+        is_owner = row.get('usuario_cs') == usuario_cs_email
+        is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
+        if not (is_owner or is_manager):
+            return jsonify({'ok': False, 'error': 'Permissão negada.'}), 403
+        if row.get('status') in ['finalizada', 'parada', 'cancelada']:
+            return jsonify({'ok': False, 'error': 'Implantação bloqueada para alterações.'}), 400
+        execute_db("DELETE FROM subtarefas_h WHERE tarefa_id = %s", (tarefa_h_id,))
+        execute_db("DELETE FROM tarefas_h WHERE id = %s", (tarefa_h_id,))
+        logar_timeline(row['implantacao_id'], usuario_cs_email, 'tarefa_excluida', f"TarefaH '{row.get('nome','')}' foi excluída.")
+        nome = g.perfil.get('nome', usuario_cs_email)
+        log_exclusao = query_db(
+            "SELECT *, %s as usuario_nome FROM timeline_log WHERE implantacao_id = %s AND tipo_evento = 'tarefa_excluida' ORDER BY id DESC LIMIT 1",
+            (nome, row['implantacao_id']), one=True
+        )
+        if log_exclusao:
+            log_exclusao['data_criacao'] = format_date_iso_for_json(log_exclusao.get('data_criacao'))
+        return jsonify({'ok': True, 'log_exclusao': log_exclusao})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': f"Erro interno: {e}"}), 500
+
+@api_bp.route('/excluir_grupo_h', methods=['POST'])
+@login_required
+@validate_api_origin
+def excluir_grupo_h():
+    usuario_cs_email = g.user_email
+    data = request.get_json(silent=True) or {}
+    impl_id = data.get('implantacao_id')
+    grupo_nome = (data.get('grupo_nome') or '').strip()
+    if not impl_id or not grupo_nome:
+        return jsonify({'ok': False, 'error': 'Dados inválidos.'}), 400
+    try:
+        impl = query_db("SELECT id, usuario_cs, status FROM implantacoes WHERE id = %s", (impl_id,), one=True)
+        if not impl:
+            return jsonify({'ok': False, 'error': 'Implantação não encontrada.'}), 404
+        is_owner = impl.get('usuario_cs') == usuario_cs_email
+        is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
+        if not (is_owner or is_manager):
+            return jsonify({'ok': False, 'error': 'Permissão negada.'}), 403
+        if impl.get('status') in ['finalizada', 'parada', 'cancelada']:
+            return jsonify({'ok': False, 'error': f"Não é possível excluir em status '{impl.get('status')}'."}), 400
+        grupo = query_db(
+            """
+            SELECT g.id FROM grupos g
+            JOIN fases f ON g.fase_id = f.id
+            WHERE f.implantacao_id = %s AND g.nome = %s
+            """,
+            (impl_id, grupo_nome), one=True
+        )
+        if not grupo:
+            return jsonify({'ok': False, 'error': 'Grupo não encontrado.'}), 404
+        gid = grupo['id']
+        tarefas_ids = query_db("SELECT id FROM tarefas_h WHERE grupo_id = %s", (gid,)) or []
+        for t in tarefas_ids:
+            execute_db("DELETE FROM subtarefas_h WHERE tarefa_id = %s", (t['id'],))
+        execute_db("DELETE FROM tarefas_h WHERE grupo_id = %s", (gid,))
+        logar_timeline(impl_id, usuario_cs_email, 'modulo_excluido', f"Todas as tarefas do grupo '{grupo_nome}' foram excluídas.")
+        nome = g.perfil.get('nome', usuario_cs_email)
+        log_exclusao = query_db(
+            "SELECT *, %s as usuario_nome FROM timeline_log WHERE implantacao_id = %s AND tipo_evento = 'modulo_excluido' ORDER BY id DESC LIMIT 1",
+            (nome, impl_id), one=True
+        )
+        if log_exclusao:
+            log_exclusao['data_criacao'] = format_date_iso_for_json(log_exclusao.get('data_criacao'))
+        return jsonify({'ok': True, 'log_exclusao_modulo': log_exclusao})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': f"Erro interno: {e}"}), 500
+
+@api_bp.route('/reordenar_hierarquia', methods=['POST'])
+@login_required
+@validate_api_origin
+def reordenar_hierarquia():
+    usuario_cs_email = g.user_email
+    data = request.get_json(silent=True) or {}
+    impl_id = data.get('implantacao_id')
+    grupo_nome = (data.get('grupo_nome') or '').strip()
+    ordem = data.get('ordem') or []
+    if not impl_id or not grupo_nome or not isinstance(ordem, list):
+        return jsonify({'ok': False, 'error': 'Dados inválidos.'}), 400
+    try:
+        impl = query_db("SELECT id, usuario_cs, status FROM implantacoes WHERE id = %s", (impl_id,), one=True)
+        if not impl:
+            return jsonify({'ok': False, 'error': 'Implantação não encontrada.'}), 404
+        is_owner = impl.get('usuario_cs') == usuario_cs_email
+        is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
+        if not (is_owner or is_manager):
+            return jsonify({'ok': False, 'error': 'Permissão negada.'}), 403
+        if impl.get('status') in ['finalizada', 'parada', 'cancelada']:
+            return jsonify({'ok': False, 'error': f"Não é possível reordenar em status '{impl.get('status')}'."}), 400
+        grupo = query_db(
+            """
+            SELECT g.id FROM grupos g
+            JOIN fases f ON g.fase_id = f.id
+            WHERE f.implantacao_id = %s AND g.nome = %s
+            """,
+            (impl_id, grupo_nome), one=True
+        )
+        if not grupo:
+            return jsonify({'ok': False, 'error': 'Grupo não encontrado.'}), 404
+        for idx, item_id in enumerate(ordem, 1):
+            try:
+                execute_db("UPDATE subtarefas_h SET ordem = %s WHERE id = %s", (idx, item_id))
+            except Exception:
+                try:
+                    execute_db("UPDATE tarefas_h SET ordem = %s WHERE id = %s", (idx, item_id))
+                except Exception:
+                    pass
+        logar_timeline(impl_id, usuario_cs_email, 'tarefas_reordenadas', f"A ordem das tarefas no grupo '{grupo_nome}' foi alterada.")
+        nome = g.perfil.get('nome', usuario_cs_email)
+        log_reordenar = query_db(
+            "SELECT *, %s as usuario_nome FROM timeline_log WHERE implantacao_id = %s AND tipo_evento = 'tarefas_reordenadas' ORDER BY id DESC LIMIT 1",
+            (nome, impl_id), one=True
+        )
+        if log_reordenar:
+            log_reordenar['data_criacao'] = format_date_iso_for_json(log_reordenar.get('data_criacao'))
+        return jsonify({'ok': True, 'log_reordenar': log_reordenar})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': f"Erro interno: {e}"}), 500

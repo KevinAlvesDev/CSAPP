@@ -421,6 +421,41 @@ def init_db():
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_timeline_log_implantacao_id ON timeline_log (implantacao_id);")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_gamificacao_user_period ON gamificacao_metricas_mensais (usuario_cs, ano, mes);")
 
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS fases (
+                id SERIAL PRIMARY KEY,
+                implantacao_id INTEGER NOT NULL REFERENCES implantacoes(id) ON DELETE CASCADE,
+                nome TEXT NOT NULL,
+                ordem INTEGER DEFAULT 0
+            );
+            """)
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS grupos (
+                id SERIAL PRIMARY KEY,
+                fase_id INTEGER NOT NULL REFERENCES fases(id) ON DELETE CASCADE,
+                nome TEXT NOT NULL
+            );
+            """)
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS tarefas_h (
+                id SERIAL PRIMARY KEY,
+                grupo_id INTEGER NOT NULL REFERENCES grupos(id) ON DELETE CASCADE,
+                nome TEXT NOT NULL,
+                status VARCHAR(50) DEFAULT 'pendente',
+                percentual_conclusao INTEGER DEFAULT 0,
+                ordem INTEGER DEFAULT 0
+            );
+            """)
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS subtarefas_h (
+                id SERIAL PRIMARY KEY,
+                tarefa_id INTEGER NOT NULL REFERENCES tarefas_h(id) ON DELETE CASCADE,
+                nome TEXT NOT NULL,
+                concluido BOOLEAN DEFAULT FALSE,
+                ordem INTEGER DEFAULT 0
+            );
+            """)
+
         
         elif db_type == 'sqlite':
 
@@ -684,6 +719,41 @@ def init_db():
                 data_registro DATETIME DEFAULT CURRENT_TIMESTAMP,
                 registrado_por VARCHAR(255) REFERENCES usuarios(usuario) ON DELETE SET NULL,
                 UNIQUE (usuario_cs, mes, ano)
+            );
+            """)
+
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS fases (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                implantacao_id INTEGER NOT NULL REFERENCES implantacoes(id) ON DELETE CASCADE,
+                nome TEXT NOT NULL,
+                ordem INTEGER DEFAULT 0
+            );
+            """)
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS grupos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                fase_id INTEGER NOT NULL REFERENCES fases(id) ON DELETE CASCADE,
+                nome TEXT NOT NULL
+            );
+            """)
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS tarefas_h (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                grupo_id INTEGER NOT NULL REFERENCES grupos(id) ON DELETE CASCADE,
+                nome TEXT NOT NULL,
+                status VARCHAR(50) DEFAULT 'pendente',
+                percentual_conclusao INTEGER DEFAULT 0,
+                ordem INTEGER DEFAULT 0
+            );
+            """)
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS subtarefas_h (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tarefa_id INTEGER NOT NULL REFERENCES tarefas_h(id) ON DELETE CASCADE,
+                nome TEXT NOT NULL,
+                concluido BOOLEAN DEFAULT FALSE,
+                ordem INTEGER DEFAULT 0
             );
             """)
 

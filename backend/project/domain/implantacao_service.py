@@ -9,6 +9,7 @@ from ..task_definitions import (
     TAREFAS_TREINAMENTO_PADRAO, MODULO_PENDENCIAS
 )
 
+from ..dominio.hierarquia_service import get_hierarquia_implantacao
 from ..constants import (
     PERFIS_COM_GESTAO, 
     JUSTIFICATIVAS_PARADA, CARGOS_RESPONSAVEL, NIVEIS_RECEITA, 
@@ -42,17 +43,51 @@ def _create_default_tasks(impl_id):
     return tasks_added
 
 def _get_progress(impl_id):
-    """Calcula o progresso de uma implantação (incluindo todas as tarefas)."""
+    try:
+        fases_exist = query_db("SELECT id FROM fases WHERE implantacao_id = %s LIMIT 1", (impl_id,), one=True)
+    except Exception:
+        fases_exist = None
+    if fases_exist:
+        leg = query_db(
+            """
+            SELECT COUNT(*) as total, SUM(CASE WHEN concluida THEN 1 ELSE 0 END) as done
+            FROM tarefas WHERE implantacao_id = %s AND tarefa_pai IN (%s, %s)
+            """,
+            (impl_id, MODULO_OBRIGATORIO, MODULO_PENDENCIAS), one=True
+        ) or {}
+        sub = query_db(
+            """
+            SELECT COUNT(s.id) as total, SUM(CASE WHEN s.concluido THEN 1 ELSE 0 END) as done
+            FROM subtarefas_h s
+            JOIN tarefas_h th ON s.tarefa_id = th.id
+            JOIN grupos g ON th.grupo_id = g.id
+            JOIN fases f ON g.fase_id = f.id
+            WHERE f.implantacao_id = %s
+            """,
+            (impl_id,), one=True
+        ) or {}
+        th_no = query_db(
+            """
+            SELECT COUNT(th.id) as total,
+                   SUM(CASE WHEN LOWER(COALESCE(th.status,'')) = 'concluida' THEN 1 ELSE 0 END) as done
+            FROM tarefas_h th
+            LEFT JOIN subtarefas_h s ON s.tarefa_id = th.id
+            JOIN grupos g ON th.grupo_id = g.id
+            JOIN fases f ON g.fase_id = f.id
+            WHERE f.implantacao_id = %s AND s.id IS NULL
+            """,
+            (impl_id,), one=True
+        ) or {}
+        total = int(leg.get('total', 0) or 0) + int(sub.get('total', 0) or 0) + int(th_no.get('total', 0) or 0)
+        done = int(leg.get('done', 0) or 0) + int(sub.get('done', 0) or 0) + int(th_no.get('done', 0) or 0)
+        return int(round((done / total) * 100)) if total > 0 else 0, total, done
     counts = query_db(
-        "SELECT COUNT(*) as total, SUM(CASE WHEN concluida THEN 1 ELSE 0 END) as done "
-        "FROM tarefas WHERE implantacao_id = %s",
-        (impl_id,),
-        one=True
+        "SELECT COUNT(*) as total, SUM(CASE WHEN concluida THEN 1 ELSE 0 END) as done FROM tarefas WHERE implantacao_id = %s",
+        (impl_id,), one=True
     )
     total = counts.get('total', 0) if counts else 0
     done = counts.get('done', 0) if counts else 0
     done = int(done) if done is not None else 0
-
     return int(round((done / total) * 100)) if total > 0 else 0, total, done
 
 
@@ -186,14 +221,67 @@ def _get_tarefas_and_comentarios(impl_id, is_owner=False, is_manager=False):
         t['comentarios'] = comentarios_por_tarefa.get(t['id'], [])
         modulo = t['tarefa_pai']
         todos_modulos_temp.add(modulo)
-        if modulo == MODULO_OBRIGATORIO: tarefas_agrupadas_obrigatorio.setdefault(modulo, []).append(t)
-        elif modulo == MODULO_PENDENCIAS: tarefas_agrupadas_pendencias.setdefault(modulo, []).append(t)
-        else: tarefas_agrupadas_treinamento.setdefault(modulo, []).append(t)
+        if modulo == MODULO_OBRIGATORIO:
+            tarefas_agrupadas_obrigatorio.setdefault(modulo, []).append(t)
+        elif modulo == MODULO_PENDENCIAS:
+            tarefas_agrupadas_pendencias.setdefault(modulo, []).append(t)
+        else:
+            tarefas_agrupadas_treinamento.setdefault(modulo, []).append(t)
+
+    try:
+        fases_raw = query_db("SELECT id, nome, ordem FROM fases WHERE implantacao_id = %s ORDER BY ordem DESC", (impl_id,)) or []
+    except Exception:
+        fases_raw = []
+    if fases_raw:
+        tarefas_agrupadas_treinamento = OrderedDict()
+        todos_modulos_temp = set()
+        for fase in fases_raw:
+            grupos_raw = query_db("SELECT id, nome FROM grupos WHERE fase_id = %s", (fase['id'],)) or []
+            for grupo in grupos_raw:
+                modulo_nome = grupo.get('nome') or f"Grupo {grupo.get('id')}"
+                todos_modulos_temp.add(modulo_nome)
+                tarefas_h_raw = query_db("SELECT * FROM tarefas_h WHERE grupo_id = %s", (grupo['id'],)) or []
+                ordem_c = 1
+                for th in tarefas_h_raw:
+                    subs_raw = query_db("SELECT * FROM subtarefas_h WHERE tarefa_id = %s", (th['id'],)) or []
+                    if subs_raw:
+                        for sub in subs_raw:
+                            tarefas_agrupadas_treinamento.setdefault(modulo_nome, []).append({
+                                'id': sub['id'],
+                                'tarefa_filho': sub.get('nome'),
+                                'concluida': bool(sub.get('concluido')), 
+                                'tag': '',
+                                'ordem': sub.get('ordem', ordem_c),
+                                'comentarios': [],
+                                'toggle_url': f"/api/toggle_subtarefa_h/{sub['id']}"
+                            })
+                            tarefas_agrupadas_treinamento[modulo_nome].sort(key=lambda x: x.get('ordem', 0))
+                            tarefas_agrupadas_treinamento[modulo_nome][-1]['delete_url'] = f"/api/excluir_subtarefa_h/{sub['id']}"
+                            ordem_c += 1
+                    else:
+                        concl = True if (th.get('status') or '').lower() == 'concluida' else False
+                        tarefas_agrupadas_treinamento.setdefault(modulo_nome, []).append({
+                            'id': th['id'],
+                            'tarefa_filho': th.get('nome'),
+                            'concluida': concl,
+                            'tag': '',
+                            'ordem': th.get('ordem', ordem_c),
+                            'comentarios': [],
+                            'toggle_url': f"/api/toggle_tarefa_h/{th['id']}"
+                        })
+                        tarefas_agrupadas_treinamento[modulo_nome].sort(key=lambda x: x.get('ordem', 0))
+                        tarefas_agrupadas_treinamento[modulo_nome][-1]['delete_url'] = f"/api/excluir_tarefa_h/{th['id']}"
+                        ordem_c += 1
 
     ordered_treinamento = OrderedDict()
-    for mp in TAREFAS_TREINAMENTO_PADRAO:
-        if mp in tarefas_agrupadas_treinamento: ordered_treinamento[mp] = tarefas_agrupadas_treinamento.pop(mp)
-    for mr in sorted(tarefas_agrupadas_treinamento.keys()): ordered_treinamento[mr] = tarefas_agrupadas_treinamento[mr]
+    modulo_ordem_map = {}
+    for modulo, lista in tarefas_agrupadas_treinamento.items():
+        try:
+            modulo_ordem_map[modulo] = min([t.get('ordem') or 0 for t in (lista or [])])
+        except Exception:
+            modulo_ordem_map[modulo] = 0
+    for modulo in [k for k, _ in sorted(modulo_ordem_map.items(), key=lambda x: (x[1], x[0]), reverse=True)]:
+        ordered_treinamento[modulo] = tarefas_agrupadas_treinamento.get(modulo, [])
 
     if MODULO_OBRIGATORIO in todos_modulos_temp:
         try:
@@ -204,29 +292,10 @@ def _get_tarefas_and_comentarios(impl_id, is_owner=False, is_manager=False):
     if MODULO_PENDENCIAS not in todos_modulos_lista:
         todos_modulos_lista.append(MODULO_PENDENCIAS)
 
-    preferred_order = [
-        "Definição de carteira",
-        "Welcome",
-        "Estruturação de BD",
-        "Importação de dados",
-        "Módulo ADM",
-        "Módulo Treino",
-        "Módulo CRM",
-        "Módulo Financeiro",
-        "Conclusão",
-        MODULO_PENDENCIAS,
-    ]
-    seen = set()
-    ordered_mods = []
-    for name in preferred_order:
-        if name in todos_modulos_lista and name not in seen:
-            ordered_mods.append(name)
-            seen.add(name)
-    for name in todos_modulos_lista:
-        if name not in seen:
-            ordered_mods.append(name)
-            seen.add(name)
-    todos_modulos_lista = ordered_mods
+    # Ordenação de módulos visíveis também segue a ordem derivada das tarefas (maior primeiro)
+    todos_modulos_lista = sorted(list(todos_modulos_temp), key=lambda m: modulo_ordem_map.get(m, 0), reverse=True)
+    if MODULO_PENDENCIAS not in todos_modulos_lista:
+        todos_modulos_lista.append(MODULO_PENDENCIAS)
     
     return tarefas_agrupadas_obrigatorio, ordered_treinamento, tarefas_agrupadas_pendencias, todos_modulos_lista
 
@@ -253,6 +322,9 @@ def get_implantacao_details(impl_id, usuario_cs_email, user_perfil):
 
     is_owner = implantacao.get('usuario_cs') == usuario_cs_email
     tarefas_agrupadas_obrigatorio, ordered_treinamento, tarefas_agrupadas_pendencias, todos_modulos_lista = _get_tarefas_and_comentarios(impl_id, is_owner=is_owner, is_manager=is_manager)
+    
+    # Buscar hierarquia completa (novo modelo)
+    hierarquia = get_hierarquia_implantacao(impl_id)
 
     logs_timeline = _get_timeline_logs(impl_id)
 
@@ -267,6 +339,7 @@ def get_implantacao_details(impl_id, usuario_cs_email, user_perfil):
     return {
         'user_info': g.user,
         'implantacao': implantacao,
+        'hierarquia': hierarquia,
         'tarefas_agrupadas_obrigatorio': tarefas_agrupadas_obrigatorio,
         'tarefas_agrupadas_treinamento': ordered_treinamento,
         'tarefas_agrupadas_pendencias': tarefas_agrupadas_pendencias,

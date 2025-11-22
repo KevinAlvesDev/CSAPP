@@ -13467,3 +13467,543 @@ Invalid bucket name "*": Bucket name must match the regex "^[a-zA-Z0-9.\-_]{1,25
 Invalid bucket name "*": Bucket name must match the regex "^[a-zA-Z0-9.\-_]{1,255}$" or be an ARN matching the regex "^arn:(aws).*:(s3|s3-object-lambda):[a-z\-0-9]*:[0-9]{12}:accesspoint[/:][a-zA-Z0-9\-.]{1,63}$|^arn:(aws).*:s3-outposts:[a-z\-0-9]+:[0-9]{12}:outpost[/:][a-zA-Z0-9\-]{1,63}[/:]accesspoint[/:][a-zA-Z0-9\-]{1,63}$"
 2025-11-17 20:31:38 - ERROR - photo_local@example.com - User (Implantador) - app - Falha ao salvar foto local para photo_local@example.com: I/O operation on closed file.
 2025-11-17 20:31:38 - ERROR - photo_local@example.com - User (Implantador) - app - Falha ao salvar foto local para photo_local@example.com: I/O operation on closed file.
+2025-11-22 03:05:42 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - project - Database query error: no such table: fases
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: fases
+2025-11-22 03:05:42 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - project - Database query error: no such table: fases
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: fases
+2025-11-22 03:05:50 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - project - Database query error: no such table: fases
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: fases
+2025-11-22 03:05:50 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - project - Database query error: no such table: fases
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: fases
+2025-11-22 03:07:37 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - project - Database query error: no such table: fases
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: fases
+2025-11-22 03:07:37 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - project - Database query error: no such table: fases
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: fases
+2025-11-22 03:08:50 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - project - Database query error: no such table: fases
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: fases
+2025-11-22 03:08:50 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - project - Database query error: no such table: fases
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: fases
+2025-11-22 03:08:50 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - project - Database query error: no such table: fases
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: fases
+2025-11-22 03:08:50 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - project - Database query error: no such table: fases
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: fases
+2025-11-22 03:11:43 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - project - Database query error: no such table: fases
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: fases
+2025-11-22 03:11:43 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - project - Database query error: no such table: fases
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: fases
+2025-11-22 03:13:43 - ERROR - system - system - project - Database query error: no such table: fases
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: fases
+2025-11-22 03:13:43 - ERROR - system - system - project - Database query error: no such table: fases
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: fases
+2025-11-22 03:13:43 - ERROR - system - system - project - Database execution error: no such table: fases
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 149, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: fases
+2025-11-22 03:13:43 - ERROR - system - system - project - Database execution error: no such table: fases
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 149, in execute_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: fases
+2025-11-22 03:13:43 - ERROR - system - system - project - Database query error: no such table: fases
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: fases
+2025-11-22 03:13:43 - ERROR - system - system - project - Database query error: no such table: fases
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: fases
+2025-11-22 03:16:49 - ERROR - suporte01.cs@gmail.com - suporte01.cs@gmail.com - project - Database query error: no such table: perfil_usuario
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: perfil_usuario
+2025-11-22 03:16:49 - ERROR - suporte01.cs@gmail.com - suporte01.cs@gmail.com - project - Database query error: no such table: perfil_usuario
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: perfil_usuario
+2025-11-22 03:16:49 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - project - Database query error: no such table: implantacoes
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: implantacoes
+2025-11-22 03:16:49 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - project - Database query error: no such table: implantacoes
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: implantacoes
+2025-11-22 03:16:50 - ERROR - suporte01.cs@gmail.com - suporte01.cs@gmail.com - project - Database query error: no such table: perfil_usuario
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: perfil_usuario
+2025-11-22 03:16:50 - ERROR - suporte01.cs@gmail.com - suporte01.cs@gmail.com - project - Database query error: no such table: perfil_usuario
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: perfil_usuario
+2025-11-22 03:16:50 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - project - Database query error: no such table: implantacoes
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: implantacoes
+2025-11-22 03:16:50 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - project - Database query error: no such table: implantacoes
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: implantacoes
+2025-11-22 03:16:50 - ERROR - suporte01.cs@gmail.com - suporte01.cs@gmail.com - project - Database query error: no such table: perfil_usuario
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: perfil_usuario
+2025-11-22 03:16:50 - ERROR - suporte01.cs@gmail.com - suporte01.cs@gmail.com - project - Database query error: no such table: perfil_usuario
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: perfil_usuario
+2025-11-22 03:16:50 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - project - Database query error: no such table: implantacoes
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: implantacoes
+2025-11-22 03:16:50 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - project - Database query error: no such table: implantacoes
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: implantacoes
+2025-11-22 03:16:50 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - project - Database query error: no such table: perfil_usuario
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: perfil_usuario
+2025-11-22 03:16:50 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - project - Database query error: no such table: perfil_usuario
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: perfil_usuario
+2025-11-22 03:16:50 - ERROR - suporte01.cs@gmail.com - suporte01.cs@gmail.com - project - Database query error: no such table: perfil_usuario
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: perfil_usuario
+2025-11-22 03:16:50 - ERROR - suporte01.cs@gmail.com - suporte01.cs@gmail.com - project - Database query error: no such table: perfil_usuario
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: perfil_usuario
+2025-11-22 03:16:50 - ERROR - suporte01.cs@gmail.com - suporte01.cs@gmail.com - project - Database query error: no such table: perfil_usuario
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: perfil_usuario
+2025-11-22 03:16:50 - ERROR - suporte01.cs@gmail.com - suporte01.cs@gmail.com - project - Database query error: no such table: perfil_usuario
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: perfil_usuario
+2025-11-22 03:16:50 - ERROR - suporte01.cs@gmail.com - suporte01.cs@gmail.com - project - Database query error: no such table: perfil_usuario
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: perfil_usuario
+2025-11-22 03:16:50 - ERROR - suporte01.cs@gmail.com - suporte01.cs@gmail.com - project - Database query error: no such table: perfil_usuario
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: perfil_usuario
+2025-11-22 03:16:51 - ERROR - suporte01.cs@gmail.com - suporte01.cs@gmail.com - project - Database query error: no such table: perfil_usuario
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: perfil_usuario
+2025-11-22 03:16:51 - ERROR - suporte01.cs@gmail.com - suporte01.cs@gmail.com - project - Database query error: no such table: perfil_usuario
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: perfil_usuario
+2025-11-22 03:16:51 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - project - Database query error: no such table: implantacoes
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: implantacoes
+2025-11-22 03:16:51 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - project - Database query error: no such table: implantacoes
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: implantacoes
+2025-11-22 03:16:51 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - project - Database query error: no such table: perfil_usuario
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: perfil_usuario
+2025-11-22 03:16:51 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - project - Database query error: no such table: perfil_usuario
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: perfil_usuario
+2025-11-22 03:16:59 - ERROR - suporte01.cs@gmail.com - suporte01.cs@gmail.com - project - Database query error: no such table: perfil_usuario
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: perfil_usuario
+2025-11-22 03:16:59 - ERROR - suporte01.cs@gmail.com - suporte01.cs@gmail.com - project - Database query error: no such table: perfil_usuario
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: perfil_usuario
+2025-11-22 03:17:09 - ERROR - system - system - project - Database query error: no such table: usuarios
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: usuarios
+2025-11-22 03:17:09 - ERROR - system - system - project - Database query error: no such table: usuarios
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\db.py", line 90, in query_db
+    cursor.execute(query, args)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: usuarios
+2025-11-22 04:16:39 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - main - Erro ao carregar detalhes da implantação ID 1: Encountered unknown tag 'endfor'. Jinja was looking for the following tags: 'endblock'. The innermost block that needs to be closed is 'block'.
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\blueprints\main.py", line 178, in ver_implantacao
+    return render_template(
+        'implantacao_detalhes.html',
+        **context_data
+    )
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\flask\templating.py", line 149, in render_template
+    template = app.jinja_env.get_or_select_template(template_name_or_list)
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 1087, in get_or_select_template
+    return self.get_template(template_name_or_list, parent, globals)
+           ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 1016, in get_template
+    return self._load_template(name, globals)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 975, in _load_template
+    template = self.loader.load(self, name, self.make_globals(globals))
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\loaders.py", line 138, in load
+    code = environment.compile(source, name, filename)
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 771, in compile
+    self.handle_exception(source=source_hint)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\frontend\templates\implantacao_detalhes.html", line 239, in template
+    {% endfor %}
+    ^^^^^
+jinja2.exceptions.TemplateSyntaxError: Encountered unknown tag 'endfor'. Jinja was looking for the following tags: 'endblock'. The innermost block that needs to be closed is 'block'.
+2025-11-22 04:16:47 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - main - Erro ao carregar detalhes da implantação ID 1: Encountered unknown tag 'endfor'. Jinja was looking for the following tags: 'endblock'. The innermost block that needs to be closed is 'block'.
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\blueprints\main.py", line 178, in ver_implantacao
+    return render_template(
+        'implantacao_detalhes.html',
+        **context_data
+    )
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\flask\templating.py", line 149, in render_template
+    template = app.jinja_env.get_or_select_template(template_name_or_list)
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 1087, in get_or_select_template
+    return self.get_template(template_name_or_list, parent, globals)
+           ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 1016, in get_template
+    return self._load_template(name, globals)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 975, in _load_template
+    template = self.loader.load(self, name, self.make_globals(globals))
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\loaders.py", line 138, in load
+    code = environment.compile(source, name, filename)
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 771, in compile
+    self.handle_exception(source=source_hint)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\frontend\templates\implantacao_detalhes.html", line 239, in template
+    {% endfor %}
+    ^^^^^
+jinja2.exceptions.TemplateSyntaxError: Encountered unknown tag 'endfor'. Jinja was looking for the following tags: 'endblock'. The innermost block that needs to be closed is 'block'.
+2025-11-22 04:16:51 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - main - Erro ao carregar detalhes da implantação ID 1: Encountered unknown tag 'endfor'. Jinja was looking for the following tags: 'endblock'. The innermost block that needs to be closed is 'block'.
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\blueprints\main.py", line 178, in ver_implantacao
+    return render_template(
+        'implantacao_detalhes.html',
+        **context_data
+    )
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\flask\templating.py", line 149, in render_template
+    template = app.jinja_env.get_or_select_template(template_name_or_list)
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 1087, in get_or_select_template
+    return self.get_template(template_name_or_list, parent, globals)
+           ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 1016, in get_template
+    return self._load_template(name, globals)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 975, in _load_template
+    template = self.loader.load(self, name, self.make_globals(globals))
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\loaders.py", line 138, in load
+    code = environment.compile(source, name, filename)
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 771, in compile
+    self.handle_exception(source=source_hint)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\frontend\templates\implantacao_detalhes.html", line 239, in template
+    {% endfor %}
+    ^^^^^
+jinja2.exceptions.TemplateSyntaxError: Encountered unknown tag 'endfor'. Jinja was looking for the following tags: 'endblock'. The innermost block that needs to be closed is 'block'.
+2025-11-22 04:17:03 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - main - Erro ao carregar detalhes da implantação ID 1: Encountered unknown tag 'endfor'. Jinja was looking for the following tags: 'endblock'. The innermost block that needs to be closed is 'block'.
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\blueprints\main.py", line 178, in ver_implantacao
+    return render_template(
+        'implantacao_detalhes.html',
+        **context_data
+    )
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\flask\templating.py", line 149, in render_template
+    template = app.jinja_env.get_or_select_template(template_name_or_list)
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 1087, in get_or_select_template
+    return self.get_template(template_name_or_list, parent, globals)
+           ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 1016, in get_template
+    return self._load_template(name, globals)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 975, in _load_template
+    template = self.loader.load(self, name, self.make_globals(globals))
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\loaders.py", line 138, in load
+    code = environment.compile(source, name, filename)
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 771, in compile
+    self.handle_exception(source=source_hint)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\frontend\templates\implantacao_detalhes.html", line 239, in template
+    {% endfor %}
+    ^^^^^
+jinja2.exceptions.TemplateSyntaxError: Encountered unknown tag 'endfor'. Jinja was looking for the following tags: 'endblock'. The innermost block that needs to be closed is 'block'.
+2025-11-22 04:18:33 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - main - Erro ao carregar detalhes da implantação ID 1: Encountered unknown tag 'endfor'. Jinja was looking for the following tags: 'endblock'. The innermost block that needs to be closed is 'block'.
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\blueprints\main.py", line 178, in ver_implantacao
+    return render_template(
+        'implantacao_detalhes.html',
+        **context_data
+    )
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\flask\templating.py", line 149, in render_template
+    template = app.jinja_env.get_or_select_template(template_name_or_list)
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 1087, in get_or_select_template
+    return self.get_template(template_name_or_list, parent, globals)
+           ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 1016, in get_template
+    return self._load_template(name, globals)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 975, in _load_template
+    template = self.loader.load(self, name, self.make_globals(globals))
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\loaders.py", line 138, in load
+    code = environment.compile(source, name, filename)
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 771, in compile
+    self.handle_exception(source=source_hint)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\frontend\templates\implantacao_detalhes.html", line 239, in template
+    {% endfor %}
+    ^^^^^
+jinja2.exceptions.TemplateSyntaxError: Encountered unknown tag 'endfor'. Jinja was looking for the following tags: 'endblock'. The innermost block that needs to be closed is 'block'.
+2025-11-22 04:18:48 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - main - Erro ao carregar detalhes da implantação ID 1: Encountered unknown tag 'endfor'. Jinja was looking for the following tags: 'endblock'. The innermost block that needs to be closed is 'block'.
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\blueprints\main.py", line 178, in ver_implantacao
+    return render_template(
+        'implantacao_detalhes.html',
+        **context_data
+    )
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\flask\templating.py", line 149, in render_template
+    template = app.jinja_env.get_or_select_template(template_name_or_list)
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 1087, in get_or_select_template
+    return self.get_template(template_name_or_list, parent, globals)
+           ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 1016, in get_template
+    return self._load_template(name, globals)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 975, in _load_template
+    template = self.loader.load(self, name, self.make_globals(globals))
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\loaders.py", line 138, in load
+    code = environment.compile(source, name, filename)
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 771, in compile
+    self.handle_exception(source=source_hint)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\frontend\templates\implantacao_detalhes.html", line 239, in template
+    {% endfor %}
+    ^^^^^
+jinja2.exceptions.TemplateSyntaxError: Encountered unknown tag 'endfor'. Jinja was looking for the following tags: 'endblock'. The innermost block that needs to be closed is 'block'.
+2025-11-22 04:23:02 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - main - Erro ao carregar detalhes da implantação ID 1: expected token 'end of print statement', got 'string'
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\blueprints\main.py", line 178, in ver_implantacao
+    return render_template(
+        'implantacao_detalhes.html',
+        **context_data
+    )
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\flask\templating.py", line 149, in render_template
+    template = app.jinja_env.get_or_select_template(template_name_or_list)
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 1087, in get_or_select_template
+    return self.get_template(template_name_or_list, parent, globals)
+           ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 1016, in get_template
+    return self._load_template(name, globals)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 975, in _load_template
+    template = self.loader.load(self, name, self.make_globals(globals))
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\loaders.py", line 138, in load
+    code = environment.compile(source, name, filename)
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 771, in compile
+    self.handle_exception(source=source_hint)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\frontend\templates\implantacao_detalhes.html", line 204, in template
+    registrada. Use "Adicionar Tarefa" na sidebar.
+    
+jinja2.exceptions.TemplateSyntaxError: expected token 'end of print statement', got 'string'
+2025-11-22 04:24:19 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - main - Erro ao carregar detalhes da implantação ID 1: expected token 'end of print statement', got 'string'
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\blueprints\main.py", line 178, in ver_implantacao
+    return render_template(
+        'implantacao_detalhes.html',
+        **context_data
+    )
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\flask\templating.py", line 149, in render_template
+    template = app.jinja_env.get_or_select_template(template_name_or_list)
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 1087, in get_or_select_template
+    return self.get_template(template_name_or_list, parent, globals)
+           ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 1016, in get_template
+    return self._load_template(name, globals)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 975, in _load_template
+    template = self.loader.load(self, name, self.make_globals(globals))
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\loaders.py", line 138, in load
+    code = environment.compile(source, name, filename)
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 771, in compile
+    self.handle_exception(source=source_hint)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\frontend\templates\implantacao_detalhes.html", line 204, in template
+    registrada. Use "Adicionar Tarefa" na sidebar.
+    
+jinja2.exceptions.TemplateSyntaxError: expected token 'end of print statement', got 'string'
+2025-11-22 04:25:07 - ERROR - suporte01.cs@gmail.com - Admin Dev (Administrador) - main - Erro ao carregar detalhes da implantação ID 1: expected token 'end of print statement', got 'string'
+Traceback (most recent call last):
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\backend\project\blueprints\main.py", line 178, in ver_implantacao
+    return render_template(
+        'implantacao_detalhes.html',
+        **context_data
+    )
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\flask\templating.py", line 149, in render_template
+    template = app.jinja_env.get_or_select_template(template_name_or_list)
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 1087, in get_or_select_template
+    return self.get_template(template_name_or_list, parent, globals)
+           ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 1016, in get_template
+    return self._load_template(name, globals)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 975, in _load_template
+    template = self.loader.load(self, name, self.make_globals(globals))
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\loaders.py", line 138, in load
+    code = environment.compile(source, name, filename)
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 771, in compile
+    self.handle_exception(source=source_hint)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\.venv\Lib\site-packages\jinja2\environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "C:\Users\Usuário\Desktop\ajuste\CSAPP\frontend\templates\implantacao_detalhes.html", line 204, in template
+    registrada. Use "Adicionar Tarefa" na sidebar.
+    
+jinja2.exceptions.TemplateSyntaxError: expected token 'end of print statement', got 'string'

@@ -1,0 +1,16 @@
+<li class="list-group-item d-flex justify-content-between align-items-center p-2 border-0 mb-1 rounded subtarefa-item {{ 'bg-light' if subtarefa.concluido else '' }}" id="subtarefa-{{ subtarefa.id }}">
+    <div class="form-check d-flex align-items-center w-100">
+        <input class="form-check-input me-2" type="checkbox" 
+               id="check-sub-{{ subtarefa.id }}" 
+               {% if subtarefa.concluido %}checked{% endif %}
+               hx-post="/api/toggle_subtarefa_h/{{ subtarefa.id }}"
+               hx-target="#subtarefa-{{ subtarefa.id }}"
+               hx-swap="outerHTML"
+               style="cursor: pointer; width: 1.2em; height: 1.2em;">
+        <label class="form-check-label flex-grow-1 {{ 'text-decoration-line-through text-muted' if subtarefa.concluido else '' }}" 
+               for="check-sub-{{ subtarefa.id }}" 
+               style="cursor: pointer; font-size: 0.95rem;">
+            {{ subtarefa.nome }}
+        </label>
+    </div>
+</li>
