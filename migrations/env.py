@@ -10,26 +10,31 @@ from alembic import context
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-load_dotenv()
+is_prod = (os.environ.get("FLASK_ENV", "").lower() == "production") or (
+    os.environ.get("ENV", "").lower() == "production"
+)
+if (
+    os.environ.get("CSAPP_LOAD_DOTENV", "1").lower() in ("1", "true", "yes")
+    and not is_prod
+):
+    load_dotenv()
 
 
 config = context.config
 
-database_url = os.environ.get('DATABASE_URL')
+database_url = os.environ.get("DATABASE_URL")
 if database_url:
-    config.set_main_option('sqlalchemy.url', database_url)
+    config.set_main_option("sqlalchemy.url", database_url)
 else:
 
     base_dir = os.path.dirname(os.path.dirname(__file__))
-    sqlite_path = os.path.join(base_dir, 'backend', 'dashboard_simples.db')
-    config.set_main_option('sqlalchemy.url', f'sqlite:///{sqlite_path}')
+    sqlite_path = os.path.join(base_dir, "backend", "dashboard_simples.db")
+    config.set_main_option("sqlalchemy.url", f"sqlite:///{sqlite_path}")
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 target_metadata = None
-
-
 
 
 def run_migrations_offline() -> None:
@@ -70,9 +75,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()

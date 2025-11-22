@@ -9,16 +9,21 @@ intentionally lightweight and do not depend on Flask request context.
 from datetime import datetime
 import re
 
+
 class _DummyG:
     pass
 
-g = _DummyG()                                            
 
-def jsonify(obj):                                                                 
+g = _DummyG()
+
+
+def jsonify(obj):
     return obj
 
-from .db import get_db_connection                                             
+
+from .db import get_db_connection
 from .logging_config import api_logger, security_logger
+
 
 def validate_integer(value):
     """Return int(value) or None if invalid (no exceptions)."""
@@ -61,18 +66,24 @@ def toggle_tarefa(tarefa_id):
 
     conn = get_db_connection()
     cursor = conn.cursor()
-    task = cursor.fetchone()                                      
+    task = cursor.fetchone()
 
     if not task:
         api_logger.warning("Tarefa não encontrada")
         return None
 
-    perfil_acesso = getattr(g, "perfil", {}).get("perfil_acesso") if getattr(g, "perfil", None) else None
+    perfil_acesso = (
+        getattr(g, "perfil", {}).get("perfil_acesso")
+        if getattr(g, "perfil", None)
+        else None
+    )
     if perfil_acesso != "Administrador":
         security_logger.warning("Permissão negada em toggle_tarefa")
         return jsonify({"error": "Acesso negado"})
 
-    api_logger.info(f"Status da tarefa {tarefa_id_val} alternado por {getattr(g, 'user_email', '')}")
+    api_logger.info(
+        f"Status da tarefa {tarefa_id_val} alternado por {getattr(g, 'user_email', '')}"
+    )
     return {"ok": True, "id": tarefa_id_val}
 
 
@@ -95,7 +106,9 @@ def adicionar_comentario(tarefa_id, comentario_texto):
         api_logger.warning("Tarefa não encontrada para adicionar comentário")
         return None
 
-    api_logger.info(f"Comentário adicionado à tarefa {tarefa_id_val} por {getattr(g, 'user_email', '')}")
+    api_logger.info(
+        f"Comentário adicionado à tarefa {tarefa_id_val} por {getattr(g, 'user_email', '')}"
+    )
     return {"ok": True, "tarefa_id": tarefa_id_val}
 
 
@@ -108,13 +121,17 @@ def excluir_comentario(comentario_id):
 
     conn = get_db_connection()
     cursor = conn.cursor()
-    comentario = cursor.fetchone()                                              
+    comentario = cursor.fetchone()
     if not comentario:
         api_logger.warning("Comentário não encontrado")
         return None
 
     usuario_email = getattr(g, "user_email", None)
-    perfil_acesso = getattr(g, "perfil", {}).get("perfil_acesso") if getattr(g, "perfil", None) else None
+    perfil_acesso = (
+        getattr(g, "perfil", {}).get("perfil_acesso")
+        if getattr(g, "perfil", None)
+        else None
+    )
     is_admin = perfil_acesso == "Administrador"
     is_owner = comentario.get("usuario_email") == usuario_email
     if not (is_admin or is_owner):

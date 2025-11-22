@@ -31,24 +31,38 @@ def main():
         print(f"[Admin Seed] Processando usuário: {EMAIL}")
         senha_hash = generate_password_hash(PLAIN_PASSWORD)
 
-        usuario = query_db("SELECT usuario FROM usuarios WHERE usuario = %s", (EMAIL,), one=True)
+        usuario = query_db(
+            "SELECT usuario FROM usuarios WHERE usuario = %s", (EMAIL,), one=True
+        )
         if usuario:
-            execute_db("UPDATE usuarios SET senha = %s WHERE usuario = %s", (senha_hash, EMAIL))
+            execute_db(
+                "UPDATE usuarios SET senha = %s WHERE usuario = %s", (senha_hash, EMAIL)
+            )
             print("[Admin Seed] Senha atualizada.")
         else:
-            execute_db("INSERT INTO usuarios (usuario, senha) VALUES (%s, %s)", (EMAIL, senha_hash))
+            execute_db(
+                "INSERT INTO usuarios (usuario, senha) VALUES (%s, %s)",
+                (EMAIL, senha_hash),
+            )
             print("[Admin Seed] Usuário criado.")
 
-        perfil = query_db("SELECT usuario, perfil_acesso FROM perfil_usuario WHERE usuario = %s", (EMAIL,), one=True)
+        perfil = query_db(
+            "SELECT usuario, perfil_acesso FROM perfil_usuario WHERE usuario = %s",
+            (EMAIL,),
+            one=True,
+        )
         if perfil:
-            execute_db("UPDATE perfil_usuario SET perfil_acesso = %s WHERE usuario = %s", (PERFIL_ADMIN, EMAIL))
+            execute_db(
+                "UPDATE perfil_usuario SET perfil_acesso = %s WHERE usuario = %s",
+                (PERFIL_ADMIN, EMAIL),
+            )
             print("[Admin Seed] Perfil atualizado para Administrador.")
         else:
 
-            nome = EMAIL.split('@')[0].replace('.', ' ').title()
+            nome = EMAIL.split("@")[0].replace(".", " ").title()
             execute_db(
                 "INSERT INTO perfil_usuario (usuario, nome, perfil_acesso) VALUES (%s, %s, %s)",
-                (EMAIL, nome, PERFIL_ADMIN)
+                (EMAIL, nome, PERFIL_ADMIN),
             )
             print("[Admin Seed] Perfil criado como Administrador.")
 

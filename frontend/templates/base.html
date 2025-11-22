@@ -191,42 +191,6 @@
           var el = ev.target && ev.target.closest('button[hx-post], a[hx-post]');
           if (!el) return;
           var postUrl = el.getAttribute('hx-post');
-          if (!postUrl || postUrl.indexOf('/api/excluir_comentario/') === -1) return;
-          ev.preventDefault();
-          ev.stopPropagation();
-          try { ev.stopImmediatePropagation(); } catch(e){}
-          var confirmMsg = el.getAttribute('hx-confirm');
-          if (confirmMsg && !window.confirm(confirmMsg)) return;
-          var targetSel = el.getAttribute('hx-target');
-          var swapMode = (el.getAttribute('hx-swap')||'outerHTML').toLowerCase();
-          var target = targetSel ? document.querySelector(targetSel) : null;
-          if (!target) return;
-          try { el.disabled = true; } catch(e){}
-          fetch(postUrl, { method: 'POST', headers: { 'HX-Request':'true' } })
-            .then(function(r){ if (!r.ok) throw new Error('HTTP '+r.status); return r.text(); })
-            .then(function(html){
-              if (swapMode === 'outerhtml') { target.outerHTML = html; }
-              else if (swapMode === 'beforeend') {
-                var temp = document.createElement('div'); temp.innerHTML = html;
-                Array.from(temp.childNodes).forEach(function(n){ target.appendChild(n); });
-              } else { target.innerHTML = html; }
-            })
-            .catch(function(){
-              try {
-                var alert = document.createElement('div');
-                alert.className = 'alert alert-danger alert-dismissible fade show my-2';
-                alert.innerHTML = 'Falha ao excluir comentário.' + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
-                var container = document.querySelector('.container') || document.body;
-                container.prepend(alert);
-                setTimeout(function(){ try { var ai = bootstrap.Alert.getOrCreateInstance(alert); ai.close(); } catch(e){} }, 3000);
-              } catch(e){}
-            })
-            .finally(function(){ try { el.disabled = false; } catch(e){} });
-        }, true);
-        document.addEventListener('click', function(ev){
-          var el = ev.target && ev.target.closest('button[hx-post], a[hx-post]');
-          if (!el) return;
-          var postUrl = el.getAttribute('hx-post');
           if (!postUrl || postUrl.indexOf('/api/enviar_email_comentario/') === -1) return;
           ev.preventDefault();
           ev.stopPropagation();

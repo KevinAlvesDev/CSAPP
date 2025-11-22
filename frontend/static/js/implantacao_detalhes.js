@@ -5,7 +5,7 @@
 function formatDataComentario(dataStr) { if (!dataStr) return ''; try { const dateObj = new Date(dataStr.replace(' ', 'T') + 'Z'); if (isNaN(dateObj.getTime())) throw new Error("Inválida"); const day = String(dateObj.getDate()).padStart(2, '0'); const month = String(dateObj.getMonth() + 1).padStart(2, '0'); const year = dateObj.getFullYear(); return `${day}/${month}/${year}`; } catch (e) { console.error("Erro data:", dataStr, e); return 'Inválida'; } }
 function formatDataLog(dataStr) { if (!dataStr) return ''; try { const dateObj = new Date(dataStr.replace(' ', 'T') + 'Z'); if (isNaN(dateObj.getTime())) throw new Error("Inválida"); return dateObj.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(',', ' às'); } catch (e) { console.error("Erro data log:", dataStr, e); return 'Inválida'; } }
 function toggleComment(button, elementId) { const textElement = document.getElementById(elementId); if (!textElement) return; const isExpanded = textElement.classList.toggle('expanded'); button.textContent = isExpanded ? 'Ver menos...' : 'Ver mais...'; }
-function criarTimelineItemHTML(log) { if (!log || !log.data_criacao) return ''; let iconClass = 'bi-info-circle-fill'; if (log.tipo_evento === 'novo_comentario') iconClass = 'bi-chat-left-text-fill'; else if (log.tipo_evento?.includes('tarefa')) iconClass = 'bi-check-circle-fill'; else if (log.tipo_evento?.includes('status') || log.tipo_evento?.includes('implantacao') || log.tipo_evento?.includes('detalhes')) iconClass = 'bi-flag-fill'; else if (log.tipo_evento === 'modulo_excluido') iconClass = 'bi-trash-fill'; const dataFormatada = formatDataLog(log.data_criacao); const detalhesHTML = (log.detalhes || '').replace(/\n/g, '<br>'); return `<li class="timeline-item"><div class="timeline-icon"><i class="bi ${iconClass}"></i></div><div class="timeline-content"><div class="timeline-header"><span class="timeline-usuario">${log.usuario_nome || 'Sistema'}</span><span class="timeline-data">${dataFormatada}</span></div><p class="timeline-detalhes">${detalhesHTML}</p></div></li>`; }
+function criarTimelineItemHTML(log) { if (!log || !log.data_criacao) return ''; let iconClass = 'bi-info-circle-fill'; if (log.tipo_evento === 'novo_comentario') iconClass = 'bi-chat-left-text-fill'; else if (log.tipo_evento?.includes('tarefa')) iconClass = 'bi-check-circle-fill'; else if (log.tipo_evento?.includes('status') || log.tipo_evento?.includes('implantacao') || log.tipo_evento?.includes('detalhes')) iconClass = 'bi-flag-fill'; else if (log.tipo_evento === 'modulo_excluido') iconClass = 'bi-trash-fill'; const dataFormatada = formatDataLog(log.data_criacao); const detalhesHTML = (log.detalhes || '').replace(/\\n/g, '<br>'); return `<li class="timeline-item"><div class="timeline-icon"><i class="bi ${iconClass}"></i></div><div class="timeline-content"><div class="timeline-header"><span class="timeline-usuario">${log.usuario_nome || 'Sistema'}</span><span class="timeline-data">${dataFormatada}</span></div><p class="timeline-detalhes">${detalhesHTML}</p></div></li>`; }
 function adicionarLogNaTimeline(log) { if (!log) return; const timelineList = document.querySelector('#timeline-content .timeline-list'); if (!timelineList) return; const noTimelineMsg = document.getElementById('no-timeline-msg'); if (noTimelineMsg) noTimelineMsg.remove(); const logHTML = criarTimelineItemHTML(log); if (logHTML) timelineList.insertAdjacentHTML('afterbegin', logHTML); }
 
 function updateProgressBar(progress) { const progressBar = document.querySelector('#progress-total-bar'); if (progressBar) { const progressNum = parseInt(progress) || 0; progressBar.style.width = progressNum + '%'; progressBar.setAttribute('aria-valuenow', progressNum); progressBar.textContent = progressNum + '%'; } }
@@ -38,67 +38,31 @@ function confirmWithModal(message) {
     });
 }
 
-async function excluirTarefa(tarefaId, button, CONFIG) { 
-    const ok = await confirmWithModal('Excluir tarefa e comentários?'); 
-    if (!ok) return; 
-    const endpointUrl = CONFIG.endpoints.delTarefa + tarefaId;
-    const originalHTML = button.innerHTML;
-    button.disabled = true; 
-    button.innerHTML = '<span class="spinner-border spinner-border-sm"></span>'; 
-    const listItem = button.closest('.list-group-item'); 
-    if (listItem) listItem.style.opacity = '0.5'; 
-    fetch(endpointUrl, { method: 'POST' })
-      .then(response => response.json())
-      .then(data => { 
-        if (data.ok) { 
-          if(listItem) listItem.remove(); 
-          adicionarLogNaTimeline(data.log_exclusao); 
-          if (data.novo_progresso !== undefined) updateProgressBar(data.novo_progresso); 
-          if (data.implantacao_finalizada) { 
-            adicionarLogNaTimeline(data.log_finalizacao); 
-            window.location.reload(); 
-          } 
-        } else { 
-          throw new Error(data.error || 'Erro.'); 
-        } 
-      })
-      .catch(error => { 
-        alert(`Erro: ${error.message}`); 
-        if (listItem) listItem.style.opacity = '1'; 
-      })
-      .finally(() => { 
-        button.innerHTML = originalHTML; 
-        button.disabled = false; 
-      }); 
+function marcarTodasDoModulo(button, collapseId, CONFIG) {
+    const collapseElement = document.getElementById(collapseId); if (!collapseElement) return; const bsCollapse = bootstrap.Collapse.getOrCreateInstance(collapseElement); bsCollapse.show(); setTimeout(async () => {
+        const checkboxesNaoMarcadas = Array.from(collapseElement.querySelectorAll('.task-checkbox:not(:checked)')); if (checkboxesNaoMarcadas.length === 0) { alert('Todas já concluídas.'); return; } const ok = await confirmWithModal(`Marcar ${checkboxesNaoMarcadas.length} tarefa(s) como concluída(s)?`); if (!ok) return; const originalBtnHTML = button.innerHTML; button.disabled = true; button.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Marcando...`; let promises = []; let errors = []; let ultimaFinalizada = false; let ultimoLogTarefa = null; let ultimoLogFinalizacao = null; let ultimoProgresso = null; checkboxesNaoMarcadas.forEach(checkbox => {
+            const tarefaId = parseInt(checkbox.closest('li').dataset.id); if (isNaN(tarefaId)) return;
+            const endpointUrl = CONFIG.endpoints.toggleTarefa + tarefaId;
+            checkbox.disabled = true; const promise = fetch(endpointUrl, { method: 'POST' }).then(response => response.json()).then(data => { if (data.ok) { const label = checkbox.closest('li').querySelector('label.form-check-label'); checkbox.checked = true; if (label) label.classList.add('text-decoration-line-through', 'text-success'); ultimoProgresso = data.novo_progresso; ultimoLogTarefa = data.log_tarefa; if (data.implantacao_finalizada) { ultimaFinalizada = true; ultimoLogFinalizacao = data.log_finalizacao; } return { success: true }; } else { throw new Error(data.error || 'Erro'); } }).catch(error => {
+                console.error(`Erro ${tarefaId}:`, error);
+
+                errors.push(error?.message || 'Erro ao marcar tarefa');
+                checkbox.checked = false; const label = checkbox.closest('li').querySelector('label.form-check-label'); if (label) label.classList.remove('text-decoration-line-through', 'text-success'); return { success: false };
+            }).finally(() => { checkbox.disabled = false; }); promises.push(promise);
+        }); Promise.all(promises).then(() => {
+            button.innerHTML = originalBtnHTML; button.disabled = false; if (ultimoProgresso !== null) updateProgressBar(ultimoProgresso); if (ultimoLogTarefa) adicionarLogNaTimeline(ultimoLogTarefa); if (ultimaFinalizada) { if (ultimoLogFinalizacao) adicionarLogNaTimeline(ultimoLogFinalizacao); window.location.reload(); return; } if (errors.length > 0) {
+                const uniqueReasons = Array.from(new Set(errors.filter(Boolean)));
+                if (uniqueReasons.length === 1) {
+                    alert(`Falha ao marcar ${errors.length} tarefa(s).\\nMotivo: ${uniqueReasons[0]}`);
+                } else {
+                    alert(`Falha ao marcar ${errors.length} tarefa(s).\\nMotivo(s):\\n- ${uniqueReasons.join('\\n- ')}`);
+                }
+            }
+        });
+    }, 300);
 }
-async function excluirTodasDoModulo(button, moduloNome, CONFIG) { 
-    const ok = await confirmWithModal(`EXCLUIR TODAS as tarefas do módulo "${moduloNome}"? Esta ação é irreversível.`);
-    if (!ok) return; 
-    const endpointUrl = CONFIG.endpoints.delModulo;
-    const cardElement = button.closest('.module-header'); // Procura o .module-header
-    const collapseElement = cardElement ? cardElement.nextElementSibling : null; // Pega o .collapse
-    const originalBtnHTML = button.innerHTML; button.disabled = true; button.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Excluindo...`; 
 
-    if (cardElement) cardElement.style.opacity = '0.5';
-    if (collapseElement) collapseElement.style.opacity = '0.5';
-
-    fetch(endpointUrl, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ implantacao_id: CONFIG.implantacaoId, tarefa_pai: moduloNome }) }).then(response => response.json()).then(data => { if (data.ok) { if (collapseElement) { const taskList = collapseElement.querySelector('.list-group-sortable'); if (taskList) { taskList.innerHTML = ''; const noTaskMsg = document.createElement('div'); noTaskMsg.className = 'list-group-item text-center small text-muted fst-italic'; noTaskMsg.textContent = 'Nenhuma tarefa. Use "Adicionar Tarefa".'; taskList.appendChild(noTaskMsg); } } adicionarLogNaTimeline(data.log_exclusao_modulo); if (data.novo_progresso !== undefined) updateProgressBar(data.novo_progresso); if (data.implantacao_finalizada) { adicionarLogNaTimeline(data.log_finalizacao); window.location.reload(); } } else { throw new Error(data.error || 'Erro.'); } }).catch(error => { console.error('Erro:', error); alert(`Erro: ${error.message}`); }).finally(() => { button.innerHTML = originalBtnHTML; button.disabled = false; if (cardElement) cardElement.style.opacity = '1'; if (collapseElement) collapseElement.style.opacity = '1'; }); }
-function marcarTodasDoModulo(button, collapseId, CONFIG) { 
-    const collapseElement = document.getElementById(collapseId); if (!collapseElement) return; const bsCollapse = bootstrap.Collapse.getOrCreateInstance(collapseElement); bsCollapse.show(); setTimeout(async () => { const checkboxesNaoMarcadas = Array.from(collapseElement.querySelectorAll('.task-checkbox:not(:checked)')); if (checkboxesNaoMarcadas.length === 0) { alert('Todas já concluídas.'); return; } const ok = await confirmWithModal(`Marcar ${checkboxesNaoMarcadas.length} tarefa(s) como concluída(s)?`); if (!ok) return; const originalBtnHTML = button.innerHTML; button.disabled = true; button.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Marcando...`; let promises = []; let errors = []; let ultimaFinalizada = false; let ultimoLogTarefa = null; let ultimoLogFinalizacao = null; let ultimoProgresso = null; checkboxesNaoMarcadas.forEach(checkbox => { const tarefaId = parseInt(checkbox.closest('li').dataset.id); if (isNaN(tarefaId)) return; 
-    const endpointUrl = CONFIG.endpoints.toggleTarefa + tarefaId;
-    checkbox.disabled = true; const promise = fetch(endpointUrl, { method: 'POST' }).then(response => response.json()).then(data => { if (data.ok) { const label = checkbox.closest('li').querySelector('label.form-check-label'); checkbox.checked = true; if(label) label.classList.add('text-decoration-line-through', 'text-success'); ultimoProgresso = data.novo_progresso; ultimoLogTarefa = data.log_tarefa; if(data.implantacao_finalizada) { ultimaFinalizada = true; ultimoLogFinalizacao = data.log_finalizacao; } return { success: true }; } else { throw new Error(data.error || 'Erro'); } }).catch(error => { console.error(`Erro ${tarefaId}:`, error); 
-
-        errors.push(error?.message || 'Erro ao marcar tarefa'); 
-        checkbox.checked = false; const label = checkbox.closest('li').querySelector('label.form-check-label'); if(label) label.classList.remove('text-decoration-line-through', 'text-success'); return { success: false }; }).finally(() => { checkbox.disabled = false; }); promises.push(promise); }); Promise.all(promises).then(() => { button.innerHTML = originalBtnHTML; button.disabled = false; if (ultimoProgresso !== null) updateProgressBar(ultimoProgresso); if (ultimoLogTarefa) adicionarLogNaTimeline(ultimoLogTarefa); if (ultimaFinalizada) { if (ultimoLogFinalizacao) adicionarLogNaTimeline(ultimoLogFinalizacao); window.location.reload(); return; } if (errors.length > 0) { 
-        const uniqueReasons = Array.from(new Set(errors.filter(Boolean)));
-        if (uniqueReasons.length === 1) {
-            alert(`Falha ao marcar ${errors.length} tarefa(s).\nMotivo: ${uniqueReasons[0]}`);
-        } else {
-            alert(`Falha ao marcar ${errors.length} tarefa(s).\nMotivo(s):\n- ${uniqueReasons.join('\n- ')}`);
-        }
-    } }); }, 300); }
-
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
 
     const mainContent = document.getElementById('main-content');
     if (!mainContent) {
@@ -112,72 +76,45 @@ document.addEventListener('DOMContentLoaded', function() {
             reordenar: mainContent.dataset.urlReordenar,
             toggleTarefa: mainContent.dataset.urlToggleTarefa,
             addComentario: mainContent.dataset.urlAdicionarComentario,
-            delComentario: mainContent.dataset.urlExcluirComentario,
             delTarefa: mainContent.dataset.urlExcluirTarefa,
             delModulo: mainContent.dataset.urlExcluirModulo
         }
     };
     if (!CONFIG.implantacaoId) {
-         console.error("data-implantacao-id não encontrado no #main-content.");
-         return;
+        console.error("data-implantacao-id não encontrado no #main-content.");
+        return;
     }
 
 
-    document.body.addEventListener('click', function(event) {
+    document.body.addEventListener('click', function (event) {
         const target = event.target;
 
-        const deleteTaskButton = target.closest('button[title="Excluir Tarefa"]');
-        if (deleteTaskButton) {
-            const tarefaId = parseInt(target.closest('li[data-id]').dataset.id);
-            if(tarefaId) window.excluirTarefa(tarefaId, deleteTaskButton, CONFIG);
+
+        const markAllButton = target.closest('button.btn-marcar-todas');
+        if (markAllButton) {
+
+            event.stopPropagation();
+
+            const collapseId = markAllButton.closest('.module-header').getAttribute('data-bs-target').substring(1);
+            if (collapseId) window.marcarTodasDoModulo(markAllButton, collapseId, CONFIG);
             return;
         }
 
-        const markAllButton = target.closest('button[title="Marcar todas"]');
-        if (markAllButton) {
-
-             event.stopPropagation(); // Impede o clique de "borbulhar" para o .module-header
-
-             const collapseId = markAllButton.closest('.module-header').getAttribute('data-bs-target').substring(1);
-             if(collapseId) window.marcarTodasDoModulo(markAllButton, collapseId, CONFIG);
-             return;
-        }
-
-        const deleteAllButton = target.closest('button[title="Excluir todas"]');
-        if (deleteAllButton) {
-
-             event.stopPropagation(); // Impede o clique de "borbulhar" para o .module-header
-
-             const moduloNome = deleteAllButton.closest('.module-header').nextElementSibling.dataset.modulo;
-             if(moduloNome) window.excluirTodasDoModulo(deleteAllButton, moduloNome, CONFIG);
-             return;
-        }
 
 
         const toggleCommentButton = target.closest('button[data-action="toggle-comment"]');
         if (toggleCommentButton) {
             const targetId = toggleCommentButton.dataset.targetId;
-            if(targetId) window.toggleComment(toggleCommentButton, targetId); // A função helper toggleComment ainda é útil
+            if (targetId) window.toggleComment(toggleCommentButton, targetId);
             return;
         }
 
-        const deleteCommentButton = target.closest('button[data-action="delete-comment"]');
-        if (deleteCommentButton) {
-            const commentId = parseInt(deleteCommentButton.dataset.commentId);
-            if(commentId) {
-                const endpointUrl = CONFIG.endpoints.delComentario + commentId;
-                window.excluirComentario(commentId, endpointUrl, deleteCommentButton); // A função helper excluirComentario ainda é útil
-            }
-            return;
-        }
 
     });
 
 
-    window.toggleComment = toggleComment; 
-    window.excluirTarefa = excluirTarefa; 
-    window.marcarTodasDoModulo = marcarTodasDoModulo; 
-    window.excluirTodasDoModulo = excluirTodasDoModulo;
+    window.toggleComment = toggleComment;
+    window.marcarTodasDoModulo = marcarTodasDoModulo;
 
     function initializeSortableLists(CONFIG) {
         if (!window.Sortable) {
@@ -208,7 +145,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const novaOrdemIds = Array.from(evt.to.children).map(item => parseInt(item.dataset.id));
                     fetch(CONFIG.endpoints.reordenar, {
                         method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ implantacao_id: CONFIG.implantacaoId, tarefa_pai: modulo, ordem: novaOrdemIds })
                     }).then(r => r.json()).then(d => {
                         if (d.ok) adicionarLogNaTimeline(d.log_reordenar);
@@ -222,7 +159,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (window.Sortable) {
         initializeSortableLists(CONFIG);
     } else {
-        document.addEventListener('sortable-ready', function() {
+        document.addEventListener('sortable-ready', function () {
             initializeSortableLists(CONFIG);
         }, { once: true });
     }
@@ -232,12 +169,11 @@ document.addEventListener('DOMContentLoaded', function() {
     let activated = false; const urlHash = window.location.hash; console.log('[Init] Hash:', urlHash); if (urlHash) { let hashId = urlHash.substring(1); let buttonIdToActivate = null; if (hashId.endsWith('-content')) { buttonIdToActivate = hashId.replace('-content', '-tab'); } else { const directButton = document.getElementById(hashId); if (directButton && directButton.matches(tabSelector)) { buttonIdToActivate = hashId; } } if (buttonIdToActivate) { console.log('[Init] Ativando via hash:', buttonIdToActivate); if (activateTabById(buttonIdToActivate)) { activated = true; console.log('[Init] Limpando hash pós ativação.'); history.pushState("", document.title, window.location.pathname + window.location.search); } else { history.pushState("", document.title, window.location.pathname + window.location.search); } } else { console.warn('[Init] Hash inválido.'); history.pushState("", document.title, window.location.pathname + window.location.search); } }
     if (!activated) { const savedTabId = localStorage.getItem(tabStorageKey); console.log('[Init] Restaurando via localStorage:', savedTabId); if (savedTabId) { if (!activateTabById(savedTabId)) { localStorage.removeItem(tabStorageKey); } else { activated = true; } } }
     if (!activated) { const firstTabButton = document.querySelector(tabSelector); if (firstTabButton) { console.log('[Init Fallback] Ativando padrão:', firstTabButton.id); activateTabById(firstTabButton.id); } else { console.error("[Init Fallback] Nenhuma aba!"); } }
-    document.querySelectorAll('.comment-text').forEach(textEl => { const wrapper = textEl.closest('.comment-content-wrapper'); let button = wrapper ? wrapper.querySelector('button[onclick^="toggleComment"]') : null; const maxHeight = parseFloat(window.getComputedStyle(textEl).maxHeight); const isOverflowing = textEl.scrollHeight > maxHeight + 5; if (isOverflowing && !button) { const newButton = document.createElement('button'); newButton.className = 'btn btn-sm btn-link p-0 small'; newButton.textContent = 'Ver mais...'; newButton.onclick = function() { toggleComment(this, textEl.id); }; textElement.parentNode.insertBefore(newButton, textEl.nextSibling); } else if (!isOverflowing && button) { button.remove(); } else if (isOverflowing && button) { button.textContent = textEl.classList.contains('expanded') ? 'Ver menos...' : 'Ver mais...'; } });
-    document.querySelectorAll('.module-header[data-bs-toggle="collapse"]').forEach(header => { const collapseId = header.getAttribute('data-bs-target'); const collapseElement = document.querySelector(collapseId); const icon = header.querySelector('i.bi-chevron-down, i.bi-chevron-up'); if (collapseElement && icon) { collapseElement.addEventListener('show.bs.collapse', () => { icon.classList.replace('bi-chevron-down','bi-chevron-up'); }); collapseElement.addEventListener('hide.bs.collapse', () => { icon.classList.replace('bi-chevron-up','bi-chevron-down'); }); if (collapseElement.classList.contains('show')) { icon.classList.replace('bi-chevron-down','bi-chevron-up'); } } });
+    document.querySelectorAll('.module-header[data-bs-toggle="collapse"]').forEach(header => { const collapseId = header.getAttribute('data-bs-target'); const collapseElement = document.querySelector(collapseId); const icon = header.querySelector('i.bi-chevron-down, i.bi-chevron-up'); if (collapseElement && icon) { collapseElement.addEventListener('show.bs.collapse', () => { icon.classList.replace('bi-chevron-down', 'bi-chevron-up'); }); collapseElement.addEventListener('hide.bs.collapse', () => { icon.classList.replace('bi-chevron-up', 'bi-chevron-down'); }); if (collapseElement.classList.contains('show')) { icon.classList.replace('bi-chevron-down', 'bi-chevron-up'); } } });
 
 
 
-    document.addEventListener('progress_update', function(event) {
+    document.addEventListener('progress_update', function (event) {
         const data = event.detail || {};
         if (data.novo_progresso !== undefined) {
             updateProgressBar(data.novo_progresso);
@@ -252,14 +188,14 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
 
-    document.body.addEventListener('htmx:afterSwap', function(event) {
+    document.body.addEventListener('htmx:afterSwap', function (event) {
 
         const target = event.detail.target;
         if (target && target.id && target.id.startsWith('task-item-')) {
 
 
 
-            setTimeout(function() {
+            setTimeout(function () {
                 const progressBar = document.querySelector('#progress-total-bar');
                 if (progressBar) {
 
@@ -277,22 +213,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     }
                 }
-            }, 50); // Pequeno delay para garantir que o HTMX processou o OOB
-        }
-
-        if (target && target.id && target.id.startsWith('comment-list-')) {
-            try {
-
-                target.scrollTop = target.scrollHeight;
-
-                const form = target.previousElementSibling;
-                if (form && form.classList && form.classList.contains('comment-form')) {
-
-                    form.reset();
-                }
-            } catch (e) {
-                console.warn('Falha ao limpar/rolar após comentário HTMX:', e);
-            }
+            }, 50);
         }
     });
 });

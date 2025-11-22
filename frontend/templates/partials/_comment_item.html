@@ -20,17 +20,7 @@
             </a>
         {% endif %}
     </div>
-    {% if comentario.usuario_cs == g.user_email %}
-        <button 
-            class="btn btn-sm btn-link text-danger p-0 small mt-1"
-            hx-post="{{ url_for('api.excluir_comentario', comentario_id=comentario.id) }}"
-            hx-target="#comentario-{{ comentario.id }}"
-            hx-swap="outerHTML"
-            hx-confirm="Excluir este comentário?"
-            >
-            Excluir
-        </button>
-    {% endif %}
+    
     {% if comentario.visibilidade and comentario.visibilidade == 'externo' %}
         <button 
             class="btn btn-sm btn-link text-primary p-0 small mt-1 ms-2"

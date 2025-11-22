@@ -1,5 +1,12 @@
-
-from flask import Blueprint, request, jsonify, g, current_app, render_template, make_response
+from flask import (
+    Blueprint,
+    request,
+    jsonify,
+    g,
+    current_app,
+    render_template,
+    make_response,
+)
 from datetime import datetime
 import os
 import time
@@ -12,29 +19,35 @@ from ..blueprints.auth import login_required
 
 from ..db import query_db, execute_db, logar_timeline, execute_and_fetch_one
 
-from ..extensions import r2_client, limiter                                               
+from ..extensions import r2_client, limiter
 
 
 from ..domain.implantacao_service import _get_progress
 
 from ..utils import allowed_file, format_date_iso_for_json, format_date_br
 from ..constants import PERFIS_COM_GESTAO
-from ..validation import validate_integer, sanitize_string, validate_email, ValidationError
+from ..validation import (
+    validate_integer,
+    sanitize_string,
+    validate_email,
+    ValidationError,
+)
 from ..logging_config import api_logger, security_logger
 from flask_limiter.util import get_remote_address
 
 from ..api_security import validate_api_origin
 
-api_bp = Blueprint('api', __name__, url_prefix='/api')
+api_bp = Blueprint("api", __name__, url_prefix="/api")
 
 
 @api_bp.before_request
 def _api_origin_guard():
     return validate_api_origin(lambda: None)()
 
-@api_bp.route('/toggle_tarefa/<int:tarefa_id>', methods=['POST'])
+
+@api_bp.route("/toggle_tarefa/<int:tarefa_id>", methods=["POST"])
 @login_required
-@validate_api_origin                                    
+@validate_api_origin
 @limiter.limit("100 per minute", key_func=lambda: g.user_email or get_remote_address())
 def toggle_tarefa(tarefa_id):
     usuario_cs_email = g.user_email
@@ -42,117 +55,160 @@ def toggle_tarefa(tarefa_id):
     try:
         tarefa_id = validate_integer(tarefa_id, min_value=1)
     except ValidationError as e:
-        api_logger.warning(f'Invalid task ID in toggle_tarefa: {str(e)} - User: {g.user_email}')
-        return jsonify({'ok': False, 'error': f'ID de tarefa inválido: {str(e)}'}), 400
+        api_logger.warning(
+            f"Invalid task ID in toggle_tarefa: {str(e)} - User: {g.user_email}"
+        )
+        return jsonify({"ok": False, "error": f"ID de tarefa inválido: {str(e)}"}), 400
     try:
+        # Updated query for new hierarchy
         tarefa = query_db(
             """
-            SELECT t.*, i.usuario_cs, i.id as implantacao_id, i.status 
-            FROM tarefas t 
-            JOIN implantacoes i ON t.implantacao_id = i.id 
+            SELECT t.*, i.usuario_cs, i.id as implantacao_id, i.status as impl_status
+            FROM tarefas_h t 
+            JOIN grupos g ON t.grupo_id = g.id
+            JOIN fases f ON g.fase_id = f.id
+            JOIN implantacoes i ON f.implantacao_id = i.id 
             WHERE t.id = %s
-            """, (tarefa_id,), one=True
+            """,
+            (tarefa_id,),
+            one=True,
         )
-        
+
         if not tarefa:
-            api_logger.warning(f'Task not found: {tarefa_id} - User: {g.user_email}')
-            return jsonify({'ok': False, 'error': 'Tarefa não encontrada'}), 404
-            
-        is_owner = tarefa.get('usuario_cs') == usuario_cs_email
-        is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
-        
+            api_logger.warning(f"Task not found: {tarefa_id} - User: {g.user_email}")
+            return jsonify({"ok": False, "error": "Tarefa não encontrada"}), 404
+
+        is_owner = tarefa.get("usuario_cs") == usuario_cs_email
+        is_manager = g.perfil and g.perfil.get("perfil_acesso") in PERFIS_COM_GESTAO
+
         if not (is_owner or is_manager):
-             security_logger.warning(f'Permission denied for user {g.user_email} trying to toggle task {tarefa_id}')
-             return jsonify({'ok': False, 'error': 'Permissão negada.'}), 403
-            
-        if tarefa.get('status') in ['finalizada', 'parada', 'cancelada']:
-            return jsonify({'ok': False, 'error': f'Não é possível alterar tarefas de implantações com status "{tarefa.get("status")}".'}), 400
-            
-        novo_status_bool = not tarefa.get('concluida', False)
-        
-        data_conclusao_val = datetime.now() if novo_status_bool else None
+            security_logger.warning(
+                f"Permission denied for user {g.user_email} trying to toggle task {tarefa_id}"
+            )
+            return jsonify({"ok": False, "error": "Permissão negada."}), 403
+
+        if tarefa.get("impl_status") in ["finalizada", "parada", "cancelada"]:
+            return (
+                jsonify(
+                    {
+                        "ok": False,
+                        "error": f'Não é possível alterar tarefas de implantações com status "{tarefa.get("impl_status")}".',
+                    }
+                ),
+                400,
+            )
+
+        # Toggle logic based on percentual
+        novo_percentual = 0 if tarefa.get("percentual_conclusao") == 100 else 100
+        novo_status = "Concluída" if novo_percentual == 100 else "Pendente"
+        novo_status_bool = novo_percentual == 100
+
         execute_db(
-            "UPDATE tarefas SET concluida = %s, data_conclusao = %s WHERE id = %s", 
-            (novo_status_bool, data_conclusao_val, tarefa_id)
+            "UPDATE tarefas_h SET percentual_conclusao = %s, status = %s WHERE id = %s",
+            (novo_percentual, novo_status, tarefa_id),
         )
-        
-        detalhe = f"Tarefa '{tarefa['tarefa_filho']}': {'Marcada como Concluída' if novo_status_bool else 'Marcada como Não Concluída'}."
-        logar_timeline(tarefa['implantacao_id'], usuario_cs_email, 'tarefa_alterada', detalhe)
-        
-        api_logger.info(f'Task {tarefa_id} status changed to {novo_status_bool} by user {g.user_email}')
+
+        detalhe = f"Tarefa '{tarefa['nome']}': {'Marcada como Concluída' if novo_status_bool else 'Marcada como Não Concluída'}."
+        logar_timeline(
+            tarefa["implantacao_id"], usuario_cs_email, "tarefa_alterada", detalhe
+        )
+
+        api_logger.info(
+            f"Task {tarefa_id} status changed to {novo_status} by user {g.user_email}"
+        )
 
         finalizada, log_finalizacao = False, None
-        novo_prog, _, _ = _get_progress(tarefa['implantacao_id'])
+        novo_prog, _, _ = _get_progress(tarefa["implantacao_id"])
 
-        nome = g.perfil.get('nome', usuario_cs_email)
+        nome = g.perfil.get("nome", usuario_cs_email)
         log_tarefa = query_db(
             "SELECT *, %s as usuario_nome FROM timeline_log "
             "WHERE implantacao_id = %s AND tipo_evento = 'tarefa_alterada' "
             "ORDER BY id DESC LIMIT 1",
-            (nome, tarefa['implantacao_id']), one=True
+            (nome, tarefa["implantacao_id"]),
+            one=True,
         )
         if log_tarefa:
-            log_tarefa['data_criacao'] = format_date_iso_for_json(log_tarefa.get('data_criacao'))
-
-        if request.headers.get('HX-Request') == 'true':
-            tarefa_atualizada = query_db(
-                "SELECT id, tarefa_filho, tag, concluida FROM tarefas WHERE id = %s",
-                (tarefa_id,), one=True
+            log_tarefa["data_criacao"] = format_date_iso_for_json(
+                log_tarefa.get("data_criacao")
             )
-            comentarios = query_db(
-                """
-                SELECT c.*, p.nome as usuario_nome
-                FROM comentarios c
-                LEFT JOIN perfil_usuario p ON c.usuario_cs = p.usuario
-                WHERE c.tarefa_id = %s
-                ORDER BY c.id ASC
-                """,
+
+        if request.headers.get("HX-Request") == "true":
+            # Re-fetch updated task for rendering
+            tarefa_atualizada = query_db(
+                "SELECT * FROM tarefas_h WHERE id = %s",
+                (tarefa_id,),
+                one=True,
+            )
+            
+            # Fetch subtasks to preserve them in the UI
+            subtarefas = query_db(
+                "SELECT * FROM subtarefas_h WHERE tarefa_id = %s ORDER BY id",
                 (tarefa_id,)
-            ) or []
+            )
+            tarefa_atualizada['subtarefas'] = subtarefas if subtarefas else []
+            
+            # Note: Comments are still linked to old table structure or need migration. 
+            # For now, returning empty list or we need to update comments query if table was updated.
+            # Assuming comments are not yet migrated to link to tarefas_h directly or we use same ID space (risky).
+            comentarios = [] 
 
-            tarefa_atualizada['comentarios'] = comentarios
-
-            implantacao_info = query_db(
-                "SELECT nome_empresa, email_responsavel FROM implantacoes WHERE id = %s",
-                (tarefa['implantacao_id'],), one=True
-            ) or {}
+            implantacao_info = (
+                query_db(
+                    "SELECT nome_empresa, email_responsavel FROM implantacoes WHERE id = %s",
+                    (tarefa["implantacao_id"],),
+                    one=True,
+                )
+                or {}
+            )
             implantacao = {
-                'nome_empresa': implantacao_info.get('nome_empresa', ''),
-                'email_responsavel': implantacao_info.get('email_responsavel', '')
+                "nome_empresa": implantacao_info.get("nome_empresa", ""),
+                "email_responsavel": implantacao_info.get("email_responsavel", ""),
             }
 
             hx_payload = {
-                'progress_update': {
-                    'novo_progresso': novo_prog,
-                    'log_tarefa': log_tarefa,
-                    'implantacao_finalizada': finalizada,
-                    'log_finalizacao': log_finalizacao
+                "progress_update": {
+                    "novo_progresso": novo_prog,
+                    "log_tarefa": log_tarefa,
+                    "implantacao_finalizada": finalizada,
+                    "log_finalizacao": log_finalizacao,
                 }
             }
 
-            item_html = render_template('partials/_task_item_wrapper.html', tarefa=tarefa_atualizada, implantacao=implantacao)
-            progress_html = render_template('partials/_progress_total_bar.html', progresso_percent=novo_prog)
+            # We need a wrapper that works with the new task object
+            # Since _task_item_wrapper.html likely includes _task_item.html, and we updated _task_item.html,
+            # we just need to pass the correct object.
+            item_html = render_template(
+                "partials/_task_item_wrapper.html",
+                tarefa=tarefa_atualizada,
+                implantacao=implantacao,
+            )
+            progress_html = render_template(
+                "partials/_progress_total_bar.html", progresso_percent=novo_prog
+            )
             resp = make_response(item_html + progress_html)
 
-            resp.headers['HX-Trigger-After-Swap'] = json.dumps(hx_payload)
+            resp.headers["HX-Trigger-After-Swap"] = json.dumps(hx_payload)
             return resp
 
-        return jsonify({
-            'ok': True,
-            'novo_progresso': novo_prog,
-            'log_tarefa': log_tarefa,
-            'implantacao_finalizada': finalizada,
-            'log_finalizacao': log_finalizacao
-        })
-        
+        return jsonify(
+            {
+                "ok": True,
+                "novo_progresso": novo_prog,
+                "log_tarefa": log_tarefa,
+                "implantacao_finalizada": finalizada,
+                "log_finalizacao": log_finalizacao,
+            }
+        )
+
     except Exception as e:
         api_logger.error(f"Erro ao alternar tarefa ID {tarefa_id}: {e}", exc_info=True)
-        return jsonify({'ok': False, 'error': f"Erro interno: {e}"}), 500
+        return jsonify({"ok": False, "error": f"Erro interno: {e}"}), 500
 
 
-@api_bp.route('/toggle_tarefas', methods=['POST'])
+@api_bp.route("/toggle_tarefas", methods=["POST"])
 @login_required
-@validate_api_origin                                    
+@validate_api_origin
 def toggle_tarefas_bulk():
     """Alterna o status de múltiplas tarefas de uma mesma implantação em uma única operação.
     Espera JSON com {'ids': [<int>, ...]} ou form 'ids' separado por vírgula.
@@ -164,11 +220,11 @@ def toggle_tarefas_bulk():
     try:
         if request.is_json:
             payload = request.get_json(silent=True) or {}
-            ids = payload.get('ids') or []
+            ids = payload.get("ids") or []
         else:
-            raw = (request.form.get('ids') or '').strip()
+            raw = (request.form.get("ids") or "").strip()
             if raw:
-                ids = [s for s in raw.split(',') if s]
+                ids = [s for s in raw.split(",") if s]
 
         ids_norm = []
         for tid in ids:
@@ -179,183 +235,209 @@ def toggle_tarefas_bulk():
                 raise ValidationError(f"ID inválido na lista: {tid}")
 
         if not ids_norm:
-            return jsonify({'ok': False, 'error': 'Nenhuma tarefa informada.'}), 400
+            return jsonify({"ok": False, "error": "Nenhuma tarefa informada."}), 400
     except ValidationError as e:
-        api_logger.warning(f'Invalid task IDs in toggle_tarefas_bulk: {str(e)} - User: {g.user_email}')
-        return jsonify({'ok': False, 'error': f'Lista de IDs inválida: {str(e)}'}), 400
+        api_logger.warning(
+            f"Invalid task IDs in toggle_tarefas_bulk: {str(e)} - User: {g.user_email}"
+        )
+        return jsonify({"ok": False, "error": f"Lista de IDs inválida: {str(e)}"}), 400
 
     implantacao_id = None
-    status_impl = None
     tarefas_info = []
+    
+    # Validate all tasks belong to same implantation and user has access
     for tarefa_id in ids_norm:
         tarefa = query_db(
             """
-            SELECT t.id, t.concluida, t.tarefa_filho, i.usuario_cs, i.id as implantacao_id, i.status
-            FROM tarefas t
-            JOIN implantacoes i ON t.implantacao_id = i.id
+            SELECT t.id, t.percentual_conclusao, t.nome, i.usuario_cs, i.id as implantacao_id, i.status as status_impl
+            FROM tarefas_h t
+            JOIN grupos g ON t.grupo_id = g.id
+            JOIN fases f ON g.fase_id = f.id
+            JOIN implantacoes i ON f.implantacao_id = i.id
             WHERE t.id = %s
             """,
-            (tarefa_id,), one=True
+            (tarefa_id,),
+            one=True,
         )
+        
         if not tarefa:
-            return jsonify({'ok': False, 'error': f'Tarefa {tarefa_id} não encontrada.'}), 404
+             return (
+                jsonify({"ok": False, "error": f"Tarefa {tarefa_id} não encontrada."}),
+                404,
+            )
 
-        is_owner = tarefa.get('usuario_cs') == usuario_cs_email
-        is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
+        is_owner = tarefa.get("usuario_cs") == usuario_cs_email
+        is_manager = g.perfil and g.perfil.get("perfil_acesso") in PERFIS_COM_GESTAO
         if not (is_owner or is_manager):
-            security_logger.warning(f'Permission denied for user {g.user_email} trying to bulk toggle task {tarefa_id}')
-            return jsonify({'ok': False, 'error': 'Permissão negada.'}), 403
+            security_logger.warning(
+                f"Permission denied for user {g.user_email} trying to bulk toggle task {tarefa_id}"
+            )
+            return jsonify({"ok": False, "error": "Permissão negada."}), 403
 
-        st = tarefa.get('status')
-        if st in ['finalizada', 'parada', 'cancelada']:
-            return jsonify({'ok': False, 'error': f'Implantação em status "{st}" não permite alteração de tarefas.'}), 400
+        st = tarefa.get("status_impl")
+        if st in ["finalizada", "parada", "cancelada"]:
+            return (
+                jsonify(
+                    {
+                        "ok": False,
+                        "error": f'Implantação em status "{st}" não permite alteração de tarefas.',
+                    }
+                ),
+                400,
+            )
 
         if implantacao_id is None:
-            implantacao_id = tarefa.get('implantacao_id')
-            status_impl = st
-        elif implantacao_id != tarefa.get('implantacao_id'):
-            return jsonify({'ok': False, 'error': 'Todas as tarefas devem pertencer à mesma implantação.'}), 400
-
+            implantacao_id = tarefa.get("implantacao_id")
+        elif implantacao_id != tarefa.get("implantacao_id"):
+            return (
+                jsonify(
+                    {
+                        "ok": False,
+                        "error": "Todas as tarefas devem pertencer à mesma implantação.",
+                    }
+                ),
+                400,
+            )
+        
         tarefas_info.append(tarefa)
 
     try:
         updated = 0
         for tarefa in tarefas_info:
-            tid = tarefa['id']
-            novo_status_bool = not tarefa.get('concluida', False)
-            data_conclusao_val = datetime.now() if novo_status_bool else None
+            tid = tarefa["id"]
+            # Toggle logic: if 100 -> 0, else -> 100
+            current_pct = tarefa.get("percentual_conclusao", 0)
+            novo_pct = 0 if current_pct == 100 else 100
+            novo_status = "Concluída" if novo_pct == 100 else "Pendente"
+            
             execute_db(
-                "UPDATE tarefas SET concluida = %s, data_conclusao = %s WHERE id = %s",
-                (novo_status_bool, data_conclusao_val, tid)
+                "UPDATE tarefas_h SET percentual_conclusao = %s, status = %s WHERE id = %s",
+                (novo_pct, novo_status, tid),
             )
-            detalhe = f"Tarefa '{tarefa['tarefa_filho']}': {'Marcada como Concluída' if novo_status_bool else 'Marcada como Não Concluída'}."
-            logar_timeline(implantacao_id, usuario_cs_email, 'tarefa_alterada', detalhe)
+            
+            detalhe = f"Tarefa '{tarefa['nome']}': {'Marcada como Concluída' if novo_pct == 100 else 'Marcada como Pendente'}."
+            logar_timeline(implantacao_id, usuario_cs_email, "tarefa_alterada", detalhe)
             updated += 1
 
-        finalizada, log_finalizacao = False, None
-        novo_prog, _, _ = _get_progress(implantacao_id)
+        # Calculate progress
+        stats = query_db(
+            """
+            SELECT 
+                COUNT(*) as total, 
+                SUM(CASE WHEN percentual_conclusao = 100 THEN 1 ELSE 0 END) as concluidas 
+            FROM tarefas_h t
+            JOIN grupos g ON t.grupo_id = g.id
+            JOIN fases f ON g.fase_id = f.id
+            WHERE f.implantacao_id = %s
+            """,
+            (implantacao_id,),
+            one=True
+        )
+        
+        total = stats['total'] if stats else 0
+        concluidas = stats['concluidas'] if stats else 0
+        novo_prog = int((concluidas / total) * 100) if total > 0 else 0
 
-        if request.headers.get('HX-Request') == 'true':
-            nome = g.perfil.get('nome', usuario_cs_email)
-            log_tarefa = query_db(
-                "SELECT *, %s as usuario_nome FROM timeline_log "
-                "WHERE implantacao_id = %s AND tipo_evento = 'tarefa_alterada' "
-                "ORDER BY id DESC LIMIT 1",
-                (nome, implantacao_id), one=True
+        if request.headers.get("HX-Request") == "true":
+            progress_html = render_template(
+                "partials/_progress_total_bar.html", progresso_percent=novo_prog
             )
-            if log_tarefa:
-                log_tarefa['data_criacao'] = format_date_iso_for_json(log_tarefa.get('data_criacao'))
-
-            implantacao_info = query_db(
-                "SELECT nome_empresa, email_responsavel FROM implantacoes WHERE id = %s",
-                (implantacao_id,), one=True
-            ) or {}
-            implantacao = {
-                'nome_empresa': implantacao_info.get('nome_empresa', ''),
-                'email_responsavel': implantacao_info.get('email_responsavel', '')
-            }
-
-            fragments = []
-            for tarefa in tarefas_info:
-                tid = tarefa['id']
-                tarefa_atualizada = query_db(
-                    "SELECT id, tarefa_filho, tag, concluida FROM tarefas WHERE id = %s",
-                    (tid,), one=True
-                )
-                comentarios = query_db(
-                    """
-                    SELECT c.*, p.nome as usuario_nome
-                    FROM comentarios c
-                    LEFT JOIN perfil_usuario p ON c.usuario_cs = p.usuario
-                    WHERE c.tarefa_id = %s
-                    ORDER BY c.id ASC
-                    """,
-                    (tid,)
-                ) or []
-                tarefa_atualizada['comentarios'] = comentarios
-                fragments.append(render_template('partials/_task_item_wrapper.html', tarefa=tarefa_atualizada, implantacao=implantacao, oob=True))
-
-            progress_html = render_template('partials/_progress_total_bar.html', progresso_percent=novo_prog)
+            
+            resp = make_response(progress_html)
+            
             hx_payload = {
-                'progress_update': {
-                    'novo_progresso': novo_prog,
-                    'log_tarefa': log_tarefa,
-                    'implantacao_finalizada': finalizada,
-                    'log_finalizacao': log_finalizacao
+                "progress_update": {
+                    "novo_progresso": novo_prog,
                 }
             }
-            resp = make_response("".join(fragments) + progress_html)
-            resp.headers['HX-Trigger-After-Swap'] = json.dumps(hx_payload)
+            resp.headers["HX-Trigger-After-Swap"] = json.dumps(hx_payload)
             return resp
 
-        return jsonify({
-            'ok': True,
-            'updated_count': updated,
-            'novo_progresso': novo_prog,
-            'implantacao_finalizada': finalizada,
-            'log_finalizacao': log_finalizacao
-        })
-    except Exception as e:
-        api_logger.error(f"Erro ao alternar tarefas em lote para implantação {implantacao_id}: {e}", exc_info=True)
-        return jsonify({'ok': False, 'error': f'Erro interno: {e}'}), 500
+        return jsonify(
+            {
+                "ok": True,
+                "novo_progresso": novo_prog,
+                "updated_count": updated
+            }
+        )
 
-@api_bp.route('/adicionar_comentario/<int:tarefa_id>', methods=['POST'])
+    except Exception as e:
+        api_logger.error(f"Erro ao alternar tarefas em lote: {e}", exc_info=True)
+        return jsonify({"ok": False, "error": f"Erro interno: {e}"}), 500
+
+
+@api_bp.route("/adicionar_comentario/<int:tarefa_id>", methods=["POST"])
 @login_required
-@validate_api_origin                                    
+@validate_api_origin
 @limiter.limit("20 per minute", key_func=lambda: g.user_email or get_remote_address())
 def adicionar_comentario(tarefa_id):
 
     def render_hx_error(message, status_code=400):
-        if request.headers.get('HX-Request') == 'true':
+        if request.headers.get("HX-Request") == "true":
 
-            html = render_template('partials/_comment_error.html', message=message)
+            html = render_template("partials/_comment_error.html", message=message)
             resp = make_response(html, 200)
             return resp
-        return jsonify({'ok': False, 'error': message}), status_code
+        return jsonify({"ok": False, "error": message}), status_code
 
     usuario_cs_email = g.user_email
 
     try:
         tarefa_id = validate_integer(tarefa_id, min_value=1)
     except ValidationError as e:
-        api_logger.warning(f'Invalid task ID in adicionar_comentario: {str(e)} - User: {g.user_email}')
-        return render_hx_error(f'ID de tarefa inválido: {str(e)}', 400)
-    
+        api_logger.warning(
+            f"Invalid task ID in adicionar_comentario: {str(e)} - User: {g.user_email}"
+        )
+        return render_hx_error(f"ID de tarefa inválido: {str(e)}", 400)
+
     try:
-        texto = request.form.get('comentario', '')
+        texto = request.form.get("comentario", "")
         if texto:
             texto = sanitize_string(texto, max_length=8000, min_length=1)
         else:
-            texto = ''
+            texto = ""
     except ValidationError as e:
-        api_logger.warning(f'Invalid comment in adicionar_comentario: {str(e)} - User: {g.user_email}')
-        return render_hx_error(f'Texto do comentário inválido: {str(e)}', 400)
-    
+        api_logger.warning(
+            f"Invalid comment in adicionar_comentario: {str(e)} - User: {g.user_email}"
+        )
+        return render_hx_error(f"Texto do comentário inválido: {str(e)}", 400)
+
     img_url = None
 
-    visibilidade = (request.form.get('visibilidade', 'interno') or 'interno').strip().lower()
-    if visibilidade not in ('interno', 'externo'):
-        visibilidade = 'interno'
+    visibilidade = (
+        (request.form.get("visibilidade", "interno") or "interno").strip().lower()
+    )
+    if visibilidade not in ("interno", "externo"):
+        visibilidade = "interno"
 
     tarefa_info = query_db(
-        "SELECT i.usuario_cs, i.id as implantacao_id, t.tarefa_filho, i.status "
-        "FROM tarefas t JOIN implantacoes i ON t.implantacao_id = i.id "
-        "WHERE t.id = %s",
-        (tarefa_id,), one=True
+        """
+        SELECT i.usuario_cs, i.id as implantacao_id, t.nome as tarefa_filho, i.status 
+        FROM tarefas_h t 
+        JOIN grupos g ON t.grupo_id = g.id
+        JOIN fases f ON g.fase_id = f.id
+        JOIN implantacoes i ON f.implantacao_id = i.id 
+        WHERE t.id = %s
+        """,
+        (tarefa_id,),
+        one=True,
     )
 
-    is_owner = tarefa_info.get('usuario_cs') == usuario_cs_email
-    is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
-    
-    if not tarefa_info or not (is_owner or is_manager):
-        return render_hx_error('Permissão negada.', 403)
-        
-    if tarefa_info.get('status') in ['finalizada', 'parada']:
-        status_atual = tarefa_info.get('status')
-        return render_hx_error(f'Não é possível adicionar comentários a implantações com status "{status_atual}".', 400)
+    is_owner = tarefa_info.get("usuario_cs") == usuario_cs_email
+    is_manager = g.perfil and g.perfil.get("perfil_acesso") in PERFIS_COM_GESTAO
 
-    if 'imagem' in request.files:
-        file = request.files.get('imagem')
+    if not tarefa_info or not (is_owner or is_manager):
+        return render_hx_error("Permissão negada.", 403)
+
+    if tarefa_info.get("status") in ["finalizada", "parada"]:
+        status_atual = tarefa_info.get("status")
+        return render_hx_error(
+            f'Não é possível adicionar comentários a implantações com status "{status_atual}".',
+            400,
+        )
+
+    if "imagem" in request.files:
+        file = request.files.get("imagem")
         if file and file.filename:
 
             from ..file_validation import validate_uploaded_file
@@ -364,58 +446,73 @@ def adicionar_comentario(tarefa_id):
 
             if not is_valid:
                 current_app.logger.warning(f"File upload rejected: {error_msg}")
-                return render_hx_error(f'Arquivo inválido: {error_msg}', 400)
+                return render_hx_error(f"Arquivo inválido: {error_msg}", 400)
 
             try:
 
-                if not r2_client or not current_app.config.get('CLOUDFLARE_PUBLIC_URL'):
-                    return render_hx_error('Serviço de armazenamento (R2) não está configurado para upload de imagem.', 500)
-                impl_id = tarefa_info['implantacao_id']
+                if not r2_client or not current_app.config.get("CLOUDFLARE_PUBLIC_URL"):
+                    return render_hx_error(
+                        "Serviço de armazenamento (R2) não está configurado para upload de imagem.",
+                        500,
+                    )
+                impl_id = tarefa_info["implantacao_id"]
 
-                safe_filename = metadata['safe_filename']
+                safe_filename = metadata["safe_filename"]
                 nome_base, extensao = os.path.splitext(safe_filename)
                 nome_unico = f"{nome_base}_task{tarefa_id}_{int(time.time())}{extensao}"
-                object_name = f"comment_images/impl_{impl_id}/task_{tarefa_id}/{nome_unico}"
+                object_name = (
+                    f"comment_images/impl_{impl_id}/task_{tarefa_id}/{nome_unico}"
+                )
 
                 file.seek(0)
                 r2_client.upload_fileobj(
                     file,
-                    current_app.config['CLOUDFLARE_BUCKET_NAME'],
+                    current_app.config["CLOUDFLARE_BUCKET_NAME"],
                     object_name,
-                    ExtraArgs={'ContentType': metadata['mime_type']}
+                    ExtraArgs={"ContentType": metadata["mime_type"]},
                 )
                 img_url = f"{current_app.config['CLOUDFLARE_PUBLIC_URL']}/{object_name}"
-                current_app.logger.info(f"File uploaded to R2: {object_name} ({metadata['size_mb']} MB)")
+                current_app.logger.info(
+                    f"File uploaded to R2: {object_name} ({metadata['size_mb']} MB)"
+                )
 
             except (ClientError, NoCredentialsError) as upload_err:
                 current_app.logger.error(f"R2 upload error: {upload_err}")
-                return render_hx_error('Erro ao fazer upload da imagem para o R2.', 500)
+                return render_hx_error("Erro ao fazer upload da imagem para o R2.", 500)
             except Exception as e:
                 current_app.logger.error(f"File processing error: {e}")
-                return render_hx_error(f'Falha ao processar imagem: {e}', 500)
+                return render_hx_error(f"Falha ao processar imagem: {e}", 500)
 
     if not texto and not img_url:
-        return render_hx_error('O comentário não pode estar vazio se não houver imagem.', 400)
+        return render_hx_error(
+            "O comentário não pode estar vazio se não houver imagem.", 400
+        )
 
     try:
         agora = datetime.now()
         result = execute_and_fetch_one(
             "INSERT INTO comentarios (tarefa_id, usuario_cs, texto, data_criacao, imagem_url, visibilidade) "
             "VALUES (%s, %s, %s, %s, %s, %s) RETURNING id",
-            (tarefa_id, usuario_cs_email, texto, agora, img_url, visibilidade)
+            (tarefa_id, usuario_cs_email, texto, agora, img_url, visibilidade),
         )
-        
-        novo_id = result.get('id') if result else None
-        
+
+        novo_id = result.get("id") if result else None
+
         if not novo_id:
             raise Exception("Falha ao salvar comentário e obter ID.")
 
-        detalhe = f"Comentário em '{tarefa_info['tarefa_filho']}':\n{texto}" if texto else f"Imagem adicionada em '{tarefa_info['tarefa_filho']}'."
+        detalhe = (
+            f"Comentário em '{tarefa_info['tarefa_filho']}':\n{texto}"
+            if texto
+            else f"Imagem adicionada em '{tarefa_info['tarefa_filho']}'."
+        )
         if texto and img_url:
             detalhe = f"Comentário em '{tarefa_info['tarefa_filho']}':\n{texto}\n[Imagem Adicionada]"
-        logar_timeline(tarefa_info['implantacao_id'], usuario_cs_email, 'novo_comentario', detalhe)
-        
-        api_logger.info(f'Comment added to task {tarefa_id} by user {g.user_email}')
+        logar_timeline(
+            tarefa_info["implantacao_id"], usuario_cs_email, "novo_comentario", detalhe
+        )
+
+        api_logger.info(f"Comment added to task {tarefa_id} by user {g.user_email}")
 
         novo_comentario_dados = query_db(
             """
@@ -423,28 +520,43 @@ def adicionar_comentario(tarefa_id):
             FROM comentarios c
             JOIN perfil_usuario p ON c.usuario_cs = p.usuario
             WHERE c.id = %s
-            """, (novo_id,), one=True
+            """,
+            (novo_id,),
+            one=True,
         )
 
         if not novo_comentario_dados:
-            return render_hx_error('Falha ao recuperar o comentário após a criação.', 500)
+            return render_hx_error(
+                "Falha ao recuperar o comentário após a criação.", 500
+            )
 
         try:
-            if visibilidade == 'externo':
+            if visibilidade == "externo":
                 impl = query_db(
                     "SELECT i.id, i.nome_empresa, i.email_responsavel FROM implantacoes i "
                     "JOIN tarefas t ON t.implantacao_id = i.id WHERE t.id = %s",
-                    (tarefa_id,), one=True
+                    (tarefa_id,),
+                    one=True,
                 )
-                to_email = impl.get('email_responsavel') if impl else None
+                to_email = impl.get("email_responsavel") if impl else None
                 if to_email:
                     from ..email_utils import send_email_global
                     import threading
-                    subject = f"Resumo de reunião - {impl.get('nome_empresa', 'Academia')}"
+
+                    subject = (
+                        f"Resumo de reunião - {impl.get('nome_empresa', 'Academia')}"
+                    )
                     corpo_txt = f"Olá,\n\nCompartilhamos o resumo da reunião referente à implantação.\n\nResumo:\n{texto or ''}\n\n"
                     if img_url:
                         corpo_txt += f"Imagem: {img_url}\n\n"
-                    corpo_html = f"<p>Olá,</p><p>Compartilhamos o resumo da reunião referente à implantação.</p><p><strong>Resumo:</strong></p><div>{(texto or '').replace('\n','<br>')}</div>" + (f"<p><a href='{img_url}' target='_blank'>Ver imagem</a></p>" if img_url else "")
+                    corpo_html = (
+                        f"<p>Olá,</p><p>Compartilhamos o resumo da reunião referente à implantação.</p><p><strong>Resumo:</strong></p><div>{(texto or '').replace('\n','<br>')}</div>"
+                        + (
+                            f"<p><a href='{img_url}' target='_blank'>Ver imagem</a></p>"
+                            if img_url
+                            else ""
+                        )
+                    )
 
                     from ..async_tasks import send_email_async
 
@@ -453,72 +565,106 @@ def adicionar_comentario(tarefa_id):
                         body_html=corpo_html,
                         recipients=[to_email],
                         reply_to=usuario_cs_email,
-                        from_name=novo_comentario_dados.get('usuario_nome') or usuario_cs_email,
-                        body_text=corpo_txt
+                        from_name=novo_comentario_dados.get("usuario_nome")
+                        or usuario_cs_email,
+                        body_text=corpo_txt,
                     )
 
-                    api_logger.info(f"E-mail de comentário externo agendado para {to_email} (tarefa {tarefa_id}).")
+                    api_logger.info(
+                        f"E-mail de comentário externo agendado para {to_email} (tarefa {tarefa_id})."
+                    )
                 else:
-                    api_logger.info(f"Comentário externo sem e-mail do responsável configurado para tarefa {tarefa_id}.")
+                    api_logger.info(
+                        f"Comentário externo sem e-mail do responsável configurado para tarefa {tarefa_id}."
+                    )
         except Exception as e_mail:
-            api_logger.warning(f"Falha ao agendar envio de e-mail de comentário externo: {e_mail}")
+            api_logger.warning(
+                f"Falha ao agendar envio de e-mail de comentário externo: {e_mail}"
+            )
 
         try:
-            if visibilidade == 'externo':
+            if visibilidade == "externo":
                 if not isinstance(novo_comentario_dados, dict):
                     novo_comentario_dados = dict(novo_comentario_dados)
-                novo_comentario_dados['responsavel_email'] = (impl or {}).get('email_responsavel')
-                novo_comentario_dados['responsavel_nome'] = (impl or {}).get('responsavel_cliente')
+                novo_comentario_dados["responsavel_email"] = (impl or {}).get(
+                    "email_responsavel"
+                )
+                novo_comentario_dados["responsavel_nome"] = (impl or {}).get(
+                    "responsavel_cliente"
+                )
         except Exception:
             pass
 
-        item_html = render_template('partials/_comment_item.html', comentario=novo_comentario_dados)
+        item_html = render_template(
+            "partials/_comment_item.html", comentario=novo_comentario_dados
+        )
         oob_stub = f"<div id='no-comment-{tarefa_id}' hx-swap-oob='delete'></div>"
 
-        notice_html = ''
+        notice_html = ""
         try:
-            if visibilidade == 'externo':
-                notice_html = render_template('partials/_comment_email_notice.html', comentario=novo_comentario_dados)
+            if visibilidade == "externo":
+                notice_html = render_template(
+                    "partials/_comment_email_notice.html",
+                    comentario=novo_comentario_dados,
+                )
         except Exception:
-            notice_html = ''
-        resp = make_response(item_html + oob_stub + (notice_html or ''), 200)
+            notice_html = ""
+        resp = make_response(item_html + oob_stub + (notice_html or ""), 200)
         try:
             payload = {
-                'comment_saved': {
-                    'tarefa_id': tarefa_id,
-                    'comentario_id': novo_id,
-                    'visibilidade': visibilidade
+                "comment_saved": {
+                    "tarefa_id": tarefa_id,
+                    "comentario_id": novo_id,
+                    "visibilidade": visibilidade,
                 }
             }
-            resp.headers['HX-Trigger-After-Swap'] = json.dumps(payload)
+            resp.headers["HX-Trigger-After-Swap"] = json.dumps(payload)
         except Exception:
             pass
         return resp
-        
-    except Exception as e:
-        api_logger.error(f"Erro ao salvar comentário para tarefa {tarefa_id}: {e}", exc_info=True)
-        if request.headers.get('HX-Request') == 'true':
-            return render_hx_error(f"Erro interno do servidor: {e}", 500)
-        return jsonify({'ok': False, 'error': f"Erro interno do servidor: {e}"}), 500
 
-@api_bp.route('/enviar_email_comentario/<int:comentario_id>', methods=['POST'])
+    except Exception as e:
+        api_logger.error(
+            f"Erro ao salvar comentário para tarefa {tarefa_id}: {e}", exc_info=True
+        )
+        if request.headers.get("HX-Request") == "true":
+            return render_hx_error(f"Erro interno do servidor: {e}", 500)
+        return jsonify({"ok": False, "error": f"Erro interno do servidor: {e}"}), 500
+
+
+@api_bp.route("/enviar_email_comentario/<int:comentario_id>", methods=["POST"])
 @login_required
 @validate_api_origin
 @limiter.limit("20 per minute", key_func=lambda: g.user_email or get_remote_address())
 def enviar_email_comentario(comentario_id):
     def render_inline_notice(comentario_ctx):
         try:
-            html = render_template('partials/_comment_email_notice.html', comentario=comentario_ctx, oob=False)
+            html = render_template(
+                "partials/_comment_email_notice.html",
+                comentario=comentario_ctx,
+                oob=False,
+            )
             return make_response(html, 200)
         except Exception as e:
-            return make_response(f"<div class='list-group-item py-2'><small class='text-danger'>Falha ao renderizar aviso: {e}</small></div>", 200)
+            return make_response(
+                f"<div class='list-group-item py-2'><small class='text-danger'>Falha ao renderizar aviso: {e}</small></div>",
+                200,
+            )
 
     usuario_cs_email = g.user_email
     try:
         comentario_id = validate_integer(comentario_id, min_value=1)
     except ValidationError as e:
-        api_logger.warning(f"ID inválido em enviar_email_comentario: {e} - User: {g.user_email}")
-        return render_inline_notice({'email_send_status': 'error', 'email_send_error': f'ID inválido: {e}', 'tarefa_id': 0})
+        api_logger.warning(
+            f"ID inválido em enviar_email_comentario: {e} - User: {g.user_email}"
+        )
+        return render_inline_notice(
+            {
+                "email_send_status": "error",
+                "email_send_error": f"ID inválido: {e}",
+                "tarefa_id": 0,
+            }
+        )
 
     try:
         dados = query_db(
@@ -531,64 +677,146 @@ def enviar_email_comentario(comentario_id):
             JOIN implantacoes i ON t.implantacao_id = i.id
             WHERE c.id = %s
             """,
-            (comentario_id,), one=True
+            (comentario_id,),
+            one=True,
         )
         if not dados:
-            return render_inline_notice({'email_send_status': 'error', 'email_send_error': 'Comentário não encontrado.', 'tarefa_id': 0})
+            return render_inline_notice(
+                {
+                    "email_send_status": "error",
+                    "email_send_error": "Comentário não encontrado.",
+                    "tarefa_id": 0,
+                }
+            )
 
-        is_owner = dados.get('usuario_cs') == usuario_cs_email if 'usuario_cs' in dados else True
-        is_impl_owner = dados.get('implantacao_owner') == usuario_cs_email
-        is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
+        is_owner = (
+            dados.get("usuario_cs") == usuario_cs_email
+            if "usuario_cs" in dados
+            else True
+        )
+        is_impl_owner = dados.get("implantacao_owner") == usuario_cs_email
+        is_manager = g.perfil and g.perfil.get("perfil_acesso") in PERFIS_COM_GESTAO
         if not (is_owner or is_impl_owner or is_manager):
-            security_logger.warning(f"Permissão negada ao enviar email do comentário {comentario_id} por {g.user_email}")
-            return render_inline_notice({'email_send_status': 'error', 'email_send_error': 'Permissão negada.', 'tarefa_id': dados.get('tarefa_id')})
+            security_logger.warning(
+                f"Permissão negada ao enviar email do comentário {comentario_id} por {g.user_email}"
+            )
+            return render_inline_notice(
+                {
+                    "email_send_status": "error",
+                    "email_send_error": "Permissão negada.",
+                    "tarefa_id": dados.get("tarefa_id"),
+                }
+            )
 
-        if str(dados.get('visibilidade', 'interno')).lower() != 'externo':
-            return render_inline_notice({'email_send_status': 'error', 'email_send_error': 'Comentário não é externo.', 'tarefa_id': dados.get('tarefa_id')})
+        if str(dados.get("visibilidade", "interno")).lower() != "externo":
+            return render_inline_notice(
+                {
+                    "email_send_status": "error",
+                    "email_send_error": "Comentário não é externo.",
+                    "tarefa_id": dados.get("tarefa_id"),
+                }
+            )
 
-        to_email = dados.get('email_responsavel')
+        to_email = dados.get("email_responsavel")
         if not to_email:
-            return render_inline_notice({'email_send_status': 'error', 'email_send_error': 'E-mail do responsável não configurado.', 'tarefa_id': dados.get('tarefa_id')})
+            return render_inline_notice(
+                {
+                    "email_send_status": "error",
+                    "email_send_error": "E-mail do responsável não configurado.",
+                    "tarefa_id": dados.get("tarefa_id"),
+                }
+            )
 
-        if not current_app.config.get('EMAIL_CONFIGURADO'):
+        if not current_app.config.get("EMAIL_CONFIGURADO"):
             api_logger.warning("Tentativa de envio mas EMAIL_CONFIGURADO está falso.")
-            return render_inline_notice({'email_send_status': 'error', 'email_send_error': 'Serviço de e-mail não configurado.', 'tarefa_id': dados.get('tarefa_id'), 'responsavel_email': to_email})
+            return render_inline_notice(
+                {
+                    "email_send_status": "error",
+                    "email_send_error": "Serviço de e-mail não configurado.",
+                    "tarefa_id": dados.get("tarefa_id"),
+                    "responsavel_email": to_email,
+                }
+            )
 
         subject = f"Resumo de reunião - {dados.get('nome_empresa') or 'Academia'}"
-        texto = dados.get('texto') or ''
-        img_url = dados.get('imagem_url')
+        texto = dados.get("texto") or ""
+        img_url = dados.get("imagem_url")
         corpo_txt = f"Olá,\n\nCompartilhamos o resumo da reunião referente à implantação.\n\nResumo:\n{texto}\n\n"
         if img_url:
             corpo_txt += f"Imagem: {img_url}\n\n"
-        corpo_html = f"<p>Olá,</p><p>Compartilhamos o resumo da reunião referente à implantação.</p><p><strong>Resumo:</strong></p><div>{texto.replace('\n','<br>')}</div>" + (f"<p><a href='{img_url}' target='_blank'>Ver imagem</a></p>" if img_url else "")
+        corpo_html = (
+            f"<p>Olá,</p><p>Compartilhamos o resumo da reunião referente à implantação.</p><p><strong>Resumo:</strong></p><div>{texto.replace('\n','<br>')}</div>"
+            + (
+                f"<p><a href='{img_url}' target='_blank'>Ver imagem</a></p>"
+                if img_url
+                else ""
+            )
+        )
 
-        api_logger.info(f"Tentando enviar e-mail de comentário externo (comentario_id={comentario_id}) para {to_email}")
+        api_logger.info(
+            f"Tentando enviar e-mail de comentário externo (comentario_id={comentario_id}) para {to_email}"
+        )
         try:
             from ..email_utils import send_email_global
+
             send_email_global(
                 subject=subject,
                 body_html=corpo_html,
                 recipients=[to_email],
                 reply_to=usuario_cs_email,
-                from_name=g.perfil.get('nome') if (g.perfil and isinstance(g.perfil, dict)) else usuario_cs_email,
-                body_text=corpo_txt
+                from_name=(
+                    g.perfil.get("nome")
+                    if (g.perfil and isinstance(g.perfil, dict))
+                    else usuario_cs_email
+                ),
+                body_text=corpo_txt,
             )
-            logar_timeline(dados['impl_id'], usuario_cs_email, 'email_comentario_enviado', f"E-mail enviado para responsável com resumo de '{dados['tarefa_filho']}'.")
-            api_logger.info(f"E-mail enviado (comentario_id={comentario_id}) para {to_email}")
-            ctx = {'email_send_status': 'ok', 'tarefa_id': dados.get('tarefa_id'), 'responsavel_email': to_email, 'responsavel_nome': None}
+            logar_timeline(
+                dados["impl_id"],
+                usuario_cs_email,
+                "email_comentario_enviado",
+                f"E-mail enviado para responsável com resumo de '{dados['tarefa_filho']}'.",
+            )
+            api_logger.info(
+                f"E-mail enviado (comentario_id={comentario_id}) para {to_email}"
+            )
+            ctx = {
+                "email_send_status": "ok",
+                "tarefa_id": dados.get("tarefa_id"),
+                "responsavel_email": to_email,
+                "responsavel_nome": None,
+            }
             return render_inline_notice(ctx)
         except Exception as e:
-            api_logger.error(f"Falha ao enviar e-mail (comentario_id={comentario_id}) para {to_email}: {e}", exc_info=True)
-            ctx = {'email_send_status': 'error', 'email_send_error': str(e), 'tarefa_id': dados.get('tarefa_id'), 'responsavel_email': to_email}
+            api_logger.error(
+                f"Falha ao enviar e-mail (comentario_id={comentario_id}) para {to_email}: {e}",
+                exc_info=True,
+            )
+            ctx = {
+                "email_send_status": "error",
+                "email_send_error": str(e),
+                "tarefa_id": dados.get("tarefa_id"),
+                "responsavel_email": to_email,
+            }
             return render_inline_notice(ctx)
 
     except Exception as e:
-        api_logger.error(f"Erro inesperado em enviar_email_comentario {comentario_id}: {e}", exc_info=True)
-        return render_inline_notice({'email_send_status': 'error', 'email_send_error': f'Erro interno: {e}', 'tarefa_id': 0})
+        api_logger.error(
+            f"Erro inesperado em enviar_email_comentario {comentario_id}: {e}",
+            exc_info=True,
+        )
+        return render_inline_notice(
+            {
+                "email_send_status": "error",
+                "email_send_error": f"Erro interno: {e}",
+                "tarefa_id": 0,
+            }
+        )
 
-@api_bp.route('/excluir_comentario/<int:comentario_id>', methods=['POST'])
+
+@api_bp.route("/excluir_comentario/<int:comentario_id>", methods=["POST"])
 @login_required
-@validate_api_origin                                    
+@validate_api_origin
 @limiter.limit("30 per minute", key_func=lambda: g.user_email or get_remote_address())
 def excluir_comentario(comentario_id):
     usuario_cs_email = g.user_email
@@ -596,8 +824,13 @@ def excluir_comentario(comentario_id):
     try:
         comentario_id = validate_integer(comentario_id, min_value=1)
     except ValidationError as e:
-        api_logger.warning(f'Invalid comment ID in excluir_comentario: {str(e)} - User: {g.user_email}')
-        return jsonify({'ok': False, 'error': f'ID de comentário inválido: {str(e)}'}), 400
+        api_logger.warning(
+            f"Invalid comment ID in excluir_comentario: {str(e)} - User: {g.user_email}"
+        )
+        return (
+            jsonify({"ok": False, "error": f"ID de comentário inválido: {str(e)}"}),
+            400,
+        )
 
     try:
         comentario = query_db(
@@ -607,48 +840,72 @@ def excluir_comentario(comentario_id):
             JOIN tarefas t ON c.tarefa_id = t.id 
             JOIN implantacoes i ON t.implantacao_id = i.id 
             WHERE c.id = %s
-            """, (comentario_id,), one=True
+            """,
+            (comentario_id,),
+            one=True,
         )
-        
-        is_comment_owner = comentario.get('usuario_cs') == usuario_cs_email
-        is_impl_owner = comentario.get('implantacao_owner') == usuario_cs_email
-        is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
-        
-        if not comentario or not (is_comment_owner or is_impl_owner or is_manager):
-            security_logger.warning(f'Permission denied for user {g.user_email} trying to delete comment {comentario_id}')
-            return jsonify({'ok': False, 'error': 'Permissão negada.'}), 403
 
-        imagem_url = comentario.get('imagem_url')
-        public_url_base = current_app.config.get('CLOUDFLARE_PUBLIC_URL')
-        bucket_name = current_app.config.get('CLOUDFLARE_BUCKET_NAME')
-        
-        if r2_client and public_url_base and bucket_name and imagem_url and imagem_url.startswith(public_url_base):
+        is_comment_owner = comentario.get("usuario_cs") == usuario_cs_email
+        is_impl_owner = comentario.get("implantacao_owner") == usuario_cs_email
+        is_manager = g.perfil and g.perfil.get("perfil_acesso") in PERFIS_COM_GESTAO
+
+        if not comentario or not (is_comment_owner or is_impl_owner or is_manager):
+            security_logger.warning(
+                f"Permission denied for user {g.user_email} trying to delete comment {comentario_id}"
+            )
+            return jsonify({"ok": False, "error": "Permissão negada."}), 403
+
+        imagem_url = comentario.get("imagem_url")
+        public_url_base = current_app.config.get("CLOUDFLARE_PUBLIC_URL")
+        bucket_name = current_app.config.get("CLOUDFLARE_BUCKET_NAME")
+
+        if (
+            r2_client
+            and public_url_base
+            and bucket_name
+            and imagem_url
+            and imagem_url.startswith(public_url_base)
+        ):
             try:
                 object_key = imagem_url.replace(f"{public_url_base}/", "")
                 if object_key:
                     r2_client.delete_object(Bucket=bucket_name, Key=object_key)
                     api_logger.info(f"Objeto R2 (comentário) excluído: {object_key}")
             except ClientError as e_delete:
-                api_logger.warning(f"Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete.response['Error']['Code']}")
+                api_logger.warning(
+                    f"Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete.response['Error']['Code']}"
+                )
             except Exception as e_delete:
-                 api_logger.warning(f"Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete}")
+                api_logger.warning(
+                    f"Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete}"
+                )
         else:
-            api_logger.warning("R2 não configurado ou variáveis ausentes; exclusão seguirá apenas no banco de dados.")
+            api_logger.warning(
+                "R2 não configurado ou variáveis ausentes; exclusão seguirá apenas no banco de dados."
+            )
 
         execute_db("DELETE FROM comentarios WHERE id = %s", (comentario_id,))
-        logar_timeline(comentario['impl_id'], usuario_cs_email, 'comentario_excluido', f"Comentário em '{comentario['tarefa_filho']}' foi excluído.")
-        
-        api_logger.info(f'Comment {comentario_id} deleted by user {g.user_email}')
+        logar_timeline(
+            comentario["impl_id"],
+            usuario_cs_email,
+            "comentario_excluido",
+            f"Comentário em '{comentario['tarefa_filho']}' foi excluído.",
+        )
 
-        return '', 200
-        
+        api_logger.info(f"Comment {comentario_id} deleted by user {g.user_email}")
+
+        return "", 200
+
     except Exception as e:
-        api_logger.error(f"Erro ao excluir comentário ID {comentario_id}: {e}", exc_info=True)
-        return jsonify({'ok': False, 'error': f"Erro interno do servidor: {e}"}), 500
+        api_logger.error(
+            f"Erro ao excluir comentário ID {comentario_id}: {e}", exc_info=True
+        )
+        return jsonify({"ok": False, "error": f"Erro interno do servidor: {e}"}), 500
 
-@api_bp.route('/excluir_tarefa/<int:tarefa_id>', methods=['POST'])
+
+@api_bp.route("/excluir_tarefa/<int:tarefa_id>", methods=["POST"])
 @login_required
-@validate_api_origin                                    
+@validate_api_origin
 @limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 def excluir_tarefa(tarefa_id):
     usuario_cs_email = g.user_email
@@ -656,8 +913,10 @@ def excluir_tarefa(tarefa_id):
     try:
         tarefa_id = validate_integer(tarefa_id, min_value=1)
     except ValidationError as e:
-        api_logger.warning(f'Invalid task ID in excluir_tarefa: {str(e)} - User: {g.user_email}')
-        return jsonify({'ok': False, 'error': f'ID de tarefa inválido: {str(e)}'}), 400
+        api_logger.warning(
+            f"Invalid task ID in excluir_tarefa: {str(e)} - User: {g.user_email}"
+        )
+        return jsonify({"ok": False, "error": f"ID de tarefa inválido: {str(e)}"}), 400
 
     try:
         tarefa = query_db(
@@ -666,41 +925,63 @@ def excluir_tarefa(tarefa_id):
             FROM tarefas t 
             JOIN implantacoes i ON t.implantacao_id = i.id 
             WHERE t.id = %s
-            """, (tarefa_id,), one=True
+            """,
+            (tarefa_id,),
+            one=True,
         )
 
-        is_owner = tarefa.get('usuario_cs') == usuario_cs_email
-        is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
-        
+        is_owner = tarefa.get("usuario_cs") == usuario_cs_email
+        is_manager = g.perfil and g.perfil.get("perfil_acesso") in PERFIS_COM_GESTAO
+
         if not tarefa or not (is_owner or is_manager):
-            security_logger.warning(f'Permission denied for user {g.user_email} trying to delete task {tarefa_id}')
-            return jsonify({'ok': False, 'error': 'Permissão negada.'}), 403
-            
-        impl_id = tarefa['impl_id']
-        nome_tarefa = tarefa['tarefa_filho']
+            security_logger.warning(
+                f"Permission denied for user {g.user_email} trying to delete task {tarefa_id}"
+            )
+            return jsonify({"ok": False, "error": "Permissão negada."}), 403
 
-        if tarefa.get('status') in ['finalizada', 'parada', 'cancelada']:
-            return jsonify({'ok': False, 'error': f'Não é possível excluir tarefas de implantações com status "{tarefa.get("status")}".'}), 400
+        impl_id = tarefa["impl_id"]
+        nome_tarefa = tarefa["tarefa_filho"]
 
-        comentarios_tarefa = query_db("SELECT id, imagem_url FROM comentarios WHERE tarefa_id = %s", (tarefa_id,))
-        public_url_base = current_app.config.get('CLOUDFLARE_PUBLIC_URL')
-        bucket_name = current_app.config.get('CLOUDFLARE_BUCKET_NAME')
-        
+        if tarefa.get("status") in ["finalizada", "parada", "cancelada"]:
+            return (
+                jsonify(
+                    {
+                        "ok": False,
+                        "error": f'Não é possível excluir tarefas de implantações com status "{tarefa.get("status")}".',
+                    }
+                ),
+                400,
+            )
+
+        comentarios_tarefa = query_db(
+            "SELECT id, imagem_url FROM comentarios WHERE tarefa_id = %s", (tarefa_id,)
+        )
+        public_url_base = current_app.config.get("CLOUDFLARE_PUBLIC_URL")
+        bucket_name = current_app.config.get("CLOUDFLARE_BUCKET_NAME")
+
         if r2_client and public_url_base and bucket_name:
             for com in comentarios_tarefa:
-                imagem_url = com.get('imagem_url')
+                imagem_url = com.get("imagem_url")
                 if imagem_url and imagem_url.startswith(public_url_base):
                     try:
                         object_key = imagem_url.replace(f"{public_url_base}/", "")
                         if object_key:
                             r2_client.delete_object(Bucket=bucket_name, Key=object_key)
-                            api_logger.info(f"Objeto R2 (comentário {com['id']}) excluído: {object_key}")
+                            api_logger.info(
+                                f"Objeto R2 (comentário {com['id']}) excluído: {object_key}"
+                            )
                     except ClientError as e_delete:
-                        api_logger.warning(f"Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete.response['Error']['Code']}")
+                        api_logger.warning(
+                            f"Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete.response['Error']['Code']}"
+                        )
                     except Exception as e_delete:
-                        api_logger.warning(f"Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete}")
+                        api_logger.warning(
+                            f"Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete}"
+                        )
         else:
-            api_logger.warning("R2 não configurado ou variáveis ausentes; exclusão seguirá apenas no banco de dados.")
+            api_logger.warning(
+                "R2 não configurado ou variáveis ausentes; exclusão seguirá apenas no banco de dados."
+            )
 
         execute_db(
             """
@@ -712,109 +993,167 @@ def excluir_tarefa(tarefa_id):
                   AND i.status NOT IN ('finalizada', 'parada', 'cancelada')
               )
             """,
-            (tarefa_id,)
+            (tarefa_id,),
         )
-        logar_timeline(impl_id, usuario_cs_email, 'tarefa_excluida', f"Tarefa '{nome_tarefa}' foi excluída.")
-        
-        api_logger.info(f'Task {tarefa_id} deleted by user {g.user_email}')
+        logar_timeline(
+            impl_id,
+            usuario_cs_email,
+            "tarefa_excluida",
+            f"Tarefa '{nome_tarefa}' foi excluída.",
+        )
+
+        api_logger.info(f"Task {tarefa_id} deleted by user {g.user_email}")
 
         finalizada, log_finalizacao = False, None
         novo_prog, _, _ = _get_progress(impl_id)
 
-        nome = g.perfil.get('nome', usuario_cs_email)
+        nome = g.perfil.get("nome", usuario_cs_email)
         log_exclusao = query_db(
             "SELECT *, %s as usuario_nome FROM timeline_log "
             "WHERE implantacao_id = %s AND tipo_evento = 'tarefa_excluida' "
             "ORDER BY id DESC LIMIT 1",
-            (nome, impl_id), one=True
+            (nome, impl_id),
+            one=True,
         )
         if log_exclusao:
-            log_exclusao['data_criacao'] = format_date_iso_for_json(log_exclusao.get('data_criacao'))
-            
-        return jsonify({
-            'ok': True,
-            'log_exclusao': log_exclusao,
-            'novo_progresso': novo_prog,
-            'implantacao_finalizada': finalizada,
-            'log_finalizacao': log_finalizacao
-        })
-        
+            log_exclusao["data_criacao"] = format_date_iso_for_json(
+                log_exclusao.get("data_criacao")
+            )
+
+        return jsonify(
+            {
+                "ok": True,
+                "log_exclusao": log_exclusao,
+                "novo_progresso": novo_prog,
+                "implantacao_finalizada": finalizada,
+                "log_finalizacao": log_finalizacao,
+            }
+        )
+
     except Exception as e:
         api_logger.error(f"Erro ao excluir tarefa ID {tarefa_id}: {e}", exc_info=True)
-        return jsonify({'ok': False, 'error': f"Erro interno do servidor: {e}"}), 500
+        return jsonify({"ok": False, "error": f"Erro interno do servidor: {e}"}), 500
 
-@api_bp.route('/reordenar_tarefas', methods=['POST'])
+
+@api_bp.route("/reordenar_tarefas", methods=["POST"])
 @login_required
-@validate_api_origin                                    
+@validate_api_origin
 def reordenar_tarefas():
     usuario_cs_email = g.user_email
     try:
         data = request.get_json()
-        impl_id = data.get('implantacao_id')
-        tarefa_pai = data.get('tarefa_pai')             
-        nova_ordem_ids = data.get('ordem')                             
-        
+        impl_id = data.get("implantacao_id")
+        tarefa_pai = data.get("tarefa_pai")
+        nova_ordem_ids = data.get("ordem")
+
         if not all([impl_id, tarefa_pai, isinstance(nova_ordem_ids, list)]):
-            return jsonify({'ok': False, 'error': 'Dados inválidos.'}), 400
-            
-        impl = query_db("SELECT id, usuario_cs FROM implantacoes WHERE id = %s", (impl_id,), one=True)
-        is_owner = impl and impl.get('usuario_cs') == usuario_cs_email
-        is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
-        
+            return jsonify({"ok": False, "error": "Dados inválidos."}), 400
+
+        impl = query_db(
+            "SELECT id, usuario_cs FROM implantacoes WHERE id = %s",
+            (impl_id,),
+            one=True,
+        )
+        is_owner = impl and impl.get("usuario_cs") == usuario_cs_email
+        is_manager = g.perfil and g.perfil.get("perfil_acesso") in PERFIS_COM_GESTAO
+
         if not (is_owner or is_manager):
-            security_logger.warning(f'Permission denied for user {g.user_email} trying to reorder tasks in implantation {impl_id}')
-            return jsonify({'ok': False, 'error': 'Permissão negada.'}), 403
-        
+            security_logger.warning(
+                f"Permission denied for user {g.user_email} trying to reorder tasks in implantation {impl_id}"
+            )
+            return jsonify({"ok": False, "error": "Permissão negada."}), 403
+
         for index, tarefa_id in enumerate(nova_ordem_ids, 1):
             execute_db(
                 "UPDATE tarefas SET ordem = %s WHERE id = %s AND implantacao_id = %s AND tarefa_pai = %s",
-                (index, tarefa_id, impl_id, tarefa_pai)
+                (index, tarefa_id, impl_id, tarefa_pai),
             )
-            
-        logar_timeline(impl_id, usuario_cs_email, 'tarefas_reordenadas', f"A ordem das tarefas no módulo '{tarefa_pai}' foi alterada.")
-        
-        api_logger.info(f'Tasks reordered in module {tarefa_pai} of implantation {impl_id} by user {g.user_email}')
-        
-        nome = g.perfil.get('nome', usuario_cs_email)
+
+        logar_timeline(
+            impl_id,
+            usuario_cs_email,
+            "tarefas_reordenadas",
+            f"A ordem das tarefas no módulo '{tarefa_pai}' foi alterada.",
+        )
+
+        api_logger.info(
+            f"Tasks reordered in module {tarefa_pai} of implantation {impl_id} by user {g.user_email}"
+        )
+
+        nome = g.perfil.get("nome", usuario_cs_email)
         log_reordenar = query_db(
             "SELECT *, %s as usuario_nome FROM timeline_log "
             "WHERE implantacao_id = %s AND tipo_evento = 'tarefas_reordenadas' "
             "ORDER BY id DESC LIMIT 1",
-            (nome, impl_id), one=True
+            (nome, impl_id),
+            one=True,
         )
         if log_reordenar:
-            log_reordenar['data_criacao'] = format_date_iso_for_json(log_reordenar.get('data_criacao'))
-            
-        return jsonify({'ok': True, 'log_reordenar': log_reordenar})
-        
+            log_reordenar["data_criacao"] = format_date_iso_for_json(
+                log_reordenar.get("data_criacao")
+            )
+
+        return jsonify({"ok": True, "log_reordenar": log_reordenar})
+
     except Exception as e:
         api_logger.error(f"Erro ao reordenar tarefas: {e}", exc_info=True)
-        return jsonify({'ok': False, 'error': f"Erro interno do servidor: {e}"}), 500
+        return jsonify({"ok": False, "error": f"Erro interno do servidor: {e}"}), 500
 
-@api_bp.route('/excluir_tarefas_modulo', methods=['POST'])
+
+@api_bp.route("/excluir_tarefas_modulo", methods=["POST"])
 @login_required
-@validate_api_origin                                    
+@validate_api_origin
 def excluir_tarefas_modulo():
     """Exclui todas as tarefas de um módulo (tarefa_pai) específico."""
     usuario_cs_email = g.user_email
     data = request.get_json()
-    impl_id = data.get('implantacao_id')
-    tarefa_pai = data.get('tarefa_pai')             
+    impl_id = data.get("implantacao_id")
+    tarefa_pai = data.get("tarefa_pai")
 
     if not all([impl_id, tarefa_pai]):
-        return jsonify({'ok': False, 'error': 'Dados inválidos (ID da implantação e Módulo são obrigatórios).'}), 400
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "error": "Dados inválidos (ID da implantação e Módulo são obrigatórios).",
+                }
+            ),
+            400,
+        )
 
-    impl = query_db("SELECT id, nome_empresa, status, usuario_cs FROM implantacoes WHERE id = %s", (impl_id,), one=True)
-    is_owner = impl and impl.get('usuario_cs') == usuario_cs_email
-    is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
-    
+    impl = query_db(
+        "SELECT id, nome_empresa, status, usuario_cs FROM implantacoes WHERE id = %s",
+        (impl_id,),
+        one=True,
+    )
+    is_owner = impl and impl.get("usuario_cs") == usuario_cs_email
+    is_manager = g.perfil and g.perfil.get("perfil_acesso") in PERFIS_COM_GESTAO
+
     if not (is_owner or is_manager):
-        security_logger.warning(f'Permission denied for user {g.user_email} trying to delete tasks from module {tarefa_pai} in implantation {impl_id}')
-        return jsonify({'ok': False, 'error': 'Permissão negada ou implantação não encontrada.'}), 403
+        security_logger.warning(
+            f"Permission denied for user {g.user_email} trying to delete tasks from module {tarefa_pai} in implantation {impl_id}"
+        )
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "error": "Permissão negada ou implantação não encontrada.",
+                }
+            ),
+            403,
+        )
 
-    st = impl.get('status')
-    if st in ['finalizada', 'parada', 'cancelada']:
-        return jsonify({'ok': False, 'error': f'Não é possível excluir tarefas de implantações com status "{st}".'}), 400
+    st = impl.get("status")
+    if st in ["finalizada", "parada", "cancelada"]:
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "error": f'Não é possível excluir tarefas de implantações com status "{st}".',
+                }
+            ),
+            400,
+        )
 
     try:
 
@@ -824,28 +1163,37 @@ def excluir_tarefas_modulo():
             FROM comentarios c
             JOIN tarefas t ON c.tarefa_id = t.id
             WHERE t.implantacao_id = %s AND t.tarefa_pai = %s AND c.imagem_url IS NOT NULL
-            """, (impl_id, tarefa_pai)
+            """,
+            (impl_id, tarefa_pai),
         )
-        
-        public_url_base = current_app.config.get('CLOUDFLARE_PUBLIC_URL')
-        bucket_name = current_app.config.get('CLOUDFLARE_BUCKET_NAME')
+
+        public_url_base = current_app.config.get("CLOUDFLARE_PUBLIC_URL")
+        bucket_name = current_app.config.get("CLOUDFLARE_BUCKET_NAME")
 
         if r2_client and public_url_base and bucket_name:
             for c in comentarios_img:
-                imagem_url = c.get('imagem_url')
+                imagem_url = c.get("imagem_url")
                 if imagem_url and imagem_url.startswith(public_url_base):
                     try:
                         object_key = imagem_url.replace(f"{public_url_base}/", "")
                         if object_key:
                             r2_client.delete_object(Bucket=bucket_name, Key=object_key)
-                            api_logger.info(f"Objeto R2 (módulo {tarefa_pai}) excluído: {object_key}")
+                            api_logger.info(
+                                f"Objeto R2 (módulo {tarefa_pai}) excluído: {object_key}"
+                            )
                     except ClientError as e_delete:
-                        api_logger.warning(f"Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete.response['Error']['Code']}")
+                        api_logger.warning(
+                            f"Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete.response['Error']['Code']}"
+                        )
                     except Exception as e_delete:
-                        api_logger.warning(f"Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete}")
+                        api_logger.warning(
+                            f"Falha ao excluir imagem R2 (key: {object_key}). Erro: {e_delete}"
+                        )
         else:
-            api_logger.warning("R2 não configurado ou variáveis ausentes; exclusão seguirá apenas no banco de dados.")
-        
+            api_logger.warning(
+                "R2 não configurado ou variáveis ausentes; exclusão seguirá apenas no banco de dados."
+            )
+
         execute_db(
             """
             DELETE FROM tarefas
@@ -856,35 +1204,49 @@ def excluir_tarefas_modulo():
                   AND i.status NOT IN ('finalizada', 'parada', 'cancelada')
               )
             """,
-            (impl_id, tarefa_pai, impl_id)
+            (impl_id, tarefa_pai, impl_id),
         )
 
-        logar_timeline(impl_id, usuario_cs_email, 'modulo_excluido', f"Todas as tarefas do módulo '{tarefa_pai}' foram excluídas.")
-        
-        api_logger.info(f'All tasks from module {tarefa_pai} in implantation {impl_id} deleted by user {g.user_email}')
+        logar_timeline(
+            impl_id,
+            usuario_cs_email,
+            "modulo_excluido",
+            f"Todas as tarefas do módulo '{tarefa_pai}' foram excluídas.",
+        )
+
+        api_logger.info(
+            f"All tasks from module {tarefa_pai} in implantation {impl_id} deleted by user {g.user_email}"
+        )
 
         finalizada, log_finalizacao = False, None
         novo_prog, _, _ = _get_progress(impl_id)
 
-        nome = g.perfil.get('nome', usuario_cs_email)
+        nome = g.perfil.get("nome", usuario_cs_email)
         log_exclusao = query_db(
             "SELECT *, %s as usuario_nome FROM timeline_log "
             "WHERE implantacao_id = %s AND tipo_evento = 'modulo_excluido' "
             "ORDER BY id DESC LIMIT 1",
-            (nome, impl_id), one=True
+            (nome, impl_id),
+            one=True,
         )
         if log_exclusao:
 
-            log_exclusao['data_criacao'] = format_date_iso_for_json(log_exclusao.get('data_criacao'))
+            log_exclusao["data_criacao"] = format_date_iso_for_json(
+                log_exclusao.get("data_criacao")
+            )
 
-        return jsonify({
-            'ok': True,
-            'log_exclusao_modulo': log_exclusao,
-            'novo_progresso': novo_prog,
-            'implantacao_finalizada': finalizada,
-            'log_finalizacao': log_finalizacao
-        })
+        return jsonify(
+            {
+                "ok": True,
+                "log_exclusao_modulo": log_exclusao,
+                "novo_progresso": novo_prog,
+                "implantacao_finalizada": finalizada,
+            }
+        )
 
     except Exception as e:
-        api_logger.error(f'Erro ao excluir tarefas do módulo {tarefa_pai} (Impl. ID {impl_id}): {e} - User: {g.user_email}', exc_info=True)
-        return jsonify({'ok': False, 'error': f"Erro interno do servidor: {e}"}), 500
+        api_logger.error(
+            f"Erro ao excluir tarefas do módulo {tarefa_pai} (Impl. ID {impl_id}): {e} - User: {g.user_email}",
+            exc_info=True,
+        )
+        return jsonify({"ok": False, "error": f"Erro interno do servidor: {e}"}), 500

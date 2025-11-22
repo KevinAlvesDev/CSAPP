@@ -1,4 +1,3 @@
-
 import sqlite3
 import psycopg2
 from psycopg2.extras import DictCursor
@@ -12,6 +11,7 @@ from contextlib import contextmanager
 from .db_pool import get_db_connection as get_pooled_connection
 
 from .exceptions import DatabaseError
+
 
 def get_db_connection():
     """
@@ -38,7 +38,7 @@ def db_connection():
         tuple: (conexão, tipo_db) onde tipo_db é 'sqlite' ou 'postgresql'
     """
     conn, db_type = None, None
-    use_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
+    use_sqlite = current_app.config.get("USE_SQLITE_LOCALLY", False)
 
     try:
         conn, db_type = get_db_connection()
@@ -51,6 +51,7 @@ def db_connection():
 
         if use_sqlite and conn:
             conn.close()
+
 
 def query_db(query, args=(), one=False, raise_on_error=False):
     """
@@ -73,19 +74,20 @@ def query_db(query, args=(), one=False, raise_on_error=False):
 
     try:
         from .performance_monitoring import track_query
+
         track_query()
     except:
-        pass                      
+        pass
 
     conn, db_type = None, None
-    use_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
+    use_sqlite = current_app.config.get("USE_SQLITE_LOCALLY", False)
 
     try:
         conn, db_type = get_db_connection()
         cursor = conn.cursor()
 
-        if db_type == 'sqlite':
-            query = query.replace('%s', '?')
+        if db_type == "sqlite":
+            query = query.replace("%s", "?")
 
         cursor.execute(query, args)
 
@@ -99,18 +101,21 @@ def query_db(query, args=(), one=False, raise_on_error=False):
     except Exception as e:
 
         current_app.logger.error(f"Database query error: {e}", exc_info=True)
-        current_app.logger.debug(f"Query: {query[:100]}...")                      
+        current_app.logger.debug(f"Query: {query[:100]}...")
         if conn:
             conn.rollback()
 
         if raise_on_error:
-            raise DatabaseError(f"Erro ao executar query: {e}", {'query': query[:100], 'args': args}) from e
+            raise DatabaseError(
+                f"Erro ao executar query: {e}", {"query": query[:100], "args": args}
+            ) from e
 
         return None if one else []
     finally:
 
         if use_sqlite and conn:
             conn.close()
+
 
 def execute_db(query, args=(), raise_on_error=False):
     """
@@ -132,19 +137,20 @@ def execute_db(query, args=(), raise_on_error=False):
 
     try:
         from .performance_monitoring import track_query
+
         track_query()
     except:
-        pass                      
+        pass
 
     conn, db_type = None, None
-    use_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
+    use_sqlite = current_app.config.get("USE_SQLITE_LOCALLY", False)
 
     try:
         conn, db_type = get_db_connection()
         cursor = conn.cursor()
 
-        if db_type == 'sqlite':
-            query = query.replace('%s', '?')
+        if db_type == "sqlite":
+            query = query.replace("%s", "?")
 
         cursor.execute(query, args)
         conn.commit()
@@ -156,18 +162,21 @@ def execute_db(query, args=(), raise_on_error=False):
     except Exception as e:
 
         current_app.logger.error(f"Database execution error: {e}", exc_info=True)
-        current_app.logger.debug(f"Query: {query[:100]}...")                      
+        current_app.logger.debug(f"Query: {query[:100]}...")
         if conn:
             conn.rollback()
 
         if raise_on_error:
-            raise DatabaseError(f"Erro ao executar query: {e}", {'query': query[:100], 'args': args}) from e
+            raise DatabaseError(
+                f"Erro ao executar query: {e}", {"query": query[:100], "args": args}
+            ) from e
 
         return None
     finally:
 
         if use_sqlite and conn:
             conn.close()
+
 
 def execute_and_fetch_one(query, args=()):
     """
@@ -176,14 +185,14 @@ def execute_and_fetch_one(query, args=()):
     Agora usa connection pooling e logging adequado.
     """
     conn, db_type = None, None
-    use_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
+    use_sqlite = current_app.config.get("USE_SQLITE_LOCALLY", False)
 
     try:
         conn, db_type = get_db_connection()
         cursor = conn.cursor()
 
-        if db_type == 'sqlite':
-            query = query.replace('%s', '?')
+        if db_type == "sqlite":
+            query = query.replace("%s", "?")
 
         cursor.execute(query, args)
         result = cursor.fetchone()
@@ -194,7 +203,7 @@ def execute_and_fetch_one(query, args=()):
     except Exception as e:
 
         current_app.logger.error(f"Database execute_and_fetch error: {e}")
-        current_app.logger.debug(f"Query: {query[:100]}...")                      
+        current_app.logger.debug(f"Query: {query[:100]}...")
         if conn:
             conn.rollback()
         return None
@@ -210,16 +219,20 @@ def logar_timeline(implantacao_id, usuario_cs, tipo_evento, detalhe):
         conn, db_type = get_db_connection()
         cursor = conn.cursor()
         sql = "INSERT INTO timeline_log (implantacao_id, usuario_cs, tipo_evento, detalhes, data_criacao) VALUES (%s, %s, %s, %s, %s)"
-        if db_type == 'sqlite':
-            sql = sql.replace('%s', '?')
-        cursor.execute(sql, (implantacao_id, usuario_cs, tipo_evento, detalhe, datetime.now()))
+        if db_type == "sqlite":
+            sql = sql.replace("%s", "?")
+        cursor.execute(
+            sql, (implantacao_id, usuario_cs, tipo_evento, detalhe, datetime.now())
+        )
         conn.commit()
     except Exception as e:
-        print(f"ERRO CRÍTICO: Falha ao logar timeline para Impl. ID {implantacao_id}. Erro: {e}")
+        print(
+            f"ERRO CRÍTICO: Falha ao logar timeline para Impl. ID {implantacao_id}. Erro: {e}"
+        )
         if conn:
             conn.rollback()
     finally:
-        use_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
+        use_sqlite = current_app.config.get("USE_SQLITE_LOCALLY", False)
         if use_sqlite and conn:
             conn.close()
 
@@ -231,18 +244,21 @@ def init_db():
         conn, db_type = get_db_connection()
         cursor = conn.cursor()
 
-        if db_type == 'postgres':
+        if db_type == "postgres":
 
             print("Executando init_db para PostgreSQL...")
-            
-            cursor.execute("""
+
+            cursor.execute(
+                """
             CREATE TABLE IF NOT EXISTS usuarios (
                 usuario VARCHAR(255) PRIMARY KEY,
                 senha TEXT NOT NULL
             );
-            """)
+            """
+            )
 
-            cursor.execute("""
+            cursor.execute(
+                """
             CREATE TABLE IF NOT EXISTS perfil_usuario (
                 usuario VARCHAR(255) PRIMARY KEY REFERENCES usuarios(usuario) ON DELETE CASCADE,
                 nome TEXT,
@@ -257,9 +273,11 @@ def init_db():
                 implantacoes_atrasadas INTEGER DEFAULT 0,
                 data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
-            """)
+            """
+            )
 
-            cursor.execute("""
+            cursor.execute(
+                """
             CREATE TABLE IF NOT EXISTS smtp_settings (
                 usuario_email VARCHAR(255) PRIMARY KEY REFERENCES usuarios(usuario) ON DELETE CASCADE,
                 host TEXT NOT NULL,
@@ -271,9 +289,11 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
-            """)
+            """
+            )
 
-            cursor.execute("""
+            cursor.execute(
+                """
             CREATE TABLE IF NOT EXISTS implantacoes (
                 id SERIAL PRIMARY KEY,
                 usuario_cs VARCHAR(255) REFERENCES usuarios(usuario) ON DELETE SET NULL,
@@ -319,9 +339,60 @@ def init_db():
                 resp_estrategico_obs TEXT DEFAULT NULL,
                 contatos TEXT DEFAULT NULL
             );
-            """)
+            """
+            )
 
-            cursor.execute("""
+            cursor.execute(
+                """
+            CREATE TABLE IF NOT EXISTS fases (
+                id SERIAL PRIMARY KEY,
+                implantacao_id INTEGER NOT NULL REFERENCES implantacoes(id) ON DELETE CASCADE,
+                nome TEXT NOT NULL,
+                ordem INTEGER DEFAULT 0
+            );
+            """
+            )
+
+            cursor.execute(
+                """
+            CREATE TABLE IF NOT EXISTS grupos (
+                id SERIAL PRIMARY KEY,
+                fase_id INTEGER NOT NULL REFERENCES fases(id) ON DELETE CASCADE,
+                nome TEXT NOT NULL,
+                ordem INTEGER DEFAULT 0
+            );
+            """
+            )
+
+            cursor.execute(
+                """
+            CREATE TABLE IF NOT EXISTS tarefas_h (
+                id SERIAL PRIMARY KEY,
+                grupo_id INTEGER NOT NULL REFERENCES grupos(id) ON DELETE CASCADE,
+                nome TEXT NOT NULL,
+                ordem INTEGER DEFAULT 0,
+                tag VARCHAR(100) DEFAULT NULL,
+                percentual_conclusao INTEGER DEFAULT 0,
+                status VARCHAR(50) DEFAULT 'Pendente',
+                data_conclusao TIMESTAMP DEFAULT NULL
+            );
+            """
+            )
+
+            cursor.execute(
+                """
+            CREATE TABLE IF NOT EXISTS subtarefas_h (
+                id SERIAL PRIMARY KEY,
+                tarefa_id INTEGER NOT NULL REFERENCES tarefas_h(id) ON DELETE CASCADE,
+                nome TEXT NOT NULL,
+                detalhe TEXT DEFAULT NULL,
+                concluida BOOLEAN DEFAULT FALSE
+            );
+            """
+            )
+
+            cursor.execute(
+                """
             CREATE TABLE IF NOT EXISTS tarefas (
                 id SERIAL PRIMARY KEY,
                 implantacao_id INTEGER NOT NULL REFERENCES implantacoes(id) ON DELETE CASCADE,
@@ -332,9 +403,11 @@ def init_db():
                 tag VARCHAR(100) DEFAULT NULL,
                 data_conclusao TIMESTAMP DEFAULT NULL
             );
-            """)
+            """
+            )
 
-            cursor.execute("""
+            cursor.execute(
+                """
             CREATE TABLE IF NOT EXISTS comentarios (
                 id SERIAL PRIMARY KEY,
                 tarefa_id INTEGER NOT NULL REFERENCES tarefas(id) ON DELETE CASCADE,
@@ -343,18 +416,28 @@ def init_db():
                 data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 imagem_url TEXT DEFAULT NULL
             );
-            """)
+            """
+            )
 
             try:
-                cursor.execute("ALTER TABLE comentarios ADD COLUMN visibilidade VARCHAR(20) DEFAULT 'externo';")
+                cursor.execute(
+                    "ALTER TABLE comentarios ADD COLUMN visibilidade VARCHAR(20) DEFAULT 'externo';"
+                )
             except Exception as e:
-                print(f"Aviso: coluna 'visibilidade' já existe ou não pôde ser criada (PostgreSQL): {e}")
+                print(
+                    f"Aviso: coluna 'visibilidade' já existe ou não pôde ser criada (PostgreSQL): {e}"
+                )
             try:
-                cursor.execute("ALTER TABLE comentarios ADD CONSTRAINT comentarios_visibilidade_check CHECK (visibilidade IN ('interno','externo'));")
+                cursor.execute(
+                    "ALTER TABLE comentarios ADD CONSTRAINT comentarios_visibilidade_check CHECK (visibilidade IN ('interno','externo'));"
+                )
             except Exception as e:
-                print(f"Aviso: constraint de check para 'visibilidade' já existe ou não pôde ser criada (PostgreSQL): {e}")
-            
-            cursor.execute("""
+                print(
+                    f"Aviso: constraint de check para 'visibilidade' já existe ou não pôde ser criada (PostgreSQL): {e}"
+                )
+
+            cursor.execute(
+                """
             CREATE TABLE IF NOT EXISTS timeline_log (
                 id SERIAL PRIMARY KEY,
                 implantacao_id INTEGER NOT NULL REFERENCES implantacoes(id) ON DELETE CASCADE,
@@ -363,9 +446,11 @@ def init_db():
                 detalhes TEXT NOT NULL,
                 data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
-            """)
+            """
+            )
 
-            cursor.execute("""
+            cursor.execute(
+                """
             CREATE TABLE IF NOT EXISTS gamificacao_regras (
                 id SERIAL PRIMARY KEY,
                 regra_id VARCHAR(100) UNIQUE NOT NULL,
@@ -374,9 +459,11 @@ def init_db():
                 valor_pontos INTEGER NOT NULL DEFAULT 0,
                 tipo_valor VARCHAR(20) DEFAULT 'pontos'
             );
-            """)
+            """
+            )
 
-            cursor.execute("""
+            cursor.execute(
+                """
             CREATE TABLE IF NOT EXISTS gamificacao_metricas_mensais (
                 id SERIAL PRIMARY KEY,
                 usuario_cs VARCHAR(255) NOT NULL REFERENCES usuarios(usuario) ON DELETE CASCADE,
@@ -412,21 +499,34 @@ def init_db():
                 registrado_por VARCHAR(255) REFERENCES usuarios(usuario) ON DELETE SET NULL,
                 UNIQUE (usuario_cs, mes, ano)
             );
-            """)
-            
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_impl_usuario_cs ON implantacoes (usuario_cs);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_impl_status ON implantacoes (status);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_tarefas_implantacao_id ON tarefas (implantacao_id);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_comentarios_tarefa_id ON comentarios (tarefa_id);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_timeline_log_implantacao_id ON timeline_log (implantacao_id);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_gamificacao_user_period ON gamificacao_metricas_mensais (usuario_cs, ano, mes);")
+            """
+            )
 
-        
-        elif db_type == 'sqlite':
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_impl_usuario_cs ON implantacoes (usuario_cs);"
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_impl_status ON implantacoes (status);"
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_tarefas_implantacao_id ON tarefas (implantacao_id);"
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_comentarios_tarefa_id ON comentarios (tarefa_id);"
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_timeline_log_implantacao_id ON timeline_log (implantacao_id);"
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_gamificacao_user_period ON gamificacao_metricas_mensais (usuario_cs, ano, mes);"
+            )
+
+        elif db_type == "sqlite":
 
             print("Executando init_db para SQLite...")
-            
-            cursor.execute("""
+
+            cursor.execute(
+                """
             CREATE TABLE IF NOT EXISTS implantacoes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 usuario_cs VARCHAR(255) REFERENCES usuarios(usuario) ON DELETE SET NULL,
@@ -472,14 +572,19 @@ def init_db():
                 resp_estrategico_obs TEXT DEFAULT NULL,
                 contatos TEXT DEFAULT NULL
             );
-            """)
+            """
+            )
 
             try:
-                cursor.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='implantacoes'")
+                cursor.execute(
+                    "SELECT sql FROM sqlite_master WHERE type='table' AND name='implantacoes'"
+                )
                 row = cursor.fetchone()
-                schema_sql = row[0] if row else ''
+                schema_sql = row[0] if row else ""
                 if schema_sql and "sem_previsao" not in schema_sql:
-                    current_app.logger.info("Migrando tabela 'implantacoes' para incluir status 'sem_previsao' (SQLite)")
+                    current_app.logger.info(
+                        "Migrando tabela 'implantacoes' para incluir status 'sem_previsao' (SQLite)"
+                    )
                     cursor.execute("PRAGMA foreign_keys=OFF")
                     cursor.execute("BEGIN TRANSACTION")
                     cursor.execute(
@@ -554,13 +659,67 @@ def init_db():
                         """
                     )
                     cursor.execute("DROP TABLE implantacoes")
-                    cursor.execute("ALTER TABLE implantacoes_new RENAME TO implantacoes")
+                    cursor.execute(
+                        "ALTER TABLE implantacoes_new RENAME TO implantacoes"
+                    )
                     cursor.execute("COMMIT")
                     cursor.execute("PRAGMA foreign_keys=ON")
             except Exception as mig_err:
-                current_app.logger.error(f"Falha na migração de status 'sem_previsao': {mig_err}")
-            
-            cursor.execute("""
+                current_app.logger.error(
+                    f"Falha na migração de status 'sem_previsao': {mig_err}"
+                )
+
+            cursor.execute(
+                """
+            CREATE TABLE IF NOT EXISTS fases (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                implantacao_id INTEGER NOT NULL REFERENCES implantacoes(id) ON DELETE CASCADE,
+                nome TEXT NOT NULL,
+                ordem INTEGER DEFAULT 0
+            );
+            """
+            )
+
+            cursor.execute(
+                """
+            CREATE TABLE IF NOT EXISTS grupos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                fase_id INTEGER NOT NULL REFERENCES fases(id) ON DELETE CASCADE,
+                nome TEXT NOT NULL,
+                ordem INTEGER DEFAULT 0
+            );
+            """
+            )
+
+            cursor.execute(
+                """
+            CREATE TABLE IF NOT EXISTS tarefas_h (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                grupo_id INTEGER NOT NULL REFERENCES grupos(id) ON DELETE CASCADE,
+                nome TEXT NOT NULL,
+                ordem INTEGER DEFAULT 0,
+                tag VARCHAR(100) DEFAULT NULL,
+                percentual_conclusao INTEGER DEFAULT 0,
+                status VARCHAR(50) DEFAULT 'Pendente',
+                data_conclusao DATETIME DEFAULT NULL
+            );
+            """
+            )
+
+            cursor.execute(
+                """
+            CREATE TABLE IF NOT EXISTS subtarefas_h (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tarefa_id INTEGER NOT NULL REFERENCES tarefas_h(id) ON DELETE CASCADE,
+                nome TEXT NOT NULL,
+                detalhe TEXT DEFAULT NULL,
+                concluida BOOLEAN DEFAULT FALSE
+            );
+            """
+            )
+
+            cursor.execute(
+                """
             CREATE TABLE IF NOT EXISTS tarefas (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 implantacao_id INTEGER NOT NULL REFERENCES implantacoes(id) ON DELETE CASCADE,
@@ -571,9 +730,11 @@ def init_db():
                 tag VARCHAR(100) DEFAULT NULL,
                 data_conclusao DATETIME DEFAULT NULL
             );
-            """)
-            
-            cursor.execute("""
+            """
+            )
+
+            cursor.execute(
+                """
             CREATE TABLE IF NOT EXISTS comentarios (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 tarefa_id INTEGER NOT NULL REFERENCES tarefas(id) ON DELETE CASCADE,
@@ -582,14 +743,20 @@ def init_db():
                 data_criacao DATETIME DEFAULT CURRENT_TIMESTAMP,
                 imagem_url TEXT DEFAULT NULL
             );
-            """)
+            """
+            )
 
             try:
-                cursor.execute("ALTER TABLE comentarios ADD COLUMN visibilidade VARCHAR(20) DEFAULT 'externo'")
+                cursor.execute(
+                    "ALTER TABLE comentarios ADD COLUMN visibilidade VARCHAR(20) DEFAULT 'externo'"
+                )
             except Exception as e:
-                print(f"Aviso: coluna 'visibilidade' já existe ou não pôde ser criada (SQLite): {e}")
-            
-            cursor.execute("""
+                print(
+                    f"Aviso: coluna 'visibilidade' já existe ou não pôde ser criada (SQLite): {e}"
+                )
+
+            cursor.execute(
+                """
             CREATE TABLE IF NOT EXISTS timeline_log (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 implantacao_id INTEGER NOT NULL REFERENCES implantacoes(id) ON DELETE CASCADE,
@@ -598,9 +765,11 @@ def init_db():
                 detalhes TEXT NOT NULL,
                 data_criacao DATETIME DEFAULT CURRENT_TIMESTAMP
             );
-            """)
+            """
+            )
 
-            cursor.execute("""
+            cursor.execute(
+                """
             CREATE TABLE IF NOT EXISTS perfil_usuario (
                 usuario VARCHAR(255) PRIMARY KEY REFERENCES usuarios(usuario) ON DELETE CASCADE,
                 nome TEXT,
@@ -615,16 +784,20 @@ def init_db():
                 implantacoes_atrasadas INTEGER DEFAULT 0,
                 data_criacao DATETIME DEFAULT CURRENT_TIMESTAMP
             );
-            """)
-            
-            cursor.execute("""
+            """
+            )
+
+            cursor.execute(
+                """
             CREATE TABLE IF NOT EXISTS usuarios (
                 usuario VARCHAR(255) PRIMARY KEY, 
                 senha TEXT NOT NULL
             );
-            """)
+            """
+            )
 
-            cursor.execute("""
+            cursor.execute(
+                """
             CREATE TABLE IF NOT EXISTS smtp_settings (
                 usuario_email VARCHAR(255) PRIMARY KEY,
                 host TEXT NOT NULL,
@@ -636,9 +809,11 @@ def init_db():
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
-            """)
+            """
+            )
 
-            cursor.execute("""
+            cursor.execute(
+                """
             CREATE TABLE IF NOT EXISTS gamificacao_regras (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 regra_id VARCHAR(100) UNIQUE NOT NULL,
@@ -647,9 +822,11 @@ def init_db():
                 valor_pontos INTEGER NOT NULL DEFAULT 0,
                 tipo_valor VARCHAR(20) DEFAULT 'pontos'
             );
-            """)
-            
-            cursor.execute("""
+            """
+            )
+
+            cursor.execute(
+                """
             CREATE TABLE IF NOT EXISTS gamificacao_metricas_mensais (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 usuario_cs VARCHAR(255) NOT NULL REFERENCES usuarios(usuario) ON DELETE CASCADE,
@@ -685,91 +862,420 @@ def init_db():
                 registrado_por VARCHAR(255) REFERENCES usuarios(usuario) ON DELETE SET NULL,
                 UNIQUE (usuario_cs, mes, ano)
             );
-            """)
+            """
+            )
 
         sql_check = "SELECT COUNT(*) as c FROM gamificacao_regras"
         cursor.execute(sql_check)
         count_result = cursor.fetchone()
-        count = count_result[0] if isinstance(count_result, (tuple, list)) else count_result['c']
+        count = (
+            count_result[0]
+            if isinstance(count_result, (tuple, list))
+            else count_result["c"]
+        )
 
         if count == 0:
-             print("Populando 'gamificacao_regras' com os valores padrão...")
-             regras = [
-                ('eleg_nota_qualidade_min', 'Elegibilidade', 'Nota Qualidade (Mín %)', 80, 'percentual'),
-                ('eleg_assiduidade_min', 'Elegibilidade', 'Assiduidade (Mín %)', 85, 'percentual'),
-                ('eleg_planos_sucesso_min', 'Elegibilidade', 'Planos de Sucesso (Mín %)', 75, 'percentual'),
-                ('eleg_reclamacoes_max', 'Elegibilidade', 'Reclamações (Máx)', 1, 'quantidade'),
-                ('eleg_perda_prazo_max', 'Elegibilidade', 'Perda de Prazo (Máx)', 2, 'quantidade'),
-                ('eleg_nao_preenchimento_max', 'Elegibilidade', 'Não Preenchimento (Máx)', 2, 'quantidade'),
-                ('eleg_finalizadas_junior', 'Elegibilidade', 'Impl. Finalizadas (Mín Júnior)', 4, 'quantidade'),
-                ('eleg_finalizadas_pleno', 'Elegibilidade', 'Impl. Finalizadas (Mín Pleno)', 5, 'quantidade'),
-                ('eleg_finalizadas_senior', 'Elegibilidade', 'Impl. Finalizadas (Mín Sênior)', 5, 'quantidade'),
-                ('eleg_reunioes_min', 'Elegibilidade', 'Média Reuniões/Dia (Mín)', 3, 'quantidade'),
-                ('pts_satisfacao_100', 'Pontos: Satisfação', 'Satisfação >= 100%', 25, 'pontos'),
-                ('pts_satisfacao_95', 'Pontos: Satisfação', 'Satisfação 95-99%', 17, 'pontos'),
-                ('pts_satisfacao_90', 'Pontos: Satisfação', 'Satisfação 90-94%', 15, 'pontos'),
-                ('pts_satisfacao_85', 'Pontos: Satisfação', 'Satisfação 85-89%', 14, 'pontos'),
-                ('pts_satisfacao_80', 'Pontos: Satisfação', 'Satisfação 80-84%', 12, 'pontos'),
-                ('pts_assiduidade_100', 'Pontos: Assiduidade', 'Assiduidade >= 100%', 30, 'pontos'),
-                ('pts_assiduidade_98', 'Pontos: Assiduidade', 'Assiduidade 98-99%', 20, 'pontos'),
-                ('pts_assiduidade_95', 'Pontos: Assiduidade', 'Assiduidade 95-97%', 15, 'pontos'),
-                ('pts_tma_30', 'Pontos: TMA', 'TMA <= 30 dias', 45, 'pontos'),
-                ('pts_tma_35', 'Pontos: TMA', 'TMA 31-35 dias', 32, 'pontos'),
-                ('pts_tma_40', 'Pontos: TMA', 'TMA 36-40 dias', 24, 'pontos'),
-                ('pts_tma_45', 'Pontos: TMA', 'TMA 41-45 dias', 16, 'pontos'),
-                ('pts_tma_46_mais', 'Pontos: TMA', 'TMA >= 46 dias', 8, 'pontos'),
-                ('pts_reunioes_5', 'Pontos: Reuniões/Dia', 'Média Reuniões >= 5', 35, 'pontos'),
-                ('pts_reunioes_4', 'Pontos: Reuniões/Dia', 'Média Reuniões >= 4', 30, 'pontos'),
-                ('pts_reunioes_3', 'Pontos: Reuniões/Dia', 'Média Reuniões >= 3', 25, 'pontos'),
-                ('pts_reunioes_2', 'Pontos: Reuniões/Dia', 'Média Reuniões >= 2', 15, 'pontos'),
-                ('pts_acoes_5', 'Pontos: Ações/Dia', 'Média Ações >= 5', 15, 'pontos'),
-                ('pts_acoes_4', 'Pontos: Ações/Dia', 'Média Ações >= 4', 10, 'pontos'),
-                ('pts_acoes_3', 'Pontos: Ações/Dia', 'Média Ações >= 3', 7, 'pontos'),
-                ('pts_acoes_2', 'Pontos: Ações/Dia', 'Média Ações >= 2', 5, 'pontos'),
-                ('pts_planos_100', 'Pontos: Planos Sucesso', 'Planos Sucesso >= 100%', 45, 'pontos'),
-                ('pts_planos_95', 'Pontos: Planos Sucesso', 'Planos Sucesso 95-99%', 35, 'pontos'),
-                ('pts_planos_90', 'Pontos: Planos Sucesso', 'Planos Sucesso 90-94%', 30, 'pontos'),
-                ('pts_planos_85', 'Pontos: Planos Sucesso', 'Planos Sucesso 85-89%', 20, 'pontos'),
-                ('pts_planos_80', 'Pontos: Planos Sucesso', 'Planos Sucesso 80-84%', 10, 'pontos'),
-                ('pts_iniciadas_10', 'Pontos: Impl. Iniciadas', 'Impl. Iniciadas >= 10', 25, 'pontos'),
-                ('pts_iniciadas_9', 'Pontos: Impl. Iniciadas', 'Impl. Iniciadas >= 9', 20, 'pontos'),
-                ('pts_iniciadas_8', 'Pontos: Impl. Iniciadas', 'Impl. Iniciadas >= 8', 18, 'pontos'),
-                ('pts_iniciadas_7', 'Pontos: Impl. Iniciadas', 'Impl. Iniciadas >= 7', 14, 'pontos'),
-                ('pts_iniciadas_6', 'Pontos: Impl. Iniciadas', 'Impl. Iniciadas >= 6', 10, 'pontos'),
-                ('pts_qualidade_100', 'Pontos: Qualidade', 'Nota Qualidade >= 100%', 55, 'pontos'),
-                ('pts_qualidade_95', 'Pontos: Qualidade', 'Nota Qualidade 95-99%', 40, 'pontos'),
-                ('pts_qualidade_90', 'Pontos: Qualidade', 'Nota Qualidade 90-94%', 30, 'pontos'),
-                ('pts_qualidade_85', 'Pontos: Qualidade', 'Nota Qualidade 85-89%', 15, 'pontos'),
-                ('pts_qualidade_80', 'Pontos: Qualidade', 'Nota Qualidade 80-84%', 0, 'pontos'),
-                ('bonus_elogios', 'Bônus', 'Elogio (Máx 1)', 15, 'pontos'),
-                ('bonus_recomendacoes', 'Bônus', 'Recomendação (por ocorrência)', 1, 'pontos'),
-                ('bonus_certificacoes', 'Bônus', 'Certificação (Máx 1)', 15, 'pontos'),
-                ('bonus_trein_pacto_part', 'Bônus', 'Treinamento Pacto (Participou)', 15, 'pontos'),
-                ('bonus_trein_pacto_aplic', 'Bônus', 'Treinamento Pacto (Aplicou)', 30, 'pontos'),
-                ('bonus_reun_pres_10', 'Bônus: Reuniões Pres.', 'Reuniões Presenciais >= 10', 35, 'pontos'),
-                ('bonus_reun_pres_7', 'Bônus: Reuniões Pres.', 'Reuniões Presenciais >= 7', 30, 'pontos'),
-                ('bonus_reun_pres_5', 'Bônus: Reuniões Pres.', 'Reuniões Presenciais >= 5', 25, 'pontos'),
-                ('bonus_reun_pres_3', 'Bônus: Reuniões Pres.', 'Reuniões Presenciais >= 3', 20, 'pontos'),
-                ('bonus_reun_pres_1', 'Bônus: Reuniões Pres.', 'Reuniões Presenciais >= 1', 15, 'pontos'),
-                ('penal_reclamacao', 'Penalidades', 'Reclamação (por ocorrência)', -50, 'penalidade'),
-                ('penal_perda_prazo', 'Penalidades', 'Perda de Prazo (por ocorrência)', -10, 'penalidade'),
-                ('penal_desc_incomp', 'Penalidades', 'Descrição Incompreensível (por ocorrência)', -10, 'penalidade'),
-                ('penal_cancel_resp', 'Penalidades', 'Cancelamento por Resp. (por ocorrência)', -100, 'penalidade'),
-                ('penal_nao_envolv', 'Penalidades', 'Não Envolvimento (por ocorrência)', -10, 'penalidade'),
-                ('penal_nao_preench', 'Penalidades', 'Não Preenchimento (por ocorrência)', -10, 'penalidade'),
-                ('penal_sla_grupo', 'Penalidades', 'Perda SLA Grupo (por ocorrência)', -5, 'penalidade'),
-                ('penal_final_incomp', 'Penalidades', 'Finalização Incompleta (por ocorrência)', -10, 'penalidade'),
-                ('penal_hora_extra', 'Penalidades', 'Hora Extra (por ocorrência)', -10, 'penalidade'),
-             ]
-             sql_insert = "INSERT INTO gamificacao_regras (regra_id, categoria, descricao, valor_pontos, tipo_valor) VALUES (%s, %s, %s, %s, %s)"
-             if db_type == 'sqlite':
-                 sql_insert = sql_insert.replace('%s', '?')
-             for regra in regras:
-                 cursor.execute(sql_insert, regra)
+            print("Populando 'gamificacao_regras' com os valores padrão...")
+            regras = [
+                (
+                    "eleg_nota_qualidade_min",
+                    "Elegibilidade",
+                    "Nota Qualidade (Mín %)",
+                    80,
+                    "percentual",
+                ),
+                (
+                    "eleg_assiduidade_min",
+                    "Elegibilidade",
+                    "Assiduidade (Mín %)",
+                    85,
+                    "percentual",
+                ),
+                (
+                    "eleg_planos_sucesso_min",
+                    "Elegibilidade",
+                    "Planos de Sucesso (Mín %)",
+                    75,
+                    "percentual",
+                ),
+                (
+                    "eleg_reclamacoes_max",
+                    "Elegibilidade",
+                    "Reclamações (Máx)",
+                    1,
+                    "quantidade",
+                ),
+                (
+                    "eleg_perda_prazo_max",
+                    "Elegibilidade",
+                    "Perda de Prazo (Máx)",
+                    2,
+                    "quantidade",
+                ),
+                (
+                    "eleg_nao_preenchimento_max",
+                    "Elegibilidade",
+                    "Não Preenchimento (Máx)",
+                    2,
+                    "quantidade",
+                ),
+                (
+                    "eleg_finalizadas_junior",
+                    "Elegibilidade",
+                    "Impl. Finalizadas (Mín Júnior)",
+                    4,
+                    "quantidade",
+                ),
+                (
+                    "eleg_finalizadas_pleno",
+                    "Elegibilidade",
+                    "Impl. Finalizadas (Mín Pleno)",
+                    5,
+                    "quantidade",
+                ),
+                (
+                    "eleg_finalizadas_senior",
+                    "Elegibilidade",
+                    "Impl. Finalizadas (Mín Sênior)",
+                    5,
+                    "quantidade",
+                ),
+                (
+                    "eleg_reunioes_min",
+                    "Elegibilidade",
+                    "Média Reuniões/Dia (Mín)",
+                    3,
+                    "quantidade",
+                ),
+                (
+                    "pts_satisfacao_100",
+                    "Pontos: Satisfação",
+                    "Satisfação >= 100%",
+                    25,
+                    "pontos",
+                ),
+                (
+                    "pts_satisfacao_95",
+                    "Pontos: Satisfação",
+                    "Satisfação 95-99%",
+                    17,
+                    "pontos",
+                ),
+                (
+                    "pts_satisfacao_90",
+                    "Pontos: Satisfação",
+                    "Satisfação 90-94%",
+                    15,
+                    "pontos",
+                ),
+                (
+                    "pts_satisfacao_85",
+                    "Pontos: Satisfação",
+                    "Satisfação 85-89%",
+                    14,
+                    "pontos",
+                ),
+                (
+                    "pts_satisfacao_80",
+                    "Pontos: Satisfação",
+                    "Satisfação 80-84%",
+                    12,
+                    "pontos",
+                ),
+                (
+                    "pts_assiduidade_100",
+                    "Pontos: Assiduidade",
+                    "Assiduidade >= 100%",
+                    30,
+                    "pontos",
+                ),
+                (
+                    "pts_assiduidade_98",
+                    "Pontos: Assiduidade",
+                    "Assiduidade 98-99%",
+                    20,
+                    "pontos",
+                ),
+                (
+                    "pts_assiduidade_95",
+                    "Pontos: Assiduidade",
+                    "Assiduidade 95-97%",
+                    15,
+                    "pontos",
+                ),
+                ("pts_tma_30", "Pontos: TMA", "TMA <= 30 dias", 45, "pontos"),
+                ("pts_tma_35", "Pontos: TMA", "TMA 31-35 dias", 32, "pontos"),
+                ("pts_tma_40", "Pontos: TMA", "TMA 36-40 dias", 24, "pontos"),
+                ("pts_tma_45", "Pontos: TMA", "TMA 41-45 dias", 16, "pontos"),
+                ("pts_tma_46_mais", "Pontos: TMA", "TMA >= 46 dias", 8, "pontos"),
+                (
+                    "pts_reunioes_5",
+                    "Pontos: Reuniões/Dia",
+                    "Média Reuniões >= 5",
+                    35,
+                    "pontos",
+                ),
+                (
+                    "pts_reunioes_4",
+                    "Pontos: Reuniões/Dia",
+                    "Média Reuniões >= 4",
+                    30,
+                    "pontos",
+                ),
+                (
+                    "pts_reunioes_3",
+                    "Pontos: Reuniões/Dia",
+                    "Média Reuniões >= 3",
+                    25,
+                    "pontos",
+                ),
+                (
+                    "pts_reunioes_2",
+                    "Pontos: Reuniões/Dia",
+                    "Média Reuniões >= 2",
+                    15,
+                    "pontos",
+                ),
+                ("pts_acoes_5", "Pontos: Ações/Dia", "Média Ações >= 5", 15, "pontos"),
+                ("pts_acoes_4", "Pontos: Ações/Dia", "Média Ações >= 4", 10, "pontos"),
+                ("pts_acoes_3", "Pontos: Ações/Dia", "Média Ações >= 3", 7, "pontos"),
+                ("pts_acoes_2", "Pontos: Ações/Dia", "Média Ações >= 2", 5, "pontos"),
+                (
+                    "pts_planos_100",
+                    "Pontos: Planos Sucesso",
+                    "Planos Sucesso >= 100%",
+                    45,
+                    "pontos",
+                ),
+                (
+                    "pts_planos_95",
+                    "Pontos: Planos Sucesso",
+                    "Planos Sucesso 95-99%",
+                    35,
+                    "pontos",
+                ),
+                (
+                    "pts_planos_90",
+                    "Pontos: Planos Sucesso",
+                    "Planos Sucesso 90-94%",
+                    30,
+                    "pontos",
+                ),
+                (
+                    "pts_planos_85",
+                    "Pontos: Planos Sucesso",
+                    "Planos Sucesso 85-89%",
+                    20,
+                    "pontos",
+                ),
+                (
+                    "pts_planos_80",
+                    "Pontos: Planos Sucesso",
+                    "Planos Sucesso 80-84%",
+                    10,
+                    "pontos",
+                ),
+                (
+                    "pts_iniciadas_10",
+                    "Pontos: Impl. Iniciadas",
+                    "Impl. Iniciadas >= 10",
+                    25,
+                    "pontos",
+                ),
+                (
+                    "pts_iniciadas_9",
+                    "Pontos: Impl. Iniciadas",
+                    "Impl. Iniciadas >= 9",
+                    20,
+                    "pontos",
+                ),
+                (
+                    "pts_iniciadas_8",
+                    "Pontos: Impl. Iniciadas",
+                    "Impl. Iniciadas >= 8",
+                    18,
+                    "pontos",
+                ),
+                (
+                    "pts_iniciadas_7",
+                    "Pontos: Impl. Iniciadas",
+                    "Impl. Iniciadas >= 7",
+                    14,
+                    "pontos",
+                ),
+                (
+                    "pts_iniciadas_6",
+                    "Pontos: Impl. Iniciadas",
+                    "Impl. Iniciadas >= 6",
+                    10,
+                    "pontos",
+                ),
+                (
+                    "pts_qualidade_100",
+                    "Pontos: Qualidade",
+                    "Nota Qualidade >= 100%",
+                    55,
+                    "pontos",
+                ),
+                (
+                    "pts_qualidade_95",
+                    "Pontos: Qualidade",
+                    "Nota Qualidade 95-99%",
+                    40,
+                    "pontos",
+                ),
+                (
+                    "pts_qualidade_90",
+                    "Pontos: Qualidade",
+                    "Nota Qualidade 90-94%",
+                    30,
+                    "pontos",
+                ),
+                (
+                    "pts_qualidade_85",
+                    "Pontos: Qualidade",
+                    "Nota Qualidade 85-89%",
+                    15,
+                    "pontos",
+                ),
+                (
+                    "pts_qualidade_80",
+                    "Pontos: Qualidade",
+                    "Nota Qualidade 80-84%",
+                    0,
+                    "pontos",
+                ),
+                ("bonus_elogios", "Bônus", "Elogio (Máx 1)", 15, "pontos"),
+                (
+                    "bonus_recomendacoes",
+                    "Bônus",
+                    "Recomendação (por ocorrência)",
+                    1,
+                    "pontos",
+                ),
+                ("bonus_certificacoes", "Bônus", "Certificação (Máx 1)", 15, "pontos"),
+                (
+                    "bonus_trein_pacto_part",
+                    "Bônus",
+                    "Treinamento Pacto (Participou)",
+                    15,
+                    "pontos",
+                ),
+                (
+                    "bonus_trein_pacto_aplic",
+                    "Bônus",
+                    "Treinamento Pacto (Aplicou)",
+                    30,
+                    "pontos",
+                ),
+                (
+                    "bonus_reun_pres_10",
+                    "Bônus: Reuniões Pres.",
+                    "Reuniões Presenciais >= 10",
+                    35,
+                    "pontos",
+                ),
+                (
+                    "bonus_reun_pres_7",
+                    "Bônus: Reuniões Pres.",
+                    "Reuniões Presenciais >= 7",
+                    30,
+                    "pontos",
+                ),
+                (
+                    "bonus_reun_pres_5",
+                    "Bônus: Reuniões Pres.",
+                    "Reuniões Presenciais >= 5",
+                    25,
+                    "pontos",
+                ),
+                (
+                    "bonus_reun_pres_3",
+                    "Bônus: Reuniões Pres.",
+                    "Reuniões Presenciais >= 3",
+                    20,
+                    "pontos",
+                ),
+                (
+                    "bonus_reun_pres_1",
+                    "Bônus: Reuniões Pres.",
+                    "Reuniões Presenciais >= 1",
+                    15,
+                    "pontos",
+                ),
+                (
+                    "penal_reclamacao",
+                    "Penalidades",
+                    "Reclamação (por ocorrência)",
+                    -50,
+                    "penalidade",
+                ),
+                (
+                    "penal_perda_prazo",
+                    "Penalidades",
+                    "Perda de Prazo (por ocorrência)",
+                    -10,
+                    "penalidade",
+                ),
+                (
+                    "penal_desc_incomp",
+                    "Penalidades",
+                    "Descrição Incompreensível (por ocorrência)",
+                    -10,
+                    "penalidade",
+                ),
+                (
+                    "penal_cancel_resp",
+                    "Penalidades",
+                    "Cancelamento por Resp. (por ocorrência)",
+                    -100,
+                    "penalidade",
+                ),
+                (
+                    "penal_nao_envolv",
+                    "Penalidades",
+                    "Não Envolvimento (por ocorrência)",
+                    -10,
+                    "penalidade",
+                ),
+                (
+                    "penal_nao_preench",
+                    "Penalidades",
+                    "Não Preenchimento (por ocorrência)",
+                    -10,
+                    "penalidade",
+                ),
+                (
+                    "penal_sla_grupo",
+                    "Penalidades",
+                    "Perda SLA Grupo (por ocorrência)",
+                    -5,
+                    "penalidade",
+                ),
+                (
+                    "penal_final_incomp",
+                    "Penalidades",
+                    "Finalização Incompleta (por ocorrência)",
+                    -10,
+                    "penalidade",
+                ),
+                (
+                    "penal_hora_extra",
+                    "Penalidades",
+                    "Hora Extra (por ocorrência)",
+                    -10,
+                    "penalidade",
+                ),
+            ]
+            sql_insert = "INSERT INTO gamificacao_regras (regra_id, categoria, descricao, valor_pontos, tipo_valor) VALUES (%s, %s, %s, %s, %s)"
+            if db_type == "sqlite":
+                sql_insert = sql_insert.replace("%s", "?")
+            for regra in regras:
+                cursor.execute(sql_insert, regra)
 
         conn.commit()
         print(f"Banco de dados ({db_type}) inicializado/verificado com sucesso.")
-        
+
     except Exception as e:
         print(f"ERRO ao inicializar DB: {e}")
         if conn:
@@ -778,12 +1284,14 @@ def init_db():
         if conn:
             conn.close()
 
-@click.command('init-db')
+
+@click.command("init-db")
 @with_appcontext
 def init_db_command():
     """Cria as tabelas do banco de dados via linha de comando."""
     init_db()
-    click.echo('Inicialização do banco de dados concluída.')
+    click.echo("Inicialização do banco de dados concluída.")
+
 
 def init_app(app):
     """Registra o comando init-db na aplicação."""

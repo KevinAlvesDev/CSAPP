@@ -1,23 +1,21 @@
-
-
 from datetime import datetime
 from flask import current_app
 from .db import execute_db, query_db
 
 
 ALLOWED_TABLES = [
-    'usuarios',
-    'perfil_usuario',
-    'implantacoes',
-    'tarefas',
-    'comentarios',
-    'timeline',
-    'gamificacao_metricas_mensais',
-    'gamificacao_regras',
-    'smtp_settings'
+    "usuarios",
+    "perfil_usuario",
+    "implantacoes",
+    "tarefas",
+    "comentarios",
+    "timeline",
+    "gamificacao_metricas_mensais",
+    "gamificacao_regras",
+    "smtp_settings",
 ]
 
-ALLOWED_ID_COLUMNS = ['id', 'usuario', 'usuario_email']
+ALLOWED_ID_COLUMNS = ["id", "usuario", "usuario_email"]
 
 
 def _validate_table_name(table: str) -> str:
@@ -34,7 +32,9 @@ def _validate_table_name(table: str) -> str:
         ValueError: Se a tabela não estiver na whitelist
     """
     if table not in ALLOWED_TABLES:
-        current_app.logger.warning(f"Tentativa de acesso a tabela não permitida: {table}")
+        current_app.logger.warning(
+            f"Tentativa de acesso a tabela não permitida: {table}"
+        )
         raise ValueError(f"Tabela não permitida: {table}")
     return table
 
@@ -53,12 +53,14 @@ def _validate_id_column(id_column: str) -> str:
         ValueError: Se a coluna não estiver na whitelist
     """
     if id_column not in ALLOWED_ID_COLUMNS:
-        current_app.logger.warning(f"Tentativa de uso de coluna não permitida: {id_column}")
+        current_app.logger.warning(
+            f"Tentativa de uso de coluna não permitida: {id_column}"
+        )
         raise ValueError(f"Coluna de ID não permitida: {id_column}")
     return id_column
 
 
-def soft_delete(table: str, record_id: int, id_column: str = 'id') -> bool:
+def soft_delete(table: str, record_id: int, id_column: str = "id") -> bool:
     """
     Marca um registro como excluído (soft delete).
 
@@ -93,7 +95,9 @@ def soft_delete(table: str, record_id: int, id_column: str = 'id') -> bool:
             current_app.logger.info(f"Soft deleted {table} ID {record_id}")
             return True
         else:
-            current_app.logger.warning(f"No rows affected when soft deleting {table} ID {record_id}")
+            current_app.logger.warning(
+                f"No rows affected when soft deleting {table} ID {record_id}"
+            )
             return False
 
     except ValueError as ve:
@@ -106,7 +110,7 @@ def soft_delete(table: str, record_id: int, id_column: str = 'id') -> bool:
         return False
 
 
-def restore(table: str, record_id: int, id_column: str = 'id') -> bool:
+def restore(table: str, record_id: int, id_column: str = "id") -> bool:
     """
     Restaura um registro excluído (soft delete).
 
@@ -116,10 +120,10 @@ def restore(table: str, record_id: int, id_column: str = 'id') -> bool:
         table: Nome da tabela (deve estar em ALLOWED_TABLES)
         record_id: ID do registro
         id_column: Nome da coluna de ID (deve estar em ALLOWED_ID_COLUMNS, padrão: 'id')
-    
+
     Returns:
         True se sucesso, False se falha
-    
+
     Exemplo:
         restore('implantacoes', 123)
     """
@@ -135,7 +139,9 @@ def restore(table: str, record_id: int, id_column: str = 'id') -> bool:
             current_app.logger.info(f"Restored {table} ID {record_id}")
             return True
         else:
-            current_app.logger.warning(f"No rows affected when restoring {table} ID {record_id}")
+            current_app.logger.warning(
+                f"No rows affected when restoring {table} ID {record_id}"
+            )
             return False
 
     except ValueError as ve:
@@ -148,7 +154,7 @@ def restore(table: str, record_id: int, id_column: str = 'id') -> bool:
         return False
 
 
-def hard_delete(table: str, record_id: int, id_column: str = 'id') -> bool:
+def hard_delete(table: str, record_id: int, id_column: str = "id") -> bool:
     """
     Exclui permanentemente um registro (hard delete).
 
@@ -173,12 +179,16 @@ def hard_delete(table: str, record_id: int, id_column: str = 'id') -> bool:
 
         query = f"DELETE FROM {table} WHERE {id_column} = %s"
         rows_affected = execute_db(query, (record_id,))
-        
+
         if rows_affected and rows_affected > 0:
-            current_app.logger.warning(f"HARD DELETED {table} ID {record_id} - IRREVERSÍVEL!")
+            current_app.logger.warning(
+                f"HARD DELETED {table} ID {record_id} - IRREVERSÍVEL!"
+            )
             return True
         else:
-            current_app.logger.warning(f"No rows affected when hard deleting {table} ID {record_id}")
+            current_app.logger.warning(
+                f"No rows affected when hard deleting {table} ID {record_id}"
+            )
             return False
 
     except ValueError as ve:
@@ -247,45 +257,51 @@ def cleanup_old_deleted_records(table: str, days: int = 30) -> int:
         table = _validate_table_name(table)
 
         from datetime import timedelta
+
         cutoff_date = datetime.now() - timedelta(days=days)
 
         query = f"DELETE FROM {table} WHERE deleted_at IS NOT NULL AND deleted_at < %s"
         rows_affected = execute_db(query, (cutoff_date,))
 
         if rows_affected and rows_affected > 0:
-            current_app.logger.info(f"Cleaned up {rows_affected} old deleted records from {table}")
+            current_app.logger.info(
+                f"Cleaned up {rows_affected} old deleted records from {table}"
+            )
             return rows_affected
         else:
             return 0
 
     except ValueError as ve:
 
-        current_app.logger.error(f"Validation error in cleanup_old_deleted_records: {ve}")
+        current_app.logger.error(
+            f"Validation error in cleanup_old_deleted_records: {ve}"
+        )
         return 0
 
     except Exception as e:
-        current_app.logger.error(f"Error cleaning up old deleted records from {table}: {e}")
+        current_app.logger.error(
+            f"Error cleaning up old deleted records from {table}: {e}"
+        )
         return 0
 
 
 def exclude_deleted(query: str) -> str:
     """
     Adiciona filtro WHERE deleted_at IS NULL a uma query.
-    
+
     Args:
         query: Query SQL
-    
+
     Returns:
         Query modificada com filtro de soft delete
-    
+
     Exemplo:
         query = "SELECT * FROM implantacoes WHERE usuario_cs = %s"
         query = exclude_deleted(query)
         # Resultado: "SELECT * FROM implantacoes WHERE usuario_cs = %s AND deleted_at IS NULL"
     """
 
-    if 'WHERE' in query.upper():
+    if "WHERE" in query.upper():
         return query + " AND deleted_at IS NULL"
     else:
         return query + " WHERE deleted_at IS NULL"
-

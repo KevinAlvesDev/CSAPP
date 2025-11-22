@@ -1,4 +1,3 @@
-
 """
 Documentação da API usando especificação OpenAPI 3.0.
 Acessível em /api/docs
@@ -6,7 +5,7 @@ Acessível em /api/docs
 
 from flask import Blueprint, jsonify, render_template_string
 
-api_docs_bp = Blueprint('api_docs', __name__)
+api_docs_bp = Blueprint("api_docs", __name__)
 
 OPENAPI_SPEC = {
     "openapi": "3.0.0",
@@ -14,30 +13,22 @@ OPENAPI_SPEC = {
         "title": "CSAPP API",
         "description": "API para gerenciamento de implantações de Customer Success",
         "version": "1.0.0",
-        "contact": {
-            "name": "Suporte CS",
-            "email": "suporte@csapp.com"
-        }
+        "contact": {"name": "Suporte CS", "email": "suporte@csapp.com"},
     },
-    "servers": [
-        {
-            "url": "/",
-            "description": "Servidor atual"
-        }
-    ],
+    "servers": [{"url": "/", "description": "Servidor atual"}],
     "tags": [
         {
             "name": "Tarefas",
-            "description": "Operações relacionadas a tarefas de implantação"
+            "description": "Operações relacionadas a tarefas de implantação",
         },
         {
             "name": "Comentários",
-            "description": "Operações relacionadas a comentários em tarefas"
+            "description": "Operações relacionadas a comentários em tarefas",
         },
         {
             "name": "Health",
-            "description": "Endpoints de monitoramento e saúde da aplicação"
-        }
+            "description": "Endpoints de monitoramento e saúde da aplicação",
+        },
     ],
     "paths": {
         "/api/toggle_tarefa": {
@@ -54,13 +45,13 @@ OPENAPI_SPEC = {
                                 "properties": {
                                     "tarefa_id": {
                                         "type": "integer",
-                                        "description": "ID da tarefa"
+                                        "description": "ID da tarefa",
                                     }
                                 },
-                                "required": ["tarefa_id"]
+                                "required": ["tarefa_id"],
                             }
                         }
-                    }
+                    },
                 },
                 "responses": {
                     "200": {
@@ -69,18 +60,14 @@ OPENAPI_SPEC = {
                             "text/html": {
                                 "schema": {
                                     "type": "string",
-                                    "description": "HTML fragment (HTMX response)"
+                                    "description": "HTML fragment (HTMX response)",
                                 }
                             }
-                        }
+                        },
                     },
-                    "403": {
-                        "description": "Permissão negada"
-                    },
-                    "404": {
-                        "description": "Tarefa não encontrada"
-                    }
-                }
+                    "403": {"description": "Permissão negada"},
+                    "404": {"description": "Tarefa não encontrada"},
+                },
             }
         },
         "/api/adicionar_comentario": {
@@ -97,39 +84,33 @@ OPENAPI_SPEC = {
                                 "properties": {
                                     "tarefa_id": {
                                         "type": "integer",
-                                        "description": "ID da tarefa"
+                                        "description": "ID da tarefa",
                                     },
                                     "texto": {
                                         "type": "string",
-                                        "description": "Texto do comentário"
+                                        "description": "Texto do comentário",
                                     },
                                     "visibilidade": {
                                         "type": "string",
                                         "enum": ["publica", "interna"],
-                                        "description": "Visibilidade do comentário"
+                                        "description": "Visibilidade do comentário",
                                     },
                                     "imagem": {
                                         "type": "string",
                                         "format": "binary",
-                                        "description": "Arquivo de imagem (opcional, max 10MB)"
-                                    }
+                                        "description": "Arquivo de imagem (opcional, max 10MB)",
+                                    },
                                 },
-                                "required": ["tarefa_id"]
+                                "required": ["tarefa_id"],
                             }
                         }
-                    }
+                    },
                 },
                 "responses": {
-                    "200": {
-                        "description": "Comentário adicionado com sucesso"
-                    },
-                    "400": {
-                        "description": "Dados inválidos ou arquivo muito grande"
-                    },
-                    "403": {
-                        "description": "Permissão negada"
-                    }
-                }
+                    "200": {"description": "Comentário adicionado com sucesso"},
+                    "400": {"description": "Dados inválidos ou arquivo muito grande"},
+                    "403": {"description": "Permissão negada"},
+                },
             }
         },
         "/health": {
@@ -148,23 +129,21 @@ OPENAPI_SPEC = {
                                         "status": {"type": "string"},
                                         "timestamp": {"type": "string"},
                                         "version": {"type": "string"},
-                                        "checks": {"type": "object"}
-                                    }
+                                        "checks": {"type": "object"},
+                                    },
                                 }
                             }
-                        }
+                        },
                     },
-                    "503": {
-                        "description": "Aplicação não saudável"
-                    }
-                }
+                    "503": {"description": "Aplicação não saudável"},
+                },
             }
-        }
-    }
+        },
+    },
 }
 
 
-@api_docs_bp.route('/api/docs', methods=['GET'])
+@api_docs_bp.route("/api/docs", methods=["GET"])
 def api_documentation():
     """
     Renderiza a documentação da API usando Swagger UI.
@@ -205,10 +184,9 @@ def api_documentation():
     return render_template_string(swagger_ui_html)
 
 
-@api_docs_bp.route('/api/docs/spec', methods=['GET'])
+@api_docs_bp.route("/api/docs/spec", methods=["GET"])
 def api_spec():
     """
     Retorna a especificação OpenAPI em JSON.
     """
     return jsonify(OPENAPI_SPEC)
-

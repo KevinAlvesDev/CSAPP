@@ -1,88 +1,248 @@
-
 <div class="d-flex flex-column flex-grow-1 me-3">
     <div class="d-flex align-items-center mb-2">
-        <input 
-            class="form-check-input me-3 task-checkbox flex-shrink-0" 
-            type="checkbox" 
-            value="1" 
-            id="task-{{ tarefa.id }}" 
-            {% if tarefa.concluida %}checked{% endif %}
-            hx-post="{{ url_for('api.toggle_tarefa', tarefa_id=tarefa.id) }}"
-            hx-target="#task-item-{{ tarefa.id }}"
-            hx-swap="outerHTML"
-            >
+        <input class="form-check-input me-3 task-checkbox flex-shrink-0" type="checkbox" value="1"
+            id="task-{{ tarefa.id }}" {% if tarefa.percentual_conclusao==100 %}checked{% endif %}
+            hx-post="{{ url_for('api.toggle_tarefa', tarefa_id=tarefa.id) }}" hx-target="#task-item-{{ tarefa.id }}"
+            hx-swap="outerHTML">
         <div class="task-label-container">
-            <label class="form-check-label {% if tarefa.concluida %}text-decoration-line-through text-success{% endif %}" for="task-{{ tarefa.id }}">
-                {{ tarefa.tarefa_filho }}
+            <label
+                class="form-check-label {% if tarefa.percentual_conclusao == 100 %}text-decoration-line-through text-success{% endif %}"
+                for="task-{{ tarefa.id }}">
+                {{ tarefa.nome }}
             </label>
-            {% set norm_task = tarefa.tarefa_filho|lower %}
+            {% set norm_task = tarefa.nome|lower %}
             {% set norm_mod = modulo|lower if modulo is defined else '' %}
             {% set tt = {
-              'welcome|reunião de kick-off': "<div class='text-start'><div class='fw-semibold mb-1'>Checklist:</div><ul class='mb-0 ps-3'><li>Primeiro acesso ao sistema</li><li>Campos obrigatórios e necessários</li><li>Cadastro de usuários e colaboradores</li><li>Cadastro de produtos</li><li>Direcionamento de tarefas</li><li>Solicitação de backup</li></ul></div>",
-              'reunião de kick-off': "<div class='text-start'><div class='fw-semibold mb-1'>Checklist:</div><ul class='mb-0 ps-3'><li>Primeiro acesso ao sistema</li><li>Campos obrigatórios e necessários</li><li>Cadastro de usuários e colaboradores</li><li>Cadastro de produtos</li><li>Direcionamento de tarefas</li><li>Solicitação de backup</li></ul></div>",
-              'módulo adm|treinamento operacional 1': "<div class='text-start'><div class='fw-semibold mb-1'>Checklist:</div><ul class='mb-0 ps-3'><li>Como cadastrar um novo cliente</li><li>A importância do Boletim de Visitas</li><li>Negociação de Contrato</li><li>Formas de Pagamento (tela de recebimento)</li><li>Venda Avulsa (Produto ou Serviço)</li><li>Venda Avulsa de Diária</li><li>FreePass</li><li>Fechamento de Caixa por Operador</li></ul></div>",
-              'módulo adm|treinamento operacional 2': "<div class='text-start'><div class='fw-semibold mb-1'>Checklist:</div><ul class='mb-0 ps-3'><li>Renovação de contrato</li><li>Assinatura de contrato</li><li>Alteração de vencimento da parcelas</li><li>Estorno de contrato</li><li>Férias</li><li>Atestado médico</li><li>Retorno de atestado e férias</li><li>Trancamento</li><li>Retorno de trancamento</li><li>Retorno de trancamento vencido</li><li>Cancelamento com transferância</li><li>Cancelamento com devolução</li><li>Cancelamento com devolução (Base mensal)</li><li>Cancelamento de planos recorrentes</li><li>Cancelamento para planos bolsa</li><li>Bônus</li><li>Alteração de horário</li><li>Manutenção de modalidade</li></ul></div>",
-              'módulo adm|verificação de importação': "<div class='text-start'><div class='fw-semibold mb-1'>Checklist:</div><ul class='mb-0 ps-3'><li>Ativar BI de verificação</li><li>Ensinar aos usuários a jornada de verificação</li></ul></div>",
-              'módulo adm|treinamento gerencial': "<div class='text-start'><div class='fw-semibold mb-1'>Checklist:</div><ul class='mb-0 ps-3'><li>BI Grupo de Risco</li><li>BI Pendência de Clientes</li><li>BI Índice de Renovação</li><li>BI Conversão de Vendas</li><li>BI Metas Financeiras de Vendas</li><li>BI Ticket Médio de Planos</li><li>BI Cobranças por Convênio</li><li>BI Aulas Experimentais</li><li>BI Controle de Operações de Exceções</li><li>BI Inadimplência</li><li>BI de Gestão de Acessos</li><li>BI Wellhub</li><li>BI Ciclo de Vida do Cliente</li></ul></div>",
-              'módulo treino|estrutural': "<div class='text-start'><div class='fw-semibold mb-1'>Checklist:</div><ul class='mb-0 ps-3'><li>Apresentação do Treino</li><li>Perfil de acesso no treino</li><li>Como editar usuários</li><li>Cadastros de aparelhos</li><li>Cadastros de atividades</li><li>Níveis</li><li>Fichas pré-definidas</li><li>Programas pré-definidos</li><li>Cadastro de disponibilidade (Agenda de Serviços)</li><li>Agendamento de aluno</li></ul></div>",
-              'módulo treino|operacional': "<div class='text-start'><div class='fw-semibold mb-1'>Checklist:</div><ul class='mb-0 ps-3'><li>Tela de prescrição de treino</li><li>Perfil do aluno</li><li>Montagem de treino individual</li></ul></div>",
-              'módulo treino|gerencial': "<div class='text-start'><div class='fw-semibold mb-1'>Checklist:</div><ul class='mb-0 ps-3'><li>Treinos vencidos</li><li>Alunos sem treino</li><li>Treinos a vencer</li><li>Contratos a vencer</li><li>Treinos em dia</li><li>Alunos com treino</li><li>Execução de treinos nos últimos 30 dias</li><li>Avaliação média do treino dos alunos</li><li>Alunos com aviso médico</li><li>Andamento</li></ul></div>",
-              'módulo treino|app treino': "<div class='text-start'><div class='fw-semibold mb-1'>Checklist:</div><ul class='mb-0 ps-3'><li>Feed</li><li>Treino</li><li>Aulas</li><li>Dashboard (Professor)</li></ul></div>",
-              'módulo crm|estrutural': "<div class='text-start'><div class='fw-semibold mb-1'>Checklist:</div><ul class='mb-0 ps-3'><li>Gestão de carteiras</li><li>Concluído em 10/10/2025</li><li>Feriado</li><li>Meta Extra</li><li>Objeção</li><li>Script</li><li>Email para o contato em grupo</li><li>Contato em grupo (email, sms, app)</li></ul></div>",
-              'módulo crm|operacional': "<div class='text-start'><div class='fw-semibold mb-1'>Checklist:</div><ul class='mb-0 ps-3'><li>Leads Hoje</li><li>Leads Acumuladas</li><li>Agend. Presenciais</li><li>Agendados de Amanhã</li><li>Visitantes 24h</li><li>Renovação</li><li>Desistentes</li><li>Indicações</li><li>Aluno Gympass</li><li>Grupo de Risco</li><li>Vencidos</li><li>Pós Venda</li><li>Faltosos</li><li>Aniversariantes</li><li>Indicações</li><li>Receptivo</li></ul></div>",
-              'módulo crm|gerencial': "<div class='text-start'><div class='fw-semibold mb-1'>Checklist:</div><ul class='mb-0 ps-3'><li>BI CRM</li><li>Metas de vendas (meta, atingida, Respescagem)</li><li>Metas de Fidelização (meta, atingida, Respescagem)</li><li>Resultado (Meta, Atingida)</li><li>Objeções (Por Quabtidade, Por fase)</li><li>Desempenho Mensal dos Colaboradores</li><li>Agendamento de Ligações Pendente</li><li>Indicações Sem Contato</li><li>Contato Receptivo</li><li>Clientes Com Objeção Definitiva</li></ul></div>",
-              'módulo financeiro|financeiro simplificado': "<div class='text-start'><div class='fw-semibold mb-1'>Checklist:</div><ul class='mb-0 ps-3'><li>Financeiro Simplificado x Avançado</li><li>Plano de Contas</li><li>Centro de Custos</li><li>Rateio Integração</li><li>Fornecedores</li><li>Configurações</li><li>Lançamento de Contas a Pagar/Receber</li><li>Relatório de Contas a Pagar/Receber</li><li>Relatório Demonstrativo Financeiro</li><li>Relatório DRE Financeiro</li><li>Relatório Fluxo de Caixa</li><li>Gestão de Recebíveis</li><li>BI Financeiro</li></ul></div>",
-              'módulo financeiro|financeiro avançado': "<div class='text-start'><div class='fw-semibold mb-1'>Checklist:</div><ul class='mb-0 ps-3'><li>Cadastro de Contas</li><li>Cadastro das Taxas de Cartão</li><li>Configurações extras</li><li>Abrir/Fechar Caixa</li><li>Consulta/Reabertura de Caixa</li><li>Resumo de Contas</li><li>Gestão de Recebíveis (Movimentação)</li><li>Lote</li><li>Relatório Fluxo de Caixa</li></ul></div>"
+            'welcome|reunião de kick-off': "<div class='text-start'>
+                <div class='fw-semibold mb-1'>Checklist:</div>
+                <ul class='mb-0 ps-3'>
+                    <li>Primeiro acesso ao sistema</li>
+                    <li>Campos obrigatórios e necessários</li>
+                    <li>Cadastro de usuários e colaboradores</li>
+                    <li>Cadastro de produtos</li>
+                    <li>Direcionamento de tarefas</li>
+                    <li>Solicitação de backup</li>
+                </ul>
+            </div>",
+            'reunião de kick-off': "<div class='text-start'>
+                <div class='fw-semibold mb-1'>Checklist:</div>
+                <ul class='mb-0 ps-3'>
+                    <li>Primeiro acesso ao sistema</li>
+                    <li>Campos obrigatórios e necessários</li>
+                    <li>Cadastro de usuários e colaboradores</li>
+                    <li>Cadastro de produtos</li>
+                    <li>Direcionamento de tarefas</li>
+                    <li>Solicitação de backup</li>
+                </ul>
+            </div>",
+            'módulo adm|treinamento operacional 1': "<div class='text-start'>
+                <div class='fw-semibold mb-1'>Checklist:</div>
+                <ul class='mb-0 ps-3'>
+                    <li>Como cadastrar um novo cliente</li>
+                    <li>A importância do Boletim de Visitas</li>
+                    <li>Negociação de Contrato</li>
+                    <li>Formas de Pagamento (tela de recebimento)</li>
+                    <li>Venda Avulsa (Produto ou Serviço)</li>
+                    <li>Venda Avulsa de Diária</li>
+                    <li>FreePass</li>
+                    <li>Fechamento de Caixa por Operador</li>
+                </ul>
+            </div>",
+            'módulo adm|treinamento operacional 2': "<div class='text-start'>
+                <div class='fw-semibold mb-1'>Checklist:</div>
+                <ul class='mb-0 ps-3'>
+                    <li>Renovação de contrato</li>
+                    <li>Assinatura de contrato</li>
+                    <li>Alteração de vencimento da parcelas</li>
+                    <li>Estorno de contrato</li>
+                    <li>Férias</li>
+                    <li>Atestado médico</li>
+                    <li>Retorno de atestado e férias</li>
+                    <li>Trancamento</li>
+                    <li>Retorno de trancamento</li>
+                    <li>Retorno de trancamento vencido</li>
+                    <li>Cancelamento com transferância</li>
+                    <li>Cancelamento com devolução</li>
+                    <li>Cancelamento com devolução (Base mensal)</li>
+                    <li>Cancelamento de planos recorrentes</li>
+                    <li>Cancelamento para planos bolsa</li>
+                    <li>Bônus</li>
+                    <li>Alteração de horário</li>
+                    <li>Manutenção de modalidade</li>
+                </ul>
+            </div>",
+            'módulo adm|verificação de importação': "<div class='text-start'>
+                <div class='fw-semibold mb-1'>Checklist:</div>
+                <ul class='mb-0 ps-3'>
+                    <li>Ativar BI de verificação</li>
+                    <li>Ensinar aos usuários a jornada de verificação</li>
+                </ul>
+            </div>",
+            'módulo adm|treinamento gerencial': "<div class='text-start'>
+                <div class='fw-semibold mb-1'>Checklist:</div>
+                <ul class='mb-0 ps-3'>
+                    <li>BI Grupo de Risco</li>
+                    <li>BI Pendência de Clientes</li>
+                    <li>BI Índice de Renovação</li>
+                    <li>BI Conversão de Vendas</li>
+                    <li>BI Metas Financeiras de Vendas</li>
+                    <li>BI Ticket Médio de Planos</li>
+                    <li>BI Cobranças por Convênio</li>
+                    <li>BI Aulas Experimentais</li>
+                    <li>BI Controle de Operações de Exceções</li>
+                    <li>BI Inadimplência</li>
+                    <li>BI de Gestão de Acessos</li>
+                    <li>BI Wellhub</li>
+                    <li>BI Ciclo de Vida do Cliente</li>
+                </ul>
+            </div>",
+            'módulo treino|estrutural': "<div class='text-start'>
+                <div class='fw-semibold mb-1'>Checklist:</div>
+                <ul class='mb-0 ps-3'>
+                    <li>Apresentação do Treino</li>
+                    <li>Perfil de acesso no treino</li>
+                    <li>Como editar usuários</li>
+                    <li>Cadastros de aparelhos</li>
+                    <li>Cadastros de atividades</li>
+                    <li>Níveis</li>
+                    <li>Fichas pré-definidas</li>
+                    <li>Programas pré-definidos</li>
+                    <li>Cadastro de disponibilidade (Agenda de Serviços)</li>
+                    <li>Agendamento de aluno</li>
+                </ul>
+            </div>",
+            'módulo treino|operacional': "<div class='text-start'>
+                <div class='fw-semibold mb-1'>Checklist:</div>
+                <ul class='mb-0 ps-3'>
+                    <li>Tela de prescrição de treino</li>
+                    <li>Perfil do aluno</li>
+                    <li>Montagem de treino individual</li>
+                </ul>
+            </div>",
+            'módulo treino|gerencial': "<div class='text-start'>
+                <div class='fw-semibold mb-1'>Checklist:</div>
+                <ul class='mb-0 ps-3'>
+                    <li>Treinos vencidos</li>
+                    <li>Alunos sem treino</li>
+                    <li>Treinos a vencer</li>
+                    <li>Contratos a vencer</li>
+                    <li>Treinos em dia</li>
+                    <li>Alunos com treino</li>
+                    <li>Execução de treinos nos últimos 30 dias</li>
+                    <li>Avaliação média do treino dos alunos</li>
+                    <li>Alunos com aviso médico</li>
+                    <li>Andamento</li>
+                </ul>
+            </div>",
+            'módulo treino|app treino': "<div class='text-start'>
+                <div class='fw-semibold mb-1'>Checklist:</div>
+                <ul class='mb-0 ps-3'>
+                    <li>Feed</li>
+                    <li>Treino</li>
+                    <li>Aulas</li>
+                    <li>Dashboard (Professor)</li>
+                </ul>
+            </div>",
+            'módulo crm|estrutural': "<div class='text-start'>
+                <div class='fw-semibold mb-1'>Checklist:</div>
+                <ul class='mb-0 ps-3'>
+                    <li>Gestão de carteiras</li>
+                    <li>Concluído em 10/10/2025</li>
+                    <li>Feriado</li>
+                    <li>Meta Extra</li>
+                    <li>Objeção</li>
+                    <li>Script</li>
+                    <li>Email para o contato em grupo</li>
+                    <li>Contato em grupo (email, sms, app)</li>
+                </ul>
+            </div>",
+            'módulo crm|operacional': "<div class='text-start'>
+                <div class='fw-semibold mb-1'>Checklist:</div>
+                <ul class='mb-0 ps-3'>
+                    <li>Leads Hoje</li>
+                    <li>Leads Acumuladas</li>
+                    <li>Agend. Presenciais</li>
+                    <li>Agendados de Amanhã</li>
+                    <li>Visitantes 24h</li>
+                    <li>Renovação</li>
+                    <li>Desistentes</li>
+                    <li>Indicações</li>
+                    <li>Aluno Gympass</li>
+                    <li>Grupo de Risco</li>
+                    <li>Vencidos</li>
+                    <li>Pós Venda</li>
+                    <li>Faltosos</li>
+                    <li>Aniversariantes</li>
+                    <li>Indicações</li>
+                    <li>Receptivo</li>
+                </ul>
+            </div>",
+            'módulo crm|gerencial': "<div class='text-start'>
+                <div class='fw-semibold mb-1'>Checklist:</div>
+                <ul class='mb-0 ps-3'>
+                    <li>BI CRM</li>
+                    <li>Metas de vendas (meta, atingida, Respescagem)</li>
+                    <li>Metas de Fidelização (meta, atingida, Respescagem)</li>
+                    <li>Resultado (Meta, Atingida)</li>
+                    <li>Objeções (Por Quabtidade, Por fase)</li>
+                    <li>Desempenho Mensal dos Colaboradores</li>
+                    <li>Agendamento de Ligações Pendente</li>
+                    <li>Indicações Sem Contato</li>
+                    <li>Contato Receptivo</li>
+                    <li>Clientes Com Objeção Definitiva</li>
+                </ul>
+            </div>",
+            'módulo financeiro|financeiro simplificado': "<div class='text-start'>
+                <div class='fw-semibold mb-1'>Checklist:</div>
+                <ul class='mb-0 ps-3'>
+                    <li>Financeiro Simplificado x Avançado</li>
+                    <li>Plano de Contas</li>
+                    <li>Centro de Custos</li>
+                    <li>Rateio Integração</li>
+                    <li>Fornecedores</li>
+                    <li>Configurações</li>
+                    <li>Lançamento de Contas a Pagar/Receber</li>
+                    <li>Relatório de Contas a Pagar/Receber</li>
+                    <li>Relatório Demonstrativo Financeiro</li>
+                    <li>Relatório DRE Financeiro</li>
+                    <li>Relatório Fluxo de Caixa</li>
+                    <li>Gestão de Recebíveis</li>
+                    <li>BI Financeiro</li>
+                </ul>
+            </div>",
+            'módulo financeiro|financeiro avançado': "<div class='text-start'>
+                <div class='fw-semibold mb-1'>Checklist:</div>
+                <ul class='mb-0 ps-3'>
+                    <li>Cadastro de Contas</li>
+                    <li>Cadastro das Taxas de Cartão</li>
+                    <li>Configurações extras</li>
+                    <li>Abrir/Fechar Caixa</li>
+                    <li>Consulta/Reabertura de Caixa</li>
+                    <li>Resumo de Contas</li>
+                    <li>Gestão de Recebíveis (Movimentação)</li>
+                    <li>Lote</li>
+                    <li>Relatório Fluxo de Caixa</li>
+                </ul>
+            </div>"
             } %}
             {% set key = (norm_mod ~ '|' ~ norm_task) if norm_mod else norm_task %}
             {% set tip = tt.get(key) or tt.get(norm_task) %}
             {% if tip %}
-            <span class="ms-2" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-sanitize="false" data-bs-custom-class="tooltip-checklist" title='{{ tip }}'>
+            <span class="ms-2" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true"
+                data-bs-sanitize="false" data-bs-custom-class="tooltip-checklist" title='{{ tip }}'>
                 <i class="bi bi-exclamation-circle-fill text-warning" style="font-size: 0.95em;"></i>
             </span>
             {% endif %}
             {% if tarefa.tag %}
-                <span class="badge rounded-pill task-tag ms-2 {% if tarefa.tag == 'Ação interna' %} bg-secondary {% elif tarefa.tag == 'Reunião' %} bg-info text-dark {% else %} bg-light text-dark {% endif %}">
-                    {{ tarefa.tag }}
-                </span>
+            <span
+                class="badge rounded-pill task-tag ms-2 {% if tarefa.tag == 'Ação interna' %} bg-secondary {% elif tarefa.tag == 'Reunião' %} bg-info text-dark {% else %} bg-light text-dark {% endif %}">
+                {{ tarefa.tag }}
+            </span>
             {% endif %}
         </div>
     </div>
-    <div class="mt-1" style="margin-left: calc(1.25em + 0.75rem);">
-        
-        <label class="form-label small text-secondary mb-1">Comentários</label>
-        <form 
-            hx-post="{{ url_for('api.adicionar_comentario', tarefa_id=tarefa.id) }}"
-            hx-target="#comment-list-{{ tarefa.id }}"
-            hx-swap="beforeend"
-            hx-encoding="multipart/form-data"
-            class="comment-form mb-2"
-            data-email-responsavel="{{ implantacao.email_responsavel | default('') }}"
-            data-nome-empresa="{{ implantacao.nome_empresa | default('') }}"
-            >
-            <textarea class="form-control form-control-sm" name="comentario" maxlength="8000" rows="1" placeholder="Adicionar comentário..."></textarea>
-            <div class="d-flex align-items-center gap-2 mt-1">
-                <select name="visibilidade" class="form-select form-select-sm" style="max-width: 160px;">
-                    <option value="interno" selected>Interno</option>
-                    <option value="externo">Externo</option>
-                </select>
-                <input type="file" name="imagem" class="form-control form-control-sm" accept="image/png, image/jpeg, image/gif">
-                <button class="btn btn-outline-primary btn-sm" type="submit">Salvar</button>
-            </div>
-        </form>
-        <div class="list-group list-group-flush border rounded-1 comment-list-wrapper" id="comment-list-{{ tarefa.id }}" style="max-height: 300px; overflow-y: auto;">
-            {% if not tarefa.comentarios %}
-                <div class="list-group-item list-group-item-action py-1 px-2 small text-secondary fst-italic" id="no-comment-{{ tarefa.id }}">
-                    Nenhum comentário.
-                </div>
-            {% endif %}
-            {% for comentario in tarefa.comentarios %}
-                {% include 'partials/_comment_item.html' %}
-            {% endfor %}
-        </div>
-    </div>
+
 </div>
 <div class="d-flex align-items-center ms-2 flex-shrink-0">
-    <button class="btn btn-sm btn-outline-danger p-1 me-1" title="Excluir Tarefa"><i class="bi bi-x-lg"></i></button>
     <i class="bi bi-grip-vertical handle" style="cursor: grab;" title="Mover Tarefa"></i>
 </div>

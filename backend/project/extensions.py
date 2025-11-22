@@ -12,6 +12,7 @@ limiter = None
 
 gamification_rules_cache = TTLCache(maxsize=10, ttl=3600)
 
+
 def init_limiter(app):
     """
     Inicializa o Flask-Limiter com limites globais moderados.
@@ -25,13 +26,10 @@ def init_limiter(app):
 
         limiter = Limiter(
             key_func=get_remote_address,
-
             default_limits=["100 per minute"],
             storage_uri="memory://",
             strategy="fixed-window",
-
             headers_enabled=True,
-
             default_limits_exempt_when=lambda: False,
         )
 
@@ -41,24 +39,24 @@ def init_limiter(app):
         print(f"ERRO CRÍTICO: Falha ao inicializar a extensão Limiter: {e}")
         limiter = None
 
+
 def init_r2(app):
     """Inicializa o cliente Boto3 R2 dentro do contexto do app."""
     global r2_client
-    
+
     try:
 
-        if app.config.get('R2_CONFIGURADO', False):
+        if app.config.get("R2_CONFIGURADO", False):
 
             r2_client = boto3.client(
-                's3',
-                endpoint_url=app.config['R2_ENDPOINT_URL'],
-                aws_access_key_id=app.config['R2_ACCESS_KEY_ID'],
-                aws_secret_access_key=app.config['R2_SECRET_ACCESS_KEY'],
+                "s3",
+                endpoint_url=app.config["R2_ENDPOINT_URL"],
+                aws_access_key_id=app.config["R2_ACCESS_KEY_ID"],
+                aws_secret_access_key=app.config["R2_SECRET_ACCESS_KEY"],
                 config=BotocoreConfig(
-                    signature_version='s3v4',
-                    s3={'addressing_style': 'virtual'}\
+                    signature_version="s3v4", s3={"addressing_style": "virtual"}
                 ),
-                region_name='auto'\
+                region_name="auto",
             )
             print("Extensão R2 (boto3 client) inicializada.")
         else:
