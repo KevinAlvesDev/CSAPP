@@ -2,6 +2,7 @@
 
 from flask import g, current_app
 from ..db import query_db, execute_db
+from .implantacao_service import _get_progress
 from ..constants import (
     PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR
 )
@@ -148,9 +149,13 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
         impl['data_inicio_producao_iso'] = format_date_iso_for_json(impl.get('data_inicio_producao'), only_date=True)
         impl['data_final_implantacao_iso'] = format_date_iso_for_json(impl.get('data_final_implantacao'), only_date=True)
 
-        total_tasks = impl.get('total_tarefas', 0) or 0
-        done_tasks = impl.get('tarefas_concluidas', 0) or 0
-        impl['progresso'] = int(round((done_tasks / total_tasks) * 100)) if total_tasks > 0 else 0
+        try:
+            prog_percent, _, _ = _get_progress(impl_id)
+        except Exception:
+            total_tasks = impl.get('total_tarefas', 0) or 0
+            done_tasks = impl.get('tarefas_concluidas', 0) or 0
+            prog_percent = int(round((done_tasks / total_tasks) * 100)) if total_tasks > 0 else 100
+        impl['progresso'] = prog_percent
 
         try:
             impl_valor = float(impl.get('valor_atribuido', 0.0))

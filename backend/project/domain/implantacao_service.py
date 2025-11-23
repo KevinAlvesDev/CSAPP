@@ -6,7 +6,7 @@ from ..db import query_db, execute_db, logar_timeline
 
 from ..task_definitions import (
     CHECKLIST_OBRIGATORIO_ITEMS, MODULO_OBRIGATORIO,
-    TAREFAS_TREINAMENTO_PADRAO, MODULO_PENDENCIAS
+    TAREFAS_TREINAMENTO_PADRAO, MODULO_PENDENCIAS, TASK_TIPS
 )
 
 from ..dominio.hierarquia_service import get_hierarquia_implantacao
@@ -34,10 +34,17 @@ def _create_default_tasks(impl_id):
         tasks_added += 1
 
     for modulo, tarefas_info in TAREFAS_TREINAMENTO_PADRAO.items():
-        for i, tarefa_info in enumerate(tarefas_info, 1):
+        if tarefas_info:
+            for i, tarefa_info in enumerate(tarefas_info, 1):
+                execute_db(
+                    "INSERT INTO tarefas (implantacao_id, tarefa_pai, tarefa_filho, ordem, tag) VALUES (%s, %s, %s, %s, %s)",
+                    (impl_id, modulo, tarefa_info['nome'], i, tarefa_info.get('tag', ''))
+                )
+                tasks_added += 1
+        else:
             execute_db(
-                "INSERT INTO tarefas (implantacao_id, tarefa_pai, tarefa_filho, ordem, tag) VALUES (%s, %s, %s, %s, %s)",
-                (impl_id, modulo, tarefa_info['nome'], i, tarefa_info.get('tag', ''))
+                "INSERT INTO tarefas (implantacao_id, tarefa_pai, tarefa_filho, ordem, tag, concluida) VALUES (%s, %s, %s, %s, %s, %s)",
+                (impl_id, modulo, '(Módulo sem tarefas definidas)', 1, 'Informação', True)
             )
             tasks_added += 1
     return tasks_added
@@ -51,7 +58,7 @@ def _get_progress(impl_id):
         leg = query_db(
             """
             SELECT COUNT(*) as total, SUM(CASE WHEN concluida THEN 1 ELSE 0 END) as done
-            FROM tarefas WHERE implantacao_id = %s AND tarefa_pai IN (%s, %s)
+            FROM tarefas WHERE implantacao_id = %s AND (tarefa_pai IS NULL OR tarefa_pai NOT IN (%s, %s))
             """,
             (impl_id, MODULO_OBRIGATORIO, MODULO_PENDENCIAS), one=True
         ) or {}
@@ -80,15 +87,15 @@ def _get_progress(impl_id):
         ) or {}
         total = int(leg.get('total', 0) or 0) + int(sub.get('total', 0) or 0) + int(th_no.get('total', 0) or 0)
         done = int(leg.get('done', 0) or 0) + int(sub.get('done', 0) or 0) + int(th_no.get('done', 0) or 0)
-        return int(round((done / total) * 100)) if total > 0 else 0, total, done
+        return int(round((done / total) * 100)) if total > 0 else 100, total, done
     counts = query_db(
-        "SELECT COUNT(*) as total, SUM(CASE WHEN concluida THEN 1 ELSE 0 END) as done FROM tarefas WHERE implantacao_id = %s",
-        (impl_id,), one=True
+        "SELECT COUNT(*) as total, SUM(CASE WHEN concluida THEN 1 ELSE 0 END) as done FROM tarefas WHERE implantacao_id = %s AND (tarefa_pai IS NULL OR tarefa_pai NOT IN (%s, %s))",
+        (impl_id, MODULO_OBRIGATORIO, MODULO_PENDENCIAS), one=True
     )
     total = counts.get('total', 0) if counts else 0
     done = counts.get('done', 0) if counts else 0
     done = int(done) if done is not None else 0
-    return int(round((done / total) * 100)) if total > 0 else 0, total, done
+    return int(round((done / total) * 100)) if total > 0 else 100, total, done
 
 
 def auto_finalizar_implantacao(impl_id, usuario_cs_email):
@@ -184,17 +191,6 @@ def _format_implantacao_dates(implantacao):
     implantacao['data_inicio_previsto_fmt_d'] = format_date_br(implantacao.get('data_inicio_previsto'), False)
     return implantacao
 
-def get_implantacao_details(impl_id, usuario_cs_email, user_perfil):
-    """
-    Busca, processa e valida todos os dados para a página de detalhes da implantação.
-    Levanta um ValueError se o acesso for negado.
-    """
-    
-    implantacao, is_manager = _get_implantacao_and_validate_access(impl_id, usuario_cs_email, user_perfil)
-    implantacao = _format_implantacao_dates(implantacao)
-
-    progresso, _, _ = _get_progress(impl_id)
-
 def _get_tarefas_and_comentarios(impl_id, is_owner=False, is_manager=False):
     tarefas_raw = query_db("SELECT * FROM tarefas WHERE implantacao_id = %s ORDER BY tarefa_pai, ordem", (impl_id,))
     comentarios_raw = query_db(
@@ -280,7 +276,7 @@ def _get_tarefas_and_comentarios(impl_id, is_owner=False, is_manager=False):
             modulo_ordem_map[modulo] = min([t.get('ordem') or 0 for t in (lista or [])])
         except Exception:
             modulo_ordem_map[modulo] = 0
-    for modulo in [k for k, _ in sorted(modulo_ordem_map.items(), key=lambda x: (x[1], x[0]), reverse=True)]:
+    for modulo in [k for k,  _ in sorted(modulo_ordem_map.items(), key=lambda x: (x[1], x[0]), reverse=True)]:
         ordered_treinamento[modulo] = tarefas_agrupadas_treinamento.get(modulo, [])
 
     if MODULO_OBRIGATORIO in todos_modulos_temp:
@@ -361,48 +357,6 @@ def get_implantacao_details(impl_id, usuario_cs_email, user_perfil):
         'RECORRENCIA_USADA': RECORRENCIA_USADA,
         'SIM_NAO_OPTIONS': SIM_NAO_OPTIONS,
         'all_cs_users': all_cs_users,
-        'is_manager': is_manager
-    }
-
-    logs_timeline = query_db(
-        """ SELECT tl.*, COALESCE(p.nome, tl.usuario_cs) as usuario_nome 
-            FROM timeline_log tl LEFT JOIN perfil_usuario p ON tl.usuario_cs = p.usuario 
-            WHERE tl.implantacao_id = %s ORDER BY tl.data_criacao DESC """, (impl_id,)
-    )
-    for log in logs_timeline:
-        log['data_criacao_fmt_dt_hr'] = format_date_br(log.get('data_criacao'), True)
-
-    nome_usuario_logado = user_perfil.get('nome', usuario_cs_email)
-
-    all_cs_users = []
-    if is_manager:
-        all_cs_users = query_db("SELECT usuario, nome FROM perfil_usuario WHERE perfil_acesso IS NOT NULL AND perfil_acesso != '' ORDER BY nome")
-        all_cs_users = all_cs_users if all_cs_users is not None else []
-
-
-    return {
-        'user_info': g.user,
-        'implantacao': implantacao,
-        'tarefas_agrupadas_obrigatorio': tarefas_agrupadas_obrigatorio,
-        'tarefas_agrupadas_treinamento': ordered_treinamento,
-        'tarefas_agrupadas_pendencias': tarefas_agrupadas_pendencias,
-        'todos_modulos': todos_modulos_lista,
-        'modulo_pendencias_nome': MODULO_PENDENCIAS,
-        'progresso_porcentagem': progresso,
-        'nome_usuario_logado': nome_usuario_logado,
-        'email_usuario_logado': usuario_cs_email,
-        'justificativas_parada': JUSTIFICATIVAS_PARADA,
-        'logs_timeline': logs_timeline,
-        'cargos_responsavel': CARGOS_RESPONSAVEL,
-        'NIVEIS_RECEITA': NIVEIS_RECEITA,
-        'SEGUIMENTOS_LIST': SEGUIMENTOS_LIST,
-        'TIPOS_PLANOS': TIPOS_PLANOS,
-        'MODALIDADES_LIST': MODALIDADES_LIST,
-        'HORARIOS_FUNCIONAMENTO': HORARIOS_FUNCIONAMENTO,
-        'FORMAS_PAGAMENTO': FORMAS_PAGAMENTO,
-        'SISTEMAS_ANTERIORES': SISTEMAS_ANTERIORES,
-        'RECORRENCIA_USADA': RECORRENCIA_USADA,
-        'SIM_NAO_OPTIONS': SIM_NAO_OPTIONS,
-        'all_cs_users': all_cs_users,
-        'is_manager': is_manager
+        'is_manager': is_manager,
+        'tt': TASK_TIPS
     }

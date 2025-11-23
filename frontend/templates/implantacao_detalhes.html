@@ -1,24 +1,35 @@
 {% extends "base.html" %}
 
 {% block title %}Detalhes da Implantação - {{ implantacao.nome_empresa }}{% endblock %}
-
 {% block head_extra %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/implantacao_detalhes.css') }}?v=2">
+<style>
+  .module-grid{display:flex;flex-direction:column;gap:1rem}
+  .module-card{background:var(--bs-body-bg);border:1px solid rgba(0,0,0,.06);border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,.06);overflow:hidden}
+  .module-card .module-header{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;border-bottom:1px solid rgba(0,0,0,.06)}
+  .module-card .module-title{margin:0;font-size:1rem;font-weight:600}
+  .module-card .module-actions{display:flex;align-items:center;gap:.5rem}
+  .module-card .module-content-collapse{padding:1rem}
+  .tasks-list-group{gap:.5rem}
+  .tasks-list-group .list-group-item{border:0;border-radius:12px;background:rgba(0,0,0,.02);padding:.5rem .75rem;overflow:visible}
+  .progress-thin{height:6px;border-radius:999px;background:rgba(0,0,0,.06)}
+  .progress-thin .progress-bar{background:linear-gradient(90deg, #0d6efd, #20c997)}
+  .module-meta{display:flex;align-items:center;gap:.5rem;padding:.5rem 1rem}
+  .module-meta .badge{font-weight:500}
+  @media (max-width:768px){.module-grid{grid-template-columns:1fr}}
+</style>
 {% endblock %}
-
-
 {% block content %}
-<header class="header-bg p-3 d-flex justify-content-between align-items-center">
-    <h1 class="main-title mb-0 fs-4 mx-auto text-center">CS ONBOARDING DETALHES</h1>
-    <div class="d-flex align-items-center">
-        <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-primary me-2">
-            <i class="bi bi-arrow-left me-2"></i> Dashboard
-        </a>
-        <button class="btn btn-outline-secondary d-lg-none" type="button" data-bs-toggle="offcanvas"
-            data-bs-target="#mobileSidebar" aria-controls="mobileSidebar"> <i class="bi bi-list"></i> </button>
-
+<div class="container-fluid p-0">
+  <header class="header-bg p-3 d-flex align-items-center position-relative rounded-3">
+    <h1 class="main-title mb-0 fs-4 w-100 text-center">CS ONBOARDING DETALHES</h1>
+    <div class="d-flex align-items-center position-absolute end-0 top-50 translate-middle-y">
+      <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm btn-outline-primary me-2">Voltar ao Dashboard</a>
+      <button class="btn btn-outline-secondary d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar" aria-controls="mobileSidebar">
+        <i class="bi bi-list"></i>
+      </button>
     </div>
-</header>
+  </header>
+ </div>
 <div class="d-flex">
     <div class="offcanvas-lg offcanvas-start sidebar-bg d-lg-block" tabindex="-1" id="mobileSidebar"
         aria-labelledby="mobileSidebarLabel" style="width: 250px;">
@@ -117,6 +128,7 @@
         data-email-usuario-logado="{{ email_usuario_logado }}"
         data-url-reordenar="{{ url_for('api.reordenar_tarefas') }}"
         data-url-toggle-tarefa="{{ url_for('api.toggle_tarefa', tarefa_id=0) }}"
+        data-url-toggle-bulk="{{ url_for('api.toggle_tarefas_bulk') }}"
         data-url-adicionar-comentario="{{ url_for('api.adicionar_comentario', tarefa_id=0) }}"
         data-url-excluir-comentario="{{ url_for('api.excluir_comentario', comentario_id=0) }}"
         data-url-excluir-tarefa="{{ url_for('api.excluir_tarefa', tarefa_id=0) }}"
@@ -170,17 +182,9 @@
                 <ul class="nav nav-pills card-header-pills" id="detalhesTab" role="tablist">
                     <li class="nav-item" role="presentation"> <button class="nav-link active"
                             id="checklist-treinamentos-tab" data-bs-toggle="tab"
-                            data-bs-target="#checklist-treinamentos-content" type="button" role="tab"> <i
-                                class="bi bi-check2-square me-1"></i> Treinamentos </button> </li>
-                    <li class="nav-item" role="presentation"> <button class="nav-link" id="checklist-obrigatorio-tab"
-                            data-bs-toggle="tab" data-bs-target="#checklist-obrigatorio-content" type="button"
-                            role="tab"> <i class="bi bi-check-circle-fill me-1"></i> Obrigatório </button> </li>
-                    <li class="nav-item" role="presentation"> <button class="nav-link" id="pendencias-tab"
-                            data-bs-toggle="tab" data-bs-target="#pendencias-content" type="button" role="tab"> <i
-                                class="bi bi-exclamation-triangle-fill me-1"></i> Pendências </button> </li>
+                            data-bs-target="#checklist-treinamentos-content" type="button" role="tab">Treinamentos</button> </li>
                     <li class="nav-item" role="presentation"> <button class="nav-link" id="timeline-tab"
-                            data-bs-toggle="tab" data-bs-target="#timeline-content" type="button" role="tab"> <i
-                                class="bi bi-clock-history me-1"></i> Linha do Tempo </button> </li>
+                            data-bs-toggle="tab" data-bs-target="#timeline-content" type="button" role="tab">Linha do Tempo</button> </li>
                 </ul>
             </div>
 
@@ -189,120 +193,49 @@
 
                     <div class="tab-pane fade show active" id="checklist-treinamentos-content" role="tabpanel"
                         aria-labelledby="checklist-treinamentos-tab">
-                        <div id="checklist-area-treinamento" class="pt-2">
-                            {% if not tarefas_agrupadas_treinamento %} <div
-                                class="alert alert-light text-center small py-2" role="alert">Nenhuma tarefa de
-                                treinamento encontrada. Use "Adicionar Tarefa" na sidebar.</div> {% endif %}
-                            {% for modulo, tarefas in tarefas_agrupadas_treinamento.items() %}
-                            <div class="module-header" aria-expanded="false">
-                                <h5 class="mb-0 fs-6">{{ modulo }}</h5>
-                                <div>
-                                    <button class="btn btn-outline-success btn-marcar-todas me-2" type="button"
-                                        title="Marcar todas"> <i class="bi bi-check-all"></i> Todas </button>
-                                    <button class="btn btn-outline-secondary btn-desmarcar-todas btn-marcar-todas me-2"
-                                        type="button" title="Desmarcar todas"> <i class="bi bi-x-circle"></i> Todas
-                                    </button>
-                                    <button class="btn btn-outline-danger btn-marcar-todas me-2" type="button"
-                                        title="Excluir todas"> <i class="bi bi-trash"></i> Todas </button>
-                                    <button class="btn btn-link collapse-toggle align-middle" type="button"
-                                        title="Detalhar" data-bs-toggle="collapse"
-                                        data-bs-target="#collapse-trein-{{ loop.index }}" aria-expanded="false"
-                                        aria-label="Detalhar">
-                                        <i class="bi bi-chevron-down me-1"></i> Detalhar
-                                    </button>
+                        <div id="checklist-area-treinamento" class="pt-2 module-grid">
+                            {% set ordered_mods = ['Welcome', 'Estruturação BD', 'Validar estruturação', 'Implantação em andamento', 'Conclusão onboarding'] %}
+                            {% if not tarefas_agrupadas_treinamento %}
+                                <div class="alert alert-light text-center small py-2" role="alert">Nenhuma tarefa de treinamento encontrada.</div>
+                            {% endif %}
+                            {% for modulo in ordered_mods %}
+                            {% set tarefas = tarefas_agrupadas_treinamento.get(modulo) %}
+                            <div class="module-card">
+                                <div class="module-header" aria-expanded="false">
+                                    <h5 class="module-title">{{ modulo }}</h5>
+                                    <div class="module-actions">
+                                        <button class="btn btn-outline-success btn-sm btn-mark-all" type="button" title="Marcar todas" aria-label="Marcar todas"><i class="bi bi-check-all"></i></button>
+                                        <button class="btn btn-outline-secondary btn-sm btn-unmark-all" type="button" title="Desmarcar todas" aria-label="Desmarcar todas"><i class="bi bi-x-circle"></i></button>
+                                        <button class="btn btn-outline-danger btn-sm btn-delete-all" type="button" title="Excluir todas" aria-label="Excluir todas"><i class="bi bi-trash"></i></button>
+                                        <button class="btn btn-link collapse-toggle" type="button" title="Detalhar" data-bs-toggle="collapse" data-bs-target="#collapse-trein-{{ loop.index }}" aria-expanded="false" aria-label="Detalhar"><i class="bi bi-chevron-down"></i></button>
+                                    </div>
                                 </div>
-                            </div>
-                            <div id="collapse-trein-{{ loop.index }}" class="collapse module-content-collapse"
-                                data-modulo="{{ modulo }}">
-                                <ul class="list-group list-group-flush list-group-sortable tasks-list-group"
-                                    id="sortable-list-trein-{{ loop.index }}">
-                                    {% for tarefa in tarefas %}
-                                    <li class="list-group-item d-flex align-items-start justify-content-between"
-                                        id="task-item-{{ tarefa.id }}" data-id="{{ tarefa.id }}">
-                                        {% include 'partials/_task_item.html' %}
-                                    </li>
-                                    {% endfor %}
-                                </ul>
+                                <div class="module-meta">
+                                    <span class="badge bg-light text-dark">Treinamentos</span>
+                                    <span class="badge module-status bg-secondary">Pendente</span>
+                                    <div class="progress progress-thin flex-grow-1">
+                                        <div class="progress-bar" role="progressbar"></div>
+                                    </div>
+                                </div>
+                                <div id="collapse-trein-{{ loop.index }}" class="collapse module-content-collapse" data-modulo="{{ modulo }}">
+                                    <ul class="list-group list-group-flush list-group-sortable tasks-list-group" id="sortable-list-trein-{{ loop.index }}">
+                                        {% if tarefas %}
+                                            {% for tarefa in tarefas %}
+                                        <li class="list-group-item" id="task-item-{{ tarefa.id }}" data-id="{{ tarefa.id }}">
+                                            {% include 'partials/_task_item.html' %}
+                                        </li>
+                                            {% endfor %}
+                                        {% else %}
+                                            <li class="list-group-item">Nenhuma tarefa neste módulo.</li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
                             </div>
                             {% endfor %}
                         </div>
                     </div>
 
-                    <div class="tab-pane fade" id="checklist-obrigatorio-content" role="tabpanel"
-                        aria-labelledby="checklist-obrigatorio-tab">
-                        <div id="checklist-area-obrigatorio" class="pt-2">
-                            {% if not tarefas_agrupadas_obrigatorio %} <div
-                                class="alert alert-light text-center small py-2" role="alert">Nenhuma tarefa obrigatória
-                                encontrada. Use "Adicionar Tarefa" na sidebar.</div> {% endif %}
-                            {% for modulo, tarefas in tarefas_agrupadas_obrigatorio.items() %}
-                            <div class="module-header" aria-expanded="false">
-                                <h5 class="mb-0 fs-6">{{ modulo }}</h5>
-                                <div>
-                                    <button class="btn btn-outline-success btn-marcar-todas me-2" type="button"
-                                        title="Marcar todas"> <i class="bi bi-check-all"></i> Todas </button>
-                                    <button class="btn btn-outline-secondary btn-desmarcar-todas btn-marcar-todas me-2"
-                                        type="button" title="Desmarcar todas"> <i class="bi bi-x-circle"></i> Todas
-                                    </button>
-                                    <button class="btn btn-outline-danger btn-marcar-todas me-2" type="button"
-                                        title="Excluir todas"> <i class="bi bi-trash"></i> Todas </button>
-                                    <button class="btn btn-link collapse-toggle align-middle" type="button"
-                                        title="Detalhar" data-bs-toggle="collapse"
-                                        data-bs-target="#collapse-obrig-{{ loop.index }}" aria-expanded="false"
-                                        aria-label="Detalhar">
-                                        <i class="bi bi-chevron-down me-1"></i> Detalhar
-                                    </button>
-                                </div>
-                            </div>
-                            <div id="collapse-obrig-{{ loop.index }}" class="collapse module-content-collapse"
-                                data-modulo="{{ modulo }}">
-                                <ul class="list-group list-group-flush list-group-sortable tasks-list-group"
-                                    id="sortable-list-obrig-{{ loop.index }}">
-                                    {% for tarefa in tarefas %}
-                                    <li class="list-group-item d-flex align-items-start justify-content-between"
-                                        id="task-item-{{ tarefa.id }}" data-id="{{ tarefa.id }}">
-                                        {% include 'partials/_task_item.html' %}
-                                    </li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-
-                    <div class="tab-pane fade" id="pendencias-content" role="tabpanel" aria-labelledby="pendencias-tab">
-                        <div id="checklist-area-pendencias" class="pt-2">
-                            {% if not tarefas_agrupadas_pendencias %} <div
-                                class="alert alert-light text-center small py-2" role="alert">Nenhuma pendência
-                                registrada. Use "Adicionar Tarefa" na sidebar.</div>
-                            {% else %} {% for modulo, tarefas in tarefas_agrupadas_pendencias.items() %}
-                            <div class="module-header" aria-expanded="true">
-                                <h5 class="mb-0 fs-6">{{ modulo }}</h5>
-                                <div>
-                                    <button class="btn btn-outline-danger btn-marcar-todas" type="button"
-                                        title="Excluir todas"> <i class="bi bi-trash"></i> Todas </button>
-                                    <button class="btn btn-link collapse-toggle align-middle" type="button"
-                                        title="Detalhar" data-bs-toggle="collapse"
-                                        data-bs-target="#collapse-pend-{{ loop.index }}" aria-expanded="true"
-                                        aria-label="Detalhar">
-                                        <i class="bi bi-chevron-down me-1"></i> Detalhar
-                                    </button>
-                                </div>
-                            </div>
-                            <div id="collapse-pend-{{ loop.index }}" class="collapse show module-content-collapse"
-                                data-modulo="{{ modulo }}">
-                                <ul class="list-group list-group-flush list-group-sortable tasks-list-group"
-                                    id="sortable-list-pend-{{ loop.index }}">
-                                    {% for tarefa in tarefas %}
-                                    <li class="list-group-item d-flex align-items-start justify-content-between"
-                                        id="task-item-{{ tarefa.id }}" data-id="{{ tarefa.id }}">
-                                        {% include 'partials/_task_item.html' %}
-                                    </li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
-                            {% endfor %} {% endif %}
-                        </div>
-                    </div>
+                    
 
                     <div class="tab-pane fade" id="timeline-content" role="tabpanel" aria-labelledby="timeline-tab">
                         <div class="p-3 mt-3">
@@ -814,6 +747,32 @@
             });
         }
         computeProgress();
+        function computeModuleProgress(){
+            var cards=document.querySelectorAll('.module-card');
+            cards.forEach(function(card){
+                var boxes=card.querySelectorAll('.task-checkbox');
+                var total=boxes.length;var done=0;
+                boxes.forEach(function(b){if(b.checked)done++;});
+                var pct=total?Math.round((done/total)*100):100;
+                var bar=card.querySelector('.module-meta .progress-bar');
+                if(bar){bar.style.width=pct+'%';bar.setAttribute('aria-valuenow',pct);}    
+                var statusEl=card.querySelector('.module-meta .module-status');
+                if(statusEl){
+                    if(pct===100){statusEl.textContent='Concluída';statusEl.classList.remove('bg-secondary');statusEl.classList.add('bg-success');}
+                    else{statusEl.textContent='Pendente';statusEl.classList.remove('bg-success');statusEl.classList.add('bg-secondary');}
+                }
+            });
+        }
+        computeModuleProgress();
+        document.addEventListener('shown.bs.collapse', function (ev) {
+            var el = ev.target;
+            if (!el || !el.id || el.id.indexOf('comments-') !== 0) return;
+            try {
+                var ta = el.querySelector('textarea[name="comentario"]');
+                if (ta) { ta.focus(); }
+                el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            } catch(e) {}
+        });
         document.addEventListener('submit', function (ev) {
             var form = ev.target;
             if (window.htmx) return;
@@ -852,6 +811,111 @@
                 })
                 .finally(function () { if (btn) { btn.disabled = false; btn.classList.remove('disabled'); } });
         }, true);
+        function updateTaskStatusFor(box){
+            var li=box.closest('li');
+            var badge=li?li.querySelector('.task-status'):null;
+            if(!badge)return;
+            if(box.checked){badge.textContent='Concluída';badge.classList.remove('bg-secondary');badge.classList.add('bg-success');}
+            else{badge.textContent='Pendente';badge.classList.remove('bg-success');badge.classList.add('bg-secondary');}
+        }
+        document.querySelectorAll('.task-checkbox').forEach(function(b){updateTaskStatusFor(b);});
+        document.body.addEventListener('change', function (ev) { if (ev.target && ev.target.classList && ev.target.classList.contains('task-checkbox')) { updateTaskStatusFor(ev.target); computeModuleProgress(); } });
+        document.body.addEventListener('change', function (ev) {
+            var input = ev.target;
+            if (!input || input.type !== 'file' || input.name !== 'imagem') return;
+            var form = input.closest('.comment-form');
+            if (!form) return;
+            var label = form.querySelector('span.file-name');
+            if (!label) return;
+            var name = (input.files && input.files[0]) ? input.files[0].name : 'Nenhum arquivo';
+            label.textContent = name;
+        });
+        document.body.addEventListener('htmx:afterSwap', function(){ computeModuleProgress(); });
+
+        function toggleAllInModule(card, desired){
+            var boxes=Array.from(card.querySelectorAll('.task-checkbox'));
+            var targets = boxes.filter(function(b){ return (!!desired && !b.checked) || (!desired && b.checked); });
+            var ids = targets.map(function(b){ return (b.id||'').replace('task-',''); });
+            if(ids.length===0){ return; }
+            var main = document.getElementById('main-content');
+            var url = main ? main.getAttribute('data-url-toggle-bulk') : '/api/toggle_tarefas';
+            fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'HX-Request': 'true', 'X-Requested-With': 'XMLHttpRequest' },
+                body: JSON.stringify({ ids: ids }),
+                credentials: 'same-origin'
+            })
+                .then(function(r){
+                    if(!r.ok) throw new Error('bulk-failed');
+                    return r.text();
+                })
+                .then(function(){
+                    targets.forEach(function(b){ b.checked = !!desired; updateTaskStatusFor(b); });
+                    computeModuleProgress();
+                })
+                .catch(function(){
+                    // Fallback: alterna uma a uma usando o endpoint individual
+                    var promises = targets.map(function(b){
+                        var singleUrl = b.getAttribute('hx-post');
+                        if(!singleUrl){ return Promise.resolve(); }
+                        return fetch(singleUrl, {
+                            method: 'POST',
+                            headers: { 'HX-Request': 'true', 'X-Requested-With': 'XMLHttpRequest' },
+                            credentials: 'same-origin'
+                        }).then(function(r){ if(!r.ok) throw new Error('single-failed'); });
+                    });
+                    Promise.allSettled(promises).then(function(){
+                        targets.forEach(function(b){ b.checked = !!desired; updateTaskStatusFor(b); });
+                        computeModuleProgress();
+                    }).catch(function(){
+                        var alertBox = document.createElement('div');
+                        alertBox.className = 'alert alert-danger alert-dismissible fade show my-2';
+                        alertBox.innerHTML = 'Falha ao atualizar tarefas em lote.' + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+                        var container = document.querySelector('#detalhesTabContent');
+                        (container || document.body).prepend(alertBox);
+                    });
+                });
+        }
+        async function deleteAllInModule(card){
+            var items = card.querySelectorAll('li[id^="task-item-"]');
+            if(items.length===0) return;
+            var ok = false;
+            if (window.confirmWithModal) {
+                ok = await window.confirmWithModal('EXCLUIR TODAS as tarefas deste módulo? Esta ação é irreversível.');
+            } else {
+                ok = confirm('Tem certeza que deseja excluir todas as tarefas deste módulo?');
+            }
+            if(!ok) return;
+            var main = document.getElementById('main-content');
+            var url = main ? main.getAttribute('data-url-excluir-modulo') : '/api/excluir_tarefas_modulo';
+            var implId = main ? main.getAttribute('data-implantacao-id') : null;
+            var contentEl = card.querySelector('.module-content-collapse');
+            var modulo = contentEl ? contentEl.getAttribute('data-modulo') : null;
+            if(!implId || !modulo){ alert('Informações do módulo ausentes.'); return; }
+            fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, body: JSON.stringify({ implantacao_id: parseInt(implId,10), tarefa_pai: modulo }), credentials: 'same-origin' })
+                .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
+                .then(function(){
+                    items.forEach(function(li){ li.remove(); });
+                    var list = card.querySelector('.tasks-list-group');
+                    if(list){
+                        var placeholder = document.createElement('li');
+                        placeholder.className = 'list-group-item';
+                        placeholder.textContent = 'Nenhuma tarefa neste módulo.';
+                        list.appendChild(placeholder);
+                    }
+                    computeModuleProgress();
+                })
+                .catch(function(){ alert('Falha ao excluir tarefas do módulo.'); });
+        }
+        document.body.addEventListener('click', async function(ev){
+            var btn = ev.target.closest('button');
+            if(!btn) return;
+            var card = btn.closest('.module-card');
+            if(!card) return;
+            if(btn.classList.contains('btn-mark-all')){ toggleAllInModule(card, true); }
+            else if(btn.classList.contains('btn-unmark-all')){ toggleAllInModule(card, false); }
+            else if(btn.classList.contains('btn-delete-all')){ await deleteAllInModule(card); }
+        });
     });
 </script>
 

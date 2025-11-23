@@ -345,4 +345,77 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
     });
+
+    // Função para atualizar badges de status nos módulos
+    function updateModuleBadges() {
+        try {
+            document.querySelectorAll('.module-header').forEach(header => {
+                const collapseElement = header.nextElementSibling;
+                if (!collapseElement || !collapseElement.classList.contains('module-content-collapse')) return;
+
+                const checkboxes = collapseElement.querySelectorAll('.task-checkbox');
+                const total = checkboxes.length;
+
+                if (total === 0) return;
+
+                let completed = 0;
+                checkboxes.forEach(checkbox => {
+                    if (checkbox.checked) completed++;
+                });
+
+                const percentage = Math.round((completed / total) * 100);
+
+                // Remove badge existente se houver
+                const existingBadge = header.querySelector('.module-status-badge');
+                if (existingBadge) existingBadge.remove();
+
+                // Cria novo badge
+                const badge = document.createElement('span');
+                badge.className = 'badge module-status-badge ms-2';
+                badge.style.fontSize = '0.75rem';
+                badge.style.fontWeight = '600';
+                badge.style.padding = '0.35rem 0.65rem';
+                badge.style.borderRadius = '6px';
+                badge.textContent = `${completed}/${total}`;
+
+                // Define cor baseada no percentual
+                if (percentage === 100) {
+                    badge.style.backgroundColor = '#28a745';
+                    badge.style.color = '#fff';
+                } else if (percentage >= 50) {
+                    badge.style.backgroundColor = '#ffc107';
+                    badge.style.color = '#000';
+                } else if (percentage > 0) {
+                    badge.style.backgroundColor = '#fd7e14';
+                    badge.style.color = '#fff';
+                } else {
+                    badge.style.backgroundColor = '#6c757d';
+                    badge.style.color = '#fff';
+                }
+
+                // Adiciona o badge ao título
+                const titleElement = header.querySelector('h5');
+                if (titleElement) {
+                    titleElement.appendChild(badge);
+                }
+            });
+        } catch (error) {
+            console.error('Erro ao atualizar badges dos módulos:', error);
+        }
+    }
+
+    // Inicializa os badges
+    updateModuleBadges();
+
+    // Atualiza badges quando tarefas mudam
+    document.body.addEventListener('change', function (ev) {
+        if (ev.target && ev.target.classList && ev.target.classList.contains('task-checkbox')) {
+            updateModuleBadges();
+        }
+    });
+
+    // Atualiza badges após eventos HTMX
+    document.body.addEventListener('htmx:afterSwap', function () {
+        setTimeout(updateModuleBadges, 100);
+    });
 });

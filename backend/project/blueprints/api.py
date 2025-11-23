@@ -16,6 +16,7 @@ from ..extensions import r2_client, limiter
 
 
 from ..domain.implantacao_service import _get_progress
+from ..task_definitions import TASK_TIPS
 from ..dominio.hierarquia_service import (
     toggle_subtarefa,
     calcular_progresso_implantacao,
@@ -136,7 +137,7 @@ def toggle_tarefa(tarefa_id):
                 }
             }
 
-            item_html = render_template('partials/_task_item_wrapper.html', tarefa=tarefa_atualizada, implantacao=implantacao)
+            item_html = render_template('partials/_task_item_wrapper.html', tarefa=tarefa_atualizada, implantacao=implantacao, tt=TASK_TIPS)
             progress_html = render_template('partials/_progress_total_bar.html', progresso_percent=novo_prog)
             resp = make_response(item_html + progress_html)
 
@@ -279,7 +280,7 @@ def toggle_tarefas_bulk():
                     (tid,)
                 ) or []
                 tarefa_atualizada['comentarios'] = comentarios
-                fragments.append(render_template('partials/_task_item_wrapper.html', tarefa=tarefa_atualizada, implantacao=implantacao, oob=True))
+                fragments.append(render_template('partials/_task_item_wrapper.html', tarefa=tarefa_atualizada, implantacao=implantacao, tt=TASK_TIPS, oob=True))
 
             progress_html = render_template('partials/_progress_total_bar.html', progresso_percent=novo_prog)
             hx_payload = {
@@ -304,6 +305,21 @@ def toggle_tarefas_bulk():
     except Exception as e:
         api_logger.error(f"Erro ao alternar tarefas em lote para implantação {implantacao_id}: {e}", exc_info=True)
         return jsonify({'ok': False, 'error': f'Erro interno: {e}'}), 500
+
+@api_bp.route('/progresso_implantacao/<int:impl_id>', methods=['GET'])
+@login_required
+@validate_api_origin
+def progresso_implantacao(impl_id):
+    try:
+        impl_id = validate_integer(impl_id, min_value=1)
+    except ValidationError as e:
+        return jsonify({'ok': False, 'error': f'ID inválido: {str(e)}'}), 400
+    try:
+        pct, total, done = _get_progress(impl_id)
+        return jsonify({'ok': True, 'progresso': pct, 'total': total, 'concluidas': done})
+    except Exception as e:
+        api_logger.error(f"Erro ao obter progresso da implantação {impl_id}: {e}", exc_info=True)
+        return jsonify({'ok': False, 'error': 'Erro interno'}), 500
 
 @api_bp.route('/adicionar_comentario/<int:tarefa_id>', methods=['POST'])
 @login_required
@@ -944,7 +960,7 @@ def toggle_subtarefa_h(sub_id):
             'nome_empresa': implantacao_info.get('nome_empresa', ''),
             'email_responsavel': implantacao_info.get('email_responsavel', '')
         }
-        item_html = render_template('partials/_task_item_wrapper.html', tarefa=tarefa_payload, implantacao=implantacao)
+        item_html = render_template('partials/_task_item_wrapper.html', tarefa=tarefa_payload, implantacao=implantacao, tt=TASK_TIPS)
         progress_html = render_template('partials/_progress_total_bar.html', progresso_percent=novo_prog)
         hx_payload = { 'progress_update': { 'novo_progresso': novo_prog } }
         resp = make_response(item_html + progress_html)
@@ -1002,7 +1018,7 @@ def toggle_tarefa_h(tarefa_h_id):
             'nome_empresa': implantacao_info.get('nome_empresa', ''),
             'email_responsavel': implantacao_info.get('email_responsavel', '')
         }
-        item_html = render_template('partials/_task_item_wrapper.html', tarefa=tarefa_payload, implantacao=implantacao)
+        item_html = render_template('partials/_task_item_wrapper.html', tarefa=tarefa_payload, implantacao=implantacao, tt=TASK_TIPS)
         progress_html = render_template('partials/_progress_total_bar.html', progresso_percent=novo_prog)
         hx_payload = { 'progress_update': { 'novo_progresso': novo_prog } }
         resp = make_response(item_html + progress_html)

@@ -437,7 +437,7 @@
                         </td> 
                         <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or impl.usuario_cs }}</td>
                         <td><span class="badge bg-info text-dark">{{ 'Módulo' if impl.tipo == 'modulo' else 'Completa' }}</span></td>
-                        <td class="text-nowrap"> <span class="badge bg-secondary text-dark js-dias-badge" data-impl-id="{{ impl.id }}" data-start-iso="{{ impl.data_inicio_efetivo_iso }}" data-status="andamento">{{ impl.dias_passados | int }} dias</span> </td> <td> <div class="progress" style="height: 20px;"> <div class="progress-bar progress-bar-striped bg-warning text-dark" role="progressbar" style="width: {{ impl.progresso }}%;" aria-valuenow="{{ impl.progresso }}">{{ impl.progresso }}%</div> </div> </td> <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_atribuido|float) if impl.valor_atribuido else 'N/A' }}</td> <td> <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver Detalhes</a> </td> </tr> {% endfor %} </tbody> </table> </div> {% endif %}
+                        <td class="text-nowrap"> <span class="badge bg-secondary text-dark js-dias-badge" data-impl-id="{{ impl.id }}" data-start-iso="{{ impl.data_inicio_efetivo_iso }}" data-status="andamento">{{ impl.dias_passados | int }} dias</span> </td> <td> <div class="progress" style="height: 20px;"> <div class="progress-bar progress-bar-striped bg-warning text-dark js-progress-bar" data-impl-id="{{ impl.id }}" data-progress-url="{{ url_for('api.progresso_implantacao', impl_id=impl.id) }}" role="progressbar" style="width: {{ impl.progresso }}%;" aria-valuenow="{{ impl.progresso }}">{{ impl.progresso }}%</div> </div> </td> <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_atribuido|float) if impl.valor_atribuido else 'N/A' }}</td> <td> <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver Detalhes</a> </td> </tr> {% endfor %} </tbody> </table> </div> {% endif %}
                     </div>
         
                     <div class="tab-pane fade" id="atrasadas" role="tabpanel" aria-labelledby="atrasadas-tab">
@@ -474,7 +474,7 @@
                         </td>
                         <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or impl.usuario_cs }}</td>
                         <td><span class="badge bg-info text-dark">{{ 'Módulo' if impl.tipo == 'modulo' else 'Completa' }}</span></td>
-                        <td><span class="badge bg-danger js-dias-badge" data-impl-id="{{ impl.id }}" data-start-iso="{{ impl.data_inicio_efetivo_iso }}" data-status="atrasada">{{ impl.dias_passados | int }} dias</span></td> <td> {% if impl.status == 'parada' %} <span class="badge bg-danger js-status-badge" data-impl-id="{{ impl.id }}">Parada</span> {% else %} <span class="badge bg-warning text-dark js-status-badge" data-impl-id="{{ impl.id }}">Em Andamento</span> {% endif %} </td> <td> <div class="progress" style="height: 20px;"> <div class="progress-bar progress-bar-striped bg-danger" role="progressbar" style="width: {{ impl.progresso }}%;" aria-valuenow="{{ impl.progresso }}">{{ impl.progresso }}%</div> </div> </td> <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_atribuido|float) if impl.valor_atribuido else 'N/A' }}</td> <td> <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver Detalhes</a> </td> </tr> {% endfor %} </tbody> </table> </div> {% endif %}
+                        <td><span class="badge bg-danger js-dias-badge" data-impl-id="{{ impl.id }}" data-start-iso="{{ impl.data_inicio_efetivo_iso }}" data-status="atrasada">{{ impl.dias_passados | int }} dias</span></td> <td> {% if impl.status == 'parada' %} <span class="badge bg-danger js-status-badge" data-impl-id="{{ impl.id }}">Parada</span> {% else %} <span class="badge bg-warning text-dark js-status-badge" data-impl-id="{{ impl.id }}">Em Andamento</span> {% endif %} </td> <td> <div class="progress" style="height: 20px;"> <div class="progress-bar progress-bar-striped bg-danger js-progress-bar" data-impl-id="{{ impl.id }}" data-progress-url="{{ url_for('api.progresso_implantacao', impl_id=impl.id) }}" role="progressbar" style="width: {{ impl.progresso }}%;" aria-valuenow="{{ impl.progresso }}">{{ impl.progresso }}%</div> </div> </td> <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_atribuido|float) if impl.valor_atribuido else 'N/A' }}</td> <td> <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver Detalhes</a> </td> </tr> {% endfor %} </tbody> </table> </div> {% endif %}
                     </div>
         
                     <div class="tab-pane fade" id="futuras" role="tabpanel" aria-labelledby="futuras-tab">
@@ -924,5 +924,20 @@
         updateBadges();
         setInterval(updateBadges, 60000);
     });
+</script>
+<script>
+    document.addEventListener('visibilitychange', function(){ if(document.visibilityState === 'visible'){ updateDashboardProgress(); } });
+    document.addEventListener('DOMContentLoaded', function(){ updateDashboardProgress(); });
+    function updateDashboardProgress(){
+      var bars = document.querySelectorAll('.js-progress-bar[data-progress-url]');
+      bars.forEach(function(bar){
+        var url = bar.getAttribute('data-progress-url');
+        if(!url) return;
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
+          .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
+          .then(function(data){ var p = parseInt(data.progresso||0,10); if(isNaN(p)) p = 0; bar.style.width = p+'%'; bar.setAttribute('aria-valuenow', p); bar.textContent = p+'%'; })
+          .catch(function(){});
+      });
+    }
 </script>
 {% endblock %}
