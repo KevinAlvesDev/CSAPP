@@ -1,0 +1,2557 @@
+{% extends "base.html" %}
+
+{% block title %}Detalhes da Implantação - {{ implantacao.nome_empresa }}{% endblock %}
+
+{% block head_extra %}
+<style>
+    :root {
+        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        --card-hover-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+        --border-radius: 16px;
+    }
+
+    /* Espaço para o botão do menu */
+    .content-wrapper {
+        padding-top: 50px;
+    }
+
+    /* Título da página */
+    .page-title-header {
+        text-align: center;
+        padding: 0.5rem 0;
+        margin-bottom: 0.75rem;
+    }
+
+    .page-title-header h2 {
+        font-size: 0.85rem;
+        font-weight: 700;
+        letter-spacing: 2px;
+        color: #667eea;
+        text-transform: uppercase;
+        margin: 0;
+    }
+
+    .implantacao-header {
+        background: var(--primary-gradient);
+        color: white;
+        padding: 1.25rem 1.5rem;
+        border-radius: var(--border-radius);
+        margin-bottom: 1.25rem;
+        box-shadow: 0 8px 30px rgba(102, 126, 234, 0.25);
+        position: relative;
+    }
+
+    .implantacao-header h1 {
+        font-weight: 700;
+        font-size: 1.5rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .implantacao-header .badge-status {
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(5px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        padding: 0.4rem 0.8rem;
+        border-radius: 50px;
+        font-weight: 600;
+        font-size: 0.8rem;
+        letter-spacing: 0.5px;
+    }
+
+    /* Tabs para Plano/Timeline */
+    .tab-switcher {
+        display: flex;
+        background: #f1f5f9;
+        border-radius: 10px;
+        padding: 4px;
+        margin-bottom: 0;
+    }
+
+    .tab-switcher .nav-link {
+        flex: 1;
+        text-align: center;
+        padding: 0.6rem 1rem;
+        border-radius: 8px;
+        color: #64748b;
+        font-weight: 600;
+        font-size: 0.875rem;
+        border: none;
+        background: transparent;
+        transition: all 0.2s ease;
+    }
+
+    .tab-switcher .nav-link:hover {
+        color: #475569;
+    }
+
+    .tab-switcher .nav-link.active {
+        background: white;
+        color: #667eea;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Info de datas do plano */
+    .plano-datas-info {
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        border: 1px solid #bae6fd;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .plano-datas-info .data-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.4rem 0;
+    }
+
+    .plano-datas-info .data-item:not(:last-child) {
+        border-bottom: 1px dashed #bae6fd;
+    }
+
+    .plano-datas-info .data-label {
+        font-size: 0.8rem;
+        color: #0369a1;
+        font-weight: 500;
+    }
+
+    .plano-datas-info .data-value {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #0c4a6e;
+    }
+
+    .plano-datas-info .data-value.destaque {
+        color: #059669;
+        background: #d1fae5;
+        padding: 0.2rem 0.6rem;
+        border-radius: 6px;
+    }
+
+    .custom-card {
+        background: white;
+        border-radius: var(--border-radius);
+        border: none;
+        box-shadow: var(--card-shadow);
+        transition: all 0.3s ease;
+        overflow: hidden;
+        margin-bottom: 1rem;
+    }
+
+    .custom-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--card-hover-shadow);
+    }
+
+    .custom-card-header {
+        padding: 0.85rem 1.1rem;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        background: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .custom-card-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #2d3748;
+        margin: 0;
+    }
+
+    .custom-card-body {
+        padding: 1rem;
+    }
+    
+    /* Layout das colunas customizado */
+    .sidebar-column {
+        flex: 0 0 20%;
+        max-width: 20%;
+        padding-right: 0.5rem;
+        padding-left: 0.5rem;
+    }
+    
+    .main-column {
+        flex: 0 0 80%;
+        max-width: 80%;
+        padding-right: 0.5rem;
+        padding-left: 0.5rem;
+    }
+    
+    @media (max-width: 991.98px) {
+        .sidebar-column,
+        .main-column {
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
+    }
+    
+    /* Cards da sidebar (coluna esquerda) compactos */
+    .sidebar-column .custom-card {
+        margin-bottom: 0.5rem;
+    }
+    
+    .sidebar-column .custom-card-header {
+        padding: 0.5rem 0.7rem;
+    }
+    
+    .sidebar-column .custom-card-title {
+        font-size: 0.85rem;
+    }
+    
+    .sidebar-column .custom-card-body {
+        padding: 0.6rem 0.7rem;
+    }
+    
+    .sidebar-column .list-group-item {
+        padding: 0.5rem 0.7rem !important;
+    }
+    
+    .sidebar-column .list-group-item h6 {
+        font-size: 0.8rem;
+        margin-bottom: 0 !important;
+    }
+    
+    .sidebar-column .list-group-item small {
+        font-size: 0.7rem;
+    }
+    
+    .sidebar-column .list-group-item .bg-light {
+        padding: 0.35rem !important;
+    }
+    
+    .sidebar-column .list-group-item .bg-light i {
+        font-size: 0.85rem;
+    }
+    
+    .sidebar-column .cta-card .custom-card-body i {
+        font-size: 1.75rem !important;
+    }
+    
+    .sidebar-column .cta-card h5 {
+        font-size: 0.9rem;
+    }
+    
+    .sidebar-column .cta-card p {
+        font-size: 0.75rem;
+    }
+    
+    .sidebar-column .cta-card .btn {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.8rem;
+    }
+
+    /* Module Cards (Accordions) */
+    .module-card {
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 12px;
+        margin-bottom: 1rem;
+        background: #fff;
+        transition: all 0.2s;
+    }
+
+    .module-header {
+        padding: 1rem 1.25rem;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #f8f9fa;
+        border-radius: 12px;
+    }
+
+    .module-header:hover {
+        background: #f1f3f5;
+    }
+
+    .module-header[aria-expanded="true"] {
+        background: #eef2ff;
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+
+    .module-title {
+        font-weight: 600;
+        color: #4a5568;
+        margin: 0;
+    }
+
+    .module-content-collapse {
+        border-top: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    /* Tasks List */
+    .tasks-list-group .list-group-item {
+        border: none;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+        padding: 0.75rem 1.25rem;
+    }
+
+    .tasks-list-group .list-group-item:last-child {
+        border-bottom: none;
+    }
+
+    /* Progress Bar */
+    .progress-thick {
+        height: 12px;
+        border-radius: 10px;
+        background-color: #e2e8f0;
+        overflow: hidden;
+    }
+
+    .progress-thick .progress-bar {
+        background: var(--primary-gradient);
+    }
+
+    /* Timeline */
+    .timeline-list {
+        list-style: none;
+        padding: 0;
+        position: relative;
+    }
+
+    .timeline-list::before {
+        content: '';
+        position: absolute;
+        left: 20px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #e2e8f0;
+    }
+
+    .timeline-item {
+        position: relative;
+        padding-left: 50px;
+        margin-bottom: 1.5rem;
+    }
+
+    .timeline-icon {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background: white;
+        border: 2px solid #667eea;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #667eea;
+        z-index: 1;
+    }
+
+    .timeline-content {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 12px;
+        position: relative;
+    }
+
+    .timeline-content::before {
+        content: '';
+        position: absolute;
+        left: -8px;
+        top: 15px;
+        width: 16px;
+        height: 16px;
+        background: #f8f9fa;
+        transform: rotate(45deg);
+    }
+
+    /* CTA Card */
+    .cta-card {
+        background: linear-gradient(135deg, #fff5f5 0%, #fff 100%);
+        border: 2px dashed #fc8181;
+    }
+
+    .cta-title {
+        color: #c53030;
+        font-weight: 700;
+    }
+
+    /* ============================================
+       ESTILOS DO PLANO DE SUCESSO (HIERARQUIA)
+       ============================================ */
+    
+    .plano-sucesso-container {
+        max-height: calc(100vh - 300px);
+        overflow-y: auto;
+    }
+
+    /* Fase Card */
+    .fase-card {
+        background: linear-gradient(135deg, #f8fafc 0%, #fff 100%);
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        margin-bottom: 1rem;
+        overflow: hidden;
+        transition: all 0.2s ease;
+    }
+
+    .fase-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .fase-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1rem 1.25rem;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.2s ease;
+    }
+
+    .fase-header:hover {
+        filter: brightness(1.05);
+    }
+
+    .fase-header .fase-title {
+        font-weight: 700;
+        font-size: 1rem;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .fase-header .fase-progress {
+        font-size: 0.85rem;
+        opacity: 0.9;
+    }
+
+    .fase-header .chevron-icon {
+        transition: transform 0.3s ease;
+    }
+
+    .fase-header[aria-expanded="true"] .chevron-icon {
+        transform: rotate(180deg);
+    }
+
+    .fase-content {
+        padding: 1rem;
+    }
+
+    /* Grupo Card */
+    .grupo-card {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        margin-bottom: 0.75rem;
+        overflow: hidden;
+    }
+
+    .grupo-header {
+        background: #f1f5f9;
+        padding: 0.875rem 1rem;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.2s ease;
+        border-left: 4px solid #667eea;
+    }
+
+    .grupo-header:hover {
+        background: #e2e8f0;
+    }
+
+    .grupo-header .grupo-title {
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: #4a5568;
+        margin: 0;
+    }
+
+    .grupo-header .grupo-count {
+        font-size: 0.8rem;
+        color: #718096;
+    }
+
+    .grupo-content {
+        padding: 0.75rem;
+    }
+
+    /* Tarefa Item */
+    .tarefa-item {
+        background: #fafafa;
+        border: 1px solid #e8e8e8;
+        border-radius: 8px;
+        margin-bottom: 0.5rem;
+        transition: all 0.2s ease;
+    }
+
+    .tarefa-item:hover {
+        border-color: #cbd5e0;
+        background: #f7fafc;
+    }
+
+    .tarefa-item.concluida {
+        background: #f0fdf4;
+        border-color: #86efac;
+    }
+
+    .tarefa-item.concluida .tarefa-nome {
+        text-decoration: line-through;
+        color: #6b7280;
+    }
+
+    .tarefa-header {
+        padding: 0.75rem 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        position: relative;
+    }
+    
+    .tarefa-header.cursor-pointer {
+        cursor: pointer;
+    }
+
+    .tarefa-checkbox {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+        accent-color: #667eea;
+        background-color: white !important;
+    }
+    
+    .tarefa-checkbox:not(:checked) {
+        background-color: white !important;
+        appearance: checkbox;
+        -webkit-appearance: checkbox;
+    }
+
+    .tarefa-nome {
+        flex: 1;
+        font-size: 0.9rem;
+        color: #374151;
+        font-weight: 500;
+    }
+
+    .tarefa-status {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+
+    .tarefa-status.pendente {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .tarefa-status.concluido {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .tarefa-actions {
+        display: flex;
+        gap: 0.25rem;
+    }
+
+    .tarefa-actions .btn-icon {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        border: none;
+        background: transparent;
+        color: #6b7280;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .tarefa-actions .btn-icon:hover {
+        background: #e5e7eb;
+        color: #374151;
+    }
+
+    .tarefa-actions .btn-icon.has-comments {
+        color: #667eea;
+    }
+
+    /* Subtarefa Item */
+
+    /* Comentários Section */
+    .comentarios-section {
+        background: #f8fafc;
+        border-top: 1px solid #e2e8f0;
+        padding: 1rem;
+        margin-top: 0.5rem;
+        border-radius: 0 0 8px 8px;
+    }
+
+    .comentario-form {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .comentario-form textarea {
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        resize: none;
+        font-size: 0.9rem;
+    }
+
+    .comentario-form textarea:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .comentario-tipo-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: 2px solid transparent;
+    }
+
+    .comentario-tipo-tag.interno {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .comentario-tipo-tag.interno.active {
+        border-color: #1e40af;
+    }
+
+    .comentario-tipo-tag.externo {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .comentario-tipo-tag.externo.active {
+        border-color: #92400e;
+    }
+
+    .comentario-historico {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .comentario-item {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 0.875rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .comentario-item.externo {
+        border-left: 3px solid #f59e0b;
+    }
+
+    .comentario-item.interno {
+        border-left: 3px solid #3b82f6;
+    }
+
+    .comentario-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .comentario-autor {
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: #374151;
+    }
+
+    .comentario-data {
+        font-size: 0.75rem;
+        color: #9ca3af;
+    }
+
+    .comentario-texto {
+        font-size: 0.9rem;
+        color: #4b5563;
+        line-height: 1.5;
+    }
+
+    .comentario-imagem {
+        margin-top: 0.5rem;
+        max-width: 100%;
+        border-radius: 6px;
+    }
+
+    .btn-enviar-email {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: white;
+        border: none;
+        padding: 0.375rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-enviar-email:hover {
+        transform: scale(1.02);
+        box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+    }
+
+    /* Animações */
+    .collapse-content {
+        transition: all 0.3s ease;
+    }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 2rem;
+        color: #9ca3af;
+    }
+
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4 content-wrapper" id="main-content" data-implantacao-id="{{ implantacao.id }}"
+    data-email-usuario-logado="{{ email_usuario_logado }}">
+
+    <!-- Título da Página -->
+    <div class="page-title-header">
+        <h2>DETALHES DA IMPLANTAÇÃO</h2>
+    </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ category }} alert-dismissible fade show mb-3 shadow-sm" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <!-- Header Principal -->
+    <div class="implantacao-header d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <h1 class="mb-0">{{ implantacao.nome_empresa }}</h1>
+                <span class="badge-status">
+                    {% if implantacao.status == 'finalizada' %}Concluído
+                    {% elif implantacao.status == 'parada' %}Parada
+                    {% elif implantacao.status == 'cancelada' %}Cancelada
+                    {% elif implantacao.status == 'futura' %}Futura
+                    {% elif implantacao.status == 'nova' %}Nova
+                    {% else %}Em Andamento
+                    {% endif %}
+                </span>
+            </div>
+            <p class="mb-0 opacity-75 small"><i class="bi bi-person-circle me-1"></i>CS Responsável: <strong>{{
+                    implantacao.usuario_cs }}</strong></p>
+        </div>
+        <div class="mt-2 mt-md-0 d-flex gap-2">
+            <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm btn-light text-primary fw-bold shadow-sm">
+                <i class="bi bi-arrow-left me-1"></i>Voltar ao Dashboard
+            </a>
+            <button class="btn btn-sm btn-outline-light d-lg-none" type="button" data-bs-toggle="offcanvas"
+                data-bs-target="#mobileSidebar">
+                <i class="bi bi-list"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <!-- Sidebar (Coluna Esquerda) -->
+        <div class="sidebar-column">
+
+            <!-- Card Plano de Sucesso (Lógica Importante) -->
+            {% if plano_sucesso %}
+            <div class="custom-card border-primary border-top border-4">
+                <div class="custom-card-header">
+                    <h5 class="custom-card-title"><i class="bi bi-diagram-3-fill me-2 text-primary"></i>Plano Atual</h5>
+                    <div class="d-flex gap-1">
+                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
+                        data-bs-target="#modalSelecionarPlano">Alterar</button>
+                        <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal"
+                            data-bs-target="#modalRemoverPlano" title="Remover plano da implantação">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="custom-card-body">
+                    <h5 class="fw-bold mb-1">{{ plano_sucesso.nome }}</h5>
+                    <p class="text-muted small mb-3">{{ plano_sucesso.descricao }}</p>
+                    
+                    <!-- Info de datas da implantação -->
+                    <div class="plano-datas-info">
+                        <div class="data-item">
+                            <span class="data-label"><i class="bi bi-calendar-event me-1"></i>Início</span>
+                            <span class="data-value">{{ implantacao.data_inicio_efetivo_fmt_d or implantacao.data_criacao_fmt_d or 'Não definido' }}</span>
+                        </div>
+                        {% if plano_sucesso.dias_duracao %}
+                        <div class="data-item">
+                            <span class="data-label"><i class="bi bi-hourglass-split me-1"></i>Duração</span>
+                            <span class="data-value">{{ plano_sucesso.dias_duracao }} dias</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label"><i class="bi bi-calendar-check me-1"></i>Previsão Término</span>
+                            <span class="data-value destaque">{{ implantacao.data_previsao_termino_fmt_d or 'Calculando...' }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="custom-card cta-card mb-4">
+                <div class="custom-card-body text-center">
+                    <div class="mb-3 text-danger">
+                        <i class="bi bi-exclamation-circle-fill" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="cta-title mb-2">Nenhum Plano Definido</h5>
+                    <p class="text-muted small mb-3">Esta implantação ainda não possui um plano de sucesso vinculado.
+                        Selecione um para gerar as tarefas.</p>
+                    <button class="btn btn-danger w-100 fw-bold shadow-sm" data-bs-toggle="modal"
+                        data-bs-target="#modalSelecionarPlano">
+                        <i class="bi bi-plus-circle me-2"></i>Selecionar Plano Agora
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Card Ações Rápidas -->
+            <div class="custom-card">
+                <div class="custom-card-header">
+                    <h5 class="custom-card-title">Ações Rápidas</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    <button class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-3"
+                        data-bs-toggle="modal" data-bs-target="#adicionarTarefaModal">
+                        <div class="bg-light p-2 rounded text-primary"><i class="bi bi-plus-lg"></i></div>
+                        <div>
+                            <h6 class="mb-0 fw-bold">Adicionar Tarefa</h6>
+                            <small class="text-muted">Criar tarefa avulsa</small>
+                        </div>
+                    </button>
+                    <button class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-3"
+                        data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa">
+                        <div class="bg-light p-2 rounded text-info"><i class="bi bi-pencil-square"></i></div>
+                        <div>
+                            <h6 class="mb-0 fw-bold">Editar Detalhes</h6>
+                            <small class="text-muted">Dados da empresa</small>
+                        </div>
+                    </button>
+
+                    {% if implantacao.status == 'andamento' %}
+                    <button class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-3"
+                        data-bs-toggle="modal" data-bs-target="#modalFinalizar">
+                        <div class="bg-success bg-opacity-10 p-2 rounded text-success"><i class="bi bi-check-lg"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 fw-bold text-dark">Finalizar Implantação</h6>
+                            <small class="text-muted">Concluir processo</small>
+                        </div>
+                    </button>
+                    <button class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-3"
+                        data-bs-toggle="modal" data-bs-target="#modalParar">
+                        <div class="bg-warning bg-opacity-10 p-2 rounded text-warning"><i class="bi bi-pause-fill"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 fw-bold text-dark">Parar Implantação</h6>
+                            <small class="text-muted">Pausar temporariamente</small>
+                        </div>
+                    </button>
+                    {% elif implantacao.status == 'parada' %}
+                    <button class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-3"
+                        data-bs-toggle="modal" data-bs-target="#modalRetomar">
+                        <div class="bg-primary bg-opacity-10 p-2 rounded text-primary"><i class="bi bi-play-fill"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 fw-bold text-dark">Retomar Implantação</h6>
+                            <small class="text-muted">Continuar processo</small>
+                        </div>
+                    </button>
+                    {% endif %}
+
+                    <button class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-3"
+                        data-bs-toggle="modal" data-bs-target="#modalTransferir">
+                        <div class="bg-info bg-opacity-10 p-2 rounded text-info"><i class="bi bi-arrow-left-right"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 fw-bold text-dark">Transferir Implantação</h6>
+                            <small class="text-muted">Alterar CS responsável</small>
+                        </div>
+                    </button>
+
+                    {% if implantacao.status != 'cancelada' %}
+                    <button class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-3"
+                        data-bs-toggle="modal" data-bs-target="#modalCancelar">
+                        <div class="bg-warning bg-opacity-10 p-2 rounded text-warning"><i class="bi bi-x-circle"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 fw-bold text-dark">Cancelar Implantação</h6>
+                            <small class="text-muted">Cancelar processo</small>
+                        </div>
+                    </button>
+                    {% endif %}
+
+                    <button class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-3"
+                        data-bs-toggle="modal" data-bs-target="#modalExcluirImplantacao">
+                        <div class="bg-danger bg-opacity-10 p-2 rounded text-danger"><i class="bi bi-trash"></i></div>
+                        <div>
+                            <h6 class="mb-0 fw-bold text-dark">Excluir Implantação</h6>
+                            <small class="text-muted">Ação irreversível</small>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Card Detalhes da Empresa (Resumo) -->
+        </div>
+
+        <!-- Coluna Principal (Conteúdo) -->
+        <div class="main-column">
+
+            <!-- Card de Progresso -->
+            <div class="custom-card mb-4">
+                <div class="custom-card-body">
+                    <div class="d-flex justify-content-between align-items-end mb-2">
+                        <h5 class="fw-bold text-secondary mb-0">Progresso Geral</h5>
+                        <h3 class="fw-bold text-primary mb-0" id="progresso-valor">{{ progresso_porcentagem }}%</h3>
+                    </div>
+                    <div class="progress progress-thick">
+                        <div class="progress-bar" id="progress-total-bar" role="progressbar"
+                            style="width: {{ progresso_porcentagem }}%;" aria-valuenow="{{ progresso_porcentagem }}"
+                            aria-valuemin="0" aria-valuemax="100">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card Unificado: Plano de Sucesso + Linha do Tempo -->
+            <div class="custom-card" style="min-height: 400px;">
+                <div class="custom-card-header flex-column align-items-stretch gap-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="custom-card-title mb-0">
+                            <i class="bi bi-clipboard-data me-2 text-primary"></i>Acompanhamento
+                        </h5>
+                </div>
+                    
+                    <!-- Tabs de navegação -->
+                    <ul class="nav tab-switcher" id="contentTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="plano-tab" data-bs-toggle="tab" data-bs-target="#plano-content" type="button" role="tab">
+                                <i class="bi bi-diagram-3 me-1"></i>Plano de Sucesso
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="timeline-tab" data-bs-toggle="tab" data-bs-target="#timeline-content" type="button" role="tab">
+                                <i class="bi bi-clock-history me-1"></i>Linha do Tempo
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="tab-content">
+                    <!-- Tab: Plano de Sucesso -->
+                    <div class="tab-pane fade show active" id="plano-content" role="tabpanel">
+                        <div class="custom-card-body plano-sucesso-container" id="plano-hierarquia">
+                            {% if hierarquia and hierarquia.fases %}
+                                {% for fase in hierarquia.fases %}
+                                <div class="fase-card" data-fase-id="{{ fase.id }}">
+                                    <div class="fase-header" data-bs-toggle="collapse" data-bs-target="#fase-{{ fase.id }}" aria-expanded="false">
+                                        <h6 class="fase-title">
+                                            <i class="bi bi-layers-fill"></i>
+                                            {{ fase.nome }}
+                                            {% if fase.responsavel %}
+                                            <span class="badge bg-light text-dark ms-2" style="font-size: 0.65rem; font-weight: 500;">
+                                                <i class="bi bi-person-fill me-1"></i>{{ fase.responsavel }}
+                                            </span>
+                                            {% endif %}
+                                        </h6>
+                                        <div class="d-flex align-items-center gap-3">
+                                            <span class="fase-progress">
+                                                <span class="fase-progresso-valor" data-fase-id="{{ fase.id }}">0</span>%
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="collapse" id="fase-{{ fase.id }}">
+                                        <div class="fase-content">
+                                            {% if fase.grupos %}
+                                                {% for grupo in fase.grupos %}
+                                                <div class="grupo-card" data-grupo-id="{{ grupo.id }}">
+                                                    <div class="grupo-header" data-bs-toggle="collapse" data-bs-target="#grupo-{{ grupo.id }}" aria-expanded="false">
+                                                        <h6 class="grupo-title">
+                                                            <i class="bi bi-folder2 me-2"></i>{{ grupo.nome }}
+                                                            {% if grupo.responsavel %}
+                                                            <span class="badge bg-secondary bg-opacity-25 text-dark ms-2" style="font-size: 0.6rem; font-weight: 500;">
+                                                                <i class="bi bi-person me-1"></i>{{ grupo.responsavel }}
+                                                            </span>
+                                                            {% endif %}
+                                                        </h6>
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <span class="grupo-count">
+                                                                <span class="grupo-concluidas" data-grupo-id="{{ grupo.id }}">0</span>/{{ grupo.tarefas|length }} tarefas
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="collapse" id="grupo-{{ grupo.id }}">
+                                                        <div class="grupo-content">
+                                                            {% if grupo.tarefas %}
+                                                                {% for tarefa in grupo.tarefas %}
+                                                                {% set status_raw = tarefa.status or 'pendente' %}
+                                                                {% set status_lower = status_raw|lower %}
+                                                                {% if status_lower == 'concluida' %}
+                                                                    {% set status_tarefa = 'concluida' %}
+                                                                    {% set is_concluida = True %}
+                                                                {% elif status_lower == 'concluido' %}
+                                                                    {% set status_tarefa = 'concluida' %}
+                                                                    {% set is_concluida = True %}
+                                                                {% else %}
+                                                                    {% set status_tarefa = 'pendente' %}
+                                                                    {% set is_concluida = False %}
+                                                                {% endif %}
+                                                                <div class="tarefa-item {% if is_concluida %}concluida{% endif %}" 
+                                                                     data-tarefa-id="{{ tarefa.id }}"
+                                                                     data-tarefa-status="{{ status_tarefa }}">
+                                                                    <div class="tarefa-header">
+                                                                        <input type="checkbox" 
+                                                                               class="tarefa-checkbox" 
+                                                                               id="tarefa-{{ tarefa.id }}"
+                                                                               data-tarefa-id="{{ tarefa.id }}"
+                                                                               {% if is_concluida %}checked{% endif %}>
+                                                                        <label class="tarefa-nome" for="tarefa-{{ tarefa.id }}">
+                                                                            {{ tarefa.nome }}
+                                                                        </label>
+                                                                        <div class="tarefa-actions">
+                                                                            <button type="button" 
+                                                                                    class="btn-icon btn-toggle-comentarios" 
+                                                                                    data-tarefa-id="{{ tarefa.id }}"
+                                                                                    title="Comentários">
+                                                                                <i class="bi bi-chat-left-text"></i>
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                    
+
+                                                                    <!-- Comentários da Tarefa -->
+                                                                    <div class="comentarios-section collapse" id="comentarios-tarefa-{{ tarefa.id }}">
+                                                                        <div class="comentario-form">
+                                                                            <textarea class="form-control mb-2" 
+                                                                                      placeholder="Escreva um comentário..." 
+                                                                                      rows="2"
+                                                                                      id="comentario-texto-{{ tarefa.id }}"></textarea>
+                                                                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                                                                <div class="d-flex gap-2 align-items-center">
+                                                                                    <span class="comentario-tipo-tag interno active" 
+                                                                                          data-tipo="interno"
+                                                                                          data-tarefa-id="{{ tarefa.id }}">
+                                                                                        <i class="bi bi-lock-fill"></i> Interno
+                                                                                    </span>
+                                                                                    <span class="comentario-tipo-tag externo" 
+                                                                                          data-tipo="externo"
+                                                                                          data-tarefa-id="{{ tarefa.id }}">
+                                                                                        <i class="bi bi-globe"></i> Externo
+                                                                                    </span>
+                                                                                    <label class="btn btn-sm btn-outline-secondary mb-0">
+                                                                                        <i class="bi bi-image"></i>
+                                                                                        <input type="file" 
+                                                                                               class="d-none comentario-imagem-input" 
+                                                                                               accept="image/*"
+                                                                                               data-tarefa-id="{{ tarefa.id }}">
+                                                                                    </label>
+                                                                                </div>
+                                                                                <div class="d-flex gap-2">
+                                                                                    <button type="button" 
+                                                                                            class="btn btn-sm btn-primary btn-salvar-comentario"
+                                                                                            data-tarefa-id="{{ tarefa.id }}"
+                                                                                            data-tipo="tarefa">
+                                                                                        <i class="bi bi-send me-1"></i>Salvar
+                                                                                    </button>
+                                                                                    <button type="button" 
+                                                                                            class="btn-enviar-email d-none"
+                                                                                            data-tarefa-id="{{ tarefa.id }}"
+                                                                                            id="btn-email-{{ tarefa.id }}">
+                                                                                        <i class="bi bi-envelope me-1"></i>Enviar Email
+                                                                                    </button>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="comentario-historico" id="historico-tarefa-{{ tarefa.id }}">
+                                                                            <!-- Comentários carregados via JS -->
+                                                                            <div class="text-center text-muted small py-2">
+                                                                                <i class="bi bi-chat-left-text"></i> Nenhum comentário ainda
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                {% endfor %}
+                                                            {% else %}
+                                                            <div class="empty-state py-3">
+                                                                <i class="bi bi-inbox"></i>
+                                                                <p class="mb-0 small">Nenhuma tarefa neste grupo</p>
+                                                            </div>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                {% endfor %}
+                                            {% else %}
+                                            <div class="empty-state py-3">
+                                                <i class="bi bi-folder2-open"></i>
+                                                <p class="mb-0 small">Nenhum grupo nesta fase</p>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                            <div class="empty-state">
+                                <i class="bi bi-diagram-3"></i>
+                                <h6 class="text-muted">Nenhum plano aplicado</h6>
+                                <p class="small text-muted mb-3">Selecione um plano de sucesso para visualizar a estrutura de fases, ações e tarefas.</p>
+                                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalSelecionarPlano">
+                                    <i class="bi bi-plus-circle me-2"></i>Selecionar Plano
+                                </button>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Tab: Linha do Tempo -->
+                    <div class="tab-pane fade" id="timeline-content" role="tabpanel">
+                        <div class="custom-card-body" style="max-height: calc(100vh - 350px); overflow-y: auto;">
+                            <ul class="timeline-list">
+                        {% if not logs_timeline %}
+                        <li class="alert alert-light text-center small py-2">Nenhum evento registrado.</li>
+                        {% endif %}
+                        {% for log in logs_timeline %}
+                        <li class="timeline-item">
+                            <div class="timeline-icon">
+                                {% if log.tipo_evento == 'novo_comentario' %} <i
+                                    class="bi bi-chat-left-text-fill"></i>
+                                {% elif 'tarefa' in log.tipo_evento %} <i class="bi bi-check-circle-fill"></i>
+                                {% elif 'status' in log.tipo_evento %} <i class="bi bi-flag-fill"></i>
+                                {% else %} <i class="bi bi-info-circle-fill"></i>
+                                {% endif %}
+                            </div>
+                            <div class="timeline-content shadow-sm">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="fw-bold text-primary">{{ log.usuario_nome }}</span>
+                                    <span class="small text-muted">{{ log.data_criacao_fmt_dt_hr }}</span>
+                                </div>
+                                <p class="mb-0 text-secondary">{{ log.detalhes | safe | replace('\n', '<br>') }}
+                                </p>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Offcanvas Mobile Sidebar (Menu de Ações) -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="mobileSidebar">
+    <div class="offcanvas-header bg-light">
+        <h5 class="offcanvas-title">Menu de Ações</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body">
+        <div class="d-grid gap-2">
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalSelecionarPlano">
+                <i class="bi bi-diagram-3 me-2"></i>Plano de Sucesso
+            </button>
+            <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#adicionarTarefaModal">
+                <i class="bi bi-plus-lg me-2"></i>Adicionar Tarefa
+            </button>
+            <hr>
+            <button class="btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa">
+                Editar Detalhes
+            </button>
+            <!-- Mais botões mobile aqui se necessário -->
+        </div>
+    </div>
+</div>
+
+<!-- Modais Originais (Preservados para manter funcionalidade) -->
+<!-- Modal Detalhes Empresa -->
+<!-- Modal Remover Plano -->
+<div class="modal fade" id="modalRemoverPlano" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2"></i>Remover Plano</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('actions.remover_plano_implantacao') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
+                <div class="modal-body">
+                    <p>Tem certeza que deseja remover o plano <strong>{{ plano_sucesso.nome if plano_sucesso else '' }}</strong> desta implantação?</p>
+                    <p class="text-danger small mb-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Esta ação irá remover todas as fases, ações e tarefas associadas a este plano nesta implantação.
+                    </p>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Confirmar Remoção</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalDetalhesEmpresa" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title">Detalhes da Empresa</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('actions.atualizar_detalhes_empresa') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
+                <input type="hidden" name="redirect_to" value="detalhes">
+                <div class="modal-body">
+                    <!-- Seção: Responsável -->
+                    <h6 class="fw-bold text-primary mb-3"><i class="bi bi-person-circle me-2"></i>Responsável</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label">Nome do Responsável</label>
+                            <input type="text" class="form-control" name="responsavel_cliente"
+                                value="{{ implantacao.responsavel_cliente or '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Cargo</label>
+                            <input type="text" class="form-control" name="cargo_responsavel"
+                                value="{{ implantacao.cargo_responsavel or '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Email do Responsável</label>
+                            <input type="email" class="form-control" name="email_responsavel"
+                                value="{{ implantacao.email_responsavel or '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Telefone</label>
+                            <input type="text" class="form-control" name="telefone_responsavel"
+                                value="{{ implantacao.telefone_responsavel or '' }}">
+                        </div>
+                    </div>
+
+                    <!-- Seção: Datas -->
+                    <h6 class="fw-bold text-primary mb-3"><i class="bi bi-calendar-event me-2"></i>Datas</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label">Data Início Efetivo</label>
+                            <input type="text" class="form-control flatpickr-date" name="data_inicio_efetivo"
+                                value="{{ implantacao.data_inicio_efetivo_fmt_d or '' }}" placeholder="DD/MM/AAAA">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Data Início Produção</label>
+                            <input type="text" class="form-control flatpickr-date" name="data_inicio_producao"
+                                value="{{ implantacao.data_inicio_producao_fmt_d or '' }}" placeholder="DD/MM/AAAA">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Data Final Implantação</label>
+                            <input type="text" class="form-control flatpickr-date" name="data_final_implantacao"
+                                value="{{ implantacao.data_final_implantacao_fmt_d or '' }}" placeholder="DD/MM/AAAA">
+                        </div>
+                    </div>
+
+                    <!-- Seção: Informações Comerciais -->
+                    <h6 class="fw-bold text-primary mb-3"><i class="bi bi-briefcase me-2"></i>Informações Comerciais</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label">ID Favorecido</label>
+                            <input type="text" class="form-control" name="id_favorecido"
+                                value="{{ implantacao.id_favorecido or '' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Nível de Receita</label>
+                            <input type="text" class="form-control" name="nivel_receita"
+                                value="{{ implantacao.nivel_receita or '' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Valor Atribuído</label>
+                            <input type="text" class="form-control" name="valor_atribuido"
+                                value="{{ implantacao.valor_atribuido or '' }}" placeholder="R$ 0,00">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Chave OAMD</label>
+                            <input type="text" class="form-control" name="chave_oamd"
+                                value="{{ implantacao.chave_oamd or '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Tela de Apoio (Link)</label>
+                            <input type="url" class="form-control" name="tela_apoio_link"
+                                value="{{ implantacao.tela_apoio_link or '' }}" placeholder="https://...">
+                        </div>
+                    </div>
+
+                    <!-- Seção: Perfil do Negócio -->
+                    <h6 class="fw-bold text-primary mb-3"><i class="bi bi-building me-2"></i>Perfil do Negócio</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label">Segmento</label>
+                            <input type="text" class="form-control" name="seguimento"
+                                value="{{ implantacao.seguimento or '' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Tipos de Planos</label>
+                            <input type="text" class="form-control" name="tipos_planos"
+                                value="{{ implantacao.tipos_planos or '' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Alunos Ativos</label>
+                            <input type="number" class="form-control" name="alunos_ativos"
+                                value="{{ implantacao.alunos_ativos or 0 }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Sistema Anterior</label>
+                            <input type="text" class="form-control" name="sistema_anterior"
+                                value="{{ implantacao.sistema_anterior or '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Recorrência</label>
+                            <input type="text" class="form-control" name="recorrencia_usa"
+                                value="{{ implantacao.recorrencia_usa or '' }}">
+                        </div>
+                    </div>
+
+                    <!-- Seção: Recursos -->
+                    <h6 class="fw-bold text-primary mb-3"><i class="bi bi-gear me-2"></i>Recursos</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-3">
+                            <label class="form-label">Catraca</label>
+                            <select class="form-select" name="catraca">
+                                <option value="Não definido" {% if implantacao.catraca == 'Não definido' %}selected{% endif %}>Não definido</option>
+                                <option value="Sim" {% if implantacao.catraca == 'Sim' %}selected{% endif %}>Sim</option>
+                                <option value="Não" {% if implantacao.catraca == 'Não' %}selected{% endif %}>Não</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Facial</label>
+                            <select class="form-select" name="facial">
+                                <option value="Não definido" {% if implantacao.facial == 'Não definido' %}selected{% endif %}>Não definido</option>
+                                <option value="Sim" {% if implantacao.facial == 'Sim' %}selected{% endif %}>Sim</option>
+                                <option value="Não" {% if implantacao.facial == 'Não' %}selected{% endif %}>Não</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Diária</label>
+                            <select class="form-select" name="diaria">
+                                <option value="Não definido" {% if implantacao.diaria == 'Não definido' %}selected{% endif %}>Não definido</option>
+                                <option value="Sim" {% if implantacao.diaria == 'Sim' %}selected{% endif %}>Sim</option>
+                                <option value="Não" {% if implantacao.diaria == 'Não' %}selected{% endif %}>Não</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Freepass</label>
+                            <select class="form-select" name="freepass">
+                                <option value="Não definido" {% if implantacao.freepass == 'Não definido' %}selected{% endif %}>Não definido</option>
+                                <option value="Sim" {% if implantacao.freepass == 'Sim' %}selected{% endif %}>Sim</option>
+                                <option value="Não" {% if implantacao.freepass == 'Não' %}selected{% endif %}>Não</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Importação</label>
+                            <select class="form-select" name="importacao">
+                                <option value="Não definido" {% if implantacao.importacao == 'Não definido' %}selected{% endif %}>Não definido</option>
+                                <option value="Sim" {% if implantacao.importacao == 'Sim' %}selected{% endif %}>Sim</option>
+                                <option value="Não" {% if implantacao.importacao == 'Não' %}selected{% endif %}>Não</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Boleto</label>
+                            <select class="form-select" name="boleto">
+                                <option value="Não definido" {% if implantacao.boleto == 'Não definido' %}selected{% endif %}>Não definido</option>
+                                <option value="Sim" {% if implantacao.boleto == 'Sim' %}selected{% endif %}>Sim</option>
+                                <option value="Não" {% if implantacao.boleto == 'Não' %}selected{% endif %}>Não</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Nota Fiscal</label>
+                            <select class="form-select" name="nota_fiscal">
+                                <option value="Não definido" {% if implantacao.nota_fiscal == 'Não definido' %}selected{% endif %}>Não definido</option>
+                                <option value="Sim" {% if implantacao.nota_fiscal == 'Sim' %}selected{% endif %}>Sim</option>
+                                <option value="Não" {% if implantacao.nota_fiscal == 'Não' %}selected{% endif %}>Não</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Seção: Equipe Interna -->
+                    <h6 class="fw-bold text-primary mb-3"><i class="bi bi-people me-2"></i>Equipe Interna</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label">Responsável Estratégico</label>
+                            <input type="text" class="form-control" name="resp_estrategico_nome"
+                                value="{{ implantacao.resp_estrategico_nome or '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Responsável Onboarding</label>
+                            <input type="text" class="form-control" name="resp_onb_nome"
+                                value="{{ implantacao.resp_onb_nome or '' }}">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Observações do Estratégico</label>
+                            <textarea class="form-control" name="resp_estrategico_obs" rows="2">{{ implantacao.resp_estrategico_obs or '' }}</textarea>
+                        </div>
+                    </div>
+
+                    <!-- Seção: Contatos Adicionais -->
+                    <h6 class="fw-bold text-primary mb-3"><i class="bi bi-telephone me-2"></i>Contatos Adicionais</h6>
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label">Contatos</label>
+                            <textarea class="form-control" name="contatos" rows="3" placeholder="Lista de contatos adicionais...">{{ implantacao.contatos or '' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Finalizar -->
+<div class="modal fade" id="modalFinalizar" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title">Finalizar Implantação</h5><button type="button" class="btn-close"
+                    data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('actions.finalizar_implantacao') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Só é permitido finalizar se todas as tarefas
+                        obrigatórias estiverem concluídas.
+                    </div>
+                    <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
+                    <input type="hidden" name="redirect_to" value="detalhes">
+                    <div class="mb-3">
+                        <label for="data_finalizacao" class="form-label fw-bold">Data da Finalização *</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="data_finalizacao" name="data_finalizacao"
+                                required placeholder="DD/MM/AAAA">
+                            <button class="btn btn-outline-secondary" type="button" id="btn_cal_data_finalizacao"><i
+                                    class="bi bi-calendar3"></i></button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Confirmar Finalização</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Parar -->
+<div class="modal fade" id="modalParar" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title">Parar Implantação</h5><button type="button" class="btn-close"
+                    data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('actions.parar_implantacao') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
+                    <div class="mb-3">
+                        <label for="data_parada" class="form-label fw-bold">Data da Parada *</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="data_parada" name="data_parada" required
+                                placeholder="DD/MM/AAAA">
+                            <button class="btn btn-outline-secondary" type="button" id="btn_cal_data_parada"><i
+                                    class="bi bi-calendar3"></i></button>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="motivo_parada" class="form-label">Motivo *</label>
+                        <select class="form-select" id="motivo_parada" name="motivo_parada" required>
+                            <option value="">Selecione...</option>
+                            {% for motivo in justificativas_parada %}
+                            <option value="{{ motivo }}">{{ motivo }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Parar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Retomar -->
+<div class="modal fade" id="modalRetomar" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title">Retomar Implantação</h5><button type="button" class="btn-close"
+                    data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('actions.retomar_implantacao') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <p>Deseja retomar esta implantação e alterar o status para "Em Andamento"?</p>
+                    <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
+                    <input type="hidden" name="redirect_to" value="detalhes">
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Retomar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Reabrir -->
+<div class="modal fade" id="modalReabrir" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title">Reabrir Implantação</h5><button type="button" class="btn-close"
+                    data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('actions.reabrir_implantacao') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <p>A implantação voltará para o status "Em Andamento". Confirmar?</p>
+                    <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
+                    <input type="hidden" name="redirect_to" value="detalhes">
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Reabrir</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Adicionar Tarefa -->
+<div class="modal fade" id="adicionarTarefaModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title">Adicionar Tarefa Avulsa</h5><button type="button" class="btn-close"
+                    data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('actions.adicionar_tarefa') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
+                    <div class="mb-3">
+                        <label class="form-label">Nome da Tarefa</label>
+                        <input type="text" class="form-control" name="tarefa_filho" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Módulo (Grupo)</label>
+                        <select class="form-select" name="tarefa_pai" required>
+                            <option value="">Selecione...</option>
+                            {% for modulo in todos_modulos %}
+                            <option value="{{ modulo }}">{{ modulo }}</option>
+                            {% endfor %}
+                            <option value="Outros">Outros</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tag</label>
+                        <select class="form-select" name="tag">
+                            <option value="Ação interna">Ação interna</option>
+                            <option value="Reunião">Reunião</option>
+                            <option value="Configuração">Configuração</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Adicionar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Transferir -->
+<div class="modal fade" id="modalTransferir" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title">Transferir CS</h5><button type="button" class="btn-close"
+                    data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('actions.transferir_implantacao') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <p>Transferir <strong>{{ implantacao.nome_empresa }}</strong> de <strong>{{ implantacao.usuario_cs
+                            }}</strong> para:</p>
+                    <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
+                    <div class="mb-3">
+                        <label class="form-label">Novo CS</label>
+                        <select class="form-select" name="novo_usuario_cs" required>
+                            <option value="">Selecione...</option>
+                            {% for user in all_cs_users %}
+                            {% if user.usuario != implantacao.usuario_cs %}
+                            <option value="{{ user.usuario }}">{{ user.nome }} ({{ user.usuario }})</option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-info text-white">Confirmar Transferência</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Excluir -->
+<div class="modal fade" id="modalExcluirImplantacao" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title text-danger">Excluir Implantação</h5><button type="button" class="btn-close"
+                    data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('actions.excluir_implantacao') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <h5 class="text-danger fw-bold"><i class="bi bi-exclamation-octagon-fill me-2"></i>Atenção!
+                        Irreversível!</h5>
+                    <p>Tem certeza que deseja excluir permanentemente a implantação de <strong>{{
+                            implantacao.nome_empresa }}</strong>?</p>
+                    <p class="text-muted small">Todos os dados, tarefas e histórico serão perdidos.</p>
+                    <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Excluir Permanentemente</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Cancelar -->
+<div class="modal fade" id="modalCancelar" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title text-danger">Cancelar Implantação</h5><button type="button" class="btn-close"
+                    data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('actions.cancelar_implantacao') }}" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <p class="fw-bold">Deseja realmente cancelar esta implantação?</p>
+                    <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Data do Cancelamento *</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="data_cancelamento" name="data_cancelamento"
+                                required placeholder="DD/MM/AAAA">
+                            <button class="btn btn-outline-secondary" type="button" id="btn_cal_data_cancelamento"><i
+                                    class="bi bi-calendar3"></i></button>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Motivo *</label>
+                        <textarea class="form-control" name="motivo_cancelamento" rows="3" required
+                            placeholder="Descreva o motivo..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Comprovante (Print/PDF) *</label>
+                        <input type="file" class="form-control" name="comprovante_cancelamento"
+                            accept="image/*, application/pdf" required>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Voltar</button>
+                    <button type="submit" class="btn btn-danger">Confirmar Cancelamento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script>
+    // Configurações e dados globais
+    const CONFIG = {
+        implantacaoId: document.getElementById('main-content')?.dataset?.implantacaoId,
+        emailUsuarioLogado: document.getElementById('main-content')?.dataset?.emailUsuarioLogado,
+        userEmail: document.getElementById('main-content')?.dataset?.emailUsuarioLogado || '',
+        emailResponsavel: '{{ implantacao.email_responsavel or "" }}',
+        csrfToken: document.querySelector('input[name="csrf_token"]')?.value || '',
+        isManager: {{ 'true' if g.perfil and g.perfil.get('perfil_acesso') in ['Administrador', 'Gerente', 'Coordenador'] else 'false' }}
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+        console.log('🚀 [INIT] ==========================================');
+        console.log('🚀 [INIT] DOMContentLoaded - Script carregado!');
+        console.log('🚀 [INIT] ==========================================');
+        
+        // Flatpickr init - Configuração PT-BR (DD/MM/AAAA)
+        if (window.flatpickr) {
+            var config = { 
+                dateFormat: 'Y-m-d', 
+                altInput: true, 
+                altFormat: 'd/m/Y', 
+                allowInput: true,
+                clickOpens: true,
+                parseDate: function(datestr, format) {
+                    // Validar formato DD/MM/AAAA
+                    var regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+                    var match = datestr.match(regex);
+                    if (!match) return null;
+                    
+                    var day = parseInt(match[1], 10);
+                    var month = parseInt(match[2], 10) - 1; // JavaScript months are 0-indexed
+                    var year = parseInt(match[3], 10);
+                    
+                    // Validar se a data é válida
+                    var date = new Date(year, month, day);
+                    if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) {
+                        return null;
+                    }
+                    
+                    return date;
+                },
+                locale: {
+                    firstDayOfWeek: 1,
+                    weekdays: {
+                        shorthand: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
+                        longhand: ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']
+                    },
+                    months: {
+                        shorthand: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+                        longhand: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+                    }
+                }
+            };
+            
+            // Função para adicionar máscara e validação de data
+            function setupDateInputMask(flatpickrInstance) {
+                if (!flatpickrInstance || !flatpickrInstance.altInput) return;
+                
+                var altInput = flatpickrInstance.altInput;
+                
+                // Máscara de entrada: apenas números e barras
+                altInput.addEventListener('input', function(e) {
+                    var value = this.value.replace(/[^\d\/]/g, '');
+                    
+                    // Limitar tamanho
+                    if (value.length > 10) {
+                        value = value.substring(0, 10);
+                    }
+                    
+                    // Adicionar barras automaticamente
+                    if (value.length >= 2 && value[2] !== '/') {
+                        value = value.substring(0, 2) + '/' + value.substring(2);
+                    }
+                    if (value.length >= 5 && value[5] !== '/') {
+                        value = value.substring(0, 5) + '/' + value.substring(5);
+                    }
+                    
+                    this.value = value;
+                });
+                
+                // Validar ao perder o foco
+                altInput.addEventListener('blur', function(e) {
+                    var value = this.value.trim();
+                    if (value && value.length === 10) {
+                        var regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+                        if (!regex.test(value)) {
+                            this.classList.add('is-invalid');
+                            return;
+                        }
+                        
+                        var match = value.match(regex);
+                        var day = parseInt(match[1], 10);
+                        var month = parseInt(match[2], 10);
+                        var year = parseInt(match[3], 10);
+                        
+                        // Validar se a data é válida
+                        if (day < 1 || day > 31 || month < 1 || month > 12 || year < 1900 || year > 2100) {
+                            this.classList.add('is-invalid');
+                            return;
+                        }
+                        
+                        var date = new Date(year, month - 1, day);
+                        if (date.getDate() !== day || date.getMonth() !== month - 1 || date.getFullYear() !== year) {
+                            this.classList.add('is-invalid');
+                            return;
+                        }
+                        
+                        this.classList.remove('is-invalid');
+                        // Atualizar o flatpickr com a data válida
+                        if (flatpickrInstance) {
+                            flatpickrInstance.setDate(date, false);
+                        }
+                    } else if (value && value.length > 0) {
+                        this.classList.add('is-invalid');
+                    }
+                });
+            }
+            
+            // Configurar campos de data com IDs específicos
+            ['data_finalizacao', 'data_parada', 'data_cancelamento'].forEach(id => {
+                var input = document.getElementById(id);
+                if (input) {
+                    var fp = window.flatpickr(input, config);
+                    setupDateInputMask(fp);
+                }
+            });
+            
+            // Configurar campos flatpickr-date
+            document.querySelectorAll('.flatpickr-date').forEach(input => {
+                var fp = window.flatpickr(input, config);
+                setupDateInputMask(fp);
+            });
+
+            ['btn_cal_data_parada', 'btn_cal_data_cancelamento', 'btn_cal_data_finalizacao'].forEach(id => {
+                var btn = document.getElementById(id);
+                if (btn) btn.addEventListener('click', () => {
+                    var input = btn.previousElementSibling;
+                    if (input && input._flatpickr) input._flatpickr.open();
+                });
+            });
+        }
+
+        // FUNÇÕES DE ATUALIZAÇÃO DE BADGES REMOVIDAS
+        // As checkboxes continuam funcionando e salvando no backend
+
+        // ========================================
+        // SISTEMA DE PROGRESSO
+        // ========================================
+        function computeProgress() {
+            const tarefaCheckboxes = document.querySelectorAll('.tarefa-checkbox');
+            
+            // Calcular progresso geral (apenas tarefas)
+            const total = tarefaCheckboxes.length;
+            const done = Array.from(tarefaCheckboxes).filter(cb => cb.checked).length;
+            const pct = total ? Math.round((done / total) * 100) : 0;
+
+            const bar = document.getElementById('progress-total-bar');
+            const valorEl = document.getElementById('progresso-valor');
+            if (bar) {
+                bar.style.width = pct + '%';
+                bar.setAttribute('aria-valuenow', pct);
+            }
+            if (valorEl) valorEl.textContent = pct + '%';
+        }
+
+        // ========================================
+        // TOGGLE TAREFA (CONCLUIR/PENDENTE)
+        // ========================================
+        // Prevenir que labels com no-checkbox-toggle marquem o checkbox automaticamente
+        document.querySelectorAll('.tarefa-nome.no-checkbox-toggle').forEach(label => {
+            label.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                // Não fazer nada - apenas prevenir o comportamento padrão do label
+            });
+        });
+        
+        const tarefaCheckboxesForEvent = document.querySelectorAll('.tarefa-checkbox');
+        console.log('🔍 [INIT] Tarefa checkboxes encontradas:', tarefaCheckboxesForEvent.length);
+        tarefaCheckboxesForEvent.forEach((checkbox, index) => {
+            console.log(`  → Checkbox ${index + 1}:`, checkbox.dataset.tarefaId);
+            checkbox.addEventListener('change', async function() {
+                const tarefaId = this.dataset.tarefaId;
+                const concluido = this.checked;
+
+                try {
+                    const response = await fetch(`/api/toggle_tarefa_h/${tarefaId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRFToken': CONFIG.csrfToken
+                        },
+                        body: JSON.stringify({ concluido })
+                    });
+
+                    if (!response.ok) {
+                        this.checked = !concluido;
+                        showToast('Erro ao atualizar tarefa', 'error');
+                        return;
+                    }
+
+                    const data = await response.json();
+                    if (data.ok || data.success) {
+                        computeProgress();
+                        showToast('Tarefa atualizada', 'success', 2000);
+                    } else {
+                        this.checked = !concluido;
+                        showToast('Erro ao atualizar tarefa', 'error');
+                    }
+                } catch (error) {
+                    this.checked = !concluido;
+                    showToast('Erro ao comunicar com o servidor', 'error');
+                }
+            });
+        });
+
+        // SUBTAREFAS REMOVIDAS - Sistema simplificado
+
+        // ========================================
+        // TOGGLE SUBTAREFAS (EXPANDIR/COLAPSAR)
+        // ========================================
+        // Removido - agora o comportamento é padrão via data-bs-toggle no tarefa-header
+        // O clique no tarefa-header expande/colapsa as subtarefas automaticamente
+
+        // ========================================
+        // TOGGLE COMENTÁRIOS (EXPANDIR/COLAPSAR)
+        // ========================================
+        document.querySelectorAll('.btn-toggle-comentarios').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const tarefaId = this.dataset.tarefaId;
+                const comentariosSection = document.getElementById(`comentarios-tarefa-${tarefaId}`);
+                
+                if (comentariosSection) {
+                    const isShown = comentariosSection.classList.contains('show');
+                    
+                    if (!isShown) {
+                        // Carregar comentários ao expandir
+                        await carregarComentarios(tarefaId, 'tarefa');
+                    }
+                    
+                    const bsCollapse = new bootstrap.Collapse(comentariosSection, { toggle: true });
+                }
+            });
+        });
+
+        // ========================================
+        // TOGGLE COMENTÁRIOS SUBTAREFA (EXPANDIR/COLAPSAR)
+        // ========================================
+        document.querySelectorAll('.btn-toggle-comentarios-subtarefa').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const subtarefaId = this.dataset.subtarefaId;
+                const comentariosSection = document.getElementById(`comentarios-subtarefa-${subtarefaId}`);
+                
+                if (comentariosSection) {
+                    const isShown = comentariosSection.classList.contains('show');
+                    
+                    if (!isShown) {
+                        // Carregar comentários ao expandir
+                        await carregarComentarios(subtarefaId, 'subtarefa');
+                    }
+                    
+                    const bsCollapse = new bootstrap.Collapse(comentariosSection, { toggle: true });
+                }
+            });
+        });
+
+        // ========================================
+        // TIPO DE COMENTÁRIO (INTERNO/EXTERNO)
+        // ========================================
+        document.querySelectorAll('.comentario-tipo-tag').forEach(tag => {
+            tag.addEventListener('click', function() {
+                const tarefaId = this.dataset.tarefaId || this.dataset.subtarefaId;
+                const tipo = this.dataset.tipo;
+                
+                // Toggle active state
+                const container = this.closest('.d-flex');
+                container.querySelectorAll('.comentario-tipo-tag').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+
+                // Mostrar/ocultar botão de email para externo
+                const btnEmail = document.getElementById(`btn-email-${tarefaId}`) || document.getElementById(`btn-email-subtarefa-${tarefaId}`);
+                if (btnEmail) {
+                    btnEmail.classList.toggle('d-none', tipo !== 'externo');
+                }
+            });
+        });
+
+        // ========================================
+        // EXCLUIR COMENTÁRIO
+        // ========================================
+        document.body.addEventListener('click', async function(e) {
+            if (e.target.closest('.btn-excluir-comentario')) {
+                const btn = e.target.closest('.btn-excluir-comentario');
+                const comentarioId = btn.dataset.comentarioId;
+                
+                const confirmed = await showConfirm({
+                    title: 'Excluir Comentário',
+                    message: 'Tem certeza que deseja excluir este comentário? Esta ação não pode ser desfeita.',
+                    confirmText: 'Excluir',
+                    cancelText: 'Cancelar',
+                    type: 'danger',
+                    icon: 'bi-trash-fill'
+                });
+                
+                if (!confirmed) {
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(`/api/excluir_comentario_h/${comentarioId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-CSRFToken': CONFIG.csrfToken
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('Erro HTTP:', response.status, errorText);
+                        showToast('Erro ao excluir comentário: ' + (errorText || `Status ${response.status}`), 'error');
+                        return;
+                    }
+
+                    const contentType = response.headers.get('content-type') || '';
+                    
+                    if (contentType.includes('application/json')) {
+                        const data = await response.json();
+                        if (!data.ok && !data.success) {
+                            showToast('Erro ao excluir comentário: ' + (data.error || 'Erro desconhecido'), 'error');
+                            return;
+                        }
+                    } else if (contentType.includes('text/html')) {
+                        // HTML retornado (HX-Request), considerar sucesso
+                        console.log('Resposta HTML recebida (HX-Request)');
+                    } else {
+                        // Tentar parsear como JSON
+                        try {
+                            const text = await response.text();
+                            const data = JSON.parse(text);
+                            if (!data.ok && !data.success) {
+                                showToast('Erro ao excluir comentário: ' + (data.error || 'Erro desconhecido'), 'error');
+                                return;
+                            }
+                        } catch (e) {
+                            console.warn('Resposta não é JSON nem HTML, assumindo sucesso');
+                        }
+                    }
+                    
+                    const comentarioItem = btn.closest('.comentario-item');
+                    const tipo = comentarioItem.closest('[id^="historico-tarefa"]') ? 'tarefa' : 'subtarefa';
+                    const itemId = comentarioItem.closest('[id^="historico-"]').id.replace('historico-tarefa-', '').replace('historico-subtarefa-', '');
+                    
+                    comentarioItem.remove();
+                    
+                    // Recarregar comentários
+                    await carregarComentarios(itemId, tipo);
+                    showToast('Comentário excluído com sucesso', 'success');
+                } catch (error) {
+                    console.error('Erro:', error);
+                    showToast('Erro ao comunicar com o servidor: ' + error.message, 'error');
+                }
+            }
+        });
+
+        // ========================================
+        // SALVAR COMENTÁRIO
+        // ========================================
+        document.querySelectorAll('.btn-salvar-comentario').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const tarefaId = this.dataset.tarefaId;
+                const tipoItem = this.dataset.tipo || 'tarefa';
+                const textarea = document.getElementById(`comentario-texto-${tarefaId}`);
+                const texto = textarea?.value?.trim();
+                
+                if (!texto) {
+                    showToast('Digite um comentário', 'warning');
+                    return;
+                }
+
+                const tipoTag = document.querySelector(`.comentario-tipo-tag.active[data-tarefa-id="${tarefaId}"]`);
+                const visibilidade = tipoTag?.dataset?.tipo || 'interno';
+
+                // Verificar se há imagem
+                const imagemInput = document.querySelector(`.comentario-imagem-input[data-tarefa-id="${tarefaId}"]`);
+
+                this.disabled = true;
+                this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Salvando...';
+
+                try {
+                    // Usar FormData para suportar upload de imagem
+                    const formData = new FormData();
+                    formData.append('comentario', texto);
+                    formData.append('visibilidade', visibilidade);
+                    
+                    if (imagemInput && imagemInput.files[0]) {
+                        formData.append('imagem', imagemInput.files[0]);
+                    }
+                    
+                    const response = await fetch(`/api/adicionar_comentario_h/${tipoItem}/${tarefaId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-CSRFToken': CONFIG.csrfToken
+                        },
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('Erro HTTP:', response.status, errorText);
+                        showToast('Erro ao salvar comentário: ' + (errorText || `Status ${response.status}`), 'error');
+                        return;
+                    }
+
+                    const contentType = response.headers.get('content-type') || '';
+                    let data;
+                    if (contentType.includes('application/json')) {
+                        data = await response.json();
+                    } else if (contentType.includes('text/html')) {
+                        // Se retornou HTML (HX-Request), considerar sucesso
+                        console.log('Resposta HTML recebida (HX-Request)');
+                        data = { ok: true, success: true };
+                    } else {
+                        // Tentar parsear como JSON mesmo sem content-type correto
+                        try {
+                            const text = await response.text();
+                            data = JSON.parse(text);
+                        } catch (e) {
+                            console.warn('Resposta não é JSON nem HTML, assumindo sucesso');
+                            data = { ok: true, success: true };
+                        }
+                    }
+                    
+                    if (data.ok || data.success) {
+                        textarea.value = '';
+                        if (imagemInput) imagemInput.value = '';
+                        await carregarComentarios(tarefaId, tipoItem);
+                        
+                        // Atualizar ícone para indicar que tem comentários
+                        const btnComentarios = document.querySelector(`.btn-toggle-comentarios[data-tarefa-id="${tarefaId}"]`);
+                        if (btnComentarios) btnComentarios.classList.add('has-comments');
+                        
+                        showToast('Comentário salvo com sucesso!', 'success');
+                    } else {
+                        showToast('Erro ao salvar comentário: ' + (data.error || 'Erro desconhecido'), 'error');
+                    }
+                } catch (error) {
+                    console.error('Erro:', error);
+                    showToast('Erro ao comunicar com o servidor: ' + error.message, 'error');
+                } finally {
+                    this.disabled = false;
+                    this.innerHTML = '<i class="bi bi-send me-1"></i>Salvar';
+                }
+            });
+        });
+
+        // ========================================
+        // SALVAR COMENTÁRIO SUBTAREFA
+        // ========================================
+        document.querySelectorAll('.btn-salvar-comentario-subtarefa').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const subtarefaId = this.dataset.subtarefaId;
+                const textarea = document.getElementById(`comentario-texto-subtarefa-${subtarefaId}`);
+                const texto = textarea?.value?.trim();
+                
+                if (!texto) {
+                    showToast('Digite um comentário', 'warning');
+                    return;
+                }
+
+                const tipoTag = document.querySelector(`.comentario-tipo-tag.active[data-subtarefa-id="${subtarefaId}"]`);
+                const visibilidade = tipoTag?.dataset?.tipo || 'interno';
+
+                // Verificar se há imagem
+                const imagemInput = document.querySelector(`.comentario-imagem-input-subtarefa[data-subtarefa-id="${subtarefaId}"]`);
+
+                this.disabled = true;
+                this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Salvando...';
+
+                try {
+                    // Usar FormData para suportar upload de imagem
+                    const formData = new FormData();
+                    formData.append('comentario', texto);
+                    formData.append('visibilidade', visibilidade);
+                    
+                    if (imagemInput && imagemInput.files[0]) {
+                        formData.append('imagem', imagemInput.files[0]);
+                    }
+                    
+                    const response = await fetch(`/api/adicionar_comentario_h/subtarefa/${subtarefaId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-CSRFToken': CONFIG.csrfToken
+                        },
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('Erro HTTP:', response.status, errorText);
+                        showToast('Erro ao salvar comentário: ' + (errorText || `Status ${response.status}`), 'error');
+                        return;
+                    }
+
+                    const contentType = response.headers.get('content-type') || '';
+                    let data;
+                    if (contentType.includes('application/json')) {
+                        data = await response.json();
+                    } else if (contentType.includes('text/html')) {
+                        // Se retornou HTML (HX-Request), considerar sucesso
+                        console.log('Resposta HTML recebida (HX-Request)');
+                        data = { ok: true, success: true };
+                    } else {
+                        // Tentar parsear como JSON mesmo sem content-type correto
+                        try {
+                            const text = await response.text();
+                            data = JSON.parse(text);
+                        } catch (e) {
+                            console.warn('Resposta não é JSON nem HTML, assumindo sucesso');
+                            data = { ok: true, success: true };
+                        }
+                    }
+                    
+                    if (data.ok || data.success) {
+                        textarea.value = '';
+                        if (imagemInput) imagemInput.value = '';
+                        await carregarComentarios(subtarefaId, 'subtarefa');
+                        
+                        // Atualizar ícone para indicar que tem comentários
+                        const btnComentarios = document.querySelector(`.btn-toggle-comentarios-subtarefa[data-subtarefa-id="${subtarefaId}"]`);
+                        if (btnComentarios) btnComentarios.classList.add('has-comments');
+                        showToast('Comentário salvo com sucesso!', 'success');
+                    } else {
+                        showToast('Erro ao salvar comentário: ' + (data.error || 'Erro desconhecido'), 'error');
+                    }
+                } catch (error) {
+                    console.error('Erro:', error);
+                    showToast('Erro ao comunicar com o servidor: ' + error.message, 'error');
+                } finally {
+                    this.disabled = false;
+                    this.innerHTML = '<i class="bi bi-send me-1"></i>Salvar';
+                }
+            });
+        });
+
+        // ========================================
+        // ENVIAR EMAIL (COMENTÁRIO EXTERNO)
+        // ========================================
+        document.querySelectorAll('.btn-enviar-email').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const tarefaId = this.dataset.tarefaId;
+                const textarea = document.getElementById(`comentario-texto-${tarefaId}`);
+                const texto = textarea?.value?.trim();
+                
+                if (!texto) {
+                    showToast('Digite uma mensagem para enviar', 'warning');
+                    return;
+                }
+
+                if (!CONFIG.emailResponsavel) {
+                    showToast('Email do responsável não cadastrado. Acesse "Editar Detalhes" para adicionar.', 'warning');
+                    return;
+                }
+
+                const confirmed = await showConfirm({
+                    title: 'Enviar Email',
+                    message: `Deseja enviar este comentário por email para ${CONFIG.emailResponsavel}?`,
+                    confirmText: 'Enviar',
+                    cancelText: 'Cancelar',
+                    type: 'primary',
+                    icon: 'bi-envelope-fill'
+                });
+                
+                if (!confirmed) return;
+
+                this.disabled = true;
+                this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Enviando...';
+
+                try {
+                    // Primeiro salva o comentário como externo
+                    const formData = new FormData();
+                    formData.append('comentario', texto);
+                    formData.append('visibilidade', 'externo');
+                    
+                    const saveResponse = await fetch(`/api/adicionar_comentario_h/tarefa/${tarefaId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-CSRFToken': CONFIG.csrfToken
+                        },
+                        body: formData
+                    });
+                    
+                    if (!saveResponse.ok) {
+                        const errorText = await saveResponse.text();
+                        console.error('Erro HTTP ao salvar comentário:', saveResponse.status, errorText);
+                        showToast('Erro ao salvar comentário: ' + (errorText || `Status ${saveResponse.status}`), 'error');
+                        return;
+                    }
+
+                    const contentType = saveResponse.headers.get('content-type');
+                    let data;
+                    if (contentType && contentType.includes('application/json')) {
+                        data = await saveResponse.json();
+                    } else {
+                        // Se retornou HTML (HX-Request), considerar sucesso
+                        data = { ok: true, success: true };
+                    }
+                    
+                    if (data.ok || data.success) {
+                        showToast('Comentário salvo e email enviado com sucesso!', 'success');
+                        textarea.value = '';
+                        // Recarregar comentários
+                        await carregarComentarios(tarefaId, 'tarefa');
+                    } else {
+                        showToast('Erro ao salvar comentário: ' + (data.error || 'Erro desconhecido'), 'error');
+                    }
+                } catch (error) {
+                    console.error('Erro:', error);
+                    showToast('Erro ao comunicar com o servidor: ' + error.message, 'error');
+                } finally {
+                    this.disabled = false;
+                    this.innerHTML = '<i class="bi bi-envelope me-1"></i>Enviar Email';
+                }
+            });
+        });
+
+        // ========================================
+        // CARREGAR COMENTÁRIOS
+        // ========================================
+        async function carregarComentarios(itemId, tipo) {
+            const historicoContainer = document.getElementById(tipo === 'subtarefa' ? `historico-subtarefa-${itemId}` : `historico-tarefa-${itemId}`);
+            if (!historicoContainer) {
+                return;
+            }
+            
+            // Mostrar skeleton loading
+            showSkeleton(historicoContainer, 2);
+                console.warn('Container de comentários não encontrado:', tipo === 'subtarefa' ? `historico-subtarefa-${itemId}` : `historico-tarefa-${itemId}`);
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/listar_comentarios_h/${tipo}/${itemId}`, {
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Erro HTTP ao carregar comentários:', response.status, errorText);
+                    historicoContainer.innerHTML = `
+                        <div class="alert alert-danger small py-2 mb-0">
+                            <i class="bi bi-exclamation-triangle me-1"></i>Erro ao carregar comentários: ${response.status}
+                        </div>
+                    `;
+                    return;
+                }
+
+                const contentType = response.headers.get('content-type') || '';
+                let data;
+                
+                try {
+                    if (contentType.includes('application/json')) {
+                        data = await response.json();
+                    } else {
+                        // Tentar parsear como JSON mesmo sem content-type correto
+                        const text = await response.text();
+                        try {
+                            data = JSON.parse(text);
+                        } catch (parseError) {
+                            // Se não for JSON, pode ser HTML ou texto de erro
+                            console.error('Resposta não é JSON ao carregar comentários. Content-Type:', contentType, 'Texto:', text.substring(0, 200));
+                            historicoContainer.innerHTML = `
+                                <div class="alert alert-danger small py-2 mb-0">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>Erro ao carregar comentários: resposta inválida
+                                </div>
+                            `;
+                            return;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Erro ao processar resposta:', error);
+                    historicoContainer.innerHTML = `
+                        <div class="alert alert-danger small py-2 mb-0">
+                            <i class="bi bi-exclamation-triangle me-1"></i>Erro ao processar resposta do servidor
+                        </div>
+                    `;
+                    return;
+                }
+                
+                if (data.ok || data.success) {
+                    const comentarios = data.comentarios || [];
+                    
+                    if (comentarios.length === 0) {
+                        historicoContainer.innerHTML = `
+                            <div class="text-center text-muted small py-2">
+                                <i class="bi bi-chat-left-text"></i> Nenhum comentário ainda
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    historicoContainer.innerHTML = comentarios.map(c => {
+                        const canEdit = (CONFIG.userEmail && c.usuario_cs === CONFIG.userEmail) || CONFIG.isManager;
+                        return `
+                        <div class="comentario-item ${c.visibilidade || 'interno'}" data-comentario-id="${c.id}">
+                            <div class="comentario-meta">
+                                <span class="comentario-autor">
+                                    <i class="bi bi-person-circle me-1"></i>${c.usuario_nome || c.usuario_cs || 'Usuário'}
+                                    <span class="badge ${c.visibilidade === 'externo' ? 'bg-warning' : 'bg-info'} ms-2" style="font-size: 0.65rem;">
+                                        ${c.visibilidade === 'externo' ? 'Externo' : 'Interno'}
+                                    </span>
+                                </span>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="comentario-data">${formatarData(c.data_criacao, false)}</span>
+                                    ${canEdit ? `
+                                    <button type="button" class="btn btn-sm btn-outline-danger btn-excluir-comentario" data-comentario-id="${c.id}" title="Excluir">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                    ` : ''}
+                                </div>
+                            </div>
+                            <div class="comentario-texto">${escapeHtml(c.texto)}</div>
+                            ${c.imagem_url ? `<img src="${c.imagem_url}" class="comentario-imagem" alt="Imagem anexada">` : ''}
+                        </div>
+                    `;
+                    }).join('');
+                } else {
+                    historicoContainer.innerHTML = `
+                        <div class="alert alert-danger small py-2 mb-0">
+                            <i class="bi bi-exclamation-triangle me-1"></i>${data.error || 'Erro ao carregar comentários'}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Erro ao carregar comentários:', error);
+                historicoContainer.innerHTML = `
+                    <div class="alert alert-danger small py-2 mb-0">
+                        <i class="bi bi-exclamation-triangle me-1"></i>Erro ao carregar comentários: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // ========================================
+        // FUNÇÕES AUXILIARES
+        // ========================================
+        function formatarData(dataStr, includeTime = false) {
+            if (!dataStr) return '';
+            try {
+                const data = new Date(dataStr);
+                if (includeTime) {
+                    return data.toLocaleString('pt-BR', { 
+                        day: '2-digit', 
+                        month: '2-digit', 
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                }
+                return data.toLocaleDateString('pt-BR');
+            } catch {
+                return dataStr;
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ========================================
+        // MARCAR/DESMARCAR TODAS
+        // ========================================
+        // EVENT LISTENERS DE "MARCAR/DESMARCAR TODAS" REMOVIDOS
+        // Os botões foram removidos da interface
+
+
+        // Inicializa checkboxes baseado no estado do servidor (renderizado pelo Jinja2)
+        // O template já renderiza o checkbox como checked se status == 'concluida'
+        // Esta função apenas garante sincronização caso haja alguma inconsistência
+        document.querySelectorAll('.tarefa-item').forEach(item => {
+            const checkbox = item.querySelector('.tarefa-checkbox');
+            if (!checkbox) return;
+            
+            // Verificar status do atributo data-tarefa-status (renderizado pelo servidor)
+            let status = item.getAttribute('data-tarefa-status') || '';
+            status = status.toLowerCase();
+            
+            // Normalizar: verificar se é concluída
+            const isConcluida = (status === 'concluida' || status === 'concluido');
+            
+            // Sincronizar checkbox com o atributo (fonte de verdade do servidor)
+            checkbox.checked = isConcluida;
+            
+            // Garantir que o atributo está normalizado
+            item.setAttribute('data-tarefa-status', isConcluida ? 'concluida' : 'pendente');
+            
+            // Sincronizar classes CSS
+            if (isConcluida) {
+                item.classList.add('concluida');
+            } else {
+                item.classList.remove('concluida');
+            }
+            
+            // Sincronizar badge de status
+            const statusBadge = item.querySelector('.tarefa-status');
+            if (statusBadge) {
+                statusBadge.textContent = isConcluida ? 'Concluído' : 'Pendente';
+                statusBadge.classList.remove('concluido', 'pendente');
+                statusBadge.classList.add(isConcluida ? 'concluido' : 'pendente');
+            }
+        });
+        
+        // Inicializa progresso
+        computeProgress();
+
+        // Listeners para eventos customizados
+        document.body.addEventListener('progress_update', function () { computeProgress(); });
+    });
+</script>
+
+<script src="{{ url_for('static', filename='js/implantacao_detalhes.js') }}"></script>
+
+<!-- Modal Selecionar Plano (Externo) -->
+{% include 'partials/_modal_selecionar_plano.html' %}
+
+{% endblock %}
+
+{% block scripts_extra %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+{% endblock %}

@@ -1,0 +1,15 @@
+{% set status = comentario.get('email_send_status') %}
+{% if status %}
+  {% set oob = (oob if oob is defined else True) %}
+  {% if status == 'ok' %}
+    <div class="list-group-item py-2 d-flex justify-content-between align-items-center" {% if oob %}hx-swap-oob="afterend:#comment-list-{{ comentario.tarefa_id }}"{% endif %}>
+      <small class="text-success mb-0">E-mail enviado ao responsável ({{ comentario.get('responsavel_nome') or comentario.get('responsavel_email') }}).</small>
+      <button type="button" class="btn btn-sm btn-link text-danger p-0 small" aria-label="Excluir aviso" onclick="try{this.closest('.list-group-item').remove();}catch(e){}">Excluir</button>
+    </div>
+  {% else %}
+    <div class="list-group-item py-2 d-flex justify-content-between align-items-center" {% if oob %}hx-swap-oob="afterend:#comment-list-{{ comentario.tarefa_id }}"{% endif %}>
+      <small class="text-danger mb-0">Falha ao enviar e-mail ao responsável: {{ comentario.get('email_send_error') or 'verifique configurações SMTP ou credenciais do usuário.' }}</small>
+      <button type="button" class="btn btn-sm btn-link text-danger p-0 small" aria-label="Excluir aviso" onclick="try{this.closest('.list-group-item').remove();}catch(e){}">Excluir</button>
+    </div>
+  {% endif %}
+{% endif %}

@@ -1,0 +1,300 @@
+{% if erro %}
+<div class="alert alert-danger">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    {{ erro }}
+</div>
+{% elif not plano %}
+<div class="alert alert-warning">
+    <i class="bi bi-info-circle me-2"></i>
+    Plano não encontrado ou não disponível.
+</div>
+{% else %}
+<style>
+    .preview-container {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    .preview-header {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+    }
+
+    .preview-header h4 {
+        margin: 0 0 0.5rem 0;
+        color: #2d3748;
+        font-weight: 700;
+    }
+
+    .preview-header p {
+        margin: 0;
+        color: #4a5568;
+    }
+
+    .fase-item {
+        margin-bottom: 1.5rem;
+        border-left: 4px solid #667eea;
+        padding-left: 1rem;
+    }
+
+    .fase-header {
+        background: #f7fafc;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+
+    .fase-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #2d3748;
+        margin: 0;
+    }
+
+    .fase-badge {
+        display: inline-block;
+        background: #667eea;
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-left: 0.5rem;
+    }
+
+    .grupo-item {
+        margin-bottom: 1rem;
+        padding-left: 1rem;
+        border-left: 3px solid #e2e8f0;
+    }
+
+    .grupo-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #4a5568;
+        margin-bottom: 0.75rem;
+    }
+
+    .tarefa-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .tarefa-item {
+        padding: 0.75rem;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        margin-bottom: 0.5rem;
+        transition: all 0.2s ease;
+    }
+
+    .tarefa-item:hover {
+        border-color: #667eea;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+    }
+
+    .tarefa-title {
+        font-weight: 600;
+        color: #2d3748;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .tarefa-obrigatoria {
+        background: #fed7d7;
+        color: #c53030;
+        padding: 0.125rem 0.5rem;
+        border-radius: 8px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .subtarefa-list {
+        list-style: none;
+        padding-left: 1.5rem;
+        margin: 0.5rem 0 0 0;
+    }
+
+    .subtarefa-item {
+        padding: 0.5rem;
+        color: #718096;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .subtarefa-item::before {
+        content: "→";
+        color: #a0aec0;
+        font-weight: bold;
+    }
+
+    .empty-message {
+        text-align: center;
+        padding: 2rem;
+        color: #a0aec0;
+        font-style: italic;
+    }
+
+    .stats-row {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .stat-item {
+        background: white;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .stat-item i {
+        color: #667eea;
+        font-size: 1.2rem;
+    }
+
+    .stat-value {
+        font-weight: 700;
+        color: #2d3748;
+        font-size: 1.1rem;
+    }
+
+    .stat-label {
+        color: #718096;
+        font-size: 0.85rem;
+    }
+</style>
+
+<div class="preview-container">
+    <div class="preview-header">
+        <h4>{{ plano.nome }}</h4>
+        {% if plano.descricao %}
+        <p>{{ plano.descricao }}</p>
+        {% endif %}
+    </div>
+
+    {% set total_fases = plano.fases|length if plano.fases else 0 %}
+    {% set total_grupos = 0 %}
+    {% set total_tarefas = 0 %}
+    {% set total_subtarefas = 0 %}
+
+    {% if plano.fases %}
+    {% for fase in plano.fases %}
+    {% set total_grupos = total_grupos + (fase.grupos|length if fase.grupos else 0) %}
+    {% for grupo in fase.grupos or [] %}
+    {% set total_tarefas = total_tarefas + (grupo.tarefas|length if grupo.tarefas else 0) %}
+    {% for tarefa in grupo.tarefas or [] %}
+    {% set total_subtarefas = total_subtarefas + (tarefa.subtarefas|length if tarefa.subtarefas else 0) %}
+    {% endfor %}
+    {% endfor %}
+    {% endfor %}
+
+    <div class="stats-row">
+        <div class="stat-item">
+            <i class="bi bi-layers"></i>
+            <div>
+                <div class="stat-value">{{ total_fases }}</div>
+                <div class="stat-label">Fase{{ 's' if total_fases != 1 else '' }}</div>
+            </div>
+        </div>
+        <div class="stat-item">
+            <i class="bi bi-collection"></i>
+            <div>
+                <div class="stat-value">{{ total_grupos }}</div>
+                <div class="stat-label">Grupo{{ 's' if total_grupos != 1 else '' }}</div>
+            </div>
+        </div>
+        <div class="stat-item">
+            <i class="bi bi-list-check"></i>
+            <div>
+                <div class="stat-value">{{ total_tarefas }}</div>
+                <div class="stat-label">Tarefa{{ 's' if total_tarefas != 1 else '' }}</div>
+            </div>
+        </div>
+        <div class="stat-item">
+            <i class="bi bi-check2-square"></i>
+            <div>
+                <div class="stat-value">{{ total_subtarefas }}</div>
+                <div class="stat-label">Subtarefa{{ 's' if total_subtarefas != 1 else '' }}</div>
+            </div>
+        </div>
+    </div>
+
+    <hr class="my-4">
+
+    {% for fase in plano.fases %}
+    <div class="fase-item">
+        <div class="fase-header">
+            <h5 class="fase-title">
+                <i class="bi bi-layers-fill me-2"></i>
+                {{ fase.nome }}
+                <span class="fase-badge">Fase {{ fase.ordem }}</span>
+            </h5>
+            {% if fase.descricao %}
+            <p class="text-muted small mb-0 mt-2">{{ fase.descricao }}</p>
+            {% endif %}
+        </div>
+
+        {% if fase.grupos %}
+        {% for grupo in fase.grupos %}
+        <div class="grupo-item">
+            <div class="grupo-title">
+                <i class="bi bi-collection me-2"></i>{{ grupo.nome }}
+            </div>
+
+            {% if grupo.tarefas %}
+            <ul class="tarefa-list">
+                {% for tarefa in grupo.tarefas %}
+                <li class="tarefa-item">
+                    <div class="tarefa-title">
+                        <i class="bi bi-check-circle"></i>
+                        {{ tarefa.nome }}
+                        {% if tarefa.obrigatoria %}
+                        <span class="tarefa-obrigatoria">Obrigatória</span>
+                        {% endif %}
+                    </div>
+
+                    {% if tarefa.descricao %}
+                    <div class="text-muted small">{{ tarefa.descricao }}</div>
+                    {% endif %}
+
+                    {% if tarefa.subtarefas %}
+                    <ul class="subtarefa-list">
+                        {% for subtarefa in tarefa.subtarefas %}
+                        <li class="subtarefa-item">{{ subtarefa.nome }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div class="empty-message">Nenhuma tarefa neste grupo</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="empty-message">Nenhum grupo nesta fase</div>
+        {% endif %}
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="empty-message">
+        <i class="bi bi-inbox" style="font-size: 3rem; display: block; margin-bottom: 1rem;"></i>
+        Este plano ainda não possui estrutura definida
+    </div>
+    {% endif %}
+</div>
+{% endif %}

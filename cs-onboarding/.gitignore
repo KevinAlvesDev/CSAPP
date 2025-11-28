@@ -1,0 +1,157 @@
+# Ambiente Virtual
+venv/
+.venv/
+env/
+ENV/
+
+# Arquivos de configuração e segredos
+.env
+*.env
+!.env.example
+
+# Bancos de dados
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.sqlite-journal
+dashboard_simples.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.pyc
+*.pyo
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Flask
+instance/
+.webassets-cache
+flask_session/
+*.db
+
+# Testes e Cobertura
+.tox/
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+htmlcov/
+test_report_*.txt
+
+# Arquivos de OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.swp
+*.swo
+*~
+Desktop.ini
+
+# Uploads e Arquivos de Usuário
+uploads/
+/uploads/
+backend/uploads/
+frontend/static/uploads/
+
+# Logs
+logs/
+*.log
+backend/logs/
+*.log.*
+
+# IDEs e Editores
+.vscode/
+.idea/
+*.iml
+*.sublime-project
+*.sublime-workspace
+.project
+.pydevproject
+.settings/
+*.code-workspace
+
+# Build e Distribuição
+dist/
+build/
+*.egg-info/
+.eggs/
+*.egg
+*.whl
+
+# Compilação
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+
+# Node (se houver frontend JS)
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+
+# Migrations (manter estrutura)
+# migrations/versions/*.pyc
+
+# Arquivos Temporários
+*.tmp
+*.bak
+*.swp
+*~.nib
+.~lock.*
+
+# Documentos temporários
+~$*
+
+# Cache do Sistema
+.cache/
+*.cache
+
+# Certificados e Chaves
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+
+# Backups
+*.backup
+*.bak
+*.old
+backups/
+
+# Sentry
+.sentryclirc
+
+# macOS
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+.directory
+.Trash-*
+
+# Jupyter Notebook
+.ipynb_checkpoints

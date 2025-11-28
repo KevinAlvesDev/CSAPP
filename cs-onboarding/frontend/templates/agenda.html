@@ -1,0 +1,667 @@
+{% extends 'base.html' %}
+
+{% block title %}Agenda{% endblock %}
+
+{% block head_extra %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<style>
+  /* Agenda Semana (grid inspirado no Google Calendar) */
+  .agenda-toolbar { display:flex; justify-content:flex-end; align-items:center; gap:0.5rem; }
+  .agenda-timezone { color:#6c757d; font-size:0.8rem; }
+  .agenda-week-header { display:grid; grid-template-columns: 60px repeat(7, 1fr); align-items:center; border-bottom:1px solid var(--table-border-color); background: var(--header-bg); }
+  .agenda-week-header .dow { padding:0.75rem; font-weight:600; }
+  .agenda-week-header .dow.today { color: var(--accent-color); }
+  .agenda-grid { display:grid; grid-template-columns: 60px repeat(7, 1fr); }
+  .hours-col { background: var(--container-bg); border-right:1px solid var(--table-border-color); }
+  .hours-col .hour { height:60px; font-size:0.75rem; color:#888; padding-right:0.5rem; display:flex; justify-content:flex-end; align-items:flex-start; }
+  .day-col { position:relative; border-right:1px solid var(--table-border-color); }
+  .day-col:last-child { border-right:none; }
+  .allday-strip { min-height:32px; border-bottom:1px solid var(--table-border-color); padding:4px 6px; display:flex; flex-wrap:wrap; gap:4px; }
+  .events-area { position:relative; height:1440px; background-image: linear-gradient(to bottom, var(--table-border-color) 1.25px, transparent 1px); background-size: 100% 60px; background-repeat: repeat; }
+  .event-card { position:absolute; left:4px; right:4px; border-radius:6px; padding:6px 8px; color:#000000; font-size:0.85rem; box-shadow: 0 2px 6px rgba(0,0,0,0.2); overflow:hidden; }
+  .event-time { font-weight:700; margin-right:6px; }
+  .event-title { font-weight:600; }
+  .event-loc { font-size:0.75rem; opacity:0.9; }
+  /* Cores aproximadas por colorId */
+  .bg-default { background-color: var(--accent-color); }
+  .bg-1 { background-color: #7986cb; }
+  .bg-2 { background-color: #33b679; }
+  .bg-3 { background-color: #8e24aa; }
+  .bg-4 { background-color: #e67c73; }
+  .bg-5 { background-color: #f6c026; color:#222; }
+  .bg-6 { background-color: #f5511d; }
+  .bg-7 { background-color: #039be5; }
+  .bg-8 { background-color: #616161; }
+  .bg-9 { background-color: #3f51b5; }
+  .bg-10 { background-color: #0b8043; }
+  .bg-11 { background-color: #d50000; }
+  /* Altura com rolagem para evitar espaço vazio de madrugada */
+  .agenda-grid-scroll { height: 720px; overflow-y: auto; }
+  .event-card.selected { outline: 2px solid #000000; }
+  .event-card .resize-handle { position:absolute; left:0; right:0; bottom:0; height:6px; cursor:ns-resize; background: rgba(0,0,0,0.6); }
+  .event-card.dragging { opacity:0.85; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="push">
+  <main class="container py-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h1 class="h4 mb-0"><i class="bi bi-calendar-week me-2"></i> Minha Agenda</h1>
+      <div class="agenda-toolbar">
+        <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-arrow-left me-1"></i> Voltar ao dashboard</a>
+        {% if google_connected %}
+          <span class="agenda-timezone d-none d-md-inline"></span>
+          <a href="{{ url_for('agenda.agenda_disconnect') }}" class="btn btn-outline-danger btn-sm"><i class="bi bi-x-circle me-1"></i> Desconectar</a>
+        {% else %}
+          <a href="{{ url_for('agenda.agenda_connect') }}" class="btn btn-primary btn-sm" target="_top" rel="noopener"><i class="bi bi-google me-1"></i> Conectar Google</a>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if not google_connected %}
+      <div class="alert alert-info">Conecte sua conta Google para visualizar seus compromissos em um grid semanal.</div>
+    {% else %}
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-outline-secondary btn-sm" id="prevWeek"><i class="bi bi-chevron-left"></i></button>
+            <button class="btn btn-outline-secondary btn-sm" id="nextWeek"><i class="bi bi-chevron-right"></i></button>
+            <button class="btn btn-outline-primary btn-sm" id="goToday">Hoje</button>
+            <button class="btn btn-primary btn-sm" id="openCreateEvent"><i class="bi bi-plus-lg me-1"></i> Criar</button>
+            <select class="form-select form-select-sm" id="calendarSelector" style="width:auto;"></select>
+            <input type="text" id="agendaSearch" class="form-control form-control-sm" placeholder="Pesquisar..." style="width:180px;">
+          </div>
+          <strong>Semana</strong>
+        </div>
+        <div class="card-body p-0">
+          {% if not events %}
+            <div class="alert alert-dark text-center small py-2 mb-0">Nenhum evento nesta semana.</div>
+          {% endif %}
+          <div class="agenda-week" data-week-start="{{ week_start }}" data-week-end="{{ week_end }}">
+            <div class="agenda-week-header">
+              <div></div>
+              {% for d in week_days %}
+                <div class="dow" data-iso="{{ d }}"></div>
+              {% endfor %}
+            </div>
+            <div class="agenda-grid-scroll">
+              <div class="agenda-grid">
+                <div class="hours-col">
+                  {% for h in range(0,24) %}
+                    <div class="hour">{{ '%02d:00' % h }}</div>
+                  {% endfor %}
+                </div>
+                {% for d in week_days %}
+                  <div class="day-col" data-iso="{{ d }}">
+                    <div class="allday-strip"></div>
+                    <div class="events-area"></div>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  </main>
+</div>
+
+<div class="modal fade" id="eventModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header header-bg">
+        <h5 class="modal-title" id="eventModalTitle">Novo Evento</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="eventForm">
+          <div class="mb-2">
+            <label class="form-label small">Título</label>
+            <input type="text" class="form-control" id="evSummary" placeholder="Ex.: Reunião">
+          </div>
+          <div class="d-flex justify-content-end mb-2">
+            <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#evAdvanced" aria-expanded="false" aria-controls="evAdvanced">
+              <i class="bi bi-three-dots"></i> Mais opções
+            </button>
+          </div>
+          <div class="row g-2">
+            <div class="col-6">
+              <label class="form-label small">Data</label>
+              <input type="date" class="form-control" id="evDate">
+            </div>
+            <div class="col-6 d-flex align-items-end">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="evAllDay">
+                <label class="form-check-label small" for="evAllDay">Dia inteiro</label>
+              </div>
+            </div>
+          </div>
+          <div class="row g-2" id="timeRow">
+            <div class="col-6">
+              <label class="form-label small">Início</label>
+              <input type="time" class="form-control" id="evStart">
+            </div>
+            <div class="col-6">
+              <label class="form-label small">Fim</label>
+              <input type="time" class="form-control" id="evEnd">
+            </div>
+          </div>
+          <div class="collapse" id="evAdvanced">
+            <div class="mb-2">
+              <label class="form-label small">Descrição</label>
+              <textarea class="form-control" id="evDescription" rows="2" placeholder="Opcional"></textarea>
+            </div>
+            <div class="mb-2">
+              <label class="form-label small">Local</label>
+              <input type="text" class="form-control" id="evLocation" placeholder="Opcional">
+            </div>
+            <div class="mb-2">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="evMeet">
+                <label class="form-check-label small" for="evMeet">Gerar link de reunião (Google Meet)</label>
+              </div>
+            </div>
+            <div class="row g-2">
+              <div class="col-6">
+                <label class="form-label small">Recorrência</label>
+                <select class="form-select" id="evRepeat">
+                  <option value="none">Nenhuma</option>
+                  <option value="daily">Diária</option>
+                  <option value="weekly">Semanal</option>
+                  <option value="monthly">Mensal</option>
+                </select>
+              </div>
+              <div class="col-6">
+                <label class="form-label small">Lembrete (minutos)</label>
+                <input type="number" min="0" class="form-control" id="evReminder" placeholder="Ex.: 10">
+              </div>
+            </div>
+            <div class="mt-2">
+              <label class="form-label small">Calendário</label>
+              <select class="form-select" id="evCalendar"></select>
+            </div>
+          </div>
+        </form>
+        <div class="alert alert-danger d-none" id="evError"></div>
+        <div class="alert alert-success d-none" id="evSuccess"></div>
+      </div>
+      <div class="modal-footer header-bg">
+        <button type="button" class="btn btn-outline-danger d-none" id="deleteEventBtn"><i class="bi bi-trash"></i> Excluir</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="saveEventBtn">Salvar</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  // Renderiza grid semanal estilo Google e exibe timezone
+  document.addEventListener('DOMContentLoaded', function() {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const tzEl = document.querySelector('.agenda-timezone');
+    if (tzEl) tzEl.textContent = `Fuso horário: ${tz}`;
+    const csrfTokenEl = document.querySelector('meta[name="csrf-token"]');
+    const csrfToken = csrfTokenEl ? csrfTokenEl.content : null;
+
+    const fmtHeader = new Intl.DateTimeFormat('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' });
+    const fmtTime = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+    const weekEl = document.querySelector('.agenda-week');
+    if (weekEl) {
+      const startIso = weekEl.getAttribute('data-week-start');
+      const headerEls = document.querySelectorAll('.agenda-week-header .dow');
+      headerEls.forEach(el => {
+        const iso = el.getAttribute('data-iso');
+        const d = new Date(iso + 'T00:00:00');
+        el.textContent = fmtHeader.format(d);
+        const today = new Date();
+        const isToday = d.getFullYear()===today.getFullYear() && d.getMonth()===today.getMonth() && d.getDate()===today.getDate();
+        if (isToday) el.classList.add('today');
+      });
+
+      const events = {{ events | tojson }};
+      const dayCols = Array.from(document.querySelectorAll('.agenda-grid .day-col'));
+      const byDate = {};
+      dayCols.forEach(col => { byDate[col.getAttribute('data-iso')] = col; });
+
+      events.forEach(ev => {
+        const startIso = (ev.start && (ev.start.dateTime || ev.start.date)) || null;
+        const endIso = (ev.end && (ev.end.dateTime || ev.end.date)) || null;
+        if (!startIso) return;
+        const dateKey = startIso.slice(0,10);
+        const col = byDate[dateKey];
+        if (!col) return;
+        const colorClass = 'bg-' + (ev.colorId || 'default');
+        // Link do Meet, quando existente
+        let meetLink = null;
+        if (ev.hangoutLink) {
+          meetLink = ev.hangoutLink;
+        } else if (ev.conferenceData && Array.isArray(ev.conferenceData.entryPoints)) {
+          const ep = ev.conferenceData.entryPoints.find(x => (x.entryPointType === 'video' || x.entryPointType === 'more') && x.uri);
+          meetLink = ep && ep.uri ? ep.uri : null;
+        }
+        if (ev.start && ev.start.date) {
+          // All-day
+          const chip = document.createElement('span');
+          chip.className = `badge ${colorClass}`;
+          const title = ev.summary || 'Compromisso';
+          const meetHtml = meetLink ? ` <a href="${meetLink}" class="meet-link ms-1" title="Abrir Meet" target="_blank" rel="noopener"><i class="bi bi-camera-video-fill"></i></a>` : '';
+          chip.innerHTML = `${title}${meetHtml}`;
+          col.querySelector('.allday-strip').appendChild(chip);
+        } else {
+          const start = new Date(startIso);
+          const end = endIso ? new Date(endIso) : new Date(start.getTime() + 30*60000);
+          const minutesFromMidnight = start.getHours()*60 + start.getMinutes();
+          const durationMin = Math.max(20, (end - start) / 60000); // min 20px
+          const card = document.createElement('div');
+          // Força cor azul para destacar eventos com horário
+          card.className = 'event-card bg-7';
+          card.style.top = minutesFromMidnight + 'px';
+          card.style.height = durationMin + 'px';
+          const meetHtml = meetLink ? ` <a href="${meetLink}" class="meet-link ms-1" title="Abrir Meet" target="_blank" rel="noopener"><i class="bi bi-camera-video-fill"></i></a>` : '';
+          card.innerHTML = `<span class="event-time">${fmtTime.format(start)}</span><span class="event-title">${ev.summary || 'Compromisso'}</span>${meetHtml}` + (ev.location ? `<div class="event-loc"><i class="bi bi-geo-alt"></i> ${ev.location}</div>` : '');
+          // Atribui metadados para edição/remoção
+          if (ev.id) card.dataset.eventId = ev.id;
+          card.dataset.summary = ev.summary || 'Compromisso';
+          card.dataset.description = ev.description || '';
+          card.dataset.colorId = ev.colorId || '';
+          card.dataset.location = ev.location || '';
+          card.dataset.date = dateKey;
+          card.dataset.startTime = `${String(start.getHours()).padStart(2,'0')}:${String(start.getMinutes()).padStart(2,'0')}`;
+          card.dataset.endTime = endIso ? `${String(end.getHours()).padStart(2,'0')}:${String(end.getMinutes()).padStart(2,'0')}` : '';
+          if (meetLink) card.dataset.hangoutLink = meetLink;
+          card.style.cursor = 'pointer';
+          const resize = document.createElement('div'); resize.className = 'resize-handle'; card.appendChild(resize);
+          col.querySelector('.events-area').appendChild(card);
+        }
+      });
+
+      // Evita que cliques no link do Meet disparem ações do card
+      document.querySelectorAll('.event-card a.meet-link, .allday-strip a.meet-link').forEach(a => {
+        a.addEventListener('click', (e) => { e.stopPropagation(); });
+      });
+
+      // Navegação
+      function navigate(deltaDays){
+        const curr = new Date(weekEl.getAttribute('data-week-start')+'T00:00:00');
+        curr.setDate(curr.getDate()+deltaDays);
+        const newStart = curr.toISOString().slice(0,10);
+        const url = new URL(window.location.href);
+        url.searchParams.set('view','semana');
+        url.searchParams.set('start', newStart);
+        window.location.href = url.toString();
+      }
+      const prevBtn = document.getElementById('prevWeek');
+      const nextBtn = document.getElementById('nextWeek');
+      const todayBtn = document.getElementById('goToday');
+      if (prevBtn) prevBtn.addEventListener('click', () => navigate(-7));
+      if (nextBtn) nextBtn.addEventListener('click', () => navigate(7));
+      if (todayBtn) todayBtn.addEventListener('click', () => {
+        const today = new Date();
+        const iso = today.toISOString().slice(0,10);
+        const url = new URL(window.location.href);
+        url.searchParams.set('view','semana');
+        url.searchParams.set('start', iso);
+        window.location.href = url.toString();
+      });
+
+      // Ajuste de visualização padrão: rolar para 08h
+      const scroller = document.querySelector('.agenda-grid-scroll');
+      if (scroller) {
+        // 60px por hora; 8h = 480px
+        scroller.scrollTop = 8 * 60;
+      }
+
+      // --- Modal de criação/edição ---
+      const eventModalEl = document.getElementById('eventModal');
+      const bsEventModal = eventModalEl ? bootstrap.Modal.getOrCreateInstance(eventModalEl) : null;
+      const openCreateBtn = document.getElementById('openCreateEvent');
+      const titleEl = document.getElementById('eventModalTitle');
+      const fSummary = document.getElementById('evSummary');
+      const fDescription = document.getElementById('evDescription');
+      const fDate = document.getElementById('evDate');
+      const fAllDay = document.getElementById('evAllDay');
+      const fStart = document.getElementById('evStart');
+      const fEnd = document.getElementById('evEnd');
+      const fLocation = document.getElementById('evLocation');
+      const fMeet = document.getElementById('evMeet');
+      const fRepeat = document.getElementById('evRepeat');
+      const fReminder = document.getElementById('evReminder');
+      const fCalendar = document.getElementById('evCalendar');
+      const topCalendarSelector = document.getElementById('calendarSelector');
+      const searchInput = document.getElementById('agendaSearch');
+      const timeRow = document.getElementById('timeRow');
+      const saveBtn = document.getElementById('saveEventBtn');
+      const deleteBtn = document.getElementById('deleteEventBtn');
+      const errBox = document.getElementById('evError');
+      const successBox = document.getElementById('evSuccess');
+      let editingEventId = null;
+      // Seleção múltipla removida
+      let currentCalendarId = '{{ current_calendar or "primary" }}';
+
+      // Carrega calendários
+      fetch('{{ url_for("agenda.agenda_list_calendars") }}')
+        .then(r=>r.json())
+        .then(data=>{
+          if (!data.ok) return;
+          const opts = data.calendars || [];
+          const fill = (sel) => {
+            if (!sel) return;
+            sel.innerHTML = '';
+            opts.forEach(c=>{
+              const o = document.createElement('option');
+              o.value = c.id; o.textContent = c.summary + (c.primary? ' (principal)' : '');
+              if (c.id === currentCalendarId) o.selected = true;
+              sel.appendChild(o);
+            });
+          };
+          fill(topCalendarSelector);
+          fill(fCalendar);
+        })
+        .catch(()=>{});
+
+      if (topCalendarSelector) topCalendarSelector.addEventListener('change', ()=>{
+        const url = new URL(window.location.href);
+        url.searchParams.set('cal', topCalendarSelector.value);
+        window.location.href = url.toString();
+      });
+      if (searchInput) searchInput.addEventListener('keydown', (e)=>{
+        if (e.key === 'Enter'){
+          const url = new URL(window.location.href);
+          url.searchParams.set('q', searchInput.value);
+          window.location.href = url.toString();
+        }
+      });
+
+      const openCreate = () => {
+        editingEventId = null;
+        titleEl.textContent = 'Novo Evento';
+        deleteBtn.classList.add('d-none');
+        errBox.classList.add('d-none');
+        if (successBox) successBox.classList.add('d-none');
+        fSummary.value = '';
+        fDescription.value = '';
+        const todayIso = new Date().toISOString().slice(0,10);
+        fDate.value = todayIso;
+        fAllDay.checked = false;
+        timeRow.classList.remove('d-none');
+        fStart.value = '08:00';
+        fEnd.value = '09:00';
+        fLocation.value = '';
+        if (fMeet) fMeet.checked = false;
+        if (fCalendar && topCalendarSelector){ fCalendar.value = topCalendarSelector.value || currentCalendarId; }
+        fRepeat.value = 'none';
+        fReminder.value = '';
+        if (bsEventModal) bsEventModal.show();
+      };
+      if (openCreateBtn) openCreateBtn.addEventListener('click', openCreate);
+
+      fAllDay.addEventListener('change', () => {
+        if (fAllDay.checked) timeRow.classList.add('d-none'); else timeRow.classList.remove('d-none');
+      });
+
+      // Abrir modal ao clicar em um card
+      document.querySelectorAll('.event-card').forEach(card => {
+        card.addEventListener('click', () => {
+          editingEventId = card.dataset.eventId || null;
+          titleEl.textContent = editingEventId ? 'Editar Evento' : 'Evento';
+          deleteBtn.classList.toggle('d-none', !editingEventId);
+          errBox.classList.add('d-none');
+          if (successBox) successBox.classList.add('d-none');
+          fSummary.value = card.dataset.summary || '';
+          fDescription.value = card.dataset.description || '';
+          fDate.value = card.dataset.date || new Date().toISOString().slice(0,10);
+          const hasTimes = !!card.dataset.startTime;
+          fAllDay.checked = !hasTimes;
+          timeRow.classList.toggle('d-none', !hasTimes);
+          fStart.value = card.dataset.startTime || '08:00';
+          fEnd.value = card.dataset.endTime || '09:00';
+          fLocation.value = card.dataset.location || '';
+           if (fCalendar && topCalendarSelector){ fCalendar.value = topCalendarSelector.value || currentCalendarId; }
+          if (bsEventModal) bsEventModal.show();
+        });
+        // Removido: seleção múltipla com Ctrl
+        // Drag to move
+        let dragStartY = null; let startTop = null; let dragging = false; let currentDayCol = null;
+        card.addEventListener('mousedown', (e)=>{
+          // Mantemos drag sem interação de seleção múltipla
+          if (e.target.classList.contains('resize-handle')) return; // resize separado
+          dragging = true; card.classList.add('dragging');
+          dragStartY = e.clientY; startTop = parseInt(card.style.top||'0',10);
+          currentDayCol = card.closest('.day-col');
+          e.preventDefault();
+        });
+        document.addEventListener('mousemove', (e)=>{
+          if (!dragging) return;
+          const delta = e.clientY - dragStartY;
+          const newTop = Math.max(0, startTop + delta);
+          card.style.top = newTop + 'px';
+          // Detecta coluna do dia sob o cursor e move horizontalmente
+          const el = document.elementFromPoint(e.clientX, e.clientY);
+          const overCol = el ? el.closest('.day-col') : null;
+          if (overCol && overCol !== currentDayCol){
+            const area = overCol.querySelector('.events-area');
+            if (area){
+              area.appendChild(card);
+              const newDate = overCol.getAttribute('data-iso');
+              if (newDate) card.dataset.date = newDate;
+              currentDayCol = overCol;
+            }
+          }
+        });
+        document.addEventListener('mouseup', async ()=>{
+          if (!dragging) return; dragging = false; card.classList.remove('dragging');
+          // Calcula novo horário
+          const newMinutes = parseInt(card.style.top||'0',10);
+          const hh = String(Math.floor(newMinutes/60)).padStart(2,'0');
+          const mm = String(newMinutes%60).padStart(2,'0');
+          const startTime = `${hh}:${mm}`;
+          const duration = parseInt(card.style.height||'0',10);
+          const endMinutes = newMinutes + duration;
+          const eh = String(Math.floor(endMinutes/60)).padStart(2,'0');
+          const em = String(endMinutes%60).padStart(2,'0');
+          const endTime = `${eh}:${em}`;
+          const body = { date: card.dataset.date, startTime, endTime, timeZone: tz, calendarId: topCalendarSelector?.value || currentCalendarId };
+          if (card.dataset.eventId){
+            try{
+              const url = '{{ url_for("agenda.agenda_update_event", event_id="__ID__") }}'.replace('__ID__', card.dataset.eventId);
+              const headers = { 'Content-Type':'application/json' };
+              if (csrfToken) headers['X-CSRFToken'] = csrfToken;
+              const resp = await fetch(url, { method:'PUT', headers, body: JSON.stringify(body) });
+              const data = await resp.json(); if (!resp.ok || !data.ok) throw new Error(data.error || `Erro ${resp.status}`);
+            } catch(e){ console.error('Falha ao mover evento:', e); }
+          }
+        });
+        // Resize handle
+        const rh = card.querySelector('.resize-handle');
+        let resizing = false; let resizeStartY = 0; let startHeight = 0;
+        if (rh){
+          rh.addEventListener('mousedown', (e)=>{ resizing=true; resizeStartY=e.clientY; startHeight=parseInt(card.style.height||'0',10); e.stopPropagation(); e.preventDefault(); });
+          document.addEventListener('mousemove', (e)=>{
+            if (!resizing) return; const delta=e.clientY - resizeStartY; const nh=Math.max(20, startHeight+delta); card.style.height = nh+'px';
+          });
+          document.addEventListener('mouseup', async ()=>{
+            if (!resizing) return; resizing=false;
+            const minutesFromMidnight = parseInt(card.style.top||'0',10);
+            const duration = parseInt(card.style.height||'0',10);
+            const startTime = `${String(Math.floor(minutesFromMidnight/60)).padStart(2,'0')}:${String(minutesFromMidnight%60).padStart(2,'0')}`;
+            const endMinutes = minutesFromMidnight + duration;
+            const endTime = `${String(Math.floor(endMinutes/60)).padStart(2,'0')}:${String(endMinutes%60).padStart(2,'0')}`;
+            const body = { date: card.dataset.date, startTime, endTime, timeZone: tz, calendarId: topCalendarSelector?.value || currentCalendarId };
+            if (card.dataset.eventId){
+              try{
+                const url = '{{ url_for("agenda.agenda_update_event", event_id="__ID__") }}'.replace('__ID__', card.dataset.eventId);
+                const headers = { 'Content-Type':'application/json' };
+                if (csrfToken) headers['X-CSRFToken'] = csrfToken;
+                const resp = await fetch(url, { method:'PUT', headers, body: JSON.stringify(body) });
+                const data = await resp.json(); if (!resp.ok || !data.ok) throw new Error(data.error || `Erro ${resp.status}`);
+              } catch(e){ console.error('Falha ao redimensionar evento:', e); }
+            }
+          });
+        }
+      });
+
+      // Drag-to-create na área
+      document.querySelectorAll('.events-area').forEach(area=>{
+        let creating=false; let startY=0; let selDiv=null;
+        area.addEventListener('mousedown', (e)=>{ creating=true; startY=e.offsetY; selDiv=document.createElement('div'); selDiv.style.position='absolute'; selDiv.style.left='4px'; selDiv.style.right='4px'; selDiv.style.top=startY+'px'; selDiv.style.height='20px'; selDiv.style.background='rgba(3,155,229,0.4)'; selDiv.style.borderRadius='6px'; area.appendChild(selDiv); e.preventDefault(); });
+        area.addEventListener('mousemove', (e)=>{ if (!creating || !selDiv) return; const h=Math.max(20, e.offsetY - startY); selDiv.style.height=h+'px'; });
+        area.addEventListener('mouseup', (e)=>{ if (!creating) return; creating=false; const dateKey=area.parentElement.dataset.iso; const topPx=parseInt(selDiv.style.top,10); const heightPx=parseInt(selDiv.style.height,10); area.removeChild(selDiv); selDiv=null; const sh=`${String(Math.floor(topPx/60)).padStart(2,'0')}:${String(topPx%60).padStart(2,'0')}`; const endM=topPx+heightPx; const eh=`${String(Math.floor(endM/60)).padStart(2,'0')}:${String(endM%60).padStart(2,'0')}`; openCreate(); fDate.value = dateKey; fStart.value=sh; fEnd.value=eh; });
+      });
+
+      // Salvar (create ou futuramente update)
+      saveBtn.addEventListener('click', async () => {
+        const body = {
+          summary: fSummary.value || 'Compromisso',
+          description: fDescription.value || undefined,
+          date: fDate.value,
+          allDay: fAllDay.checked,
+          startTime: fAllDay.checked ? null : fStart.value,
+          endTime: fAllDay.checked ? null : fEnd.value,
+          timeZone: tz,
+          location: fLocation.value || undefined,
+          conference: !!(fMeet && fMeet.checked),
+          calendarId: fCalendar?.value || currentCalendarId,
+          recurrence: (function(){
+            if (fRepeat.value==='none') return undefined;
+            const map = { daily:'DAILY', weekly:'WEEKLY', monthly:'MONTHLY' };
+            return [`RRULE:FREQ=${map[fRepeat.value]};COUNT=5`];
+          })(),
+          reminders: (function(){
+            let m = parseInt(fReminder.value||'0',10);
+            if (!m) m = 10; // padrão 10min antes
+            return { useDefault: false, overrides: [{ method:'popup', minutes:m }] };
+          })()
+        };
+        errBox.classList.add('d-none');
+        try {
+          let resp;
+          if (editingEventId) {
+            const url = '{{ url_for("agenda.agenda_update_event", event_id="__ID__") }}'.replace('__ID__', editingEventId);
+            const headers = { 'Content-Type': 'application/json' };
+            if (csrfToken) headers['X-CSRFToken'] = csrfToken;
+            resp = await fetch(url, { method: 'PUT', headers, body: JSON.stringify(body) });
+          } else {
+            const headers = { 'Content-Type': 'application/json' };
+            if (csrfToken) headers['X-CSRFToken'] = csrfToken;
+            resp = await fetch('{{ url_for("agenda.agenda_create_event") }}', { method: 'POST', headers, body: JSON.stringify(body) });
+          }
+          const data = await resp.json();
+          if (!resp.ok || !data.ok) throw new Error(data.error || `Erro ${resp.status}`);
+          // Se houver link do Meet, mostra no modal e mantém aberto
+          let meetLink = null;
+          const ev = data.event || {};
+          if (ev.hangoutLink) {
+            meetLink = ev.hangoutLink;
+          } else if (ev.conferenceData && Array.isArray(ev.conferenceData.entryPoints)) {
+            const videoEp = ev.conferenceData.entryPoints.find(ep => (ep.entryPointType === 'video' || ep.entryPointType === 'more') && ep.uri);
+            meetLink = videoEp && videoEp.uri ? videoEp.uri : null;
+          }
+          // Renderiza imediatamente o evento criado/atualizado no grid se possível
+          (function renderEventInGrid(eventObj){
+            try {
+              const startIso = (eventObj.start && (eventObj.start.dateTime || eventObj.start.date)) || null;
+              const endIso = (eventObj.end && (eventObj.end.dateTime || eventObj.end.date)) || null;
+              if (!startIso) return;
+              const dateKey = startIso.slice(0,10);
+              const col = document.querySelector(`.agenda-grid .day-col[data-iso="${dateKey}"]`);
+              if (!col) return;
+              const colorClass = 'bg-' + (eventObj.colorId || 'default');
+              let localMeet = null;
+              if (eventObj.hangoutLink) localMeet = eventObj.hangoutLink;
+              else if (eventObj.conferenceData && Array.isArray(eventObj.conferenceData.entryPoints)) {
+                const ep = eventObj.conferenceData.entryPoints.find(x => (x.entryPointType === 'video' || x.entryPointType === 'more') && x.uri);
+                localMeet = ep && ep.uri ? ep.uri : null;
+              }
+              if (eventObj.start && eventObj.start.date) {
+                const chip = document.createElement('span');
+                chip.className = `badge ${colorClass}`;
+                const title = eventObj.summary || 'Compromisso';
+                const meetHtml = localMeet ? ` <a href="${localMeet}" class="meet-link ms-1" title="Abrir Meet" target="_blank" rel="noopener"><i class="bi bi-camera-video-fill"></i></a>` : '';
+                chip.innerHTML = `${title}${meetHtml}`;
+                col.querySelector('.allday-strip').appendChild(chip);
+              } else {
+                const start = new Date(startIso);
+                const end = endIso ? new Date(endIso) : new Date(start.getTime() + 30*60000);
+                const minutesFromMidnight = start.getHours()*60 + start.getMinutes();
+                const durationMin = Math.max(20, (end - start) / 60000);
+                const card = document.createElement('div');
+                card.className = 'event-card bg-7';
+                card.style.top = minutesFromMidnight + 'px';
+                card.style.height = durationMin + 'px';
+                const meetHtml = localMeet ? ` <a href="${localMeet}" class="meet-link ms-1" title="Abrir Meet" target="_blank" rel="noopener"><i class="bi bi-camera-video-fill"></i></a>` : '';
+                card.innerHTML = `<span class="event-time">${fmtTime.format(start)}</span><span class="event-title">${eventObj.summary || 'Compromisso'}</span>${meetHtml}` + (eventObj.location ? `<div class="event-loc"><i class="bi bi-geo-alt"></i> ${eventObj.location}</div>` : '');
+                if (eventObj.id) card.dataset.eventId = eventObj.id;
+                card.dataset.summary = eventObj.summary || 'Compromisso';
+                card.dataset.description = eventObj.description || '';
+                card.dataset.colorId = eventObj.colorId || '';
+                card.dataset.location = eventObj.location || '';
+                card.dataset.date = dateKey;
+                card.dataset.startTime = `${String(start.getHours()).padStart(2,'0')}:${String(start.getMinutes()).padStart(2,'0')}`;
+                card.dataset.endTime = endIso ? `${String(end.getHours()).padStart(2,'0')}:${String(end.getMinutes()).padStart(2,'0')}` : '';
+                if (localMeet) card.dataset.hangoutLink = localMeet;
+                card.style.cursor = 'pointer';
+                const resize = document.createElement('div'); resize.className = 'resize-handle'; card.appendChild(resize);
+                col.querySelector('.events-area').appendChild(card);
+                // Evita propagação no novo link e ativa click para edição
+                const linkEl = card.querySelector('a.meet-link');
+                if (linkEl) linkEl.addEventListener('click', (e)=> e.stopPropagation());
+                card.addEventListener('click', () => {
+                  editingEventId = card.dataset.eventId || null;
+                  titleEl.textContent = editingEventId ? 'Editar Evento' : 'Evento';
+                  deleteBtn.classList.toggle('d-none', !editingEventId);
+                  errBox.classList.add('d-none');
+                  if (successBox) successBox.classList.add('d-none');
+                  fSummary.value = card.dataset.summary || '';
+                  fDescription.value = card.dataset.description || '';
+                  fDate.value = card.dataset.date || new Date().toISOString().slice(0,10);
+                  const hasTimes = !!card.dataset.startTime;
+                  fAllDay.checked = !hasTimes;
+                  timeRow.classList.toggle('d-none', !hasTimes);
+                  fStart.value = card.dataset.startTime || '08:00';
+                  fEnd.value = card.dataset.endTime || '09:00';
+                  fLocation.value = card.dataset.location || '';
+                  if (fCalendar && topCalendarSelector){ fCalendar.value = topCalendarSelector.value || currentCalendarId; }
+                  if (bsEventModal) bsEventModal.show();
+                });
+              }
+            } catch(e){ /* ignora falhas envolvendo DOM */ }
+          })(ev);
+          if (meetLink && successBox) {
+            successBox.innerHTML = `Evento criado. Link da reunião: <a href="${meetLink}" target="_blank" rel="noopener">${meetLink}</a>`;
+            successBox.classList.remove('d-none');
+          } else {
+            if (bsEventModal) bsEventModal.hide();
+            // Recarrega para refletir o novo evento
+            window.location.reload();
+          }
+        } catch (e) {
+          errBox.textContent = e.message || String(e);
+          errBox.classList.remove('d-none');
+        }
+      });
+
+      // Excluir
+      deleteBtn.addEventListener('click', async () => {
+        if (!editingEventId) return;
+        errBox.classList.add('d-none');
+        try {
+          const delUrl = '{{ url_for("agenda.agenda_delete_event", event_id="__ID__") }}'.replace('__ID__', editingEventId) + `?calendarId=${encodeURIComponent(fCalendar?.value || currentCalendarId)}`;
+          const headers = {};
+          if (csrfToken) headers['X-CSRFToken'] = csrfToken;
+          const resp = await fetch(delUrl, { method: 'DELETE', headers });
+          const data = await resp.json();
+          if (!resp.ok || !data.ok) throw new Error(data.error || `Erro ${resp.status}`);
+          if (bsEventModal) bsEventModal.hide();
+          window.location.reload();
+        } catch (e) {
+          errBox.textContent = e.message || String(e);
+          errBox.classList.remove('d-none');
+        }
+      });
+
+      // Removido: exclusão em lote
+    }
+  });
+</script>
+{% endblock %}

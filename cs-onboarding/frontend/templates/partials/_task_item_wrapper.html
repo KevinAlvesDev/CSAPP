@@ -1,0 +1,4 @@
+
+<li class="list-group-item d-flex align-items-start justify-content-between" id="task-item-{{ tarefa.id }}" data-id="{{ tarefa.id }}"{% if oob %} hx-swap-oob="true"{% endif %}>
+    {% include 'partials/_task_item.html' %}
+</li>

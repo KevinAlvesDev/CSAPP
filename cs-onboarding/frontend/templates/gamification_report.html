@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}Relatório - Gamificação{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <header class="header-bg p-3 d-flex align-items-center position-relative">
+        <h1 class="main-title mb-0 fs-4 w-100 text-center">RELATÓRIO DE GAMIFICAÇÃO</h1>
+        
+        <div class="d-flex align-items-center position-absolute end-0 top-50 translate-middle-y">
+            <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm btn-outline-secondary me-2">
+                <i class="bi bi-arrow-left me-1"></i> Voltar ao Dashboard
+            </a>
+            <a href="{{ url_for('gamification.manage_gamification_metrics') }}" class="btn btn-sm btn-primary">
+                <i class="bi bi-pencil-square me-1"></i> Lançar Métricas
+            </a>
+            
+            
+        </div>
+    </header>
+
+    <main class="p-4" id="main-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        
+        <div class="metric-card p-3 rounded shadow-sm mb-4">
+            <h5 class="mb-3 border-bottom pb-2">Filtrar Relatório</h5>
+            <form method="GET" action="{{ url_for('gamification.gamification_report') }}" id="report-filter-form">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label for="cs_email_filter" class="form-label small">Colaborador</label>
+                        <select class="form-select" id="cs_email_filter" name="cs_email">
+                            <option value="">-- Todos os Colaboradores --</option>
+                            {% for cs in all_cs_users %}
+                                <option value="{{ cs.usuario }}" {% if cs.usuario == current_cs_email %}selected{% endif %}>
+                                    {{ cs.nome }} ({{ cs.cargo or 'N/A' }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label for="mes_filter" class="form-label small">Mês</label>
+                        <select class="form-select" id="mes_filter" name="mes" required>
+                            {% for i in range(1, 13) %}
+                                <option value="{{ i }}" {% if i == selected_month %}selected{% endif %}>
+                                    {{ ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"][i-1] }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label for="ano_filter" class="form-label small">Ano</label>
+                        <select class="form-select" id="ano_filter" name="ano" required>
+                            {% if current_year %}
+                                {% for i in range(current_year, current_year - 5, -1) %}
+                                    <option value="{{ i }}" {% if i == selected_year %}selected{% endif %}>{{ i }}</option>
+                                {% endfor %}
+                            {% else %}
+                                <option value="{{ selected_year }}" selected>{{ selected_year }}</option>
+                            {% endif %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-2 d-flex">
+                        <button type="submit" class="btn btn-primary w-100 me-2"><i class="bi bi-funnel-fill me-1"></i> Filtrar</button>
+                        <a href="{{ url_for('gamification.gamification_report') }}" class="btn btn-outline-secondary" title="Limpar Filtros"><i class="bi bi-x-lg"></i></a>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        
+        <div class="metric-card p-3 rounded shadow-sm">
+            <h2 class="h5 mb-3">Pontuação de Gamificação - {{ "%02d"|format(selected_month) }}/{{ selected_year }}</h2>
+            
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col">Colaborador</th>
+                            <th scope="col">Impl. Finalizadas (Mês)</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Comissão</th>
+                            <th scope="col">Pontuação Final</th>
+                            <th scope="col">Detalhes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if not report_data %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted p-4">
+                                    Nenhum dado encontrado para os filtros selecionados.
+                                    <br>
+                                    <small>Certifique-se de que as <a href="{{ url_for('gamification.manage_gamification_metrics') }}">métricas manuais</a> foram preenchidas para este período.</small>
+                                </td>
+                            </tr>
+                        {% endif %}
+
+                        {% for data in report_data | selectattr('elegivel') | sort(attribute='pontuacao_final', reverse=true) %}
+                        <tr class="table-light">
+                            <td><strong>{{ data.usuario_nome }}</strong></td>
+                            <td>{{ data.impl_finalizadas_mes }}</td>
+                            <td><span class="badge bg-success fs-6">Elegível</span></td>
+                            <td>
+                                
+                                {% set pts = data.pontuacao_final or 0 %}
+                                {% set cargo_lower = (data.cargo or '') | lower %}
+                                {% set is_senior = 'sênior' in cargo_lower or 'senior' in cargo_lower %}
+                                {% if pts > 300 %}
+                                    {% set valor_impl = 250 if is_senior else 200 %}
+                                {% elif pts > 250 %}
+                                    {% set valor_impl = 220 if is_senior else 180 %}
+                                {% elif pts > 200 %}
+                                    {% set valor_impl = 200 if is_senior else 160 %}
+                                {% elif pts > 150 %}
+                                    {% set valor_impl = 160 if is_senior else 140 %}
+                                {% elif pts > 100 %}
+                                    {% set valor_impl = 140 if is_senior else 120 %}
+                                {% else %}
+                                    {% set valor_impl = 30 if is_senior else 20 %}
+                                {% endif %}
+                                {% set comissao = (valor_impl | float) * (data.impl_finalizadas_mes or 0) %}
+                                {% set comissao_str = 'R$ ' ~ ('%.2f' | format(comissao)).replace('.', ',') %}
+                                <span class="fw-semibold">{{ comissao_str }}</span>
+                            </td>
+                            <td><strong class="fs-5 text-success">{{ data.pontuacao_final }} pts</strong></td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary py-0 px-2" type="button" data-bs-toggle="collapse" data-bs-target="#details-{{ loop.index }}" aria-expanded="false">
+                                    Ver Detalhes
+                                </button>
+                            </td>
+                        </tr>
+                        <tr class="collapse" id="details-{{ loop.index }}">
+                            <td colspan="7" class="p-0">
+                                <div class="p-3 bg-light">
+                                    <h6 class="text-success">Detalhamento de Pontos (Elegível)</h6>
+                                    <ul class="list-group list-group-flush">
+                                        {% for key, value in data.detalhamento_pontos.items() %}
+                                            <li class="list-group-item bg-light d-flex justify-content-between align-items-center py-1">
+                                                <span class="small">{{ key }}</span>
+                                                <span class="badge 
+                                                    {% if 'Penalidade' in key %}bg-danger
+                                                    {% elif 'Bônus' in key %}bg-success
+                                                    {% else %}bg-primary{% endif %}
+                                                    rounded-pill">
+                                                    {{ value }}
+                                                </span>
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        
+                        {% for data in report_data | selectattr('elegivel', 'false') %}
+                        <tr class="table-light opacity-75">
+                            <td>{{ data.usuario_nome }}</td>
+                            <td>{{ data.impl_finalizadas_mes }}</td>
+                            <td>{{ data.tma_medio_mes }} dias</td>
+                            <td><span class="badge bg-danger fs-6">Não Elegível</span></td>
+                            <td>—</td>
+                            <td><strong class="fs-5 text-danger">{{ data.pontuacao_final }} pts</strong></td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-danger py-0 px-2" type="button" data-bs-toggle="collapse" data-bs-target="#details-ne-{{ loop.index }}" aria-expanded="false">
+                                    Ver Motivo
+                                </button>
+                            </td>
+                        </tr>
+                        <tr class="collapse" id="details-ne-{{ loop.index }}">
+                            <td colspan="6" class="p-0">
+                                <div class="p-3 bg-light">
+                                    <h6 class="text-danger">Motivos da Inelegibilidade</h6>
+                                    <p class="mb-0">{{ data.motivo_inelegibilidade | default('Motivo não especificado ou erro no cálculo.') }}</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}

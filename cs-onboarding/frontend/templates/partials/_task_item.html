@@ -1,0 +1,70 @@
+{% set norm_mod = tarefa.tarefa_pai | lower if tarefa.tarefa_pai else '' %}
+{% set norm_task = tarefa.tarefa_filho | lower if tarefa.tarefa_filho else '' %}
+{% set key = (norm_mod ~ '|' ~ norm_task) if norm_mod else norm_task %}
+{% set tip = tt.get(key) or tt.get(norm_task) %}
+
+<div class="d-flex w-100 justify-content-between align-items-center">
+    <div class="form-check mb-0 flex-grow-1">
+        <input class="form-check-input task-checkbox" type="checkbox" value="" id="task-{{ tarefa.id }}"
+            hx-post="{{ tarefa.toggle_url if tarefa.toggle_url is defined else url_for('api.toggle_tarefa', tarefa_id=tarefa.id) }}"
+            hx-swap="none" {% if tarefa.concluida %}checked{% endif %}>
+        <label class="form-check-label w-100" for="task-{{ tarefa.id }}">
+            {{ tarefa.tarefa_filho }}
+        </label>
+    </div>
+    <div class="d-flex align-items-center">
+        {% if tarefa.tag %}
+        <span
+            class="badge rounded-pill task-tag ms-2 {% if tarefa.tag == 'Ação interna' %} bg-secondary {% elif tarefa.tag == 'Reunião' %} bg-info text-dark {% else %} bg-light text-dark {% endif %}">
+            {{ tarefa.tag }}
+        </span>
+        {% endif %}
+        <span
+            class="badge rounded-pill task-status ms-2 {% if tarefa.concluida %}bg-success{% else %}bg-secondary{% endif %}">{%
+            if tarefa.concluida %}Concluída{% else %}Pendente{% endif %}</span>
+        <button class="btn btn-sm btn-outline-secondary p-1 ms-2" type="button" data-bs-toggle="collapse"
+            data-bs-target="#comments-{{ tarefa.id }}" aria-expanded="true" title="Comentários"><i
+                class="bi bi-chat-dots"></i></button>
+        <button class="btn btn-sm btn-outline-danger p-1 ms-2" title="Excluir Tarefa"
+            data-delete-url="{{ tarefa.delete_url if tarefa.delete_url is defined else url_for('api.excluir_tarefa', tarefa_id=tarefa.id) }}"><i
+                class="bi bi-trash"></i></button>
+        <span class="handle ms-2" style="cursor: grab;" title="Mover Tarefa">⋮⋮</span>
+    </div>
+</div>
+
+<div class="mt-2 collapse show w-100" id="comments-{{ tarefa.id }}">
+    <label class="form-label small text-secondary mb-1">Comentários</label>
+    <form
+        hx-post="{{ tarefa.comment_url if tarefa.comment_url is defined else url_for('api.adicionar_comentario', tarefa_id=tarefa.id) }}"
+        hx-target="#comment-list-{{ tarefa.id }}" hx-swap="beforeend" hx-encoding="multipart/form-data"
+        class="comment-form mb-2" data-email-responsavel="{{ implantacao.email_responsavel | default('') }}"
+        data-nome-empresa="{{ implantacao.nome_empresa | default('') }}">
+        <textarea class="form-control form-control-sm" name="comentario" maxlength="8000" rows="1"
+            placeholder="Adicionar comentário..."></textarea>
+        <div class="d-flex align-items-center gap-2 mt-1">
+            <select name="visibilidade" class="form-select form-select-sm" style="max-width: 160px;">
+                <option value="interno" selected>Interno</option>
+                <option value="externo">Externo</option>
+            </select>
+            <input type="file" id="img-{{ tarefa.id }}" name="imagem" class="visually-hidden"
+                accept="image/png, image/jpeg, image/gif" aria-label="Selecionar imagem" title="Selecionar imagem">
+            <label for="img-{{ tarefa.id }}" class="btn btn-outline-secondary btn-sm" title="Selecionar imagem"><i
+                    class="bi bi-paperclip"></i></label>
+            <span class="file-name small text-muted">Nenhum arquivo</span>
+            <button class="btn btn-outline-primary btn-sm" type="submit" title="Salvar"><i
+                    class="bi bi-send"></i></button>
+        </div>
+    </form>
+    <div class="list-group list-group-flush border rounded-1 comment-list-wrapper" id="comment-list-{{ tarefa.id }}"
+        style="max-height: 300px; overflow-y: auto;">
+        {% if not tarefa.comentarios %}
+        <div class="list-group-item list-group-item-action py-1 px-2 small text-secondary fst-italic"
+            id="no-comment-{{ tarefa.id }}">
+            Nenhum comentário.
+        </div>
+        {% endif %}
+        {% for comentario in tarefa.comentarios %}
+        {% include 'partials/_comment_item.html' %}
+        {% endfor %}
+    </div>
+</div>

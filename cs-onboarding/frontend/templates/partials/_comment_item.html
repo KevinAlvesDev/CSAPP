@@ -1,0 +1,40 @@
+<div class="list-group-item list-group-item-action py-1 px-2" id="comentario-{{ comentario.id }}">
+    <div class="d-flex w-100 justify-content-between align-items-center mb-1">
+        <div class="d-flex align-items-center gap-2">
+            <strong class="mb-0 small"><i class="bi bi-person-fill me-1"></i> {{ comentario.usuario_nome }}</strong>
+            {% if comentario.visibilidade %}
+            <span
+                class="badge rounded-pill small {% if comentario.visibilidade == 'interno' %} bg-secondary {% else %} bg-info text-dark {% endif %}">{{
+                comentario.visibilidade | capitalize }}</span>
+            {% endif %}
+        </div>
+        <small class="text-secondary">{{ comentario.data_criacao | format_date_br }}</small>
+    </div>
+    <div class="comment-content-wrapper">
+        <p class="mb-1 small comment-text" id="comment-text-{{ comentario.id }}">{{ comentario.texto | safe }}</p>
+        {% if comentario.texto and comentario.texto | length > 200 %}
+        <button class="btn btn-sm btn-link p-0 small" data-action="toggle-comment"
+            data-target-id="comment-text-{{ comentario.id }}">Ver mais...</button>
+        {% endif %}
+        {% if comentario.imagem_url %}
+        <a href="{{ comentario.imagem_url }}" target="_blank" title="Ampliar">
+            <img src="{{ comentario.imagem_url }}" class="img-fluid rounded mt-1 comment-image">
+        </a>
+        {% endif %}
+    </div>
+    {% if comentario.usuario_cs == g.user_email %}
+    <button class="btn btn-sm btn-link text-danger p-0 small mt-1"
+        hx-post="{{ comentario.delete_url if comentario.delete_url is defined else url_for('api.excluir_comentario', comentario_id=comentario.id) }}"
+        hx-target="#comentario-{{ comentario.id }}" hx-swap="outerHTML" hx-confirm="Excluir este comentário?">
+        Excluir
+    </button>
+    {% endif %}
+    {% if comentario.visibilidade and comentario.visibilidade == 'externo' %}
+    <button class="btn btn-sm btn-link text-primary p-0 small mt-1 ms-2"
+        hx-post="{{ comentario.email_url if comentario.email_url is defined else url_for('api.enviar_email_comentario', comentario_id=comentario.id) }}"
+        hx-target="#comment-list-{{ comentario.tarefa_id }}" hx-swap="beforeend"
+        hx-confirm="Deseja enviar este comentário por e-mail ao responsável?">
+        Enviar e-mail ao responsável
+    </button>
+    {% endif %}
+</div>

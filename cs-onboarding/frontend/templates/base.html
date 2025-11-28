@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}CS Onboarding{% endblock %}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+  <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+  {% block head_extra %}{% endblock %}
+</head>
+
+<body>
+
+  <a href="#menu" class="menu-link menu-toggle btn btn-outline-secondary btn-sm" title="Menu">
+    <i class="bi bi-list"></i>
+  </a>
+
+
+  <nav id="menu" class="bigslide-panel" role="navigation">
+    <div class="d-flex align-items-center mb-3">
+      <div class="user-profile-btn-sidebar me-2">
+        {% if g.perfil and g.perfil.foto_url %}
+        <img src="{{ g.perfil.foto_url }}?v={{ range(1, 10000) | random }}" alt="Foto"
+          style="width:40px;height:40px;object-fit:cover;border-radius:50%;">
+        {% else %}
+        <i class="bi bi-person-fill" style="font-size: 1.5rem;"></i>
+        {% endif %}
+      </div>
+      <strong>{{ g.perfil.nome or g.user_email }}</strong>
+    </div>
+    <ul class="nav flex-column">
+      <li class="nav-item"><a class="nav-link {% if request.endpoint == 'main.dashboard' %}active{% endif %}"
+          href="{{ url_for('main.dashboard') }}"><i class="bi bi-speedometer2 me-2"></i> Dashboard</a></li>
+      {% if implantacao and implantacao.id %}
+      <li class="nav-item"><a class="nav-link {% if request.endpoint == 'main.ver_implantacao' %}active{% endif %}"
+          href="{{ url_for('main.ver_implantacao', impl_id=implantacao.id) }}"><i class="bi bi-kanban me-2"></i>
+          Detalhes da Implantação</a></li>
+      {% endif %}
+      <li class="nav-item"><a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#modalPerfil"><i
+            class="bi bi-person-circle me-2"></i> Perfil</a></li>
+
+      <li class="nav-item"><a
+          class="nav-link {% if request.endpoint and request.endpoint.startswith('agenda.') %}active{% endif %}"
+          href="{{ url_for('agenda.agenda_home') }}"><i class="bi bi-calendar-week me-2"></i> Agenda</a></li>
+
+      <li class="nav-item"><a
+          class="nav-link {% if request.endpoint and request.endpoint.startswith('planos.') %}active{% endif %}"
+          href="{{ url_for('planos.listar_planos') }}"><i class="bi bi-diagram-3 me-2"></i> Planos de Sucesso</a></li>
+
+      {% if g.perfil and g.perfil.perfil_acesso in g.PERFIS_COM_GESTAO %}
+      <li class="nav-item nav-item-divider">
+        <hr>
+      </li>
+      <li class="nav-item"><a class="nav-link" href="#" data-bs-toggle="modal"
+          data-bs-target="#modalGerenciarUsuarios"><i class="bi bi-people-fill me-2"></i> Usuários</a></li>
+      <li class="nav-item"><a
+          class="nav-link {% if request.endpoint == 'analytics.analytics_dashboard' %}active{% endif %}"
+          href="{{ url_for('analytics.analytics_dashboard') }}"><i class="bi bi-graph-up me-2"></i> Gerencial</a></li>
+      <li class="nav-item"><a
+          class="nav-link {% if request.endpoint == 'analytics.cancelamentos_dashboard' %}active{% endif %}"
+          href="{{ url_for('analytics.cancelamentos_dashboard') }}"><i class="bi bi-x-circle me-2"></i>
+          Cancelamentos</a></li>
+      <li class="nav-item nav-item-divider">
+        <hr>
+      </li>
+      <li class="nav-item"><span class="nav-link disabled">Gamificação</span></li>
+      <li class="nav-item"><a
+          class="nav-link {% if request.endpoint == 'gamification.manage_gamification_metrics' %}active{% endif %}"
+          href="{{ url_for('gamification.manage_gamification_metrics') }}"><i class="bi bi-pencil-square me-2"></i>
+          Métricas</a></li>
+      <li class="nav-item"><a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#modalGamificacao"><i
+            class="bi bi-list-check me-2"></i> Critérios da Gamificação</a></li>
+      <li class="nav-item"><a
+          class="nav-link {% if request.endpoint == 'gamification.gamification_report' %}active{% endif %}"
+          href="{{ url_for('gamification.gamification_report') }}"><i class="bi bi-clipboard-data me-2"></i>
+          Relatório</a></li>
+      {% endif %}
+      <li class="nav-item nav-item-divider">
+        <hr>
+      </li>
+      <li class="nav-item"><a class="nav-link text-danger" href="{{ url_for('auth.logout') }}"><i
+            class="bi bi-box-arrow-left me-2"></i> Sair</a></li>
+    </ul>
+  </nav>
+
+  <div class="push">
+    {% block content %}
+    <div class="container py-4">
+      <div class="card">
+        <div class="card-body">
+          <h1 class="main-title mb-2">Conteúdo Padrão</h1>
+          <p class="text-muted text-center mb-0">Substitua no template filho.</p>
+        </div>
+      </div>
+    </div>
+    {% endblock %}
+  </div>
+
+  {% include 'modals/_detalhes_empresa.html' %}
+  {% include 'modals/_gamificacao_regras.html' %}
+  {% include 'modals/_gerenciar_usuarios.html' %}
+  {% include 'modals/_perfil.html' %}
+  
+  <!-- Toast Container -->
+  <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;" id="toastContainer">
+    <!-- Toasts serão inseridos aqui dinamicamente -->
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script>
+    (function () {
+      function ensureHTMX() {
+        if (window.htmx) return true;
+        var urls = [
+          'https://cdn.jsdelivr.net/npm/htmx.org@1.9.10/dist/htmx.min.js',
+          'https://cdnjs.cloudflare.com/ajax/libs/htmx/1.9.10/htmx.min.js'
+        ];
+        var i = 0;
+        function loadNext() {
+          if (window.htmx) return;
+          if (i >= urls.length) { console.warn('HTMX não pôde ser carregado dos CDNs alternativos. Ativando fallback simples para formulários.'); polyfillHTMX(); return; }
+          var s = document.createElement('script'); s.src = urls[i++]; s.async = true;
+          s.onload = function () { console.log('HTMX carregado via fallback'); };
+          s.onerror = function () { loadNext(); };
+          document.head.appendChild(s);
+        }
+        loadNext();
+        return !!window.htmx;
+      }
+      function polyfillHTMX() {
+        // Fallback mínimo: intercepta formulários de comentário e envia via fetch
+        document.addEventListener('submit', function (ev) {
+          var form = ev.target;
+          if (!form || !form.matches('form[hx-post]')) return;
+          ev.preventDefault();
+          try {
+            var targetSel = form.getAttribute('hx-target');
+            var postUrl = form.getAttribute('hx-post');
+            var swapMode = (form.getAttribute('hx-swap') || 'beforeend').toLowerCase();
+            var target = targetSel ? document.querySelector(targetSel) : null;
+            if (!postUrl || !target) { form.submit(); return; }
+            var fd = new FormData(form);
+            fetch(postUrl, { method: 'POST', body: fd, headers: { 'HX-Request': 'true' } })
+              .then(function (r) { return r.text(); })
+              .then(function (html) {
+                var temp = document.createElement('div'); temp.innerHTML = html;
+                var nodes = Array.from(temp.childNodes);
+                if (swapMode === 'beforeend') nodes.forEach(function (n) { target.appendChild(n); });
+                else if (swapMode === 'outerhtml') { target.outerHTML = html; }
+                else { target.innerHTML = html; }
+                var evt = new Event('comment_saved_fallback'); document.body.dispatchEvent(evt);
+              })
+              .catch(function (e) { console.error('Falha ao enviar comentário:', e); alert('Erro ao salvar comentário.'); });
+          } catch (e2) { console.error('Fallback HTMX falhou:', e2); form.submit(); }
+        }, true);
+        document.addEventListener('click', function (ev) {
+          var el = ev.target && ev.target.closest('[hx-post]');
+          if (!el) return;
+          if (el.closest('form')) return;
+          if (!(el.tagName === 'BUTTON' || el.tagName === 'A')) return;
+          ev.preventDefault();
+          var confirmMsg = el.getAttribute('hx-confirm');
+          if (confirmMsg && !window.confirm(confirmMsg)) return;
+          var postUrl = el.getAttribute('hx-post');
+          var targetSel = el.getAttribute('hx-target');
+          var swapMode = (el.getAttribute('hx-swap') || 'innerHTML').toLowerCase();
+          var target = targetSel ? document.querySelector(targetSel) : null;
+          if (!postUrl || !target) return;
+          try { el.disabled = true; } catch (e) { }
+          fetch(postUrl, { method: 'POST', headers: { 'HX-Request': 'true' } })
+            .then(function (r) { return r.text(); })
+            .then(function (html) {
+              if (swapMode === 'outerhtml') { target.outerHTML = html; }
+              else if (swapMode === 'beforeend') {
+                var temp = document.createElement('div'); temp.innerHTML = html;
+                Array.from(temp.childNodes).forEach(function (n) { target.appendChild(n); });
+              } else { target.innerHTML = html; }
+            })
+            .catch(function () {
+              try {
+                var alert = document.createElement('div');
+                alert.className = 'alert alert-danger alert-dismissible fade show my-2';
+                alert.innerHTML = 'Falha ao excluir comentário.' + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+                var container = document.querySelector('.container') || document.body;
+                container.prepend(alert);
+                setTimeout(function () { try { var ai = bootstrap.Alert.getOrCreateInstance(alert); ai.close(); } catch (e) { } }, 3000);
+              } catch (e) { }
+            })
+            .finally(function () { try { el.disabled = false; } catch (e) { } });
+        }, true);
+      }
+      if (!window.htmx) {
+        if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', ensureHTMX); }
+        else { ensureHTMX(); }
+      }
+      document.addEventListener('submit', function (ev) {
+        var form = ev.target;
+        if (!form || !form.matches('#modalGerenciarUsuarios form[hx-post]')) return;
+        ev.preventDefault();
+        try {
+          var targetSel = form.getAttribute('hx-target');
+          var postUrl = form.getAttribute('hx-post');
+          var swapMode = (form.getAttribute('hx-swap') || 'innerHTML').toLowerCase();
+          var target = targetSel ? document.querySelector(targetSel) : null;
+          if (!postUrl || !target) return;
+          var fd = new FormData(form);
+          fetch(postUrl, { method: 'POST', body: fd, headers: { 'HX-Request': 'true' } })
+            .then(function (r) { return r.text(); })
+            .then(function (html) {
+              if (swapMode === 'outerhtml') { target.outerHTML = html; }
+              else if (swapMode === 'beforeend') {
+                var temp = document.createElement('div'); temp.innerHTML = html;
+                Array.from(temp.childNodes).forEach(function (n) { target.appendChild(n); });
+              } else { target.innerHTML = html; }
+            })
+            .catch(function (e) { console.error('Falha no envio do formulário do modal:', e); });
+        } catch (e) { console.error('Erro ao processar submit do modal:', e); }
+      }, true);
+      document.addEventListener('click', function (ev) {
+        var el = ev.target && ev.target.closest('button[hx-post], a[hx-post]');
+        if (!el) return;
+        var postUrl = el.getAttribute('hx-post');
+        if (!postUrl || postUrl.indexOf('/api/excluir_comentario/') === -1) return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        try { ev.stopImmediatePropagation(); } catch (e) { }
+        var confirmMsg = el.getAttribute('hx-confirm');
+        if (confirmMsg && !window.confirm(confirmMsg)) return;
+        var targetSel = el.getAttribute('hx-target');
+        var swapMode = (el.getAttribute('hx-swap') || 'outerHTML').toLowerCase();
+        var target = targetSel ? document.querySelector(targetSel) : null;
+        if (!target) return;
+        try { el.disabled = true; } catch (e) { }
+        fetch(postUrl, { method: 'POST', headers: { 'HX-Request': 'true' } })
+          .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+          .then(function (html) {
+            if (swapMode === 'outerhtml') { target.outerHTML = html; }
+            else if (swapMode === 'beforeend') {
+              var temp = document.createElement('div'); temp.innerHTML = html;
+              Array.from(temp.childNodes).forEach(function (n) { target.appendChild(n); });
+            } else { target.innerHTML = html; }
+          })
+          .catch(function () {
+            try {
+              var alert = document.createElement('div');
+              alert.className = 'alert alert-danger alert-dismissible fade show my-2';
+              alert.innerHTML = 'Falha ao excluir comentário.' + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+              var container = document.querySelector('.container') || document.body;
+              container.prepend(alert);
+              setTimeout(function () { try { var ai = bootstrap.Alert.getOrCreateInstance(alert); ai.close(); } catch (e) { } }, 3000);
+            } catch (e) { }
+          })
+          .finally(function () { try { el.disabled = false; } catch (e) { } });
+      }, true);
+      document.addEventListener('click', function (ev) {
+        var el = ev.target && ev.target.closest('button[hx-post], a[hx-post]');
+        if (!el) return;
+        var postUrl = el.getAttribute('hx-post');
+        if (!postUrl || postUrl.indexOf('/api/enviar_email_comentario/') === -1) return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        try { ev.stopImmediatePropagation(); } catch (e) { }
+        var confirmMsg = el.getAttribute('hx-confirm');
+        if (confirmMsg && !window.confirm(confirmMsg)) return;
+        var targetSel = el.getAttribute('hx-target');
+        var swapMode = (el.getAttribute('hx-swap') || 'beforeend').toLowerCase();
+        var target = targetSel ? document.querySelector(targetSel) : null;
+        if (!target) return;
+        try { el.disabled = true; } catch (e) { }
+        fetch(postUrl, { method: 'POST', headers: { 'HX-Request': 'true' } })
+          .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+          .then(function (html) {
+            if (swapMode === 'outerhtml') { target.outerHTML = html; }
+            else if (swapMode === 'beforeend') {
+              var temp = document.createElement('div'); temp.innerHTML = html;
+              Array.from(temp.childNodes).forEach(function (n) { target.appendChild(n); });
+            } else { target.innerHTML = html; }
+            try {
+              var ok = /text-success/.test(html);
+              var msg = ok ? 'E-mail enviado ao responsável.' : 'Falha ao enviar e-mail ao responsável.';
+              var cls = ok ? 'alert-success' : 'alert-danger';
+              var alert = document.createElement('div');
+              alert.className = 'alert ' + cls + ' alert-dismissible fade show my-2';
+              alert.innerHTML = msg + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+              var container = document.querySelector('#detalhesTabContent') || document.querySelector('.container') || document.body;
+              container.prepend(alert);
+              setTimeout(function () { try { var ai = bootstrap.Alert.getOrCreateInstance(alert); ai.close(); } catch (e) { } }, 3000);
+            } catch (e) { }
+          })
+          .catch(function () {
+            try {
+              var alert = document.createElement('div');
+              alert.className = 'alert alert-danger alert-dismissible fade show my-2';
+              alert.innerHTML = 'Falha ao enviar e-mail ao responsável.' + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+              var container = document.querySelector('#detalhesTabContent') || document.querySelector('.container') || document.body;
+              container.prepend(alert);
+              setTimeout(function () { try { var ai = bootstrap.Alert.getOrCreateInstance(alert); ai.close(); } catch (e) { } }, 3000);
+            } catch (e) { }
+          })
+          .finally(function () { try { el.disabled = false; } catch (e) { } });
+      }, true);
+      document.addEventListener('htmx:responseError', function (ev) {
+        try {
+          var alert = document.createElement('div');
+          alert.className = 'alert alert-danger alert-dismissible fade show my-2';
+          alert.innerHTML = 'Falha ao salvar. Tente novamente.' + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+          var container = document.querySelector('.container') || document.body;
+          container.prepend(alert);
+          setTimeout(function () { try { var alertInst = bootstrap.Alert.getOrCreateInstance(alert); alertInst.close(); } catch (e) { } }, 3000);
+        } catch (e) { }
+      });
+    })();
+  </script>
+  <script>
+    (function () {
+      document.addEventListener('DOMContentLoaded', function () {
+        try {
+          var tooltipEls = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+          tooltipEls.forEach(function (el) { bootstrap.Tooltip.getOrCreateInstance(el); });
+        } catch (e) { }
+      });
+    })();
+  </script>
+
+
+
+  <script>
+    (function () {
+      function nativeInit() {
+        // Se jQuery/bigSlide estiverem disponíveis, não ativar fallback
+        if (window.jQuery && jQuery.fn && jQuery.fn.bigSlide) return;
+
+        var menuToggle = document.querySelector('.menu-link');
+        var menu = document.getElementById('menu');
+        var push = document.querySelector('.push');
+        if (!menuToggle || !menu || !push) return;
+
+        // Backdrop nativo
+        var backdrop = document.querySelector('.bigslide-backdrop');
+        if (!backdrop) {
+          backdrop = document.createElement('div');
+          backdrop.className = 'bigslide-backdrop d-none';
+          document.body.appendChild(backdrop);
+        }
+
+        var open = false;
+        function openMenu() {
+          document.body.classList.add('menu-open');
+          menu.classList.add('open');
+          push.classList.add('push-shifted');
+          backdrop.classList.remove('d-none');
+          open = true;
+        }
+        function closeMenu() {
+          document.body.classList.remove('menu-open');
+          menu.classList.remove('open');
+          push.classList.remove('push-shifted');
+          backdrop.classList.add('d-none');
+          open = false;
+        }
+        function toggleMenu(e) {
+          if (e) e.preventDefault();
+          (open ? closeMenu : openMenu)();
+        }
+
+        menuToggle.addEventListener('click', toggleMenu);
+        backdrop.addEventListener('click', closeMenu);
+        // Fecha ao navegar
+        menu.addEventListener('click', function (ev) {
+          var target = ev.target.closest('a.nav-link');
+          if (target) { setTimeout(closeMenu, 10); }
+        });
+        // Fecha com ESC
+        document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && open) closeMenu(); });
+      }
+
+      // Se bigSlide não carregar, ativamos o fallback nativo
+      if (!(window.jQuery && jQuery.fn && jQuery.fn.bigSlide)) {
+        // Tentar após DOM pronto
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', nativeInit);
+        } else {
+          nativeInit();
+        }
+      }
+      // Além disso, se o evento "bigslide-ready" nunca ocorrer, já teremos o fallback ativo
+    })();
+  </script>
+
+  <script>
+    document.addEventListener('show.bs.modal', function () {
+      try {
+        var menu = document.getElementById('menu');
+        var push = document.querySelector('.push');
+        var backdrop = document.querySelector('.bigslide-backdrop');
+        if (document.body.classList.contains('menu-open')) {
+          document.body.classList.remove('menu-open');
+          if (menu) menu.classList.remove('open');
+          if (push) push.classList.remove('push-shifted');
+          if (backdrop) backdrop.classList.add('d-none');
+        }
+        // Se bigSlide estiver ativo, aciona o fechamento para sincronizar estado interno
+        if (window.jQuery && jQuery.fn && jQuery.fn.bigSlide) {
+          jQuery('.menu-link').trigger('click');
+        }
+      } catch (e) { /* ignora erros de ambiente */ }
+    });
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+  <script>
+    function formatarTelefone(input) {
+      let v = input.value.replace(/\D/g, '').substring(0, 11);
+      if (v.length > 10) v = v.replace(/^(\d{2})(\d{5})(\d{4}).*/, '($1) $2-$3');
+      else if (v.length > 6) v = v.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
+      else if (v.length > 2) v = v.replace(/^(\d{2})(\d{0,5}).*/, '($1) $2');
+      else if (v.length > 0) v = v.replace(/^(\d{0,2}).*/, '($1');
+      input.value = v;
+    }
+
+    const setMultipleSelect = (selectElement, dataValue) => {
+      if (!selectElement) return;
+      Array.from(selectElement.options).forEach(opt => opt.selected = false);
+      const values = (typeof dataValue === 'string' && dataValue)
+        ? dataValue.split(',').map(s => s.trim()).filter(s => s.length > 0)
+        : [];
+      if (values.length > 0) {
+        let hasSelection = false;
+        Array.from(selectElement.options).forEach(opt => {
+          if (values.includes(opt.value)) {
+            opt.selected = true;
+            hasSelection = true;
+          }
+        });
+        if (!hasSelection && selectElement.options.length > 0 && selectElement.options[0].value === "") {
+          selectElement.options[0].selected = true;
+        }
+      } else {
+        if (selectElement.options.length > 0 && selectElement.options[0].value === "") {
+          selectElement.options[0].selected = true;
+        }
+      }
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+
+      let tomSelectInstances = {};
+
+      const initializeMultiTagInput = (selector, dataValue) => {
+        const selectElement = modalDetalhesEmpresa.querySelector(selector);
+        if (!selectElement) return;
+
+        if (tomSelectInstances[selector]) {
+          tomSelectInstances[selector].destroy();
+        }
+
+        const values = (typeof dataValue === 'string' && dataValue)
+          ? dataValue.split(',').map(s => s.trim()).filter(s => s.length > 0)
+          : [];
+
+        const tomSelect = new TomSelect(selectElement, {
+          create: true,
+          persist: false,
+          delimiter: ',',
+          items: []
+        });
+
+        values.forEach(value => {
+          if (!tomSelect.options.hasOwnProperty(value)) {
+            tomSelect.addOption({ value: value, text: value });
+          }
+        });
+
+        tomSelect.setValue(values);
+        tomSelectInstances[selector] = tomSelect;
+      };
+
+      const initializeSingleTagInput = (selector, dataValue) => {
+        const selectElement = modalDetalhesEmpresa.querySelector(selector);
+        if (!selectElement) return;
+
+        if (tomSelectInstances[selector]) {
+          tomSelectInstances[selector].destroy();
+        }
+
+        const tomSelect = new TomSelect(selectElement, {
+          create: true,
+          persist: false,
+          items: []
+        });
+
+        if (dataValue && !tomSelect.options.hasOwnProperty(dataValue)) {
+          tomSelect.addOption({ value: dataValue, text: dataValue });
+        }
+
+        tomSelect.setValue(dataValue);
+        tomSelectInstances[selector] = tomSelect;
+      };
+
+
+      const modalDetalhesEmpresa = document.getElementById('modalDetalhesEmpresa');
+      if (modalDetalhesEmpresa) {
+        modalDetalhesEmpresa.addEventListener('show.bs.modal', function (event) {
+          const button = event.relatedTarget;
+          if (!button || !button.getAttribute('data-id')) return;
+          const getData = (key, defaultVal = '') => { const val = button.getAttribute(`data-${key}`); return (val === 'null' || val === 'undefined' || val === null || val === 'None' || val === undefined || val === '') ? defaultVal : val; };
+          const modal = modalDetalhesEmpresa;
+          const implId = getData('id');
+
+          modal.querySelector('#modal-implantacao_id').value = implId;
+          modal.querySelector('#modal-responsavel_cliente').value = getData('responsavel');
+          modal.querySelector('#modal-cargo_responsavel').value = getData('cargo');
+          modal.querySelector('#modal-telefone_responsavel').value = getData('telefone');
+          modal.querySelector('#modal-email_responsavel').value = getData('email');
+          const inicioProducaoIsoAttr = getData('inicio-producao');
+          const finalImplantacaoIsoAttr = getData('final-implantacao');
+          modal.querySelector('#modal-id_favorecido').value = getData('id-favorecido');
+          modal.querySelector('#modal-chave_oamd').value = getData('chave-oamd');
+          modal.querySelector('#modal-tela_apoio_link').value = getData('tela-apoio-link');
+          modal.querySelector('#modal-nivel_receita').value = getData('nivel-receita');
+
+          initializeMultiTagInput('#modal-modalidades', getData('modalidades'));
+          initializeMultiTagInput('#modal-horarios_func', getData('horarios-func'));
+          initializeMultiTagInput('#modal-formas_pagamento', getData('formas-pagamento'));
+          initializeMultiTagInput('#modal-seguimento', getData('seguimento'));
+          initializeMultiTagInput('#modal-tipos_planos', getData('tipos-planos'));
+
+          modal.querySelector('#modal-diaria').value = getData('diaria', 'Não definido');
+          modal.querySelector('#modal-freepass').value = getData('freepass', 'Não definido');
+          modal.querySelector('#modal-alunos_ativos').value = getData('alunos-ativos', '0');
+          modal.querySelector('#modal-sistema_anterior').value = getData('sistema-anterior');
+          modal.querySelector('#modal-recorrencia_usa').value = getData('recorrencia-usa');
+          modal.querySelector('#modal-importacao').value = getData('importacao', 'Não definido');
+          modal.querySelector('#modal-boleto').value = getData('boleto', 'Não definido');
+          modal.querySelector('#modal-nota_fiscal').value = getData('nota-fiscal', 'Não definido');
+          modal.querySelector('#modal-catraca').value = getData('catraca', 'Não preenchido');
+          modal.querySelector('#modal-facial').value = getData('facial', 'Não preenchido');
+
+          const valorAtribuidoInput = modal.querySelector('#modal-valor_atribuido'); if (valorAtribuidoInput) valorAtribuidoInput.value = getData('valor-atribuido', '0.00');
+
+          const respEstrategicoNomeInput = modal.querySelector('#modal-resp_estrategico_nome'); if (respEstrategicoNomeInput) respEstrategicoNomeInput.value = getData('resp-estrategico-nome');
+          const respOnbNomeInput = modal.querySelector('#modal-resp_onb_nome'); if (respOnbNomeInput) respOnbNomeInput.value = getData('resp-onb-nome');
+          const contatosInput = modal.querySelector('#modal-contatos'); if (contatosInput) contatosInput.value = getData('contatos');
+          const respEstrategicoObsInput = modal.querySelector('#modal-resp_estrategico_obs'); if (respEstrategicoObsInput) respEstrategicoObsInput.value = getData('resp-estrategico-obs');
+
+          const inicioEfetivoIsoAttr = getData('inicio-efetivo-iso');
+
+          const normalizeToISO = (s) => {
+            if (!s) return '';
+            const t = String(s).trim();
+            let m = t.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+            if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+            m = t.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+            return '';
+          };
+          const setFpDate = (fp, s) => { const iso = normalizeToISO(s); if (fp && iso) { fp.setDate(iso, true, 'Y-m-d'); } };
+          setFpDate(window.fpInicioEfetivo, inicioEfetivoIsoAttr);
+          setFpDate(window.fpInicioProd, inicioProducaoIsoAttr);
+          setFpDate(window.fpFinalImpl, finalImplantacaoIsoAttr);
+
+          const inicioImplantacaoIso = getData('inicio-implantacao');
+          const dataCadastroInput = modal.querySelector('#modal-data_cadastro');
+          if (dataCadastroInput) dataCadastroInput.value = (function (iso) { if (!iso) return ''; var p = iso.split('T')[0].split('-'); if (p.length !== 3) return ''; return p[2].padStart(2, '0') + '/' + p[1].padStart(2, '0') + '/' + p[0]; })(inicioImplantacaoIso);
+
+          fetch(`/api/v1/implantacoes/${implId}`)
+            .then(r => r.ok ? r.json() : Promise.reject(new Error('Falha ao carregar implantação')))
+            .then(j => {
+              if (!j || !j.ok || !j.data || !j.data.implantacao) return;
+              const impl = j.data.implantacao;
+              setFpDate(window.fpInicioEfetivo, impl.data_inicio_efetivo);
+              setFpDate(window.fpInicioProd, impl.data_inicio_producao);
+              setFpDate(window.fpFinalImpl, impl.data_final_implantacao);
+            })
+            .catch(() => { });
+
+          formatarTelefone(modal.querySelector('#modal-telefone_responsavel'));
+          const modalRedirect = modal.querySelector('#modal-redirect_to'); const isDetailsPage = document.getElementById('checklist-area-treinamento'); modalRedirect.value = isDetailsPage ? 'detalhes' : 'dashboard';
+        });
+
+        modalDetalhesEmpresa.addEventListener('hide.bs.modal', function (event) {
+          for (const selector in tomSelectInstances) {
+            if (tomSelectInstances[selector]) {
+              tomSelectInstances[selector].destroy();
+            }
+          }
+          tomSelectInstances = {};
+        });
+      }
+
+      // Converte datas BR -> ISO no submit do formulário do modal
+      (function attachSubmitConverter() {
+        const modalForm = document.querySelector('#modalDetalhesEmpresa form');
+        if (!modalForm) return;
+        const toIso = (br) => {
+          if (!br || typeof br !== 'string') return '';
+          const m = br.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+          if (!m) return br; // Se já estiver ISO ou vazio, mantém
+          const [_, dd, mm, yyyy] = m;
+          return `${yyyy}-${mm}-${dd}`;
+        };
+        modalForm.addEventListener('submit', function (e) {
+          const inicioEfetivo = modalForm.querySelector('#modal-inicio_efetivo');
+          const dataInicioProd = modalForm.querySelector('#modal-data_inicio_producao');
+          const dataFinalImpl = modalForm.querySelector('#modal-data_final_implantacao');
+
+          if (window.fpInicioEfetivo && window.fpInicioEfetivo._input) {
+            const v = window.fpInicioEfetivo._input.value;
+            if (v) {
+              const iso = toIso(v);
+              if (iso) { window.fpInicioEfetivo.setDate(iso, true, 'Y-m-d'); }
+            }
+          }
+          if (window.fpInicioProd && window.fpInicioProd._input) {
+            const v = window.fpInicioProd._input.value;
+            if (v) {
+              const iso = toIso(v);
+              if (iso) { window.fpInicioProd.setDate(iso, true, 'Y-m-d'); }
+            }
+          }
+          if (window.fpFinalImpl && window.fpFinalImpl._input) {
+            const v = window.fpFinalImpl._input.value;
+            if (v) {
+              const iso = toIso(v);
+              if (iso) { window.fpFinalImpl.setDate(iso, true, 'Y-m-d'); }
+            }
+          }
+
+          if (inicioEfetivo && inicioEfetivo.value) inicioEfetivo.value = toIso(inicioEfetivo.value);
+          if (dataInicioProd && dataInicioProd.value) dataInicioProd.value = toIso(dataInicioProd.value);
+          if (dataFinalImpl && dataFinalImpl.value) dataFinalImpl.value = toIso(dataFinalImpl.value);
+        });
+      })();
+
+      // Inicializa calendário e máscara nos campos do modal Detalhes
+      (function initModalCalendars() {
+        if (!window.flatpickr) return;
+        const fpInicioEfetivo = window.flatpickr('#modal-inicio_efetivo', { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true });
+        const fpInicioProd = window.flatpickr('#modal-data_inicio_producao', { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true });
+        const fpFinalImpl = window.flatpickr('#modal-data_final_implantacao', { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true });
+        window.fpInicioEfetivo = fpInicioEfetivo;
+        window.fpInicioProd = fpInicioProd;
+        window.fpFinalImpl = fpFinalImpl;
+        const btnInicioEfetivo = document.getElementById('btn-cal-inicio_efetivo');
+        const btnInicioProd = document.getElementById('btn-cal-data_inicio_producao');
+        const btnFinalImpl = document.getElementById('btn-cal-data_final_implantacao');
+        if (btnInicioEfetivo && fpInicioEfetivo) btnInicioEfetivo.addEventListener('click', function () { fpInicioEfetivo.open(); });
+        if (btnInicioProd && fpInicioProd) btnInicioProd.addEventListener('click', function () { fpInicioProd.open(); });
+        if (btnFinalImpl && fpFinalImpl) btnFinalImpl.addEventListener('click', function () { fpFinalImpl.open(); });
+        function attachMask(fp) {
+          var alt = fp && fp._input ? fp._input : null;
+          if (!alt) return;
+          alt.addEventListener('input', function (e) {
+            var v = e.target.value.replace(/[^\d]/g, '').slice(0, 8);
+            var out = '';
+            if (v.length >= 2) out = v.slice(0, 2);
+            if (v.length >= 4) out = out + '/' + v.slice(2, 4);
+            if (v.length >= 5) out = out + '/' + v.slice(4, 8);
+            e.target.value = out;
+          });
+        }
+        attachMask(fpInicioEfetivo);
+        attachMask(fpInicioProd);
+        attachMask(fpFinalImpl);
+      })();
+
+      const modalGerenciarUsuarios = document.getElementById('modalGerenciarUsuarios');
+      if (modalGerenciarUsuarios) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const shouldOpenModal = urlParams.get('open_users_modal') === 'true';
+        const loadManagementContent = () => {
+          const contentDiv = document.getElementById('users-management-content'); const spinnerHTML = `<div class="text-center py-5" id="users-loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div><p class="mt-2">Carregando lista de usuários...</p></div>`; contentDiv.innerHTML = spinnerHTML;
+          fetch('{{ url_for("management.manage_users_modal") }}')
+            .then(response => { if (!response.ok) { return response.text().then(text => { throw new Error(text || `Erro ${response.status} ao carregar usuários.`); }); } return response.text(); })
+            .then(html => { contentDiv.innerHTML = html; })
+            .catch(error => { console.error('Erro ao carregar gerenciamento de usuários:', error); contentDiv.innerHTML = `<div class="alert alert-danger">Falha ao carregar a lista de usuários. Detalhes: ${error.message}</div>`; });
+        };
+        modalGerenciarUsuarios.addEventListener('shown.bs.modal', loadManagementContent);
+        if (shouldOpenModal) { setTimeout(() => { const bsModal = bootstrap.Modal.getOrCreateInstance(modalGerenciarUsuarios); if (bsModal) { bsModal.show(); const currentUrl = new URL(window.location); currentUrl.searchParams.delete('open_users_modal'); history.replaceState(null, '', currentUrl.toString()); } }, 100); }
+      }
+
+      const modalPerfil = document.getElementById('modalPerfil');
+      if (modalPerfil) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const shouldOpenProfileModal = urlParams.get('open_profile_modal') === 'true';
+        const loadProfileContent = () => {
+          const contentDiv = document.getElementById('profile-content');
+          const spinnerHTML = `<div class="text-center py-5" id="profile-loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div><p class="mt-2">Carregando perfil...</p></div>`;
+          contentDiv.innerHTML = spinnerHTML;
+          fetch('{{ url_for("profile.profile_modal") }}')
+            .then(response => { if (!response.ok) { return response.text().then(text => { throw new Error(text || `Erro ${response.status} ao carregar perfil.`); }); } return response.text(); })
+            .then(html => { contentDiv.innerHTML = html; })
+            .catch(error => { console.error('Erro ao carregar perfil:', error); contentDiv.innerHTML = `<div class="alert alert-danger">Falha ao carregar o perfil. Detalhes: ${error.message}</div>`; });
+        };
+        modalPerfil.addEventListener('shown.bs.modal', loadProfileContent);
+        modalPerfil.addEventListener('submit', function (ev) {
+          const form = ev.target;
+          if (!form || !modalPerfil.contains(form)) return;
+          ev.preventDefault();
+          try {
+            const contentDiv = document.getElementById('profile-content');
+            const postUrl = form.getAttribute('hx-post') || form.getAttribute('action');
+            if (!postUrl) { form.submit(); return; }
+            const fd = new FormData(form);
+            fetch(postUrl, { method: 'POST', body: fd, headers: { 'HX-Request': 'true' } })
+              .then(function (r) { return r.text(); })
+              .then(function (html) { contentDiv.innerHTML = html; })
+              .catch(function (err) { console.error('Falha ao salvar perfil no modal:', err); });
+          } catch (e) { console.error('Erro ao interceptar submit no modal Perfil:', e); }
+        }, true);
+        if (shouldOpenProfileModal) {
+          setTimeout(() => {
+            const bsModal = bootstrap.Modal.getOrCreateInstance(modalPerfil);
+            if (bsModal) {
+              bsModal.show();
+              const currentUrl = new URL(window.location);
+              currentUrl.searchParams.delete('open_profile_modal');
+              history.replaceState(null, '', currentUrl.toString());
+            }
+          }, 100);
+        }
+      }
+
+      // Menu offcanvas antigo removido; nenhuma lógica necessária aqui.
+
+    });
+
+    // ========================================
+    // SISTEMA DE TOASTS
+    // ========================================
+    window.showToast = function(message, type = 'info', duration = 5000) {
+      const toastContainer = document.getElementById('toastContainer');
+      if (!toastContainer) {
+        console.warn('Toast container não encontrado');
+        return;
+      }
+
+      const toastId = 'toast-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+      const bgClass = {
+        'success': 'bg-success',
+        'error': 'bg-danger',
+        'warning': 'bg-warning',
+        'info': 'bg-info',
+        'primary': 'bg-primary'
+      }[type] || 'bg-info';
+
+      const icon = {
+        'success': 'bi-check-circle-fill',
+        'error': 'bi-x-circle-fill',
+        'warning': 'bi-exclamation-triangle-fill',
+        'info': 'bi-info-circle-fill',
+        'primary': 'bi-bell-fill'
+      }[type] || 'bi-info-circle-fill';
+
+      const toastHTML = `
+        <div id="${toastId}" class="toast align-items-center text-white ${bgClass} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+          <div class="d-flex">
+            <div class="toast-body d-flex align-items-center">
+              <i class="bi ${icon} me-2"></i>
+              <span>${message}</span>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+          </div>
+        </div>
+      `;
+
+      toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+      const toastElement = document.getElementById(toastId);
+      const toast = new bootstrap.Toast(toastElement, {
+        autohide: true,
+        delay: duration
+      });
+      toast.show();
+
+      // Remove o elemento do DOM após ser escondido
+      toastElement.addEventListener('hidden.bs.toast', function() {
+        toastElement.remove();
+      });
+    };
+
+    // ========================================
+    // SISTEMA DE CONFIRMAÇÕES INTELIGENTES
+    // ========================================
+    window.showConfirm = function(options) {
+      return new Promise((resolve) => {
+        const {
+          title = 'Confirmar ação',
+          message = 'Tem certeza que deseja continuar?',
+          confirmText = 'Confirmar',
+          cancelText = 'Cancelar',
+          type = 'warning',
+          icon = 'bi-exclamation-triangle-fill'
+        } = options;
+
+        const modalId = 'confirmModal-' + Date.now();
+        const modalHTML = `
+          <div class="modal fade" id="${modalId}" tabindex="-1" aria-labelledby="${modalId}Label" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+              <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                  <h5 class="modal-title" id="${modalId}Label">
+                    <i class="bi ${icon} text-${type} me-2"></i>${title}
+                  </h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                  <p>${message}</p>
+                </div>
+                <div class="modal-footer border-0">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">${cancelText}</button>
+                  <button type="button" class="btn btn-${type === 'danger' ? 'danger' : 'primary'}" id="${modalId}Confirm">${confirmText}</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        const modalElement = document.getElementById(modalId);
+        const modal = new bootstrap.Modal(modalElement);
+
+        document.getElementById(modalId + 'Confirm').addEventListener('click', () => {
+          modal.hide();
+          resolve(true);
+          modalElement.addEventListener('hidden.bs.modal', () => modalElement.remove(), { once: true });
+        });
+
+        modalElement.addEventListener('hidden.bs.modal', () => {
+          resolve(false);
+          modalElement.remove();
+        }, { once: true });
+
+        modal.show();
+      });
+    };
+
+    // ========================================
+    // LOADING STATES - Skeleton Screen Helper
+    // ========================================
+    window.showSkeleton = function(container, count = 3) {
+      if (!container) return;
+      
+      const skeletonHTML = `
+        <div class="skeleton-item mb-3">
+          <div class="skeleton-line" style="height: 20px; width: 60%; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s ease-in-out infinite; border-radius: 4px; margin-bottom: 10px;"></div>
+          <div class="skeleton-line" style="height: 16px; width: 100%; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s ease-in-out infinite; border-radius: 4px; margin-bottom: 8px;"></div>
+          <div class="skeleton-line" style="height: 16px; width: 80%; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s ease-in-out infinite; border-radius: 4px;"></div>
+        </div>
+      `;
+
+      container.innerHTML = skeletonHTML.repeat(count);
+    };
+
+    // Adicionar animação CSS para skeleton
+    if (!document.getElementById('skeleton-styles')) {
+      const style = document.createElement('style');
+      style.id = 'skeleton-styles';
+      style.textContent = `
+        @keyframes skeleton-loading {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+        .skeleton-item {
+          padding: 1rem;
+          background: #fff;
+          border-radius: 8px;
+          border: 1px solid #e9ecef;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  </script>
+  {% block scripts_extra %}{% endblock %}
+</body>
+
+</html>

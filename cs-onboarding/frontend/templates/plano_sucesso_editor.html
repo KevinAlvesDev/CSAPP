@@ -1,0 +1,395 @@
+{% extends "base.html" %}
+
+{% block title %}
+{% if modo == 'criar' %}Criar Plano de Sucesso{% else %}{{ plano.nome if plano else 'Plano de Sucesso' }}{% endif %}
+{% endblock %}
+
+{% block head_extra %}
+<style>
+    .editor-container {
+        display: flex;
+        gap: 2rem;
+        min-height: calc(100vh - 200px);
+    }
+
+    .editor-sidebar {
+        width: 300px;
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        height: fit-content;
+        position: sticky;
+        top: 20px;
+    }
+
+    .editor-main {
+        flex: 1;
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    }
+
+    .editor-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 16px;
+        margin-bottom: 2rem;
+    }
+
+    .editor-header h1 {
+        margin: 0;
+        font-size: 1.75rem;
+    }
+
+    .form-section {
+        margin-bottom: 2rem;
+        padding-bottom: 2rem;
+        border-bottom: 2px solid #f7fafc;
+    }
+
+    .form-section:last-child {
+        border-bottom: none;
+    }
+
+    .form-section-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #2d3748;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .fase-accordion .accordion-item {
+        border: 2px solid #e2e8f0;
+        border-radius: 12px !important;
+        margin-bottom: 1rem;
+        overflow: hidden;
+    }
+
+    .fase-accordion .accordion-button {
+        background: #f7fafc;
+        font-weight: 600;
+        color: #2d3748;
+        padding: 1rem 1.5rem;
+    }
+
+    .fase-accordion .accordion-button:not(.collapsed) {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .fase-accordion .accordion-body {
+        padding: 1.5rem;
+    }
+
+    .grupo-card {
+        background: #f7fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .grupo-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .grupo-title {
+        font-weight: 600;
+        color: #4a5568;
+        margin: 0;
+    }
+
+    .tarefa-item {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .tarefa-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 0.75rem;
+    }
+
+
+    .btn-add {
+        background: #48bb78;
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-add:hover {
+        background: #38a169;
+        transform: scale(1.05);
+    }
+
+    .btn-remove {
+        background: #fc8181;
+        color: white;
+        border: none;
+        padding: 0.25rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        cursor: pointer;
+    }
+
+    .btn-remove:hover {
+        background: #f56565;
+    }
+
+    .btn-save-plano {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 1rem 2rem;
+        border-radius: 12px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        width: 100%;
+    }
+
+    .btn-save-plano:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .drag-handle {
+        cursor: move;
+        color: #a0aec0;
+        margin-right: 0.5rem;
+    }
+
+    .drag-handle:hover {
+        color: #667eea;
+    }
+
+    .readonly-mode {
+        pointer-events: none;
+        opacity: 0.7;
+    }
+
+    .readonly-badge {
+        background: #fbd38d;
+        color: #744210;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        display: inline-block;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4" style="padding-top: 50px !important;">
+    <div class="editor-header" style="padding: 1.25rem 1.5rem;">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 style="font-size: 1.25rem;">
+                    <i class="bi bi-diagram-3-fill me-2"></i>
+                    {% if modo == 'criar' %}
+                    Criar Novo Plano
+                    {% else %}
+                    {{ plano.nome if plano else 'Editar Plano' }}
+                    {% endif %}
+                </h1>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm btn-outline-light">
+                    <i class="bi bi-house me-1"></i>Dashboard
+                </a>
+                <a href="{{ url_for('planos.listar_planos') }}" class="btn btn-sm btn-light">
+                    <i class="bi bi-arrow-left me-1"></i>Voltar
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show"
+        role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    {% if modo == 'visualizar' or not pode_editar %}
+    <div class="readonly-badge">
+        <i class="bi bi-eye me-2"></i>Modo Somente Leitura
+    </div>
+    {% endif %}
+
+    <div class="editor-container">
+        <div class="editor-sidebar">
+            <h5 class="mb-3">
+                <i class="bi bi-info-circle me-2"></i>Informações
+            </h5>
+
+            <div class="mb-3">
+                <strong>Status:</strong>
+                <div class="mt-1">
+                    {% if plano and plano.ativo %}
+                    <span class="badge bg-success">Ativo</span>
+                    {% elif plano %}
+                    <span class="badge bg-secondary">Inativo</span>
+                    {% else %}
+                    <span class="badge bg-info">Novo</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if plano %}
+            <div class="mb-3">
+                <strong>Criado por:</strong>
+                <div class="mt-1 text-muted">{{ plano.criado_por or 'Sistema' }}</div>
+            </div>
+
+            <div class="mb-3">
+                <strong>Data de criação:</strong>
+                <div class="mt-1 text-muted">{{ plano.data_criacao|format_date_br if plano.data_criacao else 'N/A' }}
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <strong>Última atualização:</strong>
+                <div class="mt-1 text-muted">{{ plano.data_atualizacao|format_date_br if plano.data_atualizacao else
+                    'N/A' }}</div>
+            </div>
+            {% endif %}
+
+            <hr class="my-3">
+
+            <h6 class="mb-2">
+                <i class="bi bi-lightbulb me-2"></i>Dicas
+            </h6>
+            <ul class="small text-muted ps-3">
+                <li>Organize em fases lógicas</li>
+                <li>Agrupe tarefas relacionadas</li>
+                <li>Adicione múltiplas tarefas por ação</li>
+                <li>Marque tarefas obrigatórias</li>
+            </ul>
+        </div>
+
+        <div class="editor-main">
+            <form id="formPlano" method="POST" action="{{ url_for('planos.criar_plano') if modo == 'criar' else url_for('planos.atualizar_plano', plano_id=plano.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                {% if modo != 'criar' %}
+                <input type="hidden" name="_method" value="PUT">
+                {% endif %}
+
+                <div class="form-section">
+                    <h3 class="form-section-title">
+                        <i class="bi bi-card-text"></i>Informações Básicas
+                    </h3>
+
+                    <div class="mb-3">
+                        <label for="nome" class="form-label fw-bold">
+                            Nome do Plano <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="nome" name="nome" required
+                            placeholder="Ex: Plano Academia Completo" value="{{ plano.nome if plano else '' }}">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="descricao" class="form-label fw-bold">Descrição</label>
+                        <textarea class="form-control" id="descricao" name="descricao" rows="3"
+                            placeholder="Descreva o objetivo e aplicação deste plano...">{{ plano.descricao if plano else '' }}</textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="dias_duracao" class="form-label fw-bold">
+                            <i class="bi bi-calendar-range me-1"></i>Dias de Duração <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group" style="max-width: 200px;">
+                            <input type="number" class="form-control" id="dias_duracao" name="dias_duracao" 
+                                min="1" max="365" required
+                                placeholder="Ex: 30"
+                                value="{{ plano.dias_duracao if plano and plano.dias_duracao else '' }}">
+                            <span class="input-group-text">dias</span>
+                        </div>
+                        <small class="text-muted">Define o prazo esperado para completar todas as tarefas do plano</small>
+                    </div>
+
+                    {% if plano %}
+                    <div class="form-check form-switch">
+                        <input type="hidden" name="ativo" value="false">
+                        <input class="form-check-input" type="checkbox" id="ativo" name="ativo" value="true" {% if plano.ativo %}checked{% endif %}>
+                        <label class="form-check-label" for="ativo">
+                            Plano Ativo
+                        </label>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-section">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3 class="form-section-title mb-0">
+                            <i class="bi bi-layers"></i>Estrutura do Plano
+                        </h3>
+                        <button type="button" class="btn btn-add" id="btnAdicionarFase">
+                            <i class="bi bi-plus-circle me-1"></i>Adicionar Fase
+                        </button>
+                    </div>
+
+                    <div id="fasesContainer" class="accordion fase-accordion">
+                        <!-- Fases serão adicionadas aqui dinamicamente -->
+                    </div>
+
+                    <div id="emptyState" class="text-center py-5" style="display: none;">
+                        <i class="bi bi-inbox" style="font-size: 4rem; color: #cbd5e0;"></i>
+                        <p class="text-muted mt-3">Nenhuma fase adicionada ainda</p>
+                        <button type="button" class="btn btn-add" onclick="document.getElementById('btnAdicionarFase').click()">
+                            <i class="bi bi-plus-circle me-1"></i>Adicionar Primeira Fase
+                        </button>
+                    </div>
+                </div>
+
+                {% if modo != 'visualizar' and pode_editar %}
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn-save-plano">
+                        <i class="bi bi-save me-2"></i>
+                        {% if modo == 'criar' %}Criar Plano{% else %}Salvar Alterações{% endif %}
+                    </button>
+                </div>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/planos_editor.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        {% if plano and plano.fases %}
+        const planoData = {{ plano | tojson | safe
+    }};
+    window.PlanoEditor.carregarPlano(planoData);
+        {% else %}
+        document.getElementById('emptyState').style.display = 'block';
+        {% endif %}
+    });
+</script>
+{% endblock %}

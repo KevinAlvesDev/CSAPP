@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Cancelamentos{% endblock %}
+{% block head_extra %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<style>
+  .chart-container { position: relative; height: 360px; width: 100%; }
+  .card-body-chart { padding: 1rem; }
+  .kpi { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+  .kpi .card { border-radius: 10px; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="container-fluid p-0">
+  <header class="header-bg p-3 d-flex align-items-center position-relative">
+    <h1 class="main-title mb-0 fs-4 w-100 text-center">Relatório Analítico de Cancelamentos</h1>
+    <div class="d-flex align-items-center position-absolute end-0 top-50 translate-middle-y">
+      <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm btn-outline-primary me-2"><i class="bi bi-arrow-left me-1"></i> Voltar ao dashboard</a>
+      <button class="btn btn-sm btn-outline-dark" onclick="window.print()"><i class="bi bi-filetype-pdf me-1"></i> Imprimir PDF</button>
+    </div>
+  </header>
+  <main class="p-4">
+    
+    <section class="kpi mb-4">
+      <div class="card"><div class="card-body"><div class="fw-bold">Total Cancelamentos</div><div class="display-6">{{ metrics.total_cancelamentos or 0 }}</div></div></div>
+      <div class="card"><div class="card-body"><div class="fw-bold">Ticket Médio Perdido</div><div class="h3">R$ {{ "%.2f"|format(metrics.valor_medio_perdido|float) }}</div></div></div>
+      <div class="card"><div class="card-body"><div class="fw-bold">Perda Estimada (6 meses)</div><div class="h3">R$ {{ "%.2f"|format(metrics.perda_estim_6m|float) }}</div></div></div>
+    </section>
+
+    <div class="row mt-4">
+      <div class="col-xl-6"><div class="card"><div class="card-header"><h5 class="mb-0">Motivos de cancelamento</h5></div><div class="card-body card-body-chart"><div class="chart-container"><canvas id="chartMotivos"></canvas></div></div></div></div>
+      <div class="col-xl-6"><div class="card"><div class="card-header"><h5 class="mb-0">Segmento das empresas que cancelou</h5></div><div class="card-body card-body-chart"><div class="chart-container"><canvas id="chartSegmento"></canvas></div></div></div></div>
+    </div>
+
+    <div class="row mt-4">
+      <div class="col-xl-6"><div class="card"><div class="card-header"><h5 class="mb-0">Nível Receita MRR das empresas</h5></div><div class="card-body card-body-chart"><div class="chart-container"><canvas id="chartNivelReceita"></canvas></div></div></div></div>
+      <div class="col-xl-6"><div class="card"><div class="card-header"><h5 class="mb-0">Valor Atribuído (R$)</h5></div><div class="card-body card-body-chart"><div class="chart-container"><canvas id="chartValorAtribuido"></canvas></div></div></div></div>
+    </div>
+
+    <div class="row mt-4">
+      <div class="col-xl-6"><div class="card"><div class="card-header"><h5 class="mb-0">Tempo (dias) até o cancelamento</h5></div><div class="card-body card-body-chart"><div class="chart-container"><canvas id="chartTempoDias"></canvas></div></div></div></div>
+      <div class="col-xl-6"><div class="card"><div class="card-header"><h5 class="mb-0">Perda estimada (6 meses)</h5></div><div class="card-body card-body-chart"><div class="chart-container"><canvas id="chartPerda6m"></canvas></div></div></div></div>
+    </div>
+    <div class="card mt-4"><div class="card-header"><h5 class="mb-0">Lista detalhada</h5></div><div class="card-body"><div class="table-responsive"><table class="table table-sm table-hover align-middle"><thead><tr><th>ID</th><th>Empresa</th><th>CS</th><th>Cancelamento</th><th>Motivo</th><th>Alunos</th><th>Nível Receita</th><th>Valor (R$)</th><th>Tempo (dias)</th><th>Ações</th></tr></thead><tbody>{% for r in dataset[:50] %}<tr><td>{{ r.id }}</td><td class="text-truncate" style="max-width:200px">{{ r.nome_empresa }}</td><td>{{ r.usuario_cs }}</td><td>{{ r.data_cancelamento | format_date_br(include_time=False) }}</td><td>{{ r.motivo_cancelamento or 'N/I' }}</td><td>{{ r.alunos_ativos or 0 }}</td><td>{{ r.nivel_receita or 'N/I' }}</td><td>{{ r.valor_atribuido or '0,00' }}</td><td>{{ r.tempo_permanencia_dias if r.tempo_permanencia_dias is not none and r.tempo_permanencia_dias >= 0 else (0 if r.tempo_permanencia_dias is not none else '-') }}</td><td><a href="{{ url_for('main.ver_implantacao', impl_id=r.id) }}" class="btn btn-sm btn-outline-primary py-0 px-2">Ver detalhes</a></td></tr>{% endfor %}</tbody></table></div><p class="small text-muted mb-0">Use “Exportar Excel (CSV)” para baixar o dataset completo.</p></div></div>
+  </main>
+ </div>
+{% endblock %}
+{% block scripts_extra %}
+<script>
+Chart.register(ChartDataLabels);
+const chartData = {{ chart_data | tojson | safe }};
+const azul = 'rgba(54, 162, 235, 0.7)', azulB = 'rgba(54, 162, 235, 1)';
+const verde = 'rgba(75, 192, 192, 0.7)', verdeB = 'rgba(75, 192, 192, 1)';
+const laranja = 'rgba(255, 159, 64, 0.7)', laranjaB = 'rgba(255, 159, 64, 1)';
+const roxo = 'rgba(153, 102, 255, 0.7)', roxoB = 'rgba(153, 102, 255, 1)';
+const cinza = 'rgba(201, 203, 207, 0.7)', cinzaB = 'rgba(201, 203, 207, 1)';
+const tooltipOptions = { backgroundColor: '#212529', titleFont: {size:14, weight:'bold'}, bodyFont:{size:12}, padding:10, cornerRadius:6, displayColors:false };
+const datalabelsTop = { anchor:'end', align:'top', color:'#333', font:{weight:'bold'}, formatter:(v)=> v>0? v : null };
+function makeDoughnut(ctx, labels, data) {
+  new Chart(ctx, { type: 'doughnut', data: { labels, datasets: [{ data, backgroundColor: [azul, verde, laranja, roxo, cinza], borderColor:[azulB, verdeB, laranjaB, roxoB, cinzaB], borderWidth:1 }] }, options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:true, position:'bottom'}, tooltip: tooltipOptions, datalabels:{ color:'#000', font:{weight:'bold'}, formatter:(value,context)=>{ const total=context.dataset.data.reduce((a,b)=>a+b,0); return total? (value/total*100).toFixed(0)+'%' : null; } } } } });
+}
+function makeLine(ctx, labels, d1, d2) {
+  new Chart(ctx, { type: 'line', data: { labels, datasets: [ { label:'Cancelamentos', data:d1, borderColor: azulB, backgroundColor: azul, tension:0.2 }, { label:'Média móvel (3m)', data:d2, borderColor: laranjaB, backgroundColor: laranja, borderDash:[6,4], tension:0.2 } ] }, options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:true}, tooltip: tooltipOptions } } });
+}
+function makeBar(ctx, labels, data, color, colorB) {
+  new Chart(ctx, { type: 'bar', data: { labels, datasets: [{ data, backgroundColor: color, borderColor: colorB, borderRadius:6, borderWidth:1 }] }, options: { responsive:true, maintainAspectRatio:false, scales:{ y:{beginAtZero:true} }, plugins:{ legend:{display:false}, tooltip: tooltipOptions, datalabels: datalabelsTop } } });
+}
+function makeScatter(ctx, points) {
+  const labels = [...new Set(points.map(p => p.y))];
+  const ds = labels.map((lab,i)=>({ label: lab, data: points.filter(p=>p.y===lab).map(p=>({x:p.x, y:i})), backgroundColor: [azul, verde, laranja, roxo, cinza][i % 5], borderColor: [azulB, verdeB, laranjaB, roxoB, cinzaB][i % 5] }));
+  new Chart(ctx, { type: 'scatter', data: { datasets: ds }, options: { responsive:true, maintainAspectRatio:false, scales:{ y:{ ticks:{ callback:(v)=> labels[v] } } }, plugins:{ tooltip: tooltipOptions } } });
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const ctxMotivos = document.getElementById('chartMotivos'); if (ctxMotivos && chartData.motivos) makeDoughnut(ctxMotivos, chartData.motivos.labels, chartData.motivos.data);
+  const ctxSeg = document.getElementById('chartSegmento'); if (ctxSeg && chartData.segmento) makeBar(ctxSeg, chartData.segmento.labels, chartData.segmento.data, verde, verdeB);
+  const ctxNivel = document.getElementById('chartNivelReceita'); if (ctxNivel && chartData.nivel_receita) makeBar(ctxNivel, chartData.nivel_receita.labels, chartData.nivel_receita.data, azul, azulB);
+  const ctxValor = document.getElementById('chartValorAtribuido'); if (ctxValor && chartData.valor_atribuido_buckets) makeBar(ctxValor, chartData.valor_atribuido_buckets.labels, chartData.valor_atribuido_buckets.data, laranja, laranjaB);
+  const ctxTempo = document.getElementById('chartTempoDias'); if (ctxTempo && chartData.tempo_dias_hist) makeBar(ctxTempo, chartData.tempo_dias_hist.labels, chartData.tempo_dias_hist.data, roxo, roxoB);
+  const ctxPerda = document.getElementById('chartPerda6m'); if (ctxPerda) makeBar(ctxPerda, ['6 meses'], [{{ metrics.perda_estim_6m|float }}], cinza, cinzaB);
+  
+});
+</script>
+{% endblock %}
