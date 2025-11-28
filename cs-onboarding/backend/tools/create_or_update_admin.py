@@ -19,7 +19,7 @@ if BACKEND_DIR not in sys.path:
 from project import create_app
 
 EMAIL = "suporte01.cs@gmail.com"
-PLAIN_PASSWORD = "323397041"
+PLAIN_PASSWORD = "admin123@"
 
 
 def main():

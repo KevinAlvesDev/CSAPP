@@ -19,6 +19,12 @@ from ..security.api_security import validate_api_origin
 
 api_h_bp = Blueprint('api_h', __name__, url_prefix='/api')
 
+# Mapeamento de tipo para coluna de ID (whitelist explícita)
+COLUNA_ID_MAP = {
+    'tarefa': 'tarefa_h_id',
+    'subtarefa': 'subtarefa_h_id'
+}
+
 @api_h_bp.before_request
 def _api_origin_guard():
     return validate_api_origin(lambda: None)()
@@ -42,8 +48,10 @@ def adicionar_comentario_h(tipo, item_id):
     except ValidationError as e:
         return render_hx_error(f'ID inválido: {str(e)}', 400)
     
-    if tipo not in ['tarefa', 'subtarefa']:
-        return render_hx_error('Tipo inválido.', 400)
+    # Validar tipo usando whitelist explícita
+    coluna_id = COLUNA_ID_MAP.get(tipo)
+    if not coluna_id:
+        return render_hx_error('Tipo inválido. Deve ser "tarefa" ou "subtarefa".', 400)
 
     try:
         texto = request.form.get('comentario', '')
@@ -130,7 +138,7 @@ def adicionar_comentario_h(tipo, item_id):
 
     try:
         agora = datetime.now()
-        coluna_id = 'tarefa_h_id' if tipo == 'tarefa' else 'subtarefa_h_id'
+        # coluna_id já foi definida na validação acima
         
         result = execute_and_fetch_one(
             f"INSERT INTO comentarios_h ({coluna_id}, usuario_cs, texto, data_criacao, imagem_url, visibilidade) "
@@ -208,11 +216,12 @@ def listar_comentarios_h(tipo, item_id):
     except ValidationError as e:
         return jsonify({'ok': False, 'error': f'ID inválido: {str(e)}'}), 400
     
-    if tipo not in ['tarefa', 'subtarefa']:
-        return jsonify({'ok': False, 'error': 'Tipo inválido.'}), 400
+    # Validar tipo usando whitelist explícita
+    coluna_id = COLUNA_ID_MAP.get(tipo)
+    if not coluna_id:
+        return jsonify({'ok': False, 'error': 'Tipo inválido. Deve ser "tarefa" ou "subtarefa".'}), 400
     
     try:
-        coluna_id = 'tarefa_h_id' if tipo == 'tarefa' else 'subtarefa_h_id'
         
         # Obter email do responsável da implantação
         impl_info = {}

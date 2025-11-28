@@ -12,7 +12,13 @@ ALLOWED_TABLES = [
     'timeline',
     'gamificacao_metricas_mensais',
     'gamificacao_regras',
-    'smtp_settings'
+    'smtp_settings',
+    # Tabelas do modelo hierárquico
+    'fases',
+    'grupos',
+    'tarefas_h',
+    'subtarefas_h',
+    'comentarios_h',
 ]
 
 ALLOWED_ID_COLUMNS = ['id', 'usuario', 'usuario_email']

@@ -32,108 +32,75 @@
         color: #4a5568;
     }
 
-    .fase-item {
-        margin-bottom: 1.5rem;
+    /* Estilos para hierarquia infinita (checklist_items) */
+    .checklist-preview-item {
+        margin-bottom: 0.75rem;
+        transition: all 0.2s ease;
+    }
+
+    .checklist-preview-item[data-level="0"] {
         border-left: 4px solid #667eea;
         padding-left: 1rem;
     }
 
-    .fase-header {
+    .checklist-preview-item[data-level="1"] {
+        border-left: 3px solid #a0aec0;
+        padding-left: 1.5rem;
+        margin-left: 1rem;
+    }
+
+    .checklist-preview-item[data-level="2"] {
+        border-left: 2px solid #cbd5e0;
+        padding-left: 1.5rem;
+        margin-left: 2rem;
+    }
+
+    .checklist-preview-item[data-level="3"] {
+        border-left: 1px solid #e2e8f0;
+        padding-left: 1.5rem;
+        margin-left: 3rem;
+    }
+
+    .checklist-preview-item[data-level="4"] {
+        padding-left: 1.5rem;
+        margin-left: 4rem;
+    }
+
+    .checklist-preview-item-header {
         background: #f7fafc;
-        padding: 1rem;
+        padding: 0.75rem 1rem;
         border-radius: 8px;
-        margin-bottom: 1rem;
-    }
-
-    .fase-title {
-        font-size: 1.1rem;
-        font-weight: 700;
-        color: #2d3748;
-        margin: 0;
-    }
-
-    .fase-badge {
-        display: inline-block;
-        background: #667eea;
-        color: white;
-        padding: 0.25rem 0.75rem;
-        border-radius: 12px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        margin-left: 0.5rem;
-    }
-
-    .grupo-item {
-        margin-bottom: 1rem;
-        padding-left: 1rem;
-        border-left: 3px solid #e2e8f0;
-    }
-
-    .grupo-title {
-        font-size: 1rem;
-        font-weight: 600;
-        color: #4a5568;
-        margin-bottom: 0.75rem;
-    }
-
-    .tarefa-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }
-
-    .tarefa-item {
-        padding: 0.75rem;
-        background: white;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        margin-bottom: 0.5rem;
-        transition: all 0.2s ease;
-    }
-
-    .tarefa-item:hover {
-        border-color: #667eea;
-        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
-    }
-
-    .tarefa-title {
-        font-weight: 600;
-        color: #2d3748;
-        margin-bottom: 0.5rem;
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.75rem;
     }
 
-    .tarefa-obrigatoria {
-        background: #fed7d7;
-        color: #c53030;
-        padding: 0.125rem 0.5rem;
-        border-radius: 8px;
-        font-size: 0.7rem;
+    .checklist-preview-item[data-level="0"] .checklist-preview-item-header {
+        background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
         font-weight: 600;
-        text-transform: uppercase;
     }
 
-    .subtarefa-list {
-        list-style: none;
-        padding-left: 1.5rem;
-        margin: 0.5rem 0 0 0;
+    .checklist-preview-item-title {
+        flex: 1;
+        color: #2d3748;
+        font-weight: 500;
     }
 
-    .subtarefa-item {
-        padding: 0.5rem;
+    .checklist-preview-item[data-level="0"] .checklist-preview-item-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+    }
+
+    .checklist-preview-item-comment {
         color: #718096;
         font-size: 0.9rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
+        margin-top: 0.5rem;
+        padding-left: 2rem;
     }
 
-    .subtarefa-item::before {
-        content: "→";
-        color: #a0aec0;
-        font-weight: bold;
+    .checklist-preview-children {
+        margin-top: 0.5rem;
+        padding-left: 0;
     }
 
     .empty-message {
@@ -185,111 +152,63 @@
         {% endif %}
     </div>
 
-    {% set total_fases = plano.fases|length if plano.fases else 0 %}
-    {% set total_grupos = 0 %}
-    {% set total_tarefas = 0 %}
-    {% set total_subtarefas = 0 %}
-
-    {% if plano.fases %}
-    {% for fase in plano.fases %}
-    {% set total_grupos = total_grupos + (fase.grupos|length if fase.grupos else 0) %}
-    {% for grupo in fase.grupos or [] %}
-    {% set total_tarefas = total_tarefas + (grupo.tarefas|length if grupo.tarefas else 0) %}
-    {% for tarefa in grupo.tarefas or [] %}
-    {% set total_subtarefas = total_subtarefas + (tarefa.subtarefas|length if tarefa.subtarefas else 0) %}
+    {% set items = plano.items if plano.items else (plano.estrutura.items if plano.estrutura and plano.estrutura.items else []) %}
+    
+    {% if items and items|length > 0 %}
+    {# FORMATO NOVO: checklist_items (hierarquia infinita) #}
+    
+    {# Calcular total de itens recursivamente #}
+    {% set calcular_total = namespace(count=0) %}
+    {% macro contar_itens(item) %}
+        {% set calcular_total.count = calcular_total.count + 1 %}
+        {% if item.children and item.children|length > 0 %}
+            {% for child in item.children %}
+                {{ contar_itens(child) }}
+            {% endfor %}
+        {% endif %}
+    {% endmacro %}
+    
+    {% for item in items %}
+        {{ contar_itens(item) }}
     {% endfor %}
-    {% endfor %}
-    {% endfor %}
+    {% set total_items = calcular_total.count %}
 
     <div class="stats-row">
         <div class="stat-item">
-            <i class="bi bi-layers"></i>
-            <div>
-                <div class="stat-value">{{ total_fases }}</div>
-                <div class="stat-label">Fase{{ 's' if total_fases != 1 else '' }}</div>
-            </div>
-        </div>
-        <div class="stat-item">
-            <i class="bi bi-collection"></i>
-            <div>
-                <div class="stat-value">{{ total_grupos }}</div>
-                <div class="stat-label">Grupo{{ 's' if total_grupos != 1 else '' }}</div>
-            </div>
-        </div>
-        <div class="stat-item">
             <i class="bi bi-list-check"></i>
             <div>
-                <div class="stat-value">{{ total_tarefas }}</div>
-                <div class="stat-label">Tarefa{{ 's' if total_tarefas != 1 else '' }}</div>
-            </div>
-        </div>
-        <div class="stat-item">
-            <i class="bi bi-check2-square"></i>
-            <div>
-                <div class="stat-value">{{ total_subtarefas }}</div>
-                <div class="stat-label">Subtarefa{{ 's' if total_subtarefas != 1 else '' }}</div>
+                <div class="stat-value">{{ total_items }}</div>
+                <div class="stat-label">Item{{ 's' if total_items != 1 else '' }} no Plano</div>
             </div>
         </div>
     </div>
 
     <hr class="my-4">
 
-    {% for fase in plano.fases %}
-    <div class="fase-item">
-        <div class="fase-header">
-            <h5 class="fase-title">
-                <i class="bi bi-layers-fill me-2"></i>
-                {{ fase.nome }}
-                <span class="fase-badge">Fase {{ fase.ordem }}</span>
-            </h5>
-            {% if fase.descricao %}
-            <p class="text-muted small mb-0 mt-2">{{ fase.descricao }}</p>
-            {% endif %}
-        </div>
-
-        {% if fase.grupos %}
-        {% for grupo in fase.grupos %}
-        <div class="grupo-item">
-            <div class="grupo-title">
-                <i class="bi bi-collection me-2"></i>{{ grupo.nome }}
+    {% macro renderizar_item(item, level=0) %}
+        <div class="checklist-preview-item" data-level="{{ level }}">
+            <div class="checklist-preview-item-header">
+                <i class="bi {% if level == 0 %}bi-layers-fill{% elif level == 1 %}bi-collection{% elif level == 2 %}bi-list-check{% else %}bi-circle{% endif %}" 
+                   style="color: {% if level == 0 %}#667eea{% elif level == 1 %}#4299e1{% elif level == 2 %}#48bb78{% else %}#a0aec0{% endif %};"></i>
+                <div class="checklist-preview-item-title">{{ item.title or item.nome or '' }}</div>
             </div>
-
-            {% if grupo.tarefas %}
-            <ul class="tarefa-list">
-                {% for tarefa in grupo.tarefas %}
-                <li class="tarefa-item">
-                    <div class="tarefa-title">
-                        <i class="bi bi-check-circle"></i>
-                        {{ tarefa.nome }}
-                        {% if tarefa.obrigatoria %}
-                        <span class="tarefa-obrigatoria">Obrigatória</span>
-                        {% endif %}
-                    </div>
-
-                    {% if tarefa.descricao %}
-                    <div class="text-muted small">{{ tarefa.descricao }}</div>
-                    {% endif %}
-
-                    {% if tarefa.subtarefas %}
-                    <ul class="subtarefa-list">
-                        {% for subtarefa in tarefa.subtarefas %}
-                        <li class="subtarefa-item">{{ subtarefa.nome }}</li>
-                        {% endfor %}
-                    </ul>
-                    {% endif %}
-                </li>
+            {% if item.comment or item.descricao %}
+            <div class="checklist-preview-item-comment">{{ item.comment or item.descricao }}</div>
+            {% endif %}
+            {% if item.children and item.children|length > 0 %}
+            <div class="checklist-preview-children">
+                {% for child in item.children %}
+                    {{ renderizar_item(child, level + 1) }}
                 {% endfor %}
-            </ul>
-            {% else %}
-            <div class="empty-message">Nenhuma tarefa neste grupo</div>
+            </div>
             {% endif %}
         </div>
-        {% endfor %}
-        {% else %}
-        <div class="empty-message">Nenhum grupo nesta fase</div>
-        {% endif %}
-    </div>
+    {% endmacro %}
+
+    {% for item in items %}
+        {{ renderizar_item(item, 0) }}
     {% endfor %}
+
     {% else %}
     <div class="empty-message">
         <i class="bi bi-inbox" style="font-size: 3rem; display: block; margin-bottom: 1rem;"></i>

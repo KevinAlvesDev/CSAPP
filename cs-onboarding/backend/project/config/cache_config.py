@@ -62,6 +62,7 @@ def clear_implantacao_cache(implantacao_id):
         cache.delete(f'implantacao_details_{implantacao_id}')
         cache.delete(f'implantacao_tasks_{implantacao_id}')
         cache.delete(f'implantacao_timeline_{implantacao_id}')
+        cache.delete(f'progresso_impl_{implantacao_id}')  # Adicionar cache de progresso
 
 
 def clear_all_cache():

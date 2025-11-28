@@ -1,7 +1,7 @@
 
-from flask import g
+from flask import g, current_app
 from ..db import query_db, execute_db, logar_timeline
-
+from functools import wraps
 
 from ..domain.task_definitions import (
     CHECKLIST_OBRIGATORIO_ITEMS, MODULO_OBRIGATORIO,
@@ -19,48 +19,155 @@ from ..constants import (
 
 from ..common.utils import format_date_iso_for_json, format_date_br
 from datetime import datetime
-from collections import OrderedDict 
+from collections import OrderedDict
 
-def _create_default_tasks(impl_id):
-    """Cria as tarefas padrão (Obrigatórias e Treinamento) para uma nova implantação."""
-    tasks_added = 0
+# Importar cache
+try:
+    from ..config.cache_config import cache
+except ImportError:
+    cache = None
 
-    for i, tarefa_nome in enumerate(CHECKLIST_OBRIGATORIO_ITEMS, 1):
-        execute_db(
-            "INSERT INTO tarefas (implantacao_id, tarefa_pai, tarefa_filho, ordem, tag) VALUES (%s, %s, %s, %s, %s)",
-            (impl_id, MODULO_OBRIGATORIO, tarefa_nome, i, 'Ação interna')
-        )
-        tasks_added += 1
 
-    for modulo, tarefas_info in TAREFAS_TREINAMENTO_PADRAO.items():
-        if tarefas_info:
-            for i, tarefa_info in enumerate(tarefas_info, 1):
-                execute_db(
-                    "INSERT INTO tarefas (implantacao_id, tarefa_pai, tarefa_filho, ordem, tag) VALUES (%s, %s, %s, %s, %s)",
-                    (impl_id, modulo, tarefa_info['nome'], i, tarefa_info.get('tag', ''))
-                )
-                tasks_added += 1
-        else:
-            execute_db(
-                "INSERT INTO tarefas (implantacao_id, tarefa_pai, tarefa_filho, ordem, tag, concluida) VALUES (%s, %s, %s, %s, %s, %s)",
-                (impl_id, modulo, '(Módulo sem tarefas definidas)', 1, 'Informação', True)
-            )
-            tasks_added += 1
-    return tasks_added
+def cached_progress(ttl=30):
+    """
+    Decorator para cachear resultado de cálculo de progresso.
+    TTL padrão: 30 segundos
+    
+    Args:
+        ttl: Time to live em segundos (padrão: 30)
+    
+    Returns:
+        Decorator function
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(impl_id, *args, **kwargs):
+            # Se não há cache configurado, executar função normalmente
+            if not cache:
+                return func(impl_id, *args, **kwargs)
+            
+            cache_key = f'progresso_impl_{impl_id}'
+            
+            try:
+                # Tentar obter do cache
+                cached_result = cache.get(cache_key)
+                
+                if cached_result is not None:
+                    return cached_result
+                
+                # Calcular resultado
+                result = func(impl_id, *args, **kwargs)
+                
+                # Armazenar no cache
+                cache.set(cache_key, result, timeout=ttl)
+                
+                return result
+            except Exception as e:
+                # Se houver erro no cache, executar função normalmente
+                current_app.logger.warning(f"Erro no cache de progresso para impl_id {impl_id}: {e}")
+                return func(impl_id, *args, **kwargs)
+        
+        return wrapper
+    return decorator 
 
-def _get_progress(impl_id):
+def _get_progress_optimized(impl_id):
+    """
+    Versão otimizada que usa uma única query com CTE/UNION.
+    Reduz de 3 queries para 1 query única.
+    """
     try:
         fases_exist = query_db("SELECT id FROM fases WHERE implantacao_id = %s LIMIT 1", (impl_id,), one=True)
     except Exception:
         fases_exist = None
-    if fases_exist:
-        leg = query_db(
+    
+    if not fases_exist:
+        # Se não há fases, retornar 0 (sem progresso)
+        return 0, 0, 0
+    
+    # Detectar tipo de banco de dados
+    is_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
+    
+    try:
+        if is_sqlite:
+            # SQLite: usar CTE (SQLite suporta CTE desde versão 3.8.3)
+            query = """
+                WITH subtarefas_count AS (
+                    SELECT 
+                        COUNT(*) as total,
+                        SUM(CASE WHEN concluido = 1 THEN 1 ELSE 0 END) as done
+                    FROM subtarefas_h s
+                    JOIN tarefas_h th ON s.tarefa_id = th.id
+                    JOIN grupos g ON th.grupo_id = g.id
+                    JOIN fases f ON g.fase_id = f.id
+                    WHERE f.implantacao_id = ?
+                ),
+                tarefas_count AS (
+                    SELECT 
+                        COUNT(*) as total,
+                        SUM(CASE WHEN LOWER(COALESCE(status, '')) = 'concluida' THEN 1 ELSE 0 END) as done
+                    FROM tarefas_h th
+                    LEFT JOIN subtarefas_h s ON s.tarefa_id = th.id
+                    JOIN grupos g ON th.grupo_id = g.id
+                    JOIN fases f ON g.fase_id = f.id
+                    WHERE f.implantacao_id = ? AND s.id IS NULL
+                )
+                SELECT 
+                    COALESCE((SELECT total FROM subtarefas_count), 0) + COALESCE((SELECT total FROM tarefas_count), 0) as total,
+                    COALESCE((SELECT done FROM subtarefas_count), 0) + COALESCE((SELECT done FROM tarefas_count), 0) as done
             """
-            SELECT COUNT(*) as total, SUM(CASE WHEN concluida THEN 1 ELSE 0 END) as done
-            FROM tarefas WHERE implantacao_id = %s AND (tarefa_pai IS NULL OR tarefa_pai NOT IN (%s, %s))
-            """,
-            (impl_id, MODULO_OBRIGATORIO, MODULO_PENDENCIAS), one=True
-        ) or {}
+            result = query_db(query, (impl_id, impl_id), one=True) or {}
+            
+            total = int(result.get('total', 0) or 0)
+            done = int(result.get('done', 0) or 0)
+        else:
+            # PostgreSQL: usar CTE (Common Table Expression)
+            query = """
+                WITH subtarefas_count AS (
+                    SELECT 
+                        COUNT(*) as total,
+                        SUM(CASE WHEN concluido THEN 1 ELSE 0 END) as done
+                    FROM subtarefas_h s
+                    JOIN tarefas_h th ON s.tarefa_id = th.id
+                    JOIN grupos g ON th.grupo_id = g.id
+                    JOIN fases f ON g.fase_id = f.id
+                    WHERE f.implantacao_id = %s
+                ),
+                tarefas_count AS (
+                    SELECT 
+                        COUNT(*) as total,
+                        SUM(CASE WHEN LOWER(COALESCE(status, '')) = 'concluida' THEN 1 ELSE 0 END) as done
+                    FROM tarefas_h th
+                    LEFT JOIN subtarefas_h s ON s.tarefa_id = th.id
+                    JOIN grupos g ON th.grupo_id = g.id
+                    JOIN fases f ON g.fase_id = f.id
+                    WHERE f.implantacao_id = %s AND s.id IS NULL
+                )
+                SELECT 
+                    COALESCE((SELECT total FROM subtarefas_count), 0) + COALESCE((SELECT total FROM tarefas_count), 0) as total,
+                    COALESCE((SELECT done FROM subtarefas_count), 0) + COALESCE((SELECT done FROM tarefas_count), 0) as done
+            """
+            result = query_db(query, (impl_id, impl_id), one=True) or {}
+            
+            total = int(result.get('total', 0) or 0)
+            done = int(result.get('done', 0) or 0)
+        
+        return int(round((done / total) * 100)) if total > 0 else 100, total, done
+        
+    except Exception as e:
+        current_app.logger.error(f"Erro ao calcular progresso otimizado para impl_id {impl_id}: {e}", exc_info=True)
+        # Fallback para versão não otimizada em caso de erro
+        return _get_progress_legacy(impl_id)
+
+
+def _get_progress_legacy(impl_id):
+    """Versão legada (3 queries separadas) - mantida como fallback"""
+    try:
+        fases_exist = query_db("SELECT id FROM fases WHERE implantacao_id = %s LIMIT 1", (impl_id,), one=True)
+    except Exception:
+        fases_exist = None
+    
+    if fases_exist:
+        # Buscar subtarefas hierárquicas
         sub = query_db(
             """
             SELECT COUNT(s.id) as total, SUM(CASE WHEN s.concluido THEN 1 ELSE 0 END) as done
@@ -72,6 +179,8 @@ def _get_progress(impl_id):
             """,
             (impl_id,), one=True
         ) or {}
+        
+        # Buscar tarefas hierárquicas sem subtarefas
         th_no = query_db(
             """
             SELECT COUNT(th.id) as total,
@@ -84,43 +193,73 @@ def _get_progress(impl_id):
             """,
             (impl_id,), one=True
         ) or {}
-        total = int(leg.get('total', 0) or 0) + int(sub.get('total', 0) or 0) + int(th_no.get('total', 0) or 0)
-        done = int(leg.get('done', 0) or 0) + int(sub.get('done', 0) or 0) + int(th_no.get('done', 0) or 0)
+        
+        total = int(sub.get('total', 0) or 0) + int(th_no.get('total', 0) or 0)
+        done = int(sub.get('done', 0) or 0) + int(th_no.get('done', 0) or 0)
         return int(round((done / total) * 100)) if total > 0 else 100, total, done
-    counts = query_db(
-        "SELECT COUNT(*) as total, SUM(CASE WHEN concluida THEN 1 ELSE 0 END) as done FROM tarefas WHERE implantacao_id = %s AND (tarefa_pai IS NULL OR tarefa_pai NOT IN (%s, %s))",
-        (impl_id, MODULO_OBRIGATORIO, MODULO_PENDENCIAS), one=True
-    )
-    total = counts.get('total', 0) if counts else 0
-    done = counts.get('done', 0) if counts else 0
-    done = int(done) if done is not None else 0
-    return int(round((done / total) * 100)) if total > 0 else 100, total, done
+    
+    # Se não há fases, retornar 0 (sem progresso)
+    return 0, 0, 0
+
+
+@cached_progress(ttl=30)
+def _get_progress(impl_id):
+    """
+    Calcula progresso da implantação usando apenas modelo hierárquico.
+    Usa versão otimizada se habilitada via feature flag.
+    """
+    # Feature flag para migração gradual
+    use_optimized = current_app.config.get('USE_OPTIMIZED_PROGRESS', True)
+    
+    if use_optimized:
+        return _get_progress_optimized(impl_id)
+    else:
+        return _get_progress_legacy(impl_id)
 
 
 def auto_finalizar_implantacao(impl_id, usuario_cs_email):
     """
-    Verifica se todas as tarefas (exceto pendências) estão concluídas
+    Verifica se todas as tarefas hierárquicas estão concluídas
     e, em caso afirmativo, finaliza a implantação.
     """
+    # Verificar se há fases (modelo hierárquico)
+    fases_exist = query_db("SELECT id FROM fases WHERE implantacao_id = %s LIMIT 1", (impl_id,), one=True)
+    
+    if not fases_exist:
+        # Sem fases, não pode auto-finalizar
+        return False, None
 
-    pending_tasks = query_db(
-        "SELECT COUNT(*) as total FROM tarefas "
-        "WHERE implantacao_id = %s AND concluida = %s AND (tarefa_pai != %s OR tarefa_pai IS NULL)",
-        (impl_id, 0, MODULO_PENDENCIAS),
-        one=True
-    )
+    # Buscar subtarefas não concluídas
+    subtarefas_pendentes = query_db(
+        """
+        SELECT COUNT(s.id) as total
+        FROM subtarefas_h s
+        JOIN tarefas_h th ON s.tarefa_id = th.id
+        JOIN grupos g ON th.grupo_id = g.id
+        JOIN fases f ON g.fase_id = f.id
+        WHERE f.implantacao_id = %s AND s.concluido = 0
+        """,
+        (impl_id,), one=True
+    ) or {}
 
-    total_nonpend_tasks = query_db(
-        "SELECT COUNT(*) as total FROM tarefas "
-        "WHERE implantacao_id = %s AND (tarefa_pai != %s OR tarefa_pai IS NULL)",
-        (impl_id, MODULO_PENDENCIAS),
-        one=True
-    )
+    # Buscar tarefas sem subtarefas não concluídas
+    tarefas_pendentes = query_db(
+        """
+        SELECT COUNT(th.id) as total
+        FROM tarefas_h th
+        LEFT JOIN subtarefas_h s ON s.tarefa_id = th.id
+        JOIN grupos g ON th.grupo_id = g.id
+        JOIN fases f ON g.fase_id = f.id
+        WHERE f.implantacao_id = %s 
+        AND s.id IS NULL 
+        AND LOWER(COALESCE(th.status,'')) != 'concluida'
+        """,
+        (impl_id,), one=True
+    ) or {}
 
-    total_nonpend = total_nonpend_tasks.get('total', 0) if total_nonpend_tasks else 0
-    total_pendentes = pending_tasks.get('total', 0) if pending_tasks else 0
+    total_pendentes = int(subtarefas_pendentes.get('total', 0) or 0) + int(tarefas_pendentes.get('total', 0) or 0)
 
-    if total_nonpend > 0 and total_pendentes == 0:
+    if total_pendentes == 0:
         impl_status = query_db(
             "SELECT status, nome_empresa FROM implantacoes WHERE id = %s",
             (impl_id,),
@@ -191,55 +330,96 @@ def _format_implantacao_dates(implantacao):
     implantacao['data_inicio_previsto_fmt_d'] = format_date_br(implantacao.get('data_inicio_previsto'), False)
     return implantacao
 
-def _get_tarefas_and_comentarios(impl_id, is_owner=False, is_manager=False):
-    try:
-        tarefas_raw = query_db("SELECT * FROM tarefas WHERE implantacao_id = %s ORDER BY tarefa_pai, ordem", (impl_id,)) or []
-    except Exception as e:
-        import traceback
-        error_trace = traceback.format_exc()
-        from ..config.logging_config import get_logger
-        logger = get_logger('implantacao')
-        logger.warning(f"Erro ao buscar tarefas para implantação {impl_id}: {e}\n{error_trace}")
-        tarefas_raw = []
+def _get_comentarios_bulk(impl_id, is_owner=False, is_manager=False):
+    """
+    Busca TODOS os comentários de uma implantação em uma única query (ou poucas queries).
+    Retorna dicionário indexado por item_id para acesso rápido.
     
+    Otimização: Reduz de N+1 queries (uma por tarefa/subtarefa) para 2 queries totais
+    (uma para comentarios_h e uma para comentarios legado).
+    
+    Returns:
+        dict: {
+            'tarefa_h_{id}': [comentario1, comentario2, ...],
+            'subtarefa_h_{id}': [comentario1, comentario2, ...],
+            'tarefa_{id}': [comentario1, comentario2, ...]  # modelo antigo
+        }
+    """
+    comentarios_map = {}
+    
+    # Comentários do modelo hierárquico (novo) - uma única query
     try:
-        comentarios_raw = query_db(
-            """ SELECT c.*, COALESCE(p.nome, c.usuario_cs) as usuario_nome 
-                FROM comentarios c LEFT JOIN perfil_usuario p ON c.usuario_cs = p.usuario 
-                WHERE c.tarefa_id IN (SELECT id FROM tarefas WHERE implantacao_id = %s) 
-                ORDER BY c.data_criacao DESC """, (impl_id,)
+        comentarios_h_raw = query_db(
+            """
+            SELECT c.*, 
+                   COALESCE(p.nome, c.usuario_cs) as usuario_nome,
+                   c.data_criacao as data_criacao_raw,
+                   c.subtarefa_h_id,
+                   c.tarefa_h_id
+            FROM comentarios_h c
+            LEFT JOIN perfil_usuario p ON c.usuario_cs = p.usuario
+            WHERE EXISTS (
+                SELECT 1 FROM subtarefas_h s
+                JOIN tarefas_h th_sub ON s.tarefa_id = th_sub.id
+                JOIN grupos g_sub ON th_sub.grupo_id = g_sub.id
+                JOIN fases f_sub ON g_sub.fase_id = f_sub.id
+                WHERE (c.subtarefa_h_id = s.id AND f_sub.implantacao_id = %s)
+            ) OR EXISTS (
+                SELECT 1 FROM tarefas_h th
+                JOIN grupos g ON th.grupo_id = g.id
+                JOIN fases f ON g.fase_id = f.id
+                WHERE (c.tarefa_h_id = th.id AND f.implantacao_id = %s)
+            )
+            ORDER BY c.data_criacao DESC
+            """,
+            (impl_id, impl_id)
         ) or []
     except Exception as e:
-        import traceback
-        error_trace = traceback.format_exc()
         from ..config.logging_config import get_logger
         logger = get_logger('implantacao')
-        logger.warning(f"Erro ao buscar comentários para implantação {impl_id}: {e}\n{error_trace}")
-        comentarios_raw = []
+        logger.warning(f"Erro ao buscar comentarios_h em bulk para implantação {impl_id}: {e}")
+        comentarios_h_raw = []
+    
+    # Agrupar comentários hierárquicos (concatenação feita no Python para compatibilidade)
+    for c in comentarios_h_raw:
+        # Determinar item_key baseado em qual campo está preenchido
+        if c.get('subtarefa_h_id'):
+            item_key = f"subtarefa_h_{c['subtarefa_h_id']}"
+        elif c.get('tarefa_h_id'):
+            item_key = f"tarefa_h_{c['tarefa_h_id']}"
+        else:
+            continue  # Comentário sem associação válida
+        
+        # Filtrar por visibilidade se necessário
+        if not (is_owner or is_manager):
+            if c.get('visibilidade') == 'interno':
+                continue
+        
+        # Formatar comentário igual ao código original
+        c_formatado = {
+            **c,
+            'data_criacao_fmt_d': format_date_br(c.get('data_criacao_raw'))
+        }
+        c_formatado['delete_url'] = f"/api/excluir_comentario_h/{c['id']}"
+        c_formatado['email_url'] = f"/api/enviar_email_comentario_h/{c['id']}"
+        
+        if item_key not in comentarios_map:
+            comentarios_map[item_key] = []
+        comentarios_map[item_key].append(c_formatado)
+    
+    # Comentários do modelo antigo (legado) - REMOVIDO
+    # O modelo legado foi completamente removido do projeto
+    
+    return comentarios_map
 
-    if not (is_owner or is_manager):
-        comentarios_raw = [c for c in (comentarios_raw or []) if (c.get('visibilidade') != 'interno')]
-
-    comentarios_por_tarefa = {}
-    for c in comentarios_raw:
-        c_formatado = {**c, 'data_criacao_fmt_d': format_date_br(c.get('data_criacao'))}
-        comentarios_por_tarefa.setdefault(c['tarefa_id'], []).append(c_formatado)
-
+def _get_tarefas_and_comentarios(impl_id, is_owner=False, is_manager=False):
+    # Buscar todos os comentários de uma vez (otimização N+1)
+    comentarios_map = _get_comentarios_bulk(impl_id, is_owner, is_manager)
+    
     tarefas_agrupadas_treinamento = OrderedDict()
     tarefas_agrupadas_obrigatorio = OrderedDict()
     tarefas_agrupadas_pendencias = OrderedDict()
     todos_modulos_temp = set()
-
-    for t in tarefas_raw:
-        t['comentarios'] = comentarios_por_tarefa.get(t['id'], [])
-        modulo = t['tarefa_pai']
-        todos_modulos_temp.add(modulo)
-        if modulo == MODULO_OBRIGATORIO:
-            tarefas_agrupadas_obrigatorio.setdefault(modulo, []).append(t)
-        elif modulo == MODULO_PENDENCIAS:
-            tarefas_agrupadas_pendencias.setdefault(modulo, []).append(t)
-        else:
-            tarefas_agrupadas_treinamento.setdefault(modulo, []).append(t)
 
     try:
         fases_raw = query_db("SELECT id, nome, ordem FROM fases WHERE implantacao_id = %s ORDER BY ordem DESC", (impl_id,)) or []
@@ -283,25 +463,8 @@ def _get_tarefas_and_comentarios(impl_id, is_owner=False, is_manager=False):
                             subs_raw = []
                         if subs_raw:
                             for sub in subs_raw:
-                                try:
-                                    comentarios_sub = query_db(
-                                        """ SELECT c.*, COALESCE(p.nome, c.usuario_cs) as usuario_nome, c.data_criacao as data_criacao_raw
-                                            FROM comentarios_h c LEFT JOIN perfil_usuario p ON c.usuario_cs = p.usuario 
-                                            WHERE c.subtarefa_h_id = %s 
-                                            ORDER BY c.data_criacao DESC """, (sub['id'],)
-                                    ) or []
-                                except Exception as e:
-                                    from ..config.logging_config import get_logger
-                                    logger = get_logger('implantacao')
-                                    logger.warning(f"Erro ao buscar comentarios_h para subtarefa {sub.get('id')}: {e}")
-                                    comentarios_sub = []
-                                
-                                comentarios_fmt = []
-                                for c in comentarios_sub:
-                                    c_fmt = {**c, 'data_criacao_fmt_d': format_date_br(c.get('data_criacao_raw'))}
-                                    c_fmt['delete_url'] = f"/api/excluir_comentario_h/{c['id']}"
-                                    c_fmt['email_url'] = f"/api/enviar_email_comentario_h/{c['id']}"
-                                    comentarios_fmt.append(c_fmt)
+                                # OTIMIZAÇÃO: Usar comentários do mapa ao invés de query individual
+                                comentarios_sub = comentarios_map.get(f"subtarefa_h_{sub['id']}", [])
 
                                 tarefas_agrupadas_treinamento.setdefault(modulo_nome, []).append({
                                     'id': sub['id'],
@@ -309,7 +472,7 @@ def _get_tarefas_and_comentarios(impl_id, is_owner=False, is_manager=False):
                                     'concluida': bool(sub.get('concluido')), 
                                     'tag': '',
                                     'ordem': sub.get('ordem', ordem_c),
-                                    'comentarios': comentarios_fmt,
+                                    'comentarios': comentarios_sub,  # Comentários já formatados e ordenados do mapa
                                     'toggle_url': f"/api/toggle_subtarefa_h/{sub['id']}",
                                     'comment_url': f"/api/adicionar_comentario_h/subtarefa/{sub['id']}"
                                 })
@@ -319,25 +482,8 @@ def _get_tarefas_and_comentarios(impl_id, is_owner=False, is_manager=False):
                         else:
                             concl = True if (th.get('status') or '').lower() == 'concluida' else False
                             
-                            try:
-                                comentarios_th = query_db(
-                                    """ SELECT c.*, COALESCE(p.nome, c.usuario_cs) as usuario_nome, c.data_criacao as data_criacao_raw
-                                        FROM comentarios_h c LEFT JOIN perfil_usuario p ON c.usuario_cs = p.usuario 
-                                        WHERE c.tarefa_h_id = %s 
-                                        ORDER BY c.data_criacao DESC """, (th['id'],)
-                                ) or []
-                            except Exception as e:
-                                from ..config.logging_config import get_logger
-                                logger = get_logger('implantacao')
-                                logger.warning(f"Erro ao buscar comentarios_h para tarefa_h {th.get('id')}: {e}")
-                                comentarios_th = []
-                            
-                            comentarios_fmt = []
-                            for c in comentarios_th:
-                                c_fmt = {**c, 'data_criacao_fmt_d': format_date_br(c.get('data_criacao_raw'))}
-                                c_fmt['delete_url'] = f"/api/excluir_comentario_h/{c['id']}"
-                                c_fmt['email_url'] = f"/api/enviar_email_comentario_h/{c['id']}"
-                                comentarios_fmt.append(c_fmt)
+                            # OTIMIZAÇÃO: Usar comentários do mapa ao invés de query individual
+                            comentarios_th = comentarios_map.get(f"tarefa_h_{th['id']}", [])
 
                             tarefas_agrupadas_treinamento.setdefault(modulo_nome, []).append({
                                 'id': th['id'],
@@ -345,7 +491,7 @@ def _get_tarefas_and_comentarios(impl_id, is_owner=False, is_manager=False):
                                 'concluida': concl,
                                 'tag': '',
                                 'ordem': th.get('ordem', ordem_c),
-                                'comentarios': comentarios_fmt,
+                                'comentarios': comentarios_th,  # Comentários já formatados e ordenados do mapa
                                 'toggle_url': f"/api/toggle_tarefa_h/{th['id']}",
                                 'comment_url': f"/api/adicionar_comentario_h/tarefa/{th['id']}"
                             })
@@ -483,6 +629,26 @@ def get_implantacao_details(impl_id, usuario_cs_email, user_perfil):
         # Tabela planos_sucesso pode não existir ainda
         pass
 
+    # Buscar checklist hierárquico (novo modelo)
+    checklist_tree = None
+    checklist_nested = None
+    try:
+        from ..domain.checklist_service import get_checklist_tree, build_nested_tree
+        checklist_flat = get_checklist_tree(
+            implantacao_id=impl_id,
+            include_progress=True
+        )
+        if checklist_flat:
+            checklist_nested = build_nested_tree(checklist_flat)
+            logger.info(f"Checklist carregado para implantação {impl_id}: {len(checklist_flat)} itens")
+        else:
+            logger.debug(f"Nenhum item de checklist encontrado para implantação {impl_id}")
+    except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        logger.warning(f"Erro ao carregar checklist da implantação {impl_id}: {e}\n{error_trace}. Usando checklist vazio.")
+        checklist_nested = []
+
     logger.info(f"get_implantacao_details concluído com sucesso para ID {impl_id}")
     
     # Obter user_info do contexto g se disponível, caso contrário usar dados do perfil
@@ -518,5 +684,6 @@ def get_implantacao_details(impl_id, usuario_cs_email, user_perfil):
         'all_cs_users': all_cs_users,
         'is_manager': is_manager,
         'tt': TASK_TIPS,
-        'plano_sucesso': plano_sucesso_info
+        'plano_sucesso': plano_sucesso_info,
+        'checklist_tree': checklist_nested  # Árvore aninhada do checklist hierárquico
     }

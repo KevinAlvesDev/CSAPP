@@ -12,6 +12,98 @@
         min-height: calc(100vh - 200px);
     }
 
+    /* Estilos para Checklist Editor - Hierarquia Infinita */
+    .checklist-items-editor {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        min-height: 200px;
+    }
+
+    .checklist-item-editor {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        transition: all 0.2s ease;
+    }
+
+    .checklist-item-editor:hover {
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .checklist-item-header-editor {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .checklist-item-header-editor .item-title-input {
+        flex: 1;
+        font-weight: 500;
+    }
+
+    .toggle-children {
+        cursor: pointer;
+        border: none;
+        background: transparent;
+        color: #6c757d;
+        padding: 0;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .toggle-children:hover {
+        color: #495057;
+    }
+
+    .toggle-children i {
+        transition: transform 0.2s ease;
+    }
+
+    .toggle-children i.expanded {
+        transform: rotate(90deg);
+    }
+
+    .item-body {
+        margin-top: 0.75rem;
+        padding-left: 32px;
+    }
+
+    .item-children {
+        margin-top: 0.5rem;
+    }
+
+    .btn-add-child {
+        background: #0d6efd;
+        border: none;
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.875rem;
+    }
+
+    .btn-add-child:hover {
+        background: #0b5ed7;
+    }
+
+    .btn-remove-item {
+        background: #dc3545;
+        border: none;
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.875rem;
+    }
+
+    .btn-remove-item:hover {
+        background: #bb2d3b;
+    }
+
     .editor-sidebar {
         width: 300px;
         background: white;
@@ -196,6 +288,98 @@
         display: inline-block;
         margin-bottom: 1rem;
     }
+
+    /* Estilos para Checklist Editor - Hierarquia Infinita */
+    .checklist-items-editor {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        min-height: 200px;
+    }
+
+    .checklist-item-editor {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        transition: all 0.2s ease;
+    }
+
+    .checklist-item-editor:hover {
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .checklist-item-header-editor {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .checklist-item-header-editor .item-title-input {
+        flex: 1;
+        font-weight: 500;
+    }
+
+    .toggle-children {
+        cursor: pointer;
+        border: none;
+        background: transparent;
+        color: #6c757d;
+        padding: 0;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .toggle-children:hover {
+        color: #495057;
+    }
+
+    .toggle-children i {
+        transition: transform 0.2s ease;
+    }
+
+    .toggle-children i.expanded {
+        transform: rotate(90deg);
+    }
+
+    .item-body {
+        margin-top: 0.75rem;
+        padding-left: 32px;
+    }
+
+    .item-children {
+        margin-top: 0.5rem;
+    }
+
+    .btn-add-child {
+        background: #0d6efd;
+        border: none;
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.875rem;
+    }
+
+    .btn-add-child:hover {
+        background: #0b5ed7;
+    }
+
+    .btn-remove-item {
+        background: #dc3545;
+        border: none;
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.875rem;
+    }
+
+    .btn-remove-item:hover {
+        background: #bb2d3b;
+    }
 </style>
 {% endblock %}
 
@@ -349,20 +533,25 @@
                         <h3 class="form-section-title mb-0">
                             <i class="bi bi-layers"></i>Estrutura do Plano
                         </h3>
-                        <button type="button" class="btn btn-add" id="btnAdicionarFase">
-                            <i class="bi bi-plus-circle me-1"></i>Adicionar Fase
+                        <button type="button" class="btn btn-add" id="btnAdicionarItem">
+                            <i class="bi bi-plus-circle me-1"></i>Adicionar Item
                         </button>
                     </div>
 
-                    <div id="fasesContainer" class="accordion fase-accordion">
-                        <!-- Fases serão adicionadas aqui dinamicamente -->
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Hierarquia Infinita:</strong> Você pode adicionar filhos em qualquer nível para criar uma estrutura hierárquica ilimitada.
+                    </div>
+
+                    <div id="itemsContainer" class="checklist-items-editor">
+                        <!-- Itens serão adicionados aqui dinamicamente -->
                     </div>
 
                     <div id="emptyState" class="text-center py-5" style="display: none;">
                         <i class="bi bi-inbox" style="font-size: 4rem; color: #cbd5e0;"></i>
-                        <p class="text-muted mt-3">Nenhuma fase adicionada ainda</p>
-                        <button type="button" class="btn btn-add" onclick="document.getElementById('btnAdicionarFase').click()">
-                            <i class="bi bi-plus-circle me-1"></i>Adicionar Primeira Fase
+                        <p class="text-muted mt-3">Nenhum item adicionado ainda</p>
+                        <button type="button" class="btn btn-add" onclick="document.getElementById('btnAdicionarItem').click()">
+                            <i class="bi bi-plus-circle me-1"></i>Adicionar Primeiro Item
                         </button>
                     </div>
                 </div>
@@ -383,10 +572,13 @@
 <script src="{{ url_for('static', filename='js/planos_editor.js') }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        {% if plano and plano.fases %}
-        const planoData = {{ plano | tojson | safe
-    }};
-    window.PlanoEditor.carregarPlano(planoData);
+        {% if plano %}
+        const planoData = {{ plano | tojson | safe }};
+        if (planoData.items || planoData.fases) {
+            window.PlanoEditor.carregarPlano(planoData);
+        } else {
+            document.getElementById('emptyState').style.display = 'block';
+        }
         {% else %}
         document.getElementById('emptyState').style.display = 'block';
         {% endif %}

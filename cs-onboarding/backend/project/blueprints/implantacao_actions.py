@@ -15,7 +15,7 @@ from ..db import query_db, execute_db, logar_timeline, execute_and_fetch_one
 from ..config.cache_config import clear_user_cache, clear_implantacao_cache
 
 
-from ..domain.implantacao_service import _get_progress, _create_default_tasks
+from ..domain.implantacao_service import _get_progress
 
 
 from ..domain.task_definitions import (
@@ -117,12 +117,10 @@ def criar_implantacao():
 
         logar_timeline(implantacao_id, usuario_criador, 'implantacao_criada', f'Implantação "{nome_empresa}" ({tipo.capitalize()}) criada e atribuída a {usuario_atribuido}.')  
         
-        tasks_added = 0
-
-        if tipo == 'completa': 
-            tasks_added = _create_default_tasks(implantacao_id)  
-            
-        flash(f'Implantação "{nome_empresa}" criada com {tasks_added} tarefas padrão.', 'success')
+        # Nota: Tarefas são criadas automaticamente quando um plano de sucesso é aplicado
+        # Não há mais criação automática de tarefas padrão (código legado removido)
+        
+        flash(f'Implantação "{nome_empresa}" criada com sucesso. Aplique um plano de sucesso para criar as tarefas.', 'success')
 
         try:
             clear_user_cache(usuario_criador)

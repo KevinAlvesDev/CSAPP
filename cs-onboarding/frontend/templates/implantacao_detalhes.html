@@ -378,6 +378,170 @@
        ESTILOS DO PLANO DE SUCESSO (HIERARQUIA)
        ============================================ */
     
+    /* Checklist Hierárquico Infinito - Melhorado */
+    .checklist-item {
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        position: relative;
+    }
+    
+    .checklist-item:last-child {
+        border-bottom: none;
+    }
+    
+    .checklist-item-header {
+        transition: background-color 0.2s ease;
+    }
+    
+    .checklist-item-header .hover-bg:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .checklist-item-title {
+        font-weight: 500;
+        color: #4a5568;
+        cursor: pointer;
+        margin: 0;
+        transition: all 0.2s ease;
+    }
+    
+    .checklist-item-title:hover {
+        color: #667eea;
+    }
+    
+    .checklist-checkbox {
+        cursor: pointer;
+        accent-color: #667eea;
+        transition: all 0.2s ease;
+    }
+    
+    .checklist-checkbox:disabled {
+        opacity: 0.5;
+        cursor: wait;
+    }
+    
+    .checklist-progress-badge {
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 0.25rem 0.5rem;
+        border-radius: 12px;
+    }
+    
+    .checklist-item-children {
+        padding-left: 0;
+        transition: all 0.3s ease-in-out;
+    }
+    
+    .checklist-item-children.d-none {
+        display: none !important;
+    }
+    
+    .btn-icon {
+        background: none;
+        border: none;
+        padding: 0.25rem;
+        color: #64748b;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+    }
+    
+    .btn-icon:hover {
+        background-color: #e2e8f0;
+        color: #667eea;
+        transform: scale(1.1);
+    }
+    
+    .btn-icon:focus {
+        outline: 2px solid #667eea;
+        outline-offset: 2px;
+    }
+    
+    .btn-icon-placeholder {
+        width: 28px;
+        height: 28px;
+        display: inline-block;
+    }
+    
+    /* Barra de progresso por item */
+    .progress-bar-item {
+        height: 3px;
+        border-radius: 0 0 4px 4px;
+        transition: width 0.3s ease, opacity 0.3s ease;
+    }
+    
+    /* Comentários */
+    .checklist-comments-section {
+        border-top: 1px solid rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+    }
+    
+    .checklist-comment-form {
+        background-color: #f8f9fa;
+        border-radius: 0 0 8px 8px;
+    }
+    
+    .checklist-comment-form textarea {
+        resize: vertical;
+        min-height: 60px;
+    }
+    
+    /* Status badges melhorados */
+    .checklist-item .badge {
+        font-size: 0.7rem;
+        padding: 0.35rem 0.65rem;
+        border-radius: 12px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+    }
+    
+    /* Animação suave para chevron */
+    .btn-icon i.bi-chevron-right,
+    .btn-icon i.bi-chevron-down {
+        transition: transform 0.2s ease;
+    }
+    
+    /* Ícones de comentário com notificação */
+    .btn-comment-toggle i.text-primary {
+        color: #667eea !important;
+    }
+    
+    /* Progresso global melhorado */
+    .checklist-global-progress {
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        border: 1px solid #bae6fd;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .checklist-global-progress .progress-thick {
+        height: 10px;
+        border-radius: 10px;
+        background-color: #e0f2fe;
+        overflow: hidden;
+    }
+    
+    .checklist-global-progress .progress-bar {
+        transition: width 0.5s ease, background-color 0.3s ease;
+        font-size: 0.7rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .checklist-global-progress {
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        border: 1px solid #bae6fd;
+        border-radius: 10px;
+        padding: 1rem;
+    }
+
     .plano-sucesso-container {
         max-height: calc(100vh - 300px);
         overflow-y: auto;
@@ -975,7 +1139,25 @@
                     <!-- Tab: Plano de Sucesso -->
                     <div class="tab-pane fade show active" id="plano-content" role="tabpanel">
                         <div class="custom-card-body plano-sucesso-container" id="plano-hierarquia">
-                            {% if hierarquia and hierarquia.fases %}
+                            {% if checklist_tree and checklist_tree|length > 0 %}
+                            <!-- Novo Checklist Hierárquico -->
+                            <div id="checklist-container" data-implantacao-id="{{ implantacao.id }}">
+                                <!-- Progresso Global -->
+                                <div class="checklist-global-progress mb-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="text-muted small">Progresso Global do Onboarding</span>
+                                        <span id="checklist-global-progress-percent" class="fw-bold text-primary">0%</span>
+                                    </div>
+                                    <div class="progress-thick">
+                                        <div id="checklist-global-progress-bar" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Checklist Tree será renderizado via JavaScript -->
+                                <div id="checklist-tree-root"></div>
+                            </div>
+                            {% elif hierarquia and hierarquia.fases %}
+                            <!-- Modelo Antigo (Compatibilidade) -->
                                 {% for fase in hierarquia.fases %}
                                 <div class="fase-card" data-fase-id="{{ fase.id }}">
                                     <div class="fase-header" data-bs-toggle="collapse" data-bs-target="#fase-{{ fase.id }}" aria-expanded="false">
@@ -1126,6 +1308,7 @@
                                 </div>
                                 {% endfor %}
                             {% else %}
+                            <!-- Nenhum plano aplicado -->
                             <div class="empty-state">
                                 <i class="bi bi-diagram-3"></i>
                                 <h6 class="text-muted">Nenhum plano aplicado</h6>
@@ -2543,6 +2726,12 @@
     });
 </script>
 
+<script>
+    // Dados do checklist para renderização
+    window.CHECKLIST_DATA = {{ checklist_tree | tojson if checklist_tree else '[]' }};
+    window.IMPLANTACAO_ID = {{ implantacao.id }};
+</script>
+<script src="{{ url_for('static', filename='js/checklist_renderer.js') }}"></script>
 <script src="{{ url_for('static', filename='js/implantacao_detalhes.js') }}"></script>
 
 <!-- Modal Selecionar Plano (Externo) -->

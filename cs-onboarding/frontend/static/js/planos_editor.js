@@ -1,14 +1,12 @@
 /**
- * Editor de Planos de Sucesso
- * Gerencia a criação e edição hierárquica de planos
+ * Editor de Planos de Sucesso - Hierarquia Infinita
+ * Gerencia a criação e edição de planos com estrutura hierárquica ilimitada
  */
 
 (function() {
   'use strict';
 
-  let faseCounter = 0;
-  let grupoCounter = 0;
-  let tarefaCounter = 0;
+  let itemCounter = 0;
 
   const PlanoEditor = {
     init() {
@@ -17,9 +15,9 @@
     },
 
     bindEvents() {
-      const btnAdicionarFase = document.getElementById('btnAdicionarFase');
-      if (btnAdicionarFase) {
-        btnAdicionarFase.addEventListener('click', () => this.adicionarFase());
+      const btnAdicionarItem = document.getElementById('btnAdicionarItem');
+      if (btnAdicionarItem) {
+        btnAdicionarItem.addEventListener('click', () => this.adicionarItemRaiz());
       }
 
       const formPlano = document.getElementById('formPlano');
@@ -28,292 +26,374 @@
       }
     },
 
-    adicionarFase(dados = null) {
-      faseCounter++;
-      const faseId = dados?.id || `fase_${faseCounter}`;
-      const ordem = dados?.ordem || faseCounter;
-
-      const faseHtml = `
-        <div class="accordion-item" data-fase-id="${faseId}">
-          <h2 class="accordion-header">
-            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse${faseId}">
-              <i class="bi bi-grip-vertical drag-handle me-2"></i>
-              <span class="fase-nome-display">${dados?.nome || `Fase ${ordem}`}</span>
-            </button>
-          </h2>
-          <div id="collapse${faseId}" class="accordion-collapse collapse" data-bs-parent="#fasesContainer">
-            <div class="accordion-body">
-              <div class="mb-3">
-                <label class="form-label fw-bold">Nome da Fase</label>
-                <input 
-                  type="text" 
-                  class="form-control fase-nome-input" 
-                  placeholder="Ex: Onboarding Inicial"
-                  value="${dados?.nome || ''}"
-                  required
-                >
-              </div>
-
-              <div class="mb-3">
-                <label class="form-label fw-bold">Descrição</label>
-                <textarea 
-                  class="form-control fase-descricao-input" 
-                  rows="2"
-                  placeholder="Descrição opcional da fase..."
-                >${dados?.descricao || ''}</textarea>
-              </div>
-
-              <input type="hidden" class="fase-ordem-input" value="${ordem}">
-
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <h6 class="mb-0"><i class="bi bi-collection me-2"></i>Ações</h6>
-                <button type="button" class="btn btn-sm btn-add btn-adicionar-grupo">
-                  <i class="bi bi-plus me-1"></i>Adicionar Ação
-                </button>
-              </div>
-
-              <div class="grupos-container">
-                <!-- Grupos serão adicionados aqui -->
-              </div>
-
-              <button type="button" class="btn btn-remove mt-3 btn-remover-fase">
-                <i class="bi bi-trash me-1"></i>Remover Fase
-              </button>
-            </div>
-          </div>
-        </div>
-      `;
-
-      const container = document.getElementById('fasesContainer');
-      container.insertAdjacentHTML('beforeend', faseHtml);
-
-      const faseElement = container.querySelector(`[data-fase-id="${faseId}"]`);
-      this.bindFaseEvents(faseElement);
-
-      // Carregar grupos se existirem
-      if (dados?.grupos) {
-        dados.grupos.forEach(grupo => this.adicionarGrupo(faseElement, grupo));
+    /**
+     * Adiciona um item raiz (nível 0)
+     */
+    adicionarItemRaiz(dados = null) {
+      itemCounter++;
+      const itemId = dados?.id || `item_${itemCounter}`;
+      const container = document.getElementById('itemsContainer');
+      
+      // Se dados existem e têm children, marcar como expandido
+      if (dados && dados.children && dados.children.length > 0) {
+        dados.expanded = true;
       }
-
-      // Atualizar nome da fase quando digitado
-      const nomeInput = faseElement.querySelector('.fase-nome-input');
-      const nomeDisplay = faseElement.querySelector('.fase-nome-display');
-      nomeInput.addEventListener('input', (e) => {
-        nomeDisplay.textContent = e.target.value || `Fase ${ordem}`;
-      });
-
+      
+      const itemElement = this.criarItemElement(itemId, dados, 0, null);
+      container.insertAdjacentHTML('beforeend', itemElement);
+      
+      const element = container.querySelector(`[data-item-id="${itemId}"]`);
+      this.bindItemEvents(element);
+      
+      // Carregar filhos se existirem
+      if (dados && dados.children && dados.children.length > 0) {
+        this.carregarFilhosRecursivo(dados, element);
+      }
+      
       this.checkEmptyState();
+      return element;
     },
 
-    bindFaseEvents(faseElement) {
-      const btnAdicionarGrupo = faseElement.querySelector('.btn-adicionar-grupo');
-      btnAdicionarGrupo.addEventListener('click', () => this.adicionarGrupo(faseElement));
-
-      const btnRemoverFase = faseElement.querySelector('.btn-remover-fase');
-      btnRemoverFase.addEventListener('click', () => this.removerFase(faseElement));
-    },
-
-    adicionarGrupo(faseElement, dados = null) {
-      grupoCounter++;
-      const grupoId = dados?.id || `grupo_${grupoCounter}`;
-
-      const grupoHtml = `
-        <div class="grupo-card" data-grupo-id="${grupoId}">
-          <div class="grupo-header">
-            <input 
-              type="text" 
-              class="form-control form-control-sm grupo-nome-input" 
-              placeholder="Nome da ação"
-              value="${dados?.nome || ''}"
-              required
-            >
-            <button type="button" class="btn btn-sm btn-remove btn-remover-grupo">
-              <i class="bi bi-trash"></i>
-            </button>
-          </div>
-
-          <div class="mb-2">
-            <textarea 
-              class="form-control form-control-sm grupo-descricao-input" 
-              rows="2"
-              placeholder="Descrição da ação (opcional)"
-            >${dados?.descricao || ''}</textarea>
-          </div>
-
-          <div class="d-flex justify-content-between align-items-center mb-2">
-            <small class="fw-bold"><i class="bi bi-list-check me-1"></i>Tarefas</small>
-            <button type="button" class="btn btn-sm btn-add btn-adicionar-tarefa">
-              <i class="bi bi-plus"></i>
-            </button>
-          </div>
-
-          <div class="tarefas-container">
-            <!-- Tarefas serão adicionadas aqui -->
-          </div>
-        </div>
-      `;
-
-      const gruposContainer = faseElement.querySelector('.grupos-container');
-      gruposContainer.insertAdjacentHTML('beforeend', grupoHtml);
-
-      const grupoElement = gruposContainer.querySelector(`[data-grupo-id="${grupoId}"]`);
-      this.bindGrupoEvents(grupoElement);
-
-      // Carregar tarefas se existirem
-      if (dados?.tarefas) {
-        dados.tarefas.forEach(tarefa => this.adicionarTarefa(grupoElement, tarefa));
-      }
-    },
-
-    bindGrupoEvents(grupoElement) {
-      const btnAdicionarTarefa = grupoElement.querySelector('.btn-adicionar-tarefa');
-      btnAdicionarTarefa.addEventListener('click', () => this.adicionarTarefa(grupoElement));
-
-      const btnRemoverGrupo = grupoElement.querySelector('.btn-remover-grupo');
-      btnRemoverGrupo.addEventListener('click', () => this.removerGrupo(grupoElement));
-    },
-
-    adicionarTarefa(grupoElement, dados = null) {
-      tarefaCounter++;
-      const tarefaId = dados?.id || `tarefa_${tarefaCounter}`;
-
-      const tarefaHtml = `
-        <div class="tarefa-item" data-tarefa-id="${tarefaId}">
-          <div class="tarefa-header">
-            <div class="flex-grow-1">
+    /**
+     * Cria HTML para um item (genérico, qualquer nível)
+     */
+    criarItemElement(itemId, dados = null, level = 0, parentId = null) {
+      const indent = level * 20;
+      const title = dados?.title || dados?.nome || '';
+      const comment = dados?.comment || dados?.descricao || '';
+      const isExpanded = dados?.expanded !== false;
+      const hasChildren = dados?.children && dados.children.length > 0;
+      const showToggle = hasChildren || level >= 0; // Sempre mostrar toggle (pode adicionar filhos)
+      
+      return `
+        <div class="checklist-item-editor" data-item-id="${itemId}" data-level="${level}" data-parent-id="${parentId || ''}" data-expanded="${isExpanded}" style="margin-left: ${indent}px;">
+          <div class="checklist-item-header-editor">
+            <div class="d-flex align-items-center gap-2 flex-grow-1">
+              ${showToggle ? `
+                <button type="button" class="btn btn-sm btn-link p-0 toggle-children" style="min-width: 24px;">
+                  <i class="bi ${isExpanded ? 'bi-chevron-down expanded' : 'bi-chevron-right'}"></i>
+                </button>
+              ` : '<div style="width: 24px;"></div>'}
               <input 
                 type="text" 
-                class="form-control form-control-sm tarefa-nome-input mb-2" 
-                placeholder="Nome da tarefa"
-                value="${dados?.nome || ''}"
+                class="form-control form-control-sm item-title-input" 
+                placeholder="Nome do item"
+                value="${this.escapeHtml(title)}"
                 required
               >
-              <textarea 
-                class="form-control form-control-sm tarefa-descricao-input" 
-                rows="1"
-                placeholder="Descrição (opcional)"
-              >${dados?.descricao || ''}</textarea>
             </div>
-            <button type="button" class="btn btn-sm btn-remove btn-remover-tarefa">
-              <i class="bi bi-trash"></i>
-            </button>
+            <div class="d-flex align-items-center gap-1">
+              <button type="button" class="btn btn-sm btn-primary btn-add-child" title="Adicionar filho">
+                <i class="bi bi-plus-lg"></i>
+              </button>
+              ${level > 0 ? `
+                <button type="button" class="btn btn-sm btn-danger btn-remove-item" title="Remover">
+                  <i class="bi bi-trash"></i>
+                </button>
+              ` : `
+                <button type="button" class="btn btn-sm btn-danger btn-remove-item" title="Remover">
+                  <i class="bi bi-trash"></i>
+                </button>
+              `}
+            </div>
           </div>
-
-          <div class="form-check mb-2">
-            <input 
-              class="form-check-input tarefa-obrigatoria-input" 
-              type="checkbox" 
-              id="obrig_${tarefaId}"
-              ${dados?.obrigatoria ? 'checked' : ''}
-            >
-            <label class="form-check-label small" for="obrig_${tarefaId}">
-              Tarefa Obrigatória
-            </label>
+          
+          <div class="item-body ${isExpanded ? '' : 'd-none'}">
+            <div class="mb-2 mt-2">
+              <textarea 
+                class="form-control form-control-sm item-comment-input" 
+                rows="2"
+                placeholder="Descrição/Comentário (opcional)"
+              >${this.escapeHtml(comment)}</textarea>
+            </div>
+            
+            <div class="item-children" data-parent-id="${itemId}">
+              <!-- Filhos serão adicionados aqui -->
+            </div>
           </div>
         </div>
       `;
-
-      const tarefasContainer = grupoElement.querySelector('.tarefas-container');
-      tarefasContainer.insertAdjacentHTML('beforeend', tarefaHtml);
-
-      const tarefaElement = tarefasContainer.querySelector(`[data-tarefa-id="${tarefaId}"]`);
-      this.bindTarefaEvents(tarefaElement);
     },
 
-    bindTarefaEvents(tarefaElement) {
-      const btnRemoverTarefa = tarefaElement.querySelector('.btn-remover-tarefa');
-      btnRemoverTarefa.addEventListener('click', () => this.removerTarefa(tarefaElement));
+    /**
+     * Adiciona um filho a um item
+     */
+    adicionarFilho(parentElement, dados = null) {
+      itemCounter++;
+      const parentId = parentElement.getAttribute('data-item-id');
+      const level = parseInt(parentElement.getAttribute('data-level')) + 1;
+      const itemId = dados?.id || `item_${itemCounter}`;
+      
+      const childrenContainer = parentElement.querySelector('.item-children');
+      const itemElement = this.criarItemElement(itemId, dados, level, parentId);
+      childrenContainer.insertAdjacentHTML('beforeend', itemElement);
+      
+      const element = childrenContainer.querySelector(`[data-item-id="${itemId}"]`);
+      this.bindItemEvents(element);
+      
+      // Expandir pai se estiver colapsado
+      this.expandItem(parentElement);
     },
 
-    removerFase(faseElement) {
-      if (confirm('Tem certeza que deseja remover esta fase e todo seu conteúdo?')) {
-        faseElement.remove();
+    /**
+     * Expande/colapsa um item
+     */
+    expandItem(element) {
+      const body = element.querySelector('.item-body');
+      const icon = element.querySelector('.toggle-children i');
+      
+      body.classList.remove('d-none');
+      icon.classList.remove('bi-chevron-right');
+      icon.classList.add('bi-chevron-down', 'expanded');
+      element.setAttribute('data-expanded', 'true');
+    },
+
+    collapseItem(element) {
+      const body = element.querySelector('.item-body');
+      const icon = element.querySelector('.toggle-children i');
+      
+      body.classList.add('d-none');
+      icon.classList.remove('bi-chevron-down', 'expanded');
+      icon.classList.add('bi-chevron-right');
+      element.setAttribute('data-expanded', 'false');
+    },
+
+    toggleItem(element) {
+      const isExpanded = element.getAttribute('data-expanded') === 'true';
+      if (isExpanded) {
+        this.collapseItem(element);
+      } else {
+        this.expandItem(element);
+      }
+    },
+
+    /**
+     * Vincula eventos a um item
+     */
+    bindItemEvents(element) {
+      const btnAddChild = element.querySelector('.btn-add-child');
+      const btnRemove = element.querySelector('.btn-remove-item');
+      const btnToggle = element.querySelector('.toggle-children');
+      
+      if (btnAddChild) {
+        btnAddChild.addEventListener('click', () => this.adicionarFilho(element));
+      }
+      
+      if (btnRemove) {
+        btnRemove.addEventListener('click', () => this.removerItem(element));
+      }
+      
+      if (btnToggle) {
+        btnToggle.addEventListener('click', () => this.toggleItem(element));
+      }
+    },
+
+    /**
+     * Remove um item e seus filhos
+     */
+    removerItem(element) {
+      if (confirm('Tem certeza que deseja remover este item e todos os seus filhos?')) {
+        element.remove();
         this.checkEmptyState();
       }
     },
 
-    removerGrupo(grupoElement) {
-      if (confirm('Tem certeza que deseja remover esta ação e todo seu conteúdo?')) {
-        grupoElement.remove();
-      }
-    },
-
-    removerTarefa(tarefaElement) {
-      tarefaElement.remove();
-    },
-
+    /**
+     * Verifica estado vazio
+     */
     checkEmptyState() {
-      const fasesContainer = document.getElementById('fasesContainer');
+      const itemsContainer = document.getElementById('itemsContainer');
       const emptyState = document.getElementById('emptyState');
       
-      if (fasesContainer && emptyState) {
-        const hasFases = fasesContainer.querySelectorAll('.accordion-item').length > 0;
-        emptyState.style.display = hasFases ? 'none' : 'block';
+      if (itemsContainer && emptyState) {
+        const hasItems = itemsContainer.querySelectorAll('[data-item-id]').length > 0;
+        emptyState.style.display = hasItems ? 'none' : 'block';
       }
     },
 
+    /**
+     * Coleta dados da estrutura hierárquica
+     */
     coletarDados() {
-      const fases = [];
-      const faseElements = document.querySelectorAll('[data-fase-id]');
-
-      faseElements.forEach((faseEl, index) => {
-        const fase = {
-          nome: faseEl.querySelector('.fase-nome-input').value.trim(),
-          descricao: faseEl.querySelector('.fase-descricao-input').value.trim(),
-          ordem: index + 1,
-          grupos: []
-        };
-
-        const grupoElements = faseEl.querySelectorAll('[data-grupo-id]');
-        grupoElements.forEach((grupoEl, gIndex) => {
-          const grupo = {
-            nome: grupoEl.querySelector('.grupo-nome-input').value.trim(),
-            descricao: grupoEl.querySelector('.grupo-descricao-input').value.trim(),
-            ordem: gIndex + 1,
-            tarefas: []
-          };
-
-          const tarefaElements = grupoEl.querySelectorAll('[data-tarefa-id]');
-          tarefaElements.forEach((tarefaEl, tIndex) => {
-            const tarefa = {
-              nome: tarefaEl.querySelector('.tarefa-nome-input').value.trim(),
-              descricao: tarefaEl.querySelector('.tarefa-descricao-input').value.trim(),
-              obrigatoria: tarefaEl.querySelector('.tarefa-obrigatoria-input').checked,
-              ordem: tIndex + 1
-            };
-
-            if (tarefa.nome) {
-              grupo.tarefas.push(tarefa);
-            }
-          });
-
-          if (grupo.nome) {
-            fase.grupos.push(grupo);
-          }
-        });
-
-        if (fase.nome) {
-          fases.push(fase);
+      const itemsContainer = document.getElementById('itemsContainer');
+      const rootItems = itemsContainer.querySelectorAll('[data-item-id][data-level="0"]');
+      
+      const items = [];
+      rootItems.forEach(itemEl => {
+        const item = this.coletarItemRecursivo(itemEl);
+        if (item.title) {
+          items.push(item);
         }
       });
-
-      return { fases };
+      
+      return { items };
     },
 
+    /**
+     * Coleta dados de um item e seus filhos recursivamente
+     */
+    coletarItemRecursivo(element) {
+      const title = element.querySelector('.item-title-input').value.trim();
+      const comment = element.querySelector('.item-comment-input').value.trim();
+      const level = parseInt(element.getAttribute('data-level'));
+      
+      const item = {
+        title: title,
+        comment: comment,
+        level: level,
+        ordem: 0, // Será calculado no backend se necessário
+        children: []
+      };
+      
+      // Coletar filhos
+      const childrenContainer = element.querySelector('.item-children');
+      if (childrenContainer) {
+        const children = childrenContainer.querySelectorAll('[data-item-id]');
+        children.forEach(childEl => {
+          const child = this.coletarItemRecursivo(childEl);
+          if (child.title) {
+            item.children.push(child);
+          }
+        });
+      }
+      
+      return item;
+    },
+
+    /**
+     * Valida dados da estrutura
+     */
     validarDados(estrutura) {
-      // Permite criar planos sem fases (podem ser adicionadas depois)
-      if (estrutura.fases && estrutura.fases.length > 0) {
-        for (const fase of estrutura.fases) {
-          if (!fase.nome) {
-            alert('Todas as fases devem ter um nome.');
-            return false;
+      if (!estrutura.items || estrutura.items.length === 0) {
+        alert('Adicione pelo menos um item ao plano.');
+        return false;
+      }
+      
+      // Validar recursivamente
+      const validarItem = (item) => {
+        if (!item.title || !item.title.trim()) {
+          alert('Todos os itens devem ter um título.');
+          return false;
+        }
+        
+        if (item.children) {
+          for (const child of item.children) {
+            if (!validarItem(child)) {
+              return false;
+            }
           }
         }
+        
+        return true;
+      };
+      
+      for (const item of estrutura.items) {
+        if (!validarItem(item)) {
+          return false;
+        }
       }
-
+      
       return true;
     },
 
+    /**
+     * Carrega plano (suporta formato antigo e novo)
+     */
+    carregarPlano(planoData) {
+      if (planoData.items && Array.isArray(planoData.items)) {
+        // Formato novo (checklist_items)
+        planoData.items.forEach(item => {
+          this.adicionarItemRaiz(item);
+        });
+      } else if (planoData.fases && Array.isArray(planoData.fases)) {
+        // Formato antigo (fases/grupos/tarefas) - converter
+        this.carregarPlanoLegado(planoData);
+      } else if (planoData.estrutura && planoData.estrutura.items) {
+        // Formato com estrutura.items
+        planoData.estrutura.items.forEach(item => {
+          this.adicionarItemRaiz(item);
+        });
+      }
+    },
+
+    /**
+     * Carrega plano em formato legado (fases/grupos/tarefas)
+     */
+    carregarPlanoLegado(planoData) {
+      planoData.fases.forEach((fase, faseIndex) => {
+        const faseItem = {
+          title: fase.nome,
+          comment: fase.descricao || '',
+          level: 0,
+          expanded: true,
+          children: []
+        };
+        
+        // Criar estrutura de filhos para grupos
+        if (fase.grupos && fase.grupos.length > 0) {
+          fase.grupos.forEach(grupo => {
+            const grupoItem = {
+              title: grupo.nome,
+              comment: grupo.descricao || '',
+              level: 1,
+              children: []
+            };
+            
+            // Adicionar tarefas como filhos do grupo
+            if (grupo.tarefas && grupo.tarefas.length > 0) {
+              grupo.tarefas.forEach(tarefa => {
+                grupoItem.children.push({
+                  title: tarefa.nome,
+                  comment: tarefa.descricao || '',
+                  level: 2
+                });
+              });
+            }
+            
+            faseItem.children.push(grupoItem);
+          });
+        }
+        
+        // Adicionar fase com toda a estrutura
+        this.adicionarItemRaiz(faseItem);
+      });
+    },
+
+    /**
+     * Carrega filhos recursivamente
+     */
+    carregarFilhosRecursivo(itemData, parentElement) {
+      if (!itemData.children || itemData.children.length === 0) {
+        return;
+      }
+      
+      itemData.children.forEach(childData => {
+        this.adicionarFilho(parentElement, childData);
+        
+        // Encontrar elemento recém-criado e carregar seus filhos
+        const childrenContainer = parentElement.querySelector('.item-children');
+        if (childrenContainer) {
+          const lastChild = childrenContainer.querySelector('[data-item-id]:last-child');
+          if (lastChild && childData.children && childData.children.length > 0) {
+            this.carregarFilhosRecursivo(childData, lastChild);
+          }
+        }
+      });
+    },
+
+    /**
+     * Escapa HTML para evitar XSS
+     */
+    escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    },
+
+    /**
+     * Manipula submit do formulário
+     */
     handleSubmit(e) {
       e.preventDefault();
 
@@ -353,12 +433,6 @@
 
       // Submeter o formulário
       form.submit();
-    },
-
-    carregarPlano(planoData) {
-      if (planoData.fases) {
-        planoData.fases.forEach(fase => this.adicionarFase(fase));
-      }
     }
   };
 

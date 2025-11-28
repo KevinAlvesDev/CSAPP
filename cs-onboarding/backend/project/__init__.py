@@ -131,22 +131,21 @@ def create_app():
             with app.app_context():
                 db.init_db()
                 
+                # Criar usuário admin padrão
                 try:
-                    admin_exists = query_db("SELECT usuario FROM usuarios WHERE usuario = %s", (ADMIN_EMAIL,), one=True)
                     from werkzeug.security import generate_password_hash
-                    seeded_hash = generate_password_hash('323397041')
-                    if not admin_exists:
-                        execute_db("INSERT INTO usuarios (usuario, senha) VALUES (%s, %s)", (ADMIN_EMAIL, seeded_hash))
-                    else:
-                        execute_db("UPDATE usuarios SET senha = %s WHERE usuario = %s", (seeded_hash, ADMIN_EMAIL))
-                    perfil_exists = query_db("SELECT usuario FROM perfil_usuario WHERE usuario = %s", (ADMIN_EMAIL,), one=True)
-                    if not perfil_exists:
-                        execute_db(
-                            "INSERT INTO perfil_usuario (usuario, nome, cargo, perfil_acesso, foto_url) VALUES (%s, %s, %s, %s, %s)",
-                            (ADMIN_EMAIL, 'Admin Dev', None, PERFIL_ADMIN, None)
-                        )
-                    else:
-                        execute_db("UPDATE perfil_usuario SET perfil_acesso = %s WHERE usuario = %s", (PERFIL_ADMIN, ADMIN_EMAIL))
+                    seeded_hash = generate_password_hash('admin123@')
+                    
+                    # Usar INSERT OR REPLACE para garantir que o admin existe
+                    execute_db(
+                        "INSERT OR REPLACE INTO usuarios (usuario, senha) VALUES (%s, %s)",
+                        (ADMIN_EMAIL, seeded_hash)
+                    )
+                    execute_db(
+                        "INSERT OR REPLACE INTO perfil_usuario (usuario, nome, cargo, perfil_acesso, foto_url) VALUES (%s, %s, %s, %s, %s)",
+                        (ADMIN_EMAIL, 'Administrador', None, PERFIL_ADMIN, None)
+                    )
+                    print(f"[Setup] Usuário admin criado/atualizado: {ADMIN_EMAIL}")
                 except Exception as e_seed:
                     print(f"AVISO: Falha ao semear admin padrão: {e_seed}")
     except Exception as e_dbinit:
@@ -218,6 +217,7 @@ def create_app():
     from .blueprints.api_docs import api_docs_bp
     from .blueprints.planos_bp import planos_bp
     from .blueprints.api_h import api_h_bp
+    from .blueprints.checklist_api import checklist_bp
 
     try:
         csrf.exempt(api_bp)
@@ -225,6 +225,7 @@ def create_app():
         csrf.exempt(health_bp)                                      
         csrf.exempt(api_docs_bp)
         csrf.exempt(api_h_bp)
+        csrf.exempt(checklist_bp)
     except Exception as e:
         print(f"Aviso: não foi possível isentar CSRF no api_bp: {e}")
 
@@ -242,6 +243,7 @@ def create_app():
     app.register_blueprint(api_docs_bp)
     app.register_blueprint(planos_bp)
     app.register_blueprint(api_h_bp)
+    app.register_blueprint(checklist_bp)
 
 
     try:

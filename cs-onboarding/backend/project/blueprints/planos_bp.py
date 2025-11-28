@@ -168,7 +168,8 @@ def criar_plano():
         user = get_current_user()
         criado_por = user.get('usuario') if user else 'sistema'
         
-        plano_id = planos_sucesso_service.criar_plano_sucesso(
+        # Usar nova função que usa checklist_items (hierarquia infinita)
+        plano_id = planos_sucesso_service.criar_plano_sucesso_checklist(
             nome=nome,
             descricao=descricao,
             criado_por=criado_por,
@@ -341,7 +342,8 @@ def aplicar_plano_implantacao(implantacao_id):
         user = get_current_user()
         usuario = user.get('usuario') if user else 'sistema'
         
-        sucesso = planos_sucesso_service.aplicar_plano_a_implantacao(
+        # Usar nova função que usa checklist_items (hierarquia infinita)
+        sucesso = planos_sucesso_service.aplicar_plano_a_implantacao_checklist(
             implantacao_id=implantacao_id,
             plano_id=plano_id,
             usuario=usuario

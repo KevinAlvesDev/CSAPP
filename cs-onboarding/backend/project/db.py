@@ -204,6 +204,88 @@ def execute_and_fetch_one(query, args=()):
             conn.close()
 
 
+@contextmanager
+def db_transaction_with_lock():
+    """
+    Context manager para transações com lock de linha.
+    Garante atomicidade e previne race conditions.
+    
+    IMPORTANTE: 
+    - Para PostgreSQL: usa SELECT FOR UPDATE para lock
+    - Para SQLite: usa BEGIN IMMEDIATE TRANSACTION para lock
+    - Não fecha conexões PostgreSQL que estão em g.db_conn (gerenciadas pelo pool)
+    - Fecha conexões SQLite após uso
+    
+    Uso:
+        with db_transaction_with_lock() as (conn, cursor, db_type):
+            if db_type == 'postgres':
+                cursor.execute("SELECT ... FROM tabela WHERE id = %s FOR UPDATE", (id,))
+            else:
+                cursor.execute("SELECT ... FROM tabela WHERE id = ?", (id,))
+            
+            row = cursor.fetchone()
+            if db_type == 'postgres':
+                # cursor retorna dict automaticamente (DictCursor)
+                dados = row
+            else:
+                # SQLite retorna Row object
+                dados = dict(row) if row else None
+            
+            # ... operações na mesma transação ...
+            conn.commit()  # Commit automático no context manager
+    
+    Returns:
+        tuple: (conexão, cursor, tipo_db) onde tipo_db é 'sqlite' ou 'postgres'
+    
+    Raises:
+        Exception: Qualquer erro durante a transação (rollback automático)
+    """
+    conn, db_type = None, None
+    use_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
+    
+    try:
+        conn, db_type = get_db_connection()
+        cursor = None
+        
+        # SQLite precisa de transação explícita para lock efetivo
+        if db_type == 'sqlite':
+            # BEGIN IMMEDIATE garante lock imediato (não espera)
+            conn.execute("BEGIN IMMEDIATE TRANSACTION")
+            cursor = conn.cursor()
+        else:
+            # PostgreSQL - cursor já é DictCursor via pool
+            cursor = conn.cursor()
+            # PostgreSQL lock é feito via SELECT FOR UPDATE
+        
+        yield conn, cursor, db_type
+        
+        # Commit automático se não houve exceção
+        # Se já foi feito rollback manual, o commit pode falhar (ignoramos silenciosamente)
+        if conn:
+            try:
+                conn.commit()
+            except Exception:
+                # Se commit falhar (provavelmente porque já foi feito rollback), ignorar
+                pass
+            
+    except Exception as e:
+        # Rollback em caso de erro
+        if conn:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+        raise
+    finally:
+        # IMPORTANTE: Não fechar conexões PostgreSQL (gerenciadas pelo pool via g.db_conn)
+        # Apenas fechar conexões SQLite que criamos localmente
+        if use_sqlite and conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+
 def logar_timeline(implantacao_id, usuario_cs, tipo_evento, detalhe):
     conn, db_type = None, None
     try:
@@ -592,6 +674,52 @@ def init_db():
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_planos_tarefas_grupo_id ON planos_tarefas (grupo_id);")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_planos_subtarefas_tarefa_id ON planos_subtarefas (tarefa_id);")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_implantacoes_plano_sucesso ON implantacoes (plano_sucesso_id);")
+
+            # Tabela checklist_items para checklist hierárquico infinito
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS checklist_items (
+                    id SERIAL PRIMARY KEY,
+                    parent_id INTEGER REFERENCES checklist_items(id) ON DELETE CASCADE,
+                    title VARCHAR(500) NOT NULL,
+                    completed BOOLEAN NOT NULL DEFAULT false,
+                    comment TEXT,
+                    level INTEGER DEFAULT 0,
+                    ordem INTEGER DEFAULT 0,
+                    implantacao_id INTEGER,
+                    plano_id INTEGER REFERENCES planos_sucesso(id) ON DELETE CASCADE,
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    CONSTRAINT chk_title_not_empty CHECK (LENGTH(TRIM(title)) > 0)
+                )
+            """)
+            
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_parent_id ON checklist_items(parent_id);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_implantacao_id ON checklist_items(implantacao_id);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_plano_id ON checklist_items(plano_id);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_completed ON checklist_items(completed);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_ordem ON checklist_items(ordem);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_parent_ordem ON checklist_items(parent_id, ordem);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_plano_ordem ON checklist_items(plano_id, ordem);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_plano_parent ON checklist_items(plano_id, parent_id);")
+            
+            # Trigger para atualizar updated_at automaticamente (PostgreSQL)
+            cursor.execute("""
+                CREATE OR REPLACE FUNCTION update_checklist_items_updated_at()
+                RETURNS TRIGGER AS $$
+                BEGIN
+                    NEW.updated_at = CURRENT_TIMESTAMP;
+                    RETURN NEW;
+                END;
+                $$ LANGUAGE plpgsql
+            """)
+            
+            cursor.execute("DROP TRIGGER IF EXISTS trigger_checklist_items_updated_at ON checklist_items;")
+            cursor.execute("""
+                CREATE TRIGGER trigger_checklist_items_updated_at
+                BEFORE UPDATE ON checklist_items
+                FOR EACH ROW
+                EXECUTE FUNCTION update_checklist_items_updated_at()
+            """)
 
         
         elif db_type == 'sqlite':
@@ -1072,6 +1200,67 @@ def init_db():
                 descricao TEXT,
                 ordem INTEGER DEFAULT 0
             );
+            """)
+            
+            # Tabela checklist_items para checklist hierárquico infinito (SQLite)
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS checklist_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                parent_id INTEGER,
+                title TEXT NOT NULL,
+                completed INTEGER NOT NULL DEFAULT 0,
+                comment TEXT,
+                level INTEGER DEFAULT 0,
+                ordem INTEGER DEFAULT 0,
+                implantacao_id INTEGER,
+                plano_id INTEGER,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (parent_id) REFERENCES checklist_items(id) ON DELETE CASCADE,
+                CHECK (LENGTH(TRIM(title)) > 0)
+            );
+            """)
+            
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_parent_id ON checklist_items(parent_id);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_implantacao_id ON checklist_items(implantacao_id);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_plano_id ON checklist_items(plano_id);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_completed ON checklist_items(completed);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_ordem ON checklist_items(ordem);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_parent_ordem ON checklist_items(parent_id, ordem);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_plano_ordem ON checklist_items(plano_id, ordem);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_plano_parent ON checklist_items(plano_id, parent_id);")
+            
+            # Verificar se coluna plano_id já existe (para bancos antigos) e adicionar se necessário
+            cursor.execute("PRAGMA table_info(checklist_items)")
+            checklist_columns = [col[1] for col in cursor.fetchall()]
+            
+            if 'plano_id' not in checklist_columns:
+                try:
+                    cursor.execute("ALTER TABLE checklist_items ADD COLUMN plano_id INTEGER")
+                    print("✅ Coluna plano_id adicionada à tabela checklist_items (SQLite)")
+                except Exception as e:
+                    print(f"⚠️ Erro ao adicionar coluna plano_id: {e}")
+                    # Continuar mesmo se houver erro (coluna pode já existir)
+            
+            # Recriar índices se necessário
+            try:
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_plano_id ON checklist_items(plano_id);")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_plano_ordem ON checklist_items(plano_id, ordem);")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_plano_parent ON checklist_items(plano_id, parent_id);")
+            except Exception:
+                pass  # Índices podem já existir
+            
+            # Trigger para atualizar updated_at automaticamente (SQLite)
+            cursor.execute("""
+            CREATE TRIGGER IF NOT EXISTS trigger_checklist_items_updated_at
+            AFTER UPDATE ON checklist_items
+            FOR EACH ROW
+            WHEN NEW.updated_at = OLD.updated_at
+            BEGIN
+                UPDATE checklist_items 
+                SET updated_at = CURRENT_TIMESTAMP 
+                WHERE id = NEW.id;
+            END
             """)
 
             # Verificar se colunas existem antes de adicionar (duplicata da verificação anterior)

@@ -23,7 +23,7 @@ SIM_NAO_OPTIONS = [NAO_DEFINIDO_BOOL, "Sim", "Não"]
 
 
 import os
-ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'admin@example.com')
+ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'admin@gmail.com')
 
 CARGOS_LIST = ["Júnior", "Pleno", "Sênior"] 
 
