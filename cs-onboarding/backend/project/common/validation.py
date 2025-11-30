@@ -3,11 +3,12 @@ Módulo de validação e sanitização de inputs.
 """
 import re
 import html
-from datetime import datetime, date, timezone
 from typing import Optional, Any
+
 
 class ValidationError(Exception):
     pass
+
 
 COMMON_PASSWORDS = {
     '123456', '123456789', '12345678', '12345', '1234567890',
@@ -22,6 +23,7 @@ COMMON_PASSWORDS = {
     'admin123', 'root', 'toor', 'test', 'guest',
     '2024', '2023', '2022', '2021', '2020',
 }
+
 
 def validate_password_strength(password: str, min_length: int = 8, max_length: int = 128) -> str:
     if not isinstance(password, str):
@@ -46,14 +48,17 @@ def validate_password_strength(password: str, min_length: int = 8, max_length: i
     password_lower = password.lower()
     for seq in sequences:
         for i in range(len(seq) - 4):
-            if seq[i:i+5] in password_lower or seq[i:i+5][::-1] in password_lower:
+            if seq[i:i + 5] in password_lower or seq[i:i + 5][::-1] in password_lower:
                 raise ValidationError('A senha não pode conter sequências simples (ex: 12345, abcde).')
     return password
 
-def sanitize_string(value: str, max_length: int = None, min_length: int = 0, allow_html: bool = False, allowed_chars: str = None) -> str:
+
+def sanitize_string(value: str, max_length: int = None, min_length: int = 0, allow_html: bool = False, allowed_chars: str = None, allow_empty: bool = False) -> str:
     if not isinstance(value, str):
         raise ValidationError("Valor deve ser uma string")
     value = value.strip()
+    if allow_empty and len(value) == 0:
+        return value
     if min_length > 0 and len(value) < min_length:
         raise ValidationError(f"String deve ter no mínimo {min_length} caracteres")
     if max_length and len(value) > max_length:
@@ -71,6 +76,7 @@ def sanitize_string(value: str, max_length: int = None, min_length: int = 0, all
             raise ValidationError(f"Caracteres inválidos detectados. Use apenas: {allowed_chars}")
     return value
 
+
 def validate_email(email: str) -> str:
     if not isinstance(email, str):
         raise ValidationError("Email deve ser uma string")
@@ -81,6 +87,7 @@ def validate_email(email: str) -> str:
     if len(email) > 254:
         raise ValidationError("Email muito longo")
     return email
+
 
 def validate_date(value: str) -> str:
     if not isinstance(value, str):
@@ -95,6 +102,7 @@ def validate_date(value: str) -> str:
     except ValueError:
         raise ValidationError("Formato de data inválido. Use YYYY-MM-DD")
 
+
 def validate_integer(value: Any, min_value: int = None, max_value: int = None, allow_none: bool = False) -> Optional[int]:
     if value is None and allow_none:
         return None
@@ -107,6 +115,7 @@ def validate_integer(value: Any, min_value: int = None, max_value: int = None, a
     if max_value is not None and int_value > max_value:
         raise ValidationError(f"Valor deve ser no máximo {max_value}")
     return int_value
+
 
 def validate_float(value: Any, min_value: float = None, max_value: float = None, allow_none: bool = False, decimal_places: int = None) -> Optional[float]:
     if value is None and allow_none:

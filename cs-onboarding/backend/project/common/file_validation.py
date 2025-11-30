@@ -28,13 +28,16 @@ ALLOWED_EXTENSIONS = {
 
 MAX_FILE_SIZE = 10 * 1024 * 1024
 
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 
 def get_file_extension(filename):
     if '.' in filename:
         return filename.rsplit('.', 1)[1].lower()
     return None
+
 
 def validate_file_content(file_stream, filename):
     try:
@@ -62,6 +65,7 @@ def validate_file_content(file_stream, filename):
         current_app.logger.error(f"Error validating file content: {e}")
         return False, f"Erro ao validar arquivo: {str(e)}", None
 
+
 def validate_file_size(file_stream, max_size=MAX_FILE_SIZE):
     try:
         file_stream.seek(0, os.SEEK_END)
@@ -77,6 +81,7 @@ def validate_file_size(file_stream, max_size=MAX_FILE_SIZE):
     except Exception as e:
         current_app.logger.error(f"Error validating file size: {e}")
         return False, f"Erro ao validar tamanho: {str(e)}", 0
+
 
 def validate_uploaded_file(file, filename=None):
     if not file:

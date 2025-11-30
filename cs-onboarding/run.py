@@ -9,7 +9,7 @@ try:
     from project import create_app
 except ImportError:
     print("\n--- ERRO DE IMPORTAÇÃO ---")
-    print(f"Não foi possível encontrar 'project.create_app'.")
+    print("Não foi possível encontrar 'project.create_app'.")
     print(f"Certifique-se que o seu código principal está em: {os.path.join(backend_dir, 'project')}")
     print("--------------------------\n")
     sys.exit(1)
@@ -25,7 +25,7 @@ except Exception as e:
 
 if __name__ == '__main__':
     if app is None:
-        exit(1)
+        sys.exit(1)
 
     try:
         from project.extensions import r2_client

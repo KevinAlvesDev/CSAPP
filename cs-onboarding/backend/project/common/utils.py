@@ -1,5 +1,6 @@
 from datetime import datetime, date
 
+
 def _convert_to_date_or_datetime(dt_obj):
     if not dt_obj or not isinstance(dt_obj, str):
         return dt_obj
@@ -17,6 +18,7 @@ def _convert_to_date_or_datetime(dt_obj):
     except Exception:
         return original_str
 
+
 def format_date_br(dt_obj, include_time=False):
     if not dt_obj:
         return 'N/A'
@@ -29,9 +31,21 @@ def format_date_br(dt_obj, include_time=False):
     except ValueError:
         return 'Data Inválida'
 
+
 def format_date_iso_for_json(dt_obj, only_date=False):
     if not dt_obj:
         return None
+
+    if isinstance(dt_obj, str):
+        if len(dt_obj) >= 10 and dt_obj[4] == '-' and dt_obj[7] == '-':
+            if only_date:
+                return dt_obj[:10]
+            return dt_obj
+        try:
+            dt_obj = _convert_to_date_or_datetime(dt_obj)
+        except Exception:
+            return None
+
     dt_obj = _convert_to_date_or_datetime(dt_obj)
     if not isinstance(dt_obj, (datetime, date)):
         return None
@@ -46,14 +60,17 @@ def format_date_iso_for_json(dt_obj, only_date=False):
     except ValueError:
         return None
 
+
 def allowed_file(filename):
     from ..constants import ALLOWED_EXTENSIONS
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 
 def calcular_progresso(concluidas, total):
     if total == 0:
         return 0
     return round((concluidas / total) * 100)
+
 
 def calcular_dias_decorridos(data_inicio):
     if not data_inicio:
@@ -70,6 +87,7 @@ def calcular_dias_decorridos(data_inicio):
         return max(0, delta.days)
     return 0
 
+
 def gerar_cor_status(status):
     cores = {
         'andamento': '#3498db',
@@ -81,6 +99,7 @@ def gerar_cor_status(status):
         'futura': '#1abc9c',
     }
     return cores.get(status.lower() if status else '', '#95a5a6')
+
 
 def load_profiles_list(exclude_self=True):
     try:

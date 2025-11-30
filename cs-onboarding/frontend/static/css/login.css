@@ -1,8 +1,6 @@
-
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
 
 :root {
-    
     --bg-start: #529eff;
     --bg-end: #66a3ff;
     --main-text-color: #0b1f48;
@@ -12,9 +10,8 @@
     --box-bg: rgba(255, 255, 255, 0.9);
     --accent-color-darker: #0056b3;
     
-    --border-radius-md: 0.5rem; 
+    --border-radius-md: 0.5rem;
 }
-
 
 @keyframes gradientAnimation {
     0% { background-position: 0% 50%; }
@@ -39,18 +36,16 @@ body {
     text-align: center;
     padding: 40px;
     background-color: var(--box-bg);
-    border-radius: var(--border-radius-md); 
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.05); 
+    border-radius: var(--border-radius-md);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     max-width: 400px;
     width: 90%;
     z-index: 10;
-    
     
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
 }
-
 
 .main-title {
     color: var(--main-text-color);
@@ -72,21 +67,22 @@ body {
     font-weight: 600;
     padding: 10px 30px;
     font-size: 1.1rem;
-    transition: all 0.2s ease-in-out; 
+    transition: all 0.2s ease-in-out;
     border-radius: var(--border-radius-md);
 }
+
 .btn-login.btn-sm {
     padding: 6px 16px;
     font-size: 0.875rem;
 }
+
 .btn-login:hover {
     background-color: var(--accent-color-darker);
     border-color: var(--accent-color-darker);
     color: #000000;
-    transform: translateY(-3px); 
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); 
+    transform: translateY(-3px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
 }
-
 
 .form-control {
     border-radius: var(--border-radius-md);

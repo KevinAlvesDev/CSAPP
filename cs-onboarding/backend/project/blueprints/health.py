@@ -1,12 +1,9 @@
-
 """
 Blueprint para health checks e monitoramento.
 """
 
 from flask import Blueprint, jsonify, current_app
 from datetime import datetime
-import psycopg2
-import sqlite3
 from botocore.exceptions import ClientError
 
 health_bp = Blueprint('health', __name__)
@@ -19,21 +16,21 @@ def check_database_connection():
     """
     start_time = datetime.now()
     use_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
-    
+
     try:
         from ..db import query_db
 
         result = query_db("SELECT 1 as test", one=True)
-        
+
         end_time = datetime.now()
-        response_time = (end_time - start_time).total_seconds() * 1000         
-        
+        response_time = (end_time - start_time).total_seconds() * 1000
+
         if result and result.get('test') == 1:
             db_type = 'SQLite' if use_sqlite else 'PostgreSQL'
             return True, f"{db_type} connection OK", response_time
         else:
             return False, "Database query returned unexpected result", response_time
-            
+
     except Exception as e:
         end_time = datetime.now()
         response_time = (end_time - start_time).total_seconds() * 1000
@@ -47,10 +44,10 @@ def check_r2_connection():
     """
     try:
         from ..core.extensions import r2_client
-        
+
         if r2_client is None:
             return False, "R2 client not initialized"
-        
+
         if current_app.config.get('R2_CONFIGURADO', False):
             try:
                 bucket = current_app.config.get('CLOUDFLARE_BUCKET_NAME')
@@ -65,7 +62,7 @@ def check_r2_connection():
                 return False, f"R2 operation failed: {str(e)}"
         else:
             return False, "R2 not configured"
-            
+
     except Exception as e:
         return False, f"R2 check failed: {str(e)}"
 
@@ -82,7 +79,7 @@ def health_check():
     r2_status, r2_message = check_r2_connection()
 
     overall_status = "healthy" if db_status else "unhealthy"
-    
+
     response = {
         "status": overall_status,
         "timestamp": datetime.utcnow().isoformat(),
@@ -105,7 +102,7 @@ def health_check():
     }
 
     status_code = 200 if overall_status == "healthy" else 503
-    
+
     return jsonify(response), status_code
 
 
@@ -116,7 +113,7 @@ def readiness_check():
     Verifica se a aplicação está pronta para receber tráfego.
     """
     db_status, _, _ = check_database_connection()
-    
+
     if db_status:
         return jsonify({"status": "ready"}), 200
     else:
@@ -130,4 +127,3 @@ def liveness_check():
     Verifica se a aplicação está viva (não travada).
     """
     return jsonify({"status": "alive"}), 200
-

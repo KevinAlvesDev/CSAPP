@@ -5,6 +5,8 @@ env/
 
 # Variáveis de ambiente (contém senhas!)
 .env
+.env.local
+.env.*.local
 
 # Banco de dados local
 *.db

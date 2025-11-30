@@ -16,6 +16,7 @@ from ..config.cache_config import cache
 
 analytics_bp = Blueprint('analytics', __name__)
 
+
 def get_all_customer_success():
     """
     Busca a lista de todos os CS com nome e e-mail para o filtro.
@@ -37,11 +38,12 @@ def get_all_customer_success():
 
     return result
 
+
 @analytics_bp.route('/analytics')
 @permission_required(PERFIS_COM_ANALYTICS)
 def analytics_dashboard():
     """Rota para o dashboard gerencial de métricas e relatórios, com filtros."""
-    
+
     user_perfil = g.perfil.get('perfil_acesso')
 
     cs_email = None
@@ -49,7 +51,7 @@ def analytics_dashboard():
     start_date = None
     end_date = None
     sort_impl_date = None
-    
+
     try:
         cs_email_param = request.args.get('cs_email')
         if cs_email_param:
@@ -90,11 +92,11 @@ def analytics_dashboard():
         status_filter = 'todas'
         start_date = None
         end_date = None
-    
+
     task_cs_email = None
     task_start_date = None
     task_end_date = None
-    
+
     try:
         task_cs_email_param = request.args.get('task_cs_email')
         if task_cs_email_param:
@@ -121,38 +123,33 @@ def analytics_dashboard():
 
     if user_perfil not in PERFIS_COM_GESTAO:
         cs_email = g.user_email
-        task_cs_email = g.user_email                                                   
-    
+        task_cs_email = g.user_email
+
     try:
 
         analytics_data = get_analytics_data(
-            target_cs_email=cs_email, 
+            target_cs_email=cs_email,
             target_status=status_filter,
             start_date=start_date,
             end_date=end_date,
             target_tag=None,
-
             task_cs_email=task_cs_email,
             task_start_date=task_start_date,
             task_end_date=task_end_date,
             sort_impl_date=sort_impl_date
-
         )
-        
+
         all_cs = get_all_customer_success()
 
         status_options = [
             {'value': 'todas', 'label': 'Todas as Implantações'},
             {'value': 'nova', 'label': 'Novas'},
             {'value': 'andamento', 'label': 'Em Andamento'},
-            {'value': 'atrasadas_status', 'label': 'Atrasadas (> 25d)'},
             {'value': 'futura', 'label': 'Futuras'},
             {'value': 'finalizada', 'label': 'Finalizadas'},
             {'value': 'parada', 'label': 'Paradas'},
-
             {'value': 'cancelada', 'label': 'Canceladas'}
         ]
-
 
         current_task_cs_email = task_cs_email
         current_task_start_date = task_start_date or analytics_data.get('default_task_start_date')
@@ -160,19 +157,16 @@ def analytics_dashboard():
 
         return render_template(
             'analytics.html',
-
             kpi_cards=analytics_data.get('kpi_cards', {}),
             implantacoes_lista_detalhada=analytics_data.get('implantacoes_lista_detalhada', []),
             modules_implantacao_lista=analytics_data.get('modules_implantacao_lista', []),
             chart_data=analytics_data.get('chart_data', {}),
             implantacoes_paradas_lista=analytics_data.get('implantacoes_paradas_lista', []),
             implantacoes_canceladas_lista=analytics_data.get('implantacoes_canceladas_lista', []),
-
             task_summary_data=analytics_data.get('task_summary_data', []),
             current_task_cs_email=current_task_cs_email,
             current_task_start_date=current_task_start_date,
             current_task_end_date=current_task_end_date,
-
             all_cs=all_cs,
             status_options=status_options,
             current_cs_email=cs_email,
@@ -183,13 +177,14 @@ def analytics_dashboard():
             user_info=g.user,
             user_perfil=user_perfil
         )
-        
+
     except Exception as e:
         from ..config.logging_config import get_logger
         logger = get_logger('analytics')
         logger.error(f"Erro ao carregar dashboard de analytics: {e}", exc_info=True)
         flash(f"Erro interno ao carregar os dados de relatórios: {e}", "error")
         return redirect(url_for('main.dashboard'))
+
 
 @analytics_bp.route('/analytics/implants_by_day')
 @permission_required(PERFIS_COM_ANALYTICS)
@@ -211,11 +206,12 @@ def api_implants_by_day():
             cs_email = g.user_email
 
         payload = get_implants_by_day(start_date=start_date, end_date=end_date, cs_email=cs_email)
-        return jsonify({ 'ok': True, **payload })
+        return jsonify({'ok': True, **payload})
     except ValidationError as e:
-        return jsonify({ 'ok': False, 'error': f'Parâmetro inválido: {str(e)}' }), 400
+        return jsonify({'ok': False, 'error': f'Parâmetro inválido: {str(e)}'}), 400
     except Exception as e:
-        return jsonify({ 'ok': False, 'error': f'Erro interno: {str(e)}' }), 500
+        return jsonify({'ok': False, 'error': f'Erro interno: {str(e)}'}), 500
+
 
 @analytics_bp.route('/cancelamentos')
 @permission_required(PERFIS_COM_ANALYTICS)
@@ -255,6 +251,7 @@ def cancelamentos_dashboard():
         flash(f'Erro ao carregar cancelamentos: {e}', 'error')
         return redirect(url_for('analytics.analytics_dashboard'))
 
+
 @analytics_bp.route('/cancelamentos/export/csv')
 @permission_required(PERFIS_COM_ANALYTICS)
 def export_cancelamentos_csv():
@@ -274,10 +271,10 @@ def export_cancelamentos_csv():
 
         payload = get_cancelamentos_data(cs_email=cs_email, start_date=start_date, end_date=end_date)
         rows = payload.get('dataset', [])
-        headers = ['id','nome_empresa','usuario_cs','data_criacao','data_cancelamento','motivo_cancelamento','seguimento','tipos_planos','alunos_ativos','nivel_receita','valor_atribuido','tempo_permanencia_dias']
+        headers = ['id', 'nome_empresa', 'usuario_cs', 'data_criacao', 'data_cancelamento', 'motivo_cancelamento', 'seguimento', 'tipos_planos', 'alunos_ativos', 'nivel_receita', 'valor_atribuido', 'tempo_permanencia_dias']
         out = ','.join(headers) + '\n'
         for r in rows:
-            vals = [str(r.get(h,'')).replace(',', ';') for h in headers]
+            vals = [str(r.get(h, '')).replace(',', ';') for h in headers]
             out += ','.join(vals) + '\n'
         resp = make_response(out)
         resp.headers['Content-Type'] = 'text/csv; charset=utf-8'
@@ -307,11 +304,11 @@ def api_funnel():
             cs_email = g.user_email
 
         payload = get_funnel_counts(start_date=start_date, end_date=end_date, cs_email=cs_email)
-        return jsonify({ 'ok': True, **payload })
+        return jsonify({'ok': True, **payload})
     except ValidationError as e:
-        return jsonify({ 'ok': False, 'error': f'Parâmetro inválido: {str(e)}' }), 400
+        return jsonify({'ok': False, 'error': f'Parâmetro inválido: {str(e)}'}), 400
     except Exception as e:
-        return jsonify({ 'ok': False, 'error': f'Erro interno: {str(e)}' }), 500
+        return jsonify({'ok': False, 'error': f'Erro interno: {str(e)}'}), 500
 
 
 @analytics_bp.route('/analytics/gamification_rank')
@@ -328,8 +325,8 @@ def api_gamification_rank():
             year = int(sanitize_string(year, max_length=4))
 
         payload = get_gamification_rank(month=month, year=year)
-        return jsonify({ 'ok': True, **payload })
+        return jsonify({'ok': True, **payload})
     except ValueError:
-        return jsonify({ 'ok': False, 'error': 'Parâmetros month/year devem ser inteiros.' }), 400
+        return jsonify({'ok': False, 'error': 'Parâmetros month/year devem ser inteiros.'}), 400
     except Exception as e:
-        return jsonify({ 'ok': False, 'error': f'Erro interno: {str(e)}' }), 500
+        return jsonify({'ok': False, 'error': f'Erro interno: {str(e)}'}), 500

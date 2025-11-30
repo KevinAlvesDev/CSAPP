@@ -1,16 +1,14 @@
-
 """
 Módulo de Connection Pooling para PostgreSQL.
 Melhora performance e evita esgotamento de conexões.
 """
 
 import sqlite3
-import psycopg2
-from psycopg2 import pool
-from psycopg2.extras import DictCursor
-from flask import current_app, g
 import os
 from threading import Lock
+from flask import current_app, g
+from psycopg2 import pool
+from psycopg2.extras import DictCursor
 
 _pg_pool = None
 _pool_lock = Lock()
@@ -29,7 +27,6 @@ def init_connection_pool(app):
             try:
                 with _pool_lock:
                     if _pg_pool is None:
-
                         _pg_pool = pool.ThreadedConnectionPool(
                             minconn=5,
                             maxconn=20,
@@ -48,13 +45,25 @@ def get_db_connection():
     Para PostgreSQL, a conexão é armazenada em g.db e reutilizada durante a requisição.
     """
     use_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
-    
+
     if use_sqlite:
         try:
-            base_dir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
-            is_testing = current_app.config.get('TESTING', False)
-            db_filename = 'dashboard_simples_test.db' if is_testing else 'dashboard_simples.db'
-            db_path = os.path.join(base_dir, db_filename)
+            # Usar DATABASE_URL se definido, senão usar padrão
+            database_url = current_app.config.get('DATABASE_URL', '')
+            if database_url and database_url.startswith('sqlite'):
+                # Extrair caminho do arquivo da URL sqlite:///path/to/file.db
+                db_path = database_url.replace('sqlite:///', '')
+                # Se for caminho relativo, tornar absoluto a partir da raiz do projeto
+                if not os.path.isabs(db_path):
+                    base_dir = os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+                    db_path = os.path.join(base_dir, db_path)
+            else:
+                # Fallback para comportamento antigo
+                base_dir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+                is_testing = current_app.config.get('TESTING', False)
+                db_filename = 'dashboard_simples_test.db' if is_testing else 'dashboard_simples.db'
+                db_path = os.path.join(base_dir, db_filename)
+            
             conn = sqlite3.connect(db_path, isolation_level=None)
             conn.row_factory = sqlite3.Row
             return conn, 'sqlite'
@@ -90,7 +99,7 @@ def close_db_connection(error=None):
     """
     db_conn = g.pop('db_conn', None)
     db_type = g.pop('db_type', None)
-    
+
     if db_conn is not None:
         if db_type == 'postgres' and _pg_pool is not None:
             try:
@@ -111,9 +120,8 @@ def close_all_connections():
     Deve ser chamado no shutdown da aplicação.
     """
     global _pg_pool
-    
+
     if _pg_pool is not None:
         with _pool_lock:
             _pg_pool.closeall()
             _pg_pool = None
-

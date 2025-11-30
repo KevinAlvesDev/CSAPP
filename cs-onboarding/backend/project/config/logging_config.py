@@ -1,8 +1,8 @@
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import os
-from datetime import datetime
-from flask import g, current_app
+from flask import g
+
 
 class ContextFilter(logging.Filter):
     """Filtro para adicionar contexto do Flask aos logs.
@@ -29,6 +29,7 @@ class ContextFilter(logging.Filter):
             record.user_email = 'system'
             record.user_profile = 'system'
         return True
+
 
 def setup_logging(app):
     """Configura o sistema de logs para a aplicação."""
@@ -91,9 +92,11 @@ def setup_logging(app):
 
     app.logger.info('Sistema de logging configurado com sucesso')
 
+
 def get_logger(name):
     """Obtém um logger com o nome especificado"""
     return logging.getLogger(name)
+
 
 auth_logger = get_logger('auth')
 api_logger = get_logger('api')

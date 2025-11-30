@@ -94,13 +94,10 @@ def toggle_subtarefa_h(sub_id):
         api_logger.info(f"[TOGGLE_SUBTAREFA_H] Buscando subtarefa no banco...")
         row = query_db(
             """
-            SELECT s.id as sub_id, s.concluido, i.id as implantacao_id, i.usuario_cs, i.status
-            FROM subtarefas_h s
-            JOIN tarefas_h th ON s.tarefa_id = th.id
-            JOIN grupos g ON th.grupo_id = g.id
-            JOIN fases f ON g.fase_id = f.id
-            JOIN implantacoes i ON f.implantacao_id = i.id
-            WHERE s.id = %s
+            SELECT ci.id as sub_id, ci.completed as concluido, i.id as implantacao_id, i.usuario_cs, i.status
+            FROM checklist_items ci
+            JOIN implantacoes i ON ci.implantacao_id = i.id
+            WHERE ci.id = %s AND ci.tipo_item = 'subtarefa'
             """,
             (sub_id,), one=True
         )
@@ -138,8 +135,13 @@ def toggle_subtarefa_h(sub_id):
             novo = 1 if bool(concluido_desejado) else 0
             api_logger.info(f"[TOGGLE_SUBTAREFA_H] Valor vindo do frontend: concluido_desejado={concluido_desejado} -> novo={novo}")
         
-        api_logger.info(f"[TOGGLE_SUBTAREFA_H] Atualizando banco: UPDATE subtarefas_h SET concluido = {novo} WHERE id = {sub_id}")
-        execute_db("UPDATE subtarefas_h SET concluido = %s WHERE id = %s", (novo, sub_id))
+        api_logger.info(f"[TOGGLE_SUBTAREFA_H] Atualizando banco: UPDATE checklist_items SET completed = {novo} WHERE id = {sub_id}")
+        # Atualizar data_conclusao quando marcar como concluído
+        from datetime import datetime
+        if novo:
+            execute_db("UPDATE checklist_items SET completed = %s, data_conclusao = %s WHERE id = %s", (True, datetime.now(), sub_id))
+        else:
+            execute_db("UPDATE checklist_items SET completed = %s, data_conclusao = NULL WHERE id = %s", (False, sub_id))
         api_logger.info(f"[TOGGLE_SUBTAREFA_H] UPDATE executado com sucesso")
         
         detalhe = f"Subtarefa {sub_id}: {'Concluída' if novo else 'Não Concluída'}."
@@ -147,7 +149,7 @@ def toggle_subtarefa_h(sub_id):
         logar_timeline(row['implantacao_id'], usuario_cs_email, 'tarefa_alterada', detalhe)
         
         api_logger.info(f"[TOGGLE_SUBTAREFA_H] Buscando subtarefa atualizada do banco...")
-        tarefa_atualizada = query_db("SELECT id, nome, concluido FROM subtarefas_h WHERE id = %s", (sub_id,), one=True)
+        tarefa_atualizada = query_db("SELECT id, title as nome, completed as concluido FROM checklist_items WHERE id = %s AND tipo_item = 'subtarefa'", (sub_id,), one=True)
         api_logger.info(f"[TOGGLE_SUBTAREFA_H] Subtarefa retornada do banco: {tarefa_atualizada}")
         
         api_logger.info(f"[TOGGLE_SUBTAREFA_H] Buscando informações de implantação...")
@@ -221,12 +223,10 @@ def toggle_tarefa_h(tarefa_h_id):
         api_logger.info(f"[TOGGLE_TAREFA_H] Buscando tarefa no banco...")
         row = query_db(
             """
-            SELECT th.id as tarefa_id, th.status, i.id as implantacao_id, i.usuario_cs, i.status as impl_status
-            FROM tarefas_h th
-            JOIN grupos g ON th.grupo_id = g.id
-            JOIN fases f ON g.fase_id = f.id
-            JOIN implantacoes i ON f.implantacao_id = i.id
-            WHERE th.id = %s
+            SELECT ci.id as tarefa_id, ci.status, i.id as implantacao_id, i.usuario_cs, i.status as impl_status
+            FROM checklist_items ci
+            JOIN implantacoes i ON ci.implantacao_id = i.id
+            WHERE ci.id = %s AND ci.tipo_item = 'tarefa'
             """,
             (tarefa_h_id,), one=True
         )
@@ -276,9 +276,9 @@ def toggle_tarefa_h(tarefa_h_id):
             api_logger.warning(f"[TOGGLE_TAREFA_H] Status inválido '{novo_status}', normalizando para 'pendente'")
             novo_status = 'pendente'
         
-        api_logger.info(f"[TOGGLE_TAREFA_H] Atualizando banco: UPDATE tarefas_h SET status = '{novo_status}' WHERE id = {tarefa_h_id}")
+        api_logger.info(f"[TOGGLE_TAREFA_H] Atualizando banco: UPDATE checklist_items SET status = '{novo_status}' WHERE id = {tarefa_h_id}")
         # Garantir que o status seja sempre 'pendente' ou 'concluida' (nunca NULL)
-        execute_db("UPDATE tarefas_h SET status = %s WHERE id = %s", (novo_status, tarefa_h_id))
+        execute_db("UPDATE checklist_items SET status = %s, completed = %s WHERE id = %s", (novo_status, novo_status == 'concluida', tarefa_h_id))
         api_logger.info(f"[TOGGLE_TAREFA_H] UPDATE executado com sucesso")
         
         # Log para debug
@@ -290,7 +290,7 @@ def toggle_tarefa_h(tarefa_h_id):
         
         # Buscar tarefa atualizada do banco
         api_logger.info(f"[TOGGLE_TAREFA_H] Buscando tarefa atualizada do banco...")
-        th = query_db("SELECT id, nome, COALESCE(status, 'pendente') as status FROM tarefas_h WHERE id = %s", (tarefa_h_id,), one=True)
+        th = query_db("SELECT id, title as nome, COALESCE(status, 'pendente') as status FROM checklist_items WHERE id = %s AND tipo_item = 'tarefa'", (tarefa_h_id,), one=True)
         api_logger.info(f"[TOGGLE_TAREFA_H] Tarefa retornada do banco: {th}")
         
         if not th:
@@ -312,7 +312,7 @@ def toggle_tarefa_h(tarefa_h_id):
         # Se o status no banco não estiver normalizado, corrigir
         if th.get('status') != status_retornado:
             api_logger.info(f"[TOGGLE_TAREFA_H] Corrigindo status no banco: '{th.get('status')}' -> '{status_retornado}'")
-            execute_db("UPDATE tarefas_h SET status = %s WHERE id = %s", (status_retornado, tarefa_h_id))
+            execute_db("UPDATE checklist_items SET status = %s, completed = %s WHERE id = %s", (status_retornado, status_retornado == 'concluida', tarefa_h_id))
             th['status'] = status_retornado
         
         api_logger.info(f"[TOGGLE_TAREFA_H] Buscando informações de implantação...")
@@ -380,13 +380,10 @@ def excluir_subtarefa_h(sub_id):
     try:
         row = query_db(
             """
-            SELECT s.id as sub_id, s.nome, i.id as implantacao_id, i.usuario_cs, i.status
-            FROM subtarefas_h s
-            JOIN tarefas_h th ON s.tarefa_id = th.id
-            JOIN grupos g ON th.grupo_id = g.id
-            JOIN fases f ON g.fase_id = f.id
-            JOIN implantacoes i ON f.implantacao_id = i.id
-            WHERE s.id = %s
+            SELECT ci.id as sub_id, ci.title as nome, i.id as implantacao_id, i.usuario_cs, i.status
+            FROM checklist_items ci
+            JOIN implantacoes i ON ci.implantacao_id = i.id
+            WHERE ci.id = %s AND ci.tipo_item = 'subtarefa'
             """,
             (sub_id,), one=True
         )
@@ -398,7 +395,7 @@ def excluir_subtarefa_h(sub_id):
             return jsonify({'ok': False, 'error': 'Permissão negada.'}), 403
         if row.get('status') in ['finalizada', 'parada', 'cancelada']:
             return jsonify({'ok': False, 'error': 'Implantação bloqueada para alterações.'}), 400
-        execute_db("DELETE FROM subtarefas_h WHERE id = %s", (sub_id,))
+        execute_db("DELETE FROM checklist_items WHERE id = %s AND tipo_item = 'subtarefa'", (sub_id,))
         logar_timeline(row['implantacao_id'], usuario_cs_email, 'tarefa_excluida', f"Subtarefa '{row.get('nome','')}' foi excluída.")
         nome = g.perfil.get('nome', usuario_cs_email)
         log_exclusao = query_db(
@@ -424,12 +421,10 @@ def excluir_tarefa_h(tarefa_h_id):
     try:
         row = query_db(
             """
-            SELECT th.id as tarefa_id, th.nome, i.id as implantacao_id, i.usuario_cs, i.status
-            FROM tarefas_h th
-            JOIN grupos g ON th.grupo_id = g.id
-            JOIN fases f ON g.fase_id = f.id
-            JOIN implantacoes i ON f.implantacao_id = i.id
-            WHERE th.id = %s
+            SELECT ci.id as tarefa_id, ci.title as nome, i.id as implantacao_id, i.usuario_cs, i.status
+            FROM checklist_items ci
+            JOIN implantacoes i ON ci.implantacao_id = i.id
+            WHERE ci.id = %s AND ci.tipo_item = 'tarefa'
             """,
             (tarefa_h_id,), one=True
         )
@@ -441,8 +436,9 @@ def excluir_tarefa_h(tarefa_h_id):
             return jsonify({'ok': False, 'error': 'Permissão negada.'}), 403
         if row.get('status') in ['finalizada', 'parada', 'cancelada']:
             return jsonify({'ok': False, 'error': 'Implantação bloqueada para alterações.'}), 400
-        execute_db("DELETE FROM subtarefas_h WHERE tarefa_id = %s", (tarefa_h_id,))
-        execute_db("DELETE FROM tarefas_h WHERE id = %s", (tarefa_h_id,))
+        # Deletar subtarefas primeiro (cascata via parent_id)
+        execute_db("DELETE FROM checklist_items WHERE parent_id = %s AND tipo_item = 'subtarefa'", (tarefa_h_id,))
+        execute_db("DELETE FROM checklist_items WHERE id = %s AND tipo_item = 'tarefa'", (tarefa_h_id,))
         logar_timeline(row['implantacao_id'], usuario_cs_email, 'tarefa_excluida', f"TarefaH '{row.get('nome','')}' foi excluída.")
         nome = g.perfil.get('nome', usuario_cs_email)
         log_exclusao = query_db(
@@ -477,19 +473,20 @@ def excluir_grupo_h():
             return jsonify({'ok': False, 'error': f"Não é possível excluir em status '{impl.get('status')}'."}), 400
         grupo = query_db(
             """
-            SELECT g.id FROM grupos g
-            JOIN fases f ON g.fase_id = f.id
-            WHERE f.implantacao_id = %s AND g.nome = %s
+            SELECT ci.id FROM checklist_items ci
+            WHERE ci.implantacao_id = %s AND ci.tipo_item = 'grupo' AND ci.title = %s
             """,
             (impl_id, grupo_nome), one=True
         )
         if not grupo:
             return jsonify({'ok': False, 'error': 'Grupo não encontrado.'}), 404
         gid = grupo['id']
-        tarefas_ids = query_db("SELECT id FROM tarefas_h WHERE grupo_id = %s", (gid,)) or []
+        # Deletar recursivamente: subtarefas -> tarefas -> grupo
+        tarefas_ids = query_db("SELECT id FROM checklist_items WHERE parent_id = %s AND tipo_item = 'tarefa'", (gid,)) or []
         for t in tarefas_ids:
-            execute_db("DELETE FROM subtarefas_h WHERE tarefa_id = %s", (t['id'],))
-        execute_db("DELETE FROM tarefas_h WHERE grupo_id = %s", (gid,))
+            execute_db("DELETE FROM checklist_items WHERE parent_id = %s AND tipo_item = 'subtarefa'", (t['id'],))
+        execute_db("DELETE FROM checklist_items WHERE parent_id = %s AND tipo_item = 'tarefa'", (gid,))
+        execute_db("DELETE FROM checklist_items WHERE id = %s AND tipo_item = 'grupo'", (gid,))
         logar_timeline(impl_id, usuario_cs_email, 'modulo_excluido', f"Todas as tarefas do grupo '{grupo_nome}' foram excluídas.")
         nome = g.perfil.get('nome', usuario_cs_email)
         log_exclusao = query_db(
@@ -525,9 +522,8 @@ def reordenar_hierarquia():
             return jsonify({'ok': False, 'error': f"Não é possível reordenar em status '{impl.get('status')}'."}), 400
         grupo = query_db(
             """
-            SELECT g.id FROM grupos g
-            JOIN fases f ON g.fase_id = f.id
-            WHERE f.implantacao_id = %s AND g.nome = %s
+            SELECT ci.id FROM checklist_items ci
+            WHERE ci.implantacao_id = %s AND ci.tipo_item = 'grupo' AND ci.title = %s
             """,
             (impl_id, grupo_nome), one=True
         )
@@ -535,12 +531,9 @@ def reordenar_hierarquia():
             return jsonify({'ok': False, 'error': 'Grupo não encontrado.'}), 404
         for idx, item_id in enumerate(ordem, 1):
             try:
-                execute_db("UPDATE subtarefas_h SET ordem = %s WHERE id = %s", (idx, item_id))
+                execute_db("UPDATE checklist_items SET ordem = %s WHERE id = %s", (idx, item_id))
             except Exception:
-                try:
-                    execute_db("UPDATE tarefas_h SET ordem = %s WHERE id = %s", (idx, item_id))
-                except Exception:
-                    pass
+                pass
         logar_timeline(impl_id, usuario_cs_email, 'tarefas_reordenadas', f"A ordem das tarefas no grupo '{grupo_nome}' foi alterada.")
         nome = g.perfil.get('nome', usuario_cs_email)
         log_reordenar = query_db(

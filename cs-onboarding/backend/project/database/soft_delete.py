@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import current_app
 from ..db import execute_db, query_db
 
@@ -14,10 +14,7 @@ ALLOWED_TABLES = [
     'gamificacao_regras',
     'smtp_settings',
     # Tabelas do modelo hierárquico
-    'fases',
-    'grupos',
-    'tarefas_h',
-    'subtarefas_h',
+    'checklist_items',
     'comentarios_h',
 ]
 
@@ -27,13 +24,13 @@ ALLOWED_ID_COLUMNS = ['id', 'usuario', 'usuario_email']
 def _validate_table_name(table: str) -> str:
     """
     Valida nome de tabela contra whitelist.
-    
+
     Args:
         table: Nome da tabela a validar
-    
+
     Returns:
         Nome da tabela validado
-    
+
     Raises:
         ValueError: Se a tabela não estiver na whitelist
     """
@@ -46,13 +43,13 @@ def _validate_table_name(table: str) -> str:
 def _validate_id_column(id_column: str) -> str:
     """
     Valida nome de coluna de ID contra whitelist.
-    
+
     Args:
         id_column: Nome da coluna de ID a validar
-    
+
     Returns:
         Nome da coluna validado
-    
+
     Raises:
         ValueError: Se a coluna não estiver na whitelist
     """
@@ -65,20 +62,20 @@ def _validate_id_column(id_column: str) -> str:
 def soft_delete(table: str, record_id: int, id_column: str = 'id') -> bool:
     """
     Marca um registro como excluído (soft delete).
-    
+
     SEGURANÇA: Valida nome da tabela e coluna contra whitelist para prevenir SQL Injection.
-    
+
     Args:
         table: Nome da tabela (deve estar em ALLOWED_TABLES)
         record_id: ID do registro
         id_column: Nome da coluna de ID (deve estar em ALLOWED_ID_COLUMNS, padrão: 'id')
-    
+
     Returns:
         True se sucesso, False se falha
-    
+
     Raises:
         ValueError: Se tabela ou coluna não estiverem na whitelist
-    
+
     Exemplo:
         soft_delete('implantacoes', 123)
         soft_delete('tarefas', 456)
@@ -106,17 +103,17 @@ def soft_delete(table: str, record_id: int, id_column: str = 'id') -> bool:
 def restore(table: str, record_id: int, id_column: str = 'id') -> bool:
     """
     Restaura um registro excluído (soft delete).
-    
+
     SEGURANÇA: Valida nome da tabela e coluna contra whitelist para prevenir SQL Injection.
-    
+
     Args:
         table: Nome da tabela (deve estar em ALLOWED_TABLES)
         record_id: ID do registro
         id_column: Nome da coluna de ID (deve estar em ALLOWED_ID_COLUMNS, padrão: 'id')
-    
+
     Returns:
         True se sucesso, False se falha
-    
+
     Exemplo:
         restore('implantacoes', 123)
     """
@@ -142,18 +139,18 @@ def restore(table: str, record_id: int, id_column: str = 'id') -> bool:
 def hard_delete(table: str, record_id: int, id_column: str = 'id') -> bool:
     """
     Exclui permanentemente um registro (hard delete).
-    
+
     ATENÇÃO: Esta operação é irreversível!
     SEGURANÇA: Valida nome da tabela e coluna contra whitelist para prevenir SQL Injection.
-    
+
     Args:
         table: Nome da tabela (deve estar em ALLOWED_TABLES)
         record_id: ID do registro
         id_column: Nome da coluna de ID (deve estar em ALLOWED_ID_COLUMNS, padrão: 'id')
-    
+
     Returns:
         True se sucesso, False se falha
-    
+
     Exemplo:
         hard_delete('implantacoes', 123)
     """
@@ -179,16 +176,16 @@ def hard_delete(table: str, record_id: int, id_column: str = 'id') -> bool:
 def get_deleted_records(table: str, limit: int = 100) -> list:
     """
     Retorna registros excluídos (soft delete).
-    
+
     SEGURANÇA: Valida nome da tabela contra whitelist para prevenir SQL Injection.
-    
+
     Args:
         table: Nome da tabela (deve estar em ALLOWED_TABLES)
         limit: Limite de registros (padrão: 100)
-    
+
     Returns:
         Lista de registros excluídos
-    
+
     Exemplo:
         deleted = get_deleted_records('implantacoes')
     """
@@ -208,23 +205,22 @@ def get_deleted_records(table: str, limit: int = 100) -> list:
 def cleanup_old_deleted_records(table: str, days: int = 30) -> int:
     """
     Remove permanentemente registros excluídos há mais de X dias.
-    
+
     SEGURANÇA: Valida nome da tabela contra whitelist para prevenir SQL Injection.
-    
+
     Args:
         table: Nome da tabela (deve estar em ALLOWED_TABLES)
         days: Dias desde a exclusão (padrão: 30)
-    
+
     Returns:
         Número de registros removidos
-    
+
     Exemplo:
         # Remove registros excluídos há mais de 30 dias
         cleanup_old_deleted_records('implantacoes', days=30)
     """
     try:
         table = _validate_table_name(table)
-        from datetime import timedelta
         cutoff_date = datetime.now() - timedelta(days=days)
         query = f"DELETE FROM {table} WHERE deleted_at IS NOT NULL AND deleted_at < %s"
         rows_affected = execute_db(query, (cutoff_date,))
@@ -244,13 +240,13 @@ def cleanup_old_deleted_records(table: str, days: int = 30) -> int:
 def exclude_deleted(query: str) -> str:
     """
     Adiciona filtro WHERE deleted_at IS NULL a uma query.
-    
+
     Args:
         query: Query SQL
-    
+
     Returns:
         Query modificada com filtro de soft delete
-    
+
     Exemplo:
         query = "SELECT * FROM implantacoes WHERE usuario_cs = %s"
         query = exclude_deleted(query)

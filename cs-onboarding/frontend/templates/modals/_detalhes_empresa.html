@@ -16,11 +16,23 @@
                     <h6 class="text-primary mb-3 border-bottom pb-1 mt-3">Contatos e Responsáveis</h6>
                     <div class="row">
                         <div class="col-md-4 mb-3"><label for="modal-responsavel_cliente" class="form-label">Resp. Cliente (Nome)</label><input type="text" class="form-control" id="modal-responsavel_cliente" name="responsavel_cliente"></div>
-                        <div class="col-md-4 mb-3"> <label for="modal-cargo_responsavel" class="form-label">Cargo Resp.</label> <select class="form-select" id="modal-cargo_responsavel" name="cargo_responsavel"> <option value="">Selecione...</option> {% if cargos_responsavel %} {% for cargo in cargos_responsavel %} <option value="{{ cargo }}">{{ cargo }}</option> {% endfor %} {% endif %} </select> </div>
+                        <div class="col-md-4 mb-3"> <label for="modal-cargo_responsavel" class="form-label">Cargo Resp.</label> <select class="form-select tom-select-single" id="modal-cargo_responsavel" name="cargo_responsavel"> <option value="">Selecione...</option> {% if cargos_responsavel %} {% for cargo in cargos_responsavel %} <option value="{{ cargo }}">{{ cargo }}</option> {% endfor %} {% endif %} </select> </div>
                         <div class="col-md-4 mb-3"><label for="modal-email_responsavel" class="form-label">E-mail Resp.</label><input type="email" class="form-control" id="modal-email_responsavel" name="email_responsavel"></div>
                     </div>
                     <div class="row">
-                         <div class="col-md-4 mb-3"><label for="modal-telefone_responsavel" class="form-label">Telefone Resp.</label><input type="tel" class="form-control" id="modal-telefone_responsavel" name="telefone_responsavel" placeholder="(XX) XXXXX-XXXX" maxlength="15" oninput="formatarTelefone(this)"></div>
+                         <div class="col-md-4 mb-3">
+                             <label for="modal-telefone_responsavel" class="form-label">Telefone Resp.</label>
+                             <input type="tel" 
+                                    class="form-control" 
+                                    id="modal-telefone_responsavel" 
+                                    name="telefone_responsavel" 
+                                    placeholder="(XX) XXXXX-XXXX" 
+                                    maxlength="15" 
+                                    pattern="^\(\d{2}\)\s\d{4,5}-\d{4}$"
+                                    oninput="formatarTelefone(this)"
+                                    onblur="validarTelefoneCompleto(this)">
+                             <div class="invalid-feedback">Telefone inválido. Use o formato (XX) XXXXX-XXXX ou (XX) XXXX-XXXX</div>
+                         </div>
                          <div class="col-md-4 mb-3 d-none"><input type="hidden" id="modal-resp_estrategico_nome" name="resp_estrategico_nome"></div>
                          <div class="col-md-4 mb-3 d-none"><input type="hidden" id="modal-resp_onb_nome" name="resp_onb_nome"></div>
                     </div>
@@ -33,7 +45,7 @@
                         <div class="col-md-3 mb-3"> 
                             <label for="modal-inicio_efetivo" class="form-label">Início Efetivo (Editável)</label> 
                             <div class="input-group">
-                                <input type="text" class="form-control" id="modal-inicio_efetivo" name="data_inicio_efetivo" placeholder="DD/MM/AAAA" inputmode="numeric" pattern="\d{2}/\d{2}/\d{4}"> 
+                                <input type="text" class="form-control" id="modal-inicio_efetivo" name="data_inicio_efetivo" placeholder="DD/MM/AAAA" readonly> 
                                 <button class="btn btn-outline-secondary" type="button" id="btn-cal-inicio_efetivo" aria-label="Abrir calendário"><i class="bi bi-calendar3"></i></button>
                             </div>
                         </div>
@@ -41,14 +53,14 @@
                         <div class="col-md-3 mb-3">
                             <label for="modal-data_inicio_producao" class="form-label">Início Produção (Data)</label>
                             <div class="input-group">
-                                <input type="text" class="form-control" id="modal-data_inicio_producao" name="data_inicio_producao" placeholder="DD/MM/AAAA" inputmode="numeric" pattern="\d{2}/\d{2}/\d{4}">
+                                <input type="text" class="form-control" id="modal-data_inicio_producao" name="data_inicio_producao" placeholder="DD/MM/AAAA" readonly>
                                 <button class="btn btn-outline-secondary" type="button" id="btn-cal-data_inicio_producao" aria-label="Abrir calendário"><i class="bi bi-calendar3"></i></button>
                             </div>
                         </div>
                         <div class="col-md-3 mb-3">
                             <label for="modal-data_final_implantacao" class="form-label">Fim da Implantação (Data)</label>
                             <div class="input-group">
-                                <input type="text" class="form-control" id="modal-data_final_implantacao" name="data_final_implantacao" placeholder="DD/MM/AAAA" inputmode="numeric" pattern="\d{2}/\d{2}/\d{4}">
+                                <input type="text" class="form-control" id="modal-data_final_implantacao" name="data_final_implantacao" placeholder="DD/MM/AAAA" readonly>
                                 <button class="btn btn-outline-secondary" type="button" id="btn-cal-data_final_implantacao" aria-label="Abrir calendário"><i class="bi bi-calendar3"></i></button>
                             </div>
                         </div>
@@ -56,7 +68,7 @@
                     
                     <div class="row">
                         <div class="col-md-6 mb-3"><label for="modal-nivel_receita" class="form-label">Nível de Receita (MRR)</label> 
-                            <select class="form-select" id="modal-nivel_receita" name="nivel_receita"> 
+                            <select class="form-select tom-select-single" id="modal-nivel_receita" name="nivel_receita"> 
                                 <option value="">Selecione...</option> 
                                 {% if NIVEIS_RECEITA %} 
                                     {% for nivel in NIVEIS_RECEITA %} 
@@ -75,31 +87,36 @@
 
                     <h6 class="text-primary mb-3 border-bottom pb-1 mt-4">Configurações e Detalhes Operacionais</h6>
                     <div class="row">
-                        <div class="col-md-4 mb-3"><label for="modal-seguimento" class="form-label">Seguimento</label><select id="modal-seguimento" name="seguimento" multiple><option value="">Selecione...</option>{% if SEGUIMENTOS_LIST %}{% for s in SEGUIMENTOS_LIST %}<option value="{{ s }}">{{ s }}</option>{% endfor %}{% endif %}</select></div>
-                        <div class="col-md-4 mb-3"><label for="modal-tipos_planos" class="form-label">Tipos de Planos</label><select id="modal-tipos_planos" name="tipos_planos" multiple><option value="">Selecione...</option>{% if TIPOS_PLANOS %}{% for tp in TIPOS_PLANOS %}<option value="{{ tp }}">{{ tp }}</option>{% endfor %}{% endif %}</select></div>
+                        <div class="col-md-4 mb-3"><label for="modal-seguimento" class="form-label">Segmento</label><select class="form-select tom-select-multi" id="modal-seguimento" name="seguimento" multiple><option value="">Selecione...</option>{% if SEGUIMENTOS_LIST %}{% for s in SEGUIMENTOS_LIST %}<option value="{{ s }}">{{ s }}</option>{% endfor %}{% endif %}</select></div>
+                        <div class="col-md-4 mb-3"><label for="modal-tipos_planos" class="form-label">Tipos de Planos</label><select class="form-select tom-select-multi" id="modal-tipos_planos" name="tipos_planos" multiple><option value="">Selecione...</option>{% if TIPOS_PLANOS %}{% for tp in TIPOS_PLANOS %}<option value="{{ tp }}">{{ tp }}</option>{% endfor %}{% endif %}</select></div>
                         <div class="col-md-4 mb-3"><label for="modal-modalidades" class="form-label">Modalidades</label><select id="modal-modalidades" name="modalidades" multiple><option value="">Selecione...</option>{% if MODALIDADES_LIST %}{% for m in MODALIDADES_LIST %}<option value="{{ m }}">{{ m }}</option>{% endfor %}{% endif %}</select></div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3"><label for="modal-horarios_func" class="form-label">Horários</label><select id="modal-horarios_func" name="horarios_func" multiple><option value="">Selecione...</option>{% if HORARIOS_FUNCIONAMENTO %}{% for hf in HORARIOS_FUNCIONAMENTO %}<option value="{{ hf }}">{{ hf }}</option>{% endfor %}{% endif %}</select></div>
                         <div class="col-md-6 mb-3"><label for="modal-formas_pagamento" class="form-label">Pagamento</label><select id="modal-formas_pagamento" name="formas_pagamento" multiple><option value="">Selecione...</option>{% if FORMAS_PAGAMENTO %}{% for fp in FORMAS_PAGAMENTO %}<option value="{{ fp }}">{{ fp }}</option>{% endfor %}{% endif %}</select></div>
                         </div>
-                    <div class="row">
-                        <div class="col-md-3 mb-3"><label for="modal-diaria" class="form-label">Diária?</label><select class="form-select" id="modal-diaria" name="diaria"> {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}{% endif %} </select></div>
-                        <div class="col-md-3 mb-3"><label for="modal-freepass" class="form-label">Freepass?</label><select class="form-select" id="modal-freepass" name="freepass"> {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}{% endif %} </select></div>
-                        <div class="col-md-6 mb-3"><label for="modal-alunos_ativos" class="form-label">Alunos Ativos</label><input type="number" class="form-control" id="modal-alunos_ativos" name="alunos_ativos" min="0"></div>
-                    </div>
-
                     <h6 class="text-primary mb-3 border-bottom pb-1 mt-4">Sistemas e Integrações</h6>
                     <div class="row">
-                        <div class="col-md-6 mb-3"><label for="modal-sistema_anterior" class="form-label">Sistema Anterior</label><select class="form-select" id="modal-sistema_anterior" name="sistema_anterior"><option value="">Selecione...</option>{% if SISTEMAS_ANTERIORES %}{% for sa in SISTEMAS_ANTERIORES %}<option value="{{ sa }}">{{ sa }}</option>{% endfor %}{% endif %}</select></div>
-                        <div class="col-md-6 mb-3"><label for="modal-recorrencia_usa" class="form-label">Recorrência (Empresa)</label><select class="form-select" id="modal-recorrencia_usa" name="recorrencia_usa"><option value="">Selecione...</option>{% if RECORRENCIA_USADA %}{% for ru in RECORRENCIA_USADA %}<option value="{{ ru }}">{{ ru }}</option>{% endfor %}{% endif %}</select></div>
+                        <div class="col-md-6 mb-3"><label for="modal-sistema_anterior" class="form-label">Sistema Anterior</label><select class="form-select tom-select-single" id="modal-sistema_anterior" name="sistema_anterior"><option value="">Selecione...</option>{% if SISTEMAS_ANTERIORES %}{% for sa in SISTEMAS_ANTERIORES %}<option value="{{ sa }}">{{ sa }}</option>{% endfor %}{% endif %}</select></div>
+                        <div class="col-md-6 mb-3"><label for="modal-recorrencia_usa" class="form-label">Recorrência</label><select class="form-select tom-select-single" id="modal-recorrencia_usa" name="recorrencia_usa"><option value="">Selecione...</option>{% if RECORRENCIA_USADA %}{% for ru in RECORRENCIA_USADA %}<option value="{{ ru }}">{{ ru }}</option>{% endfor %}{% endif %}</select></div>
+                    </div>
+
+                    <h6 class="text-primary mb-3 border-bottom pb-1 mt-4">Recursos</h6>
+                    <div class="row">
+                        <div class="col-md-2 mb-3"><label for="modal-diaria" class="form-label">Diária?</label><select class="form-select" id="modal-diaria" name="diaria"> {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}{% endif %} </select></div>
+                        <div class="col-md-2 mb-3"><label for="modal-freepass" class="form-label">Freepass?</label><select class="form-select" id="modal-freepass" name="freepass"> {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}{% endif %} </select></div>
+                        <div class="col-md-2 mb-3"><label for="modal-importacao" class="form-label">Importação?</label><select class="form-select" id="modal-importacao" name="importacao"> {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}{% endif %} </select></div>
+                        <div class="col-md-2 mb-3"><label for="modal-boleto" class="form-label">Boleto?</label><select class="form-select" id="modal-boleto" name="boleto"> {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}{% endif %} </select></div>
+                        <div class="col-md-2 mb-3"><label for="modal-nota_fiscal" class="form-label">Nota Fiscal?</label><select class="form-select" id="modal-nota_fiscal" name="nota_fiscal"> {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}{% endif %} </select></div>
+                        <div class="col-md-2 mb-3"><label for="modal-alunos_ativos" class="form-label">Alunos Ativos</label><input type="number" class="form-control" id="modal-alunos_ativos" name="alunos_ativos" min="0"></div>
                     </div>
                     <div class="row">
-                        <div class="col-md-3 mb-3"><label for="modal-importacao" class="form-label">Importação?</label><select class="form-select" id="modal-importacao" name="importacao"> {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}{% endif %} </select></div>
-                        <div class="col-md-3 mb-3"><label for="modal-boleto" class="form-label">Boleto?</label><select class="form-select" id="modal-boleto" name="boleto"> {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}{% endif %} </select></div>
-                        <div class="col-md-3 mb-3"><label for="modal-nota_fiscal" class="form-label">Nota Fiscal?</label><select class="form-select" id="modal-nota_fiscal" name="nota_fiscal"> {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}{% endif %} </select></div>
-                        <div class="col-md-3 mb-3"><label for="modal-catraca" class="form-label">Catraca?</label><select class="form-select" id="modal-catraca" name="catraca"> {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}{% endif %} </select></div>
-                        <div class="col-md-3 mb-3"><label for="modal-facial" class="form-label">Facial?</label><select class="form-select" id="modal-facial" name="facial"> {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}{% endif %} </select></div>
+                        <div class="col-md-2 mb-3"><label for="modal-catraca" class="form-label">Catraca?</label><select class="form-select" id="modal-catraca" name="catraca"> {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}{% endif %} </select></div>
+                        <div class="col-md-2 mb-3" id="row-catraca-modelo" style="display: none;"><label for="modal-modelo_catraca" class="form-label">Modelo da Catraca</label><input type="text" class="form-control" id="modal-modelo_catraca" name="modelo_catraca" placeholder="Informe o modelo"></div>
+                        <div class="col-md-2 mb-3"><label for="modal-facial" class="form-label">Facial?</label><select class="form-select" id="modal-facial" name="facial"> {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}{% endif %} </select></div>
+                        <div class="col-md-2 mb-3" id="row-facial-modelo" style="display: none;"><label for="modal-modelo_facial" class="form-label">Modelo Facial</label><input type="text" class="form-control" id="modal-modelo_facial" name="modelo_facial" placeholder="Informe o modelo"></div>
+                        <div class="col-md-2 mb-3"><label for="modal-wellhub" class="form-label">WellHub?</label><select class="form-select" id="modal-wellhub" name="wellhub"> {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}{% endif %} </select></div>
+                        <div class="col-md-2 mb-3"><label for="modal-totalpass" class="form-label">TotalPass?</label><select class="form-select" id="modal-totalpass" name="totalpass"> {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}">{{ op }}</option>{% endfor %}{% endif %} </select></div>
                     </div>
                 </div>
                 <div class="modal-footer header-bg"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary" style="background-color: var(--accent-color); border-color: var(--accent-color);">Salvar Alterações</button></div>

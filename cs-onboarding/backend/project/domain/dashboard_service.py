@@ -1,14 +1,14 @@
-
-
 from flask import g, current_app
 from ..db import query_db, execute_db
 from .implantacao_service import _get_progress
+from .time_calculator import calculate_days_passed, calculate_days_parada
 from ..constants import (
     PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR
 )
 from ..common.utils import format_date_iso_for_json, format_date_br
 from ..config.cache_config import cache
 from datetime import datetime, date
+
 
 def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=None, use_cache=True):
     """
@@ -41,7 +41,6 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
 
     is_manager_view = perfil_acesso in manager_profiles
 
-
     query_sql = """
         SELECT
             i.*,
@@ -51,12 +50,14 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
         FROM implantacoes i
         LEFT JOIN perfil_usuario p ON i.usuario_cs = p.usuario
         LEFT JOIN (
+            -- Migrado para checklist_items (estrutura consolidada)
             SELECT
-                implantacao_id,
-                COUNT(*) as total_tarefas,
-                COUNT(CASE WHEN concluida = TRUE THEN 1 END) as tarefas_concluidas
-            FROM tarefas
-            GROUP BY implantacao_id
+                ci.implantacao_id,
+                COUNT(DISTINCT ci.id) as total_tarefas,
+                COUNT(DISTINCT CASE WHEN ci.completed = TRUE THEN ci.id END) as tarefas_concluidas
+            FROM checklist_items ci
+            WHERE ci.tipo_item = 'subtarefa'
+            GROUP BY ci.implantacao_id
         ) t_counts ON t_counts.implantacao_id = i.id
     """
     args = []
@@ -107,27 +108,24 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
     impl_list = query_db(query_sql, tuple(args))
     impl_list = impl_list if impl_list is not None else []
 
-
     dashboard_data = {
-        'andamento': [], 'atrasadas': [], 'futuras': [], 'sem_previsao': [],
-        'finalizadas': [], 'paradas': [], 'novas': [] 
+        'andamento': [], 'futuras': [], 'sem_previsao': [],
+        'finalizadas': [], 'paradas': [], 'novas': []
     }
     metrics = {
-        'impl_andamento_total': 0, 'implantacoes_atrasadas': 0,
+        'impl_andamento_total': 0,
         'implantacoes_futuras': 0, 'implantacoes_sem_previsao': 0, 'impl_finalizadas': 0, 'impl_paradas': 0,
         'impl_novas': 0,
         'modulos_total': 0,
         'total_valor_andamento': 0.0,
-        'total_valor_atrasadas': 0.0,
         'total_valor_futuras': 0.0,
         'total_valor_sem_previsao': 0.0,
         'total_valor_finalizadas': 0.0,
         'total_valor_paradas': 0.0,
-        'total_valor_novas': 0.0, 
+        'total_valor_novas': 0.0,
     }
 
-
-    agora = datetime.now() 
+    agora = datetime.now()
 
     for impl in impl_list:
         if not impl or not isinstance(impl, dict):
@@ -135,11 +133,20 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
 
         impl_id = impl.get('id')
         if impl_id is None:
+            current_app.logger.warning(f"Skipping implantacao without id: {impl}")
             continue
 
-        status = impl.get('status')
+        status_raw = impl.get('status')
+        if isinstance(status_raw, str):
+            status = status_raw.replace('\xa0', ' ').strip().lower()
+        else:
+            status = str(status_raw).strip().lower() if status_raw else ''
+        
+        if not status:
+            current_app.logger.warning(f"Implantacao {impl_id} has empty/null status. Raw value: {status_raw}. Will try to categorize anyway.")
+            status = 'andamento'
         try:
-            if impl.get('tipo') == 'modulo' and status in ['nova','andamento','atrasada','parada','futura','sem_previsao']:
+            if impl.get('tipo') == 'modulo' and status in ['nova', 'andamento', 'parada', 'futura', 'sem_previsao']:
                 metrics['modulos_total'] += 1
         except Exception:
             pass
@@ -163,92 +170,39 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
             impl_valor = 0.0
         impl['valor_atribuido'] = impl_valor
 
+        try:
+            dias_passados = calculate_days_passed(impl_id)
+            if dias_passados is None:
+                dias_passados = 0
+        except Exception as e:
+            current_app.logger.warning(f"Error calculating dias_passados for impl {impl_id}: {e}")
+            dias_passados = 0
+        except:
+            current_app.logger.error(f"Unexpected error calculating dias_passados for impl {impl_id}")
+            dias_passados = 0
 
-        dias_passados = 0
-        data_inicio_obj = impl.get('data_inicio_efetivo') 
-        
-        if data_inicio_obj:
-            data_inicio_datetime = None
-            if isinstance(data_inicio_obj, str):
-                try:
-                    data_inicio_datetime = datetime.fromisoformat(data_inicio_obj.replace('Z', '+00:00'))
-                except ValueError:
-                    try:
-                        if '.' in data_inicio_obj:
-                            data_inicio_datetime = datetime.strptime(data_inicio_obj, '%Y-%m-%d %H:%M:%S.%f')
-                        else:
-                            data_inicio_datetime = datetime.strptime(data_inicio_obj, '%Y-%m-%d %H:%M:%S')
-                    except ValueError:
-                         try:
-                            data_inicio_datetime = datetime.strptime(data_inicio_obj, '%Y-%m-%d')
-                         except ValueError:
-                            current_app.logger.warning(f"Invalid data_inicio_efetivo format for impl {impl_id}: {data_inicio_obj}")
-            
-            elif isinstance(data_inicio_obj, date) and not isinstance(data_inicio_obj, datetime):
-                data_inicio_datetime = datetime.combine(data_inicio_obj, datetime.min.time())
-            
-            elif isinstance(data_inicio_obj, datetime):
-                data_inicio_datetime = data_inicio_obj
-
-            if data_inicio_datetime:
-                try:
-                    agora_naive = agora.replace(tzinfo=None) if agora.tzinfo else agora
-                    inicio_naive = data_inicio_datetime.replace(tzinfo=None) if data_inicio_datetime.tzinfo else data_inicio_datetime
-                    dias_passados_delta = agora_naive - inicio_naive
-                    dias_passados = dias_passados_delta.days if dias_passados_delta.days >= 0 else 0
-                except TypeError as te:
-                    current_app.logger.warning(f"Type error calculating dias_passados for impl {impl_id}: {te}")
-                    dias_passados = -1
-                    
-        impl['dias_passados'] = dias_passados 
+        impl['dias_passados'] = dias_passados
 
         if status == 'finalizada':
             dashboard_data['finalizadas'].append(impl)
             metrics['impl_finalizadas'] += 1
             metrics['total_valor_finalizadas'] += impl_valor
         elif status == 'parada':
-
-            dias_parada = 0
-            data_finalizacao_obj = impl.get('data_finalizacao')
-            if data_finalizacao_obj:
-                data_inicio_parada_datetime = None
-                if isinstance(data_finalizacao_obj, str):
-                    try:
-                        data_inicio_parada_datetime = datetime.fromisoformat(data_finalizacao_obj.replace('Z', '+00:00'))
-                    except ValueError:
-                        try:
-                            if '.' in data_finalizacao_obj:
-                                data_inicio_parada_datetime = datetime.strptime(data_finalizacao_obj, '%Y-%m-%d %H:%M:%S.%f')
-                            else:
-                                data_inicio_parada_datetime = datetime.strptime(data_finalizacao_obj, '%Y-%m-%d %H:%M:%S')
-                        except ValueError:
-                            try:
-                                data_inicio_parada_datetime = datetime.strptime(data_finalizacao_obj, '%Y-%m-%d')
-                            except ValueError:
-                                current_app.logger.warning(f"Invalid data_finalizacao format for impl {impl_id}: {data_finalizacao_obj}")
-                elif isinstance(data_finalizacao_obj, date) and not isinstance(data_finalizacao_obj, datetime):
-                    data_inicio_parada_datetime = datetime.combine(data_finalizacao_obj, datetime.min.time())
-                elif isinstance(data_finalizacao_obj, datetime):
-                    data_inicio_parada_datetime = data_finalizacao_obj
-
-                if data_inicio_parada_datetime:
-                    try:
-                        agora_naive = agora.replace(tzinfo=None) if agora.tzinfo else agora
-                        parada_naive = data_inicio_parada_datetime.replace(tzinfo=None) if data_inicio_parada_datetime.tzinfo else data_inicio_parada_datetime
-                        dias_parada_delta = agora_naive - parada_naive
-                        dias_parada = dias_parada_delta.days if dias_parada_delta.days >= 0 else 0
-                    except TypeError as te:
-                        current_app.logger.warning(f"Error calculating dias_parada for impl {impl_id}: {te}")
+            try:
+                dias_parada = calculate_days_parada(impl_id)
+            except Exception as e:
+                current_app.logger.warning(f"Error calculating dias_parada for impl {impl_id}: {e}")
+                dias_parada = 0
 
             impl['dias_parada'] = dias_parada
             dashboard_data['paradas'].append(impl)
             metrics['impl_paradas'] += 1
             metrics['total_valor_paradas'] += impl_valor
-        elif status == 'futura': 
+        elif status == 'futura':
             dashboard_data['futuras'].append(impl)
             metrics['implantacoes_futuras'] += 1
             metrics['total_valor_futuras'] += impl_valor
-            
+
             data_prevista_str = impl.get('data_inicio_previsto')
             data_prevista_obj = None
 
@@ -261,7 +215,7 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
                 data_prevista_obj = data_prevista_str
 
             impl['data_inicio_previsto_fmt_d'] = format_date_br(data_prevista_obj or data_prevista_str, include_time=False)
-            
+
             if data_prevista_obj and data_prevista_obj < agora.date():
                 impl['atrasada_para_iniciar'] = True
             else:
@@ -277,50 +231,38 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
             metrics['implantacoes_sem_previsao'] += 1
             metrics['total_valor_sem_previsao'] += impl_valor
 
-        elif status == 'andamento':
-            metrics['impl_andamento_total'] += 1 
-            if dias_passados > 25:
-                try:
-                    execute_db("UPDATE implantacoes SET status = 'atrasada' WHERE id = %s AND status = 'andamento'", (impl_id,))
-                    status = 'atrasada'
-                    impl['status'] = 'atrasada'
-                except Exception:
-                    pass
-                dashboard_data['atrasadas'].append(impl)
-                metrics['implantacoes_atrasadas'] += 1
-                metrics['total_valor_atrasadas'] += impl_valor
-            else:
-                dashboard_data['andamento'].append(impl)
-                metrics['total_valor_andamento'] += impl_valor 
-        elif status == 'atrasada':
-            metrics['implantacoes_atrasadas'] += 1
-            if dias_passados <= 25:
+        elif status == 'andamento' or status == 'atrasada':
+            if status == 'atrasada':
                 try:
                     execute_db("UPDATE implantacoes SET status = 'andamento' WHERE id = %s AND status = 'atrasada'", (impl_id,))
                     status = 'andamento'
                     impl['status'] = 'andamento'
-                    dashboard_data['andamento'].append(impl)
-                    metrics['total_valor_andamento'] += impl_valor
-                except Exception:
-                    dashboard_data['atrasadas'].append(impl)
-                    metrics['total_valor_atrasadas'] += impl_valor
-            else:
-                dashboard_data['atrasadas'].append(impl)
-                metrics['total_valor_atrasadas'] += impl_valor
-
+                except Exception as e:
+                    current_app.logger.warning(f"Error updating status from atrasada to andamento for impl {impl_id}: {e}")
+            dashboard_data['andamento'].append(impl)
+            metrics['impl_andamento_total'] += 1
+            metrics['total_valor_andamento'] += impl_valor
         else:
-            current_app.logger.warning(f"Unknown or null status for implantacao {impl_id}: '{status}'. Skipping categorization.")
+            current_app.logger.warning(f"Unknown or null status for implantacao {impl_id}: '{status}' (raw: '{status_raw}'). Categorizing as 'andamento' by default.")
+            dashboard_data['andamento'].append(impl)
+            metrics['impl_andamento_total'] += 1
+            metrics['total_valor_andamento'] += impl_valor
+
+    for bucket in dashboard_data.values():
+        for item in bucket:
+            if isinstance(item, dict) and 'dias_passados' not in item:
+                item['dias_passados'] = 0
 
     if not is_manager_view and not filtered_cs_email and impl_list:
         try:
-            rows_affected = execute_db(
+            execute_db(
                 """
                 UPDATE perfil_usuario
-                SET impl_andamento_total = %s, implantacoes_atrasadas = %s,
+                SET impl_andamento_total = %s,
                     impl_finalizadas = %s, impl_paradas = %s
                 WHERE usuario = %s
                 """,
-                (metrics['impl_andamento_total'], metrics['implantacoes_atrasadas'],
+                (metrics['impl_andamento_total'],
                  metrics['impl_finalizadas'], metrics['impl_paradas'], user_email)
             )
         except Exception as update_err:

@@ -19,10 +19,10 @@ from ..security.api_security import validate_api_origin
 
 api_h_bp = Blueprint('api_h', __name__, url_prefix='/api')
 
-# Mapeamento de tipo para coluna de ID (whitelist explícita)
+# Mapeamento de tipo para coluna de ID (agora usa checklist_item_id)
 COLUNA_ID_MAP = {
-    'tarefa': 'tarefa_h_id',
-    'subtarefa': 'subtarefa_h_id'
+    'tarefa': 'checklist_item_id',
+    'subtarefa': 'checklist_item_id'
 }
 
 @api_h_bp.before_request
@@ -48,10 +48,11 @@ def adicionar_comentario_h(tipo, item_id):
     except ValidationError as e:
         return render_hx_error(f'ID inválido: {str(e)}', 400)
     
-    # Validar tipo usando whitelist explícita
-    coluna_id = COLUNA_ID_MAP.get(tipo)
-    if not coluna_id:
+    # Validar tipo (agora sempre usa checklist_item_id)
+    if tipo not in ('tarefa', 'subtarefa'):
         return render_hx_error('Tipo inválido. Deve ser "tarefa" ou "subtarefa".', 400)
+    
+    coluna_id = 'checklist_item_id'
 
     try:
         texto = request.form.get('comentario', '')
@@ -70,24 +71,19 @@ def adicionar_comentario_h(tipo, item_id):
     if tipo == 'tarefa':
         info = query_db(
             """
-            SELECT th.nome as item_nome, i.usuario_cs, i.id as implantacao_id, i.status, i.nome_empresa, i.email_responsavel, i.responsavel_cliente
-            FROM tarefas_h th
-            JOIN grupos g ON th.grupo_id = g.id
-            JOIN fases f ON g.fase_id = f.id
-            JOIN implantacoes i ON f.implantacao_id = i.id
-            WHERE th.id = %s
+            SELECT ci.title as item_nome, i.usuario_cs, i.id as implantacao_id, i.status, i.nome_empresa, i.email_responsavel, i.responsavel_cliente
+            FROM checklist_items ci
+            JOIN implantacoes i ON ci.implantacao_id = i.id
+            WHERE ci.id = %s AND ci.tipo_item = 'tarefa'
             """, (item_id,), one=True
         )
     else:
         info = query_db(
             """
-            SELECT sh.nome as item_nome, i.usuario_cs, i.id as implantacao_id, i.status, i.nome_empresa, i.email_responsavel, i.responsavel_cliente
-            FROM subtarefas_h sh
-            JOIN tarefas_h th ON sh.tarefa_id = th.id
-            JOIN grupos g ON th.grupo_id = g.id
-            JOIN fases f ON g.fase_id = f.id
-            JOIN implantacoes i ON f.implantacao_id = i.id
-            WHERE sh.id = %s
+            SELECT ci.title as item_nome, i.usuario_cs, i.id as implantacao_id, i.status, i.nome_empresa, i.email_responsavel, i.responsavel_cliente
+            FROM checklist_items ci
+            JOIN implantacoes i ON ci.implantacao_id = i.id
+            WHERE ci.id = %s AND ci.tipo_item = 'subtarefa'
             """, (item_id,), one=True
         )
 
@@ -138,10 +134,24 @@ def adicionar_comentario_h(tipo, item_id):
 
     try:
         agora = datetime.now()
-        # coluna_id já foi definida na validação acima
+        
+        # Garantir que a coluna checklist_item_id existe (para SQLite)
+        try:
+            from project.database.db_pool import get_db_connection
+            conn_check, db_type_check = get_db_connection()
+            if db_type_check == 'sqlite':
+                cursor_check = conn_check.cursor()
+                cursor_check.execute("PRAGMA table_info(comentarios_h)")
+                colunas_existentes = [row[1] for row in cursor_check.fetchall()]
+                if 'checklist_item_id' not in colunas_existentes:
+                    cursor_check.execute("ALTER TABLE comentarios_h ADD COLUMN checklist_item_id INTEGER")
+                    conn_check.commit()
+                conn_check.close()
+        except Exception:
+            pass
         
         result = execute_and_fetch_one(
-            f"INSERT INTO comentarios_h ({coluna_id}, usuario_cs, texto, data_criacao, imagem_url, visibilidade) "
+            "INSERT INTO comentarios_h (checklist_item_id, usuario_cs, texto, data_criacao, imagem_url, visibilidade) "
             "VALUES (%s, %s, %s, %s, %s, %s) RETURNING id",
             (item_id, usuario_cs_email, texto, agora, img_url, visibilidade)
         )
@@ -151,8 +161,8 @@ def adicionar_comentario_h(tipo, item_id):
             # Fallback para SQLite
             if current_app.config.get('USE_SQLITE_LOCALLY'):
                 execute_db(
-                    f"INSERT INTO comentarios_h ({coluna_id}, usuario_cs, texto, data_criacao, imagem_url, visibilidade) "
-                    "VALUES (%s, %s, %s, %s, %s, %s)",
+                    "INSERT INTO comentarios_h (checklist_item_id, usuario_cs, texto, data_criacao, imagem_url, visibilidade) "
+                    "VALUES (?, ?, ?, ?, ?, ?)",
                     (item_id, usuario_cs_email, texto, agora, img_url, visibilidade)
                 )
                 novo_id = query_db("SELECT last_insert_rowid() as id", one=True)['id']
@@ -216,10 +226,11 @@ def listar_comentarios_h(tipo, item_id):
     except ValidationError as e:
         return jsonify({'ok': False, 'error': f'ID inválido: {str(e)}'}), 400
     
-    # Validar tipo usando whitelist explícita
-    coluna_id = COLUNA_ID_MAP.get(tipo)
-    if not coluna_id:
+    # Validar tipo (agora sempre usa checklist_item_id)
+    if tipo not in ('tarefa', 'subtarefa'):
         return jsonify({'ok': False, 'error': 'Tipo inválido. Deve ser "tarefa" ou "subtarefa".'}), 400
+    
+    coluna_id = 'checklist_item_id'
     
     try:
         
@@ -230,23 +241,18 @@ def listar_comentarios_h(tipo, item_id):
                 impl_info = query_db(
                     """
                     SELECT i.email_responsavel
-                    FROM tarefas_h th
-                    JOIN grupos g ON th.grupo_id = g.id
-                    JOIN fases f ON g.fase_id = f.id
-                    JOIN implantacoes i ON f.implantacao_id = i.id
-                    WHERE th.id = %s
+                    FROM checklist_items ci
+                    JOIN implantacoes i ON ci.implantacao_id = i.id
+                    WHERE ci.id = %s AND ci.tipo_item = 'tarefa'
                     """, (item_id,), one=True
                 ) or {}
             else:
                 impl_info = query_db(
                     """
                     SELECT i.email_responsavel
-                    FROM subtarefas_h sh
-                    JOIN tarefas_h th ON sh.tarefa_id = th.id
-                    JOIN grupos g ON th.grupo_id = g.id
-                    JOIN fases f ON g.fase_id = f.id
-                    JOIN implantacoes i ON f.implantacao_id = i.id
-                    WHERE sh.id = %s
+                    FROM checklist_items ci
+                    JOIN implantacoes i ON ci.implantacao_id = i.id
+                    WHERE ci.id = %s AND ci.tipo_item = 'subtarefa'
                     """, (item_id,), one=True
                 ) or {}
         except Exception as e:
@@ -254,12 +260,12 @@ def listar_comentarios_h(tipo, item_id):
             impl_info = {}
         
         comentarios = query_db(
-            f"""
+            """
             SELECT c.id, c.texto, c.usuario_cs, c.data_criacao, c.imagem_url, c.visibilidade,
                    p.nome as usuario_nome
             FROM comentarios_h c
             LEFT JOIN perfil_usuario p ON c.usuario_cs = p.usuario
-            WHERE c.{coluna_id} = %s
+            WHERE c.checklist_item_id = %s
             ORDER BY c.data_criacao DESC
             """,
             (item_id,)
@@ -289,16 +295,11 @@ def excluir_comentario_h(comentario_id):
         comentario = query_db(
             """
             SELECT c.*, 
-                   COALESCE(th.nome, sh.nome) as item_nome,
+                   ci.title as item_nome,
                    i.id as impl_id, i.usuario_cs as implantacao_owner
             FROM comentarios_h c
-            LEFT JOIN tarefas_h th ON c.tarefa_h_id = th.id
-            LEFT JOIN subtarefas_h sh ON c.subtarefa_h_id = sh.id
-            LEFT JOIN grupos g ON th.grupo_id = g.id
-            LEFT JOIN tarefas_h th_sub ON sh.tarefa_id = th_sub.id
-            LEFT JOIN grupos g_sub ON th_sub.grupo_id = g_sub.id
-            LEFT JOIN fases f ON COALESCE(g.fase_id, g_sub.fase_id) = f.id
-            LEFT JOIN implantacoes i ON f.implantacao_id = i.id
+            LEFT JOIN checklist_items ci ON c.checklist_item_id = ci.id
+            LEFT JOIN implantacoes i ON ci.implantacao_id = i.id
             WHERE c.id = %s
             """, (comentario_id,), one=True
         )
@@ -343,17 +344,12 @@ def enviar_email_comentario_h(comentario_id):
         dados = query_db(
             """
             SELECT c.id, c.texto, c.imagem_url, c.visibilidade, 
-                   COALESCE(th.id, sh.tarefa_id) as tarefa_id, -- Approximation for target ID
-                   COALESCE(th.nome, sh.nome) as tarefa_filho,
+                   ci.id as tarefa_id,
+                   ci.title as tarefa_filho,
                    i.id as impl_id, i.nome_empresa, i.email_responsavel, i.usuario_cs as implantacao_owner
             FROM comentarios_h c
-            LEFT JOIN tarefas_h th ON c.tarefa_h_id = th.id
-            LEFT JOIN subtarefas_h sh ON c.subtarefa_h_id = sh.id
-            LEFT JOIN grupos g ON th.grupo_id = g.id
-            LEFT JOIN tarefas_h th_sub ON sh.tarefa_id = th_sub.id
-            LEFT JOIN grupos g_sub ON th_sub.grupo_id = g_sub.id
-            LEFT JOIN fases f ON COALESCE(g.fase_id, g_sub.fase_id) = f.id
-            LEFT JOIN implantacoes i ON f.implantacao_id = i.id
+            LEFT JOIN checklist_items ci ON c.checklist_item_id = ci.id
+            LEFT JOIN implantacoes i ON ci.implantacao_id = i.id
             WHERE c.id = %s
             """,
             (comentario_id,), one=True
@@ -361,20 +357,16 @@ def enviar_email_comentario_h(comentario_id):
         if not dados:
             return render_inline_notice({'email_send_status': 'error', 'email_send_error': 'Comentário não encontrado.', 'tarefa_id': 0})
 
+        # Segunda query para garantir que temos todos os dados
         dados = query_db(
             """
             SELECT c.id, c.texto, c.imagem_url, c.visibilidade, c.usuario_cs,
-                   COALESCE(th.id, sh.tarefa_id) as tarefa_id, 
-                   COALESCE(th.nome, sh.nome) as tarefa_filho,
+                   ci.id as tarefa_id, 
+                   ci.title as tarefa_filho,
                    i.id as impl_id, i.nome_empresa, i.email_responsavel, i.usuario_cs as implantacao_owner
             FROM comentarios_h c
-            LEFT JOIN tarefas_h th ON c.tarefa_h_id = th.id
-            LEFT JOIN subtarefas_h sh ON c.subtarefa_h_id = sh.id
-            LEFT JOIN grupos g ON th.grupo_id = g.id
-            LEFT JOIN tarefas_h th_sub ON sh.tarefa_id = th_sub.id
-            LEFT JOIN grupos g_sub ON th_sub.grupo_id = g_sub.id
-            LEFT JOIN fases f ON COALESCE(g.fase_id, g_sub.fase_id) = f.id
-            LEFT JOIN implantacoes i ON f.implantacao_id = i.id
+            LEFT JOIN checklist_items ci ON c.checklist_item_id = ci.id
+            LEFT JOIN implantacoes i ON ci.implantacao_id = i.id
             WHERE c.id = %s
             """,
             (comentario_id,), one=True

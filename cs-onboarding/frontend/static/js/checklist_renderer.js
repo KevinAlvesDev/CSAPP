@@ -35,29 +35,41 @@ class ChecklistRenderer {
         // Construir estrutura plana para propagação rápida
         this.buildFlatData(this.data);
         
+        // Expandir primeira fase por padrão ANTES de renderizar
+        if (this.data.length > 0 && this.data[0]) {
+            this.expandedItems.add(this.data[0].id);
+        }
+        
         this.render();
-        this.updateGlobalProgress();
         this.attachEventListeners();
         
-        // Expandir primeira fase por padrão
+        // Garantir que o estado expandido seja aplicado após renderização
         if (this.data.length > 0 && this.data[0]) {
-            this.toggleExpand(this.data[0].id, false);
+            setTimeout(() => {
+                this.updateExpandedState(this.data[0].id, false);
+            }, 0);
         }
+        
+        this.updateGlobalProgress();
     }
     
     /**
      * Constrói estrutura plana (flatData) para acesso rápido durante propagação
+     * Limita a 7 filhos por tarefa pai
      */
     buildFlatData(nodes, parentId = null) {
         nodes.forEach(node => {
+            // Limitar a 7 filhos por tarefa pai
+            const limitedChildren = node.children && node.children.length > 0 ? node.children.slice(0, 7) : [];
+            
             this.flatData[node.id] = {
                 ...node,
                 parentId: parentId,
-                childrenIds: node.children ? node.children.map(c => c.id) : []
+                childrenIds: limitedChildren.map(c => c.id)
             };
             
-            if (node.children && node.children.length > 0) {
-                this.buildFlatData(node.children, node.id);
+            if (limitedChildren.length > 0) {
+                this.buildFlatData(limitedChildren, node.id);
             }
         });
     }
@@ -78,7 +90,9 @@ class ChecklistRenderer {
     }
     
     renderItem(item) {
-        const hasChildren = item.children && item.children.length > 0;
+        // Limitar a 7 filhos por tarefa pai
+        const limitedChildren = item.children && item.children.length > 0 ? item.children.slice(0, 7) : [];
+        const hasChildren = limitedChildren.length > 0;
         const isExpanded = this.expandedItems.has(item.id);
         const hasComment = item.comment && item.comment.trim().length > 0;
         const progressLabel = item.progress_label || null;
@@ -118,12 +132,15 @@ class ChecklistRenderer {
                              id="progress-bar-${item.id}"></div>
                     ` : ''}
                     
-                    <div class="d-flex align-items-center gap-2 py-2 px-3 hover-bg">
+                    <div class="d-flex align-items-center gap-2 py-2 px-3 hover-bg" 
+                         style="cursor: pointer;"
+                         onclick="if(event.target.closest('.btn-expand, .btn-comment-toggle, .checklist-checkbox')) return; if(window.checklistRenderer && ${hasChildren}) { window.checklistRenderer.toggleExpand(${item.id}); }">
                         ${hasChildren ? `
                             <button class="btn-icon btn-expand p-1 border-0 bg-transparent" 
                                     data-item-id="${item.id}" 
-                                    title="${isExpanded ? 'Colapsar' : 'Expandir'}">
-                                <i class="bi ${isExpanded ? 'bi-chevron-down' : 'bi-chevron-right'} text-muted"></i>
+                                    title="${isExpanded ? 'Colapsar' : 'Expandir'}"
+                                    style="cursor: pointer; z-index: 10; position: relative;"
+                                <i class="bi ${isExpanded ? 'bi-chevron-down' : 'bi-chevron-right'} text-muted" style="pointer-events: none;"></i>
                             </button>
                         ` : '<span class="btn-icon-placeholder" style="width: 24px;"></span>'}
                         
@@ -136,11 +153,10 @@ class ChecklistRenderer {
                         
                         <i class="bi ${iconClass} ${iconColor}" style="font-size: 1.1rem;"></i>
                         
-                        <label class="checklist-item-title flex-grow-1 mb-0 cursor-pointer" 
-                               for="checklist-${item.id}"
+                        <span class="checklist-item-title flex-grow-1 mb-0" 
                                style="${item.completed ? 'text-decoration: line-through; color: #6c757d;' : ''}">
                             ${this.escapeHtml(item.title)}
-                        </label>
+                        </span>
                         
                         ${progressLabel ? `
                             <span class="checklist-progress-badge badge bg-light text-dark ms-2" style="font-size: 0.75rem;">
@@ -165,26 +181,47 @@ class ChecklistRenderer {
                 ${hasChildren ? `
                     <div class="checklist-item-children ${isExpanded ? '' : 'd-none'}" 
                          data-item-id="${item.id}"
-                         style="transition: all 0.3s ease;">
-                        ${this.renderTree(item.children)}
+                         style="transition: all 0.3s ease; ${isExpanded ? 'display: block;' : 'display: none;'}">
+                        ${this.renderTree(limitedChildren)}
+                        ${item.children && item.children.length > 7 ? `
+                            <div class="text-muted text-center py-2 px-3 small" style="font-style: italic;">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Limite de 7 tarefas por camada. ${item.children.length - 7} tarefa(s) não exibida(s).
+                            </div>
+                        ` : ''}
                     </div>
                 ` : ''}
                 
                 <!-- Seção de Comentários (Collapse Bootstrap) -->
                 <div class="checklist-comments-section collapse" id="comments-${item.id}">
                     <div class="checklist-comment-form p-3 bg-light border-top">
-                        <label class="form-label small text-muted mb-1">Comentários / Observações</label>
+                        <label class="form-label small text-muted mb-1">Adicionar Comentário</label>
                         <textarea class="form-control form-control-sm" 
                                   id="comment-input-${item.id}" 
                                   rows="2"
-                                  placeholder="Escreva uma observação para este item...">${item.comment || ''}</textarea>
-                        <div class="d-flex justify-content-end gap-2 mt-2">
-                            <button class="btn btn-sm btn-secondary btn-cancel-comment" data-item-id="${item.id}">
-                                Cancelar
-                            </button>
-                            <button class="btn btn-sm btn-primary btn-save-comment" data-item-id="${item.id}">
-                                <i class="bi bi-send me-1"></i>Salvar Nota
-                            </button>
+                                  placeholder="Escreva um comentário para esta tarefa..."></textarea>
+                        <div class="d-flex align-items-center justify-content-between gap-2 mt-2">
+                            <select class="form-select form-select-sm" id="comment-visibility-${item.id}" style="max-width: 140px;">
+                                <option value="interno" selected>Interno</option>
+                                <option value="externo">Externo</option>
+                            </select>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-secondary btn-cancel-comment" data-item-id="${item.id}">
+                                    Cancelar
+                                </button>
+                                <button class="btn btn-sm btn-primary btn-save-comment" data-item-id="${item.id}">
+                                    <i class="bi bi-send me-1"></i>Salvar
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Histórico de Comentários -->
+                        <div class="comments-history mt-3" id="comments-history-${item.id}">
+                            <div class="text-center py-2">
+                                <div class="spinner-border spinner-border-sm text-secondary" role="status">
+                                    <span class="visually-hidden">Carregando...</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -209,12 +246,16 @@ class ChecklistRenderer {
     }
     
     attachEventListeners() {
-        // Toggle expand/collapse
-        this.container.addEventListener('click', (e) => {
-            if (e.target.closest('.btn-expand')) {
-                const button = e.target.closest('.btn-expand');
+        // Toggle expand/collapse - usar delegation no documento
+        document.addEventListener('click', (e) => {
+            const button = e.target.closest('.btn-expand');
+            if (button && this.container.contains(button)) {
+                e.preventDefault();
+                e.stopPropagation();
                 const itemId = parseInt(button.dataset.itemId);
-                this.toggleExpand(itemId);
+                if (!isNaN(itemId)) {
+                    this.toggleExpand(itemId);
+                }
             }
         });
         
@@ -249,11 +290,51 @@ class ChecklistRenderer {
                 const itemId = parseInt(button.dataset.itemId);
                 this.cancelComment(itemId);
             }
+            
+            // Enviar email de comentário
+            if (e.target.closest('.btn-send-email-comment')) {
+                const button = e.target.closest('.btn-send-email-comment');
+                const comentarioId = parseInt(button.dataset.commentId);
+                this.sendCommentEmail(comentarioId);
+            }
+            
+            // Excluir comentário
+            if (e.target.closest('.btn-delete-comment')) {
+                const button = e.target.closest('.btn-delete-comment');
+                const comentarioId = parseInt(button.dataset.commentId);
+                const itemId = parseInt(button.dataset.itemId);
+                this.deleteComment(comentarioId, itemId);
+            }
         });
     }
     
+    updateElementState(children, button, itemId) {
+        const isExpanded = this.expandedItems.has(itemId);
+        if (isExpanded) {
+            children.classList.remove('d-none');
+            children.style.display = 'block';
+            if (button) {
+                const icon = button.querySelector('i');
+                if (icon) {
+                    icon.className = 'bi bi-chevron-down text-muted';
+                }
+                button.setAttribute('title', 'Colapsar');
+            }
+        } else {
+            children.classList.add('d-none');
+            if (button) {
+                const icon = button.querySelector('i');
+                if (icon) {
+                    icon.className = 'bi bi-chevron-right text-muted';
+                }
+                button.setAttribute('title', 'Expandir');
+            }
+        }
+    }
+    
     toggleExpand(itemId, animate = true) {
-        if (this.expandedItems.has(itemId)) {
+        const wasExpanded = this.expandedItems.has(itemId);
+        if (wasExpanded) {
             this.expandedItems.delete(itemId);
         } else {
             this.expandedItems.add(itemId);
@@ -263,24 +344,11 @@ class ChecklistRenderer {
     
     updateExpandedState(itemId = null, animate = true) {
         if (itemId) {
-            // Atualizar apenas o item específico (melhor performance)
             const children = this.container.querySelector(`.checklist-item-children[data-item-id="${itemId}"]`);
             const button = this.container.querySelector(`.btn-expand[data-item-id="${itemId}"]`);
             
             if (children) {
-                if (this.expandedItems.has(itemId)) {
-                    children.classList.remove('d-none');
-                    if (button) {
-                        const icon = button.querySelector('i');
-                        if (icon) icon.className = 'bi bi-chevron-down text-muted';
-                    }
-                } else {
-                    children.classList.add('d-none');
-                    if (button) {
-                        const icon = button.querySelector('i');
-                        if (icon) icon.className = 'bi bi-chevron-right text-muted';
-                    }
-                }
+                this.updateElementState(children, button, itemId);
             }
         } else {
             // Atualizar todos (apenas na inicialização)
@@ -288,11 +356,7 @@ class ChecklistRenderer {
                 const children = this.container.querySelector(`.checklist-item-children[data-item-id="${id}"]`);
                 const button = this.container.querySelector(`.btn-expand[data-item-id="${id}"]`);
                 if (children) {
-                    children.classList.remove('d-none');
-                    if (button) {
-                        const icon = button.querySelector('i');
-                        if (icon) icon.className = 'bi bi-chevron-down text-muted';
-                    }
+                    this.updateElementState(children, button, id);
                 }
             });
         }
@@ -461,6 +525,9 @@ class ChecklistRenderer {
         const commentsSection = this.container.querySelector(`#comments-${itemId}`);
         if (!commentsSection) return;
         
+        // Verificar se está abrindo ou fechando
+        const isOpening = !commentsSection.classList.contains('show');
+        
         // Usar Bootstrap Collapse
         if (window.bootstrap && bootstrap.Collapse) {
             const bsCollapse = new bootstrap.Collapse(commentsSection, {
@@ -470,13 +537,96 @@ class ChecklistRenderer {
             // Fallback sem Bootstrap
             commentsSection.classList.toggle('show');
         }
+        
+        // Se está abrindo, carregar histórico de comentários
+        if (isOpening) {
+            this.loadComments(itemId);
+        }
+    }
+    
+    async loadComments(itemId) {
+        const historyContainer = this.container.querySelector(`#comments-history-${itemId}`);
+        if (!historyContainer) return;
+        
+        try {
+            const response = await fetch(`/api/checklist/comments/${itemId}`);
+            const data = await response.json();
+            
+            if (data.ok) {
+                this.renderCommentsHistory(itemId, data.comentarios, data.email_responsavel);
+            } else {
+                historyContainer.innerHTML = `<div class="text-danger small">${data.error || 'Erro ao carregar comentários'}</div>`;
+            }
+        } catch (error) {
+            console.error('Erro ao carregar comentários:', error);
+            historyContainer.innerHTML = '<div class="text-danger small">Erro ao carregar comentários</div>';
+        }
+    }
+    
+    renderCommentsHistory(itemId, comentarios, emailResponsavel) {
+        const historyContainer = this.container.querySelector(`#comments-history-${itemId}`);
+        if (!historyContainer) return;
+        
+        if (!comentarios || comentarios.length === 0) {
+            historyContainer.innerHTML = '<div class="text-muted small fst-italic py-2">Nenhum comentário ainda.</div>';
+            return;
+        }
+        
+        const html = comentarios.map(c => {
+            const dataFormatada = c.data_criacao ? new Date(c.data_criacao).toLocaleString('pt-BR') : '';
+            const visibilidadeClass = c.visibilidade === 'interno' ? 'bg-secondary' : 'bg-info text-dark';
+            const isExterno = c.visibilidade === 'externo';
+            const temEmailResponsavel = emailResponsavel && emailResponsavel.trim() !== '';
+            
+            return `
+                <div class="comment-item border rounded p-2 mb-2 bg-white" data-comment-id="${c.id}">
+                    <div class="d-flex justify-content-between align-items-start mb-1">
+                        <div class="d-flex align-items-center gap-2">
+                            <strong class="small"><i class="bi bi-person-fill me-1"></i>${this.escapeHtml(c.usuario_nome || c.usuario_cs)}</strong>
+                            <span class="badge rounded-pill small ${visibilidadeClass}">${c.visibilidade}</span>
+                        </div>
+                        <small class="text-muted">${dataFormatada}</small>
+                    </div>
+                    <p class="mb-1 small">${this.escapeHtml(c.texto)}</p>
+                    ${c.imagem_url ? `<a href="${c.imagem_url}" target="_blank"><img src="${c.imagem_url}" class="img-fluid rounded mt-1" style="max-height: 100px;"></a>` : ''}
+                    <div class="d-flex gap-2 mt-1">
+                        ${isExterno && temEmailResponsavel ? `
+                            <button class="btn btn-sm btn-link text-primary p-0 small btn-send-email-comment" 
+                                    data-comment-id="${c.id}" 
+                                    title="Enviar para ${emailResponsavel}">
+                                <i class="bi bi-envelope me-1"></i>Enviar email ao responsável
+                            </button>
+                        ` : ''}
+                        <button class="btn btn-sm btn-link text-danger p-0 small btn-delete-comment" 
+                                data-comment-id="${c.id}"
+                                data-item-id="${itemId}">
+                            <i class="bi bi-trash me-1"></i>Excluir
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        historyContainer.innerHTML = `
+            <label class="form-label small text-muted mb-2">Histórico de Comentários</label>
+            <div class="comments-list" style="max-height: 250px; overflow-y: auto;">
+                ${html}
+            </div>
+        `;
     }
     
     async saveComment(itemId) {
         const textarea = this.container.querySelector(`#comment-input-${itemId}`);
+        const visibilitySelect = this.container.querySelector(`#comment-visibility-${itemId}`);
         if (!textarea) return;
         
-        const comment = textarea.value.trim();
+        const texto = textarea.value.trim();
+        const visibilidade = visibilitySelect ? visibilitySelect.value : 'interno';
+        
+        if (!texto) {
+            alert('O texto do comentário é obrigatório');
+            return;
+        }
         
         try {
             const response = await fetch(`/api/checklist/comment/${itemId}`, {
@@ -484,47 +634,89 @@ class ChecklistRenderer {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ comment })
+                body: JSON.stringify({ texto, visibilidade })
             });
             
             const data = await response.json();
             
             if (data.ok) {
-                // Atualizar dados locais
-                if (this.flatData[itemId]) {
-                    this.flatData[itemId].comment = comment;
-                }
+                // Limpar textarea
+                textarea.value = '';
+                if (visibilitySelect) visibilitySelect.value = 'interno';
                 
-                // Atualizar ícone de comentário (sem re-render completo)
+                // Atualizar ícone de comentário para indicar que tem comentários
                 const commentButton = this.container.querySelector(`.btn-comment-toggle[data-item-id="${itemId}"]`);
                 if (commentButton) {
                     const icon = commentButton.querySelector('i');
                     if (icon) {
-                        if (comment) {
-                            icon.className = 'bi bi-chat-left-text text-primary position-relative';
-                            // Adicionar indicador se não tiver
-                            if (!icon.querySelector('.position-absolute')) {
-                                icon.innerHTML += '<span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle" style="font-size: 0.4rem;"></span>';
-                            }
-                        } else {
-                            icon.className = 'bi bi-chat-left-text text-muted';
-                            const indicator = icon.querySelector('.position-absolute');
-                            if (indicator) indicator.remove();
+                        icon.className = 'bi bi-chat-left-text text-primary position-relative';
+                        if (!icon.querySelector('.position-absolute')) {
+                            icon.innerHTML += '<span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle" style="font-size: 0.4rem;"></span>';
                         }
                     }
                 }
                 
-                // Colapsar seção de comentários
-                const commentsSection = this.container.querySelector(`#comments-${itemId}`);
-                if (commentsSection && window.bootstrap && bootstrap.Collapse) {
-                    const bsCollapse = bootstrap.Collapse.getInstance(commentsSection);
-                    if (bsCollapse) bsCollapse.hide();
-                }
+                // Recarregar histórico de comentários
+                await this.loadComments(itemId);
+                
             } else {
                 throw new Error(data.error || 'Erro ao salvar comentário');
             }
         } catch (error) {
             console.error('Erro ao salvar comentário:', error);
+            alert(`Erro: ${error.message}`);
+        }
+    }
+    
+    async sendCommentEmail(comentarioId) {
+        if (!confirm('Deseja enviar este comentário por e-mail ao responsável?')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/checklist/comment/${comentarioId}/email`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.ok) {
+                alert('Email enviado com sucesso!');
+            } else {
+                throw new Error(data.error || 'Erro ao enviar email');
+            }
+        } catch (error) {
+            console.error('Erro ao enviar email:', error);
+            alert(`Erro: ${error.message}`);
+        }
+    }
+    
+    async deleteComment(comentarioId, itemId) {
+        if (!confirm('Deseja excluir este comentário?')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/checklist/comment/${comentarioId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.ok) {
+                // Recarregar histórico
+                await this.loadComments(itemId);
+            } else {
+                throw new Error(data.error || 'Erro ao excluir comentário');
+            }
+        } catch (error) {
+            console.error('Erro ao excluir comentário:', error);
             alert(`Erro: ${error.message}`);
         }
     }
@@ -602,6 +794,19 @@ class ChecklistRenderer {
                         progressBar.classList.remove('bg-success');
                         progressBar.classList.add('bg-primary');
                     }
+                }
+                
+                // Atualizar também o progresso geral da página (Progresso Geral)
+                const progressoValor = document.getElementById('progresso-valor');
+                const progressTotalBar = document.getElementById('progress-total-bar');
+                
+                if (progressoValor) {
+                    progressoValor.textContent = `${progress}%`;
+                }
+                
+                if (progressTotalBar) {
+                    progressTotalBar.style.width = `${progress}%`;
+                    progressTotalBar.setAttribute('aria-valuenow', progress);
                 }
                 
                 // Atualizar progresso de cada item com filhos

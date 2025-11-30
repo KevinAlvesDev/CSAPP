@@ -1,10 +1,8 @@
-
-
-from flask import Blueprint, request, jsonify, render_template, redirect, url_for, flash, session, g, current_app
+from flask import Blueprint, request, jsonify, render_template, redirect, url_for, flash, g
 from functools import wraps
 from ..domain import planos_sucesso_service
 from ..__init__ import csrf
-from ..common.exceptions import ValidationError, DatabaseError
+from ..common.exceptions import ValidationError
 from ..blueprints.auth import login_required
 from ..config.logging_config import planos_logger
 
@@ -27,14 +25,14 @@ def requires_permission(allowed_roles):
                     return jsonify({'error': 'Não autenticado'}), 401
                 flash('Você precisa estar logado para acessar esta página.', 'error')
                 return redirect(url_for('auth.login'))
-            
+
             perfil = user.get('perfil_acesso', '').lower()
             if perfil not in allowed_roles:
                 if request.is_json:
                     return jsonify({'error': 'Permissão negada'}), 403
                 flash('Você não tem permissão para acessar esta funcionalidade.', 'error')
                 return redirect(url_for('main.dashboard'))
-            
+
             return f(*args, **kwargs)
         return decorated_function
     return decorator
@@ -46,20 +44,17 @@ def listar_planos():
     try:
         ativo_apenas = request.args.get('ativo', 'true').lower() == 'true'
         busca = request.args.get('busca', '').strip()
-        
+
         planos = planos_sucesso_service.listar_planos_sucesso(
             ativo_apenas=ativo_apenas,
             busca=busca if busca else None
         )
-        
-        user = get_current_user()
-        perfil = user.get('perfil_acesso', '').lower() if user else ''
+
         pode_editar = True
         pode_excluir = True
-        
-        # Verifica se é uma requisição que espera JSON (via is_json ou header Accept)
+
         wants_json = request.is_json or request.headers.get('Accept', '').startswith('application/json')
-        
+
         if wants_json:
             return jsonify({
                 'success': True,
@@ -69,7 +64,7 @@ def listar_planos():
                     'pode_excluir': pode_excluir
                 }
             }), 200
-        
+
         return render_template(
             'planos_sucesso.html',
             planos=planos,
@@ -78,7 +73,7 @@ def listar_planos():
             ativo_apenas=ativo_apenas,
             busca=busca
         )
-    
+
     except Exception as e:
         planos_logger.error(f"Erro ao listar planos: {str(e)}", exc_info=True)
         if request.is_json:
@@ -92,21 +87,18 @@ def listar_planos():
 def obter_plano(plano_id):
     try:
         plano = planos_sucesso_service.obter_plano_completo(plano_id)
-        
-        # Verifica se é uma requisição que espera JSON
+
         wants_json = request.is_json or request.headers.get('Accept', '').startswith('application/json')
-        
+
         if not plano:
             if wants_json:
                 return jsonify({'error': 'Plano não encontrado'}), 404
             flash('Plano não encontrado.', 'error')
             return redirect(url_for('planos.listar_planos'))
-        
+
         if wants_json:
             return jsonify({'success': True, 'plano': plano}), 200
-        
-        user = get_current_user()
-        perfil = user.get('perfil_acesso', '').lower() if user else ''
+
         pode_editar = True
 
         default_mode = 'editar' if pode_editar else 'visualizar'
@@ -120,7 +112,7 @@ def obter_plano(plano_id):
             modo=modo_req,
             pode_editar=pode_editar
         )
-    
+
     except Exception as e:
         planos_logger.error(f"Erro ao obter plano {plano_id}: {str(e)}", exc_info=True)
         wants_json = request.is_json or request.headers.get('Accept', '').startswith('application/json')
@@ -142,13 +134,12 @@ def novo_plano():
 def criar_plano():
     try:
         data = request.get_json() if request.is_json else request.form.to_dict()
-        
+
         nome = data.get('nome', '').strip()
         descricao = data.get('descricao', '').strip()
         estrutura = data.get('estrutura', {})
         dias_duracao_str = data.get('dias_duracao', '')
-        
-        # Converter dias_duracao para int se fornecido
+
         dias_duracao = None
         if dias_duracao_str:
             try:
@@ -157,18 +148,17 @@ def criar_plano():
                     raise ValidationError("Dias de duração deve ser entre 1 e 365")
             except ValueError:
                 raise ValidationError("Dias de duração deve ser um número válido")
-        
+
         if not nome:
             raise ValidationError("Nome do plano é obrigatório")
-        
+
         if isinstance(estrutura, str):
             import json
             estrutura = json.loads(estrutura)
-        
+
         user = get_current_user()
         criado_por = user.get('usuario') if user else 'sistema'
-        
-        # Usar nova função que usa checklist_items (hierarquia infinita)
+
         plano_id = planos_sucesso_service.criar_plano_sucesso_checklist(
             nome=nome,
             descricao=descricao,
@@ -176,23 +166,23 @@ def criar_plano():
             estrutura=estrutura,
             dias_duracao=dias_duracao
         )
-        
+
         if request.is_json:
             return jsonify({
                 'success': True,
                 'message': 'Plano criado com sucesso',
                 'plano_id': plano_id
             }), 201
-        
+
         flash(f'Plano "{nome}" criado com sucesso!', 'success')
         return redirect(url_for('planos.obter_plano', plano_id=plano_id))
-    
+
     except ValidationError as e:
         if request.is_json:
             return jsonify({'error': str(e)}), 400
         flash(str(e), 'error')
         return redirect(url_for('planos.novo_plano'))
-    
+
     except Exception as e:
         planos_logger.error(f"Erro ao criar plano: {str(e)}", exc_info=True)
         if request.is_json:
@@ -206,36 +196,32 @@ def criar_plano():
 @csrf.exempt
 def atualizar_plano(plano_id):
     try:
-        # Para JSON, usa get_json(); para form, precisamos tratar o checkbox corretamente
         if request.is_json:
             data = request.get_json()
         else:
             data = request.form.to_dict()
-            # Tratar checkbox 'ativo' - pegar todos os valores com getlist
             ativo_values = request.form.getlist('ativo')
             if ativo_values:
-                # Se tem 'true' ou 'on' na lista, está ativo
                 data['ativo'] = 'true' in ativo_values or 'on' in ativo_values
             else:
                 data['ativo'] = False
-        
+
         if request.method == 'POST' and '_method' in data:
             if data['_method'].upper() != 'PUT':
                 return jsonify({'error': 'Método não permitido'}), 405
-        
+
         dados_atualizacao = {}
-        
+
         if 'nome' in data:
             dados_atualizacao['nome'] = data['nome']
-        
+
         if 'descricao' in data:
             dados_atualizacao['descricao'] = data['descricao']
-        
+
         if 'ativo' in data:
-            # Agora 'ativo' já vem tratado corretamente
             ativo_val = data.get('ativo')
             dados_atualizacao['ativo'] = ativo_val in [True, 'true', '1', 1, 'on']
-        
+
         if 'dias_duracao' in data:
             dias_val = data['dias_duracao']
             if dias_val:
@@ -248,24 +234,24 @@ def atualizar_plano(plano_id):
                     raise ValidationError("Dias de duração deve ser um número válido")
             else:
                 dados_atualizacao['dias_duracao'] = None
-        
-        sucesso = planos_sucesso_service.atualizar_plano_sucesso(plano_id, dados_atualizacao)
-        
+
+        planos_sucesso_service.atualizar_plano_sucesso(plano_id, dados_atualizacao)
+
         if request.is_json:
             return jsonify({
                 'success': True,
                 'message': 'Plano atualizado com sucesso'
             }), 200
-        
+
         flash('Plano atualizado com sucesso!', 'success')
         return redirect(url_for('planos.obter_plano', plano_id=plano_id))
-    
+
     except ValidationError as e:
         if request.is_json:
             return jsonify({'error': str(e)}), 400
         flash(str(e), 'error')
         return redirect(url_for('planos.obter_plano', plano_id=plano_id))
-    
+
     except Exception as e:
         planos_logger.error(f"Erro ao atualizar plano {plano_id}: {str(e)}", exc_info=True)
         if request.is_json:
@@ -278,23 +264,23 @@ def atualizar_plano(plano_id):
 @login_required
 def excluir_plano(plano_id):
     try:
-        sucesso = planos_sucesso_service.excluir_plano_sucesso(plano_id)
-        
+        planos_sucesso_service.excluir_plano_sucesso(plano_id)
+
         if request.is_json:
             return jsonify({
                 'success': True,
                 'message': 'Plano excluído com sucesso'
             }), 200
-        
+
         flash('Plano excluído com sucesso!', 'success')
         return redirect(url_for('planos.listar_planos'))
-    
+
     except ValidationError as e:
         if request.is_json:
             return jsonify({'error': str(e)}), 400
         flash(str(e), 'error')
         return redirect(url_for('planos.listar_planos'))
-    
+
     except Exception as e:
         if request.is_json:
             return jsonify({'error': str(e)}), 500
@@ -308,17 +294,17 @@ def preview_plano(plano_id):
     try:
         plano = planos_sucesso_service.obter_plano_completo(plano_id)
         wants_json = request.is_json or request.headers.get('Accept', '').startswith('application/json')
-        
+
         if not plano:
             if wants_json:
                 return jsonify({'error': 'Plano não encontrado'}), 404
             return render_template('partials/_plano_preview.html', plano=None)
-        
+
         if wants_json:
             return jsonify({'success': True, 'plano': plano}), 200
-        
+
         return render_template('partials/_plano_preview.html', plano=plano)
-    
+
     except Exception as e:
         wants_json = request.is_json or request.headers.get('Accept', '').startswith('application/json')
         if wants_json:
@@ -333,37 +319,36 @@ def aplicar_plano_implantacao(implantacao_id):
     try:
         data = request.get_json() if request.is_json else request.form.to_dict()
         plano_id = data.get('plano_id')
-        
+
         if not plano_id:
             raise ValidationError("ID do plano é obrigatório")
-        
+
         plano_id = int(plano_id)
-        
+
         user = get_current_user()
         usuario = user.get('usuario') if user else 'sistema'
-        
-        # Usar nova função que usa checklist_items (hierarquia infinita)
-        sucesso = planos_sucesso_service.aplicar_plano_a_implantacao_checklist(
+
+        planos_sucesso_service.aplicar_plano_a_implantacao_checklist(
             implantacao_id=implantacao_id,
             plano_id=plano_id,
             usuario=usuario
         )
-        
+
         if request.is_json:
             return jsonify({
                 'success': True,
                 'message': 'Plano aplicado com sucesso à implantação'
             }), 200
-        
+
         flash('Plano aplicado com sucesso!', 'success')
         return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
-    
+
     except ValidationError as e:
         if request.is_json:
             return jsonify({'error': str(e)}), 400
         flash(str(e), 'error')
         return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
-    
+
     except Exception as e:
         planos_logger.error(f"Erro ao aplicar plano {plano_id} à implantação {implantacao_id}: {str(e)}", exc_info=True)
         if request.is_json:
@@ -378,15 +363,15 @@ def obter_plano_implantacao(implantacao_id):
     try:
         plano = planos_sucesso_service.obter_plano_da_implantacao(implantacao_id)
         wants_json = request.is_json or request.headers.get('Accept', '').startswith('application/json')
-        
+
         if wants_json:
             return jsonify({
                 'success': True,
                 'plano': plano
             }), 200
-        
+
         return render_template('partials/_plano_preview.html', plano=plano)
-    
+
     except Exception as e:
         wants_json = request.is_json or request.headers.get('Accept', '').startswith('application/json')
         if wants_json:
@@ -400,27 +385,27 @@ def remover_plano_implantacao(implantacao_id):
     try:
         user = get_current_user()
         usuario = user.get('usuario') if user else 'sistema'
-        
-        sucesso = planos_sucesso_service.remover_plano_de_implantacao(
+
+        planos_sucesso_service.remover_plano_de_implantacao(
             implantacao_id=implantacao_id,
             usuario=usuario
         )
-        
+
         if request.is_json:
             return jsonify({
                 'success': True,
                 'message': 'Plano removido da implantação'
             }), 200
-        
+
         flash('Plano removido da implantação!', 'success')
         return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
-    
+
     except ValidationError as e:
         if request.is_json:
             return jsonify({'error': str(e)}), 400
         flash(str(e), 'error')
         return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
-    
+
     except Exception as e:
         if request.is_json:
             return jsonify({'error': str(e)}), 500

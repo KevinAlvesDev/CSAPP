@@ -1,3 +1,7 @@
+"""
+Definições de tarefas e checklists para o sistema de onboarding.
+"""
+
 MODULO_OBRIGATORIO = "Obrigações para finalização"
 CHECKLIST_OBRIGATORIO_ITEMS = [
     "Fotos da unidade",

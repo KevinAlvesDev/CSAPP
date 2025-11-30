@@ -6,7 +6,6 @@
 <div class="container-fluid p-0">
     <header class="header-bg p-3 d-flex align-items-center position-relative rounded-3">
         <h1 class="main-title mb-0 fs-4 w-100 text-center">CS ONBOARDING</h1>
-
         <div class="d-flex align-items-center position-absolute end-0 top-50 translate-middle-y">
             {% if g.perfil and g.perfil.perfil_acesso in PERFIS_COM_CRIACAO %}
             <button class="btn btn-sm btn-primary me-2" data-bs-toggle="modal" data-bs-target="#novaImplantacaoModal">
@@ -55,13 +54,8 @@
             </div>
             <div class="card p-3 text-center">
                 <h6 class="text-secondary">Em Andamento</h6>
-                <h4 class="mb-0 text-primary">{{ m.impl_andamento_total | default(0) }}</h4>
+                <h4 class="mb-0 text-primary">{{ implantacoes_andamento|length if implantacoes_andamento else (m.impl_andamento_total | default(0)) }}</h4>
                 <div class="text-muted small">R$ {{ "%.2f"|format(metrics.total_valor_andamento|float) if metrics.total_valor_andamento else '0.00' }}</div>
-            </div>
-            <div class="card p-3 text-center">
-                <h6 class="text-secondary">Atrasadas (> 25d)</h6>
-                <h4 class="mb-0 text-danger">{{ m.implantacoes_atrasadas | default(0) }}</h4>
-                <div class="text-muted small">R$ {{ "%.2f"|format(metrics.total_valor_atrasadas|float) if metrics.total_valor_atrasadas else '0.00' }}</div>
             </div>
             <div class="card p-3 text-center">
                 <h6 class="text-secondary">Paradas</h6>
@@ -105,7 +99,6 @@
                 <ul class="nav nav-pills card-header-pills" id="myTab" role="tablist">
                     <li class="nav-item" role="presentation"><button class="nav-link active" id="novas-tab" data-bs-toggle="tab" data-bs-target="#novas" type="button" role="tab">Novas</button></li>
                     <li class="nav-item" role="presentation"><button class="nav-link" id="andamento-tab" data-bs-toggle="tab" data-bs-target="#andamento" type="button" role="tab">Em Andamento</button></li>
-                    <li class="nav-item" role="presentation"><button class="nav-link" id="atrasadas-tab" data-bs-toggle="tab" data-bs-target="#atrasadas" type="button" role="tab">Atrasadas</button></li>
                     <li class="nav-item" role="presentation"><button class="nav-link" id="paradas-tab" data-bs-toggle="tab" data-bs-target="#paradas" type="button" role="tab">Paradas</button></li>
                     <li class="nav-item" role="presentation"><button class="nav-link" id="futuras-tab" data-bs-toggle="tab" data-bs-target="#futuras" type="button" role="tab">Futuras</button></li>
                     <li class="nav-item" role="presentation"><button class="nav-link" id="sem-previsao-tab" data-bs-toggle="tab" data-bs-target="#sem_previsao" type="button" role="tab">Sem previsão</button></li>
@@ -282,7 +275,7 @@
                     
                     <div class="tab-pane fade" id="modulos" role="tabpanel" aria-labelledby="modulos-tab">
                         <h2 class="h5 mb-3">Módulos em Implantação (todos status)</h2>
-                        {% set ativos = (implantacoes_novas or []) + (implantacoes_andamento or []) + (implantacoes_atrasadas or []) + (implantacoes_paradas or []) + (implantacoes_futuras or []) %}
+                        {% set ativos = (implantacoes_novas or []) + (implantacoes_andamento or []) + (implantacoes_paradas or []) + (implantacoes_futuras or []) %}
                         {% set ns = namespace(has_modulos=false) %}
                         <div class="table-responsive">
                             <table class="table table-hover align-middle table-sm">
@@ -349,8 +342,6 @@
                                                         <span class="badge bg-dark">Nova</span>
                                                     {% elif impl.status == 'andamento' %}
                                                         <span class="badge bg-warning text-dark">Em Andamento</span>
-                                                    {% elif impl.status == 'atrasada' %}
-                                                        <span class="badge bg-danger">Atrasada</span>
                                                     {% elif impl.status == 'parada' %}
                                                         <span class="badge bg-danger">Parada</span>
                                                     {% elif impl.status == 'futura' %}
@@ -438,43 +429,6 @@
                         <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or impl.usuario_cs }}</td>
                         <td><span class="badge bg-info text-dark">{{ 'Módulo' if impl.tipo == 'modulo' else 'Completa' }}</span></td>
                         <td class="text-nowrap"> <span class="badge bg-secondary text-dark js-dias-badge" data-impl-id="{{ impl.id }}" data-start-iso="{{ impl.data_inicio_efetivo_iso }}" data-status="andamento">{{ impl.dias_passados | int }} dias</span> </td> <td> <div class="progress" style="height: 20px;"> <div class="progress-bar progress-bar-striped bg-warning text-dark js-progress-bar" data-impl-id="{{ impl.id }}" data-progress-url="{{ url_for('api.progresso_implantacao', impl_id=impl.id) }}" role="progressbar" style="width: {{ impl.progresso }}%;" aria-valuenow="{{ impl.progresso }}">{{ impl.progresso }}%</div> </div> </td> <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_atribuido|float) if impl.valor_atribuido else 'N/A' }}</td> <td> <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver Detalhes</a> </td> </tr> {% endfor %} </tbody> </table> </div> {% endif %}
-                    </div>
-        
-                    <div class="tab-pane fade" id="atrasadas" role="tabpanel" aria-labelledby="atrasadas-tab">
-                        <h2 class="h5 mb-3">Implantações Atrasadas (> 25 dias)</h2>
-                        {% if not implantacoes_atrasadas %} <div class="alert alert-info text-center" role="alert"> Nenhuma implantação atrasada. </div>
-                        {% else %} <div class="table-responsive"> <table class="table table-hover align-middle"> <thead> <tr> 
-                            <th scope="col">Empresa</th> 
-                            <th scope="col">Implantador</th>
-                            <th scope="col">Tipo</th>
-                            <th scope="col">Dias</th> <th scope="col">Status</th> <th scope="col" style="width: 20%;">Progresso</th> <th scope="col">Valor (Total: R$ {{ "%.2f"|format(metrics.total_valor_atrasadas|float) if metrics.total_valor_atrasadas else '0.00' }})</th> <th scope="col">Ações</th> </tr> </thead> <tbody>
-                        {% for impl in implantacoes_atrasadas %} <tr> <td class="text-truncate" style="max-width: 200px;">
-                            <a href="#" class="btn-edit-empresa fw-bold text-decoration-none" data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa"
-                               data-id="{{ impl.id }}" data-nome="{{ impl.nome_empresa }}"
-                               data-responsavel="{{ impl.responsavel_cliente | default('') }}" data-cargo="{{ impl.cargo_responsavel | default('') }}"
-                               data-telefone="{{ impl.telefone_responsavel | default('') }}" data-email="{{ impl.email_responsavel | default('') }}"
-                               data-inicio-implantacao="{{ impl.data_criacao_iso | default('') }}"
-                               data-inicio-efetivo-iso="{{ impl.data_inicio_efetivo_iso | default('') }}"
-                               data-inicio-producao="{{ impl.data_inicio_producao_iso | default('') }}"
-                               data-final-implantacao="{{ impl.data_final_implantacao_iso | default('') }}"
-                               data-chave-oamd="{{ impl.chave_oamd | default('') }}" data-catraca="{{ impl.catraca | default('') }}" data-facial="{{ impl.facial | default('') }}"
-                               data-nivel-receita="{{ impl.nivel_receita | default('') }}" data-valor-atribuido="{{ impl.valor_atribuido | default('') }}"
-                               data-id-favorecido="{{ impl.id_favorecido | default('') }}" data-tela-apoio-link="{{ impl.tela_apoio_link | default('') }}"
-                               data-resp-estrategico-nome="{{ impl.resp_estrategico_nome | default('') }}" data-resp-onb-nome="{{ impl.resp_onb_nome | default('') }}"
-                               data-resp-estrategico-obs="{{ impl.resp_estrategico_obs | default('') }}" data-contatos="{{ impl.contatos | default('') }}"
-                               data-seguimento="{{ impl.seguimento | default('') }}" data-tipos-planos="{{ impl.tipos_planos | default('') }}"
-                               data-modalidades="{{ impl.modalidades | default('') }}" data-horarios-func="{{ impl.horarios_func | default('') }}"
-                               data-formas-pagamento="{{ impl.formas_pagamento | default('') }}" data-diaria="{{ impl.diaria | default('') }}"
-                               data-freepass="{{ impl.freepass | default('') }}" data-alunos-ativos="{{ impl.alunos_ativos | default(0) }}"
-                               data-sistema-anterior="{{ impl.sistema_anterior | default('') }}" data-importacao="{{ impl.importacao | default('') }}"
-                               data-recorrencia-usa="{{ impl.recorrencia_usa | default('') }}" data-boleto="{{ impl.boleto | default('') }}"
-                               data-nota-fiscal="{{ impl.nota_fiscal | default('') }}">
-                                 {{ impl.nome_empresa }}
-                             </a>
-                        </td>
-                        <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or impl.usuario_cs }}</td>
-                        <td><span class="badge bg-info text-dark">{{ 'Módulo' if impl.tipo == 'modulo' else 'Completa' }}</span></td>
-                        <td><span class="badge bg-danger js-dias-badge" data-impl-id="{{ impl.id }}" data-start-iso="{{ impl.data_inicio_efetivo_iso }}" data-status="atrasada">{{ impl.dias_passados | int }} dias</span></td> <td> {% if impl.status == 'parada' %} <span class="badge bg-danger js-status-badge" data-impl-id="{{ impl.id }}">Parada</span> {% else %} <span class="badge bg-warning text-dark js-status-badge" data-impl-id="{{ impl.id }}">Em Andamento</span> {% endif %} </td> <td> <div class="progress" style="height: 20px;"> <div class="progress-bar progress-bar-striped bg-danger js-progress-bar" data-impl-id="{{ impl.id }}" data-progress-url="{{ url_for('api.progresso_implantacao', impl_id=impl.id) }}" role="progressbar" style="width: {{ impl.progresso }}%;" aria-valuenow="{{ impl.progresso }}">{{ impl.progresso }}%</div> </div> </td> <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_atribuido|float) if impl.valor_atribuido else 'N/A' }}</td> <td> <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver Detalhes</a> </td> </tr> {% endfor %} </tbody> </table> </div> {% endif %}
                     </div>
         
                     <div class="tab-pane fade" id="futuras" role="tabpanel" aria-labelledby="futuras-tab">
@@ -749,7 +703,7 @@
                     <div class="mb-3">
                         <label for="data_inicio_previsto" class="form-label">Data de Início Previsto</label>
                         <div class="input-group">
-                            <input type="text" class="form-control" id="data_inicio_previsto" name="data_inicio_previsto" placeholder="DD/MM/AAAA" inputmode="numeric" pattern="\d{2}/\d{2}/\d{4}" required>
+                            <input type="text" class="form-control flatpickr-date" id="data_inicio_previsto" name="data_inicio_previsto" placeholder="DD/MM/AAAA" inputmode="numeric" pattern="\d{2}/\d{2}/\d{4}" required>
                             <button class="btn btn-outline-secondary" type="button" id="btn-cal-data_inicio_previsto" aria-label="Abrir calendário"><i class="bi bi-calendar3"></i></button>
                         </div>
                     </div>
@@ -914,11 +868,6 @@
                 var dt = parseISODate(iso);
                 var d = diffDays(dt);
                 el.textContent = d + ' dias';
-                if (status === 'andamento' && d > 25){
-                    var sb = document.querySelector('.js-status-badge[data-impl-id="'+id+'"]');
-                    if (sb){ sb.className = 'badge bg-danger js-status-badge'; sb.textContent = 'Atrasada'; }
-                    fetch('/api/v1/implantacoes/'+id+'/status/atrasada', { method: 'POST' }).catch(function(){});
-                }
             });
         }
         updateBadges();
@@ -933,7 +882,7 @@
       bars.forEach(function(bar){
         var url = bar.getAttribute('data-progress-url');
         if(!url) return;
-        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'include', keepalive: true })
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'include' })
           .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
           .then(function(data){ var p = parseInt(data.progresso||0,10); if(isNaN(p)) p = 0; bar.style.width = p+'%'; bar.setAttribute('aria-valuenow', p); bar.textContent = p+'%'; })
           .catch(function(){});

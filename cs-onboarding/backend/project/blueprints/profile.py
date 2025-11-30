@@ -1,13 +1,10 @@
-
 from flask import (
     Blueprint, render_template, request, flash, redirect, url_for, g, current_app, session
 )
 from ..blueprints.auth import login_required
-from ..db import query_db, execute_db
+from ..db import execute_db
 from ..core.extensions import r2_client
 from werkzeug.utils import secure_filename
-import smtplib
-from ..mail.email_utils import load_smtp_settings
 from ..config.logging_config import app_logger
 import os
 import time
@@ -15,35 +12,39 @@ import io
 
 profile_bp = Blueprint('profile', __name__, url_prefix='/profile')
 
+
 @profile_bp.before_request
 @login_required
 def before_request():
     """Protege todas as rotas de perfil."""
     pass
 
+
 @profile_bp.route('/')
 def profile():
     """Exibe a página de perfil do usuário."""
     return render_template('perfil.html', r2_configurado=g.R2_CONFIGURED)
+
 
 @profile_bp.route('/modal')
 def profile_modal():
     """Retorna apenas o conteúdo parcial para exibir dentro do modal de Perfil."""
     return render_template('modals/_perfil_content.html', r2_configurado=g.R2_CONFIGURED)
 
+
 @profile_bp.route('/save', methods=['POST'])
 def save_profile():
     """Salva as informações básicas do perfil e faz upload da foto."""
-    
+
     nome = request.form.get('nome')
     cargo = request.form.get('cargo')
     foto = request.files.get('foto')
-    
+
     if not nome or not cargo:
         flash("Nome e Cargo são obrigatórios.", "error")
         return redirect(url_for('profile.profile'))
 
-    foto_url = g.perfil.get('foto_url')                                     
+    foto_url = g.perfil.get('foto_url')
 
     if foto and g.R2_CONFIGURED and r2_client:
         try:
@@ -54,7 +55,7 @@ def save_profile():
             filename = secure_filename(foto.filename)
 
             s3_key = f"fotos_perfil/{g.user_email}_{filename}"
-            
+
             if foto_bytes is None:
                 raise ValueError("Falha ao ler bytes da foto para upload")
             data_stream = io.BytesIO(foto_bytes)
@@ -68,7 +69,7 @@ def save_profile():
 
             base_public_url = current_app.config['CLOUDFLARE_PUBLIC_URL']
             foto_url = f"{base_public_url}/{s3_key}"
-            
+
             app_logger.info(f"Foto de perfil carregada para {g.user_email} em {foto_url}")
 
         except Exception as e:
@@ -121,14 +122,14 @@ def save_profile():
             "UPDATE perfil_usuario SET nome = %s, cargo = %s, foto_url = %s WHERE usuario = %s",
             (nome, cargo, foto_url, g.user_email)
         )
-        
+
         session['user'] = session.get('user', {})
         session['user']['name'] = nome
         session['user']['picture'] = foto_url
         session.modified = True
-        
+
         flash("Perfil atualizado com sucesso!", "success")
-        
+
     except Exception as e:
         app_logger.error(f"Erro ao salvar perfil no DB para {g.user_email}: {e}")
         flash("Erro ao salvar perfil no banco de dados.", "error")
@@ -136,4 +137,3 @@ def save_profile():
     if request.headers.get('HX-Request') == 'true':
         return render_template('modals/_perfil_content.html', r2_configurado=g.R2_CONFIGURED)
     return redirect(url_for('profile.profile'))
-

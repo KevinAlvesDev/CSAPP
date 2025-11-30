@@ -21,16 +21,26 @@ def create_app():
     )
     
     try:
-        _dotenv_path = find_dotenv()
-        if _dotenv_path:
-            load_dotenv(_dotenv_path, override=True)
-        else:
-            load_dotenv(override=True)
         from pathlib import Path
-        root_env = Path(__file__).resolve().parents[3] / '.env'
-        if root_env.exists():
-            load_dotenv(str(root_env), override=True)
-            print(f"[Startup] .env carregado explicitamente de: {root_env}")
+        root_path = Path(__file__).resolve().parents[3]
+        
+        # Prioridade: .env.local (desenvolvimento) > .env (produção)
+        env_local = root_path / '.env.local'
+        env_prod = root_path / '.env'
+        
+        if env_local.exists():
+            load_dotenv(str(env_local), override=True)
+            print(f"[Startup] .env.local carregado (desenvolvimento local)")
+        elif env_prod.exists():
+            load_dotenv(str(env_prod), override=True)
+            print(f"[Startup] .env carregado (producao)")
+        else:
+            # Fallback para find_dotenv padrão
+            _dotenv_path = find_dotenv()
+            if _dotenv_path:
+                load_dotenv(_dotenv_path, override=True)
+            else:
+                load_dotenv(override=True)
     except Exception as e:
         print(f"[Startup] Aviso: falha ao carregar .env antes da Config: {e}")
 
@@ -129,12 +139,23 @@ def create_app():
     try:
         if app.config.get('USE_SQLITE_LOCALLY', False):
             with app.app_context():
+                # Garantir que o banco existe e está inicializado
+                try:
+                    from .database import get_db_connection
+                    conn, db_type = get_db_connection()
+                    if conn:
+                        conn.close()
+                except Exception as e:
+                    app.logger.warning(f"Banco não existe ainda, será criado: {e}")
+                
                 db.init_db()
                 
-                # Criar usuário admin padrão
+                # Criar usuário admin padrão automaticamente
                 try:
                     from werkzeug.security import generate_password_hash
+                    from .constants import ADMIN_EMAIL
                     seeded_hash = generate_password_hash('admin123@')
+                    admin_email = ADMIN_EMAIL
                     
                     # Usar INSERT OR REPLACE para garantir que o admin existe
                     execute_db(
@@ -266,31 +287,65 @@ def create_app():
 
     @app.before_request
     def load_logged_in_user():
+        # Ignorar rotas estáticas, API health e favicon
+        if (request.path.startswith('/static/') or 
+            request.path.startswith('/api/health') or 
+            request.path == '/favicon.ico'):
+            return
+        
+        # Importar constantes no início da função para garantir escopo
+        from .constants import ADMIN_EMAIL, PERFIL_ADMIN, PERFIS_COM_GESTAO
+        
+        # Carregar usuário da sessão PRIMEIRO
         g.user_email = session.get('user', {}).get('email')
         g.user = session.get('user')
+        
+        # Login automático em desenvolvimento local
+        use_sqlite = app.config.get('USE_SQLITE_LOCALLY', False)
+        flask_debug = app.config.get('DEBUG', False)
+        flask_env = os.environ.get('FLASK_ENV', 'production')
+        auth0_enabled = app.config.get('AUTH0_ENABLED', True)
+        
+        # Se estiver em dev local, Auth0 desabilitado, não houver usuário, e não for rota de auth
+        if (use_sqlite or flask_debug) and flask_env != 'production' and not auth0_enabled:
+            rotas_auth = ['/login', '/dev-login', '/dev-login-as', '/logout', '/callback']
+            is_rota_auth = any(request.path.startswith(rota) for rota in rotas_auth)
+            
+            if not is_rota_auth and not g.user_email:
+                try:
+                    admin_email = ADMIN_EMAIL
+                    session['user'] = {
+                        'email': admin_email,
+                        'name': 'Administrador',
+                        'sub': 'dev|local'
+                    }
+                    session.permanent = True
+                    # Atualizar g.user_email IMEDIATAMENTE
+                    g.user_email = admin_email
+                    g.user = session['user']
+                    # Sincronizar perfil
+                    try:
+                        from .blueprints.auth import _sync_user_profile
+                        _sync_user_profile(admin_email, 'Administrador', 'dev|local')
+                    except Exception as e:
+                        app.logger.warning(f"Falha ao sincronizar perfil automático: {e}")
+                except Exception as e:
+                    app.logger.error(f"Erro no login automático: {e}")
         
         g.perfil = None 
         if g.user_email:
             try:
                 g.perfil = query_db("SELECT * FROM perfil_usuario WHERE usuario = %s", (g.user_email,), one=True)
             except Exception as e:
-                print(f"ALERTA: Falha ao buscar perfil no before_request para {g.user_email}: {e}")
-
-
-                if not current_app.config.get('AUTH0_ENABLED', True) and g.user_email == ADMIN_EMAIL:
-                    g.perfil = {
-                        'nome': g.user.get('name', g.user_email) if g.user else 'Dev',
-                        'usuario': g.user_email,
-                        'foto_url': None,
-                        'cargo': None,
-                        'perfil_acesso': PERFIL_ADMIN
-                    }
-                else:
-                    g.perfil = None 
-        if not current_app.config.get('AUTH0_ENABLED', True) and g.user_email == ADMIN_EMAIL:
+                # Se a tabela não existir ainda, criar perfil básico
+                app.logger.warning(f"Falha ao buscar perfil para {g.user_email}: {e}")
+                g.perfil = None
+        
+        # Fallback para admin em desenvolvimento local
+        if not auth0_enabled and g.user_email and g.user_email == ADMIN_EMAIL:
             if not g.perfil or g.perfil.get('perfil_acesso') is None:
                 g.perfil = {
-                    'nome': g.user.get('name', g.user_email) if g.user else 'Dev',
+                    'nome': g.user.get('name', g.user_email) if g.user else 'Administrador',
                     'usuario': g.user_email,
                     'foto_url': None,
                     'cargo': None,
@@ -312,10 +367,14 @@ def create_app():
 
 
 
+        # Carregar regras de gamificação
         try:
-            g.gamification_rules = current_app.gamification_rules
+            if hasattr(current_app, 'gamification_rules'):
+                g.gamification_rules = current_app.gamification_rules
+            else:
+                g.gamification_rules = {}
         except Exception as e:
-            print(f"ALERTA: Falha ao carregar regras de gamificação no before_request (a partir do app.context): {e}")
+            app.logger.warning(f"Falha ao carregar regras de gamificação: {e}")
             g.gamification_rules = {} 
 
     @app.errorhandler(404)

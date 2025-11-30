@@ -3,10 +3,16 @@
 {% block title %}Gerenciamento de Usuários{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h1 class="mb-4">
-        <i class="fas fa-users-cog"></i>
-    </h1>
+<div class="container-fluid p-0">
+    <header class="header-bg p-3 d-flex align-items-center position-relative rounded-3">
+        <h1 class="main-title mb-0 fs-4 w-100 text-center">CS ONBOARDING Gerenciar Usuários</h1>
+        <div class="d-flex align-items-center position-absolute end-0 top-50 translate-middle-y">
+            <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-house me-1"></i> Dashboard
+            </a>
+        </div>
+    </header>
+    <main class="p-4">
 
 
     {% with messages = get_flashed_messages(with_categories=true) %}

@@ -1,14 +1,11 @@
-
 from flask import (
     Blueprint, render_template, request, flash, redirect, url_for, g, jsonify, current_app
 )
 from ..blueprints.auth import admin_required
-from ..db import query_db, execute_db
+from ..db import query_db, execute_db, db_connection
 from ..config.logging_config import management_logger, security_logger
 from ..constants import ADMIN_EMAIL, PERFIL_ADMIN
 from ..core.extensions import r2_client
-from ..database import get_db_connection
-from ..db import db_connection
 import os
 import io
 import csv
@@ -18,17 +15,18 @@ from datetime import datetime
 
 management_bp = Blueprint('management', __name__, url_prefix='/management')
 
+
 @management_bp.before_request
 @admin_required
 def before_request():
     """Protege todas as rotas de gerenciamento."""
     pass
 
+
 @management_bp.route('/users')
 def manage_users():
     """Renderiza a página principal de gerenciamento de usuários."""
     try:
-
         users_data = query_db(
             "SELECT usuario as usuario, nome, perfil_acesso FROM perfil_usuario ORDER BY nome"
         ) or []
@@ -43,9 +41,9 @@ def manage_users():
             perfis_list=perfis_disponiveis
         )
     except Exception as e:
-
         management_logger.error(f"Erro ao carregar a lista de usuários: {e}")
         return ("Erro ao carregar a lista de usuários", 500)
+
 
 @management_bp.route('/users/modal')
 def manage_users_modal():
@@ -106,7 +104,7 @@ def perform_backup():
             target = os.path.join(backup_dir, f'db-sqlite-{ts}.sqlite')
             shutil.copy2(db_path, target)
             management_logger.info(f"SQLite backup criado: {target}")
-            return {'type': 'sqlite', 'backup_file': target.replace(base_dir+os.sep, '')}
+            return {'type': 'sqlite', 'backup_file': target.replace(base_dir + os.sep, '')}
 
         elif db_type == 'postgres':
             tables = [
@@ -135,9 +133,10 @@ def perform_backup():
                         management_logger.error(f"Falha ao exportar tabela {tbl}: {te}")
                 cur.close()
             management_logger.info(f"PostgreSQL backup criado: {zip_path}")
-            return {'type': 'postgres', 'backup_file': zip_path.replace(base_dir+os.sep, '')}
+            return {'type': 'postgres', 'backup_file': zip_path.replace(base_dir + os.sep, '')}
         else:
             raise RuntimeError(f"Tipo de banco desconhecido: {db_type}")
+
 
 @management_bp.route('/users/update_profile', methods=['POST'])
 def update_user_profile():
@@ -159,7 +158,6 @@ def update_user_profile():
         return jsonify({'ok': False, 'error': 'Não pode alterar o seu próprio perfil por esta interface.'}), 403
 
     try:
-
         user_exists = query_db("SELECT 1 FROM perfil_usuario WHERE usuario = %s", (usuario_alvo,), one=True)
         if not user_exists:
             return jsonify({'ok': False, 'error': 'Usuário não encontrado'}), 404
@@ -174,6 +172,7 @@ def update_user_profile():
     except Exception as e:
         management_logger.error(f"Erro ao atualizar perfil de {usuario_alvo} por {g.user_email}: {e}")
         return jsonify({'ok': False, 'error': f'Erro de banco de dados: {e}'}), 500
+
 
 @management_bp.route('/users/update_perfil', methods=['POST'])
 def update_user_perfil():
@@ -240,7 +239,6 @@ def update_user_perfil():
         return redirect(url_for('management.manage_users'))
 
     try:
-
         user_exists = query_db("SELECT 1 FROM perfil_usuario WHERE usuario = %s", (usuario_alvo,), one=True)
         if not user_exists:
             flash('Usuário não encontrado.', 'error')
@@ -254,7 +252,7 @@ def update_user_perfil():
                 return render_template('_manage_users_content.html', users=users_data, perfis_list=perfis_disponiveis)
             return redirect(url_for('management.manage_users'))
 
-        from ..blueprints.auth import security_logger as auth_security_logger                               
+        from ..blueprints.auth import security_logger as auth_security_logger
         try:
             target_is_admin = query_db(
                 "SELECT perfil_acesso FROM perfil_usuario WHERE usuario = %s",
@@ -306,6 +304,7 @@ def update_user_perfil():
             return render_template('_manage_users_content.html', users=users_data, perfis_list=perfis_disponiveis)
         return redirect(url_for('management.manage_users'))
 
+
 @management_bp.route('/users/delete', methods=['POST'])
 def delete_user():
     """Exclui um usuário via formulário, com redirecionamento e logs (compatível com testes)."""
@@ -354,7 +353,6 @@ def delete_user():
         return redirect(url_for('management.manage_users'))
 
     try:
-
         perfil = query_db("SELECT foto_url FROM perfil_usuario WHERE usuario = %s", (usuario_alvo,), one=True)
         public_base = current_app.config.get('CLOUDFLARE_PUBLIC_URL')
         bucket = current_app.config.get('CLOUDFLARE_BUCKET_NAME')
@@ -365,7 +363,6 @@ def delete_user():
                 try:
                     r2_client.delete_object(Bucket=bucket, Key=key)
                 except Exception:
-
                     pass
 
         implantacoes_ids = query_db("SELECT id FROM implantacoes WHERE usuario_cs = %s", (usuario_alvo,)) or []
@@ -399,6 +396,7 @@ def delete_user():
             )
             return render_template('_manage_users_content.html', users=users_data, perfis_list=perfis_disponiveis)
         return redirect(url_for('management.manage_users'))
+
 
 @management_bp.route('/cleanup/orphan-implantacoes', methods=['POST'])
 def cleanup_orphan_implantacoes():

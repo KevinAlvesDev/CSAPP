@@ -61,6 +61,7 @@
       const indent = level * 20;
       const title = dados?.title || dados?.nome || '';
       const comment = dados?.comment || dados?.descricao || '';
+      const obrigatoria = dados?.obrigatoria || false;
       const isExpanded = dados?.expanded !== false;
       const hasChildren = dados?.children && dados.children.length > 0;
       const showToggle = hasChildren || level >= 0; // Sempre mostrar toggle (pode adicionar filhos)
@@ -86,15 +87,12 @@
               <button type="button" class="btn btn-sm btn-primary btn-add-child" title="Adicionar filho">
                 <i class="bi bi-plus-lg"></i>
               </button>
-              ${level > 0 ? `
-                <button type="button" class="btn btn-sm btn-danger btn-remove-item" title="Remover">
-                  <i class="bi bi-trash"></i>
-                </button>
-              ` : `
-                <button type="button" class="btn btn-sm btn-danger btn-remove-item" title="Remover">
-                  <i class="bi bi-trash"></i>
-                </button>
-              `}
+              <button type="button" 
+                      class="btn btn-sm btn-danger btn-remove-item ${obrigatoria ? 'disabled' : ''}" 
+                      title="${obrigatoria ? 'Não é possível excluir tarefas obrigatórias' : 'Remover'}"
+                      ${obrigatoria ? 'disabled' : ''}>
+                <i class="bi bi-trash"></i>
+              </button>
             </div>
           </div>
           
@@ -105,6 +103,19 @@
                 rows="2"
                 placeholder="Descrição/Comentário (opcional)"
               >${this.escapeHtml(comment)}</textarea>
+            </div>
+            <div class="mb-2">
+              <div class="form-check">
+                <input 
+                  class="form-check-input item-obrigatoria-input" 
+                  type="checkbox" 
+                  id="obrigatoria_${itemId}"
+                  ${obrigatoria ? 'checked' : ''}
+                >
+                <label class="form-check-label" for="obrigatoria_${itemId}">
+                  Tarefa obrigatória
+                </label>
+              </div>
             </div>
             
             <div class="item-children" data-parent-id="${itemId}">
@@ -174,6 +185,7 @@
       const btnAddChild = element.querySelector('.btn-add-child');
       const btnRemove = element.querySelector('.btn-remove-item');
       const btnToggle = element.querySelector('.toggle-children');
+      const obrigatoriaInput = element.querySelector('.item-obrigatoria-input');
       
       if (btnAddChild) {
         btnAddChild.addEventListener('click', () => this.adicionarFilho(element));
@@ -186,12 +198,38 @@
       if (btnToggle) {
         btnToggle.addEventListener('click', () => this.toggleItem(element));
       }
+      
+      // Atualizar estado do botão remover quando obrigatória mudar
+      if (obrigatoriaInput && btnRemove) {
+        obrigatoriaInput.addEventListener('change', () => {
+          const isObrigatoria = obrigatoriaInput.checked;
+          if (isObrigatoria) {
+            btnRemove.classList.add('disabled');
+            btnRemove.disabled = true;
+            btnRemove.title = 'Não é possível excluir tarefas obrigatórias';
+          } else {
+            btnRemove.classList.remove('disabled');
+            btnRemove.disabled = false;
+            btnRemove.title = 'Remover';
+          }
+        });
+      }
     },
 
     /**
      * Remove um item e seus filhos
+     * Impede exclusão se a tarefa for obrigatória
      */
     removerItem(element) {
+      // Verificar se a tarefa é obrigatória
+      const obrigatoriaInput = element.querySelector('.item-obrigatoria-input');
+      const isObrigatoria = obrigatoriaInput && obrigatoriaInput.checked;
+      
+      if (isObrigatoria) {
+        alert('Não é possível excluir uma tarefa obrigatória. Desmarque a opção "Tarefa obrigatória" antes de excluir.');
+        return;
+      }
+      
       if (confirm('Tem certeza que deseja remover este item e todos os seus filhos?')) {
         element.remove();
         this.checkEmptyState();
@@ -235,11 +273,14 @@
     coletarItemRecursivo(element) {
       const title = element.querySelector('.item-title-input').value.trim();
       const comment = element.querySelector('.item-comment-input').value.trim();
+      const obrigatoriaInput = element.querySelector('.item-obrigatoria-input');
+      const obrigatoria = obrigatoriaInput ? obrigatoriaInput.checked : false;
       const level = parseInt(element.getAttribute('data-level'));
       
       const item = {
         title: title,
         comment: comment,
+        obrigatoria: obrigatoria,
         level: level,
         ordem: 0, // Será calculado no backend se necessário
         children: []

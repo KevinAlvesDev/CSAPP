@@ -32,34 +32,6 @@
         margin: 0;
     }
 
-    .implantacao-header {
-        background: var(--primary-gradient);
-        color: white;
-        padding: 1.25rem 1.5rem;
-        border-radius: var(--border-radius);
-        margin-bottom: 1.25rem;
-        box-shadow: 0 8px 30px rgba(102, 126, 234, 0.25);
-        position: relative;
-    }
-
-    .implantacao-header h1 {
-        font-weight: 700;
-        font-size: 1.5rem;
-        margin-bottom: 0.25rem;
-    }
-
-    .implantacao-header .badge-status {
-        background: rgba(255, 255, 255, 0.2);
-        backdrop-filter: blur(5px);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        color: white;
-        padding: 0.4rem 0.8rem;
-        border-radius: 50px;
-        font-weight: 600;
-        font-size: 0.8rem;
-        letter-spacing: 0.5px;
-    }
-
     /* Tabs para Plano/Timeline */
     .tab-switcher {
         display: flex;
@@ -382,6 +354,7 @@
     .checklist-item {
         border-bottom: 1px solid rgba(0, 0, 0, 0.05);
         position: relative;
+        z-index: auto;
     }
     
     .checklist-item:last-child {
@@ -390,10 +363,17 @@
     
     .checklist-item-header {
         transition: background-color 0.2s ease;
+        position: relative;
+        z-index: 1;
     }
     
     .checklist-item-header .hover-bg:hover {
         background-color: #f8f9fa;
+    }
+    
+    .checklist-item-header .hover-bg {
+        position: relative;
+        z-index: auto;
     }
     
     .checklist-item-title {
@@ -435,6 +415,10 @@
         display: none !important;
     }
     
+    .checklist-item-children:not(.d-none) {
+        display: block !important;
+    }
+    
     .btn-icon {
         background: none;
         border: none;
@@ -472,6 +456,8 @@
         height: 3px;
         border-radius: 0 0 4px 4px;
         transition: width 0.3s ease, opacity 0.3s ease;
+        z-index: 0;
+        pointer-events: none;
     }
     
     /* Comentários */
@@ -545,6 +531,7 @@
     .plano-sucesso-container {
         max-height: calc(100vh - 300px);
         overflow-y: auto;
+        overflow-x: hidden;
     }
 
     /* Fase Card */
@@ -744,8 +731,6 @@
         color: #667eea;
     }
 
-    /* Subtarefa Item */
-
     /* Comentários Section */
     .comentarios-section {
         background: #f8fafc;
@@ -896,12 +881,18 @@
 
 {% block content %}
 <div class="container-fluid p-4 content-wrapper" id="main-content" data-implantacao-id="{{ implantacao.id }}"
-    data-email-usuario-logado="{{ email_usuario_logado }}">
+    data-email-usuario-logado="{{ email_usuario_logado }}"
+    data-email-responsavel="{{ implantacao.email_responsavel or '' }}"
+    data-is-manager="{{ 'true' if g.perfil and g.perfil.get('perfil_acesso') in ['Administrador', 'Gerente', 'Coordenador'] else 'false' }}">
 
-    <!-- Título da Página -->
-    <div class="page-title-header">
-        <h2>DETALHES DA IMPLANTAÇÃO</h2>
-    </div>
+    <header class="header-bg p-3 d-flex align-items-center position-relative rounded-3 mb-4">
+        <h1 class="main-title mb-0 fs-4 w-100 text-center">CS ONBOARDING Detalhes da Implantação</h1>
+        <div class="d-flex align-items-center position-absolute end-0 top-50 translate-middle-y">
+            <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-house me-1"></i> Dashboard
+            </a>
+        </div>
+    </header>
 
     <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -915,34 +906,6 @@
     {% endif %}
     {% endwith %}
 
-    <!-- Header Principal -->
-    <div class="implantacao-header d-flex flex-column flex-md-row justify-content-between align-items-md-center">
-        <div>
-            <div class="d-flex align-items-center gap-2 mb-1">
-                <h1 class="mb-0">{{ implantacao.nome_empresa }}</h1>
-                <span class="badge-status">
-                    {% if implantacao.status == 'finalizada' %}Concluído
-                    {% elif implantacao.status == 'parada' %}Parada
-                    {% elif implantacao.status == 'cancelada' %}Cancelada
-                    {% elif implantacao.status == 'futura' %}Futura
-                    {% elif implantacao.status == 'nova' %}Nova
-                    {% else %}Em Andamento
-                    {% endif %}
-                </span>
-            </div>
-            <p class="mb-0 opacity-75 small"><i class="bi bi-person-circle me-1"></i>CS Responsável: <strong>{{
-                    implantacao.usuario_cs }}</strong></p>
-        </div>
-        <div class="mt-2 mt-md-0 d-flex gap-2">
-            <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm btn-light text-primary fw-bold shadow-sm">
-                <i class="bi bi-arrow-left me-1"></i>Voltar ao Dashboard
-            </a>
-            <button class="btn btn-sm btn-outline-light d-lg-none" type="button" data-bs-toggle="offcanvas"
-                data-bs-target="#mobileSidebar">
-                <i class="bi bi-list"></i>
-            </button>
-        </div>
-    </div>
 
     <div class="row g-3">
         <!-- Sidebar (Coluna Esquerda) -->
@@ -1017,7 +980,21 @@
                         </div>
                     </button>
                     <button class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-3"
-                        data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa">
+                        data-bs-toggle="modal" 
+                        data-bs-target="#modalDetalhesEmpresa"
+                        data-id="{{ implantacao.id }}"
+                        data-cargo="{{ implantacao.cargo_responsavel | default('') }}"
+                        data-nivel-receita="{{ implantacao.nivel_receita | default('') }}"
+                        data-seguimento="{{ implantacao.seguimento | default('') }}"
+                        data-tipos-planos="{{ implantacao.tipos_planos | default('') }}"
+                        data-sistema-anterior="{{ implantacao.sistema_anterior | default('') }}"
+                        data-recorrencia-usa="{{ implantacao.recorrencia_usa | default('') }}"
+                        data-catraca="{{ implantacao.catraca | default('') }}"
+                        data-facial="{{ implantacao.facial | default('') }}"
+                        data-modelo-catraca="{{ implantacao.modelo_catraca | default('') }}"
+                        data-modelo-facial="{{ implantacao.modelo_facial | default('') }}"
+                        data-wellhub="{{ implantacao.wellhub | default('') }}"
+                        data-totalpass="{{ implantacao.totalpass | default('') }}">
                         <div class="bg-light p-2 rounded text-info"><i class="bi bi-pencil-square"></i></div>
                         <div>
                             <h6 class="mb-0 fw-bold">Editar Detalhes</h6>
@@ -1313,9 +1290,6 @@
                                 <i class="bi bi-diagram-3"></i>
                                 <h6 class="text-muted">Nenhum plano aplicado</h6>
                                 <p class="small text-muted mb-3">Selecione um plano de sucesso para visualizar a estrutura de fases, ações e tarefas.</p>
-                                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalSelecionarPlano">
-                                    <i class="bi bi-plus-circle me-2"></i>Selecionar Plano
-                                </button>
                             </div>
                             {% endif %}
                         </div>
@@ -1365,14 +1339,26 @@
     </div>
     <div class="offcanvas-body">
         <div class="d-grid gap-2">
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalSelecionarPlano">
-                <i class="bi bi-diagram-3 me-2"></i>Plano de Sucesso
-            </button>
             <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#adicionarTarefaModal">
                 <i class="bi bi-plus-lg me-2"></i>Adicionar Tarefa
             </button>
             <hr>
-            <button class="btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa">
+            <button class="btn btn-outline-dark" 
+                    data-bs-toggle="modal" 
+                    data-bs-target="#modalDetalhesEmpresa"
+                    data-id="{{ implantacao.id }}"
+                    data-cargo="{{ implantacao.cargo_responsavel | default('') }}"
+                    data-nivel-receita="{{ implantacao.nivel_receita | default('') }}"
+                    data-seguimento="{{ implantacao.seguimento | default('') }}"
+                    data-tipos-planos="{{ implantacao.tipos_planos | default('') }}"
+                    data-sistema-anterior="{{ implantacao.sistema_anterior | default('') }}"
+                    data-recorrencia-usa="{{ implantacao.recorrencia_usa | default('') }}"
+                    data-catraca="{{ implantacao.catraca | default('') }}"
+                    data-facial="{{ implantacao.facial | default('') }}"
+                    data-modelo-catraca="{{ implantacao.modelo_catraca | default('') }}"
+                    data-modelo-facial="{{ implantacao.modelo_facial | default('') }}"
+                    data-wellhub="{{ implantacao.wellhub | default('') }}"
+                    data-totalpass="{{ implantacao.totalpass | default('') }}">
                 Editar Detalhes
             </button>
             <!-- Mais botões mobile aqui se necessário -->
@@ -1431,8 +1417,14 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Cargo</label>
-                            <input type="text" class="form-control" name="cargo_responsavel"
-                                value="{{ implantacao.cargo_responsavel or '' }}">
+                            <select class="form-select tom-select-single" id="modal-cargo_responsavel" name="cargo_responsavel" data-value="{{ implantacao.cargo_responsavel or '' }}">
+                                <option value="">Selecione...</option>
+                                {% if cargos_responsavel %}
+                                    {% for cargo in cargos_responsavel %}
+                                        <option value="{{ cargo }}" {% if implantacao.cargo_responsavel == cargo %}selected{% endif %}>{{ cargo }}</option>
+                                    {% endfor %}
+                                {% endif %}
+                            </select>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Email do Responsável</label>
@@ -1441,8 +1433,17 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Telefone</label>
-                            <input type="text" class="form-control" name="telefone_responsavel"
-                                value="{{ implantacao.telefone_responsavel or '' }}">
+                            <input type="tel" 
+                                   class="form-control" 
+                                   id="modal-telefone_responsavel" 
+                                   name="telefone_responsavel"
+                                   placeholder="(XX) XXXXX-XXXX" 
+                                   maxlength="15" 
+                                   pattern="^\(\d{2}\)\s\d{4,5}-\d{4}$"
+                                   value="{{ implantacao.telefone_responsavel or '' }}"
+                                   oninput="formatarTelefone(this)"
+                                   onblur="validarTelefoneCompleto(this)">
+                            <div class="invalid-feedback">Telefone inválido. Use o formato (XX) XXXXX-XXXX ou (XX) XXXX-XXXX</div>
                         </div>
                     </div>
 
@@ -1451,18 +1452,18 @@
                     <div class="row g-3 mb-4">
                         <div class="col-md-4">
                             <label class="form-label">Data Início Efetivo</label>
-                            <input type="text" class="form-control flatpickr-date" name="data_inicio_efetivo"
-                                value="{{ implantacao.data_inicio_efetivo_fmt_d or '' }}" placeholder="DD/MM/AAAA">
+                            <input type="date" class="form-control no-datepicker" name="data_inicio_efetivo"
+                                value="{{ implantacao.data_inicio_efetivo or '' }}">
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Data Início Produção</label>
-                            <input type="text" class="form-control flatpickr-date" name="data_inicio_producao"
-                                value="{{ implantacao.data_inicio_producao_fmt_d or '' }}" placeholder="DD/MM/AAAA">
+                            <input type="date" class="form-control no-datepicker" name="data_inicio_producao"
+                                value="{{ implantacao.data_inicio_producao or '' }}">
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Data Final Implantação</label>
-                            <input type="text" class="form-control flatpickr-date" name="data_final_implantacao"
-                                value="{{ implantacao.data_final_implantacao_fmt_d or '' }}" placeholder="DD/MM/AAAA">
+                            <input type="date" class="form-control no-datepicker" name="data_final_implantacao"
+                                value="{{ implantacao.data_final_implantacao or '' }}">
                         </div>
                     </div>
 
@@ -1476,8 +1477,14 @@
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Nível de Receita</label>
-                            <input type="text" class="form-control" name="nivel_receita"
-                                value="{{ implantacao.nivel_receita or '' }}">
+                            <select class="form-select tom-select-single" id="modal-nivel_receita" name="nivel_receita" data-value="{{ implantacao.nivel_receita or '' }}">
+                                <option value="">Selecione...</option>
+                                {% if NIVEIS_RECEITA %}
+                                    {% for nivel in NIVEIS_RECEITA %}
+                                        <option value="{{ nivel }}" {% if implantacao.nivel_receita == nivel %}selected{% endif %}>{{ nivel }}</option>
+                                    {% endfor %}
+                                {% endif %}
+                            </select>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Valor Atribuído</label>
@@ -1501,13 +1508,25 @@
                     <div class="row g-3 mb-4">
                         <div class="col-md-4">
                             <label class="form-label">Segmento</label>
-                            <input type="text" class="form-control" name="seguimento"
-                                value="{{ implantacao.seguimento or '' }}">
+                            <select class="form-select tom-select-multi" id="modal-seguimento" name="seguimento" multiple data-value="{{ implantacao.seguimento or '' }}">
+                                <option value="">Selecione...</option>
+                                {% if SEGUIMENTOS_LIST %}
+                                    {% for s in SEGUIMENTOS_LIST %}
+                                        <option value="{{ s }}" {% if implantacao.seguimento and s in implantacao.seguimento.split(',') %}selected{% endif %}>{{ s }}</option>
+                                    {% endfor %}
+                                {% endif %}
+                            </select>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Tipos de Planos</label>
-                            <input type="text" class="form-control" name="tipos_planos"
-                                value="{{ implantacao.tipos_planos or '' }}">
+                            <select class="form-select tom-select-multi" id="modal-tipos_planos" name="tipos_planos" multiple data-value="{{ implantacao.tipos_planos or '' }}">
+                                <option value="">Selecione...</option>
+                                {% if TIPOS_PLANOS %}
+                                    {% for tp in TIPOS_PLANOS %}
+                                        <option value="{{ tp }}" {% if implantacao.tipos_planos and tp in implantacao.tipos_planos.split(',') %}selected{% endif %}>{{ tp }}</option>
+                                    {% endfor %}
+                                {% endif %}
+                            </select>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Alunos Ativos</label>
@@ -1516,36 +1535,32 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Sistema Anterior</label>
-                            <input type="text" class="form-control" name="sistema_anterior"
-                                value="{{ implantacao.sistema_anterior or '' }}">
+                            <select class="form-select tom-select-single" id="modal-sistema_anterior" name="sistema_anterior" data-value="{{ implantacao.sistema_anterior or '' }}">
+                                <option value="">Selecione...</option>
+                                {% if SISTEMAS_ANTERIORES %}
+                                    {% for sa in SISTEMAS_ANTERIORES %}
+                                        <option value="{{ sa }}" {% if implantacao.sistema_anterior == sa %}selected{% endif %}>{{ sa }}</option>
+                                    {% endfor %}
+                                {% endif %}
+                            </select>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Recorrência</label>
-                            <input type="text" class="form-control" name="recorrencia_usa"
-                                value="{{ implantacao.recorrencia_usa or '' }}">
+                            <select class="form-select tom-select-single" id="modal-recorrencia_usa" name="recorrencia_usa" data-value="{{ implantacao.recorrencia_usa or '' }}">
+                                <option value="">Selecione...</option>
+                                {% if RECORRENCIA_USADA %}
+                                    {% for ru in RECORRENCIA_USADA %}
+                                        <option value="{{ ru }}" {% if implantacao.recorrencia_usa == ru %}selected{% endif %}>{{ ru }}</option>
+                                    {% endfor %}
+                                {% endif %}
+                            </select>
                         </div>
                     </div>
 
                     <!-- Seção: Recursos -->
                     <h6 class="fw-bold text-primary mb-3"><i class="bi bi-gear me-2"></i>Recursos</h6>
                     <div class="row g-3 mb-4">
-                        <div class="col-md-3">
-                            <label class="form-label">Catraca</label>
-                            <select class="form-select" name="catraca">
-                                <option value="Não definido" {% if implantacao.catraca == 'Não definido' %}selected{% endif %}>Não definido</option>
-                                <option value="Sim" {% if implantacao.catraca == 'Sim' %}selected{% endif %}>Sim</option>
-                                <option value="Não" {% if implantacao.catraca == 'Não' %}selected{% endif %}>Não</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Facial</label>
-                            <select class="form-select" name="facial">
-                                <option value="Não definido" {% if implantacao.facial == 'Não definido' %}selected{% endif %}>Não definido</option>
-                                <option value="Sim" {% if implantacao.facial == 'Sim' %}selected{% endif %}>Sim</option>
-                                <option value="Não" {% if implantacao.facial == 'Não' %}selected{% endif %}>Não</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label class="form-label">Diária</label>
                             <select class="form-select" name="diaria">
                                 <option value="Não definido" {% if implantacao.diaria == 'Não definido' %}selected{% endif %}>Não definido</option>
@@ -1553,7 +1568,7 @@
                                 <option value="Não" {% if implantacao.diaria == 'Não' %}selected{% endif %}>Não</option>
                             </select>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label class="form-label">Freepass</label>
                             <select class="form-select" name="freepass">
                                 <option value="Não definido" {% if implantacao.freepass == 'Não definido' %}selected{% endif %}>Não definido</option>
@@ -1561,7 +1576,7 @@
                                 <option value="Não" {% if implantacao.freepass == 'Não' %}selected{% endif %}>Não</option>
                             </select>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label class="form-label">Importação</label>
                             <select class="form-select" name="importacao">
                                 <option value="Não definido" {% if implantacao.importacao == 'Não definido' %}selected{% endif %}>Não definido</option>
@@ -1569,7 +1584,7 @@
                                 <option value="Não" {% if implantacao.importacao == 'Não' %}selected{% endif %}>Não</option>
                             </select>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label class="form-label">Boleto</label>
                             <select class="form-select" name="boleto">
                                 <option value="Não definido" {% if implantacao.boleto == 'Não definido' %}selected{% endif %}>Não definido</option>
@@ -1577,7 +1592,7 @@
                                 <option value="Não" {% if implantacao.boleto == 'Não' %}selected{% endif %}>Não</option>
                             </select>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label class="form-label">Nota Fiscal</label>
                             <select class="form-select" name="nota_fiscal">
                                 <option value="Não definido" {% if implantacao.nota_fiscal == 'Não definido' %}selected{% endif %}>Não definido</option>
@@ -1585,35 +1600,81 @@
                                 <option value="Não" {% if implantacao.nota_fiscal == 'Não' %}selected{% endif %}>Não</option>
                             </select>
                         </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Alunos Ativos</label>
+                            <input type="number" class="form-control" name="alunos_ativos"
+                                value="{{ implantacao.alunos_ativos or 0 }}">
+                        </div>
                     </div>
-
-                    <!-- Seção: Equipe Interna -->
-                    <h6 class="fw-bold text-primary mb-3"><i class="bi bi-people me-2"></i>Equipe Interna</h6>
                     <div class="row g-3 mb-4">
-                        <div class="col-md-6">
-                            <label class="form-label">Responsável Estratégico</label>
-                            <input type="text" class="form-control" name="resp_estrategico_nome"
-                                value="{{ implantacao.resp_estrategico_nome or '' }}">
+                        <div class="col-md-2">
+                            <label class="form-label">Catraca</label>
+                            <select class="form-select" id="modal-catraca" name="catraca">
+                                {% if SIM_NAO_OPTIONS %}
+                                    {% for op in SIM_NAO_OPTIONS %}
+                                        <option value="{{ op }}" {% if implantacao.catraca == op %}selected{% endif %}>{{ op }}</option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="Não definido" {% if implantacao.catraca == 'Não definido' %}selected{% endif %}>Não definido</option>
+                                    <option value="Sim" {% if implantacao.catraca == 'Sim' %}selected{% endif %}>Sim</option>
+                                    <option value="Não" {% if implantacao.catraca == 'Não' %}selected{% endif %}>Não</option>
+                                {% endif %}
+                            </select>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Responsável Onboarding</label>
-                            <input type="text" class="form-control" name="resp_onb_nome"
-                                value="{{ implantacao.resp_onb_nome or '' }}">
+                        <div class="col-md-2" id="row-catraca-modelo" style="display: {% if implantacao.catraca == 'Sim' %}block{% else %}none{% endif %};">
+                            <label class="form-label">Modelo da Catraca</label>
+                            <input type="text" class="form-control" id="modal-modelo_catraca" name="modelo_catraca"
+                                value="{{ implantacao.modelo_catraca or '' }}" placeholder="Informe o modelo">
                         </div>
-                        <div class="col-12">
-                            <label class="form-label">Observações do Estratégico</label>
-                            <textarea class="form-control" name="resp_estrategico_obs" rows="2">{{ implantacao.resp_estrategico_obs or '' }}</textarea>
+                        <div class="col-md-2">
+                            <label class="form-label">Facial</label>
+                            <select class="form-select" id="modal-facial" name="facial">
+                                {% if SIM_NAO_OPTIONS %}
+                                    {% for op in SIM_NAO_OPTIONS %}
+                                        <option value="{{ op }}" {% if implantacao.facial == op %}selected{% endif %}>{{ op }}</option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="Não definido" {% if implantacao.facial == 'Não definido' %}selected{% endif %}>Não definido</option>
+                                    <option value="Sim" {% if implantacao.facial == 'Sim' %}selected{% endif %}>Sim</option>
+                                    <option value="Não" {% if implantacao.facial == 'Não' %}selected{% endif %}>Não</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                        <div class="col-md-2" id="row-facial-modelo" style="display: {% if implantacao.facial == 'Sim' %}block{% else %}none{% endif %};">
+                            <label class="form-label">Modelo Facial</label>
+                            <input type="text" class="form-control" id="modal-modelo_facial" name="modelo_facial"
+                                value="{{ implantacao.modelo_facial or '' }}" placeholder="Informe o modelo">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">WellHub</label>
+                            <select class="form-select" id="modal-wellhub" name="wellhub">
+                                {% if SIM_NAO_OPTIONS %}
+                                    {% for op in SIM_NAO_OPTIONS %}
+                                        <option value="{{ op }}" {% if implantacao.wellhub == op %}selected{% endif %}>{{ op }}</option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="Não definido" {% if implantacao.wellhub == 'Não definido' %}selected{% endif %}>Não definido</option>
+                                    <option value="Sim" {% if implantacao.wellhub == 'Sim' %}selected{% endif %}>Sim</option>
+                                    <option value="Não" {% if implantacao.wellhub == 'Não' %}selected{% endif %}>Não</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">TotalPass</label>
+                            <select class="form-select" id="modal-totalpass" name="totalpass">
+                                {% if SIM_NAO_OPTIONS %}
+                                    {% for op in SIM_NAO_OPTIONS %}
+                                        <option value="{{ op }}" {% if implantacao.totalpass == op %}selected{% endif %}>{{ op }}</option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="Não definido" {% if implantacao.totalpass == 'Não definido' %}selected{% endif %}>Não definido</option>
+                                    <option value="Sim" {% if implantacao.totalpass == 'Sim' %}selected{% endif %}>Sim</option>
+                                    <option value="Não" {% if implantacao.totalpass == 'Não' %}selected{% endif %}>Não</option>
+                                {% endif %}
+                            </select>
                         </div>
                     </div>
 
-                    <!-- Seção: Contatos Adicionais -->
-                    <h6 class="fw-bold text-primary mb-3"><i class="bi bi-telephone me-2"></i>Contatos Adicionais</h6>
-                    <div class="row g-3">
-                        <div class="col-12">
-                            <label class="form-label">Contatos</label>
-                            <textarea class="form-control" name="contatos" rows="3" placeholder="Lista de contatos adicionais...">{{ implantacao.contatos or '' }}</textarea>
-                        </div>
-                    </div>
                 </div>
                 <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -1644,7 +1705,7 @@
                     <div class="mb-3">
                         <label for="data_finalizacao" class="form-label fw-bold">Data da Finalização *</label>
                         <div class="input-group">
-                            <input type="text" class="form-control" id="data_finalizacao" name="data_finalizacao"
+                            <input type="text" class="form-control flatpickr-date" id="data_finalizacao" name="data_finalizacao"
                                 required placeholder="DD/MM/AAAA">
                             <button class="btn btn-outline-secondary" type="button" id="btn_cal_data_finalizacao"><i
                                     class="bi bi-calendar3"></i></button>
@@ -1668,7 +1729,7 @@
                 <h5 class="modal-title">Parar Implantação</h5><button type="button" class="btn-close"
                     data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ url_for('actions.parar_implantacao') }}" method="POST">
+            <form action="{{ url_for('actions.parar_implantacao') }}" method="POST" id="formPararImplantacao">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
@@ -1676,10 +1737,11 @@
                         <label for="data_parada" class="form-label fw-bold">Data da Parada *</label>
                         <div class="input-group">
                             <input type="text" class="form-control" id="data_parada" name="data_parada" required
-                                placeholder="DD/MM/AAAA">
+                                placeholder="DD/MM/AAAA" readonly>
                             <button class="btn btn-outline-secondary" type="button" id="btn_cal_data_parada"><i
                                     class="bi bi-calendar3"></i></button>
                         </div>
+                        <small class="text-danger d-none" id="data_parada_error">A data da parada é obrigatória.</small>
                     </div>
                     <div class="mb-3">
                         <label for="motivo_parada" class="form-label">Motivo *</label>
@@ -1862,7 +1924,7 @@
                 <h5 class="modal-title text-danger">Cancelar Implantação</h5><button type="button" class="btn-close"
                     data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ url_for('actions.cancelar_implantacao') }}" method="POST" enctype="multipart/form-data">
+            <form action="{{ url_for('actions.cancelar_implantacao') }}" method="POST" enctype="multipart/form-data" id="formCancelarImplantacao">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <p class="fw-bold">Deseja realmente cancelar esta implantação?</p>
@@ -1871,10 +1933,11 @@
                         <label class="form-label fw-bold">Data do Cancelamento *</label>
                         <div class="input-group">
                             <input type="text" class="form-control" id="data_cancelamento" name="data_cancelamento"
-                                required placeholder="DD/MM/AAAA">
+                                required placeholder="DD/MM/AAAA" readonly>
                             <button class="btn btn-outline-secondary" type="button" id="btn_cal_data_cancelamento"><i
                                     class="bi bi-calendar3"></i></button>
                         </div>
+                        <small class="text-danger d-none" id="data_cancelamento_error">A data do cancelamento é obrigatória.</small>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold">Motivo *</label>
@@ -1896,836 +1959,6 @@
     </div>
 </div>
 
-<!-- Scripts -->
-<script>
-    // Configurações e dados globais
-    const CONFIG = {
-        implantacaoId: document.getElementById('main-content')?.dataset?.implantacaoId,
-        emailUsuarioLogado: document.getElementById('main-content')?.dataset?.emailUsuarioLogado,
-        userEmail: document.getElementById('main-content')?.dataset?.emailUsuarioLogado || '',
-        emailResponsavel: '{{ implantacao.email_responsavel or "" }}',
-        csrfToken: document.querySelector('input[name="csrf_token"]')?.value || '',
-        isManager: {{ 'true' if g.perfil and g.perfil.get('perfil_acesso') in ['Administrador', 'Gerente', 'Coordenador'] else 'false' }}
-    };
-
-    document.addEventListener('DOMContentLoaded', function () {
-        console.log('🚀 [INIT] ==========================================');
-        console.log('🚀 [INIT] DOMContentLoaded - Script carregado!');
-        console.log('🚀 [INIT] ==========================================');
-        
-        // Flatpickr init - Configuração PT-BR (DD/MM/AAAA)
-        if (window.flatpickr) {
-            var config = { 
-                dateFormat: 'Y-m-d', 
-                altInput: true, 
-                altFormat: 'd/m/Y', 
-                allowInput: true,
-                clickOpens: true,
-                parseDate: function(datestr, format) {
-                    // Validar formato DD/MM/AAAA
-                    var regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
-                    var match = datestr.match(regex);
-                    if (!match) return null;
-                    
-                    var day = parseInt(match[1], 10);
-                    var month = parseInt(match[2], 10) - 1; // JavaScript months are 0-indexed
-                    var year = parseInt(match[3], 10);
-                    
-                    // Validar se a data é válida
-                    var date = new Date(year, month, day);
-                    if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) {
-                        return null;
-                    }
-                    
-                    return date;
-                },
-                locale: {
-                    firstDayOfWeek: 1,
-                    weekdays: {
-                        shorthand: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
-                        longhand: ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']
-                    },
-                    months: {
-                        shorthand: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
-                        longhand: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
-                    }
-                }
-            };
-            
-            // Função para adicionar máscara e validação de data
-            function setupDateInputMask(flatpickrInstance) {
-                if (!flatpickrInstance || !flatpickrInstance.altInput) return;
-                
-                var altInput = flatpickrInstance.altInput;
-                
-                // Máscara de entrada: apenas números e barras
-                altInput.addEventListener('input', function(e) {
-                    var value = this.value.replace(/[^\d\/]/g, '');
-                    
-                    // Limitar tamanho
-                    if (value.length > 10) {
-                        value = value.substring(0, 10);
-                    }
-                    
-                    // Adicionar barras automaticamente
-                    if (value.length >= 2 && value[2] !== '/') {
-                        value = value.substring(0, 2) + '/' + value.substring(2);
-                    }
-                    if (value.length >= 5 && value[5] !== '/') {
-                        value = value.substring(0, 5) + '/' + value.substring(5);
-                    }
-                    
-                    this.value = value;
-                });
-                
-                // Validar ao perder o foco
-                altInput.addEventListener('blur', function(e) {
-                    var value = this.value.trim();
-                    if (value && value.length === 10) {
-                        var regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
-                        if (!regex.test(value)) {
-                            this.classList.add('is-invalid');
-                            return;
-                        }
-                        
-                        var match = value.match(regex);
-                        var day = parseInt(match[1], 10);
-                        var month = parseInt(match[2], 10);
-                        var year = parseInt(match[3], 10);
-                        
-                        // Validar se a data é válida
-                        if (day < 1 || day > 31 || month < 1 || month > 12 || year < 1900 || year > 2100) {
-                            this.classList.add('is-invalid');
-                            return;
-                        }
-                        
-                        var date = new Date(year, month - 1, day);
-                        if (date.getDate() !== day || date.getMonth() !== month - 1 || date.getFullYear() !== year) {
-                            this.classList.add('is-invalid');
-                            return;
-                        }
-                        
-                        this.classList.remove('is-invalid');
-                        // Atualizar o flatpickr com a data válida
-                        if (flatpickrInstance) {
-                            flatpickrInstance.setDate(date, false);
-                        }
-                    } else if (value && value.length > 0) {
-                        this.classList.add('is-invalid');
-                    }
-                });
-            }
-            
-            // Configurar campos de data com IDs específicos
-            ['data_finalizacao', 'data_parada', 'data_cancelamento'].forEach(id => {
-                var input = document.getElementById(id);
-                if (input) {
-                    var fp = window.flatpickr(input, config);
-                    setupDateInputMask(fp);
-                }
-            });
-            
-            // Configurar campos flatpickr-date
-            document.querySelectorAll('.flatpickr-date').forEach(input => {
-                var fp = window.flatpickr(input, config);
-                setupDateInputMask(fp);
-            });
-
-            ['btn_cal_data_parada', 'btn_cal_data_cancelamento', 'btn_cal_data_finalizacao'].forEach(id => {
-                var btn = document.getElementById(id);
-                if (btn) btn.addEventListener('click', () => {
-                    var input = btn.previousElementSibling;
-                    if (input && input._flatpickr) input._flatpickr.open();
-                });
-            });
-        }
-
-        // FUNÇÕES DE ATUALIZAÇÃO DE BADGES REMOVIDAS
-        // As checkboxes continuam funcionando e salvando no backend
-
-        // ========================================
-        // SISTEMA DE PROGRESSO
-        // ========================================
-        function computeProgress() {
-            const tarefaCheckboxes = document.querySelectorAll('.tarefa-checkbox');
-            
-            // Calcular progresso geral (apenas tarefas)
-            const total = tarefaCheckboxes.length;
-            const done = Array.from(tarefaCheckboxes).filter(cb => cb.checked).length;
-            const pct = total ? Math.round((done / total) * 100) : 0;
-
-            const bar = document.getElementById('progress-total-bar');
-            const valorEl = document.getElementById('progresso-valor');
-            if (bar) {
-                bar.style.width = pct + '%';
-                bar.setAttribute('aria-valuenow', pct);
-            }
-            if (valorEl) valorEl.textContent = pct + '%';
-        }
-
-        // ========================================
-        // TOGGLE TAREFA (CONCLUIR/PENDENTE)
-        // ========================================
-        // Prevenir que labels com no-checkbox-toggle marquem o checkbox automaticamente
-        document.querySelectorAll('.tarefa-nome.no-checkbox-toggle').forEach(label => {
-            label.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                // Não fazer nada - apenas prevenir o comportamento padrão do label
-            });
-        });
-        
-        const tarefaCheckboxesForEvent = document.querySelectorAll('.tarefa-checkbox');
-        console.log('🔍 [INIT] Tarefa checkboxes encontradas:', tarefaCheckboxesForEvent.length);
-        tarefaCheckboxesForEvent.forEach((checkbox, index) => {
-            console.log(`  → Checkbox ${index + 1}:`, checkbox.dataset.tarefaId);
-            checkbox.addEventListener('change', async function() {
-                const tarefaId = this.dataset.tarefaId;
-                const concluido = this.checked;
-
-                try {
-                    const response = await fetch(`/api/toggle_tarefa_h/${tarefaId}`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                            'X-CSRFToken': CONFIG.csrfToken
-                        },
-                        body: JSON.stringify({ concluido })
-                    });
-
-                    if (!response.ok) {
-                        this.checked = !concluido;
-                        showToast('Erro ao atualizar tarefa', 'error');
-                        return;
-                    }
-
-                    const data = await response.json();
-                    if (data.ok || data.success) {
-                        computeProgress();
-                        showToast('Tarefa atualizada', 'success', 2000);
-                    } else {
-                        this.checked = !concluido;
-                        showToast('Erro ao atualizar tarefa', 'error');
-                    }
-                } catch (error) {
-                    this.checked = !concluido;
-                    showToast('Erro ao comunicar com o servidor', 'error');
-                }
-            });
-        });
-
-        // SUBTAREFAS REMOVIDAS - Sistema simplificado
-
-        // ========================================
-        // TOGGLE SUBTAREFAS (EXPANDIR/COLAPSAR)
-        // ========================================
-        // Removido - agora o comportamento é padrão via data-bs-toggle no tarefa-header
-        // O clique no tarefa-header expande/colapsa as subtarefas automaticamente
-
-        // ========================================
-        // TOGGLE COMENTÁRIOS (EXPANDIR/COLAPSAR)
-        // ========================================
-        document.querySelectorAll('.btn-toggle-comentarios').forEach(btn => {
-            btn.addEventListener('click', async function() {
-                const tarefaId = this.dataset.tarefaId;
-                const comentariosSection = document.getElementById(`comentarios-tarefa-${tarefaId}`);
-                
-                if (comentariosSection) {
-                    const isShown = comentariosSection.classList.contains('show');
-                    
-                    if (!isShown) {
-                        // Carregar comentários ao expandir
-                        await carregarComentarios(tarefaId, 'tarefa');
-                    }
-                    
-                    const bsCollapse = new bootstrap.Collapse(comentariosSection, { toggle: true });
-                }
-            });
-        });
-
-        // ========================================
-        // TOGGLE COMENTÁRIOS SUBTAREFA (EXPANDIR/COLAPSAR)
-        // ========================================
-        document.querySelectorAll('.btn-toggle-comentarios-subtarefa').forEach(btn => {
-            btn.addEventListener('click', async function() {
-                const subtarefaId = this.dataset.subtarefaId;
-                const comentariosSection = document.getElementById(`comentarios-subtarefa-${subtarefaId}`);
-                
-                if (comentariosSection) {
-                    const isShown = comentariosSection.classList.contains('show');
-                    
-                    if (!isShown) {
-                        // Carregar comentários ao expandir
-                        await carregarComentarios(subtarefaId, 'subtarefa');
-                    }
-                    
-                    const bsCollapse = new bootstrap.Collapse(comentariosSection, { toggle: true });
-                }
-            });
-        });
-
-        // ========================================
-        // TIPO DE COMENTÁRIO (INTERNO/EXTERNO)
-        // ========================================
-        document.querySelectorAll('.comentario-tipo-tag').forEach(tag => {
-            tag.addEventListener('click', function() {
-                const tarefaId = this.dataset.tarefaId || this.dataset.subtarefaId;
-                const tipo = this.dataset.tipo;
-                
-                // Toggle active state
-                const container = this.closest('.d-flex');
-                container.querySelectorAll('.comentario-tipo-tag').forEach(t => t.classList.remove('active'));
-                this.classList.add('active');
-
-                // Mostrar/ocultar botão de email para externo
-                const btnEmail = document.getElementById(`btn-email-${tarefaId}`) || document.getElementById(`btn-email-subtarefa-${tarefaId}`);
-                if (btnEmail) {
-                    btnEmail.classList.toggle('d-none', tipo !== 'externo');
-                }
-            });
-        });
-
-        // ========================================
-        // EXCLUIR COMENTÁRIO
-        // ========================================
-        document.body.addEventListener('click', async function(e) {
-            if (e.target.closest('.btn-excluir-comentario')) {
-                const btn = e.target.closest('.btn-excluir-comentario');
-                const comentarioId = btn.dataset.comentarioId;
-                
-                const confirmed = await showConfirm({
-                    title: 'Excluir Comentário',
-                    message: 'Tem certeza que deseja excluir este comentário? Esta ação não pode ser desfeita.',
-                    confirmText: 'Excluir',
-                    cancelText: 'Cancelar',
-                    type: 'danger',
-                    icon: 'bi-trash-fill'
-                });
-                
-                if (!confirmed) {
-                    return;
-                }
-                
-                try {
-                    const response = await fetch(`/api/excluir_comentario_h/${comentarioId}`, {
-                        method: 'POST',
-                        headers: {
-                            'Accept': 'application/json',
-                            'X-CSRFToken': CONFIG.csrfToken
-                        }
-                    });
-                    
-                    if (!response.ok) {
-                        const errorText = await response.text();
-                        console.error('Erro HTTP:', response.status, errorText);
-                        showToast('Erro ao excluir comentário: ' + (errorText || `Status ${response.status}`), 'error');
-                        return;
-                    }
-
-                    const contentType = response.headers.get('content-type') || '';
-                    
-                    if (contentType.includes('application/json')) {
-                        const data = await response.json();
-                        if (!data.ok && !data.success) {
-                            showToast('Erro ao excluir comentário: ' + (data.error || 'Erro desconhecido'), 'error');
-                            return;
-                        }
-                    } else if (contentType.includes('text/html')) {
-                        // HTML retornado (HX-Request), considerar sucesso
-                        console.log('Resposta HTML recebida (HX-Request)');
-                    } else {
-                        // Tentar parsear como JSON
-                        try {
-                            const text = await response.text();
-                            const data = JSON.parse(text);
-                            if (!data.ok && !data.success) {
-                                showToast('Erro ao excluir comentário: ' + (data.error || 'Erro desconhecido'), 'error');
-                                return;
-                            }
-                        } catch (e) {
-                            console.warn('Resposta não é JSON nem HTML, assumindo sucesso');
-                        }
-                    }
-                    
-                    const comentarioItem = btn.closest('.comentario-item');
-                    const tipo = comentarioItem.closest('[id^="historico-tarefa"]') ? 'tarefa' : 'subtarefa';
-                    const itemId = comentarioItem.closest('[id^="historico-"]').id.replace('historico-tarefa-', '').replace('historico-subtarefa-', '');
-                    
-                    comentarioItem.remove();
-                    
-                    // Recarregar comentários
-                    await carregarComentarios(itemId, tipo);
-                    showToast('Comentário excluído com sucesso', 'success');
-                } catch (error) {
-                    console.error('Erro:', error);
-                    showToast('Erro ao comunicar com o servidor: ' + error.message, 'error');
-                }
-            }
-        });
-
-        // ========================================
-        // SALVAR COMENTÁRIO
-        // ========================================
-        document.querySelectorAll('.btn-salvar-comentario').forEach(btn => {
-            btn.addEventListener('click', async function() {
-                const tarefaId = this.dataset.tarefaId;
-                const tipoItem = this.dataset.tipo || 'tarefa';
-                const textarea = document.getElementById(`comentario-texto-${tarefaId}`);
-                const texto = textarea?.value?.trim();
-                
-                if (!texto) {
-                    showToast('Digite um comentário', 'warning');
-                    return;
-                }
-
-                const tipoTag = document.querySelector(`.comentario-tipo-tag.active[data-tarefa-id="${tarefaId}"]`);
-                const visibilidade = tipoTag?.dataset?.tipo || 'interno';
-
-                // Verificar se há imagem
-                const imagemInput = document.querySelector(`.comentario-imagem-input[data-tarefa-id="${tarefaId}"]`);
-
-                this.disabled = true;
-                this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Salvando...';
-
-                try {
-                    // Usar FormData para suportar upload de imagem
-                    const formData = new FormData();
-                    formData.append('comentario', texto);
-                    formData.append('visibilidade', visibilidade);
-                    
-                    if (imagemInput && imagemInput.files[0]) {
-                        formData.append('imagem', imagemInput.files[0]);
-                    }
-                    
-                    const response = await fetch(`/api/adicionar_comentario_h/${tipoItem}/${tarefaId}`, {
-                        method: 'POST',
-                        headers: {
-                            'Accept': 'application/json',
-                            'X-CSRFToken': CONFIG.csrfToken
-                        },
-                        body: formData
-                    });
-
-                    if (!response.ok) {
-                        const errorText = await response.text();
-                        console.error('Erro HTTP:', response.status, errorText);
-                        showToast('Erro ao salvar comentário: ' + (errorText || `Status ${response.status}`), 'error');
-                        return;
-                    }
-
-                    const contentType = response.headers.get('content-type') || '';
-                    let data;
-                    if (contentType.includes('application/json')) {
-                        data = await response.json();
-                    } else if (contentType.includes('text/html')) {
-                        // Se retornou HTML (HX-Request), considerar sucesso
-                        console.log('Resposta HTML recebida (HX-Request)');
-                        data = { ok: true, success: true };
-                    } else {
-                        // Tentar parsear como JSON mesmo sem content-type correto
-                        try {
-                            const text = await response.text();
-                            data = JSON.parse(text);
-                        } catch (e) {
-                            console.warn('Resposta não é JSON nem HTML, assumindo sucesso');
-                            data = { ok: true, success: true };
-                        }
-                    }
-                    
-                    if (data.ok || data.success) {
-                        textarea.value = '';
-                        if (imagemInput) imagemInput.value = '';
-                        await carregarComentarios(tarefaId, tipoItem);
-                        
-                        // Atualizar ícone para indicar que tem comentários
-                        const btnComentarios = document.querySelector(`.btn-toggle-comentarios[data-tarefa-id="${tarefaId}"]`);
-                        if (btnComentarios) btnComentarios.classList.add('has-comments');
-                        
-                        showToast('Comentário salvo com sucesso!', 'success');
-                    } else {
-                        showToast('Erro ao salvar comentário: ' + (data.error || 'Erro desconhecido'), 'error');
-                    }
-                } catch (error) {
-                    console.error('Erro:', error);
-                    showToast('Erro ao comunicar com o servidor: ' + error.message, 'error');
-                } finally {
-                    this.disabled = false;
-                    this.innerHTML = '<i class="bi bi-send me-1"></i>Salvar';
-                }
-            });
-        });
-
-        // ========================================
-        // SALVAR COMENTÁRIO SUBTAREFA
-        // ========================================
-        document.querySelectorAll('.btn-salvar-comentario-subtarefa').forEach(btn => {
-            btn.addEventListener('click', async function() {
-                const subtarefaId = this.dataset.subtarefaId;
-                const textarea = document.getElementById(`comentario-texto-subtarefa-${subtarefaId}`);
-                const texto = textarea?.value?.trim();
-                
-                if (!texto) {
-                    showToast('Digite um comentário', 'warning');
-                    return;
-                }
-
-                const tipoTag = document.querySelector(`.comentario-tipo-tag.active[data-subtarefa-id="${subtarefaId}"]`);
-                const visibilidade = tipoTag?.dataset?.tipo || 'interno';
-
-                // Verificar se há imagem
-                const imagemInput = document.querySelector(`.comentario-imagem-input-subtarefa[data-subtarefa-id="${subtarefaId}"]`);
-
-                this.disabled = true;
-                this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Salvando...';
-
-                try {
-                    // Usar FormData para suportar upload de imagem
-                    const formData = new FormData();
-                    formData.append('comentario', texto);
-                    formData.append('visibilidade', visibilidade);
-                    
-                    if (imagemInput && imagemInput.files[0]) {
-                        formData.append('imagem', imagemInput.files[0]);
-                    }
-                    
-                    const response = await fetch(`/api/adicionar_comentario_h/subtarefa/${subtarefaId}`, {
-                        method: 'POST',
-                        headers: {
-                            'Accept': 'application/json',
-                            'X-CSRFToken': CONFIG.csrfToken
-                        },
-                        body: formData
-                    });
-
-                    if (!response.ok) {
-                        const errorText = await response.text();
-                        console.error('Erro HTTP:', response.status, errorText);
-                        showToast('Erro ao salvar comentário: ' + (errorText || `Status ${response.status}`), 'error');
-                        return;
-                    }
-
-                    const contentType = response.headers.get('content-type') || '';
-                    let data;
-                    if (contentType.includes('application/json')) {
-                        data = await response.json();
-                    } else if (contentType.includes('text/html')) {
-                        // Se retornou HTML (HX-Request), considerar sucesso
-                        console.log('Resposta HTML recebida (HX-Request)');
-                        data = { ok: true, success: true };
-                    } else {
-                        // Tentar parsear como JSON mesmo sem content-type correto
-                        try {
-                            const text = await response.text();
-                            data = JSON.parse(text);
-                        } catch (e) {
-                            console.warn('Resposta não é JSON nem HTML, assumindo sucesso');
-                            data = { ok: true, success: true };
-                        }
-                    }
-                    
-                    if (data.ok || data.success) {
-                        textarea.value = '';
-                        if (imagemInput) imagemInput.value = '';
-                        await carregarComentarios(subtarefaId, 'subtarefa');
-                        
-                        // Atualizar ícone para indicar que tem comentários
-                        const btnComentarios = document.querySelector(`.btn-toggle-comentarios-subtarefa[data-subtarefa-id="${subtarefaId}"]`);
-                        if (btnComentarios) btnComentarios.classList.add('has-comments');
-                        showToast('Comentário salvo com sucesso!', 'success');
-                    } else {
-                        showToast('Erro ao salvar comentário: ' + (data.error || 'Erro desconhecido'), 'error');
-                    }
-                } catch (error) {
-                    console.error('Erro:', error);
-                    showToast('Erro ao comunicar com o servidor: ' + error.message, 'error');
-                } finally {
-                    this.disabled = false;
-                    this.innerHTML = '<i class="bi bi-send me-1"></i>Salvar';
-                }
-            });
-        });
-
-        // ========================================
-        // ENVIAR EMAIL (COMENTÁRIO EXTERNO)
-        // ========================================
-        document.querySelectorAll('.btn-enviar-email').forEach(btn => {
-            btn.addEventListener('click', async function() {
-                const tarefaId = this.dataset.tarefaId;
-                const textarea = document.getElementById(`comentario-texto-${tarefaId}`);
-                const texto = textarea?.value?.trim();
-                
-                if (!texto) {
-                    showToast('Digite uma mensagem para enviar', 'warning');
-                    return;
-                }
-
-                if (!CONFIG.emailResponsavel) {
-                    showToast('Email do responsável não cadastrado. Acesse "Editar Detalhes" para adicionar.', 'warning');
-                    return;
-                }
-
-                const confirmed = await showConfirm({
-                    title: 'Enviar Email',
-                    message: `Deseja enviar este comentário por email para ${CONFIG.emailResponsavel}?`,
-                    confirmText: 'Enviar',
-                    cancelText: 'Cancelar',
-                    type: 'primary',
-                    icon: 'bi-envelope-fill'
-                });
-                
-                if (!confirmed) return;
-
-                this.disabled = true;
-                this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Enviando...';
-
-                try {
-                    // Primeiro salva o comentário como externo
-                    const formData = new FormData();
-                    formData.append('comentario', texto);
-                    formData.append('visibilidade', 'externo');
-                    
-                    const saveResponse = await fetch(`/api/adicionar_comentario_h/tarefa/${tarefaId}`, {
-                        method: 'POST',
-                        headers: {
-                            'Accept': 'application/json',
-                            'X-CSRFToken': CONFIG.csrfToken
-                        },
-                        body: formData
-                    });
-                    
-                    if (!saveResponse.ok) {
-                        const errorText = await saveResponse.text();
-                        console.error('Erro HTTP ao salvar comentário:', saveResponse.status, errorText);
-                        showToast('Erro ao salvar comentário: ' + (errorText || `Status ${saveResponse.status}`), 'error');
-                        return;
-                    }
-
-                    const contentType = saveResponse.headers.get('content-type');
-                    let data;
-                    if (contentType && contentType.includes('application/json')) {
-                        data = await saveResponse.json();
-                    } else {
-                        // Se retornou HTML (HX-Request), considerar sucesso
-                        data = { ok: true, success: true };
-                    }
-                    
-                    if (data.ok || data.success) {
-                        showToast('Comentário salvo e email enviado com sucesso!', 'success');
-                        textarea.value = '';
-                        // Recarregar comentários
-                        await carregarComentarios(tarefaId, 'tarefa');
-                    } else {
-                        showToast('Erro ao salvar comentário: ' + (data.error || 'Erro desconhecido'), 'error');
-                    }
-                } catch (error) {
-                    console.error('Erro:', error);
-                    showToast('Erro ao comunicar com o servidor: ' + error.message, 'error');
-                } finally {
-                    this.disabled = false;
-                    this.innerHTML = '<i class="bi bi-envelope me-1"></i>Enviar Email';
-                }
-            });
-        });
-
-        // ========================================
-        // CARREGAR COMENTÁRIOS
-        // ========================================
-        async function carregarComentarios(itemId, tipo) {
-            const historicoContainer = document.getElementById(tipo === 'subtarefa' ? `historico-subtarefa-${itemId}` : `historico-tarefa-${itemId}`);
-            if (!historicoContainer) {
-                return;
-            }
-            
-            // Mostrar skeleton loading
-            showSkeleton(historicoContainer, 2);
-                console.warn('Container de comentários não encontrado:', tipo === 'subtarefa' ? `historico-subtarefa-${itemId}` : `historico-tarefa-${itemId}`);
-                return;
-            }
-
-            try {
-                const response = await fetch(`/api/listar_comentarios_h/${tipo}/${itemId}`, {
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                });
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('Erro HTTP ao carregar comentários:', response.status, errorText);
-                    historicoContainer.innerHTML = `
-                        <div class="alert alert-danger small py-2 mb-0">
-                            <i class="bi bi-exclamation-triangle me-1"></i>Erro ao carregar comentários: ${response.status}
-                        </div>
-                    `;
-                    return;
-                }
-
-                const contentType = response.headers.get('content-type') || '';
-                let data;
-                
-                try {
-                    if (contentType.includes('application/json')) {
-                        data = await response.json();
-                    } else {
-                        // Tentar parsear como JSON mesmo sem content-type correto
-                        const text = await response.text();
-                        try {
-                            data = JSON.parse(text);
-                        } catch (parseError) {
-                            // Se não for JSON, pode ser HTML ou texto de erro
-                            console.error('Resposta não é JSON ao carregar comentários. Content-Type:', contentType, 'Texto:', text.substring(0, 200));
-                            historicoContainer.innerHTML = `
-                                <div class="alert alert-danger small py-2 mb-0">
-                                    <i class="bi bi-exclamation-triangle me-1"></i>Erro ao carregar comentários: resposta inválida
-                                </div>
-                            `;
-                            return;
-                        }
-                    }
-                } catch (error) {
-                    console.error('Erro ao processar resposta:', error);
-                    historicoContainer.innerHTML = `
-                        <div class="alert alert-danger small py-2 mb-0">
-                            <i class="bi bi-exclamation-triangle me-1"></i>Erro ao processar resposta do servidor
-                        </div>
-                    `;
-                    return;
-                }
-                
-                if (data.ok || data.success) {
-                    const comentarios = data.comentarios || [];
-                    
-                    if (comentarios.length === 0) {
-                        historicoContainer.innerHTML = `
-                            <div class="text-center text-muted small py-2">
-                                <i class="bi bi-chat-left-text"></i> Nenhum comentário ainda
-                            </div>
-                        `;
-                        return;
-                    }
-
-                    historicoContainer.innerHTML = comentarios.map(c => {
-                        const canEdit = (CONFIG.userEmail && c.usuario_cs === CONFIG.userEmail) || CONFIG.isManager;
-                        return `
-                        <div class="comentario-item ${c.visibilidade || 'interno'}" data-comentario-id="${c.id}">
-                            <div class="comentario-meta">
-                                <span class="comentario-autor">
-                                    <i class="bi bi-person-circle me-1"></i>${c.usuario_nome || c.usuario_cs || 'Usuário'}
-                                    <span class="badge ${c.visibilidade === 'externo' ? 'bg-warning' : 'bg-info'} ms-2" style="font-size: 0.65rem;">
-                                        ${c.visibilidade === 'externo' ? 'Externo' : 'Interno'}
-                                    </span>
-                                </span>
-                                <div class="d-flex align-items-center gap-2">
-                                    <span class="comentario-data">${formatarData(c.data_criacao, false)}</span>
-                                    ${canEdit ? `
-                                    <button type="button" class="btn btn-sm btn-outline-danger btn-excluir-comentario" data-comentario-id="${c.id}" title="Excluir">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                    ` : ''}
-                                </div>
-                            </div>
-                            <div class="comentario-texto">${escapeHtml(c.texto)}</div>
-                            ${c.imagem_url ? `<img src="${c.imagem_url}" class="comentario-imagem" alt="Imagem anexada">` : ''}
-                        </div>
-                    `;
-                    }).join('');
-                } else {
-                    historicoContainer.innerHTML = `
-                        <div class="alert alert-danger small py-2 mb-0">
-                            <i class="bi bi-exclamation-triangle me-1"></i>${data.error || 'Erro ao carregar comentários'}
-                        </div>
-                    `;
-                }
-            } catch (error) {
-                console.error('Erro ao carregar comentários:', error);
-                historicoContainer.innerHTML = `
-                    <div class="alert alert-danger small py-2 mb-0">
-                        <i class="bi bi-exclamation-triangle me-1"></i>Erro ao carregar comentários: ${error.message}
-                    </div>
-                `;
-            }
-        }
-
-        // ========================================
-        // FUNÇÕES AUXILIARES
-        // ========================================
-        function formatarData(dataStr, includeTime = false) {
-            if (!dataStr) return '';
-            try {
-                const data = new Date(dataStr);
-                if (includeTime) {
-                    return data.toLocaleString('pt-BR', { 
-                        day: '2-digit', 
-                        month: '2-digit', 
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    });
-                }
-                return data.toLocaleDateString('pt-BR');
-            } catch {
-                return dataStr;
-            }
-        }
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        // ========================================
-        // MARCAR/DESMARCAR TODAS
-        // ========================================
-        // EVENT LISTENERS DE "MARCAR/DESMARCAR TODAS" REMOVIDOS
-        // Os botões foram removidos da interface
-
-
-        // Inicializa checkboxes baseado no estado do servidor (renderizado pelo Jinja2)
-        // O template já renderiza o checkbox como checked se status == 'concluida'
-        // Esta função apenas garante sincronização caso haja alguma inconsistência
-        document.querySelectorAll('.tarefa-item').forEach(item => {
-            const checkbox = item.querySelector('.tarefa-checkbox');
-            if (!checkbox) return;
-            
-            // Verificar status do atributo data-tarefa-status (renderizado pelo servidor)
-            let status = item.getAttribute('data-tarefa-status') || '';
-            status = status.toLowerCase();
-            
-            // Normalizar: verificar se é concluída
-            const isConcluida = (status === 'concluida' || status === 'concluido');
-            
-            // Sincronizar checkbox com o atributo (fonte de verdade do servidor)
-            checkbox.checked = isConcluida;
-            
-            // Garantir que o atributo está normalizado
-            item.setAttribute('data-tarefa-status', isConcluida ? 'concluida' : 'pendente');
-            
-            // Sincronizar classes CSS
-            if (isConcluida) {
-                item.classList.add('concluida');
-            } else {
-                item.classList.remove('concluida');
-            }
-            
-            // Sincronizar badge de status
-            const statusBadge = item.querySelector('.tarefa-status');
-            if (statusBadge) {
-                statusBadge.textContent = isConcluida ? 'Concluído' : 'Pendente';
-                statusBadge.classList.remove('concluido', 'pendente');
-                statusBadge.classList.add(isConcluida ? 'concluido' : 'pendente');
-            }
-        });
-        
-        // Inicializa progresso
-        computeProgress();
-
-        // Listeners para eventos customizados
-        document.body.addEventListener('progress_update', function () { computeProgress(); });
-    });
-</script>
-
 <script>
     // Dados do checklist para renderização
     window.CHECKLIST_DATA = {{ checklist_tree | tojson if checklist_tree else '[]' }};
@@ -2733,6 +1966,7 @@
 </script>
 <script src="{{ url_for('static', filename='js/checklist_renderer.js') }}"></script>
 <script src="{{ url_for('static', filename='js/implantacao_detalhes.js') }}"></script>
+<script src="{{ url_for('static', filename='js/implantacao_detalhes_ui.js') }}"></script>
 
 <!-- Modal Selecionar Plano (Externo) -->
 {% include 'partials/_modal_selecionar_plano.html' %}

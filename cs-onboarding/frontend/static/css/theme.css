@@ -1,6 +1,4 @@
-
 :root {
-  
   --shadow-sm: var(--elevation-1);
   --shadow-md: var(--elevation-2);
 }
@@ -8,7 +6,6 @@
 body {
   background-color: var(--body-bg);
 }
-
 
 .main-title {
   text-align: center;
@@ -20,62 +17,60 @@ body {
   text-align: center;
 }
 
-
 .card {
   border: 0;
 }
-
-
 
 header.header-bg {
   background-color: var(--header-bg);
 }
 
-
 .btn {
   transition: transform 0.08s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
+
 .btn:active {
   transform: translateY(1px);
 }
-
 
 .table thead th {
   font-weight: 600;
   color: var(--body-color);
   background-color: var(--table-header-bg);
 }
+
 .table tbody tr:hover {
-  background-color: var(--table-bg) !important; 
+  background-color: var(--table-bg) !important;
 }
+
 .table-hover > tbody > tr:hover {
-  background-color: var(--table-bg) !important; 
+  background-color: var(--table-bg) !important;
 }
+
 .table-hover > tbody > tr:hover > * {
-  background-color: var(--table-bg) !important; 
+  background-color: var(--table-bg) !important;
   color: var(--body-color) !important;
 }
 
-
 .table {
   color: var(--body-color);
-  
   --bs-table-bg: var(--table-bg);
   --bs-table-color: var(--body-color);
   --bs-table-border-color: var(--table-border-color);
   --bs-table-hover-bg: var(--table-hover-bg);
   --bs-table-striped-bg: var(--table-bg);
 }
+
 .table tbody tr,
 .table tfoot tr {
   background-color: var(--table-bg);
 }
+
 .table th,
 .table td {
   border-color: var(--table-border-color) !important;
   padding: var(--space-3);
 }
-
 
 .user-profile-btn {
   width: 40px;
@@ -83,50 +78,106 @@ header.header-bg {
   box-shadow: var(--shadow-sm);
 }
 
-
 .rounded-3 { border-radius: var(--radius-lg) !important; }
 .shadow-soft { box-shadow: var(--shadow-sm) !important; }
 
-
+/* Esconder menu toggle antigo */
 .menu-toggle {
-  position: fixed;
-  top: 12px;
-  left: 12px;
-  z-index: 1020; 
-  background: var(--container-bg);
-  border: 1px solid var(--table-border-color);
-  color: var(--body-color);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-  display: inline-block;
-  line-height: 1;
+  display: none;
 }
 
+/* Layout principal com sidebar fixa */
+.main-layout {
+  display: flex;
+  min-height: 100vh;
+}
 
-#menu.bigslide-panel {
+/* Sidebar sempre visível */
+.sidebar-menu {
   position: fixed;
+  left: 0;
   top: 0;
-  left: -280px; 
   width: 280px;
   height: 100vh;
   background: var(--container-bg);
-  box-shadow: 0 6px 16px rgba(16, 24, 40, 0.08);
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
   border-right: 1px solid var(--table-border-color);
   padding: 1rem;
   overflow-y: auto;
-  z-index: 1030; 
-  transition: left 0.3s ease;
+  transition: width 0.3s ease-in-out;
+  z-index: 1000;
 }
 
-
-body.menu-open #menu.bigslide-panel {
-  left: 0;
+.sidebar-menu.collapsed {
+  width: 60px;
 }
 
+.sidebar-menu.collapsed .nav-link-text,
+.sidebar-menu.collapsed .d-flex strong,
+.sidebar-menu.collapsed .nav-item-divider {
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  display: none;
+}
+
+.sidebar-menu.collapsed .nav-link {
+  justify-content: center;
+  padding: 0.8rem;
+}
+
+.sidebar-menu.collapsed .nav-link i {
+  margin-right: 0 !important;
+}
+
+.sidebar-menu.collapsed .d-flex {
+  justify-content: center;
+}
+
+/* Botão de toggle no centro */
+.sidebar-toggle-btn {
+  position: fixed;
+  left: 280px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 48px;
+  background: var(--container-bg);
+  border: 1px solid var(--table-border-color);
+  border-left: none;
+  border-radius: 0 8px 8px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1001;
+  transition: left 0.3s ease-in-out, background-color 0.2s;
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+  color: var(--body-color);
+}
+
+.sidebar-toggle-btn:hover {
+  background: var(--accent-color);
+  color: #000;
+}
+
+.sidebar-toggle-btn i {
+  transition: transform 0.3s ease-in-out;
+  font-size: 1rem;
+}
+
+/* Conteúdo principal */
+.main-content {
+  margin-left: 280px;
+  flex: 1;
+  transition: margin-left 0.3s ease-in-out;
+  min-height: 100vh;
+  width: calc(100% - 280px);
+}
 
 .nav-link { color: var(--body-color); }
 .nav-link:hover { color: var(--accent-color); }
-
 
 .progress .progress-bar { color: #000000; }
 .list-group-item {
@@ -134,11 +185,13 @@ body.menu-open #menu.bigslide-panel {
   background-color: var(--card-bg);
   border-color: var(--table-border-color);
 }
+
 .modal-content {
   background-color: var(--container-bg);
   color: var(--body-color);
   border-color: var(--table-border-color);
 }
+
 .menu-toggle i { color: var(--body-color); }
 
 #menu .nav-link {
@@ -149,7 +202,6 @@ body.menu-open #menu.bigslide-panel {
   margin: 0.75rem 0;
 }
 
-
 .bigslide-backdrop {
   position: fixed;
   top: 0;
@@ -159,13 +211,13 @@ body.menu-open #menu.bigslide-panel {
   width: 100%;
   height: 100%;
   background: rgba(16, 24, 40, 0.3);
-  z-index: 1025; 
+  z-index: 1025;
 }
-
 
 .push {
   transition: margin-left 0.3s ease;
 }
+
 .push.push-shifted {
   margin-left: 280px;
 }
@@ -175,17 +227,16 @@ body.menu-open #menu.bigslide-panel {
   color: var(--body-color) !important;
 }
 
-
 table {
   background-color: var(--table-bg) !important;
   color: var(--body-color) !important;
 }
+
 table > :not(caption) > * > * {
   background-color: var(--table-bg) !important;
   color: var(--body-color) !important;
   border-color: var(--table-border-color) !important;
 }
-
 
 .table-light,
 .table-light > :not(caption) > * > * {
@@ -196,20 +247,18 @@ table > :not(caption) > * > * {
   color: var(--body-color) !important;
 }
 
-
 .table-striped {
   --bs-table-striped-bg: var(--table-bg);
 }
+
 .table-striped > tbody > tr:nth-of-type(odd) > * {
   background-color: var(--table-bg) !important;
 }
-
 
 .bg-light, .bg-white {
   background-color: var(--card-bg) !important;
   color: var(--body-color) !important;
 }
-
 
 .btn { color: #000000 !important; }
 .btn:hover,
@@ -224,7 +273,6 @@ table > :not(caption) > * > * {
 .btn-outline-light,
 .btn-outline-dark { color: #000000 !important; }
 
-
 .btn-outline-primary {
   color: #0d6efd !important;
   border-color: #0d6efd !important;
@@ -233,10 +281,10 @@ table > :not(caption) > * > * {
 .btn-close { filter: none; opacity: 0.85; }
 .btn-close:hover { opacity: 1; }
 
-
 .btn-edit-empresa {
   color: #0d6efd;
 }
+
 .btn-edit-empresa:hover,
 .btn-edit-empresa:focus {
   color: #0b5ed7;

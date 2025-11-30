@@ -1,14 +1,14 @@
 from flask import Blueprint, render_template, g, session, redirect, url_for, current_app, request, flash, jsonify
-from urllib.parse import urlencode
 from ..blueprints.auth import login_required
 from ..core.extensions import oauth
 from ..config.logging_config import get_logger
 import requests
-from datetime import datetime, date, timedelta
+from datetime import date, timedelta
 import uuid
 
 agenda_bp = Blueprint('agenda', __name__)
 agenda_logger = get_logger('agenda')
+
 
 def google_events_endpoint(calendar_id: str = 'primary'):
     return f'https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events'
@@ -60,7 +60,7 @@ def agenda_home():
     except Exception:
         base_day = date.today()
 
-    weekday = base_day.weekday()                  
+    weekday = base_day.weekday()
     days_to_subtract = (weekday + 1) % 7
     week_start = base_day - timedelta(days=days_to_subtract)
     week_end = week_start + timedelta(days=6)
@@ -133,8 +133,6 @@ def agenda_connect():
     return oauth.google.authorize_redirect(redirect_uri)
 
 
-
-
 @agenda_bp.route('/agenda/calendars')
 @login_required
 def agenda_list_calendars():
@@ -169,6 +167,7 @@ def agenda_list_calendars():
         return jsonify({'ok': True, 'calendars': calendars})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
+
 
 @agenda_bp.route('/agenda/callback')
 def agenda_callback():
@@ -210,9 +209,9 @@ def agenda_create_event():
 
     payload = request.get_json(silent=True) or {}
     summary = (payload.get('summary') or 'Compromisso').strip()
-    date_str = payload.get('date')              
-    start_time = payload.get('startTime')         
-    end_time = payload.get('endTime')             
+    date_str = payload.get('date')
+    start_time = payload.get('startTime')
+    end_time = payload.get('endTime')
     time_zone = payload.get('timeZone') or 'UTC'
     location = payload.get('location')
     all_day = bool(payload.get('allDay'))
@@ -230,15 +229,15 @@ def agenda_create_event():
 
     if all_day:
 
-        event_body['start'] = { 'date': date_str }
-        event_body['end'] = { 'date': date_str }
+        event_body['start'] = {'date': date_str}
+        event_body['end'] = {'date': date_str}
     else:
         if not (start_time and end_time):
             return jsonify({'ok': False, 'error': 'startTime e endTime são obrigatórios'}), 400
         start_dt = f"{date_str}T{start_time}:00"
         end_dt = f"{date_str}T{end_time}:00"
-        event_body['start'] = { 'dateTime': start_dt, 'timeZone': time_zone }
-        event_body['end']   = { 'dateTime': end_dt,   'timeZone': time_zone }
+        event_body['start'] = {'dateTime': start_dt, 'timeZone': time_zone}
+        event_body['end'] = {'dateTime': end_dt, 'timeZone': time_zone}
 
     recurrence = payload.get('recurrence')
     reminders = payload.get('reminders')
@@ -254,11 +253,11 @@ def agenda_create_event():
         event_body['conferenceData'] = {
             'createRequest': {
                 'requestId': str(uuid.uuid4()),
-                'conferenceSolutionKey': { 'type': 'hangoutsMeet' }
+                'conferenceSolutionKey': {'type': 'hangoutsMeet'}
             }
         }
 
-        extra_params = { 'conferenceDataVersion': 1 }
+        extra_params = {'conferenceDataVersion': 1}
 
     try:
         resp = requests.post(
@@ -314,6 +313,8 @@ def agenda_disconnect():
     except Exception:
         pass
     return redirect(url_for('agenda.agenda_home'))
+
+
 @agenda_bp.route('/agenda/events/<event_id>', methods=['PUT'])
 @login_required
 def agenda_update_event(event_id):
@@ -351,15 +352,15 @@ def agenda_update_event(event_id):
     if all_day is True:
         if not date_str:
             return jsonify({'ok': False, 'error': 'date é obrigatório para dia inteiro'}), 400
-        event_body['start'] = { 'date': date_str }
-        event_body['end'] = { 'date': date_str }
+        event_body['start'] = {'date': date_str}
+        event_body['end'] = {'date': date_str}
     elif all_day is False or (start_time and end_time):
         if not (date_str and start_time and end_time):
             return jsonify({'ok': False, 'error': 'date, startTime e endTime são obrigatórios'}), 400
         start_dt = f"{date_str}T{start_time}:00"
         end_dt = f"{date_str}T{end_time}:00"
-        event_body['start'] = { 'dateTime': start_dt, 'timeZone': time_zone }
-        event_body['end']   = { 'dateTime': end_dt,   'timeZone': time_zone }
+        event_body['start'] = {'dateTime': start_dt, 'timeZone': time_zone}
+        event_body['end'] = {'dateTime': end_dt, 'timeZone': time_zone}
 
     if recurrence is not None:
         event_body['recurrence'] = recurrence

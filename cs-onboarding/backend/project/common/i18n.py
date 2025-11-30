@@ -39,6 +39,7 @@ TRANSLATIONS = {
     },
 }
 
+
 def get_translator(app) -> Callable[[str], str]:
     def t(key: str, **kwargs) -> str:
         lang = (getattr(app, 'config', {}) or {}).get('LANG', 'pt')

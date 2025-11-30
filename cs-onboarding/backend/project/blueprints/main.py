@@ -1,42 +1,31 @@
 import os
 from flask import (
     Blueprint, render_template, request, flash, redirect, url_for, g, session,
-    current_app, send_from_directory, jsonify
+    current_app, send_from_directory
 )
 
-
-from ..blueprints.auth import login_required, permission_required 
-from ..db import query_db, execute_db, logar_timeline, get_db_connection                                   
-
-
+from ..blueprints.auth import login_required
+from ..db import query_db
 from ..domain.dashboard_service import get_dashboard_data
 from ..domain.implantacao_service import get_implantacao_details
 
 from ..constants import (
-
-
     CARGOS_RESPONSAVEL, PERFIS_COM_CRIACAO,
     NIVEIS_RECEITA, SEGUIMENTOS_LIST, TIPOS_PLANOS, MODALIDADES_LIST,
     HORARIOS_FUNCIONAMENTO, FORMAS_PAGAMENTO, SISTEMAS_ANTERIORES,
-    RECORRENCIA_USADA,
-    NAO_DEFINIDO_BOOL,
-    SIM_NAO_OPTIONS,
-    PERFIS_COM_GESTAO
+    RECORRENCIA_USADA, SIM_NAO_OPTIONS, PERFIS_COM_GESTAO
 )
 
-from ..common import utils
-from ..common.validation import validate_integer, sanitize_string, ValidationError
-from ..config.cache_config import cache
+from ..common.validation import sanitize_string, validate_integer, ValidationError
 
 main_bp = Blueprint('main', __name__)
 
 
-
 def _get_all_cs_users():
     """Busca todos os usuários com perfil que podem receber implantações."""
-
     result = query_db("SELECT usuario, nome FROM perfil_usuario WHERE perfil_acesso IS NOT NULL AND perfil_acesso != '' ORDER BY nome")
     return result if result is not None else []
+
 
 @main_bp.route('/')
 def home():
@@ -53,19 +42,20 @@ def home():
         use_custom_auth=not auth0_enabled
     )
 
+
 @main_bp.route('/uploads/<path:filename>')
 @login_required
 def serve_upload(filename):
     base_dir = os.path.join(os.path.dirname(current_app.root_path), 'uploads')
     return send_from_directory(base_dir, filename)
 
+
 @main_bp.route('/dashboard')
 @login_required
 def dashboard():
+    user_email = g.user_email
+    user_info = g.user
 
-    user_email = g.user_email  
-    user_info = g.user  
-    
     perfil_acesso = g.perfil.get('perfil_acesso') if g.get('perfil') else None
     is_manager = perfil_acesso in PERFIS_COM_GESTAO
 
@@ -84,8 +74,6 @@ def dashboard():
         sort_days = None
 
     try:
-        refresh = request.args.get('refresh')
-
         dashboard_data, metrics = get_dashboard_data(
             user_email,
             filtered_cs_email=current_cs_filter,
@@ -103,24 +91,30 @@ def dashboard():
                 dashboard_data['andamento'] = andamento_list_sorted
             except Exception:
                 pass
-        
-        perfil_data = g.perfil if g.perfil else {}  
-        default_metrics = { 'nome': user_info.get('name', user_email), 'impl_andamento': 0, 'impl_finalizadas': 0, 'impl_paradas': 0, 'progresso_medio_carteira': 0, 'impl_andamento_total': 0, 'implantacoes_atrasadas': 0, 'implantacoes_futuras': 0, 'implantacoes_sem_previsao': 0, 'total_valor_sem_previsao': 0.0 }
-        final_metrics = {**default_metrics, **perfil_data, **metrics}
-        
+
+        perfil_data = g.perfil if g.perfil else {}
+        default_metrics = {
+            'nome': user_info.get('name', user_email), 'impl_andamento': 0, 'impl_finalizadas': 0,
+            'impl_paradas': 0, 'progresso_medio_carteira': 0, 'impl_andamento_total': 0,
+            'implantacoes_futuras': 0, 'implantacoes_sem_previsao': 0,
+            'total_valor_sem_previsao': 0.0
+        }
+        final_metrics = {**default_metrics, **perfil_data}
+        final_metrics.update(metrics)
+        final_metrics['impl_andamento_total'] = len(dashboard_data.get('andamento', []))
+
         all_cs_users = _get_all_cs_users()
 
         return render_template(
             'dashboard.html',
-                user_info=user_info, 
-                metrics=final_metrics, 
-                implantacoes_andamento=dashboard_data.get('andamento', []), 
-                implantacoes_novas=dashboard_data.get('novas', []),
-                implantacoes_futuras=dashboard_data.get('futuras', []), 
-                implantacoes_sem_previsao=dashboard_data.get('sem_previsao', []), 
-                implantacoes_finalizadas=dashboard_data.get('finalizadas', []), 
-                implantacoes_paradas=dashboard_data.get('paradas', []), 
-                implantacoes_atrasadas=dashboard_data.get('atrasadas', []), 
+            user_info=user_info,
+            metrics=final_metrics,
+            implantacoes_andamento=dashboard_data.get('andamento', []),
+            implantacoes_novas=dashboard_data.get('novas', []),
+            implantacoes_futuras=dashboard_data.get('futuras', []),
+            implantacoes_sem_previsao=dashboard_data.get('sem_previsao', []),
+            implantacoes_finalizadas=dashboard_data.get('finalizadas', []),
+            implantacoes_paradas=dashboard_data.get('paradas', []),
             cargos_responsavel=CARGOS_RESPONSAVEL,
             PERFIS_COM_CRIACAO=PERFIS_COM_CRIACAO,
             NIVEIS_RECEITA=NIVEIS_RECEITA,
@@ -133,38 +127,38 @@ def dashboard():
             RECORRENCIA_USADA=RECORRENCIA_USADA,
             SIM_NAO_OPTIONS=SIM_NAO_OPTIONS,
             all_cs_users=all_cs_users,
-            
             is_manager=is_manager,
             current_cs_filter=current_cs_filter,
             sort_days=sort_days
         )
-        
+
     except Exception as e:
         print(f"ERRO ao carregar dashboard para {user_email}: {e}")
         flash("Erro ao carregar dados do dashboard.", "error")
-        
+
         perfil_acesso_erro = g.perfil.get('perfil_acesso') if g.get('perfil') else None
         is_manager_erro = perfil_acesso_erro in PERFIS_COM_GESTAO
         current_cs_filter_erro = request.args.get('cs_filter', None)
         if not is_manager_erro:
             current_cs_filter_erro = None
 
-        return render_template('dashboard.html', user_info=user_info, metrics={}, 
-                             implantacoes_andamento=[], implantacoes_novas=[], 
-                             implantacoes_futuras=[], implantacoes_sem_previsao=[], implantacoes_finalizadas=[], 
-                             implantacoes_paradas=[], implantacoes_atrasadas=[], 
-                             cargos_responsavel=CARGOS_RESPONSAVEL, error="Falha ao carregar dados.", 
-                             all_cs_users=[], PERFIS_COM_CRIACAO=PERFIS_COM_CRIACAO,
-                             is_manager=is_manager_erro, current_cs_filter=current_cs_filter_erro)  
+        return render_template('dashboard.html', user_info=user_info, metrics={},
+                               implantacoes_andamento=[], implantacoes_novas=[],
+                               implantacoes_futuras=[], implantacoes_sem_previsao=[], implantacoes_finalizadas=[],
+                               implantacoes_paradas=[],
+                               cargos_responsavel=CARGOS_RESPONSAVEL, error="Falha ao carregar dados.",
+                               all_cs_users=[], PERFIS_COM_CRIACAO=PERFIS_COM_CRIACAO,
+                               is_manager=is_manager_erro, current_cs_filter=current_cs_filter_erro)
+
 
 @main_bp.route('/implantacao/<int:impl_id>')
 @login_required
 def ver_implantacao(impl_id):
     from ..config.logging_config import get_logger
     logger = get_logger('main')
-    
+
     logger.info(f"Tentando acessar implantação ID {impl_id} - Usuário: {g.user_email}")
-    
+
     try:
         impl_id = validate_integer(impl_id, min_value=1)
         logger.info(f"ID validado: {impl_id}")
@@ -172,7 +166,7 @@ def ver_implantacao(impl_id):
         logger.error(f"ID de implantação inválido: {str(e)}")
         flash(f"ID de implantação inválido: {str(e)}", "error")
         return redirect(url_for('main.dashboard'))
-    
+
     try:
         logger.info(f"Chamando get_implantacao_details para ID {impl_id}")
         user_perfil = g.perfil if hasattr(g, 'perfil') and g.perfil else {}
@@ -183,21 +177,19 @@ def ver_implantacao(impl_id):
         )
         logger.info(f"Dados da implantação {impl_id} obtidos com sucesso")
 
-        return render_template( 
-            'implantacao_detalhes.html', 
+        return render_template(
+            'implantacao_detalhes.html',
             **context_data
         )
-        
+
     except ValueError as e:
         logger.warning(f"Acesso negado à implantação {impl_id}: {str(e)}")
         flash(str(e), 'error')
         return redirect(url_for('main.dashboard'))
-        
+
     except Exception as e:
         import traceback
         error_trace = traceback.format_exc()
         logger.error(f"Erro ao carregar detalhes da implantação ID {impl_id}: {e}\n{error_trace}")
         flash(f"Erro ao carregar detalhes da implantação: {str(e)}", "error")
         return redirect(url_for('main.dashboard'))
-
-

@@ -1,5 +1,4 @@
-
-
+import os
 
 JUSTIFICATIVAS_PARADA = [
     "Pausa solicitada pelo cliente",
@@ -17,25 +16,22 @@ CARGOS_RESPONSAVEL = [
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf'}
 
-NAO_DEFINIDO_BOOL = "Não definido" 
+NAO_DEFINIDO_BOOL = "Não definido"
 
 SIM_NAO_OPTIONS = [NAO_DEFINIDO_BOOL, "Sim", "Não"]
 
-
-import os
 ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'admin@gmail.com')
 
-CARGOS_LIST = ["Júnior", "Pleno", "Sênior"] 
+CARGOS_LIST = ["Júnior", "Pleno", "Sênior"]
 
 PERFIL_ADMIN = "Administrador"
 PERFIL_GERENTE = "Gerente"
 PERFIL_COORDENADOR = "Coordenador"
-PERFIL_IMPLANTADOR = "Implantador"                    
+PERFIL_IMPLANTADOR = "Implantador"
 
-PERFIS_ACESSO_LIST = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR, PERFIL_IMPLANTADOR]                       
+PERFIS_ACESSO_LIST = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR, PERFIL_IMPLANTADOR]
 
-PERFIS_COM_GESTAO = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR] 
-
+PERFIS_COM_GESTAO = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
 
 PERFIS_COM_CRIACAO = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
 
@@ -50,7 +46,7 @@ NIVEIS_RECEITA = [
 ]
 
 SEGUIMENTOS_LIST = [
-    "Natação", "Estúdio/Boutique", "Pilates", "Cross", "Low Cost", 
+    "Natação", "Estúdio/Boutique", "Pilates", "Cross", "Low Cost",
     "Full Service", "Escola", "Quadra de Areia", "Personal Trainer", "Outro"
 ]
 
@@ -63,14 +59,14 @@ HORARIOS_FUNCIONAMENTO = ["Livre", "Horário da Turma", "Personalizado"]
 FORMAS_PAGAMENTO = ["Dinheiro", "Cartão de Crédito", "Cartão de Débito", "Cheque", "Pix", "Outra"]
 
 SISTEMAS_ANTERIORES = [
-    "ACTUAR DESK / WEB", "BH SYSTEM", "BOSS - QUALYFIT", "CLOUD GYM WEB", "Control Fit", 
-    "DATA 4 YOU", "DATA FITNESS", "EASY MANAGER", "EVO", "FITNESS SCHOOL", "IFITNESS - FITSYSTEM", 
-    "INFO SKY", "MU - MICRO UNIVERSITY", "MU WEB", "OPERFIT", "PLANILHA EXCEL - DADOS CADASTRAIS", 
-    "POLISYSTEM - (DIGITAL GYM)", "Polisystem Web", "SAGAS", "SCA", "SCA WEB", "SECULLUM", 
+    "ACTUAR DESK / WEB", "BH SYSTEM", "BOSS - QUALYFIT", "CLOUD GYM WEB", "Control Fit",
+    "DATA 4 YOU", "DATA FITNESS", "EASY MANAGER", "EVO", "FITNESS SCHOOL", "IFITNESS - FITSYSTEM",
+    "INFO SKY", "MU - MICRO UNIVERSITY", "MU WEB", "OPERFIT", "PLANILHA EXCEL - DADOS CADASTRAIS",
+    "POLISYSTEM - (DIGITAL GYM)", "Polisystem Web", "SAGAS", "SCA", "SCA WEB", "SECULLUM",
     "TECNOFIT", "VYSOR", "NEXT FIT", "Não Possuia"
 ]
 
 RECORRENCIA_USADA = [
-    "Não", "Afinz", "Caixa", "Ceopag", "Cielo", "Getnet", "One Payment", "Pagar.me", 
+    "Não", "Afinz", "Caixa", "Ceopag", "Cielo", "Getnet", "One Payment", "Pagar.me",
     "PagBnk", "PinBank", "Rede", "Stone", "Strip", "Vind"
 ]

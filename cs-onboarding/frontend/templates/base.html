@@ -18,12 +18,9 @@
 
 <body>
 
-  <a href="#menu" class="menu-link menu-toggle btn btn-outline-secondary btn-sm" title="Menu">
-    <i class="bi bi-list"></i>
-  </a>
-
-
-  <nav id="menu" class="bigslide-panel" role="navigation">
+  <div class="main-layout">
+    <!-- Sidebar sempre visível -->
+    <nav id="menu" class="sidebar-menu" role="navigation">
     <div class="d-flex align-items-center mb-3">
       <div class="user-profile-btn-sidebar me-2">
         {% if g.perfil and g.perfil.foto_url %}
@@ -33,64 +30,66 @@
         <i class="bi bi-person-fill" style="font-size: 1.5rem;"></i>
         {% endif %}
       </div>
-      <strong>{{ g.perfil.nome or g.user_email }}</strong>
+      <strong class="nav-link-text">{{ g.perfil.nome or g.user_email }}</strong>
     </div>
     <ul class="nav flex-column">
       <li class="nav-item"><a class="nav-link {% if request.endpoint == 'main.dashboard' %}active{% endif %}"
-          href="{{ url_for('main.dashboard') }}"><i class="bi bi-speedometer2 me-2"></i> Dashboard</a></li>
+          href="{{ url_for('main.dashboard') }}"><i class="bi bi-speedometer2 me-2"></i><span class="nav-link-text"> Dashboard</span></a></li>
       {% if implantacao and implantacao.id %}
       <li class="nav-item"><a class="nav-link {% if request.endpoint == 'main.ver_implantacao' %}active{% endif %}"
-          href="{{ url_for('main.ver_implantacao', impl_id=implantacao.id) }}"><i class="bi bi-kanban me-2"></i>
-          Detalhes da Implantação</a></li>
+          href="{{ url_for('main.ver_implantacao', impl_id=implantacao.id) }}"><i class="bi bi-kanban me-2"></i><span class="nav-link-text"> Detalhes da Implantação</span></a></li>
       {% endif %}
       <li class="nav-item"><a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#modalPerfil"><i
-            class="bi bi-person-circle me-2"></i> Perfil</a></li>
+            class="bi bi-person-circle me-2"></i><span class="nav-link-text"> Perfil</span></a></li>
 
       <li class="nav-item"><a
           class="nav-link {% if request.endpoint and request.endpoint.startswith('agenda.') %}active{% endif %}"
-          href="{{ url_for('agenda.agenda_home') }}"><i class="bi bi-calendar-week me-2"></i> Agenda</a></li>
+          href="{{ url_for('agenda.agenda_home') }}"><i class="bi bi-calendar-week me-2"></i><span class="nav-link-text"> Agenda</span></a></li>
 
       <li class="nav-item"><a
           class="nav-link {% if request.endpoint and request.endpoint.startswith('planos.') %}active{% endif %}"
-          href="{{ url_for('planos.listar_planos') }}"><i class="bi bi-diagram-3 me-2"></i> Planos de Sucesso</a></li>
+          href="{{ url_for('planos.listar_planos') }}"><i class="bi bi-diagram-3 me-2"></i><span class="nav-link-text"> Planos de Sucesso</span></a></li>
 
       {% if g.perfil and g.perfil.perfil_acesso in g.PERFIS_COM_GESTAO %}
       <li class="nav-item nav-item-divider">
         <hr>
       </li>
       <li class="nav-item"><a class="nav-link" href="#" data-bs-toggle="modal"
-          data-bs-target="#modalGerenciarUsuarios"><i class="bi bi-people-fill me-2"></i> Usuários</a></li>
+          data-bs-target="#modalGerenciarUsuarios"><i class="bi bi-people-fill me-2"></i><span class="nav-link-text"> Usuários</span></a></li>
       <li class="nav-item"><a
           class="nav-link {% if request.endpoint == 'analytics.analytics_dashboard' %}active{% endif %}"
-          href="{{ url_for('analytics.analytics_dashboard') }}"><i class="bi bi-graph-up me-2"></i> Gerencial</a></li>
+          href="{{ url_for('analytics.analytics_dashboard') }}"><i class="bi bi-graph-up me-2"></i><span class="nav-link-text"> Gerencial</span></a></li>
       <li class="nav-item"><a
           class="nav-link {% if request.endpoint == 'analytics.cancelamentos_dashboard' %}active{% endif %}"
-          href="{{ url_for('analytics.cancelamentos_dashboard') }}"><i class="bi bi-x-circle me-2"></i>
-          Cancelamentos</a></li>
+          href="{{ url_for('analytics.cancelamentos_dashboard') }}"><i class="bi bi-x-circle me-2"></i><span class="nav-link-text"> Cancelamentos</span></a></li>
       <li class="nav-item nav-item-divider">
         <hr>
       </li>
-      <li class="nav-item"><span class="nav-link disabled">Gamificação</span></li>
+      <li class="nav-item"><span class="nav-link disabled nav-link-text">Gamificação</span></li>
       <li class="nav-item"><a
           class="nav-link {% if request.endpoint == 'gamification.manage_gamification_metrics' %}active{% endif %}"
-          href="{{ url_for('gamification.manage_gamification_metrics') }}"><i class="bi bi-pencil-square me-2"></i>
-          Métricas</a></li>
+          href="{{ url_for('gamification.manage_gamification_metrics') }}"><i class="bi bi-pencil-square me-2"></i><span class="nav-link-text"> Métricas</span></a></li>
       <li class="nav-item"><a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#modalGamificacao"><i
-            class="bi bi-list-check me-2"></i> Critérios da Gamificação</a></li>
+            class="bi bi-list-check me-2"></i><span class="nav-link-text"> Critérios da Gamificação</span></a></li>
       <li class="nav-item"><a
           class="nav-link {% if request.endpoint == 'gamification.gamification_report' %}active{% endif %}"
-          href="{{ url_for('gamification.gamification_report') }}"><i class="bi bi-clipboard-data me-2"></i>
-          Relatório</a></li>
+          href="{{ url_for('gamification.gamification_report') }}"><i class="bi bi-clipboard-data me-2"></i><span class="nav-link-text"> Relatório</span></a></li>
       {% endif %}
       <li class="nav-item nav-item-divider">
         <hr>
       </li>
       <li class="nav-item"><a class="nav-link text-danger" href="{{ url_for('auth.logout') }}"><i
-            class="bi bi-box-arrow-left me-2"></i> Sair</a></li>
+            class="bi bi-box-arrow-left me-2"></i><span class="nav-link-text"> Sair</span></a></li>
     </ul>
-  </nav>
+    </nav>
 
-  <div class="push">
+    <!-- Botão de toggle no centro -->
+    <button id="sidebarToggle" class="sidebar-toggle-btn" title="Expandir/Colapsar menu">
+      <i class="bi bi-chevron-left"></i>
+    </button>
+
+    <!-- Conteúdo principal -->
+    <div class="main-content">
     {% block content %}
     <div class="container py-4">
       <div class="card">
@@ -101,6 +100,7 @@
       </div>
     </div>
     {% endblock %}
+    </div>
   </div>
 
   {% include 'modals/_detalhes_empresa.html' %}
@@ -117,6 +117,306 @@
 
   <script src="https://unpkg.com/htmx.org@1.9.10"></script>
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
+  <script>
+    // Configurar locale PT-BR para flatpickr
+    if (window.flatpickr) {
+      flatpickr.localize({
+        weekdays: {
+          shorthand: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
+          longhand: ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']
+        },
+        months: {
+          shorthand: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+          longhand: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+        },
+        firstDayOfWeek: 1,
+        rangeSeparator: ' até ',
+        weekAbbreviation: 'Sem',
+        scrollTitle: 'Role para aumentar',
+        toggleTitle: 'Clique para alternar',
+        amPM: ['AM', 'PM'],
+        yearAriaLabel: 'Ano',
+        monthAriaLabel: 'Mês',
+        hourAriaLabel: 'Hora',
+        minuteAriaLabel: 'Minuto',
+        time_24hr: false
+      });
+    }
+  </script>
+  
+  <script>
+    // Função para aplicar máscara de data DD/MM/AAAA
+    function applyDateMask(input) {
+      if (!input || input.dataset.maskApplied) return;
+      
+      input.dataset.maskApplied = 'true';
+      input.setAttribute('maxlength', '10');
+      input.setAttribute('inputmode', 'numeric');
+      
+      // Aplicar máscara enquanto digita
+      input.addEventListener('input', function(e) {
+        var oldValue = this.dataset.oldValue || '';
+        var cursorPos = this.selectionStart;
+        var value = this.value.replace(/\D/g, ''); // Remove tudo que não é número
+        
+        // Se o valor não mudou (apenas formatação), não fazer nada
+        if (value === oldValue.replace(/\D/g, '')) {
+          return;
+        }
+        
+        // Salvar valor antigo
+        this.dataset.oldValue = value;
+        
+        if (value.length > 8) {
+          value = value.substring(0, 8);
+        }
+        
+        // Aplicar formatação DD/MM/AAAA apenas se houver números
+        var formatted = '';
+        if (value.length > 0) {
+          formatted = value.substring(0, 2);
+          if (value.length > 2) {
+            formatted += '/' + value.substring(2, 4);
+          }
+          if (value.length > 4) {
+            formatted += '/' + value.substring(4, 8);
+          }
+        }
+        
+        // Só atualizar se o valor realmente mudou
+        if (this.value !== formatted) {
+          this.value = formatted;
+          
+          // Ajustar posição do cursor após formatação
+          var newCursorPos = cursorPos;
+          var addedChars = formatted.length - (oldValue.replace(/\D/g, '').length);
+          
+          // Se adicionamos uma barra, ajustar cursor
+          if (formatted.length > cursorPos && formatted.charAt(cursorPos) === '/') {
+            newCursorPos = cursorPos + 1;
+          } else if (addedChars > 0 && cursorPos < formatted.length) {
+            newCursorPos = cursorPos + addedChars;
+          }
+          
+          // Garantir que o cursor não ultrapasse o tamanho
+          if (newCursorPos > formatted.length) {
+            newCursorPos = formatted.length;
+          }
+          
+          if (typeof this.setSelectionRange === 'function' && (this.type || '').toLowerCase() !== 'hidden' && document.activeElement === this) {
+            try { this.setSelectionRange(newCursorPos, newCursorPos); } catch (_) {}
+          }
+        }
+        
+        // Validar data em tempo real apenas se tiver 10 caracteres (data completa)
+        if (formatted.length === 10) {
+          validateDateInput(this);
+        } else {
+          this.classList.remove('is-invalid', 'is-valid');
+        }
+      });
+      
+      // Validar ao perder o foco
+      input.addEventListener('blur', function() {
+        validateDateInput(this);
+      });
+      
+      // Prevenir entrada de caracteres não numéricos (exceto teclas de controle)
+      input.addEventListener('keypress', function(e) {
+        // Permitir teclas de controle
+        if (e.ctrlKey || e.metaKey || e.altKey) {
+          return true;
+        }
+        
+        var char = String.fromCharCode(e.which || e.keyCode);
+        // Permitir apenas números
+        if (!/[0-9]/.test(char)) {
+          e.preventDefault();
+          return false;
+        }
+      });
+      
+      // Permitir teclas de navegação e controle
+      input.addEventListener('keydown', function(e) {
+        // Permitir backspace, delete, tab, escape, enter, setas, home, end
+        if ([8, 9, 27, 13, 46, 35, 36, 37, 38, 39, 40].indexOf(e.keyCode) !== -1) {
+          return true;
+        }
+        // Permitir Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+        if ((e.keyCode === 65 || e.keyCode === 67 || e.keyCode === 86 || e.keyCode === 88) && (e.ctrlKey || e.metaKey)) {
+          return true;
+        }
+      });
+    }
+    
+    // Validar data
+    function validateDateInput(input) {
+      var value = input.value.trim();
+      input.classList.remove('is-invalid', 'is-valid');
+      
+      if (!value || value.length === 0) {
+        return;
+      }
+      
+      // Verificar formato DD/MM/AAAA
+      var regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+      var match = value.match(regex);
+      
+      if (!match) {
+        input.classList.add('is-invalid');
+        return false;
+      }
+      
+      var day = parseInt(match[1], 10);
+      var month = parseInt(match[2], 10);
+      var year = parseInt(match[3], 10);
+      
+      // Validar limites
+      if (day < 1 || day > 31 || month < 1 || month > 12 || year < 1900 || year > 2100) {
+        input.classList.add('is-invalid');
+        return false;
+      }
+      
+      // Validar se a data existe
+      var date = new Date(year, month - 1, day);
+      if (date.getDate() !== day || date.getMonth() !== month - 1 || date.getFullYear() !== year) {
+        input.classList.add('is-invalid');
+        return false;
+      }
+      
+      input.classList.add('is-valid');
+      return true;
+    }
+    
+    // Função global para aplicar flatpickr e máscara em todos os campos de data
+    window.initDateFields = function() {
+      // Aplicar máscara em todos os campos de data
+      document.querySelectorAll('input[type="text"]').forEach(function(input) {
+        if (input.disabled || input.readOnly || input.classList.contains('no-datepicker')) {
+          return;
+        }
+        
+        var placeholder = (input.getAttribute('placeholder') || '').toLowerCase();
+        var name = (input.getAttribute('name') || '').toLowerCase();
+        var id = (input.getAttribute('id') || '').toLowerCase();
+        var className = (input.className || '').toLowerCase();
+        
+        // Verificar se é um campo de data
+        var isDateField = (
+          className.includes('flatpickr-date') ||
+          className.includes('date-input') ||
+          placeholder.includes('dd/mm') || 
+          placeholder.includes('dd/mm/aaaa') ||
+          (name.includes('data_') && !name.includes('data_cadastro')) || 
+          (name.includes('_data') && !name.includes('cadastro_data')) ||
+          (id.includes('data_') && !id.includes('data_cadastro')) || 
+          (id.includes('_data') && !id.includes('cadastro_data')) ||
+          (id.includes('date') && !id.includes('update')) ||
+          (name.includes('date') && !name.includes('update'))
+        );
+        
+        if (isDateField) {
+          // Se flatpickr não estiver disponível, aplicar máscara no input original
+          if (!window.flatpickr) {
+            applyDateMask(input);
+          }
+          
+          // Aplicar flatpickr (se disponível)
+          if (window.flatpickr && !input._flatpickr) {
+            try {
+              var dateConfig = {
+                dateFormat: 'Y-m-d',
+                altInput: true,
+                altFormat: 'd/m/Y',
+                allowInput: false,
+                clickOpens: true,
+                locale: {
+                  weekdays: {
+                    shorthand: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
+                    longhand: ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']
+                  },
+                  months: {
+                    shorthand: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+                    longhand: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+                  },
+                  firstDayOfWeek: 1,
+                  rangeSeparator: ' até ',
+                  weekAbbreviation: 'Sem',
+                  scrollTitle: 'Role para aumentar',
+                  toggleTitle: 'Clique para alternar',
+                  amPM: ['AM', 'PM'],
+                  yearAriaLabel: 'Ano',
+                  monthAriaLabel: 'Mês',
+                  hourAriaLabel: 'Hora',
+                  minuteAriaLabel: 'Minuto',
+                  time_24hr: false
+                },
+                parseDate: function(datestr, format) {
+                  var regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+                  var match = datestr.match(regex);
+                  if (!match) return null;
+                  
+                  var day = parseInt(match[1], 10);
+                  var month = parseInt(match[2], 10) - 1;
+                  var year = parseInt(match[3], 10);
+                  
+                  var date = new Date(year, month, day);
+                  if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) {
+                    return null;
+                  }
+                  
+                  return date;
+                }
+              };
+              
+              var fp = window.flatpickr(input, dateConfig);
+              
+              // Aplicar máscara também no altInput do flatpickr
+              if (fp && fp.altInput) {
+                // Remover o atributo para permitir aplicar a máscara novamente
+                fp.altInput.removeAttribute('data-mask-applied');
+                applyDateMask(fp.altInput);
+                
+                // Sincronizar quando o usuário seleciona data no calendário
+                fp.config.onChange.push(function(selectedDates, dateStr, instance) {
+                  if (instance.altInput) {
+                    validateDateInput(instance.altInput);
+                  }
+                });
+                
+                // Garantir que a máscara funcione mesmo quando o flatpickr atualiza o campo
+                var originalSetDate = fp.setDate;
+                fp.setDate = function(date, triggerChange) {
+                  var result = originalSetDate.call(this, date, triggerChange);
+                  if (this.altInput) {
+                    setTimeout(function() {
+                      validateDateInput(fp.altInput);
+                    }, 10);
+                  }
+                  return result;
+                };
+              }
+            } catch (e) {
+              console.warn('Erro ao aplicar flatpickr no campo:', input.id || input.name, e);
+            }
+          }
+        }
+      });
+    };
+    
+    // Inicializar quando o DOM estiver pronto
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', window.initDateFields);
+    } else {
+      window.initDateFields();
+    }
+    
+    // Re-inicializar quando modais são abertos (para campos criados dinamicamente)
+    document.addEventListener('shown.bs.modal', function() {
+      setTimeout(window.initDateFields, 100);
+    });
+  </script>
   <script>
     (function () {
       function ensureHTMX() {
@@ -335,66 +635,64 @@
 
 
   <script>
-    (function () {
-      function nativeInit() {
-        // Se jQuery/bigSlide estiverem disponíveis, não ativar fallback
-        if (window.jQuery && jQuery.fn && jQuery.fn.bigSlide) return;
-
-        var menuToggle = document.querySelector('.menu-link');
-        var menu = document.getElementById('menu');
-        var push = document.querySelector('.push');
-        if (!menuToggle || !menu || !push) return;
-
-        // Backdrop nativo
-        var backdrop = document.querySelector('.bigslide-backdrop');
-        if (!backdrop) {
-          backdrop = document.createElement('div');
-          backdrop.className = 'bigslide-backdrop d-none';
-          document.body.appendChild(backdrop);
+    // Toggle do sidebar
+    document.addEventListener('DOMContentLoaded', function() {
+      const sidebarToggle = document.getElementById('sidebarToggle');
+      const sidebar = document.getElementById('menu');
+      const mainContent = document.querySelector('.main-content');
+      
+      if (sidebarToggle && sidebar) {
+        // Função para atualizar posição do botão
+        function updateTogglePosition() {
+          if (sidebar.classList.contains('collapsed')) {
+            sidebarToggle.style.left = '60px';
+            if (mainContent) {
+              mainContent.style.marginLeft = '60px';
+              mainContent.style.width = 'calc(100% - 60px)';
+            }
+          } else {
+            sidebarToggle.style.left = '280px';
+            if (mainContent) {
+              mainContent.style.marginLeft = '280px';
+              mainContent.style.width = 'calc(100% - 280px)';
+            }
+          }
         }
-
-        var open = false;
-        function openMenu() {
-          document.body.classList.add('menu-open');
-          menu.classList.add('open');
-          push.classList.add('push-shifted');
-          backdrop.classList.remove('d-none');
-          open = true;
+        
+        // Verificar estado salvo no localStorage
+        const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+        if (isCollapsed) {
+          sidebar.classList.add('collapsed');
         }
-        function closeMenu() {
-          document.body.classList.remove('menu-open');
-          menu.classList.remove('open');
-          push.classList.remove('push-shifted');
-          backdrop.classList.add('d-none');
-          open = false;
+        updateTogglePosition();
+        
+        // Inicializar rotação do ícone
+        const icon = sidebarToggle.querySelector('i');
+        if (icon) {
+          if (isCollapsed) {
+            icon.style.transform = 'rotate(180deg)';
+          } else {
+            icon.style.transform = 'rotate(0deg)';
+          }
         }
-        function toggleMenu(e) {
-          if (e) e.preventDefault();
-          (open ? closeMenu : openMenu)();
-        }
-
-        menuToggle.addEventListener('click', toggleMenu);
-        backdrop.addEventListener('click', closeMenu);
-        // Fecha ao navegar
-        menu.addEventListener('click', function (ev) {
-          var target = ev.target.closest('a.nav-link');
-          if (target) { setTimeout(closeMenu, 10); }
+        
+        sidebarToggle.addEventListener('click', function() {
+          sidebar.classList.toggle('collapsed');
+          // Rotacionar ícone
+          const icon = sidebarToggle.querySelector('i');
+          if (icon) {
+            if (sidebar.classList.contains('collapsed')) {
+              icon.style.transform = 'rotate(180deg)';
+            } else {
+              icon.style.transform = 'rotate(0deg)';
+            }
+          }
+          updateTogglePosition();
+          // Salvar estado no localStorage
+          localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
         });
-        // Fecha com ESC
-        document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && open) closeMenu(); });
       }
-
-      // Se bigSlide não carregar, ativamos o fallback nativo
-      if (!(window.jQuery && jQuery.fn && jQuery.fn.bigSlide)) {
-        // Tentar após DOM pronto
-        if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', nativeInit);
-        } else {
-          nativeInit();
-        }
-      }
-      // Além disso, se o evento "bigslide-ready" nunca ocorrer, já teremos o fallback ativo
-    })();
+    });
   </script>
 
   <script>
@@ -420,12 +718,81 @@
   <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
   <script>
     function formatarTelefone(input) {
+      // Remove tudo que não é número
       let v = input.value.replace(/\D/g, '').substring(0, 11);
-      if (v.length > 10) v = v.replace(/^(\d{2})(\d{5})(\d{4}).*/, '($1) $2-$3');
-      else if (v.length > 6) v = v.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
-      else if (v.length > 2) v = v.replace(/^(\d{2})(\d{0,5}).*/, '($1) $2');
-      else if (v.length > 0) v = v.replace(/^(\d{0,2}).*/, '($1');
+      
+      // Aplica máscara conforme o tamanho
+      if (v.length > 10) {
+        // Celular: (XX) XXXXX-XXXX
+        v = v.replace(/^(\d{2})(\d{5})(\d{4}).*/, '($1) $2-$3');
+      } else if (v.length > 6) {
+        // Telefone fixo: (XX) XXXX-XXXX
+        v = v.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
+      } else if (v.length > 2) {
+        // DDD + início: (XX) XXXX
+        v = v.replace(/^(\d{2})(\d{0,5}).*/, '($1) $2');
+      } else if (v.length > 0) {
+        // Apenas DDD: (XX
+        v = v.replace(/^(\d{0,2}).*/, '($1');
+      }
+      
       input.value = v;
+      
+      // Validação visual
+      const telefoneInput = input;
+      const telefoneNumeros = v.replace(/\D/g, '');
+      const isValid = telefoneNumeros.length >= 10 && telefoneNumeros.length <= 11;
+      
+      // Remove classes anteriores
+      telefoneInput.classList.remove('is-valid', 'is-invalid');
+      
+      // Adiciona classe de validação
+      if (telefoneNumeros.length > 0) {
+        if (isValid) {
+          telefoneInput.classList.add('is-valid');
+          telefoneInput.setCustomValidity('');
+        } else {
+          telefoneInput.classList.add('is-invalid');
+          telefoneInput.setCustomValidity('Telefone deve ter 10 ou 11 dígitos');
+        }
+      } else {
+        telefoneInput.setCustomValidity('');
+      }
+    }
+    
+    // Função para validar telefone
+    function validarTelefone(telefone) {
+      if (!telefone) return true; // Campo opcional
+      const numeros = telefone.replace(/\D/g, '');
+      return numeros.length >= 10 && numeros.length <= 11;
+    }
+    
+    // Função para validar telefone completo ao sair do campo
+    function validarTelefoneCompleto(input) {
+      const telefone = input.value.trim();
+      const telefoneInput = input;
+      
+      // Remove classes anteriores
+      telefoneInput.classList.remove('is-valid', 'is-invalid');
+      
+      if (telefone.length === 0) {
+        // Campo vazio é válido (opcional)
+        telefoneInput.setCustomValidity('');
+        return true;
+      }
+      
+      const numeros = telefone.replace(/\D/g, '');
+      const isValid = numeros.length >= 10 && numeros.length <= 11;
+      
+      if (isValid) {
+        telefoneInput.classList.add('is-valid');
+        telefoneInput.setCustomValidity('');
+        return true;
+      } else {
+        telefoneInput.classList.add('is-invalid');
+        telefoneInput.setCustomValidity('Telefone deve ter 10 ou 11 dígitos');
+        return false;
+      }
     }
 
     const setMultipleSelect = (selectElement, dataValue) => {
@@ -511,23 +878,35 @@
       const modalDetalhesEmpresa = document.getElementById('modalDetalhesEmpresa');
       if (modalDetalhesEmpresa) {
         modalDetalhesEmpresa.addEventListener('show.bs.modal', function (event) {
+          const safeSet = function(selOrEl, value, root){
+            const el = typeof selOrEl === 'string' ? (root || document).querySelector(selOrEl) : selOrEl;
+            if (!el) return; 
+            try { el.value = value; } catch (_) {}
+          };
           const button = event.relatedTarget;
-          if (!button || !button.getAttribute('data-id')) return;
-          const getData = (key, defaultVal = '') => { const val = button.getAttribute(`data-${key}`); return (val === 'null' || val === 'undefined' || val === null || val === 'None' || val === undefined || val === '') ? defaultVal : val; };
-          const modal = modalDetalhesEmpresa;
-          const implId = getData('id');
+          const getData = (key, defaultVal = '') => { const val = button && button.getAttribute ? button.getAttribute(`data-${key}`) : null; return (val === 'null' || val === 'undefined' || val === null || val === 'None' || val === undefined || val === '') ? defaultVal : val; };
+          const modal = event.target || modalDetalhesEmpresa;
+          let implId = getData('id');
+          if (!implId) {
+            const hiddenIdEl = modal.querySelector('#modal-implantacao_id');
+            implId = hiddenIdEl && hiddenIdEl.value ? hiddenIdEl.value : implId;
+          }
+          if (!implId) {
+            const m = (location.pathname || '').match(/\/implantacao\/(\d+)/);
+            implId = m && m[1] ? m[1] : implId;
+          }
 
-          modal.querySelector('#modal-implantacao_id').value = implId;
-          modal.querySelector('#modal-responsavel_cliente').value = getData('responsavel');
-          modal.querySelector('#modal-cargo_responsavel').value = getData('cargo');
-          modal.querySelector('#modal-telefone_responsavel').value = getData('telefone');
-          modal.querySelector('#modal-email_responsavel').value = getData('email');
+          safeSet('#modal-implantacao_id', implId, modal);
+          safeSet('#modal-responsavel_cliente', getData('responsavel'), modal);
+          safeSet('#modal-cargo_responsavel', getData('cargo'), modal);
+          safeSet('#modal-telefone_responsavel', getData('telefone'), modal);
+          safeSet('#modal-email_responsavel', getData('email'), modal);
           const inicioProducaoIsoAttr = getData('inicio-producao');
           const finalImplantacaoIsoAttr = getData('final-implantacao');
-          modal.querySelector('#modal-id_favorecido').value = getData('id-favorecido');
-          modal.querySelector('#modal-chave_oamd').value = getData('chave-oamd');
-          modal.querySelector('#modal-tela_apoio_link').value = getData('tela-apoio-link');
-          modal.querySelector('#modal-nivel_receita').value = getData('nivel-receita');
+          safeSet('#modal-id_favorecido', getData('id-favorecido'), modal);
+          safeSet('#modal-chave_oamd', getData('chave-oamd'), modal);
+          safeSet('#modal-tela_apoio_link', getData('tela-apoio-link'), modal);
+          safeSet('#modal-nivel_receita', getData('nivel-receita'), modal);
 
           initializeMultiTagInput('#modal-modalidades', getData('modalidades'));
           initializeMultiTagInput('#modal-horarios_func', getData('horarios-func'));
@@ -535,23 +914,23 @@
           initializeMultiTagInput('#modal-seguimento', getData('seguimento'));
           initializeMultiTagInput('#modal-tipos_planos', getData('tipos-planos'));
 
-          modal.querySelector('#modal-diaria').value = getData('diaria', 'Não definido');
-          modal.querySelector('#modal-freepass').value = getData('freepass', 'Não definido');
-          modal.querySelector('#modal-alunos_ativos').value = getData('alunos-ativos', '0');
-          modal.querySelector('#modal-sistema_anterior').value = getData('sistema-anterior');
-          modal.querySelector('#modal-recorrencia_usa').value = getData('recorrencia-usa');
-          modal.querySelector('#modal-importacao').value = getData('importacao', 'Não definido');
-          modal.querySelector('#modal-boleto').value = getData('boleto', 'Não definido');
-          modal.querySelector('#modal-nota_fiscal').value = getData('nota-fiscal', 'Não definido');
-          modal.querySelector('#modal-catraca').value = getData('catraca', 'Não preenchido');
-          modal.querySelector('#modal-facial').value = getData('facial', 'Não preenchido');
+          safeSet('#modal-diaria', getData('diaria', 'Não definido'), modal);
+          safeSet('#modal-freepass', getData('freepass', 'Não definido'), modal);
+          safeSet('#modal-alunos_ativos', getData('alunos-ativos', '0'), modal);
+          safeSet('#modal-sistema_anterior', getData('sistema-anterior'), modal);
+          safeSet('#modal-recorrencia_usa', getData('recorrencia-usa'), modal);
+          safeSet('#modal-importacao', getData('importacao', 'Não definido'), modal);
+          safeSet('#modal-boleto', getData('boleto', 'Não definido'), modal);
+          safeSet('#modal-nota_fiscal', getData('nota-fiscal', 'Não definido'), modal);
+          safeSet('#modal-catraca', getData('catraca', 'Não preenchido'), modal);
+          safeSet('#modal-facial', getData('facial', 'Não preenchido'), modal);
 
-          const valorAtribuidoInput = modal.querySelector('#modal-valor_atribuido'); if (valorAtribuidoInput) valorAtribuidoInput.value = getData('valor-atribuido', '0.00');
+          safeSet('#modal-valor_atribuido', getData('valor-atribuido', '0.00'), modal);
 
-          const respEstrategicoNomeInput = modal.querySelector('#modal-resp_estrategico_nome'); if (respEstrategicoNomeInput) respEstrategicoNomeInput.value = getData('resp-estrategico-nome');
-          const respOnbNomeInput = modal.querySelector('#modal-resp_onb_nome'); if (respOnbNomeInput) respOnbNomeInput.value = getData('resp-onb-nome');
-          const contatosInput = modal.querySelector('#modal-contatos'); if (contatosInput) contatosInput.value = getData('contatos');
-          const respEstrategicoObsInput = modal.querySelector('#modal-resp_estrategico_obs'); if (respEstrategicoObsInput) respEstrategicoObsInput.value = getData('resp-estrategico-obs');
+          safeSet('#modal-resp_estrategico_nome', getData('resp-estrategico-nome'), modal);
+          safeSet('#modal-resp_onb_nome', getData('resp-onb-nome'), modal);
+          safeSet('#modal-contatos', getData('contatos'), modal);
+          safeSet('#modal-resp_estrategico_obs', getData('resp-estrategico-obs'), modal);
 
           const inicioEfetivoIsoAttr = getData('inicio-efetivo-iso');
 
@@ -569,9 +948,21 @@
           setFpDate(window.fpInicioProd, inicioProducaoIsoAttr);
           setFpDate(window.fpFinalImpl, finalImplantacaoIsoAttr);
 
+          if (!inicioEfetivoIsoAttr) {
+            const v = (modal.querySelector('#modal-inicio_efetivo') || {}).value || '';
+            if (v) setFpDate(window.fpInicioEfetivo, v);
+          }
+          if (!inicioProducaoIsoAttr) {
+            const v = (modal.querySelector('#modal-data_inicio_producao') || {}).value || '';
+            if (v) setFpDate(window.fpInicioProd, v);
+          }
+          if (!finalImplantacaoIsoAttr) {
+            const v = (modal.querySelector('#modal-data_final_implantacao') || {}).value || '';
+            if (v) setFpDate(window.fpFinalImpl, v);
+          }
+
           const inicioImplantacaoIso = getData('inicio-implantacao');
-          const dataCadastroInput = modal.querySelector('#modal-data_cadastro');
-          if (dataCadastroInput) dataCadastroInput.value = (function (iso) { if (!iso) return ''; var p = iso.split('T')[0].split('-'); if (p.length !== 3) return ''; return p[2].padStart(2, '0') + '/' + p[1].padStart(2, '0') + '/' + p[0]; })(inicioImplantacaoIso);
+          safeSet('#modal-data_cadastro', (function (iso) { if (!iso) return ''; var p = iso.split('T')[0].split('-'); if (p.length !== 3) return ''; return p[2].padStart(2, '0') + '/' + p[1].padStart(2, '0') + '/' + p[0]; })(inicioImplantacaoIso), modal);
 
           fetch(`/api/v1/implantacoes/${implId}`)
             .then(r => r.ok ? r.json() : Promise.reject(new Error('Falha ao carregar implantação')))
@@ -585,7 +976,8 @@
             .catch(() => { });
 
           formatarTelefone(modal.querySelector('#modal-telefone_responsavel'));
-          const modalRedirect = modal.querySelector('#modal-redirect_to'); const isDetailsPage = document.getElementById('checklist-area-treinamento'); modalRedirect.value = isDetailsPage ? 'detalhes' : 'dashboard';
+          const isDetailsPage = document.getElementById('checklist-area-treinamento');
+          safeSet('#modal-redirect_to', isDetailsPage ? 'detalhes' : 'dashboard', modal);
         });
 
         modalDetalhesEmpresa.addEventListener('hide.bs.modal', function (event) {
@@ -597,6 +989,47 @@
           tomSelectInstances = {};
         });
       }
+
+      document.addEventListener('show.bs.modal', function (event) {
+        const target = event.target;
+        if (!target || target.id !== 'modalDetalhesEmpresa') return;
+        const button = event.relatedTarget;
+        const modal = target;
+        const getData = (key, def='') => { const val = button && button.getAttribute ? button.getAttribute(`data-${key}`) : null; return (!val || val === 'null' || val === 'undefined' || val === 'None') ? def : val; };
+        let implId = getData('id');
+        if (!implId) {
+          const hiddenIdEl = modal.querySelector('#modal-implantacao_id') || modal.querySelector('[name="implantacao_id"]');
+          implId = hiddenIdEl && hiddenIdEl.value ? hiddenIdEl.value : implId;
+        }
+        if (!implId) {
+          const m = (location.pathname || '').match(/\/implantacao\/(\d+)/);
+          implId = m && m[1] ? m[1] : implId;
+        }
+        const inicioEfetivoIsoAttr = getData('inicio-efetivo-iso');
+        const inicioProducaoIsoAttr = getData('inicio-producao');
+        const finalImplantacaoIsoAttr = getData('final-implantacao');
+        const normalizeToISO = (s) => { if (!s) return ''; const t = String(s).trim(); let m = t.match(/^(\d{2})\/(\d{2})\/(\d{4})$/); if (m) return `${m[3]}-${m[2]}-${m[1]}`; m = t.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return `${m[1]}-${m[2]}-${m[3]}`; return ''; };
+        const setFpDate = (fp, s) => { const iso = normalizeToISO(s); if (fp && iso) { fp.setDate(iso, true, 'Y-m-d'); } };
+        setFpDate(window.fpInicioEfetivo, inicioEfetivoIsoAttr);
+        setFpDate(window.fpInicioProd, inicioProducaoIsoAttr);
+        setFpDate(window.fpFinalImpl, finalImplantacaoIsoAttr);
+        if (!inicioEfetivoIsoAttr) { const v = (modal.querySelector('#modal-inicio_efetivo') || modal.querySelector('[name="data_inicio_efetivo"]') || {}).value || ''; if (v) setFpDate(window.fpInicioEfetivo, v); }
+        if (!inicioProducaoIsoAttr) { const v = (modal.querySelector('#modal-data_inicio_producao') || modal.querySelector('[name="data_inicio_producao"]') || {}).value || ''; if (v) setFpDate(window.fpInicioProd, v); }
+        if (!finalImplantacaoIsoAttr) { const v = (modal.querySelector('#modal-data_final_implantacao') || modal.querySelector('[name="data_final_implantacao"]') || {}).value || ''; if (v) setFpDate(window.fpFinalImpl, v); }
+        fetch(`/api/v1/implantacoes/${implId}`).then(r => r.ok ? r.json() : Promise.reject(new Error('Falha ao carregar implantação'))).then(j => { if (!j || !j.ok || !j.data || !j.data.implantacao) return; const impl = j.data.implantacao; setFpDate(window.fpInicioEfetivo, impl.data_inicio_efetivo); setFpDate(window.fpInicioProd, impl.data_inicio_producao); setFpDate(window.fpFinalImpl, impl.data_final_implantacao); }).catch(() => {});
+      }, true);
+
+      document.addEventListener('submit', function (e) {
+        const form = e.target;
+        if (!form || !form.closest('#modalDetalhesEmpresa')) return;
+        const toIso = (br) => { if (!br || typeof br !== 'string') return ''; const m = br.match(/^(\d{2})\/(\d{2})\/(\d{4})$/); if (!m) return br; const dd=m[1], mm=m[2], yyyy=m[3]; return `${yyyy}-${mm}-${dd}`; };
+        const inicioEfetivo = form.querySelector('#modal-inicio_efetivo') || form.querySelector('[name="data_inicio_efetivo"]');
+        const dataInicioProd = form.querySelector('#modal-data_inicio_producao') || form.querySelector('[name="data_inicio_producao"]');
+        const dataFinalImpl = form.querySelector('#modal-data_final_implantacao') || form.querySelector('[name="data_final_implantacao"]');
+        if (inicioEfetivo && inicioEfetivo.value) inicioEfetivo.value = toIso(inicioEfetivo.value);
+        if (dataInicioProd && dataInicioProd.value) dataInicioProd.value = toIso(dataInicioProd.value);
+        if (dataFinalImpl && dataFinalImpl.value) dataFinalImpl.value = toIso(dataFinalImpl.value);
+      }, true);
 
       // Converte datas BR -> ISO no submit do formulário do modal
       (function attachSubmitConverter() {
@@ -610,9 +1043,9 @@
           return `${yyyy}-${mm}-${dd}`;
         };
         modalForm.addEventListener('submit', function (e) {
-          const inicioEfetivo = modalForm.querySelector('#modal-inicio_efetivo');
-          const dataInicioProd = modalForm.querySelector('#modal-data_inicio_producao');
-          const dataFinalImpl = modalForm.querySelector('#modal-data_final_implantacao');
+          const inicioEfetivo = modalForm.querySelector('#modal-inicio_efetivo') || modalForm.querySelector('[name="data_inicio_efetivo"]');
+          const dataInicioProd = modalForm.querySelector('#modal-data_inicio_producao') || modalForm.querySelector('[name="data_inicio_producao"]');
+          const dataFinalImpl = modalForm.querySelector('#modal-data_final_implantacao') || modalForm.querySelector('[name="data_final_implantacao"]');
 
           if (window.fpInicioEfetivo && window.fpInicioEfetivo._input) {
             const v = window.fpInicioEfetivo._input.value;
@@ -645,19 +1078,57 @@
       // Inicializa calendário e máscara nos campos do modal Detalhes
       (function initModalCalendars() {
         if (!window.flatpickr) return;
-        const fpInicioEfetivo = window.flatpickr('#modal-inicio_efetivo', { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true });
-        const fpInicioProd = window.flatpickr('#modal-data_inicio_producao', { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true });
-        const fpFinalImpl = window.flatpickr('#modal-data_final_implantacao', { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true });
+        var makeConfig = function() {
+          return {
+            dateFormat: 'Y-m-d',
+            altInput: true,
+            altFormat: 'd/m/Y',
+            allowInput: false,
+            parseDate: function(datestr) {
+              var m = datestr && datestr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+              if (!m) return null;
+              var d = parseInt(m[1], 10);
+              var mo = parseInt(m[2], 10) - 1;
+              var y = parseInt(m[3], 10);
+              var dd = new Date(y, mo, d);
+              if (dd.getDate() !== d || dd.getMonth() !== mo || dd.getFullYear() !== y) return null;
+              return dd;
+            }
+          };
+        };
+        var ensureInstance = function(selector) {
+          var el = document.querySelector(selector);
+          if (!el) return null;
+          if (el._flatpickr) return el._flatpickr;
+          var fp = window.flatpickr(el, makeConfig());
+          try {
+            var rawVal = el.value || '';
+            if (rawVal) {
+              var m = rawVal.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+              var iso = '';
+              if (m) iso = m[3] + '-' + m[2] + '-' + m[1];
+              else {
+                var m2 = rawVal.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                if (m2) iso = m2[1] + '-' + m2[2] + '-' + m2[3];
+              }
+              if (iso) fp.setDate(iso, true, 'Y-m-d');
+            }
+          } catch (e) {}
+          return fp;
+        };
+        var fpInicioEfetivo = ensureInstance('#modal-inicio_efetivo') || ensureInstance('[name="data_inicio_efetivo"]');
+        var fpInicioProd = ensureInstance('#modal-data_inicio_producao') || ensureInstance('[name="data_inicio_producao"]');
+        var fpFinalImpl = ensureInstance('#modal-data_final_implantacao') || ensureInstance('[name="data_final_implantacao"]');
         window.fpInicioEfetivo = fpInicioEfetivo;
         window.fpInicioProd = fpInicioProd;
         window.fpFinalImpl = fpFinalImpl;
-        const btnInicioEfetivo = document.getElementById('btn-cal-inicio_efetivo');
-        const btnInicioProd = document.getElementById('btn-cal-data_inicio_producao');
-        const btnFinalImpl = document.getElementById('btn-cal-data_final_implantacao');
+        var btnInicioEfetivo = document.getElementById('btn-cal-inicio_efetivo');
+        var btnInicioProd = document.getElementById('btn-cal-data_inicio_producao');
+        var btnFinalImpl = document.getElementById('btn-cal-data_final_implantacao');
         if (btnInicioEfetivo && fpInicioEfetivo) btnInicioEfetivo.addEventListener('click', function () { fpInicioEfetivo.open(); });
         if (btnInicioProd && fpInicioProd) btnInicioProd.addEventListener('click', function () { fpInicioProd.open(); });
         if (btnFinalImpl && fpFinalImpl) btnFinalImpl.addEventListener('click', function () { fpFinalImpl.open(); });
-        function attachMask(fp) {
+        var attachMask = function(fp) {
           var alt = fp && fp._input ? fp._input : null;
           if (!alt) return;
           alt.addEventListener('input', function (e) {
@@ -668,7 +1139,7 @@
             if (v.length >= 5) out = out + '/' + v.slice(4, 8);
             e.target.value = out;
           });
-        }
+        };
         attachMask(fpInicioEfetivo);
         attachMask(fpInicioProd);
         attachMask(fpFinalImpl);
@@ -730,9 +1201,6 @@
           }, 100);
         }
       }
-
-      // Menu offcanvas antigo removido; nenhuma lógica necessária aqui.
-
     });
 
     // ========================================

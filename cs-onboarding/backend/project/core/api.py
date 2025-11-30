@@ -8,23 +8,27 @@ intentionally lightweight and do not depend on Flask request context.
 
 from datetime import datetime
 import re
+from ..db import get_db_connection
+from ..config.logging_config import api_logger, security_logger
+
 
 class _DummyG:
     pass
 
+
 g = _DummyG()
+
 
 def jsonify(obj):
     return obj
 
-from ..db import get_db_connection
-from ..config.logging_config import api_logger, security_logger
 
 def validate_integer(value):
     try:
         return int(value)
     except (TypeError, ValueError):
         return None
+
 
 def validate_date(value):
     if not isinstance(value, str) or not value:
@@ -35,6 +39,7 @@ def validate_date(value):
     except ValueError:
         return None
 
+
 def sanitize_string(value):
     if not isinstance(value, str):
         return ""
@@ -42,6 +47,7 @@ def sanitize_string(value):
     s = s.replace("\r", " ").replace("\n", " ")
     s = re.sub(r"\s+", " ", s)
     return s
+
 
 def toggle_tarefa(tarefa_id):
     tarefa_id_val = validate_integer(tarefa_id)
@@ -61,6 +67,7 @@ def toggle_tarefa(tarefa_id):
     api_logger.info(f"Status da tarefa {tarefa_id_val} alternado por {getattr(g, 'user_email', '')}")
     return {"ok": True, "id": tarefa_id_val}
 
+
 def adicionar_comentario(tarefa_id, comentario_texto):
     tarefa_id_val = validate_integer(tarefa_id)
     if tarefa_id_val is None:
@@ -78,6 +85,7 @@ def adicionar_comentario(tarefa_id, comentario_texto):
         return None
     api_logger.info(f"Comentário adicionado à tarefa {tarefa_id_val} por {getattr(g, 'user_email', '')}")
     return {"ok": True, "tarefa_id": tarefa_id_val}
+
 
 def excluir_comentario(comentario_id):
     comentario_id_val = validate_integer(comentario_id)
@@ -100,13 +108,16 @@ def excluir_comentario(comentario_id):
     api_logger.info(f"Comentário {comentario_id_val} excluído por {usuario_email}")
     return {"ok": True, "comentario_id": comentario_id_val}
 
+
 def excluir_tarefa(tarefa_id):
     api_logger.info(f"Tarefa {tarefa_id} excluída por {getattr(g, 'user_email', '')}")
     return {"ok": True}
 
+
 def reorder_tarefas(*args, **kwargs):
     api_logger.info("Tarefas reordenadas")
     return {"ok": True}
+
 
 def excluir_tarefas_modulo(*args, **kwargs):
     api_logger.info("Tarefas do módulo excluídas")

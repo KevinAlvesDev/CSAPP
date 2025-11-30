@@ -1,4 +1,6 @@
-# Estrutura Hierárquica Padrão para Implantações
+"""
+Estrutura hierárquica padrão para implantações.
+"""
 
 ESTRUTURA_PADRAO = {
     "fases": [

@@ -44,10 +44,17 @@
 {% endblock %}
 
 {% block content %}
-<div class="push">
+<div class="container-fluid p-0">
+  <header class="header-bg p-3 d-flex align-items-center position-relative rounded-3">
+    <h1 class="main-title mb-0 fs-4 w-100 text-center">CS ONBOARDING Minha Agenda</h1>
+    <div class="d-flex align-items-center position-absolute end-0 top-50 translate-middle-y">
+      <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-house me-1"></i> Dashboard
+      </a>
+    </div>
+  </header>
   <main class="container py-3">
     <div class="d-flex justify-content-between align-items-center mb-3">
-      <h1 class="h4 mb-0"><i class="bi bi-calendar-week me-2"></i> Minha Agenda</h1>
       <div class="agenda-toolbar">
         <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-arrow-left me-1"></i> Voltar ao dashboard</a>
         {% if google_connected %}
@@ -400,28 +407,7 @@
         if (fAllDay.checked) timeRow.classList.add('d-none'); else timeRow.classList.remove('d-none');
       });
 
-      // Abrir modal ao clicar em um card
-      document.querySelectorAll('.event-card').forEach(card => {
-        card.addEventListener('click', () => {
-          editingEventId = card.dataset.eventId || null;
-          titleEl.textContent = editingEventId ? 'Editar Evento' : 'Evento';
-          deleteBtn.classList.toggle('d-none', !editingEventId);
-          errBox.classList.add('d-none');
-          if (successBox) successBox.classList.add('d-none');
-          fSummary.value = card.dataset.summary || '';
-          fDescription.value = card.dataset.description || '';
-          fDate.value = card.dataset.date || new Date().toISOString().slice(0,10);
-          const hasTimes = !!card.dataset.startTime;
-          fAllDay.checked = !hasTimes;
-          timeRow.classList.toggle('d-none', !hasTimes);
-          fStart.value = card.dataset.startTime || '08:00';
-          fEnd.value = card.dataset.endTime || '09:00';
-          fLocation.value = card.dataset.location || '';
-           if (fCalendar && topCalendarSelector){ fCalendar.value = topCalendarSelector.value || currentCalendarId; }
-          if (bsEventModal) bsEventModal.show();
-        });
-        // Removido: seleção múltipla com Ctrl
-        // Drag to move
+        // Abrir modal ao clicar em um card
         let dragStartY = null; let startTop = null; let dragging = false; let currentDayCol = null;
         card.addEventListener('mousedown', (e)=>{
           // Mantemos drag sem interação de seleção múltipla
@@ -659,8 +645,6 @@
           errBox.classList.remove('d-none');
         }
       });
-
-      // Removido: exclusão em lote
     }
   });
 </script>

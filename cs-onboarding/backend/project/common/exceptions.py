@@ -4,17 +4,22 @@ class CSAPPException(Exception):
         self.details = details or {}
         super().__init__(self.message)
 
+
 class DatabaseError(CSAPPException):
     pass
+
 
 class ValidationError(CSAPPException):
     pass
 
+
 class AuthenticationError(CSAPPException):
     pass
 
+
 class AuthorizationError(CSAPPException):
     pass
+
 
 class ResourceNotFoundError(CSAPPException):
     def __init__(self, resource_type: str, resource_id: any):
@@ -22,11 +27,13 @@ class ResourceNotFoundError(CSAPPException):
         details = {'resource_type': resource_type, 'resource_id': resource_id}
         super().__init__(message, details)
 
+
 class DuplicateResourceError(CSAPPException):
     def __init__(self, resource_type: str, identifier: str):
         message = f"{resource_type} '{identifier}' já existe"
         details = {'resource_type': resource_type, 'identifier': identifier}
         super().__init__(message, details)
+
 
 class ExternalServiceError(CSAPPException):
     def __init__(self, service_name: str, original_error: Exception = None):
@@ -37,20 +44,24 @@ class ExternalServiceError(CSAPPException):
         }
         super().__init__(message, details)
 
+
 class FileUploadError(CSAPPException):
     def __init__(self, filename: str, reason: str):
         message = f"Erro ao fazer upload de '{filename}': {reason}"
         details = {'filename': filename, 'reason': reason}
         super().__init__(message, details)
 
+
 class ConfigurationError(CSAPPException):
     pass
+
 
 class RateLimitExceededError(CSAPPException):
     def __init__(self, limit: str, retry_after: int = None):
         message = f"Limite de requisições excedido: {limit}"
         details = {'limit': limit, 'retry_after': retry_after}
         super().__init__(message, details)
+
 
 class BusinessLogicError(CSAPPException):
     pass

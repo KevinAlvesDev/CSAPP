@@ -1,4 +1,3 @@
-
 import smtplib
 import socket
 from email.mime.text import MIMEText
@@ -11,11 +10,9 @@ from flask import current_app
 from ..config.logging_config import security_logger, app_logger
 import re
 
+
 class NetworkError(Exception):
     pass
-
-
-
 
 
 def _hash_password(password):
@@ -24,18 +21,18 @@ def _hash_password(password):
         return None
     return generate_password_hash(password)
 
+
 def _check_password(hashed_password, provided_password):
     """Verifica a senha fornecida contra o hash."""
     if not hashed_password or not provided_password:
         return False
     return check_password_hash(hashed_password, provided_password)
 
+
 def detect_smtp_settings(user_email):
     """
     Detecta automaticamente host/porta/SSL/TLS com base no domínio do e-mail.
     Retorna dict: {host, port, use_tls, use_ssl}.
-
-    Objetivo: permitir configuração com apenas e-mail + app password.
     """
     if not user_email or '@' not in user_email:
         raise ValueError("E-mail inválido para detecção de SMTP.")
@@ -43,28 +40,21 @@ def detect_smtp_settings(user_email):
     domain = user_email.split('@', 1)[1].lower().strip()
 
     COMMON = {
-
         'gmail.com': ('smtp.gmail.com', 587, True, False),
         'googlemail.com': ('smtp.gmail.com', 587, True, False),
-
         'outlook.com': ('smtp.office365.com', 587, True, False),
         'hotmail.com': ('smtp.office365.com', 587, True, False),
         'live.com': ('smtp.office365.com', 587, True, False),
         'office365.com': ('smtp.office365.com', 587, True, False),
         'msn.com': ('smtp.office365.com', 587, True, False),
-
         'yahoo.com': ('smtp.mail.yahoo.com', 587, True, False),
         'yahoo.com.br': ('smtp.mail.yahoo.com', 587, True, False),
-
         'icloud.com': ('smtp.mail.me.com', 587, True, False),
         'me.com': ('smtp.mail.me.com', 587, True, False),
         'mac.com': ('smtp.mail.me.com', 587, True, False),
-
         'zoho.com': ('smtp.zoho.com', 587, True, False),
-
         'yandex.com': ('smtp.yandex.com', 587, True, False),
         'yandex.ru': ('smtp.yandex.ru', 587, True, False),
-
         'uol.com.br': ('smtp.uol.com.br', 587, True, False),
         'bol.com.br': ('smtp.bol.com.br', 587, True, False),
         'terra.com.br': ('smtp.terra.com.br', 587, True, False),
@@ -95,7 +85,6 @@ def detect_smtp_settings(user_email):
         f"mail.{domain}",
     ]
 
-
     chosen = candidates[0]
     app_logger.info(f"Detecção SMTP: domínio desconhecido '{domain}', usando heurística -> {chosen}:587 (TLS)")
     return {
@@ -105,6 +94,7 @@ def detect_smtp_settings(user_email):
         'use_ssl': False,
     }
 
+
 def load_smtp_settings(user_email):
     """
     Carrega as configurações SMTP para um usuário específico.
@@ -112,10 +102,8 @@ def load_smtp_settings(user_email):
     """
     if not user_email:
         return None
-        
+
     try:
-
-
         settings = query_db(
             'SELECT host, port, "user", password as hashed_password, use_tls, use_ssl FROM smtp_settings WHERE usuario_email = %s',
             (user_email,),
@@ -126,6 +114,7 @@ def load_smtp_settings(user_email):
         app_logger.error(f"Erro ao carregar settings SMTP para {user_email}: {e}")
         return None
 
+
 def save_smtp_settings(user_email, data):
     """
     Salva ou atualiza as configurações SMTP para um usuário específico.
@@ -133,8 +122,8 @@ def save_smtp_settings(user_email, data):
     """
     host = data.get('host')
     port = data.get('port')
-    user = data.get('user')                                                                  
-    password = data.get('password')                                     
+    user = data.get('user')
+    password = data.get('password')
     use_tls = data.get('use_tls', 'true').lower() == 'true'
     use_ssl = data.get('use_ssl', 'false').lower() == 'true'
 
@@ -142,11 +131,8 @@ def save_smtp_settings(user_email, data):
         raise ValueError("Dados de SMTP incompletos para salvar.")
 
     try:
-
-
         if password:
             hashed_password_to_save = _hash_password(password)
-
 
             sql = """
                 INSERT INTO smtp_settings (usuario_email, host, port, "user", password, use_tls, use_ssl)
@@ -160,10 +146,8 @@ def save_smtp_settings(user_email, data):
                     use_ssl = EXCLUDED.use_ssl;
             """
             params = (user_email, host, int(port), user, hashed_password_to_save, use_tls, use_ssl)
-        
+
         else:
-
-
             sql = """
                 INSERT INTO smtp_settings (usuario_email, host, port, "user", use_tls, use_ssl)
                 VALUES (%s, %s, %s, %s, %s, %s)
@@ -186,6 +170,7 @@ def save_smtp_settings(user_email, data):
         app_logger.error(f"Erro ao salvar settings SMTP para {user_email}: {e}")
         raise
 
+
 def test_smtp_connection(settings, plain_password):
     """
     Testa a conexão SMTP e a autenticação usando as configurações e a senha em texto plano.
@@ -194,7 +179,7 @@ def test_smtp_connection(settings, plain_password):
     """
     if not settings:
         raise ValueError("Configurações não encontradas.")
-        
+
     hashed_password = settings.get('hashed_password')
 
     if not _check_password(hashed_password, plain_password):
@@ -203,10 +188,10 @@ def test_smtp_connection(settings, plain_password):
 
     host = settings.get('host')
     port = int(settings.get('port', 587))
-    user = settings.get('user')                                                           
+    user = settings.get('user')
     use_tls = settings.get('use_tls', True)
     use_ssl = settings.get('use_ssl', False)
-    
+
     app_logger.info(f"Testando conexão SMTP para {user} em {host}:{port} (SSL: {use_ssl}, TLS: {use_tls})")
 
     try:
@@ -217,21 +202,20 @@ def test_smtp_connection(settings, plain_password):
             server = smtplib.SMTP(host, port, timeout=10)
             if use_tls:
                 server.starttls()
-        
+
         server.login(user, plain_password)
         server.quit()
         app_logger.info(f"Autenticação SMTP bem-sucedida para {user}")
         return True
-    
+
     except smtplib.SMTPAuthenticationError as e:
         security_logger.warning(f"Falha de autenticacao SMTP (provedor rejeitou) para {user}: {e}")
-        raise                                         
-        
-    except (OSError, socket.gaierror, smtplib.SMTPConnectError, smtplib.SMTPServerDisconnected, TimeoutError) as e:
+        raise
 
+    except (OSError, socket.gaierror, smtplib.SMTPConnectError, smtplib.SMTPServerDisconnected, TimeoutError) as e:
         app_logger.warning(f"Falha de conectividade SMTP para {user} em {host}:{port}: {e}")
         raise NetworkError(f"Erro de conexao: {e}")
-    
+
     except Exception as e:
         app_logger.error(f"Erro inesperado no teste SMTP para {user}: {e}")
         raise ValueError(f"Erro de conexao: {e}")
@@ -243,22 +227,21 @@ def send_email(subject, body_html, recipients, smtp_settings, plain_password, fr
     Requer a senha em texto plano, pois ela não é armazenada de forma reversível.
     """
 
-
     host = smtp_settings.get('host')
     port = int(smtp_settings.get('port', 587))
     user = smtp_settings.get('user')
     use_tls = smtp_settings.get('use_tls', True)
     use_ssl = smtp_settings.get('use_ssl', False)
-    
+
     msg = MIMEMultipart('alternative')
     msg['Subject'] = subject
     msg['From'] = f"{from_name} <{user}>" if from_name else user
     msg['To'] = ", ".join(recipients)
     if reply_to:
         msg['Reply-To'] = reply_to
-    
+
     msg.attach(MIMEText(body_html, 'html'))
-    
+
     try:
         if use_ssl:
             context = smtplib.ssl.create_default_context()
@@ -267,16 +250,17 @@ def send_email(subject, body_html, recipients, smtp_settings, plain_password, fr
             server = smtplib.SMTP(host, port, timeout=10)
             if use_tls:
                 server.starttls()
-        
+
         server.login(user, plain_password)
         server.sendmail(user, recipients, msg.as_string())
         server.quit()
         app_logger.info(f"E-mail enviado com sucesso por {user} para {recipients}")
         return True
-        
+
     except Exception as e:
         app_logger.error(f"Falha ao enviar e-mail real por {user}: {e}")
         raise
+
 
 def send_email_with_credentials(to_email, subject, body_text, body_html, reply_to,
                                 from_name, host, port, user, password, from_addr,
@@ -316,6 +300,7 @@ def send_email_with_credentials(to_email, subject, body_text, body_html, reply_t
         app_logger.error(f"Falha ao enviar e-mail com credenciais para {to_email}: {e}")
         return False
 
+
 def send_email_global(subject, body_html, recipients, from_name=None, reply_to=None, body_text=None):
     """
     Envia um e-mail usando a configuração global.
@@ -340,7 +325,6 @@ def send_email_global(subject, body_html, recipients, from_name=None, reply_to=N
             content.append({"type": "text/plain", "value": body_text})
         elif body_html:
             try:
-
                 plain_fallback = re.sub(r"<[^>]+>", "", body_html)
                 content.append({"type": "text/plain", "value": plain_fallback})
             except Exception:
@@ -379,7 +363,6 @@ def send_email_global(subject, body_html, recipients, from_name=None, reply_to=N
                     "open_tracking": {"enable": False}
                 }
         except Exception:
-
             pass
 
         try:
@@ -403,10 +386,8 @@ def send_email_global(subject, body_html, recipients, from_name=None, reply_to=N
                     app_logger.info(f"E-mail global (SendGrid) enviado para {recipients}")
                 return True
             else:
-
                 raise RuntimeError(f"SendGrid falhou ({resp.status_code}): {resp.text}")
         except requests.RequestException as e:
-
             app_logger.error(f"Falha de rede no envio via SendGrid: {e}")
             raise
 
@@ -449,34 +430,81 @@ def send_email_global(subject, body_html, recipients, from_name=None, reply_to=N
     except Exception as e:
         app_logger.error(f"Falha no envio de e-mail global (SMTP): {e}")
         raise
-    
+
 
 def send_external_comment_notification(implantacao, comentario):
     """
-    Envia notificação de um novo comentário externo.
+    Envia notificação de um novo comentário externo para o responsável da implantação.
+    Usa o sistema de email global (SMTP ou SendGrid).
     
-    *** ATENÇÃO: Esta função está quebrada ***
-    Ela foi desenhada para um SMTP GLOBAL (id=1).
-    Agora, ela precisa ser redesenhada. Qual usuário deve enviar o e-mail?
-    O 'implantador_email' da implantação?
+    Args:
+        implantacao: dict com 'nome_empresa', 'email_responsavel'
+        comentario: dict com 'texto', 'tarefa_filho', 'usuario_cs'
     
-    Esta função precisa ser refatorada para:
-    1. Obter o `implantador_email` da `implantacao`.
-    2. Carregar as configurações SMTP desse implantador (load_smtp_settings(implantador_email)).
-    3. Ela NÃO PODE ENVIAR, pois não temos a senha de texto plano do implantador.
+    Returns:
+        True se enviado com sucesso, False caso contrário
+    """
+    to_email = implantacao.get('email_responsavel')
+    nome_empresa = implantacao.get('nome_empresa', 'Empresa')
+    tarefa_nome = comentario.get('tarefa_filho', 'Tarefa')
+    texto = comentario.get('texto', '')
+    usuario_cs = comentario.get('usuario_cs', 'CS')
     
-    A funcionalidade de "notificação por e-mail" precisa ser repensada.
-    Por enquanto, vamos apenas logar e falhar silenciosamente.
+    if not to_email:
+        app_logger.warning("Email do responsável não configurado para envio de comentário externo")
+        return False
+    
+    subject = f"[CS Onboarding] Novo comentário na implantação - {nome_empresa}"
+    
+    body_html = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background-color: #007bff; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
+                <h2 style="margin: 0;">Novo Comentário</h2>
+            </div>
+            <div style="background-color: #f8f9fa; padding: 20px; border: 1px solid #dee2e6; border-top: none; border-radius: 0 0 8px 8px;">
+                <p><strong>Empresa:</strong> {nome_empresa}</p>
+                <p><strong>Tarefa:</strong> {tarefa_nome}</p>
+                <p><strong>Comentário de:</strong> {usuario_cs}</p>
+                <hr style="border: none; border-top: 1px solid #dee2e6; margin: 15px 0;">
+                <div style="background-color: white; padding: 15px; border-radius: 4px; border-left: 4px solid #007bff;">
+                    <p style="margin: 0; white-space: pre-wrap;">{texto}</p>
+                </div>
+                <hr style="border: none; border-top: 1px solid #dee2e6; margin: 15px 0;">
+                <p style="color: #6c757d; font-size: 12px;">
+                    Este é um email automático do sistema CS Onboarding.
+                </p>
+            </div>
+        </div>
+    </body>
+    </html>
     """
     
-    implantador_email = implantacao.get('implantador_email')
+    body_text = f"""
+Novo Comentário - CS Onboarding
+
+Empresa: {nome_empresa}
+Tarefa: {tarefa_nome}
+Comentário de: {usuario_cs}
+
+---
+{texto}
+---
+
+Este é um email automático do sistema CS Onboarding.
+    """
     
-    app_logger.warning(
-        f"Tentativa de envio de notificacao de comentario para {implantador_email} (RECURSO DESATIVADO). "
-        f"A funcao 'send_external_comment_notification' precisa ser refatorada para o sistema de SMTP por usuario."
-    )
-    return False
-
-
-
-
+    try:
+        send_email_global(
+            subject=subject,
+            body_html=body_html,
+            recipients=[to_email],
+            from_name="CS Onboarding",
+            body_text=body_text
+        )
+        app_logger.info(f"Notificação de comentário externo enviada para {to_email}")
+        return True
+    except Exception as e:
+        app_logger.error(f"Falha ao enviar notificação de comentário externo para {to_email}: {e}")
+        return False
