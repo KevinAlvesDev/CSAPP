@@ -389,7 +389,6 @@ def finalizar_implantacao():
             flash(f"Operação não permitida: status atual é '{impl.get('status')}'. Retome ou inicie antes de finalizar.", 'warning')
             return redirect(dest_url)
 
-        # Migrado para checklist_items (estrutura consolidada)
         pending_tasks = query_db(
             """SELECT COUNT(*) as total 
                FROM checklist_items ci
@@ -638,7 +637,6 @@ def atualizar_detalhes_empresa():
     except (ValueError, TypeError):
         alunos_ativos = 0
 
-    # Campos de seleção múltipla - converter listas para string separada por vírgula
     def get_multiple_value(key):
         """Retorna valores de seleção múltipla como string separada por vírgula."""
         values = request.form.getlist(key)
@@ -646,14 +644,12 @@ def atualizar_detalhes_empresa():
         values = [v.strip() for v in values if v and v.strip() and v.strip() != "Selecione..."]
         return ','.join(values) if values else None
     
-    # Campos que permitem múltiplas seleções
     seguimento_val = get_multiple_value('seguimento')
     tipos_planos_val = get_multiple_value('tipos_planos')
     modalidades_val = get_multiple_value('modalidades')
     horarios_val = get_multiple_value('horarios_func')
     formas_pagamento_val = get_multiple_value('formas_pagamento')
     
-    # Campos de seleção única (single select)
     cargo_responsavel_val = get_form_value('cargo_responsavel')
     nivel_receita_val = get_form_value('nivel_receita')
     sistema_anterior_val = get_form_value('sistema_anterior')
@@ -701,12 +697,18 @@ def atualizar_detalhes_empresa():
         valor_raw = get_form_value('valor_atribuido')
         if valor_raw is not None:
             v = valor_raw.replace('R$', '').strip()
-            v = v.replace('.', '').replace(',', '.')
             try:
+                # Tenta converter direto (formato padrão do input type="number": 1234.56)
                 v_float = float(v)
                 valor_raw = f"{v_float:.2f}"
-            except Exception:
-                pass
+            except ValueError:
+                # Fallback para formato BR (1.234,56) caso venha como texto
+                try:
+                    v_br = v.replace('.', '').replace(',', '.')
+                    v_float = float(v_br)
+                    valor_raw = f"{v_float:.2f}"
+                except ValueError:
+                    pass
 
         data_inicio_producao = normalize_date_str(get_form_value('data_inicio_producao'))
         data_final_implantacao = normalize_date_str(get_form_value('data_final_implantacao'))
@@ -714,7 +716,6 @@ def atualizar_detalhes_empresa():
 
         data_inicio_efetivo_iso = data_inicio_efetivo or None
 
-        # Validar telefone
         telefone_raw = get_form_value('telefone_responsavel')
         telefone_validado = None
         if telefone_raw:
@@ -845,7 +846,6 @@ def remover_plano_implantacao():
         return redirect(url_for('main.dashboard'))
 
     try:
-        # Limpar todos os itens da implantação em checklist_items
         execute_db("DELETE FROM checklist_items WHERE implantacao_id = %s", (implantacao_id,))
 
         execute_db(
@@ -918,8 +918,6 @@ def excluir_implantacao():
         return redirect(url_for('main.dashboard'))
 
     try:
-        # Migrado para estrutura hierárquica: busca comentários de tarefas_h e subtarefas_h
-        # DEPRECATED: A tabela 'tarefas' (estrutura antiga) não é mais usada
         comentarios_img = query_db(
             """ SELECT DISTINCT c.imagem_url 
                 FROM comentarios_h c 
@@ -986,12 +984,6 @@ def adicionar_tarefa():
         if impl.get('status') == 'finalizada':
             flash('Não é possível adicionar tarefas a implantações finalizadas.', 'warning')
             return redirect(dest_url)
-        # DEPRECATED: Esta funcionalidade usa a estrutura antiga (tarefas)
-        # A estrutura hierárquica (fases -> grupos -> tarefas_h -> subtarefas_h) requer
-        # uma lógica diferente para adicionar tarefas. Esta função precisa ser reimplementada
-        # para usar a estrutura hierárquica ou removida se não for mais necessária.
-        # 
-        # Por enquanto, retornamos um erro informando que a funcionalidade foi descontinuada.
         flash('A funcionalidade de adicionar tarefas foi migrada para a estrutura hierárquica. Use a interface de hierarquia para adicionar tarefas.', 'warning')
         app_logger.warning(f"Tentativa de usar adicionar_tarefa (deprecated) para impl_id={implantacao_id} user={usuario_cs_email}")
     except Exception as e:

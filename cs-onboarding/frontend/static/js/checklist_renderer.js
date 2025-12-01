@@ -15,11 +15,10 @@ class ChecklistRenderer {
         this.implantacaoId = implantacaoId;
         this.data = window.CHECKLIST_DATA || [];
         this.expandedItems = new Set();
-        this.flatData = {}; // Cache de dados planos para propagação rápida
+        this.flatData = {};
         this.isLoading = false;
         
         if (!this.container) {
-            console.error(`Container #${containerId} não encontrado`);
             return;
         }
         
@@ -32,10 +31,8 @@ class ChecklistRenderer {
             return;
         }
         
-        // Construir estrutura plana para propagação rápida
         this.buildFlatData(this.data);
         
-        // Expandir primeira fase por padrão ANTES de renderizar
         if (this.data.length > 0 && this.data[0]) {
             this.expandedItems.add(this.data[0].id);
         }
@@ -43,14 +40,13 @@ class ChecklistRenderer {
         this.render();
         this.attachEventListeners();
         
-        // Garantir que o estado expandido seja aplicado após renderização
         if (this.data.length > 0 && this.data[0]) {
             setTimeout(() => {
                 this.updateExpandedState(this.data[0].id, false);
             }, 0);
         }
         
-        this.updateGlobalProgress();
+        this.updateProgressFromLocalData();
     }
     
     /**
@@ -59,7 +55,6 @@ class ChecklistRenderer {
      */
     buildFlatData(nodes, parentId = null) {
         nodes.forEach(node => {
-            // Limitar a 7 filhos por tarefa pai
             const limitedChildren = node.children && node.children.length > 0 ? node.children.slice(0, 7) : [];
             
             this.flatData[node.id] = {
@@ -90,14 +85,12 @@ class ChecklistRenderer {
     }
     
     renderItem(item) {
-        // Limitar a 7 filhos por tarefa pai
         const limitedChildren = item.children && item.children.length > 0 ? item.children.slice(0, 7) : [];
         const hasChildren = limitedChildren.length > 0;
         const isExpanded = this.expandedItems.has(item.id);
         const hasComment = item.comment && item.comment.trim().length > 0;
         const progressLabel = item.progress_label || null;
         
-        // Ícones por nível (similar ao exemplo)
         let iconClass = 'bi-list-ul text-secondary';
         let iconColor = '';
         if (item.level === 0) {
@@ -114,18 +107,15 @@ class ChecklistRenderer {
             iconColor = 'text-muted';
         }
         
-        // Status badge
         const statusClass = item.completed ? 'bg-success' : 'bg-warning';
         const statusText = item.completed ? 'Concluído' : 'Pendente';
         const statusIcon = item.completed ? 'bi-check-circle-fill' : 'bi-clock-fill';
         
-        // Padding esquerdo baseado no nível (similar ao exemplo)
         const paddingLeft = `${(item.level || 0) * 1.5 + 0.5}rem`;
         
         return `
             <div class="checklist-item" data-item-id="${item.id}" data-level="${item.level || 0}">
                 <div class="checklist-item-header position-relative" style="padding-left: ${paddingLeft};">
-                    <!-- Barra de progresso (se tiver filhos) -->
                     ${hasChildren ? `
                         <div class="position-absolute bottom-0 left-0 h-1 progress-bar-item" 
                              style="width: 0%; background-color: #28a745; opacity: 0; transition: all 0.3s;"
@@ -175,6 +165,12 @@ class ChecklistRenderer {
                                 ${hasComment ? '<span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle" style="font-size: 0.4rem;"></span>' : ''}
                             </i>
                         </button>
+
+                        <button class="btn-icon btn-delete-item p-1 border-0 bg-transparent ms-1" 
+                                data-item-id="${item.id}" 
+                                title="Excluir tarefa">
+                            <i class="bi bi-trash text-danger"></i>
+                        </button>
                     </div>
                 </div>
                 
@@ -215,7 +211,6 @@ class ChecklistRenderer {
                             </div>
                         </div>
                         
-                        <!-- Histórico de Comentários -->
                         <div class="comments-history mt-3" id="comments-history-${item.id}">
                             <div class="text-center py-2">
                                 <div class="spinner-border spinner-border-sm text-secondary" role="status">
@@ -246,7 +241,6 @@ class ChecklistRenderer {
     }
     
     attachEventListeners() {
-        // Toggle expand/collapse - usar delegation no documento
         document.addEventListener('click', (e) => {
             const button = e.target.closest('.btn-expand');
             if (button && this.container.contains(button)) {
@@ -259,7 +253,6 @@ class ChecklistRenderer {
             }
         });
         
-        // Toggle checkbox
         this.container.addEventListener('change', (e) => {
             if (e.target.classList.contains('checklist-checkbox')) {
                 const itemId = parseInt(e.target.dataset.itemId);
@@ -268,7 +261,6 @@ class ChecklistRenderer {
             }
         });
         
-        // Toggle comentários
         this.container.addEventListener('click', (e) => {
             if (e.target.closest('.btn-comment-toggle')) {
                 const button = e.target.closest('.btn-comment-toggle');
@@ -277,7 +269,6 @@ class ChecklistRenderer {
             }
         });
         
-        // Salvar comentário
         this.container.addEventListener('click', (e) => {
             if (e.target.closest('.btn-save-comment')) {
                 const button = e.target.closest('.btn-save-comment');
@@ -291,19 +282,23 @@ class ChecklistRenderer {
                 this.cancelComment(itemId);
             }
             
-            // Enviar email de comentário
             if (e.target.closest('.btn-send-email-comment')) {
                 const button = e.target.closest('.btn-send-email-comment');
                 const comentarioId = parseInt(button.dataset.commentId);
                 this.sendCommentEmail(comentarioId);
             }
             
-            // Excluir comentário
             if (e.target.closest('.btn-delete-comment')) {
                 const button = e.target.closest('.btn-delete-comment');
                 const comentarioId = parseInt(button.dataset.commentId);
                 const itemId = parseInt(button.dataset.itemId);
                 this.deleteComment(comentarioId, itemId);
+            }
+
+            if (e.target.closest('.btn-delete-item')) {
+                const button = e.target.closest('.btn-delete-item');
+                const itemId = parseInt(button.dataset.itemId);
+                this.deleteItem(itemId);
             }
         });
     }
@@ -351,7 +346,6 @@ class ChecklistRenderer {
                 this.updateElementState(children, button, itemId);
             }
         } else {
-            // Atualizar todos (apenas na inicialização)
             this.expandedItems.forEach(id => {
                 const children = this.container.querySelector(`.checklist-item-children[data-item-id="${id}"]`);
                 const button = this.container.querySelector(`.btn-expand[data-item-id="${id}"]`);
@@ -364,6 +358,7 @@ class ChecklistRenderer {
     
     /**
      * Manipula mudança de checkbox com propagação (cascata e bolha)
+     * OTIMIZADO: Atualiza UI imediatamente (otimista) e sincroniza com backend em paralelo
      */
     async handleCheck(itemId, completed) {
         if (this.isLoading) return;
@@ -371,12 +366,19 @@ class ChecklistRenderer {
         const checkbox = this.container.querySelector(`#checklist-${itemId}`);
         if (!checkbox) return;
         
-        // Desabilitar checkbox durante operação
-        checkbox.disabled = true;
+        // Marcar como loading mas NÃO desabilitar o checkbox para UX mais fluida
         this.isLoading = true;
         
+        if (this.flatData[itemId]) {
+            this.flatData[itemId].completed = completed;
+        }
+        
+        this.propagateDown(itemId, completed);
+        this.propagateUp(itemId);
+        this.updateAllItemsUI();
+        this.updateProgressFromLocalData();
+        
         try {
-            // Chamar API para fazer toggle com propagação
             const response = await fetch(`/api/checklist/toggle/${itemId}`, {
                 method: 'POST',
                 headers: {
@@ -388,27 +390,88 @@ class ChecklistRenderer {
             const data = await response.json();
             
             if (data.ok) {
-                // Backend já fez toda a propagação via SQL CTE
-                // Recarregar dados atualizados do servidor para garantir consistência
-                await this.reloadChecklist();
+                const serverProgress = Math.round(data.progress || 0);
+                this.updateProgressDisplay(serverProgress);
                 
-                // Atualizar progresso global
-                await this.updateGlobalProgress();
-                
-                // Atualizar progresso global da página principal se houver função externa
                 if (window.updateProgressBar && typeof window.updateProgressBar === 'function') {
-                    window.updateProgressBar(data.progress || 0);
+                    window.updateProgressBar(serverProgress);
                 }
             } else {
                 throw new Error(data.error || 'Erro ao alterar status');
             }
         } catch (error) {
-            console.error('Erro ao fazer toggle:', error);
+            
+            if (this.flatData[itemId]) {
+                this.flatData[itemId].completed = !completed;
+            }
+            this.propagateDown(itemId, !completed);
+            this.propagateUp(itemId);
+            this.updateAllItemsUI();
+            this.updateProgressFromLocalData();
+            
             alert(`Erro: ${error.message}`);
-            checkbox.checked = !completed; // Reverter checkbox
         } finally {
-            checkbox.disabled = false;
             this.isLoading = false;
+        }
+    }
+    
+    updateAllItemsUI() {
+        Object.keys(this.flatData).forEach(id => {
+            this.updateItemUI(parseInt(id));
+        });
+    }
+    
+    updateProgressFromLocalData() {
+        let total = 0;
+        let completed = 0;
+        
+        Object.values(this.flatData).forEach(item => {
+            const isLeaf = !item.childrenIds || item.childrenIds.length === 0;
+            if (isLeaf) {
+                total++;
+                if (item.completed) {
+                    completed++;
+                }
+            }
+        });
+        
+        const progress = total > 0 ? Math.round((completed / total) * 100) : 100;
+        this.updateProgressDisplay(progress);
+    }
+    
+    updateProgressDisplay(progress) {
+        const progressPercent = this.container.querySelector('#checklist-global-progress-percent') || 
+                               document.querySelector('#checklist-global-progress-percent');
+        const progressBar = this.container.querySelector('#checklist-global-progress-bar') || 
+                           document.querySelector('#checklist-global-progress-bar');
+        
+        if (progressPercent) {
+            progressPercent.textContent = `${progress}%`;
+        }
+        
+        if (progressBar) {
+            progressBar.style.width = `${progress}%`;
+            progressBar.setAttribute('aria-valuenow', progress);
+            
+            if (progress === 100) {
+                progressBar.classList.remove('bg-primary');
+                progressBar.classList.add('bg-success');
+            } else {
+                progressBar.classList.remove('bg-success');
+                progressBar.classList.add('bg-primary');
+            }
+        }
+        
+        const progressoValor = document.getElementById('progresso-valor');
+        const progressTotalBar = document.getElementById('progress-total-bar');
+        
+        if (progressoValor) {
+            progressoValor.textContent = `${progress}%`;
+        }
+        
+        if (progressTotalBar) {
+            progressTotalBar.style.width = `${progress}%`;
+            progressTotalBar.setAttribute('aria-valuenow', progress);
         }
     }
     
@@ -427,11 +490,8 @@ class ChecklistRenderer {
         });
     }
     
-    /**
-     * Propaga status para cima (bolha) - pai atualiza baseado nos filhos
-     */
     propagateUp(itemId, visited = new Set()) {
-        if (!itemId || visited.has(itemId)) return; // Evitar loops
+        if (!itemId || visited.has(itemId)) return;
         
         visited.add(itemId);
         
@@ -441,7 +501,6 @@ class ChecklistRenderer {
         const parentNode = this.flatData[node.parentId];
         if (!parentNode || !parentNode.childrenIds || parentNode.childrenIds.length === 0) return;
         
-        // Verificar status dos filhos
         const children = parentNode.childrenIds
             .map(id => this.flatData[id])
             .filter(c => c !== undefined);
@@ -451,43 +510,38 @@ class ChecklistRenderer {
         const allChecked = children.every(c => c.completed === true);
         const someChecked = children.some(c => c.completed === true);
         
-        // Atualizar pai
         const oldStatus = parentNode.completed;
         parentNode.completed = allChecked;
         
-        // Continuar propagação para o avô se o status mudou
         if (oldStatus !== allChecked) {
             this.propagateUp(node.parentId, visited);
         }
     }
     
-    /**
-     * Atualiza UI de um item específico (sem re-render completo)
-     */
     updateItemUI(itemId) {
         const node = this.flatData[itemId];
         if (!node) return;
         
-        // Atualizar checkbox
-        const checkbox = this.container.querySelector(`#checklist-${itemId}`);
-        if (checkbox) {
+        const itemElement = this.container.querySelector(`.checklist-item[data-item-id="${itemId}"]`);
+        if (!itemElement) return;
+        
+        const checkbox = itemElement.querySelector(`#checklist-${itemId}`);
+        if (checkbox && checkbox.checked !== node.completed) {
             checkbox.checked = node.completed;
         }
         
-        // Atualizar label (riscado)
-        const label = this.container.querySelector(`label[for="checklist-${itemId}"]`);
-        if (label) {
+        const title = itemElement.querySelector('.checklist-item-title');
+        if (title) {
             if (node.completed) {
-                label.style.textDecoration = 'line-through';
-                label.style.color = '#6c757d';
+                title.style.textDecoration = 'line-through';
+                title.style.color = '#6c757d';
             } else {
-                label.style.textDecoration = 'none';
-                label.style.color = '';
+                title.style.textDecoration = 'none';
+                title.style.color = '';
             }
         }
         
-        // Atualizar badge de status
-        const badge = this.container.querySelector(`#status-badge-${itemId}`);
+        const badge = itemElement.querySelector(`#status-badge-${itemId}`);
         if (badge) {
             const statusClass = node.completed ? 'bg-success' : 'bg-warning';
             const statusText = node.completed ? 'Concluído' : 'Pendente';
@@ -495,11 +549,15 @@ class ChecklistRenderer {
             badge.className = `badge ${statusClass} ms-2`;
             badge.innerHTML = `<i class="bi ${statusIcon} me-1"></i>${statusText}`;
         }
+        
+        const progressBadge = itemElement.querySelector('.checklist-progress-badge');
+        if (progressBadge && node.childrenIds && node.childrenIds.length > 0) {
+            const total = node.childrenIds.length;
+            const completed = node.childrenIds.filter(id => this.flatData[id]?.completed).length;
+            progressBadge.textContent = `${completed}/${total}`;
+        }
     }
     
-    /**
-     * Atualiza UI dos filhos recursivamente
-     */
     updateChildrenUI(itemId) {
         const node = this.flatData[itemId];
         if (!node || !node.childrenIds) return;
@@ -510,9 +568,6 @@ class ChecklistRenderer {
         });
     }
     
-    /**
-     * Atualiza UI do pai
-     */
     updateParentUI(itemId) {
         const node = this.flatData[itemId];
         if (!node || !node.parentId) return;
@@ -525,20 +580,16 @@ class ChecklistRenderer {
         const commentsSection = this.container.querySelector(`#comments-${itemId}`);
         if (!commentsSection) return;
         
-        // Verificar se está abrindo ou fechando
         const isOpening = !commentsSection.classList.contains('show');
         
-        // Usar Bootstrap Collapse
         if (window.bootstrap && bootstrap.Collapse) {
             const bsCollapse = new bootstrap.Collapse(commentsSection, {
                 toggle: true
             });
         } else {
-            // Fallback sem Bootstrap
             commentsSection.classList.toggle('show');
         }
         
-        // Se está abrindo, carregar histórico de comentários
         if (isOpening) {
             this.loadComments(itemId);
         }
@@ -558,7 +609,6 @@ class ChecklistRenderer {
                 historyContainer.innerHTML = `<div class="text-danger small">${data.error || 'Erro ao carregar comentários'}</div>`;
             }
         } catch (error) {
-            console.error('Erro ao carregar comentários:', error);
             historyContainer.innerHTML = '<div class="text-danger small">Erro ao carregar comentários</div>';
         }
     }
@@ -640,11 +690,9 @@ class ChecklistRenderer {
             const data = await response.json();
             
             if (data.ok) {
-                // Limpar textarea
                 textarea.value = '';
                 if (visibilitySelect) visibilitySelect.value = 'interno';
                 
-                // Atualizar ícone de comentário para indicar que tem comentários
                 const commentButton = this.container.querySelector(`.btn-comment-toggle[data-item-id="${itemId}"]`);
                 if (commentButton) {
                     const icon = commentButton.querySelector('i');
@@ -656,14 +704,12 @@ class ChecklistRenderer {
                     }
                 }
                 
-                // Recarregar histórico de comentários
                 await this.loadComments(itemId);
                 
             } else {
                 throw new Error(data.error || 'Erro ao salvar comentário');
             }
         } catch (error) {
-            console.error('Erro ao salvar comentário:', error);
             alert(`Erro: ${error.message}`);
         }
     }
@@ -689,7 +735,6 @@ class ChecklistRenderer {
                 throw new Error(data.error || 'Erro ao enviar email');
             }
         } catch (error) {
-            console.error('Erro ao enviar email:', error);
             alert(`Erro: ${error.message}`);
         }
     }
@@ -710,25 +755,102 @@ class ChecklistRenderer {
             const data = await response.json();
             
             if (data.ok) {
-                // Recarregar histórico
                 await this.loadComments(itemId);
             } else {
                 throw new Error(data.error || 'Erro ao excluir comentário');
             }
         } catch (error) {
-            console.error('Erro ao excluir comentário:', error);
             alert(`Erro: ${error.message}`);
+        }
+    }
+
+    async deleteItem(itemId) {
+        let confirmed = false;
+        if (window.confirmWithModal) {
+            confirmed = await window.confirmWithModal('Tem certeza que deseja excluir esta tarefa e todos os seus subitens? Esta ação não pode ser desfeita.');
+        } else {
+            confirmed = confirm('Tem certeza que deseja excluir esta tarefa e todos os seus subitens? Esta ação não pode ser desfeita.');
+        }
+        
+        if (!confirmed) return;
+        
+        // Mostrar loading ou desabilitar botão?
+        const itemEl = this.container.querySelector(`.checklist-item[data-item-id="${itemId}"]`);
+        if (itemEl) {
+            itemEl.style.opacity = '0.5';
+            itemEl.style.pointerEvents = 'none';
+        }
+        
+        try {
+            const response = await fetch(`/api/checklist/delete/${itemId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.ok) {
+                // Remover o item da DOM
+                if (itemEl) {
+                    itemEl.remove();
+                }
+                
+                // Remover do flatData
+                if (this.flatData[itemId]) {
+                    const parentId = this.flatData[itemId].parentId;
+                    delete this.flatData[itemId];
+                    
+                    // Atualizar lista de filhos do pai
+                    if (parentId && this.flatData[parentId]) {
+                        this.flatData[parentId].childrenIds = this.flatData[parentId].childrenIds.filter(id => id !== itemId);
+                        
+                        // Se o pai ficou sem filhos, atualizar UI do pai (remover ícone de expandir)
+                        if (this.flatData[parentId].childrenIds.length === 0) {
+                            const parentEl = this.container.querySelector(`.checklist-item[data-item-id="${parentId}"]`);
+                            if (parentEl) {
+                                // Forçar re-render do pai ou atualizar classes manualmente
+                                // Simplificando: Recarregar checklist se estrutura mudou muito
+                                // Mas vamos tentar atualizar manualmente primeiro
+                                const expandBtn = parentEl.querySelector('.btn-expand');
+                                if (expandBtn) expandBtn.remove(); // Remove botão expandir
+                                
+                                const childrenContainer = parentEl.querySelector('.checklist-item-children');
+                                if (childrenContainer) childrenContainer.remove();
+                            }
+                        }
+                    }
+                }
+                
+                // Atualizar progresso
+                if (data.progress !== undefined) {
+                    this.updateProgressDisplay(data.progress);
+                } else {
+                    this.updateProgressFromLocalData();
+                }
+                
+                // Opcional: Recarregar para garantir consistência se necessário
+                // await this.reloadChecklist();
+                
+            } else {
+                throw new Error(data.error || 'Erro ao excluir tarefa');
+            }
+        } catch (error) {
+            alert(`Erro: ${error.message}`);
+            if (itemEl) {
+                itemEl.style.opacity = '1';
+                itemEl.style.pointerEvents = 'auto';
+            }
         }
     }
     
     cancelComment(itemId) {
-        // Restaurar valor original
         const textarea = this.container.querySelector(`#comment-input-${itemId}`);
         if (textarea && this.flatData[itemId]) {
             textarea.value = this.flatData[itemId].comment || '';
         }
         
-        // Colapsar seção
         const commentsSection = this.container.querySelector(`#comments-${itemId}`);
         if (commentsSection && window.bootstrap && bootstrap.Collapse) {
             const bsCollapse = bootstrap.Collapse.getInstance(commentsSection);
@@ -742,95 +864,61 @@ class ChecklistRenderer {
             const data = await response.json();
             
             if (data.ok && data.items) {
-                // Preservar estado expandido antes de recarregar
                 const expandedIds = Array.from(this.expandedItems);
                 
-                // Atualizar dados
                 this.data = data.items;
                 
-                // Reconstruir flatData
                 this.flatData = {};
                 this.buildFlatData(this.data);
                 
-                // Re-renderizar
                 this.render();
                 
-                // Restaurar estado expandido
                 expandedIds.forEach(id => this.expandedItems.add(id));
                 this.updateExpandedState();
             }
         } catch (error) {
-            console.error('Erro ao recarregar checklist:', error);
         }
     }
     
-    async updateGlobalProgress() {
-        try {
-            const response = await fetch(`/api/checklist/tree?implantacao_id=${this.implantacaoId}&format=flat`);
-            const data = await response.json();
-            
-            if (data.ok && data.global_progress !== undefined) {
-                const progress = Math.round(data.global_progress);
+    /**
+     * Atualiza progresso global - usa dados locais para resposta imediata
+     * @param {boolean} fetchFromServer - Se true, busca do servidor (mais lento mas preciso)
+     */
+    async updateGlobalProgress(fetchFromServer = false) {
+        // Primeiro, atualiza imediatamente com dados locais
+        this.updateProgressFromLocalData();
+        
+        // Se solicitado, busca do servidor para garantir precisão
+        if (fetchFromServer) {
+            try {
+                const response = await fetch(`/api/checklist/tree?implantacao_id=${this.implantacaoId}&format=flat`);
+                const data = await response.json();
                 
-                // Atualizar UI - buscar dentro do container ou no documento
-                const progressPercent = this.container.querySelector('#checklist-global-progress-percent') || 
-                                       document.querySelector('#checklist-global-progress-percent');
-                const progressBar = this.container.querySelector('#checklist-global-progress-bar') || 
-                                   document.querySelector('#checklist-global-progress-bar');
-                
-                if (progressPercent) {
-                    progressPercent.textContent = `${progress}%`;
-                }
-                
-                if (progressBar) {
-                    progressBar.style.width = `${progress}%`;
-                    progressBar.setAttribute('aria-valuenow', progress);
+                if (data.ok && data.global_progress !== undefined) {
+                    const progress = Math.round(data.global_progress);
+                    this.updateProgressDisplay(progress);
                     
-                    // Mudar cor quando 100%
-                    if (progress === 100) {
-                        progressBar.classList.remove('bg-primary');
-                        progressBar.classList.add('bg-success');
-                    } else {
-                        progressBar.classList.remove('bg-success');
-                        progressBar.classList.add('bg-primary');
+                    if (data.items) {
+                        data.items.forEach(item => {
+                            if (item.progress_label) {
+                                const progressBadge = this.container.querySelector(`[data-item-id="${item.id}"] .checklist-progress-badge`);
+                                if (progressBadge) {
+                                    progressBadge.textContent = item.progress_label;
+                                }
+                                
+                                // Atualizar barra de progresso do item
+                                const progressBarItem = this.container.querySelector(`#progress-bar-${item.id}`);
+                                if (progressBarItem && item.progress) {
+                                    const percent = item.progress.completed / item.progress.total * 100;
+                                    progressBarItem.style.width = `${percent}%`;
+                                    progressBarItem.style.opacity = percent > 0 && percent < 100 ? '1' : '0';
+                                }
+                            }
+                        });
                     }
                 }
-                
-                // Atualizar também o progresso geral da página (Progresso Geral)
-                const progressoValor = document.getElementById('progresso-valor');
-                const progressTotalBar = document.getElementById('progress-total-bar');
-                
-                if (progressoValor) {
-                    progressoValor.textContent = `${progress}%`;
-                }
-                
-                if (progressTotalBar) {
-                    progressTotalBar.style.width = `${progress}%`;
-                    progressTotalBar.setAttribute('aria-valuenow', progress);
-                }
-                
-                // Atualizar progresso de cada item com filhos
-                if (data.items) {
-                    data.items.forEach(item => {
-                        if (item.progress_label) {
-                            const progressBadge = this.container.querySelector(`[data-item-id="${item.id}"] .checklist-progress-badge`);
-                            if (progressBadge) {
-                                progressBadge.textContent = item.progress_label;
-                            }
-                            
-                            // Atualizar barra de progresso do item
-                            const progressBarItem = this.container.querySelector(`#progress-bar-${item.id}`);
-                            if (progressBarItem && item.progress) {
-                                const percent = item.progress.completed / item.progress.total * 100;
-                                progressBarItem.style.width = `${percent}%`;
-                                progressBarItem.style.opacity = percent > 0 && percent < 100 ? '1' : '0';
-                            }
-                        }
-                    });
-                }
+            } catch (error) {
             }
-        } catch (error) {
-            console.error('Erro ao buscar progresso global:', error);
         }
     }
     

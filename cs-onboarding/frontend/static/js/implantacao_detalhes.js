@@ -8,7 +8,6 @@ function formatDataComentario(dataStr) {
         const year = dateObj.getFullYear();
         return `${day}/${month}/${year}`;
     } catch (e) {
-        console.error("Erro data:", dataStr, e);
         return 'Inválida';
     }
 }
@@ -27,7 +26,6 @@ function formatDataLog(dataStr) {
             second: '2-digit'
         }).replace(',', ' às');
     } catch (e) {
-        console.error("Erro data log:", dataStr, e);
         return 'Inválida';
     }
 }
@@ -73,12 +71,36 @@ function adicionarLogNaTimeline(log) {
 }
 
 function updateProgressBar(progress) {
+    const progressNum = parseInt(progress) || 0;
+    
     const progressBar = document.querySelector('#progress-total-bar');
     if (progressBar) {
-        const progressNum = parseInt(progress) || 0;
         progressBar.style.width = progressNum + '%';
         progressBar.setAttribute('aria-valuenow', progressNum);
-        progressBar.textContent = progressNum + '%';
+    }
+    
+    const progressoValor = document.getElementById('progresso-valor');
+    if (progressoValor) {
+        progressoValor.textContent = progressNum + '%';
+    }
+    
+    const checklistBar = document.querySelector('#checklist-global-progress-bar');
+    if (checklistBar) {
+        checklistBar.style.width = progressNum + '%';
+        checklistBar.setAttribute('aria-valuenow', progressNum);
+        
+        if (progressNum === 100) {
+            checklistBar.classList.remove('bg-primary');
+            checklistBar.classList.add('bg-success');
+        } else {
+            checklistBar.classList.remove('bg-success');
+            checklistBar.classList.add('bg-primary');
+        }
+    }
+    
+    const checklistPercent = document.querySelector('#checklist-global-progress-percent');
+    if (checklistPercent) {
+        checklistPercent.textContent = progressNum + '%';
     }
 }
 
@@ -108,25 +130,41 @@ function confirmWithModal(message) {
         wrap.innerHTML = html;
         const modalEl = wrap.firstElementChild;
         document.body.appendChild(modalEl);
+        
         const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl, {
             backdrop: 'static',
             keyboard: true
         });
+
+        let resolved = false;
+
         const cleanup = () => {
+            modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove(), { once: true });
             bsModal.hide();
-            modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove(), {
-                once: true
-            });
         };
-        modalEl.querySelector('#confirmActionBtn').addEventListener('click', () => {
+
+        const handleConfirm = () => {
+            if (resolved) return;
+            resolved = true;
             resolve(true);
             cleanup();
-        });
-        modalEl.addEventListener('hide.bs.modal', () => {
+        };
+
+        const handleCancel = () => {
+            if (resolved) return;
+            resolved = true;
             resolve(false);
-        }, {
-            once: true
+            // cleanup is handled by the hidden event normally, but here we are reacting to hide
+        };
+
+        modalEl.querySelector('#confirmActionBtn').addEventListener('click', handleConfirm);
+        
+        modalEl.addEventListener('hide.bs.modal', () => {
+            if (!resolved) {
+                handleCancel();
+            }
         });
+
         bsModal.show();
     });
 }
@@ -138,7 +176,7 @@ async function excluirTarefa(tarefaId, button, CONFIG) {
     const originalHTML = button.innerHTML;
     button.disabled = true;
     button.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
-    const listItem = button.closest('.list-group-item');
+    const listItem = button.closest('.list-group-item') || button.closest('.tarefa-item');
     if (listItem) listItem.style.opacity = '0.5';
     fetch(endpointUrl, {
             method: 'POST'
@@ -169,7 +207,6 @@ async function excluirTarefa(tarefaId, button, CONFIG) {
 async function excluirTodasDoModulo(button, moduloNome, CONFIG) {
     const ok = await confirmWithModal(`EXCLUIR TODAS as tarefas do módulo "${moduloNome}"? Esta ação é irreversível.`);
     if (!ok) return;
-    // Detecta modelo hierárquico pelo hx-post dos checkboxes dentro do módulo
     let isHier = false;
     const collapseWrap = button.closest('.module-header') ? button.closest('.module-header').nextElementSibling : null;
     if (collapseWrap) {
@@ -177,8 +214,8 @@ async function excluirTodasDoModulo(button, moduloNome, CONFIG) {
         isHier = !!anyHier;
     }
     const endpointUrl = isHier ? CONFIG.endpoints.delModuloHier : CONFIG.endpoints.delModulo;
-    const cardElement = button.closest('.module-header'); // Procura o .module-header
-    const collapseElement = cardElement ? cardElement.nextElementSibling : null; // Pega o .collapse
+    const cardElement = button.closest('.module-header');
+    const collapseElement = cardElement ? cardElement.nextElementSibling : null;
     const originalBtnHTML = button.innerHTML;
     button.disabled = true;
     button.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Excluindo...`;
@@ -221,7 +258,6 @@ async function excluirTodasDoModulo(button, moduloNome, CONFIG) {
             throw new Error(data.error || 'Erro.');
         }
     }).catch(error => {
-        console.error('Erro:', error);
         alert(`Erro: ${error.message}`);
     }).finally(() => {
         button.innerHTML = originalBtnHTML;
@@ -299,8 +335,6 @@ function marcarTodasDoModulo(button, collapseId, CONFIG) {
                     throw new Error('Resposta inválida');
                 }
             }).catch(error => {
-                console.error(`Erro ${tarefaId}:`, error);
-
                 errors.push(error?.message || 'Erro ao marcar tarefa');
                 checkbox.checked = false;
                 const label = checkbox.closest('li').querySelector('label.form-check-label');
@@ -339,7 +373,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const mainContent = document.getElementById('main-content');
     if (!mainContent) {
-        console.error("Elemento #main-content não encontrado. A página de detalhes não funcionará.");
         return;
     }
     const CONFIG = {
@@ -357,13 +390,19 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
     if (!CONFIG.implantacaoId) {
-        console.error("data-implantacao-id não encontrado no #main-content.");
         return;
     }
 
 
     document.body.addEventListener('click', function(event) {
         const target = event.target;
+
+        const btnExcluirNova = target.closest('.btn-excluir-tarefa');
+        if (btnExcluirNova) {
+            const tarefaId = btnExcluirNova.dataset.tarefaId;
+            if (tarefaId) window.excluirTarefa(tarefaId, btnExcluirNova, CONFIG);
+            return;
+        }
 
         const deleteTaskButton = target.closest('button[title="Excluir Tarefa"]');
         if (deleteTaskButton) {
@@ -396,10 +435,10 @@ document.addEventListener('DOMContentLoaded', function() {
     window.excluirTarefa = excluirTarefa;
     window.marcarTodasDoModulo = marcarTodasDoModulo;
     window.excluirTodasDoModulo = excluirTodasDoModulo;
+    window.confirmWithModal = confirmWithModal;
 
     function initializeSortableLists(CONFIG) {
         if (!window.Sortable) {
-            console.warn('Sortable não carregado ainda. Aguardando evento de pronto.');
             return;
         }
         document.querySelectorAll('.list-group-sortable').forEach(listEl => {
@@ -447,7 +486,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
             if (!modulo) {
-                console.warn("Módulo não encontrado:", listEl);
                 return;
             }
             new Sortable(listEl, {
@@ -484,8 +522,6 @@ document.addEventListener('DOMContentLoaded', function() {
             once: true
         });
     }
-    
-    // Sistema de tabs
     const tabSelector = '#detalhesTab .nav-link, #contentTabs .nav-link';
     const tabPaneSelector = '#detalhesTabContent .tab-pane, #contentTabsContent .tab-pane';
     const tabs = document.querySelectorAll(tabSelector);
@@ -614,29 +650,19 @@ document.addEventListener('DOMContentLoaded', function() {
     document.body.addEventListener('htmx:afterSwap', function(event) {
         const target = event.detail.target;
 
-        // Atualiza progresso quando uma tarefa ou subtarefa é alterada
-        if (target && target.id && (target.id.startsWith('task-item-') || target.id.startsWith('subtarefa-'))) {
-            // A barra de progresso é atualizada via OOB swap pelo servidor ou evento
-        }
-
-        // Scroll e reset de formulário de comentários
         if (target && target.id && target.id.startsWith('comment-list-')) {
             try {
-                // Scroll para o final da lista de comentários
                 target.scrollTop = target.scrollHeight;
 
-                // Reseta o formulário de comentário
                 const form = target.previousElementSibling;
                 if (form && form.classList && form.classList.contains('comment-form')) {
                     form.reset();
                 }
             } catch (e) {
-                console.warn('Falha ao limpar/rolar após comentário HTMX:', e);
             }
         }
     });
 
-    // Função para atualizar badges de status nos módulos
     function updateModuleBadges() {
         try {
             document.querySelectorAll('.module-header').forEach(header => {
@@ -655,11 +681,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 const percentage = Math.round((completed / total) * 100);
 
-                // Remove badge existente se houver
                 const existingBadge = header.querySelector('.module-status-badge');
                 if (existingBadge) existingBadge.remove();
 
-                // Cria novo badge
                 const badge = document.createElement('span');
                 badge.className = 'badge module-status-badge ms-2';
                 badge.style.fontSize = '0.75rem';
@@ -668,7 +692,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 badge.style.borderRadius = '6px';
                 badge.textContent = `${completed}/${total}`;
 
-                // Define cor baseada no percentual
                 if (percentage === 100) {
                     badge.style.backgroundColor = '#28a745';
                     badge.style.color = '#fff';
@@ -683,28 +706,23 @@ document.addEventListener('DOMContentLoaded', function() {
                     badge.style.color = '#fff';
                 }
 
-                // Adiciona o badge ao título
                 const titleElement = header.querySelector('h5');
                 if (titleElement) {
                     titleElement.appendChild(badge);
                 }
             });
         } catch (error) {
-            console.error('Erro ao atualizar badges dos módulos:', error);
         }
     }
 
-    // Inicializa os badges
     updateModuleBadges();
 
-    // Atualiza badges quando tarefas mudam
     document.body.addEventListener('change', function(ev) {
         if (ev.target && ev.target.classList && ev.target.classList.contains('task-checkbox')) {
             updateModuleBadges();
         }
     });
 
-    // Atualiza badges após eventos HTMX
     document.body.addEventListener('htmx:afterSwap', function() {
         setTimeout(updateModuleBadges, 100);
     });

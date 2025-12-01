@@ -10,19 +10,16 @@ try:
     
     if env_local.exists():
         load_dotenv(str(env_local), override=True)
-        print(f"[Config] .env.local carregado (desenvolvimento local)")
     elif env_prod.exists():
         load_dotenv(str(env_prod), override=True)
-        print(f"[Config] .env carregado (producao)")
     else:
-        # Fallback para find_dotenv padrão
         _dotenv_path = find_dotenv()
         if _dotenv_path:
             load_dotenv(_dotenv_path, override=True)
         else:
             load_dotenv(override=True)
 except Exception as e:
-    print(f"[Config] Aviso: falha ao carregar .env explícito: {e}")
+    pass
 
 
 class Config:
@@ -38,13 +35,10 @@ class Config:
     # Verificar se é SQLite pela URL ou pela variável USE_SQLITE_LOCALLY
     if USE_SQLITE_ENV or (DATABASE_URL and DATABASE_URL.startswith('sqlite')):
         USE_SQLITE_LOCALLY = True
-        print("Config: Usando SQLite local.")
     elif DATABASE_URL:
         USE_SQLITE_LOCALLY = False
-        print("Config: DATABASE_URL encontrada. Usando PostgreSQL.")
     else:
         USE_SQLITE_LOCALLY = True
-        print("Config: DATABASE_URL não encontrada. Usando SQLite local.")
 
     # Auth0 desabilitado automaticamente em desenvolvimento local
     USE_SQLITE_ENV = os.environ.get('USE_SQLITE_LOCALLY', '').lower() in ('true', '1', 'yes')
@@ -72,10 +66,6 @@ class Config:
         CLOUDFLARE_PUBLIC_URL
     ])
 
-    if not R2_CONFIGURADO:
-        print("AVISO DE CONFIGURAÇÃO: Uma ou mais variáveis Cloudflare R2 não estão definidas. O upload de imagens está desativado.")
-    else:
-        print("Config: R2 (Cloudflare) configurado.")
 
     PERMANENT_SESSION_LIFETIME = 60 * 60 * 24 * 7
 
@@ -88,8 +78,6 @@ class Config:
 
     GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI')
     GOOGLE_OAUTH_ENABLED = all([GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI])
-    if not GOOGLE_OAUTH_ENABLED:
-        print("Config: Google OAuth desativado (variáveis ausentes). Define GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI.")
 
     GOOGLE_OAUTH_SCOPES = os.environ.get(
         'GOOGLE_OAUTH_SCOPES',
@@ -110,15 +98,10 @@ class Config:
 
     if EMAIL_DRIVER == 'smtp':
         EMAIL_CONFIGURADO = all([SMTP_HOST, SMTP_PORT, SMTP_FROM])
-        if not EMAIL_CONFIGURADO:
-            print("AVISO: SMTP não configurado (comentários externos não enviarão e-mails).")
     elif EMAIL_DRIVER == 'sendgrid':
         EMAIL_CONFIGURADO = all([SENDGRID_API_KEY, SMTP_FROM])
-        if not EMAIL_CONFIGURADO:
-            print("AVISO: SendGrid não configurado (defina SENDGRID_API_KEY e SMTP_FROM).")
     else:
         EMAIL_CONFIGURADO = False
-        print(f"AVISO: EMAIL_DRIVER '{EMAIL_DRIVER}' não suportado. Use 'smtp' ou 'sendgrid'.")
 
     LANG = os.environ.get('LANG', 'pt')
 

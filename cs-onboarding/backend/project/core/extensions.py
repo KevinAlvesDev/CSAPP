@@ -33,9 +33,7 @@ def init_limiter(app):
         )
 
         limiter.init_app(app)
-        print("Extensão Limiter inicializada (limite global: 100 req/min).")
     except Exception as e:
-        print(f"ERRO CRÍTICO: Falha ao inicializar a extensão Limiter: {e}")
         limiter = None
 
 
@@ -56,9 +54,6 @@ def init_r2(app):
                 ),
                 region_name='auto'
             )
-            print("Extensão R2 (boto3 client) inicializada.")
-        else:
-            print("Extensão R2: Configurações ausentes, cliente não inicializado.")
+            pass
     except Exception as e:
-        print(f"ERRO CRÍTICO: Falha ao inicializar a extensão R2 (boto3): {e}")
         pass

@@ -179,7 +179,38 @@ header.header-bg {
 .nav-link { color: var(--body-color); }
 .nav-link:hover { color: var(--accent-color); }
 
-.progress .progress-bar { color: #000000; }
+.progress .progress-bar { 
+  color: #000000; 
+  transition: width 0.3s ease-out, background-color 0.3s ease;
+}
+
+/* Progresso global - animação suave */
+#progress-total-bar,
+#checklist-global-progress-bar {
+  transition: width 0.25s ease-out, background-color 0.3s ease;
+}
+
+/* Tom Select - Corrigir ícone de seta sobrepondo texto */
+.ts-wrapper.single .ts-control {
+  padding-right: 40px !important;
+}
+.ts-wrapper.single .ts-control::after {
+  position: absolute;
+  right: 12px !important;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.ts-wrapper .ts-control .item {
+  max-width: calc(100% - 35px) !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  display: inline-block !important;
+}
+/* Garantir que o dropdown não sobreponha */
+.ts-dropdown {
+  z-index: 1060 !important;
+}
 .list-group-item {
   color: var(--body-color);
   background-color: var(--card-bg);

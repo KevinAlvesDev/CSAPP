@@ -370,7 +370,6 @@
         const totalDisplay = document.getElementById('total_pontos_manuais');
 
         if (typeof pontosRegrasManuais === 'undefined' || !totalDisplay) {
-            console.warn('Mapa de pontos ou display de total não encontrados.');
             return;
         }
 
@@ -391,7 +390,6 @@
 
                 const regraPontos = pontosRegrasManuais[regraId];
                 if (!regraPontos) {
-                    console.warn(`Regra não encontrada no mapa JS: ${regraId}`);
                     return; 
                 }
 

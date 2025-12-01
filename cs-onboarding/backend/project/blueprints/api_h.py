@@ -19,7 +19,6 @@ from ..security.api_security import validate_api_origin
 
 api_h_bp = Blueprint('api_h', __name__, url_prefix='/api')
 
-# Mapeamento de tipo para coluna de ID (agora usa checklist_item_id)
 COLUNA_ID_MAP = {
     'tarefa': 'checklist_item_id',
     'subtarefa': 'checklist_item_id'
@@ -48,7 +47,6 @@ def adicionar_comentario_h(tipo, item_id):
     except ValidationError as e:
         return render_hx_error(f'ID inválido: {str(e)}', 400)
     
-    # Validar tipo (agora sempre usa checklist_item_id)
     if tipo not in ('tarefa', 'subtarefa'):
         return render_hx_error('Tipo inválido. Deve ser "tarefa" ou "subtarefa".', 400)
     
@@ -135,7 +133,6 @@ def adicionar_comentario_h(tipo, item_id):
     try:
         agora = datetime.now()
         
-        # Garantir que a coluna checklist_item_id existe (para SQLite)
         try:
             from project.database.db_pool import get_db_connection
             conn_check, db_type_check = get_db_connection()
@@ -172,7 +169,6 @@ def adicionar_comentario_h(tipo, item_id):
             detalhe += "\n[Imagem Adicionada]"
         logar_timeline(info['implantacao_id'], usuario_cs_email, 'novo_comentario', detalhe)
         
-        # Recuperar comentário para renderizar
         novo_comentario_dados = query_db(
             """
             SELECT c.*, p.nome as usuario_nome
@@ -185,14 +181,11 @@ def adicionar_comentario_h(tipo, item_id):
         if not novo_comentario_dados:
              return render_hx_error('Erro ao recuperar comentário.', 500)
 
-        # Envio de e-mail (simplificado)
         if visibilidade == 'externo':
-             # Lógica de e-mail aqui (similar ao anterior)
              pass
 
         novo_comentario_dados['delete_url'] = url_for('api_h.excluir_comentario_h', comentario_id=novo_id)
 
-        # Se for requisição HX-Request, retornar HTML
         if request.headers.get('HX-Request') == 'true':
             item_html = render_template('partials/_comment_item.html', comentario=novo_comentario_dados)
             oob_stub = f"<div id='no-comment-{tipo}-{item_id}' hx-swap-oob='delete'></div>"
@@ -200,7 +193,6 @@ def adicionar_comentario_h(tipo, item_id):
             resp.headers['Content-Type'] = 'text/html; charset=utf-8'
             return resp
         
-        # Caso contrário, retornar JSON
         if novo_comentario_dados.get('data_criacao'):
             novo_comentario_dados['data_criacao'] = format_date_iso_for_json(novo_comentario_dados['data_criacao'])
         
@@ -226,15 +218,12 @@ def listar_comentarios_h(tipo, item_id):
     except ValidationError as e:
         return jsonify({'ok': False, 'error': f'ID inválido: {str(e)}'}), 400
     
-    # Validar tipo (agora sempre usa checklist_item_id)
     if tipo not in ('tarefa', 'subtarefa'):
         return jsonify({'ok': False, 'error': 'Tipo inválido. Deve ser "tarefa" ou "subtarefa".'}), 400
     
     coluna_id = 'checklist_item_id'
     
     try:
-        
-        # Obter email do responsável da implantação
         impl_info = {}
         try:
             if tipo == 'tarefa':
@@ -271,11 +260,9 @@ def listar_comentarios_h(tipo, item_id):
             (item_id,)
         ) or []
         
-        # Adicionar email do responsável a cada comentário
         email_resp = impl_info.get('email_responsavel', '')
         for c in comentarios:
             c['email_responsavel'] = email_resp
-            # Formatar data
             if c.get('data_criacao'):
                 c['data_criacao'] = format_date_iso_for_json(c['data_criacao'])
         
@@ -357,7 +344,6 @@ def enviar_email_comentario_h(comentario_id):
         if not dados:
             return render_inline_notice({'email_send_status': 'error', 'email_send_error': 'Comentário não encontrado.', 'tarefa_id': 0})
 
-        # Segunda query para garantir que temos todos os dados
         dados = query_db(
             """
             SELECT c.id, c.texto, c.imagem_url, c.visibilidade, c.usuario_cs,

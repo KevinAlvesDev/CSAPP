@@ -30,19 +30,16 @@ def create_app():
         
         if env_local.exists():
             load_dotenv(str(env_local), override=True)
-            print(f"[Startup] .env.local carregado (desenvolvimento local)")
         elif env_prod.exists():
             load_dotenv(str(env_prod), override=True)
-            print(f"[Startup] .env carregado (producao)")
         else:
-            # Fallback para find_dotenv padrão
             _dotenv_path = find_dotenv()
             if _dotenv_path:
                 load_dotenv(_dotenv_path, override=True)
             else:
                 load_dotenv(override=True)
     except Exception as e:
-        print(f"[Startup] Aviso: falha ao carregar .env antes da Config: {e}")
+        pass
 
     from .config import Config
     app.config.from_object(Config)
@@ -64,14 +61,6 @@ def create_app():
             'lang': app.config.get('LANG', 'pt')
         }
 
-    try:
-        gi = app.config.get('GOOGLE_CLIENT_ID')
-        gs = app.config.get('GOOGLE_CLIENT_SECRET')
-        gr = app.config.get('GOOGLE_REDIRECT_URI')
-        print(f"[Startup] Google Config: CLIENT_ID={'definido' if gi else 'vazio'}, CLIENT_SECRET={'definido' if gs else 'vazio'}, REDIRECT_URI={'definido' if gr else 'vazio'}")
-        print(f"[Startup] GOOGLE_OAUTH_ENABLED={bool(app.config.get('GOOGLE_OAUTH_ENABLED'))}")
-    except Exception as e:
-        print(f"[Startup] Falha ao imprimir Google Config: {e}")
 
     try:
         os.environ.setdefault('OAUTHLIB_INSECURE_TRANSPORT', '1')
@@ -166,11 +155,11 @@ def create_app():
                         "INSERT OR REPLACE INTO perfil_usuario (usuario, nome, cargo, perfil_acesso, foto_url) VALUES (%s, %s, %s, %s, %s)",
                         (ADMIN_EMAIL, 'Administrador', None, PERFIL_ADMIN, None)
                     )
-                    print(f"[Setup] Usuário admin criado/atualizado: {ADMIN_EMAIL}")
+                    pass
                 except Exception as e_seed:
-                    print(f"AVISO: Falha ao semear admin padrão: {e_seed}")
+                    pass
     except Exception as e_dbinit:
-        print(f"AVISO: Falha ao inicializar DB automaticamente: {e_dbinit}")
+        pass
     
     if app.config.get('AUTH0_ENABLED', True):
         raw_domain = (app.config.get('AUTH0_DOMAIN') or '').strip().strip('`').strip()
@@ -191,12 +180,6 @@ def create_app():
             server_metadata_url=server_metadata_url,
             client_kwargs={'scope': 'openid profile email'},
         )
-        try:
-            print(f"Auth0 registrado: domain={auth0_domain}")
-        except Exception:
-            pass
-    else:
-        print("Auth0 não registrado: AUTH0_ENABLED=False")
 
     try:
         if app.config.get('GOOGLE_OAUTH_ENABLED', False):
@@ -213,16 +196,9 @@ def create_app():
                     'access_type': 'offline',
                 },
             )
-            print('OAuth Google registrado (Agenda).')
-            
-            gi = app.config.get('GOOGLE_CLIENT_ID')
-            gs = app.config.get('GOOGLE_CLIENT_SECRET')
-            gr = app.config.get('GOOGLE_REDIRECT_URI')
-            print(f"[Startup] Pós-registro OAuth: CLIENT_ID={'definido' if gi else 'vazio'}, CLIENT_SECRET={'definido' if gs else 'vazio'}, REDIRECT_URI={'definido' if gr else 'vazio'}")
-        else:
-            print('OAuth Google não registrado: GOOGLE_OAUTH_ENABLED=False')
+        pass
     except Exception as e:
-        print(f"AVISO: Falha ao registrar cliente OAuth Google: {e}")
+        pass
 
     from .blueprints.main import main_bp
     from .blueprints.auth import auth_bp
@@ -248,7 +224,7 @@ def create_app():
         csrf.exempt(api_h_bp)
         csrf.exempt(checklist_bp)
     except Exception as e:
-        print(f"Aviso: não foi possível isentar CSRF no api_bp: {e}")
+        pass
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
@@ -271,7 +247,7 @@ def create_app():
         with app.app_context():
             app.gamification_rules = _get_all_gamification_rules_grouped()
     except Exception as e:
-        print(f"ERRO CRÍTICO: Falha ao carregar regras de gamificação na inicialização: {e}")
+        app.logger.error(f"Falha ao carregar regras de gamificação na inicialização: {e}", exc_info=True)
         app.gamification_rules = {}                                       
 
     @app.cli.command('backup-db')
@@ -387,7 +363,7 @@ def create_app():
 
     @app.errorhandler(500)
     def internal_server_error(e):
-        print(f"ERRO 500: {e}")
+        app.logger.error(f"Erro 500: {e}", exc_info=True)
 
         if request.path.startswith('/api'):
             return jsonify({'ok': False, 'error': 'Erro interno do servidor'}), 500

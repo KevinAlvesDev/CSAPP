@@ -41,7 +41,6 @@
 
       document.querySelectorAll('.flatpickr-date:not(.no-datepicker)').forEach(input => {
         const fp = window.flatpickr(input, Object.assign({}, baseConfig));
-        // Garantir que o valor seja salvo corretamente
         if (input.hasAttribute('required')) {
           input.addEventListener('change', function() {
             if (this._flatpickr && this._flatpickr.selectedDates.length > 0) {
@@ -52,7 +51,6 @@
         }
       });
 
-      // Inicializar botões de calendário
       document.querySelectorAll('button[id^="btn_cal_"], button[id^="btn-cal-"], button[id*="cal-"], button[data-toggle]').forEach(btn => {
         btn.addEventListener('click', (e) => {
           e.preventDefault();
@@ -60,14 +58,12 @@
           if (target && target._flatpickr) {
             target._flatpickr.open();
           } else if (target && target.classList.contains('flatpickr-date')) {
-            // Se o flatpickr ainda não foi inicializado, inicializar agora
             const fp = window.flatpickr(target, Object.assign({}, baseConfig));
             fp.open();
           }
         });
       });
 
-      // Inicializar especificamente os campos de data dos modais
       const modalParar = document.getElementById('modalParar');
       if (modalParar) {
         modalParar.addEventListener('shown.bs.modal', function() {
@@ -75,15 +71,14 @@
           const btnCal = document.getElementById('btn_cal_data_parada');
           if (dataParadaInput && !dataParadaInput._flatpickr) {
             const fp = window.flatpickr(dataParadaInput, Object.assign({}, baseConfig, {
+              appendTo: modalParar.querySelector('.modal-body'),
+              static: true,
               onChange: function(selectedDates, dateStr, instance) {
                 if (selectedDates.length > 0) {
-                  // O valor real (dateStr) já está em Y-m-d, que é o que o backend espera
-                  // O altInput mostra DD/MM/AAAA para o usuário
-                  dataParadaInput.value = dateStr; // Formato Y-m-d para o backend
+                  dataParadaInput.value = dateStr;
                 }
               }
             }));
-            // Configurar botão do calendário
             if (btnCal) {
               btnCal.addEventListener('click', function(e) {
                 e.preventDefault();
@@ -101,15 +96,14 @@
           const btnCal = document.getElementById('btn_cal_data_cancelamento');
           if (dataCancelamentoInput && !dataCancelamentoInput._flatpickr) {
             const fp = window.flatpickr(dataCancelamentoInput, Object.assign({}, baseConfig, {
+              appendTo: modalCancelar.querySelector('.modal-body'),
+              static: true,
               onChange: function(selectedDates, dateStr, instance) {
                 if (selectedDates.length > 0) {
-                  // O valor real (dateStr) já está em Y-m-d, que é o que o backend espera
-                  // O altInput mostra DD/MM/AAAA para o usuário
-                  dataCancelamentoInput.value = dateStr; // Formato Y-m-d para o backend
+                  dataCancelamentoInput.value = dateStr;
                 }
               }
             }));
-            // Configurar botão do calendário
             if (btnCal) {
               btnCal.addEventListener('click', function(e) {
                 e.preventDefault();
@@ -120,7 +114,6 @@
         });
       }
 
-      // Validação dos formulários de parar e cancelar
       const formParar = document.getElementById('formPararImplantacao');
       if (formParar) {
         formParar.addEventListener('submit', function(e) {
@@ -130,12 +123,9 @@
           if (dataParadaInput) {
             let dataValida = false;
             
-            // Verificar se o flatpickr tem uma data selecionada
             if (dataParadaInput._flatpickr && dataParadaInput._flatpickr.selectedDates.length > 0) {
-              // O valor já está no formato Y-m-d (que é o que o backend espera)
               dataValida = true;
             } else if (dataParadaInput.value && dataParadaInput.value.trim() !== '') {
-              // Validar formato Y-m-d ou DD/MM/AAAA
               const datePatternYmd = /^\d{4}-\d{2}-\d{2}$/;
               const datePatternDmy = /^\d{2}\/\d{2}\/\d{4}$/;
               if (datePatternYmd.test(dataParadaInput.value.trim()) || datePatternDmy.test(dataParadaInput.value.trim())) {
@@ -168,12 +158,9 @@
           if (dataCancelamentoInput) {
             let dataValida = false;
             
-            // Verificar se o flatpickr tem uma data selecionada
             if (dataCancelamentoInput._flatpickr && dataCancelamentoInput._flatpickr.selectedDates.length > 0) {
-              // O valor já está no formato Y-m-d (que é o que o backend espera)
               dataValida = true;
             } else if (dataCancelamentoInput.value && dataCancelamentoInput.value.trim() !== '') {
-              // Validar formato Y-m-d ou DD/MM/AAAA
               const datePatternYmd = /^\d{4}-\d{2}-\d{2}$/;
               const datePatternDmy = /^\d{2}\/\d{2}\/\d{4}$/;
               if (datePatternYmd.test(dataCancelamentoInput.value.trim()) || datePatternDmy.test(dataCancelamentoInput.value.trim())) {
@@ -273,21 +260,137 @@
       });
     });
 
-    document.querySelectorAll('.comentario-tipo-tag').forEach(tag => {
-      tag.addEventListener('click', function () {
-        const tarefaId = this.dataset.tarefaId;
-        if (!tarefaId) return;
-
-        const tipo = this.dataset.tipo;
-        const container = this.closest('.d-flex');
-        container.querySelectorAll('.comentario-tipo-tag').forEach(t => t.classList.remove('active'));
-        this.classList.add('active');
-
-        const btnEmail = document.getElementById(`btn-email-${tarefaId}`);
-        if (btnEmail) {
-          btnEmail.classList.toggle('d-none', tipo !== 'externo');
+    document.querySelectorAll('[id^="comentarios-tarefa-"]').forEach(section => {
+      section.addEventListener('shown.bs.collapse', function () {
+        const tarefaId = this.id.replace('comentarios-tarefa-', '');
+        if (tarefaId) {
+          setTimeout(() => {
+            inicializarTagsComentario();
+            atualizarVisibilidadeBotaoEmail(tarefaId);
+          }, 100);
         }
       });
+    });
+
+    function atualizarVisibilidadeBotaoEmail(tarefaId) {
+      const tagAtiva = document.querySelector(`.comentario-tipo-tag.active[data-tarefa-id="${tarefaId}"]`);
+      if (!tagAtiva) {
+        return;
+      }
+
+      const tipo = tagAtiva.getAttribute('data-tipo') || tagAtiva.dataset.tipo;
+      const btnEmail = document.getElementById(`btn-email-${tarefaId}`);
+      const alertaEmail = document.getElementById(`alerta-email-${tarefaId}`);
+      
+      const temEmail = CONFIG.emailResponsavel && CONFIG.emailResponsavel.trim() !== '';
+      
+      if (btnEmail) {
+        const deveMostrar = tipo === 'externo';
+        if (deveMostrar) {
+          btnEmail.classList.remove('d-none');
+          
+          if (!temEmail) {
+            btnEmail.disabled = true;
+            btnEmail.classList.add('btn-secondary');
+            btnEmail.classList.remove('btn-primary');
+            btnEmail.title = 'Email do responsável não cadastrado. Acesse "Editar Detalhes" para adicionar.';
+            btnEmail.setAttribute('data-bs-toggle', 'tooltip');
+            btnEmail.setAttribute('data-bs-placement', 'top');
+            
+            if (alertaEmail) {
+              alertaEmail.classList.remove('d-none');
+            }
+          } else {
+            btnEmail.disabled = false;
+            btnEmail.classList.remove('btn-secondary');
+            btnEmail.classList.add('btn-primary');
+            btnEmail.removeAttribute('title');
+            btnEmail.removeAttribute('data-bs-toggle');
+            btnEmail.removeAttribute('data-bs-placement');
+            
+            if (alertaEmail) {
+              alertaEmail.classList.add('d-none');
+            }
+          }
+          
+          if (window.bootstrap && window.bootstrap.Tooltip) {
+            const tooltipInstance = bootstrap.Tooltip.getInstance(btnEmail);
+            if (tooltipInstance) {
+              tooltipInstance.dispose();
+            }
+            if (!temEmail) {
+              new bootstrap.Tooltip(btnEmail);
+            }
+          }
+        } else {
+          btnEmail.classList.add('d-none');
+          if (alertaEmail) {
+            alertaEmail.classList.add('d-none');
+          }
+        }
+      }
+    }
+
+    function inicializarTagsComentario() {
+      document.querySelectorAll('.comentario-tipo-tag').forEach(tag => {
+        const tarefaId = tag.getAttribute('data-tarefa-id') || tag.dataset.tarefaId;
+        if (tarefaId && tag.classList.contains('active')) {
+          atualizarVisibilidadeBotaoEmail(tarefaId);
+        }
+      });
+    }
+
+    document.body.addEventListener('click', function (e) {
+      const tag = e.target.closest('.comentario-tipo-tag');
+      if (!tag) return;
+
+      const tarefaId = tag.getAttribute('data-tarefa-id') || tag.dataset.tarefaId;
+      if (!tarefaId) return;
+
+      const tipo = tag.getAttribute('data-tipo') || tag.dataset.tipo;
+      if (!tipo) return;
+
+      const container = tag.closest('.d-flex');
+      if (container) {
+        container.querySelectorAll('.comentario-tipo-tag').forEach(t => t.classList.remove('active'));
+      }
+      tag.classList.add('active');
+
+      setTimeout(() => {
+        atualizarVisibilidadeBotaoEmail(tarefaId);
+      }, 10);
+    });
+
+    inicializarTagsComentario();
+
+    const observer = new MutationObserver(function(mutations) {
+      mutations.forEach(function(mutation) {
+        if (mutation.type === 'childList') {
+          mutation.addedNodes.forEach(function(node) {
+            if (node.nodeType === 1) {
+              const tags = node.querySelectorAll ? node.querySelectorAll('.comentario-tipo-tag') : [];
+              tags.forEach(tag => {
+                const tarefaId = tag.getAttribute('data-tarefa-id') || tag.dataset.tarefaId;
+                if (tarefaId && tag.classList.contains('active')) {
+                  atualizarVisibilidadeBotaoEmail(tarefaId);
+                }
+              });
+            }
+          });
+        }
+      });
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+
+    document.querySelectorAll('.comentario-tipo-tag.active').forEach(tag => {
+      const tarefaId = tag.dataset.tarefaId;
+      if (tarefaId) {
+        atualizarVisibilidadeBotaoEmail(tarefaId);
+      }
     });
 
     document.body.addEventListener('click', async function (e) {
@@ -337,7 +440,6 @@
               return;
             }
           } catch (err) {
-            console.warn('Resposta não é JSON nem HTML, assumindo sucesso');
           }
         }
 
@@ -350,7 +452,6 @@
 
         showToast('Comentário excluído com sucesso', 'success');
       } catch (error) {
-        console.error('Erro:', error);
         showToast('Erro ao comunicar com o servidor: ' + error.message, 'error');
       }
     });
@@ -413,6 +514,7 @@
             textarea.value = '';
             if (imagemInput) imagemInput.value = '';
             await carregarComentarios(tarefaId);
+            atualizarVisibilidadeBotaoEmail(tarefaId);
             const btnComentarios = document.querySelector(`.btn-toggle-comentarios[data-tarefa-id="${tarefaId}"]`);
             if (btnComentarios) btnComentarios.classList.add('has-comments');
             showToast('Comentário salvo com sucesso!', 'success');
@@ -420,7 +522,6 @@
             showToast('Erro ao salvar comentário: ' + (data.error || 'Erro desconhecido'), 'error');
           }
         } catch (error) {
-          console.error('Erro:', error);
           showToast('Erro ao comunicar com o servidor: ' + error.message, 'error');
         } finally {
           this.disabled = false;
@@ -429,103 +530,112 @@
       });
     });
 
-    document.querySelectorAll('.btn-enviar-email').forEach(btn => {
-      btn.addEventListener('click', async function () {
-        const tarefaId = this.dataset.tarefaId;
-        const textarea = document.getElementById(`comentario-texto-${tarefaId}`);
-        const texto = textarea?.value?.trim();
+    document.body.addEventListener('click', async function (e) {
+      const btn = e.target.closest('.btn-enviar-email');
+      if (!btn) return;
 
-        if (!texto) {
-          showToast('Digite uma mensagem para enviar', 'warning');
-          return;
-        }
+      if (btn.disabled) {
+        e.preventDefault();
+        e.stopPropagation();
+        showToast('Email do responsável não cadastrado. Acesse "Editar Detalhes" para adicionar o email antes de enviar comentários externos.', 'warning');
+        return;
+      }
 
-        if (!CONFIG.emailResponsavel) {
-          showToast('Email do responsável não cadastrado. Acesse "Editar Detalhes" para adicionar.', 'warning');
-          return;
-        }
+      const tarefaId = btn.dataset.tarefaId || btn.getAttribute('data-tarefa-id');
+      const textarea = document.getElementById(`comentario-texto-${tarefaId}`);
+      const texto = textarea?.value?.trim();
 
-        const confirmed = await showConfirm({
-          title: 'Enviar Email',
-          message: `Deseja enviar este comentário por email para ${CONFIG.emailResponsavel}?`,
-          confirmText: 'Enviar',
-          cancelText: 'Cancelar',
-          type: 'primary',
-          icon: 'bi-envelope-fill'
+      if (!texto) {
+        showToast('Digite uma mensagem para enviar', 'warning');
+        return;
+      }
+
+      const temEmail = CONFIG.emailResponsavel && CONFIG.emailResponsavel.trim() !== '';
+      if (!temEmail) {
+        showToast('Email do responsável não cadastrado. Acesse "Editar Detalhes" para adicionar o email antes de enviar comentários externos.', 'warning');
+        return;
+      }
+
+      const confirmed = await showConfirm({
+        title: 'Enviar Email',
+        message: `Deseja enviar este comentário por email para ${CONFIG.emailResponsavel}?`,
+        confirmText: 'Enviar',
+        cancelText: 'Cancelar',
+        type: 'primary',
+        icon: 'bi-envelope-fill'
+      });
+
+      if (!confirmed) return;
+
+      btn.disabled = true;
+      const originalHtml = btn.innerHTML;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Enviando...';
+
+      try {
+        const formData = new FormData();
+        formData.append('comentario', texto);
+        formData.append('visibilidade', 'externo');
+
+        const saveResponse = await fetch(`/api/adicionar_comentario_h/tarefa/${tarefaId}`, {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'X-CSRFToken': CONFIG.csrfToken
+          },
+          body: formData
         });
 
-        if (!confirmed) return;
-
-        this.disabled = true;
-        this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Enviando...';
-
-        try {
-          const formData = new FormData();
-          formData.append('comentario', texto);
-          formData.append('visibilidade', 'externo');
-
-          const saveResponse = await fetch(`/api/adicionar_comentario_h/tarefa/${tarefaId}`, {
-            method: 'POST',
-            headers: {
-              'Accept': 'application/json',
-              'X-CSRFToken': CONFIG.csrfToken
-            },
-            body: formData
-          });
-
-          if (!saveResponse.ok) {
-            const errorText = await saveResponse.text();
-            showToast('Erro ao salvar comentário: ' + (errorText || `Status ${saveResponse.status}`), 'error');
-            return;
-          }
-
-          let data;
-          const contentType = saveResponse.headers.get('content-type');
-          if (contentType && contentType.includes('application/json')) {
-            data = await saveResponse.json();
-          } else {
-            data = { ok: true, success: true };
-          }
-
-          if (!data.ok && !data.success) {
-            showToast('Erro ao salvar comentário: ' + (data.error || 'Erro desconhecido'), 'error');
-            return;
-          }
-
-          textarea.value = '';
-          await carregarComentarios(tarefaId);
-
-          const emailResponse = await fetch(`/api/enviar_comentario_email/${tarefaId}`, {
-            method: 'POST',
-            headers: {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json',
-              'X-CSRFToken': CONFIG.csrfToken
-            },
-            body: JSON.stringify({ comentario: texto })
-          });
-
-          if (!emailResponse.ok) {
-            const errorText = await emailResponse.text();
-            showToast('Comentário salvo, mas falha ao enviar email: ' + (errorText || `Status ${emailResponse.status}`), 'warning');
-            return;
-          }
-
-          const emailData = await emailResponse.json();
-          if (!emailData.ok && !emailData.success) {
-            showToast('Comentário salvo, mas falha ao enviar email: ' + (emailData.error || 'Erro desconhecido'), 'warning');
-            return;
-          }
-
-          showToast('Comentário salvo e email enviado com sucesso!', 'success');
-        } catch (error) {
-          console.error('Erro:', error);
-          showToast('Erro ao comunicar com o servidor: ' + error.message, 'error');
-        } finally {
-          this.disabled = false;
-          this.innerHTML = '<i class="bi bi-envelope me-1"></i>Enviar Email';
+        if (!saveResponse.ok) {
+          const errorText = await saveResponse.text();
+          showToast('Erro ao salvar comentário: ' + (errorText || `Status ${saveResponse.status}`), 'error');
+          return;
         }
-      });
+
+        let data;
+        const contentType = saveResponse.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          data = await saveResponse.json();
+        } else {
+          data = { ok: true, success: true };
+        }
+
+        if (!data.ok && !data.success) {
+          showToast('Erro ao salvar comentário: ' + (data.error || 'Erro desconhecido'), 'error');
+          return;
+        }
+
+        textarea.value = '';
+        await carregarComentarios(tarefaId);
+
+        const emailResponse = await fetch(`/api/enviar_comentario_email/${tarefaId}`, {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CONFIG.csrfToken
+          },
+          body: JSON.stringify({ comentario: texto })
+        });
+
+        if (!emailResponse.ok) {
+          const errorText = await emailResponse.text();
+          showToast('Comentário salvo, mas falha ao enviar email: ' + (errorText || `Status ${emailResponse.status}`), 'warning');
+          return;
+        }
+
+        const emailData = await emailResponse.json();
+        if (!emailData.ok && !emailData.success) {
+          showToast('Comentário salvo, mas falha ao enviar email: ' + (emailData.error || 'Erro desconhecido'), 'warning');
+          return;
+        }
+
+        showToast('Comentário salvo e email enviado com sucesso!', 'success');
+      } catch (error) {
+        showToast('Erro ao comunicar com o servidor: ' + error.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+      }
     });
 
     async function carregarComentarios(itemId) {
@@ -604,7 +714,6 @@
             </div>`;
         }
       } catch (error) {
-        console.error('Erro ao processar resposta:', error);
         historicoContainer.innerHTML = `
           <div class="alert alert-danger small py-2 mb-0">
             <i class="bi bi-exclamation-triangle me-1"></i>Erro ao processar resposta do servidor
@@ -659,7 +768,6 @@
       return div.innerHTML;
     }
 
-    // Inicializar campos de data do modal Detalhes da Empresa
     const modalDetalhesEmpresa = document.getElementById('modalDetalhesEmpresa');
     if (modalDetalhesEmpresa && window.flatpickr) {
       modalDetalhesEmpresa.addEventListener('shown.bs.modal', function() {
@@ -681,11 +789,9 @@
           }
         };
 
-        // Início Efetivo
         const inicioEfetivoInput = document.getElementById('modal-inicio_efetivo');
         const btnCalInicioEfetivo = document.getElementById('btn-cal-inicio_efetivo');
         if (inicioEfetivoInput) {
-          // Se já existe flatpickr, destruir para reinicializar
           if (inicioEfetivoInput._flatpickr) {
             inicioEfetivoInput._flatpickr.destroy();
           }
@@ -694,7 +800,7 @@
             defaultDate: valorInicial || null,
             onChange: function(selectedDates, dateStr, instance) {
               if (selectedDates.length > 0) {
-                inicioEfetivoInput.value = dateStr; // Formato Y-m-d para o backend
+                inicioEfetivoInput.value = dateStr;
               } else {
                 inicioEfetivoInput.value = '';
               }
@@ -711,11 +817,9 @@
           }
         }
 
-        // Início Produção
         const inicioProducaoInput = document.getElementById('modal-data_inicio_producao');
         const btnCalInicioProducao = document.getElementById('btn-cal-data_inicio_producao');
         if (inicioProducaoInput) {
-          // Se já existe flatpickr, destruir para reinicializar
           if (inicioProducaoInput._flatpickr) {
             inicioProducaoInput._flatpickr.destroy();
           }
@@ -724,7 +828,7 @@
             defaultDate: valorInicial || null,
             onChange: function(selectedDates, dateStr, instance) {
               if (selectedDates.length > 0) {
-                inicioProducaoInput.value = dateStr; // Formato Y-m-d para o backend
+                inicioProducaoInput.value = dateStr;
               } else {
                 inicioProducaoInput.value = '';
               }
@@ -741,11 +845,9 @@
           }
         }
 
-        // Fim da Implantação
         const finalImplantacaoInput = document.getElementById('modal-data_final_implantacao');
         const btnCalFinalImplantacao = document.getElementById('btn-cal-data_final_implantacao');
         if (finalImplantacaoInput) {
-          // Se já existe flatpickr, destruir para reinicializar
           if (finalImplantacaoInput._flatpickr) {
             finalImplantacaoInput._flatpickr.destroy();
           }
@@ -754,7 +856,7 @@
             defaultDate: valorInicial || null,
             onChange: function(selectedDates, dateStr, instance) {
               if (selectedDates.length > 0) {
-                finalImplantacaoInput.value = dateStr; // Formato Y-m-d para o backend
+                finalImplantacaoInput.value = dateStr;
               } else {
                 finalImplantacaoInput.value = '';
               }
@@ -772,21 +874,16 @@
         }
       });
 
-      // Instâncias do Tom Select
       const tomSelectInstances = {};
-
-      // Função para inicializar Tom Select em campos multi-select
       function initTomSelectMulti(selectId, valueStr) {
         const select = document.getElementById(selectId);
         if (!select || !select.classList.contains('tom-select-multi')) return;
 
-        // Destruir instância existente se houver
         if (tomSelectInstances[selectId]) {
           tomSelectInstances[selectId].destroy();
           delete tomSelectInstances[selectId];
         }
 
-        // Inicializar Tom Select para multi-select
         const tomSelect = new TomSelect(select, {
           plugins: ['remove_button'],
           maxItems: null,
@@ -795,7 +892,6 @@
           create: false
         });
 
-        // Definir valores se houver
         if (valueStr && valueStr.trim() !== '') {
           const values = valueStr.split(',').map(v => v.trim()).filter(v => v && v !== '');
           if (values.length > 0) {
@@ -806,25 +902,21 @@
         tomSelectInstances[selectId] = tomSelect;
       }
 
-      // Função para inicializar Tom Select em campos single-select
       function initTomSelectSingle(selectId, valueStr) {
         const select = document.getElementById(selectId);
         if (!select || !select.classList.contains('tom-select-single')) return;
 
-        // Destruir instância existente se houver
         if (tomSelectInstances[selectId]) {
           tomSelectInstances[selectId].destroy();
           delete tomSelectInstances[selectId];
         }
 
-        // Inicializar Tom Select para single-select
         const tomSelect = new TomSelect(select, {
           placeholder: 'Selecione...',
           allowEmptyOption: true,
           create: false
         });
 
-        // Definir valor se houver
         if (valueStr && valueStr.trim() !== '') {
           tomSelect.setValue(valueStr.trim());
         }
@@ -832,9 +924,7 @@
         tomSelectInstances[selectId] = tomSelect;
       }
 
-      // Popular campos quando o modal abrir
       modalDetalhesEmpresa.addEventListener('shown.bs.modal', function() {
-        // Obter valores dos data-attributes do botão ou do template
         const btn = document.querySelector('[data-bs-target="#modalDetalhesEmpresa"]');
         let cargo = '', nivelReceita = '', seguimento = '', tiposPlanos = '', sistemaAnterior = '', recorrenciaUsa = '';
         let catraca = '', facial = '', modeloCatraca = '', modeloFacial = '';
@@ -853,14 +943,12 @@
           const wellhub = btn.dataset.wellhub || '';
           const totalpass = btn.dataset.totalpass || '';
           
-          // Popular campos WellHub e TotalPass
           const wellhubSelect = document.getElementById('modal-wellhub');
           const totalpassSelect = document.getElementById('modal-totalpass');
           if (wellhubSelect && wellhub) wellhubSelect.value = wellhub;
           if (totalpassSelect && totalpass) totalpassSelect.value = totalpass;
         }
 
-        // Tentar pegar dos data-attributes dos selects também
         const cargoSelect = document.getElementById('modal-cargo_responsavel');
         const nivelReceitaSelect = document.getElementById('modal-nivel_receita');
         const seguimentoSelect = document.getElementById('modal-seguimento');
@@ -875,17 +963,14 @@
         if (sistemaAnteriorSelect && !sistemaAnterior) sistemaAnterior = sistemaAnteriorSelect.dataset.value || '';
         if (recorrenciaUsaSelect && !recorrenciaUsa) recorrenciaUsa = recorrenciaUsaSelect.dataset.value || '';
 
-        // Inicializar Tom Select para campos multi-select
         initTomSelectMulti('modal-seguimento', seguimento);
         initTomSelectMulti('modal-tipos_planos', tiposPlanos);
         
-        // Inicializar Tom Select para campos single-select
         initTomSelectSingle('modal-cargo_responsavel', cargo);
         initTomSelectSingle('modal-nivel_receita', nivelReceita);
         initTomSelectSingle('modal-sistema_anterior', sistemaAnterior);
         initTomSelectSingle('modal-recorrencia_usa', recorrenciaUsa);
 
-        // Campos condicionais - Catraca e Facial
         const catracaSelect = document.getElementById('modal-catraca');
         const facialSelect = document.getElementById('modal-facial');
         const rowCatracaModelo = document.getElementById('row-catraca-modelo');
@@ -893,7 +978,6 @@
         const modeloCatracaInput = document.getElementById('modal-modelo_catraca');
         const modeloFacialInput = document.getElementById('modal-modelo_facial');
 
-        // Função para atualizar visibilidade dos campos condicionais
         function atualizarCamposCondicionais() {
           if (catracaSelect && rowCatracaModelo) {
             const isCatracaSim = catracaSelect.value === 'Sim';
@@ -928,62 +1012,67 @@
           }
         }
 
-        // Atualizar visibilidade inicial
         atualizarCamposCondicionais();
       });
 
-      // Limpar instâncias quando o modal fechar
       modalDetalhesEmpresa.addEventListener('hidden.bs.modal', function() {
         Object.keys(tomSelectInstances).forEach(key => {
           if (tomSelectInstances[key]) {
             try {
               tomSelectInstances[key].destroy();
             } catch (e) {
-              console.warn('Erro ao destruir Tom Select:', e);
             }
             delete tomSelectInstances[key];
           }
         });
       });
 
-      // Aplicar formatação de telefone quando o modal abrir
       modalDetalhesEmpresa.addEventListener('shown.bs.modal', function() {
         const telefoneInput = document.getElementById('modal-telefone_responsavel');
         if (telefoneInput && window.formatarTelefone) {
-          // Aplicar formatação no valor existente
           formatarTelefone(telefoneInput);
         }
+
+        const alunosAtivosInput = document.getElementById('modal-alunos_ativos');
+        if (alunosAtivosInput) {
+          alunosAtivosInput.setAttribute('min', '0');
+          alunosAtivosInput.setAttribute('step', '1');
+          alunosAtivosInput.addEventListener('input', function() {
+            const value = this.value;
+            if (value.includes('.')) {
+              this.value = Math.floor(parseFloat(value) || 0);
+            }
+            if (parseInt(this.value, 10) < 0) {
+              this.value = 0;
+            }
+          });
+          alunosAtivosInput.addEventListener('blur', function() {
+            const numValue = parseInt(this.value, 10);
+            if (isNaN(numValue) || numValue < 0 || this.value === '') {
+              this.value = 0;
+            } else {
+              this.value = numValue;
+            }
+          });
+        }
+        
+        const idFavorecidoInput = document.getElementById('modal-id_favorecido');
+        if (idFavorecidoInput) {
+          idFavorecidoInput.addEventListener('input', function() {
+            this.value = this.value.replace(/[^0-9]/g, '');
+          });
+        }
+        
+        const valorAtribuidoInput = document.getElementById('modal-valor_atribuido');
+        if (valorAtribuidoInput) {
+          valorAtribuidoInput.addEventListener('blur', function() {
+            const value = parseFloat(this.value);
+            if (!isNaN(value) && value < 0) {
+              this.value = 0;
+            }
+          });
+        }
       });
-
-      // Campos condicionais: Catraca e Facial (event listeners)
-      const catracaSelect = document.getElementById('modal-catraca');
-      const facialSelect = document.getElementById('modal-facial');
-      const rowCatracaModelo = document.getElementById('row-catraca-modelo');
-      const rowFacialModelo = document.getElementById('row-facial-modelo');
-
-      if (catracaSelect) {
-        catracaSelect.addEventListener('change', function() {
-          if (rowCatracaModelo) {
-            rowCatracaModelo.style.display = (this.value === 'Sim') ? 'block' : 'none';
-            if (this.value !== 'Sim') {
-              const modeloInput = document.getElementById('modal-modelo_catraca');
-              if (modeloInput) modeloInput.value = '';
-            }
-          }
-        });
-      }
-
-      if (facialSelect) {
-        facialSelect.addEventListener('change', function() {
-          if (rowFacialModelo) {
-            rowFacialModelo.style.display = (this.value === 'Sim') ? 'block' : 'none';
-            if (this.value !== 'Sim') {
-              const modeloInput = document.getElementById('modal-modelo_facial');
-              if (modeloInput) modeloInput.value = '';
-            }
-          }
-        });
-      }
     }
   });
 })();

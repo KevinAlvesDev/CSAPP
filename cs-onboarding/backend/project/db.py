@@ -212,7 +212,6 @@ def logar_timeline(implantacao_id, usuario_cs, tipo_evento, detalhe):
         cursor.execute(sql, (implantacao_id, usuario_cs, tipo_evento, detalhe, datetime.now()))
         conn.commit()
     except Exception as e:
-        print(f"ERRO CRÍTICO: Falha ao logar timeline para Impl. ID {implantacao_id}. Erro: {e}")
         if conn:
             conn.rollback()
     finally:
@@ -229,7 +228,6 @@ def init_db():
         cursor = conn.cursor()
 
         if db_type == 'postgres':
-            print("Executando init_db para PostgreSQL...")
 
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS usuarios (
@@ -245,7 +243,6 @@ def init_db():
             # (Bloco DDL PostgreSQL omitido aqui no pensamento para brevidade, mas incluído no tool call)
 
         elif db_type == 'sqlite':
-             print("Executando init_db para SQLite...")
              # Criar TODAS as tabelas diretamente (sem depender de script externo)
              _criar_tabelas_basicas_sqlite(cursor)
              
@@ -268,13 +265,12 @@ def init_db():
                  if count == 0:
                      _inserir_regras_gamificacao_padrao(cursor)
              except Exception as e:
-                 print(f"AVISO: Não foi possível verificar/inserir regras de gamificação: {e}")
+                 pass
 
         conn.commit()
-        print(f"Banco de dados ({db_type}) inicializado/verificado com sucesso.")
 
     except Exception as e:
-        print(f"ERRO ao inicializar DB: {e}")
+        current_app.logger.error(f"Erro ao inicializar DB: {e}", exc_info=True)
         if conn:
             conn.rollback()
     finally:
@@ -514,9 +510,8 @@ def _migrar_coluna_timeline_detalhes(cursor):
         colunas = [row[1] for row in cursor.fetchall()]
         if 'detalhes' not in colunas:
             cursor.execute("ALTER TABLE timeline_log ADD COLUMN detalhes TEXT")
-            print("✅ Coluna 'detalhes' adicionada à tabela timeline_log")
     except Exception as e:
-        print(f"AVISO: Não foi possível migrar coluna detalhes em timeline_log: {e}")
+        pass
 
 
 def _migrar_colunas_planos_sucesso(cursor):
@@ -537,12 +532,10 @@ def _migrar_colunas_planos_sucesso(cursor):
                     cursor.execute(f"ALTER TABLE planos_sucesso ADD COLUMN {coluna} {tipo}")
                     colunas_adicionadas += 1
                 except Exception as e:
-                    print(f"AVISO: Não foi possível adicionar coluna {coluna} em planos_sucesso: {e}")
+                    pass
         
-        if colunas_adicionadas > 0:
-            print(f"✅ {colunas_adicionadas} colunas adicionadas à tabela planos_sucesso")
     except Exception as e:
-        print(f"AVISO: Não foi possível migrar colunas de planos_sucesso: {e}")
+        pass
 
 
 def _migrar_coluna_comentarios_checklist_item(cursor):
@@ -553,13 +546,8 @@ def _migrar_coluna_comentarios_checklist_item(cursor):
         
         if 'checklist_item_id' not in colunas_existentes:
             cursor.execute("ALTER TABLE comentarios_h ADD COLUMN checklist_item_id INTEGER")
-            print("✅ Coluna 'checklist_item_id' adicionada à tabela comentarios_h")
-            
-            # Tentar migrar dados existentes (se houver tarefa_h_id ou subtarefa_h_id)
-            # Nota: Como as tabelas antigas foram removidas, não podemos fazer JOIN
-            # Mas podemos deixar os dados antigos e usar checklist_item_id para novos
     except Exception as e:
-        print(f"AVISO: Não foi possível migrar coluna checklist_item_id em comentarios_h: {e}")
+        pass
 
 
 def _migrar_colunas_implantacoes(cursor):
@@ -614,12 +602,10 @@ def _migrar_colunas_implantacoes(cursor):
                     cursor.execute(f"ALTER TABLE implantacoes ADD COLUMN {coluna} {tipo}")
                     colunas_adicionadas += 1
                 except Exception as e:
-                    print(f"AVISO: Não foi possível adicionar coluna {coluna}: {e}")
+                    pass
         
-        if colunas_adicionadas > 0:
-            print(f"✅ {colunas_adicionadas} colunas adicionadas à tabela implantacoes")
     except Exception as e:
-        print(f"AVISO: Não foi possível migrar colunas de implantacoes: {e}")
+        pass
 
 
 def _inserir_regras_gamificacao_padrao(cursor):
@@ -640,7 +626,7 @@ def _inserir_regras_gamificacao_padrao(cursor):
                 VALUES (?, ?, ?, ?, ?)
             """, (regra_id, categoria, descricao, valor_pontos, tipo_valor))
         except Exception as e:
-            print(f"AVISO: Não foi possível inserir regra {regra_id}: {e}")
+            pass
 
 
 def init_app(app):

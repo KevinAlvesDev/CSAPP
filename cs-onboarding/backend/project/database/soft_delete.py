@@ -7,15 +7,13 @@ ALLOWED_TABLES = [
     'usuarios',
     'perfil_usuario',
     'implantacoes',
-    'tarefas',
-    'comentarios',
-    'timeline',
+    'timeline_log',
     'gamificacao_metricas_mensais',
     'gamificacao_regras',
     'smtp_settings',
-    # Tabelas do modelo hierárquico
     'checklist_items',
     'comentarios_h',
+    'planos_sucesso',
 ]
 
 ALLOWED_ID_COLUMNS = ['id', 'usuario', 'usuario_email']

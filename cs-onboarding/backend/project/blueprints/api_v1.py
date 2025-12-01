@@ -164,8 +164,6 @@ def get_implantacao(impl_id):
         impl['data_inicio_producao'] = iso_date(impl.get('data_inicio_producao'))
         impl['data_final_implantacao'] = iso_date(impl.get('data_final_implantacao'))
 
-        # Migrado para estrutura hierárquica (fases -> grupos -> tarefas_h -> subtarefas_h)
-        # DEPRECATED: A tabela 'tarefas' (estrutura antiga) não é mais usada
         hierarquia = get_hierarquia_implantacao(impl_id)
 
         return jsonify({

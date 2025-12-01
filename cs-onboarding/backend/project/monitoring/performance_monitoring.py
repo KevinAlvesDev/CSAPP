@@ -48,7 +48,7 @@ class PerformanceMonitor:
                 
                 return {
                     'total_requests': len(self.metrics),
-                    'recent_metrics': self.metrics[-100:],\
+                    'recent_metrics': self.metrics[-100:],
                     'summary': self.get_summary()
                 }
     
@@ -111,7 +111,7 @@ class PerformanceMonitor:
             'min_duration_ms': min(durations),
             'avg_queries_per_request': round(sum(queries) / total, 2),
             'total_queries': sum(queries),
-            'slow_requests': len([d for d in durations if d > 1000]),\
+            'slow_requests': len([d for d in durations if d > 1000]),
             'error_requests': len([m for m in self.metrics if m['status_code'] >= 400])
         }
 

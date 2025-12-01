@@ -8,6 +8,7 @@ from ..blueprints.auth import login_required
 from ..domain.checklist_service import (
     toggle_item_status,
     update_item_comment,
+    delete_checklist_item,
     get_checklist_tree,
     build_nested_tree,
     get_item_progress_stats
@@ -51,7 +52,6 @@ def toggle_item(item_id):
     usuario_email = g.user_email if hasattr(g, 'user_email') else None
 
     try:
-        # Verificar se foi fornecido um novo status no body
         new_status = None
         if request.is_json:
             data = request.get_json() or {}
@@ -59,7 +59,6 @@ def toggle_item(item_id):
             if completed_param is not None:
                 new_status = bool(completed_param)
 
-        # Se não foi fornecido, buscar o status atual e inverter
         if new_status is None:
             from ..db import query_db
             current_item = query_db(
@@ -71,7 +70,6 @@ def toggle_item(item_id):
                 return jsonify({'ok': False, 'error': f'Item {item_id} não encontrado'}), 404
             new_status = not (current_item.get('completed') or False)
 
-        # Executar toggle com propagação
         result = toggle_item_status(item_id, new_status, usuario_email)
 
         return jsonify({
@@ -133,7 +131,6 @@ def add_comment(item_id):
     usuario_email = g.user_email if hasattr(g, 'user_email') else None
 
     try:
-        # Verificar se o item existe
         item = query_db(
             "SELECT id, implantacao_id FROM checklist_items WHERE id = %s",
             (item_id,),
@@ -142,7 +139,6 @@ def add_comment(item_id):
         if not item:
             return jsonify({'ok': False, 'error': f'Item {item_id} não encontrado'}), 404
         
-        # Garantir que a coluna checklist_item_id existe (para SQLite)
         try:
             from project.database.db_pool import get_db_connection
             conn_check, db_type_check = get_db_connection()
@@ -157,7 +153,6 @@ def add_comment(item_id):
         except Exception:
             pass
         
-        # Inserir comentário
         agora = datetime.now()
         execute_db(
             """
@@ -167,7 +162,6 @@ def add_comment(item_id):
             (item_id, usuario_email, texto, agora, visibilidade)
         )
         
-        # Buscar o comentário inserido
         novo_comentario = query_db(
             """
             SELECT c.id, c.texto, c.usuario_cs, c.data_criacao, c.visibilidade,
@@ -182,7 +176,6 @@ def add_comment(item_id):
             one=True
         )
         
-        # Formatar data (pode ser string no SQLite ou datetime no PostgreSQL)
         data_criacao = novo_comentario['data_criacao']
         if data_criacao:
             if hasattr(data_criacao, 'isoformat'):
@@ -225,7 +218,6 @@ def get_comments(item_id):
         return jsonify({'ok': False, 'error': f'ID inválido: {str(e)}'}), 400
 
     try:
-        # Buscar comentários
         comentarios = query_db(
             """
             SELECT c.id, c.texto, c.usuario_cs, c.data_criacao, c.visibilidade, c.imagem_url,
@@ -238,7 +230,6 @@ def get_comments(item_id):
             (item_id,)
         ) or []
         
-        # Buscar email do responsável da implantação
         item_info = query_db(
             """
             SELECT i.email_responsavel
@@ -251,10 +242,8 @@ def get_comments(item_id):
         )
         email_responsavel = item_info.get('email_responsavel', '') if item_info else ''
         
-        # Formatar comentários
         comentarios_formatados = []
         for c in comentarios:
-            # Formatar data (pode ser string no SQLite ou datetime no PostgreSQL)
             data_criacao = c['data_criacao']
             if data_criacao:
                 if hasattr(data_criacao, 'isoformat'):
@@ -301,7 +290,6 @@ def send_comment_email(comentario_id):
         return jsonify({'ok': False, 'error': f'ID inválido: {str(e)}'}), 400
 
     try:
-        # Buscar comentário com dados da implantação
         dados = query_db(
             """
             SELECT c.id, c.texto, c.visibilidade, c.usuario_cs,
@@ -325,7 +313,6 @@ def send_comment_email(comentario_id):
         if not dados['email_responsavel']:
             return jsonify({'ok': False, 'error': 'Email do responsável não configurado. Configure em "Editar Detalhes".'}), 400
         
-        # Preparar dados para envio
         implantacao = {
             'id': dados['impl_id'],
             'nome_empresa': dados['nome_empresa'],
@@ -338,7 +325,6 @@ def send_comment_email(comentario_id):
             'usuario_cs': dados['usuario_cs']
         }
         
-        # Enviar email
         result = send_external_comment_notification(implantacao, comentario)
         
         if result:
@@ -369,7 +355,6 @@ def delete_comment(comentario_id):
     usuario_email = g.user_email if hasattr(g, 'user_email') else None
 
     try:
-        # Buscar comentário
         comentario = query_db(
             "SELECT id, usuario_cs FROM comentarios_h WHERE id = %s",
             (comentario_id,),
@@ -379,20 +364,89 @@ def delete_comment(comentario_id):
         if not comentario:
             return jsonify({'ok': False, 'error': 'Comentário não encontrado'}), 404
         
-        # Verificar permissão
         is_owner = comentario['usuario_cs'] == usuario_email
         is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
         
         if not (is_owner or is_manager):
             return jsonify({'ok': False, 'error': 'Permissão negada'}), 403
         
-        # Excluir
         execute_db("DELETE FROM comentarios_h WHERE id = %s", (comentario_id,))
         
         return jsonify({'ok': True, 'message': 'Comentário excluído'})
     except Exception as e:
         api_logger.error(f"Erro ao excluir comentário {comentario_id}: {e}", exc_info=True)
         return jsonify({'ok': False, 'error': 'Erro interno ao excluir comentário'}), 500
+
+
+@checklist_bp.route('/delete/<int:item_id>', methods=['POST'])
+@login_required
+@validate_api_origin
+@limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
+def delete_item(item_id):
+    """
+    Exclui um item do checklist e toda a sua hierarquia (apenas gestores ou dono da implantação).
+    """
+    from ..db import query_db
+    from ..constants import PERFIS_COM_GESTAO
+    
+    try:
+        item_id = validate_integer(item_id, min_value=1)
+    except ValidationError as e:
+        return jsonify({'ok': False, 'error': f'ID inválido: {str(e)}'}), 400
+
+    usuario_email = g.user_email if hasattr(g, 'user_email') else None
+
+    try:
+        # Verificar permissões: Apenas dono da implantação ou gestor pode excluir itens
+        item_info = query_db(
+            """
+            SELECT ci.id, ci.title, ci.implantacao_id, i.usuario_cs, i.status
+            FROM checklist_items ci
+            JOIN implantacoes i ON ci.implantacao_id = i.id
+            WHERE ci.id = %s
+            """,
+            (item_id,),
+            one=True
+        )
+        
+        if not item_info:
+            return jsonify({'ok': False, 'error': 'Item não encontrado'}), 404
+        
+        if item_info.get('status') in ['finalizada', 'parada', 'cancelada']:
+            return jsonify({'ok': False, 'error': 'Implantação bloqueada para alterações.'}), 400
+        
+        is_owner = item_info['usuario_cs'] == usuario_email
+        is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
+        
+        if not (is_owner or is_manager):
+            return jsonify({'ok': False, 'error': 'Permissão negada. Apenas o responsável ou gestores podem excluir itens.'}), 403
+        
+        result = delete_checklist_item(item_id, usuario_email)
+
+        if result.get('ok'):
+            # Log to timeline for compatibility with frontend
+            from ..core.api import logar_timeline, format_date_iso_for_json
+            
+            log_details = f"Item '{item_info.get('title', '')}' foi excluído."
+            logar_timeline(item_info['implantacao_id'], usuario_email, 'tarefa_excluida', log_details)
+            
+            # Fetch the log entry to return to frontend
+            nome_usuario = g.perfil.get('nome', usuario_email) if g.perfil else usuario_email
+            log_exclusao = query_db(
+                "SELECT *, %s as usuario_nome FROM timeline_log WHERE implantacao_id = %s AND tipo_evento = 'tarefa_excluida' ORDER BY id DESC LIMIT 1",
+                (nome_usuario, item_info['implantacao_id']), one=True
+            )
+            if log_exclusao:
+                log_exclusao['data_criacao'] = format_date_iso_for_json(log_exclusao.get('data_criacao'))
+            
+            result['log_exclusao'] = log_exclusao
+            result['novo_progresso'] = result.get('progress') # Alias for compatibility
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        api_logger.error(f"Erro ao excluir item {item_id}: {e}", exc_info=True)
+        return jsonify({'ok': False, 'error': f'Erro interno ao excluir item: {e}'}), 500
 
 
 @checklist_bp.route('/tree', methods=['GET'])
@@ -415,7 +469,6 @@ def get_tree():
         root_item_id = request.args.get('root_item_id', type=int)
         format_type = request.args.get('format', 'flat').lower()
 
-        # Validar parâmetros
         if implantacao_id:
             implantacao_id = validate_integer(implantacao_id, min_value=1)
         if root_item_id:
@@ -424,37 +477,56 @@ def get_tree():
         if format_type not in ['flat', 'nested']:
             return jsonify({'ok': False, 'error': 'format deve ser "flat" ou "nested"'}), 400
 
-        # Buscar árvore (sempre incluir progresso)
         flat_items = get_checklist_tree(
             implantacao_id=implantacao_id,
             root_item_id=root_item_id,
             include_progress=True
         )
 
-        # Calcular progresso global se houver implantacao_id
         global_progress = None
         if implantacao_id:
             from ..db import query_db
-            progress_result = query_db(
+            from flask import current_app
+            
+            is_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
+            
+            if is_sqlite:
+                progress_query = """
+                    SELECT
+                        COUNT(*) as total,
+                        SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END) as completed
+                    FROM checklist_items ci
+                    WHERE ci.implantacao_id = ?
+                    AND NOT EXISTS (
+                        SELECT 1 FROM checklist_items filho 
+                        WHERE filho.parent_id = ci.id
+                        AND filho.implantacao_id = ?
+                    )
                 """
-                SELECT
-                    COUNT(*) as total,
-                    COUNT(CASE WHEN completed = true THEN 1 END) as completed
-                FROM checklist_items
-                WHERE implantacao_id = %s
-                """,
-                (implantacao_id,),
-                one=True
-            )
+                progress_result = query_db(progress_query, (implantacao_id, implantacao_id), one=True)
+            else:
+                progress_query = """
+                    SELECT
+                        COUNT(*) as total,
+                        SUM(CASE WHEN completed THEN 1 ELSE 0 END) as completed
+                    FROM checklist_items ci
+                    WHERE ci.implantacao_id = %s
+                    AND NOT EXISTS (
+                        SELECT 1 FROM checklist_items filho 
+                        WHERE filho.parent_id = ci.id
+                        AND filho.implantacao_id = %s
+                    )
+                """
+                progress_result = query_db(progress_query, (implantacao_id, implantacao_id), one=True)
+            
             if progress_result:
-                total = progress_result.get('total', 0) or 0
-                completed = progress_result.get('completed', 0) or 0
+                total = int(progress_result.get('total', 0) or 0)
+                completed = int(progress_result.get('completed', 0) or 0)
                 if total > 0:
                     global_progress = round((completed / total) * 100, 2)
                 else:
                     global_progress = 100.0
 
-        # Formatar resposta
         if format_type == 'nested':
             nested_tree = build_nested_tree(flat_items)
             return jsonify({

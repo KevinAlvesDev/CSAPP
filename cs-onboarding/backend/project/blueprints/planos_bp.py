@@ -235,6 +235,19 @@ def atualizar_plano(plano_id):
             else:
                 dados_atualizacao['dias_duracao'] = None
 
+        estrutura = data.get('estrutura', {})
+        if estrutura:
+            if isinstance(estrutura, str):
+                import json
+                try:
+                    estrutura = json.loads(estrutura)
+                except json.JSONDecodeError:
+                    planos_logger.error(f"Erro ao fazer parse da estrutura JSON: {estrutura[:200]}")
+                    raise ValidationError("Estrutura inválida: JSON malformado")
+            
+            if estrutura and (estrutura.get('items') or estrutura.get('fases')):
+                planos_sucesso_service.atualizar_estrutura_plano(plano_id, estrutura)
+
         planos_sucesso_service.atualizar_plano_sucesso(plano_id, dados_atualizacao)
 
         if request.is_json:

@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, flash, redirect, url_for, g, current_app, current_app
+from flask import Blueprint, render_template, request, flash, redirect, url_for, g, current_app
 from ..blueprints.auth import permission_required
 from ..db import query_db, execute_db
 
@@ -46,9 +46,9 @@ def save_gamification_rules_from_modal():
                     valor_pontos = validate_integer(value, min_value=-1000, max_value=10000)
                     updates_to_make.append((valor_pontos, regra_id))
                 except ValidationError as e:
-                    print(f"AVISO: Valor inválido recebido para {regra_id}: {value} - Erro: {str(e)}")
+                    pass
                 except (ValueError, TypeError):
-                    print(f"AVISO: Valor inválido recebido para {regra_id}: {value}")
+                    pass
 
         if not updates_to_make:
             flash('Nenhum dado válido foi enviado para atualização.', 'warning')
@@ -67,7 +67,6 @@ def save_gamification_rules_from_modal():
         flash(f'{total_atualizado} regras de pontuação foram atualizadas com sucesso!', 'success')
 
     except Exception as e:
-        print(f"ERRO ao atualizar regras de gamificação (modal): {e}")
         flash(f'Erro ao salvar as regras: {e}', 'error')
 
     return fallback_redirect
@@ -153,7 +152,6 @@ def manage_gamification_metrics():
             }
 
         except Exception as e_auto:
-            print(f"Erro ao calcular métricas automáticas para {target_cs_email}: {e_auto}")
             flash(f"Erro ao buscar dados automáticos: {e_auto}", "warning")
 
     if not metricas_atuais:
@@ -275,7 +273,6 @@ def manage_gamification_metrics():
             return redirect(url_for('gamification.manage_gamification_metrics', cs_email=target_cs_email, mes=target_mes, ano=target_ano))
 
         except Exception as e:
-            print(f"ERRO ao salvar métricas de gamificação: {e}")
             flash(f"Erro ao salvar métricas: {e}", "error")
 
     return render_template(

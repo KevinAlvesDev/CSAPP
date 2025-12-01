@@ -232,7 +232,6 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
     task_end_date_to_query = (task_end_date.strftime('%Y-%m-%d') if isinstance(task_end_date, (date, datetime)) else task_end_date) or default_task_end_date_str
 
     query_tasks = """
-        -- Migrado para checklist_items (estrutura consolidada)
         SELECT
             i.usuario_cs,
             COALESCE(p.nome, i.usuario_cs) as cs_nome,
@@ -253,7 +252,6 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
         query_tasks += " AND i.usuario_cs = %s "
         args_tasks.append(task_cs_email)
 
-    # Filtros de data usando o campo data_conclusao da estrutura hierárquica
     task_start_op, task_start_date_val = _format_date_for_query(task_start_date_to_query, is_sqlite=is_sqlite)
     if task_start_op:
         query_tasks += f" AND {date_col_expr('s.data_conclusao')} {task_start_op} {date_param_expr()} "

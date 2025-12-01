@@ -68,12 +68,10 @@ def criar_plano_sucesso(nome: str, descricao: str, criado_por: str, estrutura: D
 def _criar_estrutura_plano(cursor, db_type: str, plano_id: int, estrutura: Dict):
     """
     Cria estrutura do plano usando checklist_items (consolidado).
-    Migrado das tabelas antigas (planos_fases/grupos/tarefas/subtarefas) para checklist_items.
     """
     fases = estrutura.get('fases', [])
 
     for fase_data in fases:
-        # Inserir fase em checklist_items
         sql_fase = """
             INSERT INTO checklist_items 
             (parent_id, title, completed, comment, level, ordem, plano_id, tipo_item, descricao, created_at, updated_at)
@@ -102,7 +100,6 @@ def _criar_estrutura_plano(cursor, db_type: str, plano_id: int, estrutura: Dict)
 
         grupos = fase_data.get('grupos', [])
         for grupo_data in grupos:
-            # Inserir grupo em checklist_items
             sql_grupo = """
                 INSERT INTO checklist_items 
                 (parent_id, title, completed, comment, level, ordem, plano_id, tipo_item, descricao, created_at, updated_at)
@@ -131,7 +128,6 @@ def _criar_estrutura_plano(cursor, db_type: str, plano_id: int, estrutura: Dict)
 
             tarefas = grupo_data.get('tarefas', [])
             for tarefa_data in tarefas:
-                # Inserir tarefa em checklist_items
                 sql_tarefa = """
                     INSERT INTO checklist_items 
                     (parent_id, title, completed, comment, level, ordem, plano_id, tipo_item, descricao, obrigatoria, status, created_at, updated_at)
@@ -162,7 +158,6 @@ def _criar_estrutura_plano(cursor, db_type: str, plano_id: int, estrutura: Dict)
 
                 subtarefas = tarefa_data.get('subtarefas', [])
                 for subtarefa_data in subtarefas:
-                    # Inserir subtarefa em checklist_items
                     sql_subtarefa = """
                         INSERT INTO checklist_items 
                         (parent_id, title, completed, comment, level, ordem, plano_id, tipo_item, descricao, created_at, updated_at)
@@ -192,7 +187,6 @@ def atualizar_plano_sucesso(plano_id: int, dados: Dict) -> bool:
     if not plano_existente:
         raise ValidationError(f"Plano com ID {plano_id} não encontrado")
 
-    # Garantir que as colunas existam (migração automática para SQLite)
     with db_connection() as (conn, db_type):
         if db_type == 'sqlite':
             try:
@@ -246,6 +240,37 @@ def atualizar_plano_sucesso(plano_id: int, dados: Dict) -> bool:
     return result is not None
 
 
+def atualizar_estrutura_plano(plano_id: int, estrutura: Dict) -> bool:
+    """
+    Atualiza a estrutura do plano (itens) removendo os antigos e criando os novos.
+    """
+    if not plano_id:
+        raise ValidationError("ID do plano é obrigatório")
+    
+    if not estrutura:
+        raise ValidationError("Estrutura é obrigatória")
+    
+    validar_estrutura_checklist(estrutura)
+    
+    with db_connection() as (conn, db_type):
+        cursor = conn.cursor()
+        try:
+            sql_delete = "DELETE FROM checklist_items WHERE plano_id = %s"
+            if db_type == 'sqlite':
+                sql_delete = sql_delete.replace('%s', '?')
+            cursor.execute(sql_delete, (plano_id,))
+            
+            _criar_estrutura_plano_checklist(cursor, db_type, plano_id, estrutura)
+            
+            conn.commit()
+            current_app.logger.info(f"Estrutura do plano {plano_id} atualizada com sucesso")
+            return True
+        except Exception as e:
+            conn.rollback()
+            current_app.logger.error(f"Erro ao atualizar estrutura do plano {plano_id}: {e}", exc_info=True)
+            raise DatabaseError(f"Erro ao atualizar estrutura do plano: {e}")
+
+
 def excluir_plano_sucesso(plano_id: int) -> bool:
     if not plano_id:
         raise ValidationError("ID do plano é obrigatório")
@@ -293,14 +318,13 @@ def listar_planos_sucesso(ativo_apenas: bool = True, busca: str = None) -> List[
 def obter_plano_completo(plano_id: int) -> Optional[Dict]:
     """
     Retorna plano completo usando checklist_items (estrutura consolidada).
-    Converte a estrutura hierárquica de checklist_items para o formato esperado pelo frontend.
+    Retorna no formato 'items' para compatibilidade com o editor moderno.
     """
     plano = query_db("SELECT * FROM planos_sucesso WHERE id = %s", (plano_id,), one=True)
 
     if not plano:
         return None
 
-    # Buscar todos os itens do plano em checklist_items
     items = query_db(
         """
         SELECT id, parent_id, title, completed, comment, level, ordem, tipo_item, descricao, obrigatoria, status
@@ -312,29 +336,46 @@ def obter_plano_completo(plano_id: int) -> Optional[Dict]:
     )
 
     if not items:
+        plano['items'] = []
         plano['fases'] = []
         return plano
 
-    # Construir estrutura hierárquica
-    # Mapear items por ID para acesso rápido
+    from .checklist_service import build_nested_tree
+
+    flat_items = []
+    for item in items:
+        flat_items.append({
+            'id': item['id'],
+            'parent_id': item['parent_id'],
+            'title': item['title'],
+            'completed': item['completed'],
+            'comment': item.get('comment', '') or item.get('descricao', ''),
+            'level': item.get('level', 0),
+            'ordem': item.get('ordem', 0),
+            'obrigatoria': item.get('obrigatoria', False)
+        })
+
+    nested_items = build_nested_tree(flat_items)
+    plano['items'] = nested_items
+    plano['estrutura'] = {'items': nested_items}
+
     items_map = {item['id']: item for item in items}
     
-    # Separar por tipo e nível
-    fases_items = [item for item in items if item['tipo_item'] == 'plano_fase' and item['parent_id'] is None]
-    grupos_items = {item['parent_id']: [] for item in items if item['tipo_item'] == 'plano_grupo'}
-    tarefas_items = {item['parent_id']: [] for item in items if item['tipo_item'] == 'plano_tarefa'}
-    subtarefas_items = {item['parent_id']: [] for item in items if item['tipo_item'] == 'plano_subtarefa'}
+    tipo_item_val = lambda x: x.get('tipo_item') or ''
+    fases_items = [item for item in items if tipo_item_val(item) == 'plano_fase' and item['parent_id'] is None]
+    grupos_items = {item['parent_id']: [] for item in items if tipo_item_val(item) == 'plano_grupo'}
+    tarefas_items = {item['parent_id']: [] for item in items if tipo_item_val(item) == 'plano_tarefa'}
+    subtarefas_items = {item['parent_id']: [] for item in items if tipo_item_val(item) == 'plano_subtarefa'}
 
-    # Agrupar por parent_id
     for item in items:
-        if item['tipo_item'] == 'plano_grupo' and item['parent_id']:
+        tipo_item = tipo_item_val(item)
+        if tipo_item == 'plano_grupo' and item['parent_id']:
             grupos_items[item['parent_id']].append(item)
-        elif item['tipo_item'] == 'plano_tarefa' and item['parent_id']:
+        elif tipo_item == 'plano_tarefa' and item['parent_id']:
             tarefas_items[item['parent_id']].append(item)
-        elif item['tipo_item'] == 'plano_subtarefa' and item['parent_id']:
+        elif tipo_item == 'plano_subtarefa' and item['parent_id']:
             subtarefas_items[item['parent_id']].append(item)
 
-    # Construir estrutura aninhada
     plano['fases'] = []
     for fase_item in sorted(fases_items, key=lambda x: x.get('ordem', 0)):
         fase = {
@@ -345,7 +386,6 @@ def obter_plano_completo(plano_id: int) -> Optional[Dict]:
             'grupos': []
         }
 
-        # Buscar grupos desta fase
         grupos_fase = sorted(grupos_items.get(fase_item['id'], []), key=lambda x: x.get('ordem', 0))
         for grupo_item in grupos_fase:
             grupo = {
@@ -356,7 +396,6 @@ def obter_plano_completo(plano_id: int) -> Optional[Dict]:
                 'tarefas': []
             }
 
-            # Buscar tarefas deste grupo
             tarefas_grupo = sorted(tarefas_items.get(grupo_item['id'], []), key=lambda x: x.get('ordem', 0))
             for tarefa_item in tarefas_grupo:
                 tarefa = {
@@ -369,7 +408,6 @@ def obter_plano_completo(plano_id: int) -> Optional[Dict]:
                     'subtarefas': []
                 }
 
-                # Buscar subtarefas desta tarefa
                 subtarefas_tarefa = sorted(subtarefas_items.get(tarefa_item['id'], []), key=lambda x: x.get('ordem', 0))
                 for subtarefa_item in subtarefas_tarefa:
                     subtarefa = {
@@ -427,7 +465,6 @@ def aplicar_plano_a_implantacao(implantacao_id: int, plano_id: int, usuario: str
         cursor = conn.cursor()
 
         try:
-            # Limpar itens antigos da implantação em checklist_items
             sql_limpar = "DELETE FROM checklist_items WHERE implantacao_id = %s"
             if db_type == 'sqlite':
                 sql_limpar = sql_limpar.replace('%s', '?')
@@ -467,7 +504,6 @@ def _clonar_plano_para_implantacao(cursor, db_type: str, plano: Dict, implantaca
     if not plano_id:
         raise ValidationError("Plano deve ter um ID válido")
 
-    # Buscar todos os itens do plano em checklist_items
     if db_type == 'postgres':
         cursor.execute("""
             SELECT id, parent_id, title, completed, comment, level, ordem, tipo_item, descricao, obrigatoria, status
@@ -488,10 +524,8 @@ def _clonar_plano_para_implantacao(cursor, db_type: str, plano: Dict, implantaca
     if not items_plano:
         return
 
-    # Mapear IDs antigos para novos IDs (para manter hierarquia)
-    id_map = {}  # {id_plano: id_implantacao}
+    id_map = {}
 
-    # Função recursiva para clonar item
     def clonar_item(item_plano, parent_id_implantacao):
         item_id_plano = item_plano[0] if isinstance(item_plano, tuple) else item_plano['id']
         parent_id_plano = item_plano[1] if isinstance(item_plano, tuple) else item_plano.get('parent_id')
@@ -505,10 +539,8 @@ def _clonar_plano_para_implantacao(cursor, db_type: str, plano: Dict, implantaca
         obrigatoria = item_plano[9] if isinstance(item_plano, tuple) else item_plano.get('obrigatoria', False)
         status = item_plano[10] if isinstance(item_plano, tuple) else item_plano.get('status', 'pendente')
 
-        # Determinar tipo_item para implantação
         tipo_item_implantacao = tipo_item_plano.replace('plano_', '') if tipo_item_plano.startswith('plano_') else tipo_item_plano
 
-        # Inserir item na implantação
         if db_type == 'postgres':
             sql_insert = """
                 INSERT INTO checklist_items 
@@ -555,7 +587,6 @@ def _clonar_plano_para_implantacao(cursor, db_type: str, plano: Dict, implantaca
 
         id_map[item_id_plano] = novo_id
 
-        # Buscar filhos deste item no plano
         if db_type == 'postgres':
             cursor.execute("""
                 SELECT id, parent_id, title, completed, comment, level, ordem, tipo_item, descricao, obrigatoria, status
@@ -575,7 +606,6 @@ def _clonar_plano_para_implantacao(cursor, db_type: str, plano: Dict, implantaca
         for filho in filhos:
             clonar_item(filho, novo_id)
 
-    # Clonar itens raiz (sem parent_id)
     for item in items_plano:
         parent_id_plano = item[1] if isinstance(item, tuple) else item.get('parent_id')
         if parent_id_plano is None:
@@ -870,9 +900,20 @@ def _criar_items_recursivo(cursor, db_type: str, plano_id: int, items: List[Dict
     ordem = 0
     for item_data in items:
         ordem += 1
+        tipo_item = item_data.get('tipo_item')
+        if not tipo_item:
+            if current_level == 0:
+                tipo_item = 'plano_fase'
+            elif current_level == 1:
+                tipo_item = 'plano_grupo'
+            elif current_level == 2:
+                tipo_item = 'plano_tarefa'
+            else:
+                tipo_item = 'plano_subtarefa'
+
         sql_item = """
-            INSERT INTO checklist_items (parent_id, title, completed, comment, level, ordem, implantacao_id, plano_id, obrigatoria)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO checklist_items (parent_id, title, completed, comment, level, ordem, implantacao_id, plano_id, obrigatoria, tipo_item)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         if db_type == 'sqlite':
             sql_item = sql_item.replace('%s', '?')
@@ -886,7 +927,8 @@ def _criar_items_recursivo(cursor, db_type: str, plano_id: int, items: List[Dict
             item_data.get('ordem', ordem),
             None,
             plano_id,
-            item_data.get('obrigatoria', False)
+            item_data.get('obrigatoria', False),
+            tipo_item
         ))
 
         if db_type == 'postgres':
@@ -976,20 +1018,25 @@ def _clonar_plano_para_implantacao_checklist(cursor, db_type: str, plano_id: int
     """
     Clona a estrutura do plano (itens com implantacao_id = NULL) para a implantação.
     Usa abordagem iterativa para clonar toda a árvore mantendo a hierarquia.
+    IMPORTANTE: Copia também o tipo_item convertendo de 'plano_*' para o tipo de implantação.
     """
     item_map = {}
 
     def clone_item_recursivo(plano_item_id, new_parent_id):
         if db_type == 'postgres':
-            sql_item = "SELECT title, completed, comment, level, ordem, obrigatoria FROM checklist_items WHERE id = %s"
+            sql_item = "SELECT title, completed, comment, level, ordem, obrigatoria, tipo_item, descricao, status, responsavel FROM checklist_items WHERE id = %s"
             cursor.execute(sql_item, (plano_item_id,))
             row = cursor.fetchone()
             if not row:
                 return None
 
             title, completed, comment, level, ordem, obrigatoria = row[0], row[1], row[2], row[3], row[4], row[5]
+            tipo_item_plano = row[6] or ''
+            descricao = row[7] or ''
+            status = row[8] or 'pendente'
+            responsavel = row[9]
         else:
-            sql_item = "SELECT title, completed, comment, level, ordem, obrigatoria FROM checklist_items WHERE id = ?"
+            sql_item = "SELECT title, completed, comment, level, ordem, obrigatoria, tipo_item, descricao, status, responsavel FROM checklist_items WHERE id = ?"
             cursor.execute(sql_item, (plano_item_id,))
             row = cursor.fetchone()
             if not row:
@@ -1001,22 +1048,38 @@ def _clonar_plano_para_implantacao_checklist(cursor, db_type: str, plano_id: int
             level = row[3] if row[3] is not None else 0
             ordem = row[4] if row[4] is not None else 0
             obrigatoria = bool(row[5]) if row[5] is not None else False
+            tipo_item_plano = row[6] or ''
+            descricao = row[7] or ''
+            status = row[8] or 'pendente'
+            responsavel = row[9]
+
+        tipo_item_implantacao = tipo_item_plano.replace('plano_', '') if tipo_item_plano.startswith('plano_') else tipo_item_plano
+        
+        if not tipo_item_implantacao:
+            if level == 0:
+                tipo_item_implantacao = 'fase'
+            elif level == 1:
+                tipo_item_implantacao = 'grupo'
+            elif level == 2:
+                tipo_item_implantacao = 'tarefa'
+            else:
+                tipo_item_implantacao = 'subtarefa'
 
         if db_type == 'postgres':
             sql_insert = """
-                INSERT INTO checklist_items (parent_id, title, completed, comment, level, ordem, implantacao_id, obrigatoria)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO checklist_items (parent_id, title, completed, comment, level, ordem, implantacao_id, obrigatoria, tipo_item, descricao, status, responsavel, created_at, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 RETURNING id
             """
-            cursor.execute(sql_insert, (new_parent_id, title, completed, comment, level, ordem, implantacao_id, obrigatoria))
+            cursor.execute(sql_insert, (new_parent_id, title, completed, comment, level, ordem, implantacao_id, obrigatoria, tipo_item_implantacao, descricao, status, responsavel))
             result = cursor.fetchone()
             new_item_id = result[0] if result else None
         else:
             sql_insert = """
-                INSERT INTO checklist_items (parent_id, title, completed, comment, level, ordem, implantacao_id, obrigatoria)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO checklist_items (parent_id, title, completed, comment, level, ordem, implantacao_id, obrigatoria, tipo_item, descricao, status, responsavel, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             """
-            cursor.execute(sql_insert, (new_parent_id, title, completed, comment, level, ordem, implantacao_id, obrigatoria))
+            cursor.execute(sql_insert, (new_parent_id, title, 1 if completed else 0, comment, level, ordem, implantacao_id, 1 if obrigatoria else 0, tipo_item_implantacao, descricao, status, responsavel))
             new_item_id = cursor.lastrowid
 
         if not new_item_id:
@@ -1132,7 +1195,8 @@ def validar_estrutura_checklist(estrutura: Dict) -> bool:
         if not isinstance(items, list):
             raise ValidationError("'items' deve ser uma lista")
 
-        _validar_items_recursivo(items, set(), 0)
+        if len(items) > 0:
+            _validar_items_recursivo(items, set(), 0)
         return True
     elif 'fases' in estrutura:
         return validar_estrutura_hierarquica(estrutura)

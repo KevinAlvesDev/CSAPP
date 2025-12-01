@@ -133,7 +133,6 @@ def dashboard():
         )
 
     except Exception as e:
-        print(f"ERRO ao carregar dashboard para {user_email}: {e}")
         flash("Erro ao carregar dados do dashboard.", "error")
 
         perfil_acesso_erro = g.perfil.get('perfil_acesso') if g.get('perfil') else None

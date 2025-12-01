@@ -44,11 +44,8 @@ def get_hierarquia_implantacao(implantacao_id):
             ]
         }
     """
-    logger.info(f"[GET_HIERARQUIA] INÍCIO - implantacao_id={implantacao_id}")
 
     try:
-        # Buscar todos os itens da implantação em checklist_items
-        logger.info(f"[GET_HIERARQUIA] Buscando itens de checklist_items...")
         items = query_db(
             """
             SELECT id, parent_id, title, completed, comment, level, ordem, tipo_item, 
@@ -59,25 +56,20 @@ def get_hierarquia_implantacao(implantacao_id):
             """,
             (implantacao_id,)
         )
-        logger.info(f"[GET_HIERARQUIA] Itens encontrados: {len(items) if items else 0}")
     except Exception as e:
         logger.error(f"[GET_HIERARQUIA] Erro ao buscar itens: {e}")
         return {'fases': []}
 
     if not items:
-        logger.info(f"[GET_HIERARQUIA] Nenhum item encontrado, retornando vazio")
         return {'fases': []}
 
-    # Organizar itens por tipo e parent_id
     items_map = {item['id']: item for item in items}
     
-    # Separar por tipo
     fases_items = [item for item in items if item['tipo_item'] == 'fase' and item['parent_id'] is None]
     grupos_items = {}
     tarefas_items = {}
     subtarefas_items = {}
 
-    # Agrupar por parent_id
     for item in items:
         parent_id = item.get('parent_id')
         tipo = item.get('tipo_item', '')
@@ -97,7 +89,6 @@ def get_hierarquia_implantacao(implantacao_id):
 
     resultado = {'fases': []}
 
-    # Construir estrutura hierárquica
     for fase_item in sorted(fases_items, key=lambda x: x.get('ordem', 0)):
         fase_dict = {
             'id': fase_item['id'],
@@ -107,7 +98,6 @@ def get_hierarquia_implantacao(implantacao_id):
             'grupos': []
         }
 
-        # Buscar grupos desta fase
         grupos_fase = sorted(grupos_items.get(fase_item['id'], []), key=lambda x: x.get('ordem', 0))
         
         for grupo_item in grupos_fase:
@@ -118,7 +108,6 @@ def get_hierarquia_implantacao(implantacao_id):
                 'tarefas': []
             }
 
-            # Buscar tarefas deste grupo
             tarefas_grupo = sorted(tarefas_items.get(grupo_item['id'], []), key=lambda x: x.get('ordem', 0))
             
             for tarefa_item in tarefas_grupo:
@@ -140,7 +129,6 @@ def get_hierarquia_implantacao(implantacao_id):
                     'subtarefas': []
                 }
 
-                # Buscar subtarefas desta tarefa
                 subtarefas_tarefa = sorted(subtarefas_items.get(tarefa_item['id'], []), key=lambda x: x.get('ordem', 0))
                 
                 for subtarefa_item in subtarefas_tarefa:
@@ -151,7 +139,6 @@ def get_hierarquia_implantacao(implantacao_id):
                         'ordem': subtarefa_item.get('ordem', 0),
                         'responsavel': subtarefa_item.get('responsavel')
                     }
-                    # Adicionar campos tag e data_conclusao se disponíveis
                     if subtarefa_item.get('tag'):
                         subtarefa_dict['tag'] = subtarefa_item.get('tag')
                     if subtarefa_item.get('data_conclusao'):
@@ -165,7 +152,6 @@ def get_hierarquia_implantacao(implantacao_id):
 
         resultado['fases'].append(fase_dict)
 
-    logger.info(f"[GET_HIERARQUIA] Estrutura construída: {len(resultado['fases'])} fases")
     return resultado
 
 
@@ -179,7 +165,6 @@ def toggle_subtarefa(subtarefa_id):
         dict: {'ok': bool, 'concluido': bool, 'percentual_tarefa': int}
     """
 
-    # Buscar subtarefa em checklist_items
     subtarefa = query_db(
         "SELECT id, parent_id, completed FROM checklist_items WHERE id = %s AND tipo_item = 'subtarefa'",
         (subtarefa_id,),
@@ -195,21 +180,17 @@ def toggle_subtarefa(subtarefa_id):
     if not tarefa_id:
         return {'ok': False, 'error': 'Tarefa pai não encontrada'}
     
-    # Atualizar subtarefa em checklist_items
     if novo_estado:
-        # Marcar como concluído: definir data_conclusao
         execute_db(
             "UPDATE checklist_items SET completed = %s, data_conclusao = %s WHERE id = %s",
             (True, datetime.now(), subtarefa_id)
         )
     else:
-        # Desmarcar: limpar data_conclusao
         execute_db(
             "UPDATE checklist_items SET completed = %s, data_conclusao = NULL WHERE id = %s",
             (False, subtarefa_id)
         )
 
-    # Calcular percentual de conclusão da tarefa pai
     stats = query_db(
         """
         SELECT 
@@ -229,7 +210,6 @@ def toggle_subtarefa(subtarefa_id):
 
     novo_status = 'concluida' if percentual == 100 else ('em_andamento' if percentual > 0 else 'pendente')
     
-    # Atualizar tarefa pai em checklist_items
     execute_db(
         "UPDATE checklist_items SET percentual_conclusao = %s, status = %s, completed = %s WHERE id = %s",
         (percentual, novo_status, percentual == 100, tarefa_id)

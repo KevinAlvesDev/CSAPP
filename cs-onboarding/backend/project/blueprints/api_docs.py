@@ -40,24 +40,34 @@ OPENAPI_SPEC = {
         }
     ],
     "paths": {
-        "/api/toggle_tarefa": {
+        "/api/toggle_tarefa_h/<tarefa_h_id>": {
             "post": {
                 "tags": ["Tarefas"],
-                "summary": "Alterna o status de conclusão de uma tarefa",
-                "description": "Marca uma tarefa como concluída ou não concluída",
+                "summary": "Alterna o status de conclusão de uma tarefa hierárquica",
+                "description": "Marca uma tarefa hierárquica como concluída ou não concluída",
+                "parameters": [
+                    {
+                        "name": "tarefa_h_id",
+                        "in": "path",
+                        "required": True,
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "ID da tarefa hierárquica"
+                    }
+                ],
                 "requestBody": {
-                    "required": True,
+                    "required": False,
                     "content": {
-                        "application/x-www-form-urlencoded": {
+                        "application/json": {
                             "schema": {
                                 "type": "object",
                                 "properties": {
-                                    "tarefa_id": {
-                                        "type": "integer",
-                                        "description": "ID da tarefa"
+                                    "concluido": {
+                                        "type": "boolean",
+                                        "description": "Status desejado (opcional, se não enviado alterna)"
                                     }
-                                },
-                                "required": ["tarefa_id"]
+                                }
                             }
                         }
                     }
@@ -66,6 +76,16 @@ OPENAPI_SPEC = {
                     "200": {
                         "description": "Tarefa atualizada com sucesso",
                         "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "ok": {"type": "boolean"},
+                                        "novo_progresso": {"type": "number"},
+                                        "concluida": {"type": "boolean"}
+                                    }
+                                }
+                            },
                             "text/html": {
                                 "schema": {
                                     "type": "string",
@@ -83,51 +103,65 @@ OPENAPI_SPEC = {
                 }
             }
         },
-        "/api/adicionar_comentario": {
+        "/api/toggle_subtarefa_h/<sub_id>": {
             "post": {
-                "tags": ["Comentários"],
-                "summary": "Adiciona um comentário a uma tarefa",
-                "description": "Cria um novo comentário com texto e/ou imagem",
+                "tags": ["Tarefas"],
+                "summary": "Alterna o status de conclusão de uma subtarefa",
+                "description": "Marca uma subtarefa como concluída ou não concluída",
+                "parameters": [
+                    {
+                        "name": "sub_id",
+                        "in": "path",
+                        "required": True,
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "ID da subtarefa"
+                    }
+                ],
                 "requestBody": {
-                    "required": True,
+                    "required": False,
                     "content": {
-                        "multipart/form-data": {
+                        "application/json": {
                             "schema": {
                                 "type": "object",
                                 "properties": {
-                                    "tarefa_id": {
-                                        "type": "integer",
-                                        "description": "ID da tarefa"
-                                    },
-                                    "texto": {
-                                        "type": "string",
-                                        "description": "Texto do comentário"
-                                    },
-                                    "visibilidade": {
-                                        "type": "string",
-                                        "enum": ["publica", "interna"],
-                                        "description": "Visibilidade do comentário"
-                                    },
-                                    "imagem": {
-                                        "type": "string",
-                                        "format": "binary",
-                                        "description": "Arquivo de imagem (opcional, max 10MB)"
+                                    "concluido": {
+                                        "type": "boolean",
+                                        "description": "Status desejado (opcional, se não enviado alterna)"
                                     }
-                                },
-                                "required": ["tarefa_id"]
+                                }
                             }
                         }
                     }
                 },
                 "responses": {
                     "200": {
-                        "description": "Comentário adicionado com sucesso"
-                    },
-                    "400": {
-                        "description": "Dados inválidos ou arquivo muito grande"
+                        "description": "Subtarefa atualizada com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "ok": {"type": "boolean"},
+                                        "novo_progresso": {"type": "number"},
+                                        "concluida": {"type": "boolean"}
+                                    }
+                                }
+                            },
+                            "text/html": {
+                                "schema": {
+                                    "type": "string",
+                                    "description": "HTML fragment (HTMX response)"
+                                }
+                            }
+                        }
                     },
                     "403": {
                         "description": "Permissão negada"
+                    },
+                    "404": {
+                        "description": "Subtarefa não encontrada"
                     }
                 }
             }

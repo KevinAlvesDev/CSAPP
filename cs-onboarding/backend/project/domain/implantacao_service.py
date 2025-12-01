@@ -20,7 +20,6 @@ from ..common.utils import format_date_iso_for_json, format_date_br
 from datetime import datetime
 from collections import OrderedDict
 
-# Importar cache
 try:
     from ..config.cache_config import cache
 except ImportError:
@@ -64,13 +63,36 @@ def cached_progress(ttl=30):
     return decorator
 
 
+def invalidar_cache_progresso(impl_id):
+    """
+    Invalida o cache de progresso de uma implantação específica.
+    Deve ser chamado sempre que o status de uma tarefa mudar.
+    
+    Args:
+        impl_id: ID da implantação
+    """
+    if not cache:
+        return
+    
+    try:
+        cache_key = f'progresso_impl_{impl_id}'
+        cache.delete(cache_key)
+    except Exception as e:
+        if current_app:
+            current_app.logger.warning(f"Erro ao invalidar cache de progresso para impl_id {impl_id}: {e}")
+
+
 def _get_progress_optimized(impl_id):
     """
     Versão otimizada que usa uma única query com checklist_items.
     Agora usa checklist_items (estrutura consolidada).
+    
+    Lógica de cálculo do progresso:
+    - Conta apenas itens "folha" (que não têm filhos) para evitar dupla contagem
+    - Itens folha são: subtarefas OU tarefas sem subtarefas
+    - Se tipo_item não estiver preenchido, usa lógica baseada em parent_id
     """
     try:
-        # Verificar se há itens da implantação
         items_exist = query_db(
             "SELECT id FROM checklist_items WHERE implantacao_id = %s LIMIT 1", 
             (impl_id,), 
@@ -87,29 +109,16 @@ def _get_progress_optimized(impl_id):
     try:
         if is_sqlite:
             query = """
-                WITH subtarefas_count AS (
-                    SELECT
-                        COUNT(*) as total,
-                        SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END) as done
-                    FROM checklist_items
-                    WHERE implantacao_id = ? AND tipo_item = 'subtarefa'
-                ),
-                tarefas_count AS (
-                    SELECT
-                        COUNT(*) as total,
-                        SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END) as done
-                    FROM checklist_items
-                    WHERE implantacao_id = ? 
-                    AND tipo_item = 'tarefa'
-                    AND NOT EXISTS (
-                        SELECT 1 FROM checklist_items s 
-                        WHERE s.parent_id = checklist_items.id 
-                        AND s.tipo_item = 'subtarefa'
-                    )
-                )
                 SELECT
-                    COALESCE((SELECT total FROM subtarefas_count), 0) + COALESCE((SELECT total FROM tarefas_count), 0) as total,
-                    COALESCE((SELECT done FROM subtarefas_count), 0) + COALESCE((SELECT done FROM tarefas_count), 0) as done
+                    COUNT(*) as total,
+                    SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END) as done
+                FROM checklist_items ci
+                WHERE ci.implantacao_id = ?
+                AND NOT EXISTS (
+                    SELECT 1 FROM checklist_items filho 
+                    WHERE filho.parent_id = ci.id
+                    AND filho.implantacao_id = ?
+                )
             """
             result = query_db(query, (impl_id, impl_id), one=True) or {}
 
@@ -117,34 +126,50 @@ def _get_progress_optimized(impl_id):
             done = int(result.get('done', 0) or 0)
         else:
             query = """
-                WITH subtarefas_count AS (
-                    SELECT
-                        COUNT(*) as total,
-                        SUM(CASE WHEN completed THEN 1 ELSE 0 END) as done
-                    FROM checklist_items
-                    WHERE implantacao_id = %s AND tipo_item = 'subtarefa'
-                ),
-                tarefas_count AS (
-                    SELECT
-                        COUNT(*) as total,
-                        SUM(CASE WHEN completed THEN 1 ELSE 0 END) as done
-                    FROM checklist_items ci
-                    WHERE ci.implantacao_id = %s 
-                    AND ci.tipo_item = 'tarefa'
-                    AND NOT EXISTS (
-                        SELECT 1 FROM checklist_items s 
-                        WHERE s.parent_id = ci.id 
-                        AND s.tipo_item = 'subtarefa'
-                    )
-                )
                 SELECT
-                    COALESCE((SELECT total FROM subtarefas_count), 0) + COALESCE((SELECT total FROM tarefas_count), 0) as total,
-                    COALESCE((SELECT done FROM subtarefas_count), 0) + COALESCE((SELECT done FROM tarefas_count), 0) as done
+                    COUNT(*) as total,
+                    SUM(CASE WHEN completed THEN 1 ELSE 0 END) as done
+                FROM checklist_items ci
+                WHERE ci.implantacao_id = %s
+                AND NOT EXISTS (
+                    SELECT 1 FROM checklist_items filho 
+                    WHERE filho.parent_id = ci.id
+                    AND filho.implantacao_id = %s
+                )
             """
             result = query_db(query, (impl_id, impl_id), one=True) or {}
 
             total = int(result.get('total', 0) or 0)
             done = int(result.get('done', 0) or 0)
+
+        if total == 0:
+            any_items = query_db(
+                "SELECT COUNT(*) as count FROM checklist_items WHERE implantacao_id = %s",
+                (impl_id,),
+                one=True
+            )
+            if any_items and int(any_items.get('count', 0) or 0) > 0:
+                if is_sqlite:
+                    fallback_query = """
+                        SELECT
+                            COUNT(*) as total,
+                            SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END) as done
+                        FROM checklist_items
+                        WHERE implantacao_id = ?
+                    """
+                    fallback_result = query_db(fallback_query, (impl_id,), one=True) or {}
+                else:
+                    fallback_query = """
+                        SELECT
+                            COUNT(*) as total,
+                            SUM(CASE WHEN completed THEN 1 ELSE 0 END) as done
+                        FROM checklist_items
+                        WHERE implantacao_id = %s
+                    """
+                    fallback_result = query_db(fallback_query, (impl_id,), one=True) or {}
+                
+                total = int(fallback_result.get('total', 0) or 0)
+                done = int(fallback_result.get('done', 0) or 0)
 
         return int(round((done / total) * 100)) if total > 0 else 100, total, done
 
@@ -168,7 +193,6 @@ def _get_progress_legacy(impl_id):
         items_exist = None
 
     if items_exist:
-        # Contar subtarefas
         sub = query_db(
             """
             SELECT COUNT(*) as total, SUM(CASE WHEN completed THEN 1 ELSE 0 END) as done
@@ -178,7 +202,6 @@ def _get_progress_legacy(impl_id):
             (impl_id,), one=True
         ) or {}
 
-        # Contar tarefas sem subtarefas
         th_no = query_db(
             """
             SELECT COUNT(*) as total,
@@ -231,7 +254,6 @@ def auto_finalizar_implantacao(impl_id, usuario_cs_email):
     if not items_exist:
         return False, None
 
-    # Contar subtarefas pendentes
     subtarefas_pendentes = query_db(
         """
         SELECT COUNT(*) as total
@@ -243,7 +265,6 @@ def auto_finalizar_implantacao(impl_id, usuario_cs_email):
         (impl_id,), one=True
     ) or {}
 
-    # Contar tarefas sem subtarefas que estão pendentes
     tarefas_pendentes = query_db(
         """
         SELECT COUNT(*) as total
@@ -401,7 +422,6 @@ def _get_tarefas_and_comentarios(impl_id, is_owner=False, is_manager=False):
     todos_modulos_temp = set()
 
     try:
-        # Buscar fases em checklist_items
         fases_raw = query_db(
             "SELECT id, title as nome, ordem FROM checklist_items WHERE implantacao_id = %s AND tipo_item = 'fase' AND parent_id IS NULL ORDER BY ordem DESC", 
             (impl_id,)
@@ -418,7 +438,6 @@ def _get_tarefas_and_comentarios(impl_id, is_owner=False, is_manager=False):
         todos_modulos_temp = set()
         for fase in fases_raw:
             try:
-                # Buscar grupos desta fase em checklist_items
                 grupos_raw = query_db(
                     "SELECT id, title as nome FROM checklist_items WHERE parent_id = %s AND tipo_item = 'grupo'", 
                     (fase['id'],)
@@ -433,7 +452,6 @@ def _get_tarefas_and_comentarios(impl_id, is_owner=False, is_manager=False):
                 modulo_nome = grupo.get('nome') or f"Grupo {grupo.get('id')}"
                 todos_modulos_temp.add(modulo_nome)
                 try:
-                    # Buscar tarefas deste grupo em checklist_items
                     tarefas_h_raw = query_db(
                         "SELECT * FROM checklist_items WHERE parent_id = %s AND tipo_item = 'tarefa'", 
                         (grupo['id'],)
@@ -446,7 +464,6 @@ def _get_tarefas_and_comentarios(impl_id, is_owner=False, is_manager=False):
                 ordem_c = 1
                 for th in tarefas_h_raw:
                         try:
-                            # Buscar subtarefas desta tarefa em checklist_items
                             subs_raw = query_db(
                                 "SELECT * FROM checklist_items WHERE parent_id = %s AND tipo_item = 'subtarefa'", 
                                 (th['id'],)
@@ -540,11 +557,9 @@ def get_implantacao_details(impl_id, usuario_cs_email, user_perfil):
     if user_perfil is None:
         user_perfil = {}
 
-    logger.info(f"Iniciando get_implantacao_details para ID {impl_id}, usuário {usuario_cs_email}")
 
     try:
         implantacao, is_manager = _get_implantacao_and_validate_access(impl_id, usuario_cs_email, user_perfil)
-        logger.info(f"Acesso validado para implantação {impl_id}. Is_manager: {is_manager}")
     except ValueError as e:
         logger.warning(f"Acesso negado à implantação {impl_id}: {str(e)}")
         raise
@@ -554,14 +569,12 @@ def get_implantacao_details(impl_id, usuario_cs_email, user_perfil):
 
     try:
         implantacao = _format_implantacao_dates(implantacao)
-        logger.debug(f"Datas formatadas para implantação {impl_id}")
     except Exception as e:
         logger.error(f"Erro ao formatar datas da implantação {impl_id}: {e}", exc_info=True)
         raise
 
     try:
         progresso, _, _ = _get_progress(impl_id)
-        logger.debug(f"Progresso calculado para implantação {impl_id}: {progresso}%")
     except Exception as e:
         logger.error(f"Erro ao calcular progresso da implantação {impl_id}: {e}", exc_info=True)
         raise
@@ -569,14 +582,12 @@ def get_implantacao_details(impl_id, usuario_cs_email, user_perfil):
     try:
         is_owner = implantacao.get('usuario_cs') == usuario_cs_email
         tarefas_agrupadas_obrigatorio, ordered_treinamento, tarefas_agrupadas_pendencias, todos_modulos_lista = _get_tarefas_and_comentarios(impl_id, is_owner=is_owner, is_manager=is_manager)
-        logger.debug(f"Tarefas carregadas para implantação {impl_id}")
     except Exception as e:
         logger.error(f"Erro ao carregar tarefas da implantação {impl_id}: {e}", exc_info=True)
         raise
 
     try:
         hierarquia = get_hierarquia_implantacao(impl_id)
-        logger.debug(f"Hierarquia carregada para implantação {impl_id}: {len(hierarquia.get('fases', []))} fases")
     except Exception as e:
         import traceback
         error_trace = traceback.format_exc()
@@ -585,7 +596,6 @@ def get_implantacao_details(impl_id, usuario_cs_email, user_perfil):
 
     try:
         logs_timeline = _get_timeline_logs(impl_id)
-        logger.debug(f"Timeline carregada para implantação {impl_id}: {len(logs_timeline)} eventos")
     except Exception as e:
         logger.error(f"Erro ao carregar timeline da implantação {impl_id}: {e}", exc_info=True)
         raise
@@ -596,7 +606,6 @@ def get_implantacao_details(impl_id, usuario_cs_email, user_perfil):
     try:
         all_cs_users = query_db("SELECT usuario, nome FROM perfil_usuario WHERE perfil_acesso IS NOT NULL AND perfil_acesso != '' ORDER BY nome")
         all_cs_users = all_cs_users if all_cs_users is not None else []
-        logger.debug(f"Lista de CS users carregada: {len(all_cs_users)} usuários")
     except Exception as e:
         logger.error(f"Erro ao carregar lista de CS users: {e}", exc_info=True)
         all_cs_users = []
@@ -604,7 +613,6 @@ def get_implantacao_details(impl_id, usuario_cs_email, user_perfil):
     plano_sucesso_info = None
     try:
         if implantacao.get('plano_sucesso_id'):
-            logger.debug(f"Buscando plano de sucesso ID {implantacao['plano_sucesso_id']}")
             plano_sucesso_info = query_db(
                 "SELECT * FROM planos_sucesso WHERE id = %s",
                 (implantacao['plano_sucesso_id'],),
@@ -628,16 +636,12 @@ def get_implantacao_details(impl_id, usuario_cs_email, user_perfil):
         )
         if checklist_flat:
             checklist_nested = build_nested_tree(checklist_flat)
-            logger.info(f"Checklist carregado para implantação {impl_id}: {len(checklist_flat)} itens")
-        else:
-            logger.debug(f"Nenhum item de checklist encontrado para implantação {impl_id}")
     except Exception as e:
         import traceback
         error_trace = traceback.format_exc()
         logger.warning(f"Erro ao carregar checklist da implantação {impl_id}: {e}\n{error_trace}. Usando checklist vazio.")
         checklist_nested = []
 
-    logger.info(f"get_implantacao_details concluído com sucesso para ID {impl_id}")
 
     try:
         user_info = getattr(g, 'user', None) or {'email': usuario_cs_email, 'nome': user_perfil.get('nome', usuario_cs_email) if user_perfil else usuario_cs_email}

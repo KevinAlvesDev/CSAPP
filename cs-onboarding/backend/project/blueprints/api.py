@@ -46,15 +46,6 @@ api_bp = Blueprint('api', __name__, url_prefix='/api')
 def _api_origin_guard():
     return validate_api_origin(lambda: None)()
 
-# ============================================================================
-# CÓDIGO LEGADO REMOVIDO - Endpoints do modelo antigo (tabela 'tarefas')
-# Todos os endpoints legados foram removidos. Use os endpoints hierárquicos:
-# - /api/toggle_tarefa_h/<int:tarefa_h_id>
-# - /api/toggle_subtarefa_h/<int:sub_id>
-# - /api/adicionar_comentario_h/<string:tipo>/<int:item_id>
-# - /api/excluir_tarefa_h/<int:tarefa_h_id>
-# - /api/excluir_subtarefa_h/<int:sub_id>
-# ============================================================================
 
 @api_bp.route('/progresso_implantacao/<int:impl_id>', methods=['GET'])
 @validate_api_origin
@@ -70,28 +61,19 @@ def progresso_implantacao(impl_id):
         api_logger.error(f"Erro ao obter progresso da implantação {impl_id}: {e}", exc_info=True)
         return jsonify({'ok': False, 'error': 'Erro interno'}), 500
 
-# ============================================================================
-# Endpoints Hierárquicos (Modelo Novo) - A partir daqui
-# ============================================================================
-
 @api_bp.route('/toggle_subtarefa_h/<int:sub_id>', methods=['POST'])
 @login_required
 @validate_api_origin
 @limiter.limit("100 per minute", key_func=lambda: g.user_email or get_remote_address())
 def toggle_subtarefa_h(sub_id):
-    api_logger.info(f"[TOGGLE_SUBTAREFA_H] INÍCIO - sub_id={sub_id}")
     usuario_cs_email = g.user_email
-    api_logger.info(f"[TOGGLE_SUBTAREFA_H] Usuario: {usuario_cs_email}")
     
     try:
         sub_id = validate_integer(sub_id, min_value=1)
-        api_logger.info(f"[TOGGLE_SUBTAREFA_H] ID validado: {sub_id}")
     except ValidationError as e:
-        api_logger.error(f"[TOGGLE_SUBTAREFA_H] ERRO validação ID: {str(e)}")
         return jsonify({'ok': False, 'error': f'ID inválido: {str(e)}'}), 400
     
     try:
-        api_logger.info(f"[TOGGLE_SUBTAREFA_H] Buscando subtarefa no banco...")
         row = query_db(
             """
             SELECT ci.id as sub_id, ci.completed as concluido, i.id as implantacao_id, i.usuario_cs, i.status
@@ -101,74 +83,48 @@ def toggle_subtarefa_h(sub_id):
             """,
             (sub_id,), one=True
         )
-        api_logger.info(f"[TOGGLE_SUBTAREFA_H] Resultado query: {row}")
         
         if not row:
-            api_logger.error(f"[TOGGLE_SUBTAREFA_H] Subtarefa não encontrada no banco")
             return jsonify({'ok': False, 'error': 'Subtarefa não encontrada'}), 404
         
         is_owner = row.get('usuario_cs') == usuario_cs_email
         is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
-        api_logger.info(f"[TOGGLE_SUBTAREFA_H] Permissões - is_owner={is_owner}, is_manager={is_manager}")
         
         if not (is_owner or is_manager):
-            api_logger.error(f"[TOGGLE_SUBTAREFA_H] PERMISSÃO NEGADA")
             return jsonify({'ok': False, 'error': 'Permissão negada.'}), 403
         
         if row.get('status') in ['finalizada', 'parada', 'cancelada']:
-            api_logger.error(f"[TOGGLE_SUBTAREFA_H] Implantação bloqueada - status={row.get('status')}")
             return jsonify({'ok': False, 'error': 'Implantação bloqueada para alterações.'}), 400
         
-        # Obter o estado desejado do body da requisição
         request_data = request.get_json(silent=True) or {}
         concluido_desejado = request_data.get('concluido', None)
-        api_logger.info(f"[TOGGLE_SUBTAREFA_H] Request data: {request_data}")
-        api_logger.info(f"[TOGGLE_SUBTAREFA_H] concluido_desejado={concluido_desejado}")
-        api_logger.info(f"[TOGGLE_SUBTAREFA_H] Status atual no banco: concluido={row.get('concluido')}")
         
-        # Se não foi enviado no body, alternar o estado atual
         if concluido_desejado is None:
             novo = 0 if row.get('concluido') else 1
-            api_logger.info(f"[TOGGLE_SUBTAREFA_H] Toggle automático: {row.get('concluido')} -> {novo}")
         else:
-            # Usar o valor enviado pelo frontend
             novo = 1 if bool(concluido_desejado) else 0
-            api_logger.info(f"[TOGGLE_SUBTAREFA_H] Valor vindo do frontend: concluido_desejado={concluido_desejado} -> novo={novo}")
         
-        api_logger.info(f"[TOGGLE_SUBTAREFA_H] Atualizando banco: UPDATE checklist_items SET completed = {novo} WHERE id = {sub_id}")
-        # Atualizar data_conclusao quando marcar como concluído
         from datetime import datetime
         if novo:
             execute_db("UPDATE checklist_items SET completed = %s, data_conclusao = %s WHERE id = %s", (True, datetime.now(), sub_id))
         else:
             execute_db("UPDATE checklist_items SET completed = %s, data_conclusao = NULL WHERE id = %s", (False, sub_id))
-        api_logger.info(f"[TOGGLE_SUBTAREFA_H] UPDATE executado com sucesso")
         
         detalhe = f"Subtarefa {sub_id}: {'Concluída' if novo else 'Não Concluída'}."
-        api_logger.info(f"[TOGGLE_SUBTAREFA_H] Logando timeline: {detalhe}")
         logar_timeline(row['implantacao_id'], usuario_cs_email, 'tarefa_alterada', detalhe)
         
-        api_logger.info(f"[TOGGLE_SUBTAREFA_H] Buscando subtarefa atualizada do banco...")
         tarefa_atualizada = query_db("SELECT id, title as nome, completed as concluido FROM checklist_items WHERE id = %s AND tipo_item = 'subtarefa'", (sub_id,), one=True)
-        api_logger.info(f"[TOGGLE_SUBTAREFA_H] Subtarefa retornada do banco: {tarefa_atualizada}")
-        
-        api_logger.info(f"[TOGGLE_SUBTAREFA_H] Buscando informações de implantação...")
         implantacao_info = query_db("SELECT nome_empresa, email_responsavel FROM implantacoes WHERE id = %s", (row['implantacao_id'],), one=True) or {}
-        api_logger.info(f"[TOGGLE_SUBTAREFA_H] Calculando progresso...")
-        # Invalidar cache antes de calcular novo progresso
+        
         impl_id = row['implantacao_id']
         if cache:
             cache_key = f'progresso_impl_{impl_id}'
             cache.delete(cache_key)
-            api_logger.info(f"[TOGGLE_SUBTAREFA_H] Cache invalidado para impl_id={impl_id}")
         
         novo_prog, _, _ = _get_progress(impl_id)
-        api_logger.info(f"[TOGGLE_SUBTAREFA_H] Novo progresso: {novo_prog}%")
-        
         tarefa_concluida = bool(tarefa_atualizada.get('concluido'))
         
         if request.headers.get('HX-Request') == 'true':
-            api_logger.info(f"[TOGGLE_SUBTAREFA_H] Requisição HTMX detectada, retornando HTML")
             tarefa_payload = {
                 'id': tarefa_atualizada.get('id'),
                 'tarefa_filho': tarefa_atualizada.get('nome'),
@@ -187,20 +143,17 @@ def toggle_subtarefa_h(sub_id):
             resp = make_response(item_html + progress_html)
             resp.headers['Content-Type'] = 'text/html; charset=utf-8'
             resp.headers['HX-Trigger-After-Swap'] = json.dumps(hx_payload)
-            api_logger.info(f"[TOGGLE_SUBTAREFA_H] Resposta HTMX enviada com sucesso")
             return resp
         
-        api_logger.info(f"[TOGGLE_SUBTAREFA_H] Retornando resposta JSON")
         resp = jsonify({
             'ok': True,
             'novo_progresso': novo_prog,
             'concluida': tarefa_concluida
         })
         resp.headers['Content-Type'] = 'application/json'
-        api_logger.info(f"[TOGGLE_SUBTAREFA_H] Resposta JSON enviada: ok=True, concluida={tarefa_concluida}, novo_progresso={novo_prog}")
         return resp
     except Exception as e:
-        api_logger.error(f"[TOGGLE_SUBTAREFA_H] EXCEÇÃO CAPTURADA: {e}", exc_info=True)
+        api_logger.error(f"Erro ao fazer toggle de subtarefa {sub_id}: {e}", exc_info=True)
         return jsonify({'ok': False, 'error': f"Erro interno: {e}"}), 500
 
 @api_bp.route('/toggle_tarefa_h/<int:tarefa_h_id>', methods=['POST'])
@@ -208,19 +161,14 @@ def toggle_subtarefa_h(sub_id):
 @validate_api_origin
 @limiter.limit("100 per minute", key_func=lambda: g.user_email or get_remote_address())
 def toggle_tarefa_h(tarefa_h_id):
-    api_logger.info(f"[TOGGLE_TAREFA_H] INÍCIO - tarefa_h_id={tarefa_h_id}")
     usuario_cs_email = g.user_email
-    api_logger.info(f"[TOGGLE_TAREFA_H] Usuario: {usuario_cs_email}")
     
     try:
         tarefa_h_id = validate_integer(tarefa_h_id, min_value=1)
-        api_logger.info(f"[TOGGLE_TAREFA_H] ID validado: {tarefa_h_id}")
     except ValidationError as e:
-        api_logger.error(f"[TOGGLE_TAREFA_H] ERRO validação ID: {str(e)}")
         return jsonify({'ok': False, 'error': f'ID inválido: {str(e)}'}), 400
     
     try:
-        api_logger.info(f"[TOGGLE_TAREFA_H] Buscando tarefa no banco...")
         row = query_db(
             """
             SELECT ci.id as tarefa_id, ci.status, i.id as implantacao_id, i.usuario_cs, i.status as impl_status
@@ -230,103 +178,66 @@ def toggle_tarefa_h(tarefa_h_id):
             """,
             (tarefa_h_id,), one=True
         )
-        api_logger.info(f"[TOGGLE_TAREFA_H] Resultado query: {row}")
         
         if not row:
-            api_logger.error(f"[TOGGLE_TAREFA_H] Tarefa não encontrada no banco")
             return jsonify({'ok': False, 'error': 'Tarefa não encontrada'}), 404
         is_owner = row.get('usuario_cs') == usuario_cs_email
         is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
-        api_logger.info(f"[TOGGLE_TAREFA_H] Permissões - is_owner={is_owner}, is_manager={is_manager}")
         
         if not (is_owner or is_manager):
-            api_logger.error(f"[TOGGLE_TAREFA_H] PERMISSÃO NEGADA")
             return jsonify({'ok': False, 'error': 'Permissão negada.'}), 403
         
         if row.get('impl_status') in ['finalizada', 'parada', 'cancelada']:
-            api_logger.error(f"[TOGGLE_TAREFA_H] Implantação bloqueada - status={row.get('impl_status')}")
             return jsonify({'ok': False, 'error': 'Implantação bloqueada para alterações.'}), 400
         
-        # Obter o estado desejado do body da requisição
         request_data = request.get_json(silent=True) or {}
         concluido_desejado = request_data.get('concluido', None)
-        api_logger.info(f"[TOGGLE_TAREFA_H] Request data: {request_data}")
-        api_logger.info(f"[TOGGLE_TAREFA_H] concluido_desejado={concluido_desejado}")
         
-        # Se não foi enviado no body, alternar o estado atual
         if concluido_desejado is None:
             curr = (row.get('status') or '').lower().strip()
-            api_logger.info(f"[TOGGLE_TAREFA_H] Status atual no banco: '{curr}'")
             
-            # Normalizar valores antigos
             if curr in ['concluido', 'concluida']:
                 curr = 'concluida'
             else:
                 curr = 'pendente'
             
             novo_status = 'concluida' if curr != 'concluida' else 'pendente'
-            api_logger.info(f"[TOGGLE_TAREFA_H] Toggle automático: curr='{curr}' -> novo_status='{novo_status}'")
         else:
-            # Usar o valor enviado pelo frontend
             novo_status = 'concluida' if bool(concluido_desejado) else 'pendente'
-            api_logger.info(f"[TOGGLE_TAREFA_H] Status vindo do frontend: concluido_desejado={concluido_desejado} -> novo_status='{novo_status}'")
         
-        # Garantir que o status seja sempre 'pendente' ou 'concluida'
         if novo_status not in ['pendente', 'concluida']:
-            api_logger.warning(f"[TOGGLE_TAREFA_H] Status inválido '{novo_status}', normalizando para 'pendente'")
             novo_status = 'pendente'
         
-        api_logger.info(f"[TOGGLE_TAREFA_H] Atualizando banco: UPDATE checklist_items SET status = '{novo_status}' WHERE id = {tarefa_h_id}")
-        # Garantir que o status seja sempre 'pendente' ou 'concluida' (nunca NULL)
         execute_db("UPDATE checklist_items SET status = %s, completed = %s WHERE id = %s", (novo_status, novo_status == 'concluida', tarefa_h_id))
-        api_logger.info(f"[TOGGLE_TAREFA_H] UPDATE executado com sucesso")
-        
-        # Log para debug
-        api_logger.info(f"[TOGGLE_TAREFA_H] Tarefa {tarefa_h_id} atualizada: status anterior={row.get('status')}, novo_status={novo_status}, concluido_desejado={concluido_desejado}")
         
         detalhe = f"TarefaH {tarefa_h_id}: {novo_status}."
-        api_logger.info(f"[TOGGLE_TAREFA_H] Logando timeline: {detalhe}")
         logar_timeline(row['implantacao_id'], usuario_cs_email, 'tarefa_alterada', detalhe)
         
-        # Buscar tarefa atualizada do banco
-        api_logger.info(f"[TOGGLE_TAREFA_H] Buscando tarefa atualizada do banco...")
         th = query_db("SELECT id, title as nome, COALESCE(status, 'pendente') as status FROM checklist_items WHERE id = %s AND tipo_item = 'tarefa'", (tarefa_h_id,), one=True)
-        api_logger.info(f"[TOGGLE_TAREFA_H] Tarefa retornada do banco: {th}")
         
         if not th:
-            api_logger.error(f"[TOGGLE_TAREFA_H] Tarefa não encontrada após UPDATE!")
             return jsonify({'ok': False, 'error': 'Tarefa não encontrada após atualização'}), 404
         
-        # Normalizar status retornado - garantir que seja 'concluida' ou 'pendente'
         status_retornado = (th.get('status') or 'pendente').lower().strip()
-        api_logger.info(f"[TOGGLE_TAREFA_H] Status retornado do banco (antes normalização): '{status_retornado}'")
         
         if status_retornado not in ['pendente', 'concluida']:
-            # Se for 'concluido' ou qualquer variação, normalizar para 'concluida'
             if 'conclui' in status_retornado:
                 status_retornado = 'concluida'
             else:
                 status_retornado = 'pendente'
-            api_logger.info(f"[TOGGLE_TAREFA_H] Status normalizado para: '{status_retornado}'")
         
-        # Se o status no banco não estiver normalizado, corrigir
         if th.get('status') != status_retornado:
-            api_logger.info(f"[TOGGLE_TAREFA_H] Corrigindo status no banco: '{th.get('status')}' -> '{status_retornado}'")
             execute_db("UPDATE checklist_items SET status = %s, completed = %s WHERE id = %s", (status_retornado, status_retornado == 'concluida', tarefa_h_id))
             th['status'] = status_retornado
         
-        api_logger.info(f"[TOGGLE_TAREFA_H] Buscando informações de implantação...")
         implantacao_info = query_db("SELECT nome_empresa, email_responsavel FROM implantacoes WHERE id = %s", (row['implantacao_id'],), one=True) or {}
-        api_logger.info(f"[TOGGLE_TAREFA_H] Calculando progresso...")
-        # Invalidar cache antes de calcular novo progresso
+        
         impl_id = row['implantacao_id']
         if cache:
             cache_key = f'progresso_impl_{impl_id}'
             cache.delete(cache_key)
-            api_logger.info(f"[TOGGLE_TAREFA_H] Cache invalidado para impl_id={impl_id}")
         
         novo_prog, _, _ = _get_progress(impl_id)
-        api_logger.info(f"[TOGGLE_TAREFA_H] Novo progresso: {novo_prog}%")
         
         tarefa_payload = {
             'id': th.get('id'),
@@ -341,30 +252,24 @@ def toggle_tarefa_h(tarefa_h_id):
             'email_responsavel': implantacao_info.get('email_responsavel', '')
         }
         
-        api_logger.info(f"[TOGGLE_TAREFA_H] tarefa_payload criado: {tarefa_payload}")
-        
         if request.headers.get('HX-Request') == 'true':
-            api_logger.info(f"[TOGGLE_TAREFA_H] Requisição HTMX detectada, retornando HTML")
             item_html = render_template('partials/_task_item_wrapper.html', tarefa=tarefa_payload, implantacao=implantacao, tt=TASK_TIPS)
             progress_html = render_template('partials/_progress_total_bar.html', progresso_percent=novo_prog)
             hx_payload = { 'progress_update': { 'novo_progresso': novo_prog } }
             resp = make_response(item_html + progress_html)
             resp.headers['Content-Type'] = 'text/html; charset=utf-8'
             resp.headers['HX-Trigger-After-Swap'] = json.dumps(hx_payload)
-            api_logger.info(f"[TOGGLE_TAREFA_H] Resposta HTMX enviada com sucesso")
             return resp
         
-        api_logger.info(f"[TOGGLE_TAREFA_H] Retornando resposta JSON")
         resp = jsonify({
             'ok': True,
             'novo_progresso': novo_prog,
             'concluida': status_retornado == 'concluida'
         })
         resp.headers['Content-Type'] = 'application/json'
-        api_logger.info(f"[TOGGLE_TAREFA_H] Resposta JSON enviada: ok=True, concluida={status_retornado == 'concluida'}, novo_progresso={novo_prog}")
         return resp
     except Exception as e:
-        api_logger.error(f"[TOGGLE_TAREFA_H] EXCEÇÃO CAPTURADA: {e}", exc_info=True)
+        api_logger.error(f"Erro ao fazer toggle de tarefa {tarefa_h_id}: {e}", exc_info=True)
         return jsonify({'ok': False, 'error': f"Erro interno: {e}"}), 500
 
 @api_bp.route('/excluir_subtarefa_h/<int:sub_id>', methods=['POST'])

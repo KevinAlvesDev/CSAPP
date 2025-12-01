@@ -43,10 +43,8 @@ def _sync_user_profile(user_email, user_name, auth0_user_id):
                 )
                 auth_logger.info(f'User account created: {user_email}')
             except (Psycopg2IntegrityError, Sqlite3IntegrityError) as e:
-                print(f"AVISO: Tentativa de inserir usuário duplicado {user_email}: {e}")
                 raise ValueError("Usuário já cadastrado")
             except Exception as db_error:
-                print(f"ERRO ao inserir usuário {user_email}: {db_error}")
                 raise db_error
 
         if not perfil_existente:
@@ -112,7 +110,7 @@ def login_required(f):
                 session.clear()
                 return redirect(url_for('auth.login'))
             except Exception as e:
-                print(f"Erro no _sync_user_profile durante o fallback do @login_required: {e}")
+                pass
 
         perfil_acesso_debug = g.perfil.get('perfil_acesso') if g.perfil else 'NÃO CARREGADO'
         auth_logger.info(f'User authenticated: {g.user_email}, Role: {perfil_acesso_debug}, Path: {request.path}')

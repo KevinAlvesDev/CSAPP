@@ -80,6 +80,7 @@
             <div class="card p-3 text-center">
                 <h6 class="text-secondary">Módulos</h6>
                 <h4 class="mb-0 text-dark">{{ m.modulos_total | default(0) }}</h4>
+                <div class="text-muted small">R$ {{ "%.2f"|format(metrics.total_valor_modulos|float) if metrics.total_valor_modulos else '0.00' }}</div>
             </div>
         </div>
 
@@ -744,7 +745,6 @@
                 try { 
                     new bootstrap.Tab(tabEl).show(); 
                 } catch (e) { 
-                    console.warn("Erro ao tentar restaurar aba ativa:", e); 
                     localStorage.removeItem(tabStorageKey); 
                     if(defaultTabEl) new bootstrap.Tab(defaultTabEl).show(); 
                 } 

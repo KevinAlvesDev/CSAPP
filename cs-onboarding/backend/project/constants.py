@@ -38,10 +38,10 @@ PERFIS_COM_CRIACAO = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
 PERFIS_COM_ANALYTICS = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
 
 NIVEIS_RECEITA = [
-    "Prata (MRR go grupo abaixo de R$699,99)",
-    "Ouro (MRR go grupo entre R$700,00 a R$999,99)",
-    "Platina (MRR go grupo entre R$1.000,00 a R$1999,99)",
-    "Diamante (MRR go grupo acima de R$2000,00)",
+    "Prata (MRR abaixo de R$699,99)",
+    "Ouro (MRR entre R$700,00 a R$999,99)",
+    "Platina (MRR entre R$1.000,00 a R$1999,99)",
+    "Diamante (MRR acima de R$2000,00)",
     "Grandes contas"
 ]
 

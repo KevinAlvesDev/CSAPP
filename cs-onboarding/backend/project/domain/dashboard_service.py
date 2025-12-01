@@ -50,7 +50,6 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
         FROM implantacoes i
         LEFT JOIN perfil_usuario p ON i.usuario_cs = p.usuario
         LEFT JOIN (
-            -- Migrado para checklist_items (estrutura consolidada)
             SELECT
                 ci.implantacao_id,
                 COUNT(DISTINCT ci.id) as total_tarefas,
@@ -123,6 +122,7 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
         'total_valor_finalizadas': 0.0,
         'total_valor_paradas': 0.0,
         'total_valor_novas': 0.0,
+        'total_valor_modulos': 0.0,
     }
 
     agora = datetime.now()
@@ -148,6 +148,11 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
         try:
             if impl.get('tipo') == 'modulo' and status in ['nova', 'andamento', 'parada', 'futura', 'sem_previsao']:
                 metrics['modulos_total'] += 1
+                try:
+                    modulo_valor = float(impl.get('valor_atribuido', 0.0))
+                except (ValueError, TypeError):
+                    modulo_valor = 0.0
+                metrics['total_valor_modulos'] += modulo_valor
         except Exception:
             pass
 

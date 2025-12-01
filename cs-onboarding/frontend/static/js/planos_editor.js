@@ -26,15 +26,11 @@
       }
     },
 
-    /**
-     * Adiciona um item raiz (nível 0)
-     */
     adicionarItemRaiz(dados = null) {
       itemCounter++;
       const itemId = dados?.id || `item_${itemCounter}`;
       const container = document.getElementById('itemsContainer');
       
-      // Se dados existem e têm children, marcar como expandido
       if (dados && dados.children && dados.children.length > 0) {
         dados.expanded = true;
       }
@@ -45,7 +41,6 @@
       const element = container.querySelector(`[data-item-id="${itemId}"]`);
       this.bindItemEvents(element);
       
-      // Carregar filhos se existirem
       if (dados && dados.children && dados.children.length > 0) {
         this.carregarFilhosRecursivo(dados, element);
       }
@@ -54,9 +49,6 @@
       return element;
     },
 
-    /**
-     * Cria HTML para um item (genérico, qualquer nível)
-     */
     criarItemElement(itemId, dados = null, level = 0, parentId = null) {
       const indent = level * 20;
       const title = dados?.title || dados?.nome || '';
@@ -64,7 +56,7 @@
       const obrigatoria = dados?.obrigatoria || false;
       const isExpanded = dados?.expanded !== false;
       const hasChildren = dados?.children && dados.children.length > 0;
-      const showToggle = hasChildren || level >= 0; // Sempre mostrar toggle (pode adicionar filhos)
+      const showToggle = hasChildren || level >= 0;
       
       return `
         <div class="checklist-item-editor" data-item-id="${itemId}" data-level="${level}" data-parent-id="${parentId || ''}" data-expanded="${isExpanded}" style="margin-left: ${indent}px;">
@@ -119,16 +111,12 @@
             </div>
             
             <div class="item-children" data-parent-id="${itemId}">
-              <!-- Filhos serão adicionados aqui -->
             </div>
           </div>
         </div>
       `;
     },
 
-    /**
-     * Adiciona um filho a um item
-     */
     adicionarFilho(parentElement, dados = null) {
       itemCounter++;
       const parentId = parentElement.getAttribute('data-item-id');
@@ -142,13 +130,9 @@
       const element = childrenContainer.querySelector(`[data-item-id="${itemId}"]`);
       this.bindItemEvents(element);
       
-      // Expandir pai se estiver colapsado
       this.expandItem(parentElement);
     },
 
-    /**
-     * Expande/colapsa um item
-     */
     expandItem(element) {
       const body = element.querySelector('.item-body');
       const icon = element.querySelector('.toggle-children i');
@@ -178,9 +162,6 @@
       }
     },
 
-    /**
-     * Vincula eventos a um item
-     */
     bindItemEvents(element) {
       const btnAddChild = element.querySelector('.btn-add-child');
       const btnRemove = element.querySelector('.btn-remove-item');
@@ -199,7 +180,6 @@
         btnToggle.addEventListener('click', () => this.toggleItem(element));
       }
       
-      // Atualizar estado do botão remover quando obrigatória mudar
       if (obrigatoriaInput && btnRemove) {
         obrigatoriaInput.addEventListener('change', () => {
           const isObrigatoria = obrigatoriaInput.checked;
@@ -216,12 +196,7 @@
       }
     },
 
-    /**
-     * Remove um item e seus filhos
-     * Impede exclusão se a tarefa for obrigatória
-     */
     removerItem(element) {
-      // Verificar se a tarefa é obrigatória
       const obrigatoriaInput = element.querySelector('.item-obrigatoria-input');
       const isObrigatoria = obrigatoriaInput && obrigatoriaInput.checked;
       
@@ -236,9 +211,6 @@
       }
     },
 
-    /**
-     * Verifica estado vazio
-     */
     checkEmptyState() {
       const itemsContainer = document.getElementById('itemsContainer');
       const emptyState = document.getElementById('emptyState');
@@ -249,9 +221,6 @@
       }
     },
 
-    /**
-     * Coleta dados da estrutura hierárquica
-     */
     coletarDados() {
       const itemsContainer = document.getElementById('itemsContainer');
       const rootItems = itemsContainer.querySelectorAll('[data-item-id][data-level="0"]');
@@ -267,9 +236,6 @@
       return { items };
     },
 
-    /**
-     * Coleta dados de um item e seus filhos recursivamente
-     */
     coletarItemRecursivo(element) {
       const title = element.querySelector('.item-title-input').value.trim();
       const comment = element.querySelector('.item-comment-input').value.trim();
@@ -286,10 +252,10 @@
         children: []
       };
       
-      // Coletar filhos
       const childrenContainer = element.querySelector('.item-children');
       if (childrenContainer) {
-        const children = childrenContainer.querySelectorAll('[data-item-id]');
+        // Modificado para pegar apenas filhos diretos e evitar duplicação
+        const children = Array.from(childrenContainer.children).filter(el => el.hasAttribute('data-item-id'));
         children.forEach(childEl => {
           const child = this.coletarItemRecursivo(childEl);
           if (child.title) {
@@ -301,16 +267,12 @@
       return item;
     },
 
-    /**
-     * Valida dados da estrutura
-     */
     validarDados(estrutura) {
       if (!estrutura.items || estrutura.items.length === 0) {
         alert('Adicione pelo menos um item ao plano.');
         return false;
       }
       
-      // Validar recursivamente
       const validarItem = (item) => {
         if (!item.title || !item.title.trim()) {
           alert('Todos os itens devem ter um título.');
@@ -337,29 +299,20 @@
       return true;
     },
 
-    /**
-     * Carrega plano (suporta formato antigo e novo)
-     */
     carregarPlano(planoData) {
       if (planoData.items && Array.isArray(planoData.items)) {
-        // Formato novo (checklist_items)
         planoData.items.forEach(item => {
           this.adicionarItemRaiz(item);
         });
       } else if (planoData.fases && Array.isArray(planoData.fases)) {
-        // Formato antigo (fases/grupos/tarefas) - converter
         this.carregarPlanoLegado(planoData);
       } else if (planoData.estrutura && planoData.estrutura.items) {
-        // Formato com estrutura.items
         planoData.estrutura.items.forEach(item => {
           this.adicionarItemRaiz(item);
         });
       }
     },
 
-    /**
-     * Carrega plano em formato legado (fases/grupos/tarefas)
-     */
     carregarPlanoLegado(planoData) {
       planoData.fases.forEach((fase, faseIndex) => {
         const faseItem = {
@@ -370,7 +323,6 @@
           children: []
         };
         
-        // Criar estrutura de filhos para grupos
         if (fase.grupos && fase.grupos.length > 0) {
           fase.grupos.forEach(grupo => {
             const grupoItem = {
@@ -380,7 +332,6 @@
               children: []
             };
             
-            // Adicionar tarefas como filhos do grupo
             if (grupo.tarefas && grupo.tarefas.length > 0) {
               grupo.tarefas.forEach(tarefa => {
                 grupoItem.children.push({
@@ -395,14 +346,10 @@
           });
         }
         
-        // Adicionar fase com toda a estrutura
         this.adicionarItemRaiz(faseItem);
       });
     },
 
-    /**
-     * Carrega filhos recursivamente
-     */
     carregarFilhosRecursivo(itemData, parentElement) {
       if (!itemData.children || itemData.children.length === 0) {
         return;
@@ -411,7 +358,6 @@
       itemData.children.forEach(childData => {
         this.adicionarFilho(parentElement, childData);
         
-        // Encontrar elemento recém-criado e carregar seus filhos
         const childrenContainer = parentElement.querySelector('.item-children');
         if (childrenContainer) {
           const lastChild = childrenContainer.querySelector('[data-item-id]:last-child');
@@ -422,9 +368,6 @@
       });
     },
 
-    /**
-     * Escapa HTML para evitar XSS
-     */
     escapeHtml(text) {
       if (!text) return '';
       const div = document.createElement('div');
@@ -432,15 +375,10 @@
       return div.innerHTML;
     },
 
-    /**
-     * Manipula submit do formulário
-     */
     handleSubmit(e) {
       e.preventDefault();
 
       const form = e.target;
-      
-      // Validar campos obrigatórios do formulário
       const nome = form.querySelector('#nome');
       const diasDuracao = form.querySelector('#dias_duracao');
       
@@ -462,7 +400,6 @@
         return;
       }
 
-      // Adicionar estrutura como campo hidden
       let estruturaInput = form.querySelector('input[name="estrutura"]');
       if (!estruturaInput) {
         estruturaInput = document.createElement('input');
@@ -472,15 +409,12 @@
       }
       estruturaInput.value = JSON.stringify(estrutura);
 
-      // Submeter o formulário
       form.submit();
     }
   };
 
-  // Expor globalmente
   window.PlanoEditor = PlanoEditor;
 
-  // Inicializar quando o DOM estiver pronto
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => PlanoEditor.init());
   } else {

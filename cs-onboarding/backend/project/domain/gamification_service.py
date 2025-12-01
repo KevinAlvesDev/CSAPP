@@ -62,7 +62,7 @@ def _get_all_gamification_rules_grouped():
 
 
 def _get_gamification_automatic_data_bulk(mes, ano, primeiro_dia_str, fim_ultimo_dia_str, target_cs_email=None):
-    """(NOVA) Busca todos os dados automáticos de todos os usuários de uma vez."""
+    """Busca todos os dados automáticos de todos os usuários de uma vez."""
 
     sql_finalizadas = """
         SELECT usuario_cs, data_criacao, data_finalizacao FROM implantacoes
@@ -144,7 +144,6 @@ def _get_gamification_automatic_data_bulk(mes, ano, primeiro_dia_str, fim_ultimo
     impl_iniciadas_raw = impl_iniciadas_raw if impl_iniciadas_raw is not None else []
     iniciadas_map = {row['usuario_cs']: row['total'] for row in impl_iniciadas_raw if isinstance(row, dict)}
 
-    # Migrado para checklist_items (estrutura consolidada)
     sql_tarefas = """
         SELECT i.usuario_cs, COALESCE(ci.tag, 'Ação interna') as tag, COUNT(DISTINCT ci.id) as total
         FROM checklist_items ci
@@ -466,7 +465,7 @@ def _calculate_user_gamification_score(
     dados_tarefas
 ):
     """
-    (REFATORADO) Esta função APENAS calcula. Não faz NENHUMA query ao DB.
+    Esta função APENAS calcula. Não faz NENHUMA query ao DB.
     Recebe os dados pré-buscados.
     """
 
@@ -566,7 +565,7 @@ def _calculate_user_gamification_score(
 
 def get_gamification_report_data(mes, ano, target_cs_email=None, all_cs_users_list=None):
     """
-    (NOVA) Função principal para buscar e calcular o relatório de gamificação.
+    Função principal para buscar e calcular o relatório de gamificação.
     Resolve o problema N+1 ao buscar todos os dados em massa.
     """
     from flask import current_app
