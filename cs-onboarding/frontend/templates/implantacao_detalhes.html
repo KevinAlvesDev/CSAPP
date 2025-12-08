@@ -276,7 +276,18 @@
 
     .progress-thick .progress-bar {
         background: var(--primary-gradient);
+        display: block;
+        height: 100%;
     }
+
+    /* Ensure readability even outside .progress-thick */
+    #progress-total-bar,
+    #checklist-global-progress-bar {
+        /* keep default bootstrap/progress styles */
+    }
+
+    /* No checklist, mostramos o percentual fora da barra à direita; esconder texto interno para evitar corte/duplicidade */
+    /* Only remove inner number from checklist bar via template; keep styles intact */
 
     /* Timeline */
     .timeline-list {
@@ -365,6 +376,29 @@
         transition: background-color 0.2s ease;
         position: relative;
         z-index: 1;
+    }
+
+    /* Visual de níveis: borda à esquerda e leve fundo para orientar hierarquia */
+    .checklist-item-header.level-0 { border-left: 0; }
+    .checklist-item-header.level-1 { border-left: 3px solid #60a5fa; background: rgba(96,165,250,0.06); }
+    .checklist-item-header.level-2 { border-left: 3px solid #22c55e; background: rgba(34,197,94,0.06); }
+    .checklist-item-header.level-3, .checklist-item-header.level-4, .checklist-item-header.level-5 { border-left: 3px solid #a855f7; background: rgba(168,85,247,0.06); }
+
+    .checklist-item-children { padding-left: 0.75rem; }
+    .checklist-item-header > .d-flex { flex-wrap: nowrap; align-items: flex-start; }
+    .checklist-item-title { min-width: 0; white-space: normal; word-break: break-word; }
+    .col-qtd, .col-tag, .col-responsavel, .col-prev-orig, .col-prev-atual, .col-status, .col-comment, .col-delete { flex: 0 0 auto; }
+    @media (max-width: 768px) {
+        .checklist-item-header > .d-flex { flex-wrap: wrap; }
+        .col-prev-orig, .col-prev-atual { width: 100% !important; }
+    }
+
+    .badge-resp-ellipsis {
+        display: inline-block;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
     
     .checklist-item-header .hover-bg:hover {
@@ -994,6 +1028,7 @@
                         data-bs-toggle="modal" 
                         data-bs-target="#modalDetalhesEmpresa"
                         data-id="{{ implantacao.id }}"
+                        data-id-favorecido="{{ implantacao.id_favorecido | default('') }}"
                         data-cargo="{{ implantacao.cargo_responsavel | default('') }}"
                         data-nivel-receita="{{ implantacao.nivel_receita | default('') }}"
                         data-seguimento="{{ implantacao.seguimento | default('') }}"
@@ -1104,6 +1139,11 @@
                                 <i class="bi bi-clock-history me-1"></i>Linha do Tempo
                             </button>
                         </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="comments-tab" data-bs-toggle="tab" data-bs-target="#comments-content" type="button" role="tab">
+                                <i class="bi bi-chat-square-text me-1"></i>Comentários
+                            </button>
+                        </li>
                     </ul>
                 </div>
                 
@@ -1113,7 +1153,7 @@
                         <div class="custom-card-body plano-sucesso-container" id="plano-hierarquia">
                             {% if checklist_tree and checklist_tree|length > 0 %}
                             <!-- Novo Checklist Hierárquico -->
-                            <div id="checklist-container" data-implantacao-id="{{ implantacao.id }}">
+                            <div id="checklist-container" data-implantacao-id="{{ implantacao.id }}" data-previsao-termino="{{ implantacao.data_previsao_termino or '' }}">
                                 <!-- Progresso Global -->
                                 <div class="checklist-global-progress mb-4">
                                     <div class="d-flex justify-content-between align-items-center mb-2">
@@ -1121,11 +1161,25 @@
                                         <span id="checklist-global-progress-percent" class="fw-bold text-primary">0%</span>
                                     </div>
                                     <div class="progress-thick">
-                                        <div id="checklist-global-progress-bar" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                                        <div id="checklist-global-progress-bar" class="progress-bar" role="progressbar" style="width: 0%; transition: width 0.25s ease-in-out;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
                                     </div>
                                 </div>
                                 
                                 <!-- Checklist Tree será renderizado via JavaScript -->
+                                <div class="d-flex align-items-center gap-2 px-3 py-1 text-muted small" style="border-bottom: 1px solid rgba(0,0,0,0.06);">
+                                    <span class="col-expand" style="width:24px"></span>
+                                    <span class="col-checkbox" style="width:24px"></span>
+                                    <span class="col-icon" style="width:20px"></span>
+                                    <span class="col-title flex-grow-1">Tarefa</span>
+                                    <span class="col-qtd" style="width:90px">QTD</span>
+                                    <span class="col-tag" style="width:140px">Tag</span>
+                                    <span class="col-responsavel" style="width:220px">Responsável</span>
+                                    <span class="col-prev-orig" style="width:160px">Prev. orig</span>
+                                    <span class="col-prev-atual" style="width:160px">Prev</span>
+                                    <span class="col-status" style="width:120px">Status</span>
+                                    <span class="col-comment" style="width:28px"></span>
+                                    <span class="col-delete" style="width:28px"></span>
+                                </div>
                                 <div id="checklist-tree-root"></div>
                             </div>
                             {% elif hierarquia and hierarquia.fases %}
@@ -1327,10 +1381,46 @@
                                 </div>
                                 <p class="mb-0 text-secondary">{{ log.detalhes | safe | replace('\n', '<br>') }}
                                 </p>
+                                <div class="mt-2 d-flex gap-2">
+                                    {% if log.tipo_evento == 'novo_comentario' and log.related_item_id %}
+                                    <button class="btn btn-sm btn-outline-primary timeline-action-comments" data-item-id="{{ log.related_item_id }}">
+                                        Ver comentários
+                                    </button>
+                                    {% endif %}
+                                    {% if log.related_item_id and log.tipo_evento != 'novo_comentario' %}
+                                    <button class="btn btn-sm btn-outline-secondary timeline-action-task" data-item-id="{{ log.related_item_id }}">
+                                        Ver tarefa
+                                    </button>
+                                    {% endif %}
+                                </div>
                             </div>
                         </li>
                         {% endfor %}
                     </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- Tab: Comentários -->
+                    <div class="tab-pane fade" id="comments-content" role="tabpanel">
+                        <div class="custom-card-body">
+                            <div id="comments-list-container" class="d-flex flex-column gap-3" style="max-height: calc(100vh - 350px); overflow-y: auto;">
+                                <!-- Comments will be loaded here -->
+                                <div class="text-center py-5 text-muted" id="comments-loading">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Carregando...</span>
+                                    </div>
+                                    <p class="mt-2 small">Carregando comentários...</p>
+                                </div>
+                                <div class="text-center py-5 text-muted d-none" id="comments-empty">
+                                    <i class="bi bi-chat-square text-secondary fs-1"></i>
+                                    <p class="mt-2">Nenhum comentário encontrado nesta implantação.</p>
+                                </div>
+                            </div>
+                            <div class="text-center mt-3 d-none" id="comments-pagination">
+                                <button class="btn btn-sm btn-outline-primary" id="btn-load-more-comments">
+                                    Carregar mais
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1352,11 +1442,12 @@
             </button>
             <hr>
             <button class="btn btn-outline-dark" 
-                    data-bs-toggle="modal" 
-                    data-bs-target="#modalDetalhesEmpresa"
-                    data-id="{{ implantacao.id }}"
-                    data-cargo="{{ implantacao.cargo_responsavel | default('') }}"
-                    data-nivel-receita="{{ implantacao.nivel_receita | default('') }}"
+                            data-bs-toggle="modal" 
+                            data-bs-target="#modalDetalhesEmpresa"
+                            data-id="{{ implantacao.id }}"
+                            data-id-favorecido="{{ implantacao.id_favorecido | default('') }}"
+                            data-cargo="{{ implantacao.cargo_responsavel | default('') }}"
+                            data-nivel-receita="{{ implantacao.nivel_receita | default('') }}"
                     data-seguimento="{{ implantacao.seguimento | default('') }}"
                     data-tipos-planos="{{ implantacao.tipos_planos | default('') }}"
                     data-sistema-anterior="{{ implantacao.sistema_anterior | default('') }}"
@@ -1403,295 +1494,7 @@
     </div>
 </div>
 
-<div class="modal fade" id="modalDetalhesEmpresa" tabindex="-1">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header header-bg">
-                <h5 class="modal-title">Detalhes da Empresa</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form action="{{ url_for('actions.atualizar_detalhes_empresa') }}" method="POST">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
-                <input type="hidden" name="redirect_to" value="detalhes">
-                <div class="modal-body">
-                    <!-- Seção: Responsável -->
-                    <h6 class="fw-bold text-primary mb-3"><i class="bi bi-person-circle me-2"></i>Responsável</h6>
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-6">
-                            <label class="form-label">Nome do Responsável</label>
-                            <input type="text" class="form-control" name="responsavel_cliente"
-                                value="{{ implantacao.responsavel_cliente or '' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Cargo</label>
-                            <select class="form-select tom-select-single" id="modal-cargo_responsavel" name="cargo_responsavel" data-value="{{ implantacao.cargo_responsavel or '' }}">
-                                <option value="">Selecione...</option>
-                                {% if cargos_responsavel %}
-                                    {% for cargo in cargos_responsavel %}
-                                        <option value="{{ cargo }}" {% if implantacao.cargo_responsavel == cargo %}selected{% endif %}>{{ cargo }}</option>
-                                    {% endfor %}
-                                {% endif %}
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Email do Responsável</label>
-                            <input type="email" class="form-control" name="email_responsavel"
-                                value="{{ implantacao.email_responsavel or '' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Telefone</label>
-                            <input type="tel" 
-                                   class="form-control" 
-                                   id="modal-telefone_responsavel" 
-                                   name="telefone_responsavel"
-                                   placeholder="(XX) XXXXX-XXXX" 
-                                   maxlength="15" 
-                                   pattern="^\(\d{2}\)\s\d{4,5}-\d{4}$"
-                                   value="{{ implantacao.telefone_responsavel or '' }}"
-                                   oninput="formatarTelefone(this)"
-                                   onblur="validarTelefoneCompleto(this)">
-                            <div class="invalid-feedback">Telefone inválido. Use o formato (XX) XXXXX-XXXX ou (XX) XXXX-XXXX</div>
-                        </div>
-                    </div>
 
-                    <!-- Seção: Datas -->
-                    <h6 class="fw-bold text-primary mb-3"><i class="bi bi-calendar-event me-2"></i>Datas</h6>
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-4">
-                            <label class="form-label">Data Início Efetivo</label>
-                            <input type="date" class="form-control no-datepicker" name="data_inicio_efetivo"
-                                value="{{ implantacao.data_inicio_efetivo or '' }}">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Data Início Produção</label>
-                            <input type="date" class="form-control no-datepicker" name="data_inicio_producao"
-                                value="{{ implantacao.data_inicio_producao or '' }}">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Data Final Implantação</label>
-                            <input type="date" class="form-control no-datepicker" name="data_final_implantacao"
-                                value="{{ implantacao.data_final_implantacao or '' }}">
-                        </div>
-                    </div>
-
-                    <!-- Seção: Informações Comerciais -->
-                    <h6 class="fw-bold text-primary mb-3"><i class="bi bi-briefcase me-2"></i>Informações Comerciais</h6>
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-2">
-                            <label class="form-label">ID Favorecido</label>
-                            <input type="text" class="form-control" name="id_favorecido"
-                                value="{{ implantacao.id_favorecido or '' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Nível de Receita</label>
-                            <select class="form-select tom-select-single" id="modal-nivel_receita" name="nivel_receita" data-value="{{ implantacao.nivel_receita or '' }}">
-                                <option value="">Selecione...</option>
-                                {% if NIVEIS_RECEITA %}
-                                    {% for nivel in NIVEIS_RECEITA %}
-                                        <option value="{{ nivel }}" {% if implantacao.nivel_receita == nivel %}selected{% endif %}>{{ nivel }}</option>
-                                    {% endfor %}
-                                {% endif %}
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Valor Atribuído (R$)</label>
-                            <input type="number" step="0.01" min="0" class="form-control" name="valor_atribuido" id="valor_atribuido_edit"
-                                value="{{ implantacao.valor_atribuido or '' }}" placeholder="0.00">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Chave OAMD</label>
-                            <input type="text" class="form-control" name="chave_oamd"
-                                value="{{ implantacao.chave_oamd or '' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Tela de Apoio (Link)</label>
-                            <input type="url" class="form-control" name="tela_apoio_link"
-                                value="{{ implantacao.tela_apoio_link or '' }}" placeholder="https://...">
-                        </div>
-                    </div>
-
-                    <!-- Seção: Perfil do Negócio -->
-                    <h6 class="fw-bold text-primary mb-3"><i class="bi bi-building me-2"></i>Perfil do Negócio</h6>
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-4">
-                            <label class="form-label">Segmento</label>
-                            <select class="form-select tom-select-multi" id="modal-seguimento" name="seguimento" multiple data-value="{{ implantacao.seguimento or '' }}">
-                                <option value="">Selecione...</option>
-                                {% if SEGUIMENTOS_LIST %}
-                                    {% for s in SEGUIMENTOS_LIST %}
-                                        <option value="{{ s }}" {% if implantacao.seguimento and s in implantacao.seguimento.split(',') %}selected{% endif %}>{{ s }}</option>
-                                    {% endfor %}
-                                {% endif %}
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Tipos de Planos</label>
-                            <select class="form-select tom-select-multi" id="modal-tipos_planos" name="tipos_planos" multiple data-value="{{ implantacao.tipos_planos or '' }}">
-                                <option value="">Selecione...</option>
-                                {% if TIPOS_PLANOS %}
-                                    {% for tp in TIPOS_PLANOS %}
-                                        <option value="{{ tp }}" {% if implantacao.tipos_planos and tp in implantacao.tipos_planos.split(',') %}selected{% endif %}>{{ tp }}</option>
-                                    {% endfor %}
-                                {% endif %}
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Alunos Ativos</label>
-                            <input type="number" class="form-control" name="alunos_ativos"
-                                value="{{ implantacao.alunos_ativos or 0 }}" min="0" oninput="if(this.value<0)this.value=0">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Sistema Anterior</label>
-                            <select class="form-select tom-select-single" id="modal-sistema_anterior" name="sistema_anterior" data-value="{{ implantacao.sistema_anterior or '' }}">
-                                <option value="">Selecione...</option>
-                                {% if SISTEMAS_ANTERIORES %}
-                                    {% for sa in SISTEMAS_ANTERIORES %}
-                                        <option value="{{ sa }}" {% if implantacao.sistema_anterior == sa %}selected{% endif %}>{{ sa }}</option>
-                                    {% endfor %}
-                                {% endif %}
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Recorrência</label>
-                            <select class="form-select tom-select-single" id="modal-recorrencia_usa" name="recorrencia_usa" data-value="{{ implantacao.recorrencia_usa or '' }}">
-                                <option value="">Selecione...</option>
-                                {% if RECORRENCIA_USADA %}
-                                    {% for ru in RECORRENCIA_USADA %}
-                                        <option value="{{ ru }}" {% if implantacao.recorrencia_usa == ru %}selected{% endif %}>{{ ru }}</option>
-                                    {% endfor %}
-                                {% endif %}
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- Seção: Recursos -->
-                    <h6 class="fw-bold text-primary mb-3"><i class="bi bi-gear me-2"></i>Recursos</h6>
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-2">
-                            <label class="form-label">Diária</label>
-                            <select class="form-select" name="diaria">
-                                <option value="Não definido" {% if implantacao.diaria == 'Não definido' %}selected{% endif %}>Não definido</option>
-                                <option value="Sim" {% if implantacao.diaria == 'Sim' %}selected{% endif %}>Sim</option>
-                                <option value="Não" {% if implantacao.diaria == 'Não' %}selected{% endif %}>Não</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">Freepass</label>
-                            <select class="form-select" name="freepass">
-                                <option value="Não definido" {% if implantacao.freepass == 'Não definido' %}selected{% endif %}>Não definido</option>
-                                <option value="Sim" {% if implantacao.freepass == 'Sim' %}selected{% endif %}>Sim</option>
-                                <option value="Não" {% if implantacao.freepass == 'Não' %}selected{% endif %}>Não</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">Importação</label>
-                            <select class="form-select" name="importacao">
-                                <option value="Não definido" {% if implantacao.importacao == 'Não definido' %}selected{% endif %}>Não definido</option>
-                                <option value="Sim" {% if implantacao.importacao == 'Sim' %}selected{% endif %}>Sim</option>
-                                <option value="Não" {% if implantacao.importacao == 'Não' %}selected{% endif %}>Não</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">Boleto</label>
-                            <select class="form-select" name="boleto">
-                                <option value="Não definido" {% if implantacao.boleto == 'Não definido' %}selected{% endif %}>Não definido</option>
-                                <option value="Sim" {% if implantacao.boleto == 'Sim' %}selected{% endif %}>Sim</option>
-                                <option value="Não" {% if implantacao.boleto == 'Não' %}selected{% endif %}>Não</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">Nota Fiscal</label>
-                            <select class="form-select" name="nota_fiscal">
-                                <option value="Não definido" {% if implantacao.nota_fiscal == 'Não definido' %}selected{% endif %}>Não definido</option>
-                                <option value="Sim" {% if implantacao.nota_fiscal == 'Sim' %}selected{% endif %}>Sim</option>
-                                <option value="Não" {% if implantacao.nota_fiscal == 'Não' %}selected{% endif %}>Não</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">Alunos Ativos</label>
-                            <input type="number" class="form-control" name="alunos_ativos"
-                                value="{{ implantacao.alunos_ativos or 0 }}">
-                        </div>
-                    </div>
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-2">
-                            <label class="form-label">Catraca</label>
-                            <select class="form-select" id="modal-catraca" name="catraca">
-                                {% if SIM_NAO_OPTIONS %}
-                                    {% for op in SIM_NAO_OPTIONS %}
-                                        <option value="{{ op }}" {% if implantacao.catraca == op %}selected{% endif %}>{{ op }}</option>
-                                    {% endfor %}
-                                {% else %}
-                                    <option value="Não definido" {% if implantacao.catraca == 'Não definido' %}selected{% endif %}>Não definido</option>
-                                    <option value="Sim" {% if implantacao.catraca == 'Sim' %}selected{% endif %}>Sim</option>
-                                    <option value="Não" {% if implantacao.catraca == 'Não' %}selected{% endif %}>Não</option>
-                                {% endif %}
-                            </select>
-                        </div>
-                        <div class="col-md-2" id="row-catraca-modelo" style="display: {% if implantacao.catraca == 'Sim' %}block{% else %}none{% endif %};">
-                            <label class="form-label">Modelo da Catraca</label>
-                            <input type="text" class="form-control" id="modal-modelo_catraca" name="modelo_catraca"
-                                value="{{ implantacao.modelo_catraca or '' }}" placeholder="Informe o modelo">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">Facial</label>
-                            <select class="form-select" id="modal-facial" name="facial">
-                                {% if SIM_NAO_OPTIONS %}
-                                    {% for op in SIM_NAO_OPTIONS %}
-                                        <option value="{{ op }}" {% if implantacao.facial == op %}selected{% endif %}>{{ op }}</option>
-                                    {% endfor %}
-                                {% else %}
-                                    <option value="Não definido" {% if implantacao.facial == 'Não definido' %}selected{% endif %}>Não definido</option>
-                                    <option value="Sim" {% if implantacao.facial == 'Sim' %}selected{% endif %}>Sim</option>
-                                    <option value="Não" {% if implantacao.facial == 'Não' %}selected{% endif %}>Não</option>
-                                {% endif %}
-                            </select>
-                        </div>
-                        <div class="col-md-2" id="row-facial-modelo" style="display: {% if implantacao.facial == 'Sim' %}block{% else %}none{% endif %};">
-                            <label class="form-label">Modelo Facial</label>
-                            <input type="text" class="form-control" id="modal-modelo_facial" name="modelo_facial"
-                                value="{{ implantacao.modelo_facial or '' }}" placeholder="Informe o modelo">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">WellHub</label>
-                            <select class="form-select" id="modal-wellhub" name="wellhub">
-                                {% if SIM_NAO_OPTIONS %}
-                                    {% for op in SIM_NAO_OPTIONS %}
-                                        <option value="{{ op }}" {% if implantacao.wellhub == op %}selected{% endif %}>{{ op }}</option>
-                                    {% endfor %}
-                                {% else %}
-                                    <option value="Não definido" {% if implantacao.wellhub == 'Não definido' %}selected{% endif %}>Não definido</option>
-                                    <option value="Sim" {% if implantacao.wellhub == 'Sim' %}selected{% endif %}>Sim</option>
-                                    <option value="Não" {% if implantacao.wellhub == 'Não' %}selected{% endif %}>Não</option>
-                                {% endif %}
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">TotalPass</label>
-                            <select class="form-select" id="modal-totalpass" name="totalpass">
-                                {% if SIM_NAO_OPTIONS %}
-                                    {% for op in SIM_NAO_OPTIONS %}
-                                        <option value="{{ op }}" {% if implantacao.totalpass == op %}selected{% endif %}>{{ op }}</option>
-                                    {% endfor %}
-                                {% else %}
-                                    <option value="Não definido" {% if implantacao.totalpass == 'Não definido' %}selected{% endif %}>Não definido</option>
-                                    <option value="Sim" {% if implantacao.totalpass == 'Sim' %}selected{% endif %}>Sim</option>
-                                    <option value="Não" {% if implantacao.totalpass == 'Não' %}selected{% endif %}>Não</option>
-                                {% endif %}
-                            </select>
-                        </div>
-                    </div>
-
-                </div>
-                <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Salvar Alterações</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 
 <!-- Modal Finalizar -->
 <div class="modal fade" id="modalFinalizar" tabindex="-1">
@@ -1986,3 +1789,4 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 {% endblock %}
+    /* cabeçalho e linhas continuam com flex; larguras são controladas pelos wrappers de coluna */
