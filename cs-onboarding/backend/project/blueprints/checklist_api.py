@@ -726,7 +726,7 @@ def update_responsavel(item_id):
             return jsonify({'ok': False, 'error': 'Erro interno ao atualizar responsável'}), 500
 
 
-@checklist_bp.route('/item/<int:item_id>/prazos', methods=['PATCH'])
+@checklist_bp.route('/item/<int:item_id>/prazos', methods=['PATCH', 'POST'])
 @login_required
 @validate_api_origin
 @limiter.limit("200 per minute", key_func=lambda: g.user_email or get_remote_address())
