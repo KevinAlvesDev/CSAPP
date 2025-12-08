@@ -7,7 +7,6 @@ from flask import Blueprint, request, jsonify, g
 from ..blueprints.auth import login_required
 from ..domain.checklist_service import (
     toggle_item_status,
-    update_item_comment,
     delete_checklist_item,
     get_checklist_tree,
     build_nested_tree,
@@ -20,6 +19,18 @@ from ..core.extensions import limiter
 from ..security.api_security import validate_api_origin
 
 checklist_bp = Blueprint('checklist', __name__, url_prefix='/api/checklist')
+
+@checklist_bp.route('/users', methods=['GET'])
+@login_required
+@validate_api_origin
+def list_users():
+    from ..db import query_db
+    try:
+        rows = query_db("SELECT usuario, COALESCE(nome, usuario) as nome FROM perfil_usuario ORDER BY nome ASC") or []
+        return jsonify({'ok': True, 'users': rows})
+    except Exception as e:
+        api_logger.error(f"Erro ao listar usuários: {e}", exc_info=True)
+        return jsonify({'ok': False, 'error': 'Erro ao listar usuários'}), 500
 
 
 @checklist_bp.before_request
@@ -201,6 +212,82 @@ def add_comment(item_id):
     except Exception as e:
         api_logger.error(f"Erro ao adicionar comentário ao item {item_id}: {e}", exc_info=True)
         return jsonify({'ok': False, 'error': 'Erro interno ao adicionar comentário'}), 500
+
+
+@checklist_bp.route('/implantacao/<int:impl_id>/comments', methods=['GET'])
+@login_required
+@validate_api_origin
+def get_implantacao_comments(impl_id):
+    """
+    Retorna todos os comentários das tarefas de uma implantação.
+    Ordenados cronologicamente (mais antigo para mais recente).
+    Paginação via query params page/per_page.
+    """
+    from ..db import query_db
+    
+    try:
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('per_page', 20))
+        if page < 1: page = 1
+        if per_page < 1: per_page = 20
+        if per_page > 100: per_page = 100
+    except ValueError:
+        page = 1
+        per_page = 20
+        
+    offset = (page - 1) * per_page
+    
+    try:
+        # Query total count
+        count_query = """
+            SELECT COUNT(*) as total
+            FROM comentarios_h c
+            JOIN checklist_items ci ON c.checklist_item_id = ci.id
+            WHERE ci.implantacao_id = %s
+        """
+        total_res = query_db(count_query, (impl_id,), one=True)
+        total = total_res['total'] if total_res else 0
+        
+        # Query comments
+        # Inclui nome da tarefa
+        comments_query = """
+            SELECT 
+                c.id, c.texto, c.usuario_cs, c.data_criacao, c.visibilidade,
+                ci.id as item_id, ci.title as item_title,
+                COALESCE(p.nome, c.usuario_cs) as usuario_nome
+            FROM comentarios_h c
+            JOIN checklist_items ci ON c.checklist_item_id = ci.id
+            LEFT JOIN perfil_usuario p ON c.usuario_cs = p.usuario
+            WHERE ci.implantacao_id = %s
+            ORDER BY c.data_criacao ASC
+            LIMIT %s OFFSET %s
+        """
+        
+        comments = query_db(comments_query, (impl_id, per_page, offset))
+        
+        # Format dates
+        formatted_comments = []
+        for c in comments:
+            c_dict = dict(c)
+            if c_dict.get('data_criacao'):
+                 dt = c_dict['data_criacao']
+                 c_dict['data_criacao'] = dt.isoformat() if hasattr(dt, 'isoformat') else str(dt)
+            formatted_comments.append(c_dict)
+            
+        return jsonify({
+            'ok': True,
+            'comments': formatted_comments,
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': total,
+                'total_pages': (total + per_page - 1) // per_page
+            }
+        })
+
+    except Exception as e:
+        api_logger.error(f"Erro ao buscar comentários da implantação {impl_id}: {e}", exc_info=True)
+        return jsonify({'ok': False, 'error': 'Erro interno ao buscar comentários'}), 500
 
 
 @checklist_bp.route('/comments/<int:item_id>', methods=['GET'])
@@ -585,3 +672,171 @@ def get_item_progress(item_id):
     except Exception as e:
         api_logger.error(f"Erro ao buscar progresso do item {item_id}: {e}", exc_info=True)
         return jsonify({'ok': False, 'error': 'Erro interno ao buscar progresso'}), 500
+@checklist_bp.route('/item/<int:item_id>/responsavel', methods=['PATCH'])
+@login_required
+@validate_api_origin
+@limiter.limit("200 per minute", key_func=lambda: g.user_email or get_remote_address())
+def update_responsavel(item_id):
+    from ..db import db_transaction_with_lock
+    try:
+        item_id = validate_integer(item_id, min_value=1)
+    except ValidationError as e:
+        return jsonify({'ok': False, 'error': f'ID inválido: {str(e)}'}), 400
+    if not request.is_json:
+        return jsonify({'ok': False, 'error': 'Content-Type deve ser application/json'}), 400
+    data = request.get_json() or {}
+    novo_resp = (data.get('responsavel') or '').strip()
+    if not novo_resp:
+        return jsonify({'ok': False, 'error': 'Responsável é obrigatório'}), 400
+    usuario_email = g.user_email if hasattr(g, 'user_email') else None
+    from datetime import datetime
+    with db_transaction_with_lock() as (conn, cursor, db_type):
+        try:
+            q = "SELECT responsavel FROM checklist_items WHERE id = %s"
+            if db_type == 'sqlite': q = q.replace('%s', '?')
+            cursor.execute(q, (item_id,))
+            row = cursor.fetchone()
+            if not row:
+                return jsonify({'ok': False, 'error': 'Item não encontrado'}), 404
+            old_resp = row[0] if not hasattr(row, 'keys') else row['responsavel']
+            uq = "UPDATE checklist_items SET responsavel = %s, updated_at = %s WHERE id = %s"
+            if db_type == 'sqlite': uq = uq.replace('%s', '?')
+            cursor.execute(uq, (novo_resp, datetime.now(), item_id))
+            try:
+                ih = "INSERT INTO checklist_responsavel_history (checklist_item_id, old_responsavel, new_responsavel, changed_by) VALUES (%s, %s, %s, %s)"
+                if db_type == 'sqlite': ih = ih.replace('%s', '?')
+                cursor.execute(ih, (item_id, old_resp, novo_resp, usuario_email))
+            except Exception:
+                pass
+            try:
+                from ..db import logar_timeline
+                # Recuperar impl_id
+                qi = "SELECT implantacao_id FROM checklist_items WHERE id = %s"
+                if db_type == 'sqlite': qi = qi.replace('%s', '?')
+                cursor.execute(qi, (item_id,))
+                irow = cursor.fetchone()
+                impl_id = irow[0] if not hasattr(irow, 'keys') else irow['implantacao_id']
+                detalhe = f"Item {item_id} responsavel_alterado: {old_resp or ''} -> {novo_resp}"
+                logar_timeline(impl_id, usuario_email, 'responsavel_alterado', detalhe)
+            except Exception:
+                pass
+            return jsonify({'ok': True, 'item_id': item_id, 'responsavel': novo_resp})
+        except Exception as e:
+            api_logger.error(f"Erro ao atualizar responsável do item {item_id}: {e}", exc_info=True)
+            return jsonify({'ok': False, 'error': 'Erro interno ao atualizar responsável'}), 500
+
+
+@checklist_bp.route('/item/<int:item_id>/prazos', methods=['PATCH'])
+@login_required
+@validate_api_origin
+@limiter.limit("200 per minute", key_func=lambda: g.user_email or get_remote_address())
+def update_prazos(item_id):
+    from ..db import db_transaction_with_lock
+    try:
+        item_id = validate_integer(item_id, min_value=1)
+    except ValidationError as e:
+        return jsonify({'ok': False, 'error': f'ID inválido: {str(e)}'}), 400
+    if not request.is_json:
+        return jsonify({'ok': False, 'error': 'Content-Type deve ser application/json'}), 400
+    data = request.get_json() or {}
+    nova_prev = (data.get('nova_previsao') or '').strip()
+    if not nova_prev:
+        return jsonify({'ok': False, 'error': 'Nova Previsão é obrigatória'}), 400
+    from datetime import datetime
+    try:
+        nova_dt = datetime.fromisoformat(nova_prev)
+    except Exception:
+        return jsonify({'ok': False, 'error': 'Formato de data inválido (ISO8601)'}), 400
+    usuario_email = g.user_email if hasattr(g, 'user_email') else None
+    with db_transaction_with_lock() as (conn, cursor, db_type):
+        try:
+            q = "SELECT implantacao_id, previsao_original FROM checklist_items WHERE id = %s"
+            if db_type == 'sqlite': q = q.replace('%s', '?')
+            cursor.execute(q, (item_id,))
+            row = cursor.fetchone()
+            if not row:
+                return jsonify({'ok': False, 'error': 'Item não encontrado'}), 404
+            prev_orig = None
+            if hasattr(row, 'keys'):
+                prev_orig = row['previsao_original']
+            else:
+                prev_orig = row[1]
+            uq = "UPDATE checklist_items SET nova_previsao = %s, updated_at = %s WHERE id = %s"
+            if db_type == 'sqlite': uq = uq.replace('%s', '?')
+            cursor.execute(uq, (nova_dt, datetime.now(), item_id))
+            try:
+                from ..db import logar_timeline
+                impl_id = row['implantacao_id'] if hasattr(row, 'keys') else row[0]
+                detalhe = f"Item {item_id} nova_previsao: {nova_dt.isoformat()}"
+                logar_timeline(impl_id, usuario_email, 'prazo_alterado', detalhe)
+            except Exception:
+                pass
+            return jsonify({'ok': True, 'item_id': item_id, 'nova_previsao': nova_dt.isoformat(), 'previsao_original': prev_orig if not hasattr(prev_orig, 'isoformat') else prev_orig.isoformat()})
+        except Exception as e:
+            api_logger.error(f"Erro ao atualizar prazos do item {item_id}: {e}", exc_info=True)
+            return jsonify({'ok': False, 'error': 'Erro interno ao atualizar prazos'}), 500
+
+
+@checklist_bp.route('/item/<int:item_id>/responsavel/history', methods=['GET'])
+@login_required
+@validate_api_origin
+def get_responsavel_history(item_id):
+    from ..db import query_db
+    try:
+        item_id = validate_integer(item_id, min_value=1)
+    except ValidationError as e:
+        return jsonify({'ok': False, 'error': f'ID inválido: {str(e)}'}), 400
+    try:
+        entries = query_db(
+            """
+            SELECT id, old_responsavel, new_responsavel, changed_by, changed_at
+            FROM checklist_responsavel_history
+            WHERE checklist_item_id = %s
+            ORDER BY changed_at DESC
+            """,
+            (item_id,)
+        ) or []
+        for e in entries:
+            if e.get('changed_at') and hasattr(e['changed_at'], 'isoformat'):
+                e['changed_at'] = e['changed_at'].isoformat()
+        return jsonify({'ok': True, 'item_id': item_id, 'history': entries})
+    except Exception as e:
+        api_logger.error(f"Erro ao buscar histórico de responsável do item {item_id}: {e}", exc_info=True)
+        return jsonify({'ok': False, 'error': 'Erro interno ao buscar histórico'}), 500
+
+@checklist_bp.route('/item/<int:item_id>/prazos/history', methods=['GET'])
+@login_required
+@validate_api_origin
+def get_prazos_history(item_id):
+    from ..db import query_db
+    try:
+        item_id = validate_integer(item_id, min_value=1)
+    except ValidationError as e:
+        return jsonify({'ok': False, 'error': f'ID inválido: {str(e)}'}), 400
+    try:
+        impl = query_db("SELECT implantacao_id FROM checklist_items WHERE id = %s", (item_id,), one=True)
+        if not impl:
+            return jsonify({'ok': False, 'error': 'Item não encontrado'}), 404
+        impl_id = impl['implantacao_id']
+        logs = query_db(
+            """
+            SELECT id, usuario_cs, detalhes, data_criacao
+            FROM timeline_log
+            WHERE implantacao_id = %s AND tipo_evento = 'prazo_alterado'
+            ORDER BY id DESC
+            """,
+            (impl_id,)
+        ) or []
+        entries = []
+        for l in logs:
+            det = l.get('detalhes') or ''
+            if det.startswith(f"Item {item_id} "):
+                entries.append({
+                    'usuario_cs': l.get('usuario_cs'),
+                    'detalhes': det,
+                    'data_criacao': l.get('data_criacao').isoformat() if hasattr(l.get('data_criacao'), 'isoformat') else str(l.get('data_criacao'))
+                })
+        return jsonify({'ok': True, 'history': entries})
+    except Exception as e:
+        api_logger.error(f"Erro ao buscar histórico de prazos do item {item_id}: {e}", exc_info=True)
+        return jsonify({'ok': False, 'error': 'Erro interno ao buscar histórico de prazos'}), 500
