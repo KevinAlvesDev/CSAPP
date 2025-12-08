@@ -16,31 +16,307 @@
       isManager: (mainContent.dataset.isManager || 'false') === 'true'
     };
 
+    const baseConfig = {
+      mode: 'single',
+      dateFormat: 'Y-m-d',
+      altInput: true,
+      altFormat: 'd/m/Y',
+      allowInput: true,
+      locale: {
+        firstDayOfWeek: 1,
+        weekdays: {
+          shorthand: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
+          longhand: ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']
+        },
+        months: {
+          shorthand: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+          longhand: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+        }
+      }
+    };
+
+    // Event listeners for Phone Input (moved from inline HTML)
+    const telefoneInput = document.getElementById('modal-telefone_responsavel');
+    if (telefoneInput) {
+        telefoneInput.addEventListener('input', function() {
+            if (window.formatarTelefone) window.formatarTelefone(this);
+        });
+        telefoneInput.addEventListener('blur', function() {
+            if (window.validarTelefoneCompleto) window.validarTelefoneCompleto(this);
+        });
+    }
+
     if (!CONFIG.implantacaoId) {
       return;
     }
 
-    if (window.flatpickr) {
-      const baseConfig = {
-        dateFormat: 'Y-m-d',
-        altInput: true,
-        altFormat: 'd/m/Y',
-        allowInput: true,
-        locale: {
-          firstDayOfWeek: 1,
-          weekdays: {
-            shorthand: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
-            longhand: ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']
-          },
-          months: {
-            shorthand: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
-            longhand: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
-          }
-        }
-      };
+    // =========================================================================
+    // Global Comments Logic (New "Comentários" Tab)
+    // =========================================================================
+    let globalCommentsState = {
+      page: 1,
+      perPage: 20,
+      isLoading: false,
+      hasMore: true
+    };
 
-      document.querySelectorAll('.flatpickr-date:not(.no-datepicker)').forEach(input => {
-        const fp = window.flatpickr(input, Object.assign({}, baseConfig));
+    const commentsTabBtn = document.getElementById('comments-tab');
+    if (commentsTabBtn) {
+      commentsTabBtn.addEventListener('shown.bs.tab', function (e) {
+        // Load comments only if list is empty or specifically requested
+        // But to keep it simple and fresh, we can reload or check if empty
+        const container = document.getElementById('comments-list-container');
+        // If container is effectively empty (only loading/empty placeholders), load
+        // We check if we have already loaded comments by checking for .comentario-item
+        if (container && container.querySelectorAll('.comentario-item').length === 0) {
+          resetGlobalComments();
+          carregarComentariosGerais();
+        }
+      });
+    }
+
+    const btnLoadMoreComments = document.getElementById('btn-load-more-comments');
+    if (btnLoadMoreComments) {
+      btnLoadMoreComments.addEventListener('click', function () {
+        if (!globalCommentsState.isLoading && globalCommentsState.hasMore) {
+          globalCommentsState.page++;
+          carregarComentariosGerais(true); // true = append
+        }
+      });
+    }
+
+    function resetGlobalComments() {
+      globalCommentsState = {
+        page: 1,
+        perPage: 20,
+        isLoading: false,
+        hasMore: true
+      };
+      const container = document.getElementById('comments-list-container');
+      if (container) {
+        // Keep loading/empty divs, remove comments
+        const items = container.querySelectorAll('.comentario-item');
+        items.forEach(el => el.remove());
+      }
+      document.getElementById('comments-loading')?.classList.remove('d-none');
+      document.getElementById('comments-empty')?.classList.add('d-none');
+      document.getElementById('comments-pagination')?.classList.add('d-none');
+    }
+
+    async function carregarComentariosGerais(append = false) {
+      if (globalCommentsState.isLoading) return;
+      
+      globalCommentsState.isLoading = true;
+      const loadingEl = document.getElementById('comments-loading');
+      const emptyEl = document.getElementById('comments-empty');
+      const paginationEl = document.getElementById('comments-pagination');
+      const container = document.getElementById('comments-list-container');
+
+      if (!append && loadingEl) loadingEl.classList.remove('d-none');
+
+          try {
+            const url = `/api/checklist/implantacao/${CONFIG.implantacaoId}/comments?page=${globalCommentsState.page}&per_page=${globalCommentsState.perPage}`;
+            const response = await fetch(url, {
+              headers: { 'Accept': 'application/json' }
+            });
+
+        if (!response.ok) {
+          throw new Error(`Erro ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        if (!append && loadingEl) loadingEl.classList.add('d-none');
+
+        if (data.ok) {
+          const comentarios = data.comments || [];
+          const meta = data.pagination;
+          
+          // Update state
+          globalCommentsState.hasMore = meta.page < meta.total_pages;
+
+          if (comentarios.length === 0 && !append) {
+            if (emptyEl) emptyEl.classList.remove('d-none');
+            if (paginationEl) paginationEl.classList.add('d-none');
+          } else {
+            if (emptyEl) emptyEl.classList.add('d-none');
+            renderGlobalComments(comentarios, container, append);
+            
+            if (paginationEl) {
+              if (globalCommentsState.hasMore) {
+                paginationEl.classList.remove('d-none');
+              } else {
+                paginationEl.classList.add('d-none');
+              }
+            }
+          }
+        } else {
+          showToast('Erro ao carregar comentários: ' + (data.error || 'Erro desconhecido'), 'error');
+        }
+
+      } catch (error) {
+        console.error('Erro ao carregar comentários gerais:', error);
+        showToast('Erro ao carregar comentários. Tente novamente.', 'error');
+        if (!append && loadingEl) loadingEl.classList.add('d-none');
+      } finally {
+        globalCommentsState.isLoading = false;
+      }
+    }
+
+    function renderGlobalComments(comentarios, container, append) {
+      if (!container) return;
+      
+      // If not appending, clear existing items (be careful not to remove placeholders if they are mixed, 
+      // but we structure them separately usually. Here we just append to end or clear all items first)
+      // Our structure: container has loading/empty divs + comment items.
+      // We should insert items before the pagination or just append to container if pagination is outside (it is inside in HTML structure?)
+      // Looking at HTML: pagination is sibling to list container or inside?
+      // HTML: <div id="comments-list-container"> ... </div> <div id="comments-pagination"> ... </div>
+      // Wait, HTML snippet was:
+      // <div id="comments-list-container" ...> 
+      //    <div id="comments-loading">...</div>
+      //    <div id="comments-empty">...</div>
+      // </div>
+      // <div id="comments-pagination">...</div>
+      // So we can just append to container.
+      
+      const html = comentarios.map(c => {
+        const canEdit = (CONFIG.userEmail && c.usuario_cs === CONFIG.userEmail) || CONFIG.isManager;
+        // Task reference link (scroll to task)
+        const taskLink = `<a href="#" class="text-decoration-none fw-bold ms-1 small text-primary task-scroll-link" data-task-id="${c.item_id}">
+           <i class="bi bi-check2-square me-1"></i>${escapeHtml(c.item_title || 'Tarefa #' + c.item_id)}
+        </a>`;
+        
+        return `
+          <div class="comentario-item card mb-2 border-0 shadow-sm ${c.visibilidade || 'interno'}" data-comentario-id="${c.id}">
+            <div class="card-body p-3">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                 <div class="d-flex flex-column">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fw-bold text-dark">
+                            <i class="bi bi-person-circle me-1 text-secondary"></i>${escapeHtml(c.usuario_nome || c.usuario_cs || 'Usuário')}
+                        </span>
+                        <span class="badge ${c.visibilidade === 'externo' ? 'bg-warning text-dark' : 'bg-info text-white'} rounded-pill" style="font-size: 0.65rem;">
+                            ${c.visibilidade === 'externo' ? 'Externo' : 'Interno'}
+                        </span>
+                    </div>
+                    <div class="text-muted small mt-1">
+                       em ${taskLink}
+                    </div>
+                 </div>
+                 <div class="d-flex align-items-center gap-2">
+                    <span class="text-muted small" title="${c.data_criacao}">${formatarData(c.data_criacao, true)}</span>
+                    ${canEdit ? `
+                        <button type="button" class="btn btn-link text-danger p-0 ms-2 btn-excluir-comentario" style="font-size: 0.9rem;" data-comentario-id="${c.id}" title="Excluir">
+                            <i class="bi bi-trash"></i>
+                        </button>` : ''}
+                 </div>
+              </div>
+              <div class="comentario-texto text-break">${escapeHtml(c.texto)}</div>
+              ${c.imagem_url ? `<div class="mt-2"><img src="${c.imagem_url}" class="img-fluid rounded" style="max-height: 200px;" alt="Imagem anexada"></div>` : ''}
+            </div>
+          </div>`;
+      }).join('');
+      
+      // Need to convert string to nodes to append properly or just innerHTML if not append
+      // But since we have loading/empty divs inside, we should insert After them or handle visibility.
+      // Easier: Create a wrapper for items if not exists, or just append to container.
+      // The loading/empty divs are toggled with d-none.
+      
+      if (!append) {
+        // Remove old comment items
+        container.querySelectorAll('.comentario-item').forEach(e => e.remove());
+      }
+      
+      container.insertAdjacentHTML('beforeend', html);
+      
+      // Add event listeners for task links
+      container.querySelectorAll('.task-scroll-link').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const taskId = parseInt(this.dataset.taskId, 10);
+            if (window.checklistRenderer && Number.isFinite(taskId)) {
+                try { window.checklistRenderer.ensureItemVisible(taskId); } catch (_) {}
+            }
+          const taskElement = document.getElementById(`checklist-item-${taskId}`) || document.querySelector(`.checklist-item[data-item-id="${taskId}"]`);
+          if (taskElement) {
+              const planoTabBtn = document.querySelector('button[data-bs-target="#plano-content"]');
+              if (planoTabBtn) {
+                   const tabInstance = new bootstrap.Tab(planoTabBtn);
+                   tabInstance.show();
+              }
+              setTimeout(() => {
+                  taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  taskElement.classList.add('highlight-task');
+                  setTimeout(() => taskElement.classList.remove('highlight-task'), 2000);
+                  const commentsSection = document.getElementById(`comments-${taskId}`);
+                  if (commentsSection && window.bootstrap && bootstrap.Collapse) {
+                      try { new bootstrap.Collapse(commentsSection, { toggle: true }); } catch (_) {}
+                  }
+              }, 200);
+          } else {
+              showToast('Tarefa não encontrada na visualização atual.', 'warning');
+          }
+        });
+      });
+    }
+
+    function formatarData(dataStr, includeTime = false) { return window.formatDate(dataStr, includeTime); }
+
+    function escapeHtml(text) { return window.escapeHtml(text); }
+
+    function showToast(message, type = 'info', duration = 3000) {
+        // Reuse existing toast logic if available globally or create simple one
+        if (window.showToast) {
+            window.showToast(message, type, duration);
+        } else {
+            alert(message);
+        }
+    }
+
+    if (window.flatpickr) {
+      document.querySelectorAll('.custom-datepicker').forEach(input => {
+        const config = Object.assign({}, baseConfig);
+        
+        // Integrar IMask se a classe date-mask estiver presente
+        if (input.classList.contains('date-mask') && window.IMask) {
+            config.onReady = function(selectedDates, dateStr, instance) {
+                if (instance.altInput) {
+                    // Aplica a máscara ao input visível (altInput)
+                    const mask = IMask(instance.altInput, {
+                        mask: Date,
+                        pattern: 'd/`m/`Y',
+                        lazy: false,
+                        format: function (date) {
+                            var day = date.getDate();
+                            var month = date.getMonth() + 1;
+                            var year = date.getFullYear();
+                            if (day < 10) day = "0" + day;
+                            if (month < 10) month = "0" + month;
+                            return [day, month, year].join('/');
+                        },
+                        parse: function (str) {
+                            var yearMonthDay = str.split('/');
+                            return new Date(yearMonthDay[2], yearMonthDay[1] - 1, yearMonthDay[0]);
+                        },
+                        blocks: {
+                            d: { mask: IMask.MaskedRange, from: 1, to: 31, maxLength: 2 },
+                            m: { mask: IMask.MaskedRange, from: 1, to: 12, maxLength: 2 },
+                            Y: { mask: IMask.MaskedRange, from: 1900, to: 2100 }
+                        }
+                    });
+                    
+                    // Sincronizar alterações manuais na máscara com o Flatpickr
+                    mask.on('accept', function() {
+                        if (mask.masked.isComplete) {
+                            instance.setDate(mask.value, true, 'd/m/Y');
+                        }
+                    });
+                }
+            };
+        }
+
+        const fp = window.flatpickr(input, config);
         if (input.hasAttribute('required')) {
           input.addEventListener('change', function() {
             if (this._flatpickr && this._flatpickr.selectedDates.length > 0) {
@@ -54,10 +330,44 @@
       document.querySelectorAll('button[id^="btn_cal_"], button[id^="btn-cal-"], button[id*="cal-"], button[data-toggle]').forEach(btn => {
         btn.addEventListener('click', (e) => {
           e.preventDefault();
-          const target = btn.previousElementSibling;
-          if (target && target._flatpickr) {
-            target._flatpickr.open();
-          } else if (target && target.classList.contains('flatpickr-date')) {
+          const target = btn.previousElementSibling; // Assumindo que o input está imediatamente antes do botão (estrutura input-group)
+                                                     // No DOM final do flatpickr (com altInput), a estrutura é:
+                                                     // input[hidden], input[text].form-control, button
+                                                     // Portanto, previousElementSibling do botão é o altInput.
+                                                     // Mas o target para inicializar flatpickr deve ser o input original.
+                                                     
+          // Se o flatpickr já estiver inicializado no input original (que pode estar oculto antes do altInput)
+          // O input original geralmente é acessível.
+          // Vamos verificar se o elemento anterior tem a instância _flatpickr.
+          
+          // Caso altInput esteja presente, o DOM é:
+          // <input type="hidden" ...> (original)
+          // <input type="text" ...> (altInput)
+          // <button ...>
+          
+          // O previousElementSibling do botão é o altInput.
+          // O altInput não tem a propriedade _flatpickr, mas podemos acessá-lo?
+          // Não diretamente.
+          
+          // Mas se já foi inicializado, podemos buscar a instância flatpickr associada.
+          
+          // Se target for o altInput, precisamos achar o original?
+          // Na verdade, se já está inicializado, podemos apenas chamar open() na instância.
+          
+          // Vamos tentar encontrar o input original.
+          let inputOriginal = target;
+          
+          // Se o target for o altInput (não tem a classe original custom-datepicker se o flatpickr moveu as classes, mas geralmente copia)
+          // Mas o _flatpickr fica no elemento original.
+          
+          // Melhor abordagem: procurar o input com a classe custom-datepicker dentro do mesmo parent node.
+          const parent = btn.parentElement;
+          const originalInput = parent.querySelector('.custom-datepicker');
+          
+          if (originalInput && originalInput._flatpickr) {
+            originalInput._flatpickr.open();
+          } else if (target && target.classList.contains('custom-datepicker')) {
+             // Fallback se não estiver inicializado (ex: dinamicamente)
             const fp = window.flatpickr(target, Object.assign({}, baseConfig));
             fp.open();
           }
@@ -188,9 +498,9 @@
     function computeProgress() {
       const tarefaCheckboxes = document.querySelectorAll('.tarefa-checkbox');
       const total = tarefaCheckboxes.length;
+      if (!total) return;
       const done = Array.from(tarefaCheckboxes).filter(cb => cb.checked).length;
-      const pct = total ? Math.round((done / total) * 100) : 0;
-
+      const pct = Math.round((done / total) * 100);
       const bar = document.getElementById('progress-total-bar');
       const valorEl = document.getElementById('progresso-valor');
       if (bar) {
@@ -205,6 +515,48 @@
         e.preventDefault();
         e.stopPropagation();
       });
+    });
+
+    // Navegação entre abas (Timeline -> Comentários / Plano)
+    function activateTab(targetId) {
+      if (!window.bootstrap) return;
+      const triggerEl = document.querySelector(`[data-bs-target="${targetId}"]`);
+      if (triggerEl) {
+        const tab = new bootstrap.Tab(triggerEl);
+        tab.show();
+      }
+    }
+
+    document.addEventListener('click', function(e) {
+      const btnComments = e.target.closest('.timeline-action-comments');
+      if (btnComments) {
+        const itemId = parseInt(btnComments.dataset.itemId);
+        activateTab('#plano-content');
+        if (window.checklistRenderer && Number.isFinite(itemId)) {
+          try { window.checklistRenderer.ensureItemVisible(itemId); } catch (_) {}
+        }
+        setTimeout(() => {
+          const taskElement = document.getElementById(`checklist-item-${itemId}`) || document.querySelector(`.checklist-item[data-item-id="${itemId}"]`);
+          if (taskElement) {
+            taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const commentsSection = document.getElementById(`comments-${itemId}`);
+            if (commentsSection && window.bootstrap && bootstrap.Collapse) {
+              try { new bootstrap.Collapse(commentsSection, { toggle: true }); } catch (_) {}
+            }
+          }
+        }, 200);
+        e.preventDefault();
+        return;
+      }
+      const btnTask = e.target.closest('.timeline-action-task');
+      if (btnTask) {
+        const itemId = parseInt(btnTask.dataset.itemId);
+        activateTab('#plano-content');
+        if (window.checklistRenderer && itemId) {
+          try { window.checklistRenderer.ensureItemVisible(itemId); } catch (_) {}
+        }
+        e.preventDefault();
+      }
     });
 
     document.querySelectorAll('.tarefa-checkbox').forEach(checkbox => {
@@ -607,7 +959,9 @@
         textarea.value = '';
         await carregarComentarios(tarefaId);
 
-        const emailResponse = await fetch(`/api/enviar_comentario_email/${tarefaId}`, {
+        const novoComentarioId = (data && data.comentario && data.comentario.id) ? data.comentario.id : null;
+        const emailEndpoint = novoComentarioId ? `/api/enviar_email_comentario_h/${novoComentarioId}` : `/api/enviar_email_comentario_h/${tarefaId}`;
+        const emailResponse = await fetch(emailEndpoint, {
           method: 'POST',
           headers: {
             'Accept': 'application/json',
@@ -744,50 +1098,40 @@
     computeProgress();
     document.body.addEventListener('progress_update', computeProgress);
 
-    function formatarData(dataStr, includeTime = false) {
-      try {
-        const data = new Date(dataStr);
-        if (includeTime) {
-          return data.toLocaleString('pt-BR', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-          });
-        }
-        return data.toLocaleDateString('pt-BR');
-      } catch {
-        return dataStr;
-      }
-    }
-
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-    }
+    
 
     const modalDetalhesEmpresa = document.getElementById('modalDetalhesEmpresa');
     if (modalDetalhesEmpresa && window.flatpickr) {
-      modalDetalhesEmpresa.addEventListener('shown.bs.modal', function() {
-        const baseConfig = {
-          dateFormat: 'Y-m-d',
-          altInput: true,
-          altFormat: 'd/m/Y',
-          allowInput: false,
-          locale: {
-            firstDayOfWeek: 1,
-            weekdays: {
-              shorthand: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
-              longhand: ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']
-            },
-            months: {
-              shorthand: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
-              longhand: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+      modalDetalhesEmpresa.addEventListener('shown.bs.modal', function(event) {
+        const configWithMask = Object.assign({}, baseConfig, {
+          onReady: function(selectedDates, dateStr, instance) {
+            if (instance.altInput && window.IMask) {
+                IMask(instance.altInput, {
+                    mask: Date,
+                    pattern: 'd/`m/`Y',
+                    blocks: {
+                        d: { mask: IMask.MaskedRange, from: 1, to: 31, maxLength: 2 },
+                        m: { mask: IMask.MaskedRange, from: 1, to: 12, maxLength: 2 },
+                        Y: { mask: IMask.MaskedRange, from: 1900, to: 2100, maxLength: 4 }
+                    },
+                    format: function (date) {
+                        var day = date.getDate();
+                        var month = date.getMonth() + 1;
+                        var year = date.getFullYear();
+                        if (day < 10) day = "0" + day;
+                        if (month < 10) month = "0" + month;
+                        return [day, month, year].join('/');
+                    },
+                    parse: function (str) {
+                        var yearMonthDay = str.split('/');
+                        return new Date(yearMonthDay[2], yearMonthDay[1] - 1, yearMonthDay[0]);
+                    },
+                    lazy: false,
+                    overwrite: true
+                });
             }
           }
-        };
+        });
 
         const inicioEfetivoInput = document.getElementById('modal-inicio_efetivo');
         const btnCalInicioEfetivo = document.getElementById('btn-cal-inicio_efetivo');
@@ -796,7 +1140,7 @@
             inicioEfetivoInput._flatpickr.destroy();
           }
           const valorInicial = inicioEfetivoInput.value || '';
-          const fp1 = window.flatpickr(inicioEfetivoInput, Object.assign({}, baseConfig, {
+          const fp1 = window.flatpickr(inicioEfetivoInput, Object.assign({}, configWithMask, {
             defaultDate: valorInicial || null,
             onChange: function(selectedDates, dateStr, instance) {
               if (selectedDates.length > 0) {
@@ -824,7 +1168,7 @@
             inicioProducaoInput._flatpickr.destroy();
           }
           const valorInicial = inicioProducaoInput.value || '';
-          const fp2 = window.flatpickr(inicioProducaoInput, Object.assign({}, baseConfig, {
+          const fp2 = window.flatpickr(inicioProducaoInput, Object.assign({}, configWithMask, {
             defaultDate: valorInicial || null,
             onChange: function(selectedDates, dateStr, instance) {
               if (selectedDates.length > 0) {
@@ -852,7 +1196,7 @@
             finalImplantacaoInput._flatpickr.destroy();
           }
           const valorInicial = finalImplantacaoInput.value || '';
-          const fp3 = window.flatpickr(finalImplantacaoInput, Object.assign({}, baseConfig, {
+          const fp3 = window.flatpickr(finalImplantacaoInput, Object.assign({}, configWithMask, {
             defaultDate: valorInicial || null,
             onChange: function(selectedDates, dateStr, instance) {
               if (selectedDates.length > 0) {
@@ -872,6 +1216,8 @@
             });
           }
         }
+
+        // Duplicate dataCadastro initialization removed
       });
 
       const tomSelectInstances = {};
@@ -924,8 +1270,172 @@
         tomSelectInstances[selectId] = tomSelect;
       }
 
-      modalDetalhesEmpresa.addEventListener('shown.bs.modal', function() {
-        const btn = document.querySelector('[data-bs-target="#modalDetalhesEmpresa"]');
+      // Global Click Listener for Consultar OAMD Button (Delegation)
+    document.addEventListener('click', async function(e) {
+        const btnConsultar = e.target.closest('#btn-consultar-oamd');
+        if (!btnConsultar) return;
+        
+        e.preventDefault();
+        e.stopPropagation();
+
+        console.log('Global Click Listener: Consultar button clicked');
+
+        const loaderConsultar = document.getElementById('btn-consultar-oamd-loader');
+        const iconConsultar = document.getElementById('btn-consultar-oamd-icon');
+        const inputIdFav = document.getElementById('modal-id_favorecido');
+        
+        // Get ID from input or button dataset
+        const currentId = inputIdFav ? inputIdFav.value.trim() : (btnConsultar.dataset.idFavorecido || '');
+        console.log('ID for consultation:', currentId);
+        
+        if (!currentId) {
+             showToast('ID Favorecido não informado', 'warning');
+             return;
+        }
+
+        btnConsultar.disabled = true;
+        if (loaderConsultar) loaderConsultar.classList.remove('d-none');
+        if (iconConsultar) iconConsultar.classList.add('d-none');
+
+        try {
+             const response = await fetch(`/api/consultar_empresa?id_favorecido=${currentId}`, {
+                method: 'GET',
+                headers: {
+                 'Accept': 'application/json',
+                 'X-CSRFToken': CONFIG.csrfToken
+               }
+             });
+
+             if (!response.ok) {
+                let errorMsg = `Erro na requisição: ${response.status}`;
+                try {
+                  const errData = await response.json();
+                  if (errData.error) errorMsg = errData.error;
+                } catch(e) {}
+                throw new Error(errorMsg);
+              }
+
+              const data = await response.json();
+
+             if (data.ok && data.mapped) {
+               const m = data.mapped;
+               
+               const updateDate = (inputId, val) => {
+                 const input = document.getElementById(inputId);
+                 if (!input || !val) return;
+
+                 let dateVal = String(val).split('T')[0];
+
+                 if (input._flatpickr) {
+                   input._flatpickr.setDate(dateVal, true);
+                   
+                   const altInput = input._flatpickr.altInput;
+                   if (altInput) {
+                     altInput.classList.add('bg-success', 'bg-opacity-10');
+                     setTimeout(() => altInput.classList.remove('bg-success', 'bg-opacity-10'), 2000);
+                     altInput.readOnly = true;
+                     altInput.classList.add('bg-light');
+                     altInput.style.cursor = 'not-allowed';
+                   }
+                 } else {
+                   input.value = dateVal;
+                 }
+                 
+                 input.readOnly = true;
+                 input.classList.add('bg-light');
+                 input.style.cursor = 'not-allowed';
+                 const parent = input.closest('.input-group');
+                 if (parent) {
+                     const btn = parent.querySelector('button');
+                     if (btn) btn.disabled = true;
+                 }
+               };
+
+               updateDate('modal-data_inicio_producao', m.data_inicio_producao);
+              updateDate('modal-inicio_efetivo', m.data_inicio_efetivo);
+              updateDate('modal-data_final_implantacao', m.data_final_implantacao);
+              updateDate('modal-data_cadastro', m.data_cadastro);
+
+              const updateText = (inputId, val) => {
+                const input = document.getElementById(inputId);
+                if (input && val) {
+                  input.value = val;
+                  input.classList.add('bg-success', 'bg-opacity-10');
+                  setTimeout(() => input.classList.remove('bg-success', 'bg-opacity-10'), 2000);
+                  
+                  // Make read-only
+                  input.readOnly = true;
+                  input.classList.add('bg-light');
+                  input.style.cursor = 'not-allowed';
+                }
+              };
+
+              updateText('modal-status_implantacao', m.status_implantacao);
+              updateText('modal-nivel_atendimento', m.nivel_atendimento);
+              updateText('modal-chave_oamd', m.chave_oamd);
+              updateText('modal-tela_apoio_link', m.tela_apoio_link);
+              updateText('modal-informacao_infra', m.informacao_infra);
+
+              if (m.cnpj) {
+                const cnpjInput = document.getElementById('modal-cnpj');
+                if (cnpjInput) {
+                    cnpjInput.value = m.cnpj;
+                    cnpjInput.dispatchEvent(new Event('input'));
+                    cnpjInput.classList.add('bg-success', 'bg-opacity-10');
+                    setTimeout(() => cnpjInput.classList.remove('bg-success', 'bg-opacity-10'), 2000);
+                    
+                    cnpjInput.readOnly = true;
+                    cnpjInput.classList.add('bg-light');
+                    cnpjInput.style.cursor = 'not-allowed';
+                }
+              }
+
+              if (m.nivel_receita) {
+                 const mrrInput = document.getElementById('modal-valor_atribuido');
+                 if (mrrInput) {
+                     mrrInput.value = m.nivel_receita;
+                     mrrInput.dispatchEvent(new Event('input'));
+                     mrrInput.classList.add('bg-success', 'bg-opacity-10');
+                     setTimeout(() => mrrInput.classList.remove('bg-success', 'bg-opacity-10'), 2000);
+                     
+                     mrrInput.readOnly = true;
+                     mrrInput.classList.add('bg-light');
+                     mrrInput.style.cursor = 'not-allowed';
+                 }
+              }
+
+               const now = new Date().getTime();
+               const lastUpdateSpan = document.getElementById('oamd-last-update');
+               const lastUpdateTimeSpan = document.getElementById('oamd-last-update-time');
+               if (lastUpdateSpan && lastUpdateTimeSpan) {
+                 lastUpdateSpan.style.display = 'inline-block';
+                 lastUpdateTimeSpan.textContent = new Date(now).toLocaleTimeString();
+               }
+               
+               const cacheKey = `oamd_cache_${currentId}`;
+               localStorage.setItem(cacheKey, JSON.stringify({
+                 timestamp: now,
+                 data: m
+               }));
+
+               showToast('Dados atualizados com sucesso do OAMD', 'success');
+
+             } else {
+               showToast('Não foi possível obter dados do OAMD', 'warning');
+             }
+
+           } catch (error) {
+             console.error('Erro ao consultar OAMD:', error);
+             showToast('Erro ao consultar OAMD: ' + error.message, 'error');
+           } finally {
+             btnConsultar.disabled = false;
+             if (loaderConsultar) loaderConsultar.classList.add('d-none');
+             if (iconConsultar) iconConsultar.classList.remove('d-none');
+           }
+    });
+
+    modalDetalhesEmpresa.addEventListener('shown.bs.modal', function(event) {
+        const btn = event.relatedTarget || document.querySelector('[data-bs-target="#modalDetalhesEmpresa"]');
         let cargo = '', nivelReceita = '', seguimento = '', tiposPlanos = '', sistemaAnterior = '', recorrenciaUsa = '';
         let catraca = '', facial = '', modeloCatraca = '', modeloFacial = '';
 
@@ -942,6 +1452,14 @@
           modeloFacial = btn.dataset.modeloFacial || '';
           const wellhub = btn.dataset.wellhub || '';
           const totalpass = btn.dataset.totalpass || '';
+          let idFavorecido = btn.dataset.idFavorecido || '';
+          
+          if (!idFavorecido) {
+            const inputIdFav = document.getElementById('modal-id_favorecido');
+            if (inputIdFav && inputIdFav.value) {
+                idFavorecido = inputIdFav.value;
+            }
+          }
           
           const wellhubSelect = document.getElementById('modal-wellhub');
           const totalpassSelect = document.getElementById('modal-totalpass');
@@ -982,16 +1500,18 @@
           if (catracaSelect && rowCatracaModelo) {
             const isCatracaSim = catracaSelect.value === 'Sim';
             rowCatracaModelo.style.display = isCatracaSim ? 'block' : 'none';
-            if (!isCatracaSim && modeloCatracaInput) {
-              modeloCatracaInput.value = '';
+            if (modeloCatracaInput) {
+                modeloCatracaInput.required = isCatracaSim;
+                if (!isCatracaSim) modeloCatracaInput.value = '';
             }
           }
           
           if (facialSelect && rowFacialModelo) {
             const isFacialSim = facialSelect.value === 'Sim';
             rowFacialModelo.style.display = isFacialSim ? 'block' : 'none';
-            if (!isFacialSim && modeloFacialInput) {
-              modeloFacialInput.value = '';
+            if (modeloFacialInput) {
+                modeloFacialInput.required = isFacialSim;
+                if (!isFacialSim) modeloFacialInput.value = '';
             }
           }
         }
@@ -1002,6 +1522,8 @@
           if (modeloCatracaInput && catraca === 'Sim' && modeloCatraca) {
             modeloCatracaInput.value = modeloCatraca;
           }
+          // Disparar evento para atualizar UI
+          catracaSelect.dispatchEvent(new Event('change'));
         }
 
         if (facialSelect) {
@@ -1010,9 +1532,40 @@
           if (modeloFacialInput && facial === 'Sim' && modeloFacial) {
             modeloFacialInput.value = modeloFacial;
           }
+          // Disparar evento para atualizar UI
+          facialSelect.dispatchEvent(new Event('change'));
         }
 
         atualizarCamposCondicionais();
+
+        // Antiga Lógica do botão Consultar OAMD (Removida em favor do listener global)
+        // Mantendo apenas inicialização de cache visual
+        const lastUpdateSpan = document.getElementById('oamd-last-update');
+        const lastUpdateTimeSpan = document.getElementById('oamd-last-update-time');
+        const inputIdFav = document.getElementById('modal-id_favorecido');
+
+          // Verificar cache local se houver ID inicial
+          if (idFavorecido) {
+             const cacheKey = `oamd_cache_${idFavorecido}`;
+             const cachedData = localStorage.getItem(cacheKey);
+             
+             if (cachedData) {
+               try {
+                 const parsed = JSON.parse(cachedData);
+                 const now = new Date().getTime();
+                 if (now - parsed.timestamp < 300000) { // 5 min
+                   if (lastUpdateSpan && lastUpdateTimeSpan) {
+                     lastUpdateSpan.style.display = 'inline-block';
+                     lastUpdateTimeSpan.textContent = new Date(parsed.timestamp).toLocaleTimeString();
+                   }
+                 }
+               } catch (e) {
+                 console.error('Erro ao ler cache OAMD', e);
+               }
+             }
+          }
+   
+
       });
 
       modalDetalhesEmpresa.addEventListener('hidden.bs.modal', function() {
@@ -1065,15 +1618,131 @@
         
         const valorAtribuidoInput = document.getElementById('modal-valor_atribuido');
         if (valorAtribuidoInput) {
-          valorAtribuidoInput.addEventListener('blur', function() {
-            const value = parseFloat(this.value);
-            if (!isNaN(value) && value < 0) {
-              this.value = 0;
-            }
-          });
+          // Remove existing listeners to avoid duplication if any (though 'blur' at 1316 was simple)
+          // Initialize IMask for Currency
+          if (window.IMask) {
+             // Remove previous instance if stored? Not storing currently.
+             // Just init.
+             IMask(valorAtribuidoInput, {
+                mask: 'R$ num',
+                blocks: {
+                    num: {
+                        mask: Number,
+                        thousandsSeparator: '.',
+                        radix: ',',
+                        scale: 2,
+                        signed: false,
+                        normalizeZeros: true,
+                        padFractionalZeros: true,
+                        min: 0
+                    }
+                }
+            });
+          }
         }
+        
+        const cnpjInput = document.getElementById('modal-cnpj');
+        if (cnpjInput && window.IMask) {
+             const cnpjMask = IMask(cnpjInput, {
+                mask: '00.000.000/0000-00'
+            });
+            
+            cnpjInput.addEventListener('blur', function() {
+                const val = cnpjMask.unmaskedValue;
+                if (val && !validateCNPJ(val)) {
+                    this.classList.add('is-invalid');
+                    let feedback = this.parentNode.querySelector('.invalid-feedback');
+                    if (!feedback) {
+                        feedback = document.createElement('div');
+                        feedback.className = 'invalid-feedback';
+                        feedback.innerText = 'CNPJ inválido';
+                        this.parentNode.appendChild(feedback);
+                    }
+                    feedback.style.display = 'block';
+                } else {
+                    this.classList.remove('is-invalid');
+                     let feedback = this.parentNode.querySelector('.invalid-feedback');
+                     if (feedback) feedback.style.display = 'none';
+                }
+            });
+             cnpjInput.addEventListener('input', function() {
+                 this.classList.remove('is-invalid');
+                 let feedback = this.parentNode.querySelector('.invalid-feedback');
+                 if (feedback) feedback.style.display = 'none';
+            });
+        }
+
+        const telaApoioInput = document.getElementById('modal-tela_apoio_link');
+        if (telaApoioInput) {
+            telaApoioInput.addEventListener('blur', function() {
+                const val = this.value;
+                if (val && !isValidURL(val)) {
+                    this.classList.add('is-invalid');
+                    let feedback = this.parentNode.querySelector('.invalid-feedback');
+                    if (!feedback) {
+                        feedback = document.createElement('div');
+                        feedback.className = 'invalid-feedback';
+                        feedback.innerText = 'URL inválida (ex: https://exemplo.com)';
+                        this.parentNode.appendChild(feedback);
+                    }
+                    feedback.style.display = 'block';
+                } else {
+                    this.classList.remove('is-invalid');
+                    let feedback = this.parentNode.querySelector('.invalid-feedback');
+                    if (feedback) feedback.style.display = 'none';
+                }
+            });
+            telaApoioInput.addEventListener('input', function() {
+                 this.classList.remove('is-invalid');
+                 let feedback = this.parentNode.querySelector('.invalid-feedback');
+                 if (feedback) feedback.style.display = 'none';
+            });
+        }
+
+          // Duplicate dataCadastro initialization removed
       });
     }
   });
+
+  function isValidURL(string) {
+    try {
+      new URL(string);
+      return true;
+    } catch (_) {
+      return false;  
+    }
+  }
+
+  function validateCNPJ(cnpj) {
+    cnpj = cnpj.replace(/[^\d]+/g, '');
+    if (cnpj == '') return false;
+    if (cnpj.length != 14) return false;
+    if (/^(\d)\1+$/.test(cnpj)) return false;
+    
+    let tamanho = cnpj.length - 2
+    let numeros = cnpj.substring(0,tamanho);
+    let digitos = cnpj.substring(tamanho);
+    let soma = 0;
+    let pos = tamanho - 7;
+    for (let i = tamanho; i >= 1; i--) {
+      soma += numeros.charAt(tamanho - i) * pos--;
+      if (pos < 2) pos = 9;
+    }
+    let resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
+    if (resultado != digitos.charAt(0)) return false;
+    
+    tamanho = tamanho + 1;
+    numeros = cnpj.substring(0,tamanho);
+    soma = 0;
+    pos = tamanho - 7;
+    for (let i = tamanho; i >= 1; i--) {
+      soma += numeros.charAt(tamanho - i) * pos--;
+      if (pos < 2) pos = 9;
+    }
+    resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
+    if (resultado != digitos.charAt(1)) return false;
+    
+    return true;
+  }
 })();
 

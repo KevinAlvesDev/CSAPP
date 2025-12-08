@@ -11,7 +11,7 @@ import click
 
 csrf = CSRFProtect()
 
-def create_app():
+def create_app(test_config=None):
     app = Flask(__name__,
                 static_folder='../../frontend/static', 
                 template_folder='../../frontend/templates')
@@ -43,6 +43,9 @@ def create_app():
 
     from .config import Config
     app.config.from_object(Config)
+
+    if test_config is not None:
+        app.config.from_mapping(test_config)
 
     try:
         if app.config.get('USE_SQLITE_LOCALLY', False) or app.config.get('DEBUG', False):
@@ -79,6 +82,7 @@ def create_app():
 
 
     oauth.init_app(app)
+    
     init_r2(app)
     db.init_app(app)
 
@@ -119,8 +123,9 @@ def create_app():
 
     setup_logging(app)
 
-    from .security.middleware import init_security_headers
+    from .security.middleware import init_security_headers, configure_cors
     init_security_headers(app)
+    configure_cors(app)
 
     from .config.cache_config import init_cache
     init_cache(app)
@@ -144,8 +149,6 @@ def create_app():
                     from werkzeug.security import generate_password_hash
                     from .constants import ADMIN_EMAIL
                     seeded_hash = generate_password_hash('admin123@')
-                    admin_email = ADMIN_EMAIL
-                    
                     # Usar INSERT OR REPLACE para garantir que o admin existe
                     execute_db(
                         "INSERT OR REPLACE INTO usuarios (usuario, senha) VALUES (%s, %s)",
@@ -155,11 +158,10 @@ def create_app():
                         "INSERT OR REPLACE INTO perfil_usuario (usuario, nome, cargo, perfil_acesso, foto_url) VALUES (%s, %s, %s, %s, %s)",
                         (ADMIN_EMAIL, 'Administrador', None, PERFIL_ADMIN, None)
                     )
-                    pass
                 except Exception as e_seed:
-                    pass
+                    app.logger.warning(f"Falha ao garantir usuário admin: {e_seed}")
     except Exception as e_dbinit:
-        pass
+        app.logger.warning(f"Falha na inicialização do banco (dev): {e_dbinit}")
     
     if app.config.get('AUTH0_ENABLED', True):
         raw_domain = (app.config.get('AUTH0_DOMAIN') or '').strip().strip('`').strip()
@@ -201,7 +203,7 @@ def create_app():
         pass
 
     from .blueprints.main import main_bp
-    from .blueprints.auth import auth_bp
+    from .blueprints.auth import auth_bp  # Blueprint de autenticação
     from .blueprints.api import api_bp
     from .blueprints.api_v1 import api_v1_bp                  
     from .blueprints.implantacao_actions import implantacao_actions_bp
@@ -217,12 +219,12 @@ def create_app():
     from .blueprints.checklist_api import checklist_bp
 
     try:
-        csrf.exempt(api_bp)
+        
         csrf.exempt(api_v1_bp)                              
         csrf.exempt(health_bp)                                      
         csrf.exempt(api_docs_bp)
         csrf.exempt(api_h_bp)
-        csrf.exempt(checklist_bp)
+        # checklist_bp deixa de ser isento para proteger mutações
     except Exception as e:
         pass
 
@@ -284,7 +286,7 @@ def create_app():
         
         # Se estiver em dev local, Auth0 desabilitado, não houver usuário, e não for rota de auth
         if (use_sqlite or flask_debug) and flask_env != 'production' and not auth0_enabled:
-            rotas_auth = ['/login', '/dev-login', '/dev-login-as', '/logout', '/callback']
+            rotas_auth = ['/login', '/dev-login', '/dev-login-as', '/logout', '/callback', '/login/google', '/login/google/callback']
             is_rota_auth = any(request.path.startswith(rota) for rota in rotas_auth)
             
             if not is_rota_auth and not g.user_email:
@@ -358,16 +360,55 @@ def create_app():
 
         if request.path.startswith('/api'):
             return jsonify({'ok': False, 'error': 'Recurso não encontrado'}), 404
-        flash("Página não encontrada. Redirecionando para o Dashboard.", "warning")
-        return redirect(url_for('main.dashboard'))
+        
+        # Renderiza template 404 em vez de redirecionar
+        return render_template('404.html'), 404
 
     @app.errorhandler(500)
     def internal_server_error(e):
-        app.logger.error(f"Erro 500: {e}", exc_info=True)
+        # Tenta identificar erros de construção de rota (BuildError)
+        error_msg = str(e)
+        if "Could not build url" in error_msg:
+            app.logger.critical(f"ROUTING ERROR: {e} - Verifique se todos os endpoints estão registrados.", exc_info=True)
+        else:
+            app.logger.error(f"Erro 500: {e}", exc_info=True)
 
         if request.path.startswith('/api'):
             return jsonify({'ok': False, 'error': 'Erro interno do servidor'}), 500
+            
         flash("Ocorreu um erro interno no servidor. Redirecionando para o Dashboard.", "error")
         return redirect(url_for('main.dashboard'))
+
+    # Verificação de endpoints críticos na inicialização
+    if app.config.get('DEBUG') or app.config.get('FLASK_ENV') == 'development':
+        with app.app_context():
+            required_endpoints = ['auth.login', 'auth.google_login', 'auth.google_callback']
+            registered_rules = [rule.endpoint for rule in app.url_map.iter_rules()]
+            missing = [ep for ep in required_endpoints if ep not in registered_rules]
+            if missing:
+                app.logger.warning(f"⚠️  ALERTA DE ROTA: Endpoints críticos ausentes: {missing}")
+            else:
+                app.logger.info("✅ Verificação de rotas de auth concluída com sucesso.")
+
+            checklist_required = [
+                'checklist.toggle_item',
+                'checklist.add_comment',
+                'checklist.get_comments',
+                'checklist.send_comment_email',
+                'checklist.delete_comment',
+                'checklist.delete_item',
+                'checklist.get_tree',
+                'checklist.get_item_progress',
+                'checklist.update_responsavel',
+                'checklist.update_prazos',
+                'checklist.get_responsavel_history',
+                'checklist.get_prazos_history',
+                'checklist.get_implantacao_comments'
+            ]
+            checklist_missing = [ep for ep in checklist_required if ep not in registered_rules]
+            if checklist_missing:
+                app.logger.warning(f"⚠️  ALERTA DE ROTA: Endpoints de checklist ausentes: {checklist_missing}")
+            else:
+                app.logger.info("✅ Verificação de rotas de checklist concluída com sucesso.")
 
     return app
