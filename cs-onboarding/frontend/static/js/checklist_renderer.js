@@ -17,6 +17,19 @@ class ChecklistRenderer {
         this.expandedItems = new Set();
         this.flatData = {};
         this.isLoading = false;
+        this.csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
+        this.previsaoTermino = this.container?.dataset?.previsaoTermino || '';
+        if (!this.csrfToken) {
+            const meta = document.querySelector('meta[name="csrf-token"]');
+            if (meta) this.csrfToken = meta.getAttribute('content') || '';
+            if (!this.csrfToken) {
+                try {
+                    const m = document.cookie.match(/(?:^|; )csrf_token=([^;]+)/);
+                    if (m) this.csrfToken = decodeURIComponent(m[1]);
+                } catch(e) {}
+            }
+        }
+        this._toggleThrottle = new Map();
         
         if (!this.container) {
             return;
@@ -111,11 +124,11 @@ class ChecklistRenderer {
         const statusText = item.completed ? 'Concluído' : 'Pendente';
         const statusIcon = item.completed ? 'bi-check-circle-fill' : 'bi-clock-fill';
         
-        const paddingLeft = `${(item.level || 0) * 1.5 + 0.5}rem`;
+        const paddingLeft = `${(item.level || 0) * 2 + 0.75}rem`;
         
         return `
-            <div class="checklist-item" data-item-id="${item.id}" data-level="${item.level || 0}">
-                <div class="checklist-item-header position-relative" style="padding-left: ${paddingLeft};">
+            <div id="checklist-item-${item.id}" class="checklist-item" data-item-id="${item.id}" data-level="${item.level || 0}">
+                <div class="checklist-item-header position-relative level-${item.level || 0}" style="padding-left: ${paddingLeft};">
                     ${hasChildren ? `
                         <div class="position-absolute bottom-0 left-0 h-1 progress-bar-item" 
                              style="width: 0%; background-color: #28a745; opacity: 0; transition: all 0.3s;"
@@ -147,17 +160,41 @@ class ChecklistRenderer {
                                style="${item.completed ? 'text-decoration: line-through; color: #6c757d;' : ''}">
                             ${this.escapeHtml(item.title)}
                         </span>
+                        <span class="col-qtd" style="width:90px">
+                            ${progressLabel ? `
+                                <span class="checklist-progress-badge badge bg-light text-dark" style="font-size: 0.75rem;">
+                                    ${progressLabel}
+                                </span>
+                            ` : ''}
+                        </span>
+
+                        <span class="col-tag" style="width:140px">
+                            ${item.tag ? `
+                                <span class="badge ${item.tag === 'Ação interna' ? 'bg-secondary' : (item.tag === 'Reunião' ? 'bg-info text-dark' : 'bg-light text-dark')}" style="font-size: 0.75rem;">
+                                    ${this.escapeHtml(item.tag)}
+                                </span>
+                            ` : ''}
+                        </span>
+
+                        <span class="col-responsavel" style="width:220px">
+                            ${item.responsavel ? `<span class="badge bg-primary js-edit-resp badge-resp-ellipsis" data-item-id="${item.id}" style="font-size: 0.75rem;" title="${this.escapeHtml(item.responsavel)}">${this.escapeHtml(this.abbrevResponsavel(item.responsavel))}</span>` : `<span class="badge bg-primary js-edit-resp badge-resp-ellipsis" data-item-id="${item.id}" style="font-size: 0.75rem;">Definir responsável</span>`}
+                        </span>
+                        <span class="col-prev-orig" style="width:160px">
+                            ${item.previsao_original ? `<span class="badge bg-warning text-dark" id="badge-prev-orig-${item.id}" style="font-size: 0.75rem;" title="Previsão original: ${item.previsao_original}" aria-label="Previsão original: ${this.formatDate(item.previsao_original)}">Prev. orig.: ${this.formatDate(item.previsao_original)}</span>` : `<span class="badge bg-warning text-dark d-none" id="badge-prev-orig-${item.id}" style="font-size: 0.75rem;" aria-hidden="true"></span>`}
+                        </span>
+                        <span class="col-prev-atual" style="width:160px">
+                            ${item.nova_previsao ? `<span class="badge bg-danger text-white js-edit-prev" id="badge-prev-nova-${item.id}" data-item-id="${item.id}" style="font-size: 0.75rem;" title="Previsão atual: ${item.nova_previsao}" aria-label="Previsão atual: ${this.formatDate(item.nova_previsao)}">Prev.: ${this.formatDate(item.nova_previsao)}</span>` : ((item.previsao_original || this.previsaoTermino) ? `<span class="badge bg-warning text-dark js-edit-prev" id="badge-prev-nova-${item.id}" data-item-id="${item.id}" style="font-size: 0.75rem;" title="Previsão atual: ${item.previsao_original || this.previsaoTermino}" aria-label="Previsão atual: ${this.formatDate(item.previsao_original || this.previsaoTermino)}">Prev.: ${this.formatDate(item.previsao_original || this.previsaoTermino)}</span>` : `<span class="badge bg-warning text-dark js-edit-prev" id="badge-prev-nova-${item.id}" data-item-id="${item.id}" style="font-size: 0.75rem;" aria-label="Definir nova previsão">Definir nova previsão</span>`)}
+                        </span>
+                        ${item.atrasada ? `<span class="badge bg-danger ms-2" id="badge-atrasada-${item.id}" style="font-size: 0.75rem;">Prazo excedido</span>` : `<span class="badge bg-danger ms-2 d-none" id="badge-atrasada-${item.id}" style="font-size: 0.75rem;">Prazo excedido</span>`}
+                        ${item.data_conclusao ? `<span class="badge bg-success ms-2" id="badge-concl-${item.id}" style="font-size: 0.75rem;" title="Concluída em: ${item.data_conclusao}">Concl.: ${this.formatDate(item.data_conclusao)}</span>` : `<span class="badge bg-success ms-2 d-none" id="badge-concl-${item.id}" style="font-size: 0.75rem;"></span>`}
                         
-                        ${progressLabel ? `
-                            <span class="checklist-progress-badge badge bg-light text-dark ms-2" style="font-size: 0.75rem;">
-                                ${progressLabel}
+                        <span class="col-status" style="width:120px">
+                            <span class="badge ${statusClass}" id="status-badge-${item.id}" title="Status: ${statusText}" aria-label="Status: ${statusText}">
+                                <i class="bi ${statusIcon} me-1" aria-hidden="true"></i>${statusText}
                             </span>
-                        ` : ''}
-                        
-                        <span class="badge ${statusClass} ms-2" id="status-badge-${item.id}">
-                            <i class="bi ${statusIcon} me-1"></i>${statusText}
                         </span>
                         
+                        <span class="col-comment" style="width:28px">
                         <button class="btn-icon btn-comment-toggle p-1 border-0 bg-transparent ms-2" 
                                 data-item-id="${item.id}" 
                                 title="Comentários">
@@ -165,12 +202,14 @@ class ChecklistRenderer {
                                 ${hasComment ? '<span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle" style="font-size: 0.4rem;"></span>' : ''}
                             </i>
                         </button>
-
+                        </span>
+                        <span class="col-delete" style="width:28px">
                         <button class="btn-icon btn-delete-item p-1 border-0 bg-transparent ms-1" 
                                 data-item-id="${item.id}" 
                                 title="Excluir tarefa">
                             <i class="bi bi-trash text-danger"></i>
                         </button>
+                        </span>
                     </div>
                 </div>
                 
@@ -268,6 +307,20 @@ class ChecklistRenderer {
                 this.toggleComments(itemId);
             }
         });
+        this.container.addEventListener('click', (e) => {
+            const respBadge = e.target.closest('.js-edit-resp');
+            if (respBadge) {
+                const itemId = parseInt(respBadge.dataset.itemId);
+                this.openRespModal(itemId);
+                return;
+            }
+            const prevBadge = e.target.closest('.js-edit-prev');
+            if (prevBadge) {
+                const itemId = parseInt(prevBadge.dataset.itemId);
+                this.openPrevModal(itemId);
+                return;
+            }
+        });
         
         this.container.addEventListener('click', (e) => {
             if (e.target.closest('.btn-save-comment')) {
@@ -355,6 +408,20 @@ class ChecklistRenderer {
             });
         }
     }
+
+    ensureItemVisible(itemId) {
+        if (!itemId) return;
+        let current = itemId;
+        const visited = new Set();
+        while (this.flatData[current] && this.flatData[current].parentId && !visited.has(current)) {
+            visited.add(current);
+            const parentId = this.flatData[current].parentId;
+            this.expandedItems.add(parentId);
+            current = parentId;
+        }
+        this.expandedItems.add(itemId);
+        this.updateExpandedState();
+    }
     
     /**
      * Manipula mudança de checkbox com propagação (cascata e bolha)
@@ -362,6 +429,10 @@ class ChecklistRenderer {
      */
     async handleCheck(itemId, completed) {
         if (this.isLoading) return;
+        const now = Date.now();
+        const last = this._toggleThrottle.get(itemId) || 0;
+        if (now - last < 300) return;
+        this._toggleThrottle.set(itemId, now);
         
         const checkbox = this.container.querySelector(`#checklist-${itemId}`);
         if (!checkbox) return;
@@ -371,6 +442,7 @@ class ChecklistRenderer {
         
         if (this.flatData[itemId]) {
             this.flatData[itemId].completed = completed;
+            this.flatData[itemId].data_conclusao = completed ? new Date().toISOString() : null;
         }
         
         this.propagateDown(itemId, completed);
@@ -382,7 +454,8 @@ class ChecklistRenderer {
             const response = await fetch(`/api/checklist/toggle/${itemId}`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.csrfToken
                 },
                 body: JSON.stringify({ completed })
             });
@@ -409,7 +482,7 @@ class ChecklistRenderer {
             this.updateAllItemsUI();
             this.updateProgressFromLocalData();
             
-            alert(`Erro: ${error.message}`);
+            if (typeof this.showToast === 'function') this.showToast(`Erro: ${error.message}`, 'error'); else alert(`Erro: ${error.message}`);
         } finally {
             this.isLoading = false;
         }
@@ -440,39 +513,7 @@ class ChecklistRenderer {
     }
     
     updateProgressDisplay(progress) {
-        const progressPercent = this.container.querySelector('#checklist-global-progress-percent') || 
-                               document.querySelector('#checklist-global-progress-percent');
-        const progressBar = this.container.querySelector('#checklist-global-progress-bar') || 
-                           document.querySelector('#checklist-global-progress-bar');
-        
-        if (progressPercent) {
-            progressPercent.textContent = `${progress}%`;
-        }
-        
-        if (progressBar) {
-            progressBar.style.width = `${progress}%`;
-            progressBar.setAttribute('aria-valuenow', progress);
-            
-            if (progress === 100) {
-                progressBar.classList.remove('bg-primary');
-                progressBar.classList.add('bg-success');
-            } else {
-                progressBar.classList.remove('bg-success');
-                progressBar.classList.add('bg-primary');
-            }
-        }
-        
-        const progressoValor = document.getElementById('progresso-valor');
-        const progressTotalBar = document.getElementById('progress-total-bar');
-        
-        if (progressoValor) {
-            progressoValor.textContent = `${progress}%`;
-        }
-        
-        if (progressTotalBar) {
-            progressTotalBar.style.width = `${progress}%`;
-            progressTotalBar.setAttribute('aria-valuenow', progress);
-        }
+        if (window.updateProgressBar) window.updateProgressBar(progress);
     }
     
     /**
@@ -485,6 +526,7 @@ class ChecklistRenderer {
         node.childrenIds.forEach(childId => {
             if (this.flatData[childId]) {
                 this.flatData[childId].completed = status;
+                this.flatData[childId].data_conclusao = status ? new Date().toISOString() : null;
                 this.propagateDown(childId, status);
             }
         });
@@ -512,6 +554,7 @@ class ChecklistRenderer {
         
         const oldStatus = parentNode.completed;
         parentNode.completed = allChecked;
+        parentNode.data_conclusao = allChecked ? new Date().toISOString() : null;
         
         if (oldStatus !== allChecked) {
             this.propagateUp(node.parentId, visited);
@@ -555,6 +598,70 @@ class ChecklistRenderer {
             const total = node.childrenIds.length;
             const completed = node.childrenIds.filter(id => this.flatData[id]?.completed).length;
             progressBadge.textContent = `${completed}/${total}`;
+        }
+
+        const respBadge = itemElement.querySelector('.js-edit-resp');
+        if (respBadge) {
+            if (node.responsavel) {
+                respBadge.classList.remove('d-none');
+                respBadge.textContent = this.abbrevResponsavel(node.responsavel);
+                respBadge.setAttribute('title', node.responsavel);
+            } else {
+                respBadge.classList.remove('d-none');
+                respBadge.innerHTML = 'Definir responsável';
+                respBadge.removeAttribute('title');
+            }
+        }
+
+        const prevOrig = itemElement.querySelector(`#badge-prev-orig-${itemId}`);
+        if (prevOrig) {
+            if (node.previsao_original) {
+                prevOrig.classList.remove('d-none');
+                prevOrig.setAttribute('title', `Previsão original: ${node.previsao_original}`);
+                prevOrig.textContent = `Prev. orig.: ${this.formatDate(node.previsao_original)}`;
+            } else {
+                prevOrig.classList.add('d-none');
+            }
+        }
+
+        const prevNova = itemElement.querySelector(`#badge-prev-nova-${itemId}`);
+        if (prevNova) {
+            if (node.nova_previsao) {
+                prevNova.classList.remove('d-none');
+                prevNova.classList.remove('bg-warning','text-dark');
+                prevNova.classList.add('bg-danger','text-white');
+                prevNova.setAttribute('title', `Nova previsão: ${node.nova_previsao}`);
+                prevNova.textContent = `Nova prev.: ${this.formatDate(node.nova_previsao)}`;
+            } else {
+                prevNova.classList.remove('d-none');
+                prevNova.classList.remove('bg-danger','text-white');
+                prevNova.classList.add('bg-warning','text-dark');
+                const fallbackPrev = node.previsao_original || this.previsaoTermino;
+                if (fallbackPrev) {
+                    prevNova.setAttribute('title', `Previsão: ${fallbackPrev}`);
+                    prevNova.textContent = `Prev.: ${this.formatDate(fallbackPrev)}`;
+                } else {
+                    prevNova.textContent = 'Definir nova previsão';
+                }
+            }
+        }
+
+        const concl = itemElement.querySelector(`#badge-concl-${itemId}`);
+        if (concl) {
+            if (node.data_conclusao) {
+                concl.classList.remove('d-none');
+                concl.setAttribute('title', `Concluída em: ${node.data_conclusao}`);
+                concl.textContent = `Concl.: ${this.formatDate(node.data_conclusao)}`;
+            } else {
+                concl.classList.add('d-none');
+            }
+        }
+
+        const atrasoBadge = itemElement.querySelector(`#badge-atrasada-${itemId}`);
+        if (atrasoBadge) {
+            const ref = node.nova_previsao || node.previsao_original;
+            const atrasada = !!(ref && !node.completed && new Date(ref) < new Date());
+            if (atrasada) atrasoBadge.classList.remove('d-none'); else atrasoBadge.classList.add('d-none');
         }
     }
     
@@ -611,6 +718,163 @@ class ChecklistRenderer {
         } catch (error) {
             historyContainer.innerHTML = '<div class="text-danger small">Erro ao carregar comentários</div>';
         }
+    }
+
+    formatDate(dataStr) {
+        if (!dataStr) return '';
+        const d = new Date(dataStr);
+        if (isNaN(d.getTime())) return dataStr;
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const yyyy = d.getFullYear();
+        return `${dd}/${mm}/${yyyy}`;
+    }
+
+    openRespModal(itemId) {
+        const current = this.flatData[itemId]?.responsavel || '';
+        let modal = document.getElementById('resp-edit-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'resp-edit-modal';
+            modal.className = 'modal fade';
+            modal.innerHTML = `
+            <div class="modal-dialog">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title">Editar Responsável</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                  <input type="text" class="form-control" id="resp-edit-input" placeholder="Nome" />
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                  <button type="button" class="btn btn-primary" id="resp-edit-save">Salvar</button>
+                </div>
+              </div>
+            </div>`;
+            document.body.appendChild(modal);
+        }
+        const input = modal.querySelector('#resp-edit-input');
+        input.value = current || '';
+        const saveBtn = modal.querySelector('#resp-edit-save');
+        saveBtn.onclick = async () => {
+            const novo = input.value.trim();
+            if (!novo) return;
+            const csrf = this.csrfToken;
+            try {
+                const res = await fetch(`/api/checklist/item/${itemId}/responsavel`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                    body: JSON.stringify({ responsavel: novo })
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    if (this.flatData[itemId]) this.flatData[itemId].responsavel = data.responsavel;
+                    this.updateItemUI(itemId);
+                    const m = bootstrap.Modal.getInstance(modal) || new bootstrap.Modal(modal);
+                    m.hide();
+                    if (typeof this.showToast === 'function') this.showToast('Responsável atualizado', 'success');
+                } else {
+                    if (typeof this.showToast === 'function') this.showToast(data.error || 'Erro ao atualizar responsável', 'error'); else alert(data.error || 'Erro ao atualizar responsável');
+                }
+            } catch (e) {
+                if (typeof this.showToast === 'function') this.showToast('Erro ao atualizar responsável', 'error'); else alert('Erro ao atualizar responsável');
+            }
+        };
+        const m = new bootstrap.Modal(modal);
+        m.show();
+        setTimeout(()=>input.focus(),100);
+    }
+
+    openPrevModal(itemId) {
+        const current = this.flatData[itemId]?.nova_previsao || '';
+        let modal = document.getElementById('prev-edit-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'prev-edit-modal';
+            modal.className = 'modal fade';
+            modal.innerHTML = `
+            <div class="modal-dialog">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title">Editar Prazo da Tarefa</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                  <div class="mb-2">
+                    <label class="form-label small text-muted">Previsão Original</label>
+                    <input type="text" class="form-control" id="prev-orig-view" readonly />
+                  </div>
+                  <div class="mb-2">
+                    <label class="form-label small">Nova Previsão</label>
+                    <input type="text" class="form-control" id="prev-edit-input" placeholder="YYYY-MM-DD" />
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                  <button type="button" class="btn btn-primary" id="prev-edit-save">Salvar</button>
+                </div>
+              </div>
+            </div>`;
+            document.body.appendChild(modal);
+        }
+        const input = modal.querySelector('#prev-edit-input');
+        const origView = modal.querySelector('#prev-orig-view');
+        if (origView) origView.value = this.formatDate(this.flatData[itemId]?.previsao_original) || '';
+        input.value = current ? String(current).slice(0,10) : (this.flatData[itemId]?.previsao_original ? String(this.flatData[itemId].previsao_original).slice(0,10) : '');
+        if (window.flatpickr) {
+            if (input._flatpickr) input._flatpickr.destroy();
+            window.flatpickr(input, { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y' });
+        }
+        const saveBtn = modal.querySelector('#prev-edit-save');
+        saveBtn.onclick = async () => {
+            const novo = input.value.trim();
+            if (!novo) return;
+            const csrf = this.csrfToken;
+            const prevOld = this.flatData[itemId]?.nova_previsao || null;
+            this.flatData[itemId] = this.flatData[itemId] || {};
+            this.flatData[itemId].nova_previsao = novo;
+            this.updateItemUI(itemId);
+            const originalText = saveBtn.innerHTML;
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...';
+            try {
+                const res = await fetch(`/api/checklist/item/${itemId}/prazos`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                    body: JSON.stringify({ nova_previsao: novo })
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    if (this.flatData[itemId]) {
+                        this.flatData[itemId].nova_previsao = data.nova_previsao;
+                        this.flatData[itemId].previsao_original = data.previsao_original || this.flatData[itemId].previsao_original;
+                    }
+                    this.updateItemUI(itemId);
+                    const m = bootstrap.Modal.getInstance(modal) || new bootstrap.Modal(modal);
+                    m.hide();
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = originalText;
+                    if (typeof this.showToast === 'function') this.showToast('Prazo atualizado', 'success');
+                } else {
+                    this.flatData[itemId].nova_previsao = prevOld;
+                    this.updateItemUI(itemId);
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = originalText;
+                    if (typeof this.showToast === 'function') this.showToast(data.error || 'Erro ao atualizar prazo', 'error'); else alert(data.error || 'Erro ao atualizar prazo');
+                }
+            } catch (e) {
+                this.flatData[itemId].nova_previsao = prevOld;
+                this.updateItemUI(itemId);
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = originalText;
+                if (typeof this.showToast === 'function') this.showToast('Erro ao atualizar prazo', 'error'); else alert('Erro ao atualizar prazo');
+            }
+        };
+        const m = new bootstrap.Modal(modal);
+        m.show();
+        setTimeout(()=>input.focus(),100);
     }
     
     renderCommentsHistory(itemId, comentarios, emailResponsavel) {
@@ -674,7 +938,7 @@ class ChecklistRenderer {
         const visibilidade = visibilitySelect ? visibilitySelect.value : 'interno';
         
         if (!texto) {
-            alert('O texto do comentário é obrigatório');
+            if (typeof this.showToast === 'function') this.showToast('O texto do comentário é obrigatório', 'warning'); else alert('O texto do comentário é obrigatório');
             return;
         }
         
@@ -682,7 +946,8 @@ class ChecklistRenderer {
             const response = await fetch(`/api/checklist/comment/${itemId}`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.csrfToken
                 },
                 body: JSON.stringify({ texto, visibilidade })
             });
@@ -710,12 +975,13 @@ class ChecklistRenderer {
                 throw new Error(data.error || 'Erro ao salvar comentário');
             }
         } catch (error) {
-            alert(`Erro: ${error.message}`);
+            if (typeof this.showToast === 'function') this.showToast(`Erro: ${error.message}`, 'error'); else alert(`Erro: ${error.message}`);
         }
     }
     
     async sendCommentEmail(comentarioId) {
-        if (!confirm('Deseja enviar este comentário por e-mail ao responsável?')) {
+        const proceed = window.confirmWithModal ? await window.confirmWithModal('Deseja enviar este comentário por e-mail ao responsável?') : confirm('Deseja enviar este comentário por e-mail ao responsável?');
+        if (!proceed) {
             return;
         }
         
@@ -723,24 +989,26 @@ class ChecklistRenderer {
             const response = await fetch(`/api/checklist/comment/${comentarioId}/email`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.csrfToken
                 }
             });
             
             const data = await response.json();
             
             if (data.ok) {
-                alert('Email enviado com sucesso!');
+                if (typeof this.showToast === 'function') this.showToast('Email enviado com sucesso!', 'success'); else alert('Email enviado com sucesso!');
             } else {
                 throw new Error(data.error || 'Erro ao enviar email');
             }
         } catch (error) {
-            alert(`Erro: ${error.message}`);
+            if (typeof this.showToast === 'function') this.showToast(`Erro: ${error.message}`, 'error'); else alert(`Erro: ${error.message}`);
         }
     }
     
     async deleteComment(comentarioId, itemId) {
-        if (!confirm('Deseja excluir este comentário?')) {
+        const proceedDel = window.confirmWithModal ? await window.confirmWithModal('Deseja excluir este comentário?') : confirm('Deseja excluir este comentário?');
+        if (!proceedDel) {
             return;
         }
         
@@ -748,7 +1016,8 @@ class ChecklistRenderer {
             const response = await fetch(`/api/checklist/comment/${comentarioId}`, {
                 method: 'DELETE',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.csrfToken
                 }
             });
             
@@ -760,7 +1029,7 @@ class ChecklistRenderer {
                 throw new Error(data.error || 'Erro ao excluir comentário');
             }
         } catch (error) {
-            alert(`Erro: ${error.message}`);
+            if (typeof this.showToast === 'function') this.showToast(`Erro: ${error.message}`, 'error'); else alert(`Erro: ${error.message}`);
         }
     }
 
@@ -785,7 +1054,8 @@ class ChecklistRenderer {
             const response = await fetch(`/api/checklist/delete/${itemId}`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.csrfToken
                 }
             });
             
@@ -837,11 +1107,19 @@ class ChecklistRenderer {
                 throw new Error(data.error || 'Erro ao excluir tarefa');
             }
         } catch (error) {
-            alert(`Erro: ${error.message}`);
+            if (typeof this.showToast === 'function') this.showToast(`Erro: ${error.message}`, 'error'); else alert(`Erro: ${error.message}`);
             if (itemEl) {
                 itemEl.style.opacity = '1';
                 itemEl.style.pointerEvents = 'auto';
             }
+        }
+    }
+
+    showToast(message, type='info', duration=3000) {
+        if (window.showToast) {
+            window.showToast(message, type, duration);
+        } else {
+            alert(message);
         }
     }
     
@@ -926,6 +1204,18 @@ class ChecklistRenderer {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    abbrevResponsavel(str) {
+        if (!str) return '';
+        const s = String(str);
+        if (s.includes('@')) {
+            const [local, domain] = s.split('@');
+            const baseDomain = (domain || '').split('.')[0] || domain || '';
+            const shortDomain = baseDomain.length > 5 ? baseDomain.slice(0, 5) + '...' : baseDomain + (baseDomain ? '' : '');
+            return `${local}@${shortDomain}`;
+        }
+        return s.length > 12 ? s.slice(0, 12) + '...' : s;
     }
 }
 
