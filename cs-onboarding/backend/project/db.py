@@ -242,6 +242,36 @@ def init_db():
             
             # (Bloco DDL PostgreSQL omitido aqui no pensamento para brevidade, mas incluído no tool call)
 
+            try:
+                cursor.execute("""
+                    DO $$
+                    BEGIN
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns 
+                            WHERE table_name='checklist_items' AND column_name='previsao_original'
+                        ) THEN
+                            ALTER TABLE checklist_items ADD COLUMN previsao_original TIMESTAMP NULL;
+                        END IF;
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns 
+                            WHERE table_name='checklist_items' AND column_name='nova_previsao'
+                        ) THEN
+                            ALTER TABLE checklist_items ADD COLUMN nova_previsao TIMESTAMP NULL;
+                        END IF;
+                    END
+                    $$;
+                """)
+            except Exception:
+                try:
+                    cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_name='checklist_items'")
+                    cols = [r[0] for r in cursor.fetchall()]
+                    if 'previsao_original' not in cols:
+                        cursor.execute("ALTER TABLE checklist_items ADD COLUMN previsao_original TIMESTAMP NULL")
+                    if 'nova_previsao' not in cols:
+                        cursor.execute("ALTER TABLE checklist_items ADD COLUMN nova_previsao TIMESTAMP NULL")
+                except Exception:
+                    pass
+
         elif db_type == 'sqlite':
              # Criar TODAS as tabelas diretamente (sem depender de script externo)
              _criar_tabelas_basicas_sqlite(cursor)
@@ -257,6 +287,12 @@ def init_db():
              
              # Migrar coluna checklist_item_id na tabela comentarios_h
              _migrar_coluna_comentarios_checklist_item(cursor)
+
+             # Migrar colunas de prazos em checklist_items
+             _migrar_colunas_prazos_checklist_items(cursor)
+
+             # Criar tabela de histórico de responsável
+             _criar_tabela_responsavel_history(cursor, db_type)
              
              # Inserir regras de gamificação padrão se não existirem
              try:
@@ -266,6 +302,22 @@ def init_db():
                      _inserir_regras_gamificacao_padrao(cursor)
              except Exception as e:
                  pass
+
+        # Criar índices básicos para performance
+        try:
+            if db_type == 'postgres':
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_items_implantacao_id ON checklist_items (implantacao_id)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_items_parent_id ON checklist_items (parent_id)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_comentarios_h_checklist_item_id ON comentarios_h (checklist_item_id)")
+            else:
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_items_implantacao_id ON checklist_items (implantacao_id)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_items_parent_id ON checklist_items (parent_id)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_comentarios_h_checklist_item_id ON comentarios_h (checklist_item_id)")
+        except Exception as idx_err:
+            try:
+                current_app.logger.warning(f"Falha ao criar índices: {idx_err}")
+            except Exception:
+                pass
 
         conn.commit()
 
@@ -547,6 +599,51 @@ def _migrar_coluna_comentarios_checklist_item(cursor):
         if 'checklist_item_id' not in colunas_existentes:
             cursor.execute("ALTER TABLE comentarios_h ADD COLUMN checklist_item_id INTEGER")
     except Exception as e:
+        pass
+
+
+def _migrar_colunas_prazos_checklist_items(cursor):
+    try:
+        cursor.execute("PRAGMA table_info(checklist_items)")
+        cols = cursor.fetchall()
+        names = [c[1] for c in cols]
+        if 'previsao_original' not in names:
+            cursor.execute("ALTER TABLE checklist_items ADD COLUMN previsao_original DATETIME")
+        if 'nova_previsao' not in names:
+            cursor.execute("ALTER TABLE checklist_items ADD COLUMN nova_previsao DATETIME")
+    except Exception:
+        pass
+
+
+def _criar_tabela_responsavel_history(cursor, db_type):
+    try:
+        if db_type == 'sqlite':
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS checklist_responsavel_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    checklist_item_id INTEGER NOT NULL,
+                    old_responsavel TEXT,
+                    new_responsavel TEXT,
+                    changed_by TEXT,
+                    changed_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
+        else:
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS checklist_responsavel_history (
+                    id SERIAL PRIMARY KEY,
+                    checklist_item_id INTEGER NOT NULL,
+                    old_responsavel TEXT,
+                    new_responsavel TEXT,
+                    changed_by TEXT,
+                    changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
+    except Exception:
         pass
 
 

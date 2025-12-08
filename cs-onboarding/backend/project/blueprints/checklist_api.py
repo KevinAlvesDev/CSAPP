@@ -726,7 +726,7 @@ def update_responsavel(item_id):
             return jsonify({'ok': False, 'error': 'Erro interno ao atualizar responsável'}), 500
 
 
-@checklist_bp.route('/item/<int:item_id>/prazos', methods=['PATCH'])
+@checklist_bp.route('/item/<int:item_id>/prazos', methods=['PATCH', 'POST'])
 @login_required
 @validate_api_origin
 @limiter.limit("200 per minute", key_func=lambda: g.user_email or get_remote_address())
@@ -744,7 +744,10 @@ def update_prazos(item_id):
         return jsonify({'ok': False, 'error': 'Nova Previsão é obrigatória'}), 400
     from datetime import datetime
     try:
-        nova_dt = datetime.fromisoformat(nova_prev)
+        s = nova_prev.strip()
+        if s.endswith('Z'):
+            s = s[:-1] + '+00:00'
+        nova_dt = datetime.fromisoformat(s)
     except Exception:
         return jsonify({'ok': False, 'error': 'Formato de data inválido (ISO8601)'}), 400
     usuario_email = g.user_email if hasattr(g, 'user_email') else None
