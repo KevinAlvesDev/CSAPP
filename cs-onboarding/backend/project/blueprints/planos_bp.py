@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, render_template, redirect, url_for, flash, g
 from functools import wraps
 from ..domain import planos_sucesso_service
+from ..db import logar_timeline
 from ..__init__ import csrf
 from ..common.exceptions import ValidationError
 from ..blueprints.auth import login_required
@@ -340,12 +341,31 @@ def aplicar_plano_implantacao(implantacao_id):
 
         user = get_current_user()
         usuario = user.get('usuario') if user else 'sistema'
+        responsavel_nome = None
+        if user:
+            responsavel_nome = user.get('nome') or None
+            try:
+                if not responsavel_nome and hasattr(g, 'user') and g.user:
+                    responsavel_nome = g.user.get('name')
+            except Exception:
+                pass
 
         planos_sucesso_service.aplicar_plano_a_implantacao_checklist(
             implantacao_id=implantacao_id,
             plano_id=plano_id,
-            usuario=usuario
+            usuario=usuario,
+            responsavel_nome=responsavel_nome
         )
+
+        try:
+            logar_timeline(
+                implantacao_id,
+                usuario,
+                'plano_aplicado',
+                f'Plano {plano_id} aplicado à implantação {implantacao_id} por {usuario}'
+            )
+        except Exception:
+            pass
 
         if request.is_json:
             return jsonify({
@@ -403,6 +423,16 @@ def remover_plano_implantacao(implantacao_id):
             implantacao_id=implantacao_id,
             usuario=usuario
         )
+
+        try:
+            logar_timeline(
+                implantacao_id,
+                usuario,
+                'plano_removido',
+                f'Plano removido da implantação {implantacao_id} por {usuario}'
+            )
+        except Exception:
+            pass
 
         if request.is_json:
             return jsonify({

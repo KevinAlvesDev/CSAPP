@@ -183,7 +183,7 @@ class ChecklistRenderer {
                             ${item.previsao_original ? `<span class="badge bg-warning text-dark" id="badge-prev-orig-${item.id}" style="font-size: 0.75rem;" title="Previsão original: ${item.previsao_original}" aria-label="Previsão original: ${this.formatDate(item.previsao_original)}">Prev. orig.: ${this.formatDate(item.previsao_original)}</span>` : `<span class="badge bg-warning text-dark d-none" id="badge-prev-orig-${item.id}" style="font-size: 0.75rem;" aria-hidden="true"></span>`}
                         </span>
                         <span class="col-prev-atual" style="width:160px">
-                            ${item.nova_previsao ? `<span class="badge bg-danger text-white js-edit-prev" id="badge-prev-nova-${item.id}" data-item-id="${item.id}" style="font-size: 0.75rem;" title="Previsão atual: ${item.nova_previsao}" aria-label="Previsão atual: ${this.formatDate(item.nova_previsao)}">Prev.: ${this.formatDate(item.nova_previsao)}</span>` : ((item.previsao_original || this.previsaoTermino) ? `<span class="badge bg-warning text-dark js-edit-prev" id="badge-prev-nova-${item.id}" data-item-id="${item.id}" style="font-size: 0.75rem;" title="Previsão atual: ${item.previsao_original || this.previsaoTermino}" aria-label="Previsão atual: ${this.formatDate(item.previsao_original || this.previsaoTermino)}">Prev.: ${this.formatDate(item.previsao_original || this.previsaoTermino)}</span>` : `<span class="badge bg-warning text-dark js-edit-prev" id="badge-prev-nova-${item.id}" data-item-id="${item.id}" style="font-size: 0.75rem;" aria-label="Definir nova previsão">Definir nova previsão</span>`)}
+                            ${item.nova_previsao ? `<span class="badge bg-danger text-white js-edit-prev" id="badge-prev-nova-${item.id}" data-item-id="${item.id}" style="font-size: 0.75rem;" title="Previsão atual: ${item.nova_previsao}" aria-label="Previsão atual: ${this.formatDate(item.nova_previsao)}">Prev.: ${this.formatDate(item.nova_previsao)}</span>` : `<span class="badge bg-warning text-dark js-edit-prev" id="badge-prev-nova-${item.id}" data-item-id="${item.id}" style="font-size: 0.75rem;" aria-label="Definir nova previsão">Definir nova previsão</span>`}
                         </span>
                         ${item.atrasada ? `<span class="badge bg-danger ms-2" id="badge-atrasada-${item.id}" style="font-size: 0.75rem;">Prazo excedido</span>` : `<span class="badge bg-danger ms-2 d-none" id="badge-atrasada-${item.id}" style="font-size: 0.75rem;">Prazo excedido</span>`}
                         ${item.data_conclusao ? `<span class="badge bg-success ms-2" id="badge-concl-${item.id}" style="font-size: 0.75rem;" title="Concluída em: ${item.data_conclusao}">Concl.: ${this.formatDate(item.data_conclusao)}</span>` : `<span class="badge bg-success ms-2 d-none" id="badge-concl-${item.id}" style="font-size: 0.75rem;"></span>`}
@@ -636,13 +636,7 @@ class ChecklistRenderer {
                 prevNova.classList.remove('d-none');
                 prevNova.classList.remove('bg-danger','text-white');
                 prevNova.classList.add('bg-warning','text-dark');
-                const fallbackPrev = node.previsao_original || this.previsaoTermino;
-                if (fallbackPrev) {
-                    prevNova.setAttribute('title', `Previsão: ${fallbackPrev}`);
-                    prevNova.textContent = `Prev.: ${this.formatDate(fallbackPrev)}`;
-                } else {
-                    prevNova.textContent = 'Definir nova previsão';
-                }
+                prevNova.textContent = 'Definir nova previsão';
             }
         }
 
