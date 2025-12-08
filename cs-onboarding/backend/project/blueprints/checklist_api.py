@@ -457,7 +457,27 @@ def delete_comment(comentario_id):
         if not (is_owner or is_manager):
             return jsonify({'ok': False, 'error': 'Permissão negada'}), 403
         
+        # Buscar contexto para timeline
+        item_ctx = query_db(
+            """
+            SELECT ci.implantacao_id, ci.title AS item_nome
+            FROM comentarios_h c
+            JOIN checklist_items ci ON c.checklist_item_id = ci.id
+            WHERE c.id = %s
+            """,
+            (comentario_id,),
+            one=True
+        ) or {}
+
         execute_db("DELETE FROM comentarios_h WHERE id = %s", (comentario_id,))
+        try:
+            from ..db import logar_timeline
+            impl_id = item_ctx.get('implantacao_id')
+            if impl_id:
+                detalhe = f"Comentário excluído em '{item_ctx.get('item_nome','')}' (ID {comentario_id})."
+                logar_timeline(impl_id, usuario_email, 'comentario_excluido', detalhe)
+        except Exception:
+            pass
         
         return jsonify({'ok': True, 'message': 'Comentário excluído'})
     except Exception as e:
