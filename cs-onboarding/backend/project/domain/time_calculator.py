@@ -3,16 +3,16 @@
 Módulo para calcular corretamente os tempos de implantação considerando mudanças de status.
 """
 
-from datetime import datetime, date, timedelta
+from datetime import date, datetime
+
 from ..db import query_db
-from flask import current_app
 
 
 def parse_datetime(dt_obj):
     """Converte vários formatos de data/datetime para datetime naive."""
     if not dt_obj:
         return None
-    
+
     if isinstance(dt_obj, datetime):
         return dt_obj.replace(tzinfo=None) if dt_obj.tzinfo else dt_obj
     elif isinstance(dt_obj, date) and not isinstance(dt_obj, datetime):
@@ -41,22 +41,22 @@ def get_status_history(impl_id):
     """
     logs = query_db(
         """
-        SELECT data_criacao, detalhes 
-        FROM timeline_log 
-        WHERE implantacao_id = %s 
+        SELECT data_criacao, detalhes
+        FROM timeline_log
+        WHERE implantacao_id = %s
         AND tipo_evento = 'status_alterado'
         ORDER BY data_criacao ASC
         """,
         (impl_id,)
     )
-    
+
     history = []
     import re
-    
+
     for log in logs or []:
         dt = parse_datetime(log.get('data_criacao'))
         detalhes = log.get('detalhes', '').lower()
-        
+
         if dt:
             # Parada (pode ser retroativa)
             if 'parada' in detalhes or 'retroativamente' in detalhes:
@@ -75,7 +75,7 @@ def get_status_history(impl_id):
             # Finalizada
             elif 'finalizada' in detalhes:
                 history.append((dt, 'andamento', 'finalizada', log.get('detalhes', '')))
-    
+
     return history
 
 
@@ -83,11 +83,11 @@ def calculate_total_days_in_status(impl_id, target_status='andamento'):
     """
     Calcula o total de dias que a implantação passou em um status específico,
     considerando todos os períodos (não apenas o atual).
-    
+
     Args:
         impl_id: ID da implantação
         target_status: 'andamento' ou 'parada'
-    
+
     Returns:
         Total de dias no status especificado
     """
@@ -95,18 +95,18 @@ def calculate_total_days_in_status(impl_id, target_status='andamento'):
         "SELECT data_inicio_efetivo, data_finalizacao, status FROM implantacoes WHERE id = %s",
         (impl_id,), one=True
     )
-    
+
     if not impl:
         return 0
-    
+
     agora = datetime.now()
     status_history = get_status_history(impl_id)
     current_status = impl.get('status')
     inicio_efetivo = parse_datetime(impl.get('data_inicio_efetivo'))
-    
+
     if not inicio_efetivo:
         return 0
-    
+
     # Se não há histórico, usar cálculo simples baseado no status atual
     if not status_history:
         if target_status == 'andamento':
@@ -127,24 +127,24 @@ def calculate_total_days_in_status(impl_id, target_status='andamento'):
                     delta = agora - parada_inicio
                     return max(0, delta.days)
             return 0
-    
+
     # Calcular períodos usando histórico
     total_days = 0
     status_history.sort(key=lambda x: x[0])
-    
+
     periods = []
     current_start = inicio_efetivo
     status_before_history = 'andamento'  # Assumir que começou em andamento
-    
+
     # Processar histórico
-    for hist_date, old_status, new_status, _ in status_history:
+    for hist_date, _old_status, new_status, _ in status_history:
         # Se o status antes desta mudança era o alvo, adicionar período
         if status_before_history == target_status:
             if hist_date > current_start:
                 periods.append((current_start, hist_date))
         status_before_history = new_status
         current_start = hist_date
-    
+
     # Adicionar período atual se estiver no status alvo
     if current_status == target_status:
         if target_status == 'parada':
@@ -158,14 +158,14 @@ def calculate_total_days_in_status(impl_id, target_status='andamento'):
                 start_date = current_start if status_history else inicio_efetivo
                 if agora > start_date:
                     periods.append((start_date, agora))
-    
+
     # Somar todos os períodos
     for start, end in periods:
         delta = end - start
         days = delta.days
         if days > 0:
             total_days += days
-    
+
     return total_days
 
 

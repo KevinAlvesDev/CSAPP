@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta
-from flask import current_app
-from ..db import execute_db, query_db
 
+from flask import current_app
+
+from ..db import execute_db, query_db
 
 ALLOWED_TABLES = [
     'usuarios',

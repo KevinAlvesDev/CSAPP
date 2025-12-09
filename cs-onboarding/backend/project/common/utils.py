@@ -1,4 +1,4 @@
-from datetime import datetime, date
+from datetime import date, datetime
 
 
 def _convert_to_date_or_datetime(dt_obj):
@@ -104,6 +104,7 @@ def gerar_cor_status(status):
 def load_profiles_list(exclude_self=True):
     try:
         from flask import g
+
         from ..db import query_db
         users = query_db(
             """

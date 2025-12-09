@@ -1,19 +1,18 @@
+import secrets
 from functools import wraps
-from flask import (
-    Blueprint, redirect, url_for, session, render_template, g, flash,
-    current_app, request, abort
-)
-from werkzeug.security import generate_password_hash, check_password_hash
-from urllib.parse import urlencode
-from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
-
-from psycopg2 import IntegrityError as Psycopg2IntegrityError
 from sqlite3 import IntegrityError as Sqlite3IntegrityError
+from urllib.parse import urlencode
 
-from ..db import query_db, execute_db
+from flask import Blueprint, abort, current_app, flash, g, redirect, render_template, request, session, url_for
+from itsdangerous import URLSafeTimedSerializer
+from psycopg2 import IntegrityError as Psycopg2IntegrityError
+from werkzeug.security import generate_password_hash
+
+from ..config.logging_config import auth_logger, security_logger
 from ..constants import ADMIN_EMAIL, PERFIL_ADMIN, PERFIL_IMPLANTADOR, PERFIS_COM_GESTAO
 from ..core.extensions import limiter
-from ..config.logging_config import auth_logger, security_logger
+from ..database.external_db import find_cs_user_by_email
+from ..db import execute_db, query_db
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -36,13 +35,13 @@ def _sync_user_profile(user_email, user_name, auth0_user_id):
 
         if not usuario_existente:
             try:
-                senha_placeholder = generate_password_hash(auth0_user_id + current_app.secret_key)
+                senha_placeholder = generate_password_hash(secrets.token_urlsafe(32))
                 execute_db(
                     "INSERT INTO usuarios (usuario, senha) VALUES (%s, %s)",
                     (user_email, senha_placeholder)
                 )
                 auth_logger.info(f'User account created: {user_email}')
-            except (Psycopg2IntegrityError, Sqlite3IntegrityError) as e:
+            except (Psycopg2IntegrityError, Sqlite3IntegrityError):
                 raise ValueError("Usuário já cadastrado")
             except Exception as db_error:
                 raise db_error
@@ -109,7 +108,7 @@ def login_required(f):
                 flash(str(ve), "error")
                 session.clear()
                 return redirect(url_for('auth.login'))
-            except Exception as e:
+            except Exception:
                 pass
 
         perfil_acesso_debug = g.perfil.get('perfil_acesso') if g.perfil else 'NÃO CARREGADO'
@@ -169,225 +168,90 @@ def rate_limit(max_requests):
 
 
 @auth_bp.route('/change-password', methods=['GET', 'POST'])
-@rate_limit("100 per minute")
 @login_required
 def change_password():
-    """Permite ao usuário autenticado alterar sua senha."""
-    if request.method == 'GET':
-        try:
-            session.pop('_flashes', None)
-        except Exception:
-            pass
-        return render_template('change_password.html', auth0_enabled=False)
-
-    current_password = request.form.get('current_password', '')
-    new_password = request.form.get('new_password', '')
-    new_password_confirm = request.form.get('new_password_confirm', '')
-
-    if not all([current_password, new_password, new_password_confirm]):
-        flash('Preencha todos os campos.', 'error')
-        return render_template('change_password.html', auth0_enabled=False)
-
-    try:
-        from ..common.validation import validate_password_strength, ValidationError
-        validate_password_strength(new_password)
-    except ValidationError as ve:
-        flash(str(ve), 'error')
-        return render_template('change_password.html', auth0_enabled=False)
-
-    if new_password != new_password_confirm:
-        flash('As senhas novas não coincidem.', 'error')
-        return render_template('change_password.html', auth0_enabled=False)
-
-    usuario = query_db("SELECT usuario, senha FROM usuarios WHERE usuario = %s", (g.user_email,), one=True)
-    if not usuario:
-        flash('Conta não encontrada.', 'error')
-        return render_template('change_password.html', auth0_enabled=False)
-
-    if not check_password_hash(usuario.get('senha'), current_password):
-        flash('Senha atual incorreta.', 'error')
-        return render_template('change_password.html', auth0_enabled=False)
-
-    try:
-        senha_hash = generate_password_hash(new_password)
-        execute_db("UPDATE usuarios SET senha = %s WHERE usuario = %s", (senha_hash, g.user_email))
-        auth_logger.info(f'User changed password: {g.user_email}')
-        flash('Senha alterada com sucesso.', 'success')
-        return redirect(url_for('main.dashboard'))
-    except Exception as e:
-        auth_logger.error(f'Error changing password for {g.user_email}: {str(e)}')
-        flash('Erro ao alterar senha. Tente novamente.', 'error')
-        return render_template('change_password.html', auth0_enabled=False)
+    """Rota desativada: alteração de senha não permitida (login exclusivo via Google)."""
+    flash('Gerenciamento de credenciais é feito via Google.', 'info')
+    return redirect(url_for('main.dashboard'))
 
 
 @auth_bp.route('/forgot-password', methods=['GET', 'POST'])
-@rate_limit("100 per minute")
 def forgot_password():
-    """Solicita recuperação de senha via e-mail com token."""
-    if request.method == 'GET':
-        try:
-            session.pop('_flashes', None)
-        except Exception:
-            pass
-        return render_template('forgot_password.html', auth0_enabled=False)
-
-    email = (request.form.get('email') or '').strip().lower()
-    try:
-        from ..common.validation import validate_email
-        email = validate_email(email)
-    except Exception:
-        flash('E-mail inválido.', 'error')
-        return render_template('forgot_password.html', auth0_enabled=False)
-
-    usuario = query_db("SELECT usuario FROM usuarios WHERE usuario = %s", (email,), one=True)
-    if not usuario:
-        flash('E-mail não encontrado.', 'error')
-        return render_template('forgot_password.html', auth0_enabled=False)
-
-    s = _get_reset_serializer()
-    token = s.dumps({'email': email})
-    reset_url = url_for('auth.reset_password', token=token, _external=True)
-
-    try:
-        from ..mail.email_utils import send_email_global
-        subject = 'Recuperação de senha - CS Onboarding'
-        body_html = f"""
-            <p>Olá,</p>
-            <p>Para redefinir sua senha, clique no link abaixo. Ele expira em 1 hora.</p>
-            <p><a href="{reset_url}">Redefinir senha</a></p>
-            <p>Se você não solicitou, ignore este e-mail.</p>
-        """
-        body_text = (
-            "Olá,\n\n"
-            "Para redefinir sua senha, use o link abaixo. Ele expira em 1 hora.\n"
-            f"{reset_url}\n\n"
-            "Se você não solicitou, ignore este e-mail.\n"
-        )
-        send_email_global(subject, body_html, [email], body_text=body_text)
-        flash('Enviamos um link de redefinição de senha para seu e-mail.', 'success')
-    except Exception as e:
-        auth_logger.warning(f'Password reset email not sent (fallback): {e}')
-        flash('Sistema de e-mail não está configurado. Use o link para redefinir:', 'warning')
-        flash(reset_url, 'info')
-
+    """Rota desativada: recuperação de senha não permitida (login exclusivo via Google)."""
+    flash('Login exclusivo via Google. Recupere sua senha no Google se necessário.', 'info')
     return redirect(url_for('auth.login'))
 
 
 @auth_bp.route('/check-email', methods=['GET'])
 def check_email():
-    email = (request.args.get('email') or '').strip().lower()
-    try:
-        from ..common.validation import validate_email
-        email = validate_email(email)
-    except Exception:
-        from flask import jsonify
-        return jsonify({'valid': False, 'exists': False})
-    usuario = query_db("SELECT usuario FROM usuarios WHERE usuario = %s", (email,), one=True)
+    """Rota desativada."""
     from flask import jsonify
-    return jsonify({'valid': True, 'exists': bool(usuario)})
+    return jsonify({'valid': False, 'exists': False, 'message': 'Endpoint desativado'})
 
 
 @auth_bp.route('/reset-password/<token>', methods=['GET', 'POST'])
-@rate_limit("100 per minute")
 def reset_password(token):
-    """Redefine a senha usando token temporário."""
-
-    s = _get_reset_serializer()
-    try:
-        data = s.loads(token, max_age=3600)
-        email = data.get('email')
-    except SignatureExpired:
-        flash('O link expirou. Solicite novamente.', 'error')
-        return redirect(url_for('auth.forgot_password'))
-    except BadSignature:
-        flash('Link inválido.', 'error')
-        return redirect(url_for('auth.forgot_password'))
-
-    if request.method == 'GET':
-        try:
-            session.pop('_flashes', None)
-        except Exception:
-            pass
-        return render_template('reset_password.html', auth0_enabled=False)
-
-    new_password = request.form.get('new_password', '')
-    new_password_confirm = request.form.get('new_password_confirm', '')
-    if not all([new_password, new_password_confirm]):
-        flash('Preencha todos os campos.', 'error')
-        return render_template('reset_password.html', auth0_enabled=False)
-
-    try:
-        from ..common.validation import validate_password_strength, ValidationError
-        validate_password_strength(new_password)
-    except ValidationError as ve:
-        flash(str(ve), 'error')
-        return render_template('reset_password.html', auth0_enabled=False)
-
-    if new_password != new_password_confirm:
-        flash('As senhas não coincidem.', 'error')
-        return render_template('reset_password.html', auth0_enabled=False)
-
-    try:
-        senha_hash = generate_password_hash(new_password)
-        execute_db("UPDATE usuarios SET senha = %s WHERE usuario = %s", (senha_hash, email))
-        auth_logger.info(f'User reset password: {email}')
-        flash('Senha redefinida com sucesso. Faça login.', 'success')
-        return redirect(url_for('auth.login'))
-    except Exception as e:
-        auth_logger.error(f'Error resetting password for {email}: {str(e)}')
-        flash('Erro ao redefinir senha. Tente novamente.', 'error')
-        return render_template('reset_password.html', auth0_enabled=False)
+    """Rota desativada."""
+    flash('Login exclusivo via Google.', 'info')
+    return redirect(url_for('auth.login'))
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
-@rate_limit("100 per minute")
 def login():
-    if request.method == 'GET':
-        try:
-            session.pop('_flashes', None)
-        except Exception:
-            pass
-        return render_template('login.html', auth0_enabled=False, use_custom_auth=True)
+    """
+    Página de login.
+    Agora suporta apenas login via Google OAuth.
+    O POST foi removido pois não há mais formulário de senha.
+    """
+    # Se usuário já estiver logado, redireciona para dashboard
+    if g.user:
+        return redirect(url_for('main.dashboard'))
 
-    email = (request.form.get('email') or '').strip().lower()
-    password = request.form.get('password', '')
+    # Renderiza a página de login (que agora só tem o botão do Google)
+    return render_template('login.html', auth0_enabled=False, use_custom_auth=True)
 
-    if not email or not password:
-        flash('Por favor, preencha todos os campos.', 'error')
-        return render_template('login.html', auth0_enabled=False, use_custom_auth=True)
+
+
+@auth_bp.route('/check_user_external', methods=['POST'])
+def check_user_external():
+    """
+    Endpoint para verificar se o usuário existe no banco externo.
+    Retorna JSON para uso via AJAX na tela de login.
+    """
+    data = request.get_json()
+    email = data.get('email')
+
+    if not email:
+        return {'status': 'error', 'message': 'Email não fornecido'}, 400
 
     try:
         from ..common.validation import validate_email
         email = validate_email(email)
     except Exception:
-        flash('E-mail inválido.', 'error')
-        return render_template('login.html', auth0_enabled=False, use_custom_auth=True)
+         return {'status': 'error', 'message': 'Email inválido'}, 400
 
-    usuario = query_db("SELECT usuario, senha FROM usuarios WHERE usuario = %s", (email,), one=True)
-
-    if not usuario:
-        auth_logger.warning(f'Login attempt with non-existent email: {email}')
-        flash('E-mail ou senha incorretos.', 'error')
-        return render_template('login.html', auth0_enabled=False, use_custom_auth=True)
-
-    if not check_password_hash(usuario.get('senha'), password):
-        auth_logger.warning(f'Failed login attempt for: {email}')
-        flash('E-mail ou senha incorretos.', 'error')
-        return render_template('login.html', auth0_enabled=False, use_custom_auth=True)
-
-    perfil = query_db("SELECT nome FROM perfil_usuario WHERE usuario = %s", (email,), one=True)
-    nome = perfil.get('nome') if perfil else email
-
-    session['user'] = {
-        'email': email,
-        'name': nome,
-        'sub': f'local|{email}'
-    }
-    session.permanent = True
-
-    auth_logger.info(f'User logged in successfully: {email}')
-    flash(f'Bem-vindo, {nome}!', 'success')
-    return redirect(url_for('main.dashboard'))
+    try:
+        cs_user = find_cs_user_by_email(email)
+        if cs_user:
+            if cs_user.get('ativo'):
+                return {
+                    'status': 'success',
+                    'message': 'Usuário encontrado',
+                    'user_name': cs_user.get('nome')
+                }, 200
+            else:
+                return {
+                    'status': 'error',
+                    'message': 'Usuário encontrado, mas inativo'
+                }, 200
+        else:
+            return {
+                'status': 'error',
+                'message': 'Usuário não encontrado na base CS'
+            }, 200
+    except Exception as e:
+        auth_logger.error(f"Erro na verificação externa via API: {e}")
+        return {'status': 'error', 'message': 'Erro ao consultar banco externo'}, 500
 
 
 @auth_bp.route('/callback')
@@ -399,7 +263,7 @@ def callback():
         flash('Auth0 desativado no ambiente de desenvolvimento. Use dev_login.', 'info')
         return redirect(url_for('main.dashboard'))
 
-    from ..extensions import oauth
+    from ..core.extensions import oauth
 
     try:
         auth0 = oauth.create_client('auth0')
@@ -428,9 +292,154 @@ def callback():
         return redirect(url_for('auth.login'))
     except Exception as e:
         auth_logger.error(f'Erro no callback do Auth0: {e}', exc_info=True)
-        flash(f"Erro durante a autenticação: Algo deu errado, por favor tente novamente.", "error")
+        flash("Erro durante a autenticação: Algo deu errado, por favor tente novamente.", "error")
         session.clear()
         return redirect(url_for('main.home'))
+
+
+@auth_bp.route('/login/google')
+def google_login():
+    """
+    Inicia o fluxo de login com Google.
+    
+    Rota: /login/google
+    Endpoint: auth.google_login
+    
+    Descrição:
+    - Verifica se o Google OAuth está ativado.
+    - Redireciona o usuário para a página de consentimento do Google.
+    - Define o callback para 'auth.google_callback'.
+    """
+    from ..core.extensions import oauth
+
+    auth_logger.info("Iniciando fluxo de login com Google")
+
+    if not current_app.config.get('GOOGLE_OAUTH_ENABLED'):
+        auth_logger.error("Google OAuth não está habilitado nas configurações")
+        flash('Login com Google não está configurado.', 'error')
+        return redirect(url_for('auth.login'))
+
+    # Usar SEMPRE o host atual para evitar perda de sessão/state
+    redirect_uri = url_for('auth.google_callback', _external=True)
+
+    auth_logger.info(f"Redirecionando para Google com callback: {redirect_uri}")
+    return oauth.google.authorize_redirect(redirect_uri)
+
+
+@auth_bp.route('/login/google/callback')
+def google_callback():
+    """
+    Callback do login com Google.
+    
+    Rota: /login/google/callback
+    Endpoint: auth.google_callback
+    
+    Descrição:
+    - Recebe o código de autorização do Google.
+    - Troca o código por um token de acesso.
+    - Obtém informações do perfil do usuário.
+    - Valida se o e-mail pertence ao domínio @pactosolucoes.com.br.
+    - Valida se o usuário existe e está ativo na base externa (OAMD).
+    - Cria ou atualiza o usuário localmente.
+    - Inicia a sessão do usuário.
+    """
+    from ..core.extensions import oauth
+
+    auth_logger.info("Recebido callback do Google")
+
+    try:
+        token = oauth.google.authorize_access_token()
+        auth_logger.info("Token de acesso obtido com sucesso")
+
+        # userinfo geralmente vem no token se openid scope for usado,
+        # mas garantimos chamando userinfo() se disponivel ou pegando do token
+        user_info = token.get('userinfo')
+        if not user_info:
+             user_info = oauth.google.userinfo()
+
+        auth_logger.info(f"Informações do usuário obtidas: {user_info.get('email')}")
+
+        email = user_info.get('email')
+
+        if not email:
+            auth_logger.error("E-mail não encontrado nas informações do usuário")
+            flash('Não foi possível obter o e-mail da sua conta Google.', 'error')
+            return redirect(url_for('auth.login'))
+
+        # Validação de Domínio
+        if not email.endswith('@pactosolucoes.com.br'):
+            auth_logger.warning(f'Google Login blocked: Invalid domain {email}')
+            flash('Acesso restrito a contas @pactosolucoes.com.br', 'error')
+            return redirect(url_for('auth.login'))
+
+        # --- VALIDAÇÃO EXTERNA (OAMD) ---
+        try:
+            # Verificar se a URL do banco externo está configurada
+            external_db_configured = bool(current_app.config.get('EXTERNAL_DB_URL'))
+
+            # Tentar buscar usuário se o banco estiver configurado ou se estivermos em modo DEBUG (para usar o mock)
+            # Em produção sem URL, find_cs_user_by_email retornaria None, mas queremos tratar isso diferentemente
+
+            if external_db_configured or current_app.config.get('DEBUG', False):
+                cs_user = find_cs_user_by_email(email)
+
+                if not cs_user:
+                    # Se o banco está configurado e não achou -> Bloqueia
+                    if external_db_configured:
+                        auth_logger.warning(f'Login blocked: User not found in External CS DB: {email}')
+                        flash('Acesso negado. Usuário não identificado na base de Customer Success (OAMD). Por favor, entre em contato com o suporte ou verifique se seu cadastro no OAMD está ativo e correto.', 'error')
+                        return redirect(url_for('auth.login'))
+                    else:
+                        # Se não está configurado mas tentou (DEBUG mock), e falhou -> Bloqueia (comportamento do mock)
+                        # Mas se o mock não rodou (ex: email errado), cai aqui
+                         auth_logger.warning(f'Login blocked: User not found (Mock/Dev): {email}')
+                         flash('Acesso negado. Usuário não identificado (Dev Mode).', 'error')
+                         return redirect(url_for('auth.login'))
+
+                if not cs_user.get('ativo'):
+                    auth_logger.warning(f'Login blocked: Inactive user in External CS DB: {email}')
+                    flash('Acesso negado. Seu cadastro de CS está inativo.', 'error')
+                    return redirect(url_for('auth.login'))
+
+                auth_logger.info(f"External auth check passed for {email} (CS: {cs_user.get('nome')})")
+                user_name_final = cs_user.get('nome')
+
+            else:
+                # FALLBACK DE PRODUÇÃO SEM BANCO EXTERNO
+                # Se não temos URL de banco externo e NÃO estamos em DEBUG,
+                # assumimos que a validação de domínio do Google é suficiente.
+                auth_logger.warning(f"External DB check SKIPPED for {email} (No Config). Relying on Google Domain.")
+                # Usar nome do Google
+                user_name_final = user_info.get('name', email)
+
+        except Exception as e:
+            auth_logger.error(f'External DB check failed during login: {e}', exc_info=True)
+            # Em caso de erro técnico no banco (timeout, etc), decidir se bloqueia ou libera.
+            # Por segurança, geralmente bloqueia, ou libera com restrições.
+            # Vamos manter o bloqueio para forçar correção, a menos que explicitamente desejado o contrário.
+            flash('Erro ao validar credenciais externas. Tente novamente.', 'error')
+            return redirect(url_for('auth.login'))
+        # -------------------------------------
+
+        # Sincronizar usuário
+        # Usamos o 'sub' do Google como ID único
+        _sync_user_profile(email, user_name_final, user_info.get('sub'))
+
+        # Configurar sessão (compatível com a estrutura existente que espera session['user'])
+        session['user'] = user_info
+
+        session.permanent = True
+
+        # Opcional: Armazenar token se precisar acessar APIs do Google depois
+        # session['google_token'] = token
+
+        auth_logger.info(f'User logged in via Google: {email}')
+        return redirect(url_for('main.dashboard'))
+
+    except Exception as e:
+        auth_logger.error(f'Google Login Callback Error: {e}', exc_info=True)
+        flash('Erro ao realizar login com Google. Tente novamente.', 'error')
+        return redirect(url_for('auth.login'))
 
 
 @auth_bp.route('/logout')
@@ -459,16 +468,17 @@ def dev_login():
     """
 
     import os
-    if current_app.config.get('AUTH0_ENABLED', True):
-        return redirect(url_for('auth.login'))
 
     flask_env = os.environ.get('FLASK_ENV', 'production')
     flask_debug = current_app.config.get('DEBUG', False)
     use_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
 
     if flask_env == 'production' or (not flask_debug and not use_sqlite):
-        security_logger.warning(f'Tentativa de acesso a /dev-login em ambiente de produção')
+        security_logger.warning('Tentativa de acesso a /dev-login em ambiente de produção')
         abort(404)
+
+    if current_app.config.get('AUTH0_ENABLED', True):
+        return redirect(url_for('auth.login'))
 
     dev_email = ADMIN_EMAIL
     session['user'] = {
@@ -498,16 +508,17 @@ def dev_login_as():
     """
 
     import os
-    if current_app.config.get('AUTH0_ENABLED', True):
-        return redirect(url_for('auth.login'))
 
     flask_env = os.environ.get('FLASK_ENV', 'production')
     flask_debug = current_app.config.get('DEBUG', False)
     use_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
 
     if flask_env == 'production' or (not flask_debug and not use_sqlite):
-        security_logger.warning(f'Tentativa de acesso a /dev-login-as em ambiente de produção')
+        security_logger.warning('Tentativa de acesso a /dev-login-as em ambiente de produção')
         abort(404)
+
+    if current_app.config.get('AUTH0_ENABLED', True):
+        return redirect(url_for('auth.login'))
 
     if request.method == 'GET':
         try:
@@ -556,80 +567,7 @@ def dev_login_as():
 
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
-@rate_limit("100 per minute")
 def register():
-    """Página de registro de novos usuários."""
-
-    if current_app.config.get('AUTH0_ENABLED', True):
-        flash('Registro via Auth0. Use o botão de login para se registrar.', 'info')
-        return redirect(url_for('auth.login'))
-
-    if request.method == 'GET':
-        try:
-            session.pop('_flashes', None)
-        except Exception:
-            pass
-        return render_template('register.html', auth0_enabled=False)
-
-    email = (request.form.get('email') or '').strip().lower()
-    nome = (request.form.get('nome') or '').strip()
-    password = request.form.get('password', '')
-    password_confirm = request.form.get('password_confirm', '')
-
-    if not all([email, nome, password, password_confirm]):
-        flash('Por favor, preencha todos os campos.', 'error')
-        return render_template('register.html', auth0_enabled=False)
-
-    try:
-        from ..common.validation import validate_email
-        email = validate_email(email)
-    except Exception as e:
-        flash(f'E-mail inválido: {str(e)}', 'error')
-        return render_template('register.html', auth0_enabled=False)
-
-    try:
-        from ..common.validation import sanitize_string
-        nome = sanitize_string(nome, min_length=2, max_length=100, allow_html=False)
-    except Exception as e:
-        flash(f'Nome inválido: {str(e)}', 'error')
-        return render_template('register.html', auth0_enabled=False)
-
-    try:
-        from ..common.validation import validate_password_strength, ValidationError
-        validate_password_strength(password)
-    except ValidationError as ve:
-        flash(str(ve), 'error')
-        return render_template('register.html', auth0_enabled=False)
-
-    if password != password_confirm:
-        flash('As senhas não coincidem.', 'error')
-        return render_template('register.html', auth0_enabled=False)
-
-    usuario_existente = query_db("SELECT usuario FROM usuarios WHERE usuario = %s", (email,), one=True)
-    if usuario_existente:
-        flash('Este e-mail já está cadastrado. Faça login ou use outro e-mail.', 'error')
-        return render_template('register.html', auth0_enabled=False)
-
-    try:
-        senha_hash = generate_password_hash(password)
-        execute_db(
-            "INSERT INTO usuarios (usuario, senha) VALUES (%s, %s)",
-            (email, senha_hash)
-        )
-
-        execute_db(
-            "INSERT INTO perfil_usuario (usuario, nome, perfil_acesso) VALUES (%s, %s, %s)",
-            (email, nome, None)
-        )
-
-        auth_logger.info(f'New user registered: {email}')
-        flash('Conta criada com sucesso! Faça login para continuar.', 'success')
-        return redirect(url_for('auth.login'))
-
-    except (Psycopg2IntegrityError, Sqlite3IntegrityError):
-        flash('Este e-mail já está cadastrado.', 'error')
-        return render_template('register.html', auth0_enabled=False)
-    except Exception as e:
-        auth_logger.error(f'Error registering user {email}: {str(e)}')
-        flash('Erro ao criar conta. Tente novamente mais tarde.', 'error')
-        return render_template('register.html', auth0_enabled=False)
+    """Rota desativada: registro não permitido (login exclusivo via Google)."""
+    flash('Novos cadastros devem ser feitos pelo administrador ou via Google Login.', 'info')
+    return redirect(url_for('auth.login'))

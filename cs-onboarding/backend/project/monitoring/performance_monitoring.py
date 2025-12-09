@@ -1,30 +1,30 @@
 
 
 import time
-from functools import wraps
-from flask import request, g, current_app
 from datetime import datetime
-import json
+from functools import wraps
+
+from flask import current_app, g, request
 
 
 class PerformanceMonitor:
     """
     Monitor de performance simples para rastrear métricas da aplicação.
-    
+
     Coleta métricas como:
     - Tempo de resposta de endpoints
     - Número de queries executadas
     - Erros e exceções
     - Uso de cache
     """
-    
+
     def __init__(self, app=None):
         self.metrics = []
-        self.max_metrics = 1000                                           
-        
+        self.max_metrics = 1000
+
         if app:
             self.init_app(app)
-    
+
     def init_app(self, app):
         """Inicializa o monitor com o app Flask."""
         app.before_request(self.before_request)
@@ -45,20 +45,20 @@ class PerformanceMonitor:
 
                 if not hasattr(g, 'perfil') or g.perfil.get('perfil_acesso') != PERFIL_ADMIN:
                     return "Acesso negado", 403
-                
+
                 return {
                     'total_requests': len(self.metrics),
                     'recent_metrics': self.metrics[-100:],
                     'summary': self.get_summary()
                 }
-    
+
     def before_request(self):
         """Executado antes de cada request."""
         g.start_time = time.time()
         g.query_count = 0
         g.cache_hits = 0
         g.cache_misses = 0
-    
+
     def after_request(self, response):
         """Executado após cada request."""
         if hasattr(g, 'start_time'):
@@ -80,30 +80,30 @@ class PerformanceMonitor:
 
             if len(self.metrics) > self.max_metrics:
                 self.metrics = self.metrics[-self.max_metrics:]
-            
+
             if elapsed > 1.0:
                 current_app.logger.warning(
                     f"Slow request: {request.method} {request.path} "
                     f"took {elapsed:.2f}s ({metric['query_count']} queries)"
                 )
-        
+
         return response
-    
+
     def teardown_request(self, exception=None):
         """Executado no teardown da request."""
         if exception:
 
             current_app.logger.error(f"Request exception: {exception}")
-    
+
     def get_summary(self):
         """Retorna resumo das métricas."""
         if not self.metrics:
             return {}
-        
+
         total = len(self.metrics)
         durations = [m['duration_ms'] for m in self.metrics]
         queries = [m['query_count'] for m in self.metrics]
-        
+
         return {
             'total_requests': total,
             'avg_duration_ms': round(sum(durations) / total, 2),
@@ -137,7 +137,7 @@ def track_cache_miss():
 def monitor_function(func):
     """
     Decorador para monitorar performance de funções.
-    
+
     Uso:
         @monitor_function
         def my_slow_function():
@@ -149,12 +149,12 @@ def monitor_function(func):
         try:
             result = func(*args, **kwargs)
             elapsed = time.time() - start
-            
-            if elapsed > 0.5:                  
+
+            if elapsed > 0.5:
                 current_app.logger.info(
                     f"Function {func.__name__} took {elapsed:.2f}s"
                 )
-            
+
             return result
         except Exception as e:
             elapsed = time.time() - start
@@ -162,7 +162,7 @@ def monitor_function(func):
                 f"Function {func.__name__} failed after {elapsed:.2f}s: {e}"
             )
             raise
-    
+
     return wrapper
 
 

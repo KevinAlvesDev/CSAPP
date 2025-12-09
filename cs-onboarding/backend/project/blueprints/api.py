@@ -1,11 +1,7 @@
 
-from flask import Blueprint, request, jsonify, g, current_app, render_template, make_response
-from datetime import datetime
-import os
-import time
 import json
-from werkzeug.utils import secure_filename
-from botocore.exceptions import ClientError, NoCredentialsError
+
+from flask import Blueprint, g, jsonify, make_response, render_template, request
 
 from ..blueprints.auth import login_required
 
@@ -16,27 +12,17 @@ except ImportError:
     cache = None
 
 
-from ..db import query_db, execute_db, logar_timeline, execute_and_fetch_one, db_transaction_with_lock
+from flask_limiter.util import get_remote_address
+from sqlalchemy.exc import OperationalError
 
-from ..core.extensions import r2_client, limiter                                                
-
-
+from ..common.utils import format_date_iso_for_json
+from ..common.validation import ValidationError, validate_integer
+from ..config.logging_config import api_logger
+from ..constants import PERFIS_COM_GESTAO
+from ..core.extensions import limiter
+from ..db import execute_db, logar_timeline, query_db
 from ..domain.implantacao_service import _get_progress
 from ..domain.task_definitions import TASK_TIPS
-from ..domain.hierarquia_service import (
-    toggle_subtarefa,
-    calcular_progresso_implantacao,
-    adicionar_comentario_tarefa,
-    get_comentarios_tarefa
-)
-
-from ..common.utils import allowed_file, format_date_iso_for_json, format_date_br
-from ..common.file_validation import validate_uploaded_file
-from ..constants import PERFIS_COM_GESTAO
-from ..common.validation import validate_integer, sanitize_string, ValidationError
-from ..config.logging_config import api_logger, security_logger
-from flask_limiter.util import get_remote_address
-
 from ..security.api_security import validate_api_origin
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
@@ -67,12 +53,12 @@ def progresso_implantacao(impl_id):
 @limiter.limit("100 per minute", key_func=lambda: g.user_email or get_remote_address())
 def toggle_subtarefa_h(sub_id):
     usuario_cs_email = g.user_email
-    
+
     try:
         sub_id = validate_integer(sub_id, min_value=1)
     except ValidationError as e:
         return jsonify({'ok': False, 'error': f'ID inválido: {str(e)}'}), 400
-    
+
     try:
         row = query_db(
             """
@@ -83,47 +69,47 @@ def toggle_subtarefa_h(sub_id):
             """,
             (sub_id,), one=True
         )
-        
+
         if not row:
             return jsonify({'ok': False, 'error': 'Subtarefa não encontrada'}), 404
-        
+
         is_owner = row.get('usuario_cs') == usuario_cs_email
         is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
-        
+
         if not (is_owner or is_manager):
             return jsonify({'ok': False, 'error': 'Permissão negada.'}), 403
-        
+
         if row.get('status') in ['finalizada', 'parada', 'cancelada']:
             return jsonify({'ok': False, 'error': 'Implantação bloqueada para alterações.'}), 400
-        
+
         request_data = request.get_json(silent=True) or {}
         concluido_desejado = request_data.get('concluido', None)
-        
+
         if concluido_desejado is None:
             novo = 0 if row.get('concluido') else 1
         else:
             novo = 1 if bool(concluido_desejado) else 0
-        
+
         from datetime import datetime
         if novo:
             execute_db("UPDATE checklist_items SET completed = %s, data_conclusao = %s WHERE id = %s", (True, datetime.now(), sub_id))
         else:
             execute_db("UPDATE checklist_items SET completed = %s, data_conclusao = NULL WHERE id = %s", (False, sub_id))
-        
+
         detalhe = f"Subtarefa {sub_id}: {'Concluída' if novo else 'Não Concluída'}."
         logar_timeline(row['implantacao_id'], usuario_cs_email, 'tarefa_alterada', detalhe)
-        
+
         tarefa_atualizada = query_db("SELECT id, title as nome, completed as concluido FROM checklist_items WHERE id = %s AND tipo_item = 'subtarefa'", (sub_id,), one=True)
         implantacao_info = query_db("SELECT nome_empresa, email_responsavel FROM implantacoes WHERE id = %s", (row['implantacao_id'],), one=True) or {}
-        
+
         impl_id = row['implantacao_id']
         if cache:
             cache_key = f'progresso_impl_{impl_id}'
             cache.delete(cache_key)
-        
+
         novo_prog, _, _ = _get_progress(impl_id)
         tarefa_concluida = bool(tarefa_atualizada.get('concluido'))
-        
+
         if request.headers.get('HX-Request') == 'true':
             tarefa_payload = {
                 'id': tarefa_atualizada.get('id'),
@@ -144,7 +130,7 @@ def toggle_subtarefa_h(sub_id):
             resp.headers['Content-Type'] = 'text/html; charset=utf-8'
             resp.headers['HX-Trigger-After-Swap'] = json.dumps(hx_payload)
             return resp
-        
+
         resp = jsonify({
             'ok': True,
             'novo_progresso': novo_prog,
@@ -156,18 +142,123 @@ def toggle_subtarefa_h(sub_id):
         api_logger.error(f"Erro ao fazer toggle de subtarefa {sub_id}: {e}", exc_info=True)
         return jsonify({'ok': False, 'error': f"Erro interno: {e}"}), 500
 
+
+@api_bp.route('/consultar_empresa', methods=['GET'])
+@login_required
+@validate_api_origin
+@limiter.limit("20 per minute", key_func=lambda: g.user_email or get_remote_address())
+def consultar_empresa():
+    """
+    Endpoint para consultar dados da empresa no banco externo (OAMD) via ID Favorecido (codigofinanceiro).
+    """
+    id_favorecido = request.args.get('id_favorecido')
+
+    if not id_favorecido:
+        return jsonify({'ok': False, 'error': 'ID Favorecido não informado.'}), 400
+
+    try:
+        id_favorecido = validate_integer(id_favorecido, min_value=1)
+    except ValidationError:
+        return jsonify({'ok': False, 'error': 'ID Favorecido inválido. Deve ser um número inteiro positivo.'}), 400
+
+    from ..database.external_db import query_external_db
+
+    try:
+        # Consulta robusta com JOIN para trazer o máximo de informação possível
+        # Prioriza o codigofinanceiro na tabela empresafinanceiro
+        # Alterado para trazer TODAS as colunas de detalheempresa (de.*) para inspeção
+        query = """
+            SELECT 
+                ef.codigofinanceiro,
+                ef.nomefantasia,
+                ef.razaosocial,
+                ef.cnpj,
+                ef.email,
+                ef.telefone,
+                ef.cidade,
+                ef.estado,
+                ef.bairro,
+                ef.endereco,
+                ef.nomedono,
+                ef.responsavelemail,
+                ef.responsaveltelefone,
+                ef.datacadastro,
+                de.*
+            FROM empresafinanceiro ef
+            LEFT JOIN detalheempresa de ON ef.detalheempresa_codigo = de.codigo
+            WHERE ef.codigofinanceiro = :id_favorecido
+            LIMIT 1
+        """
+
+        results = query_external_db(query, {'id_favorecido': id_favorecido})
+
+        if not results:
+            return jsonify({'ok': False, 'error': 'Empresa não encontrada para este ID Favorecido.'}), 404
+
+        empresa = results[0]
+
+
+
+        # Sanitização básica para evitar problemas no JSON
+        for k, v in empresa.items():
+            if v is None:
+                empresa[k] = ""
+            elif hasattr(v, 'isoformat'): # Datas
+                empresa[k] = v.isoformat()
+
+        # Mapeamento de campos OAMD para campos do Frontend
+        # Tentativa de normalizar chaves comuns
+        mapped = {}
+
+        # Função auxiliar para buscar chaves insensíveis a maiúsculas/minúsculas e variações
+        def find_value(keys_to_try):
+            for k in keys_to_try:
+                for emp_k in empresa.keys():
+                    if emp_k.lower().replace('_', '').replace(' ', '') == k.lower().replace('_', '').replace(' ', ''):
+                        return empresa[emp_k]
+            return None
+
+        mapped['data_inicio_producao'] = find_value(['iniciodeproducao', 'inicioproducao', 'inicio_producao', 'dt_inicio_producao', 'dataproducao'])
+        mapped['data_inicio_efetivo'] = find_value(['inicioimplantacao', 'inicio_implantacao', 'dt_inicio_implantacao', 'dataimplantacao'])
+        mapped['data_final_implantacao'] = find_value(['finalimplantacao', 'final_implantacao', 'dt_final_implantacao', 'fimimplantacao', 'datafinalimplantacao'])
+        mapped['status_implantacao'] = find_value(['status', 'statusimplantacao', 'situacao'])
+        mapped['nivel_atendimento'] = find_value(['nivelatendimento', 'nivel_atendimento', 'classificacao'])
+        mapped['nivel_receita'] = find_value(['nivelreceita', 'nivel_receita', 'faixareceita', 'mrr', 'nivelreceitamensal'])
+        mapped['chave_oamd'] = empresa.get('codigofinanceiro')
+        mapped['tela_apoio_link'] = find_value(['urltelaapoio', 'link_tela_apoio', 'tela_apoio', 'url_integracao'])
+        mapped['informacao_infra'] = find_value(['infrainfraestrutura', 'infra_info', 'informacao_infra'])
+        mapped['cnpj'] = empresa.get('cnpj')
+        mapped['data_cadastro'] = find_value(['datacadastro', 'data_cadastro', 'created_at', 'dt_cadastro'])
+
+        return jsonify({
+            'ok': True,
+            'empresa': empresa,
+            'mapped': mapped
+        })
+
+    except OperationalError as e:
+        api_logger.error(f"Erro de conexão OAMD ao consultar ID {id_favorecido}: {e}")
+        error_msg = str(e).lower()
+        if "timeout" in error_msg or "timed out" in error_msg:
+             return jsonify({'ok': False, 'error': 'Tempo limite excedido. Verifique sua conexão com a VPN/Rede.'}), 504
+        return jsonify({'ok': False, 'error': 'Falha na conexão com o banco externo.'}), 502
+
+    except Exception as e:
+        api_logger.error(f"Erro ao consultar empresa ID {id_favorecido}: {e}", exc_info=True)
+        return jsonify({'ok': False, 'error': 'Erro ao consultar banco de dados externo.'}), 500
+
 @api_bp.route('/toggle_tarefa_h/<int:tarefa_h_id>', methods=['POST'])
 @login_required
 @validate_api_origin
 @limiter.limit("100 per minute", key_func=lambda: g.user_email or get_remote_address())
 def toggle_tarefa_h(tarefa_h_id):
     usuario_cs_email = g.user_email
-    
+
     try:
         tarefa_h_id = validate_integer(tarefa_h_id, min_value=1)
     except ValidationError as e:
         return jsonify({'ok': False, 'error': f'ID inválido: {str(e)}'}), 400
-    
+
     try:
         row = query_db(
             """
@@ -178,67 +269,67 @@ def toggle_tarefa_h(tarefa_h_id):
             """,
             (tarefa_h_id,), one=True
         )
-        
+
         if not row:
             return jsonify({'ok': False, 'error': 'Tarefa não encontrada'}), 404
         is_owner = row.get('usuario_cs') == usuario_cs_email
         is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
-        
+
         if not (is_owner or is_manager):
             return jsonify({'ok': False, 'error': 'Permissão negada.'}), 403
-        
+
         if row.get('impl_status') in ['finalizada', 'parada', 'cancelada']:
             return jsonify({'ok': False, 'error': 'Implantação bloqueada para alterações.'}), 400
-        
+
         request_data = request.get_json(silent=True) or {}
         concluido_desejado = request_data.get('concluido', None)
-        
+
         if concluido_desejado is None:
             curr = (row.get('status') or '').lower().strip()
-            
+
             if curr in ['concluido', 'concluida']:
                 curr = 'concluida'
             else:
                 curr = 'pendente'
-            
+
             novo_status = 'concluida' if curr != 'concluida' else 'pendente'
         else:
             novo_status = 'concluida' if bool(concluido_desejado) else 'pendente'
-        
+
         if novo_status not in ['pendente', 'concluida']:
             novo_status = 'pendente'
-        
+
         execute_db("UPDATE checklist_items SET status = %s, completed = %s WHERE id = %s", (novo_status, novo_status == 'concluida', tarefa_h_id))
-        
+
         detalhe = f"TarefaH {tarefa_h_id}: {novo_status}."
         logar_timeline(row['implantacao_id'], usuario_cs_email, 'tarefa_alterada', detalhe)
-        
+
         th = query_db("SELECT id, title as nome, COALESCE(status, 'pendente') as status FROM checklist_items WHERE id = %s AND tipo_item = 'tarefa'", (tarefa_h_id,), one=True)
-        
+
         if not th:
             return jsonify({'ok': False, 'error': 'Tarefa não encontrada após atualização'}), 404
-        
+
         status_retornado = (th.get('status') or 'pendente').lower().strip()
-        
+
         if status_retornado not in ['pendente', 'concluida']:
             if 'conclui' in status_retornado:
                 status_retornado = 'concluida'
             else:
                 status_retornado = 'pendente'
-        
+
         if th.get('status') != status_retornado:
             execute_db("UPDATE checklist_items SET status = %s, completed = %s WHERE id = %s", (status_retornado, status_retornado == 'concluida', tarefa_h_id))
             th['status'] = status_retornado
-        
+
         implantacao_info = query_db("SELECT nome_empresa, email_responsavel FROM implantacoes WHERE id = %s", (row['implantacao_id'],), one=True) or {}
-        
+
         impl_id = row['implantacao_id']
         if cache:
             cache_key = f'progresso_impl_{impl_id}'
             cache.delete(cache_key)
-        
+
         novo_prog, _, _ = _get_progress(impl_id)
-        
+
         tarefa_payload = {
             'id': th.get('id'),
             'tarefa_filho': th.get('nome'),
@@ -251,7 +342,7 @@ def toggle_tarefa_h(tarefa_h_id):
             'nome_empresa': implantacao_info.get('nome_empresa', ''),
             'email_responsavel': implantacao_info.get('email_responsavel', '')
         }
-        
+
         if request.headers.get('HX-Request') == 'true':
             item_html = render_template('partials/_task_item_wrapper.html', tarefa=tarefa_payload, implantacao=implantacao, tt=TASK_TIPS)
             progress_html = render_template('partials/_progress_total_bar.html', progresso_percent=novo_prog)
@@ -260,7 +351,7 @@ def toggle_tarefa_h(tarefa_h_id):
             resp.headers['Content-Type'] = 'text/html; charset=utf-8'
             resp.headers['HX-Trigger-After-Swap'] = json.dumps(hx_payload)
             return resp
-        
+
         resp = jsonify({
             'ok': True,
             'novo_progresso': novo_prog,

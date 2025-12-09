@@ -1,21 +1,20 @@
-from flask import Blueprint, render_template, request, flash, redirect, url_for, g, current_app
-from ..blueprints.auth import permission_required
-from ..db import query_db, execute_db
+import calendar
+from datetime import datetime
 
+from flask import Blueprint, current_app, flash, g, redirect, render_template, request, url_for
+from flask_limiter.util import get_remote_address
+
+from ..blueprints.auth import permission_required
+from ..common.validation import ValidationError, sanitize_string, validate_email, validate_integer
+from ..constants import PERFIS_COM_GESTAO
+from ..core.extensions import limiter
+from ..db import execute_db, query_db
 from ..domain.gamification_service import (
     _get_all_gamification_rules_grouped,
-    get_gamification_report_data,
     _get_gamification_automatic_data_bulk,
-    clear_gamification_cache
+    clear_gamification_cache,
+    get_gamification_report_data,
 )
-
-from ..common.validation import validate_email, validate_integer, sanitize_string, ValidationError
-
-from ..constants import PERFIS_COM_GESTAO
-from datetime import datetime
-import calendar
-from ..core.extensions import limiter
-from flask_limiter.util import get_remote_address
 
 gamification_bp = Blueprint('gamification', __name__, url_prefix='/gamification')
 
@@ -45,7 +44,7 @@ def save_gamification_rules_from_modal():
                     regra_id = sanitize_string(regra_id, max_length=50)
                     valor_pontos = validate_integer(value, min_value=-1000, max_value=10000)
                     updates_to_make.append((valor_pontos, regra_id))
-                except ValidationError as e:
+                except ValidationError:
                     pass
                 except (ValueError, TypeError):
                     pass

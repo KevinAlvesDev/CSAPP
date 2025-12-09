@@ -3,12 +3,14 @@ Serviço de Checklist Hierárquico Infinito
 Implementa lógica de propagação de status (cascata e bolha) usando CTEs recursivas.
 """
 
-from flask import current_app, g
-from datetime import datetime
-from ..db import query_db, db_transaction_with_lock
-from ..common.validation import sanitize_string, ValidationError
-from ..common.exceptions import DatabaseError
 import logging
+from datetime import datetime
+
+from flask import current_app, g
+
+from ..common.exceptions import DatabaseError
+from ..common.validation import ValidationError, sanitize_string
+from ..db import db_transaction_with_lock, query_db
 
 logger = logging.getLogger(__name__)
 
@@ -52,10 +54,10 @@ def toggle_item_status(item_id, new_status, usuario_email=None):
         item_id = int(item_id)
         new_status = bool(new_status)
     except (ValueError, TypeError):
-        raise ValueError(f"item_id deve ser um inteiro válido e new_status deve ser booleano")
+        raise ValueError("item_id deve ser um inteiro válido e new_status deve ser booleano")
 
     usuario_email = usuario_email or (g.user_email if hasattr(g, 'user_email') else None)
-    
+
     # Valores normalizados para atualização
     status_str = 'Concluída' if new_status else 'Pendente'
     completed_val = 1 if new_status else 0
@@ -67,13 +69,13 @@ def toggle_item_status(item_id, new_status, usuario_email=None):
         check_query = "SELECT id, implantacao_id, status FROM checklist_items WHERE id = %s"
         if db_type == 'sqlite':
             check_query = check_query.replace('%s', '?')
-        
+
         cursor.execute(check_query, (item_id,))
         item = cursor.fetchone()
-        
+
         if not item:
             raise ValueError(f"Item {item_id} não encontrado")
-            
+
         # Handle result access (sqlite row vs tuple vs dict)
         if hasattr(item, 'keys'):
             implantacao_id = item['implantacao_id']
@@ -108,22 +110,22 @@ def toggle_item_status(item_id, new_status, usuario_email=None):
                 SELECT id FROM descendants
             """
             cursor.execute(descendants_query, (item_id,))
-            
+
         descendant_rows = cursor.fetchall()
         descendant_ids = [row[0] for row in descendant_rows]
-        
+
         # 3. Atualizar Descendentes (incluindo o próprio item)
         items_updated_downstream = 0
         history_entries = []
-        
+
         if descendant_ids:
             placeholders = ','.join(['%s' if db_type == 'postgres' else '?'] * len(descendant_ids))
-            
+
             # Primeiro, pegar status atuais para histórico
             status_query = f"SELECT id, status FROM checklist_items WHERE id IN ({placeholders})"
             cursor.execute(status_query, descendant_ids)
             current_statuses = {row[0]: row[1] for row in cursor.fetchall()}
-            
+
             # Atualizar status e completed
             update_sql = f"""
                 UPDATE checklist_items 
@@ -135,19 +137,13 @@ def toggle_item_status(item_id, new_status, usuario_email=None):
             params = [status_str, completed_val, data_conclusao] + descendant_ids
             cursor.execute(update_sql, params)
             items_updated_downstream = cursor.rowcount
-            
+
             # Preparar entradas de histórico
             for did in descendant_ids:
                 old_status = current_statuses.get(did, 'Pendente') # Default to Pendente if null
                 if old_status != status_str:
                     history_entries.append((did, old_status, status_str, usuario_email, now))
-                    try:
-                        from ..db import logar_timeline
-                        detalhe = f"Item {did} status: {old_status} -> {status_str}"
-                        logar_timeline(implantacao_id, usuario_email, 'status_alterado', detalhe)
-                    except Exception:
-                        pass
-            
+
             # Tentar inserir histórico (pode falhar se tabela não existir em prod, mas devia existir)
             if history_entries:
                 try:
@@ -158,14 +154,14 @@ def toggle_item_status(item_id, new_status, usuario_email=None):
                     """
                     if db_type == 'sqlite':
                         insert_history_sql = insert_history_sql.replace('%s', '?')
-                        
+
                     cursor.executemany(insert_history_sql, history_entries)
                 except Exception as e:
                     logger.warning(f"Falha ao inserir histórico de status: {e}")
 
         # 4. Atualizar Ancestrais (Upstream - Bolha)
         items_updated_upstream = 0
-        
+
         if db_type == 'postgres':
             ancestors_query = """
                 WITH RECURSIVE ancestors AS (
@@ -190,10 +186,10 @@ def toggle_item_status(item_id, new_status, usuario_email=None):
                 SELECT id FROM ancestors
             """
              cursor.execute(ancestors_query, (item_id,))
-             
+
         ancestor_rows = cursor.fetchall()
         ancestor_ids = [row[0] for row in ancestor_rows]
-        
+
         for ancestor_id in ancestor_ids:
              # Verificar estado dos filhos
              check_children_query = """
@@ -202,53 +198,47 @@ def toggle_item_status(item_id, new_status, usuario_email=None):
              """
              if db_type == 'sqlite':
                  check_children_query = check_children_query.replace('%s', '?')
-             
+
              cursor.execute(check_children_query, (ancestor_id,))
              stats = cursor.fetchone()
              total = stats[0]
              completed_count = stats[1] or 0
-             
+
              should_be_complete = (total > 0 and total == completed_count)
              new_anc_status_str = 'Concluída' if should_be_complete else 'Pendente'
              new_anc_completed = 1 if should_be_complete else 0
-             
+
              # Verificar estado atual do ancestral
              get_ancestor_query = "SELECT status FROM checklist_items WHERE id = %s"
              if db_type == 'sqlite': get_ancestor_query = get_ancestor_query.replace('%s', '?')
              cursor.execute(get_ancestor_query, (ancestor_id,))
              curr_anc_row = cursor.fetchone()
              curr_anc_status = curr_anc_row[0] if curr_anc_row else 'Pendente'
-             
-            if curr_anc_status != new_anc_status_str:
-                new_anc_date = now if should_be_complete else None
-                 
+
+             if curr_anc_status != new_anc_status_str:
+                 new_anc_date = now if should_be_complete else None
+
                  update_anc_sql = "UPDATE checklist_items SET status = %s, completed = %s, data_conclusao = %s WHERE id = %s"
                  if db_type == 'sqlite': update_anc_sql = update_anc_sql.replace('%s', '?')
-                 
-                cursor.execute(update_anc_sql, (new_anc_status_str, new_anc_completed, new_anc_date, ancestor_id))
-                items_updated_upstream += 1
-                 
+
+                 cursor.execute(update_anc_sql, (new_anc_status_str, new_anc_completed, new_anc_date, ancestor_id))
+                 items_updated_upstream += 1
+
                  # Log history
-                try:
-                    hist_sql = "INSERT INTO checklist_status_history (item_id, status_anterior, status_novo, usuario_id, data_alteracao) VALUES (%s, %s, %s, %s, %s)"
-                    if db_type == 'sqlite': hist_sql = hist_sql.replace('%s', '?')
-                    cursor.execute(hist_sql, (ancestor_id, curr_anc_status, new_anc_status_str, usuario_email, now))
-                except Exception as e:
-                    pass
-                try:
-                    from ..db import logar_timeline
-                    detalhe = f"Item {ancestor_id} status: {curr_anc_status} -> {new_anc_status_str}"
-                    logar_timeline(implantacao_id, usuario_email, 'status_alterado', detalhe)
-                except Exception:
-                    pass
+                 try:
+                     hist_sql = "INSERT INTO checklist_status_history (item_id, status_anterior, status_novo, usuario_id, data_alteracao) VALUES (%s, %s, %s, %s, %s)"
+                     if db_type == 'sqlite': hist_sql = hist_sql.replace('%s', '?')
+                     cursor.execute(hist_sql, (ancestor_id, curr_anc_status, new_anc_status_str, usuario_email, now))
+                 except Exception:
+                     pass
 
         conn.commit()
-        
+
         # Calcular progresso
         progress = 0.0
         if implantacao_id:
             _invalidar_cache_progresso_local(implantacao_id)
-            
+
             # Recalcular progresso (apenas itens folha)
             prog_sql = """
                 SELECT COUNT(*), SUM(CASE WHEN status = 'Concluída' THEN 1 ELSE 0 END)
@@ -258,12 +248,12 @@ def toggle_item_status(item_id, new_status, usuario_email=None):
             """
             if db_type == 'sqlite':
                 prog_sql = prog_sql.replace('%s', '?')
-                
+
             cursor.execute(prog_sql, (implantacao_id,))
             p_res = cursor.fetchone()
             p_total = p_res[0] or 0
             p_compl = p_res[1] or 0
-            
+
             if p_total > 0:
                 progress = round((p_compl / p_total) * 100, 2)
             else:
@@ -299,7 +289,7 @@ def update_item_comment(item_id, comment_text, usuario_email=None):
     try:
         item_id = int(item_id)
     except (ValueError, TypeError):
-        raise ValueError(f"item_id deve ser um inteiro válido")
+        raise ValueError("item_id deve ser um inteiro válido")
 
     try:
         comment_sanitized = sanitize_string(comment_text, max_length=8000, min_length=0, allow_empty=True)
@@ -311,19 +301,15 @@ def update_item_comment(item_id, comment_text, usuario_email=None):
     with db_transaction_with_lock() as (conn, cursor, db_type):
         try:
             if db_type == 'postgres':
-                check_query = "SELECT id, implantacao_id FROM checklist_items WHERE id = %s FOR UPDATE"
+                check_query = "SELECT id FROM checklist_items WHERE id = %s FOR UPDATE"
                 cursor.execute(check_query, (item_id,))
             else:
-                check_query = "SELECT id, implantacao_id FROM checklist_items WHERE id = ?"
+                check_query = "SELECT id FROM checklist_items WHERE id = ?"
                 cursor.execute(check_query, (item_id,))
 
             item = cursor.fetchone()
             if not item:
                 raise ValueError(f"Item {item_id} não encontrado")
-            if db_type == 'sqlite':
-                impl_id = item[1] if item and len(item) > 1 else None
-            else:
-                impl_id = item[1] if item and len(item) > 1 else None
 
             if db_type == 'postgres':
                 update_query = """
@@ -341,13 +327,6 @@ def update_item_comment(item_id, comment_text, usuario_email=None):
                 cursor.execute(update_query, (comment_sanitized, datetime.now(), item_id))
 
             logger.info(f"Comentário atualizado para item {item_id} por {usuario_email}")
-            try:
-                from ..db import logar_timeline
-                detalhe = f"Item {item_id} comentário atualizado"
-                if impl_id:
-                    logar_timeline(impl_id, usuario_email, 'comentario_alterado', detalhe)
-            except Exception:
-                pass
 
             return {'ok': True, 'item_id': item_id}
 
@@ -375,7 +354,7 @@ def delete_checklist_item(item_id, usuario_email=None):
     try:
         item_id = int(item_id)
     except (ValueError, TypeError):
-        raise ValueError(f"item_id deve ser um inteiro válido")
+        raise ValueError("item_id deve ser um inteiro válido")
 
     usuario_email = usuario_email or (g.user_email if hasattr(g, 'user_email') else None)
 
@@ -388,11 +367,11 @@ def delete_checklist_item(item_id, usuario_email=None):
             else:
                 query_info = "SELECT id, parent_id, implantacao_id, title FROM checklist_items WHERE id = ?"
                 cursor.execute(query_info, (item_id,))
-            
+
             row = cursor.fetchone()
             if not row:
                 raise ValueError(f"Item {item_id} não encontrado")
-            
+
             if db_type == 'sqlite':
                 item = dict(zip([desc[0] for desc in cursor.description], row))
             else:
@@ -429,7 +408,7 @@ def delete_checklist_item(item_id, usuario_email=None):
                 """
                 cursor.execute(ids_query, (item_id,))
                 ids_to_delete = [r[0] for r in cursor.fetchall()]
-                
+
                 if ids_to_delete:
                     placeholders = ','.join(['?'] * len(ids_to_delete))
                     cursor.execute(f"DELETE FROM checklist_items WHERE id IN ({placeholders})", ids_to_delete)
@@ -452,14 +431,14 @@ def delete_checklist_item(item_id, usuario_email=None):
                     res = cursor.fetchone()
                     total = res[0] or 0
                     completos = res[1] or 0
-                    
-                    # Se não tem mais filhos, o status depende da regra de negócio. 
+
+                    # Se não tem mais filhos, o status depende da regra de negócio.
                     # Geralmente se torna uma folha. Se estava marcado como incompleto, continua?
                     # Aqui vamos assumir: se não tem filhos, mantém o status atual ou vira incompleto?
                     # Melhor manter a lógica do toggle:
                     if total > 0:
                         new_status = (total == completos)
-                        cursor.execute("UPDATE checklist_items SET completed = %s, updated_at = %s WHERE id = %s", 
+                        cursor.execute("UPDATE checklist_items SET completed = %s, updated_at = %s WHERE id = %s",
                                      (new_status, datetime.now(), parent_id))
                 else:
                     # SQLite logic similar
@@ -474,10 +453,10 @@ def delete_checklist_item(item_id, usuario_email=None):
                     res = cursor.fetchone()
                     total = res[0] or 0
                     completos = res[1] or 0
-                    
+
                     if total > 0:
                         new_status = (total == completos)
-                        cursor.execute("UPDATE checklist_items SET completed = ?, updated_at = ? WHERE id = ?", 
+                        cursor.execute("UPDATE checklist_items SET completed = ?, updated_at = ? WHERE id = ?",
                                      (new_status, datetime.now(), parent_id))
 
                 # Nota: Se quiséssemos propagar para cima recursivamente (avós), precisaríamos chamar a lógica de bubble up aqui.
@@ -500,24 +479,24 @@ def delete_checklist_item(item_id, usuario_email=None):
                                    (SELECT COUNT(*) FROM checklist_items WHERE parent_id = ci.id AND completed = 1) as compl
                             FROM checklist_items ci WHERE id = ?
                         """, (curr_parent,))
-                    
+
                     p_row = cursor.fetchone()
                     if not p_row:
                         break
-                        
+
                     next_parent = p_row[0]
                     total_f = p_row[1]
                     compl_f = p_row[2]
-                    
+
                     if total_f > 0:
                         new_st = (total_f == compl_f)
                         if db_type == 'postgres':
-                            cursor.execute("UPDATE checklist_items SET completed = %s, updated_at = %s WHERE id = %s", 
+                            cursor.execute("UPDATE checklist_items SET completed = %s, updated_at = %s WHERE id = %s",
                                          (new_st, datetime.now(), curr_parent))
                         else:
-                            cursor.execute("UPDATE checklist_items SET completed = ?, updated_at = ? WHERE id = ?", 
+                            cursor.execute("UPDATE checklist_items SET completed = ?, updated_at = ? WHERE id = ?",
                                          (new_st, datetime.now(), curr_parent))
-                    
+
                     curr_parent = next_parent
 
             # 4. Recalcular progresso global

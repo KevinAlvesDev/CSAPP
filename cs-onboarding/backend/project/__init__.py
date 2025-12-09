@@ -1,33 +1,35 @@
 import os
-from dotenv import load_dotenv, find_dotenv
-from flask import Flask, session, g, render_template, request, flash, redirect, url_for, current_app, jsonify
-from werkzeug.middleware.proxy_fix import ProxyFix                          
-from .core.extensions import oauth, init_r2, init_limiter, limiter
-from flask_wtf.csrf import CSRFProtect
+
+import click
+from dotenv import find_dotenv, load_dotenv
+from flask import Flask, current_app, flash, g, jsonify, redirect, render_template, request, session, url_for
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_wtf.csrf import CSRFProtect
+from werkzeug.middleware.proxy_fix import ProxyFix
+
 from .config.logging_config import setup_logging
-import click
+from .core.extensions import init_limiter, init_r2, limiter, oauth
 
 csrf = CSRFProtect()
 
 def create_app(test_config=None):
     app = Flask(__name__,
-                static_folder='../../frontend/static', 
+                static_folder='../../frontend/static',
                 template_folder='../../frontend/templates')
 
     app.wsgi_app = ProxyFix(
         app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1
     )
-    
+
     try:
         from pathlib import Path
         root_path = Path(__file__).resolve().parents[3]
-        
+
         # Prioridade: .env.local (desenvolvimento) > .env (produção)
         env_local = root_path / '.env.local'
         env_prod = root_path / '.env'
-        
+
         if env_local.exists():
             load_dotenv(str(env_local), override=True)
         elif env_prod.exists():
@@ -38,7 +40,7 @@ def create_app(test_config=None):
                 load_dotenv(_dotenv_path, override=True)
             else:
                 load_dotenv(override=True)
-    except Exception as e:
+    except Exception:
         pass
 
     from .config import Config
@@ -71,18 +73,18 @@ def create_app(test_config=None):
     except Exception:
         pass
 
-    from . import db 
-    from .domain.gamification_service import _get_all_gamification_rules_grouped
+    from . import db
     from .common.utils import format_date_br, format_date_iso_for_json
-    from .constants import PERFIS_COM_GESTAO, PERFIL_ADMIN, ADMIN_EMAIL
-    from .db import query_db, execute_db
+    from .constants import ADMIN_EMAIL, PERFIL_ADMIN, PERFIS_COM_GESTAO
+    from .db import execute_db, query_db
+    from .domain.gamification_service import _get_all_gamification_rules_grouped
 
     app.jinja_env.filters['format_date_br'] = format_date_br
     app.jinja_env.filters['format_date_iso'] = format_date_iso_for_json
 
 
     oauth.init_app(app)
-    
+
     init_r2(app)
     db.init_app(app)
 
@@ -99,13 +101,13 @@ def create_app(test_config=None):
         'text/html', 'text/css', 'text/xml', 'application/json',
         'application/javascript', 'text/javascript'
     ]
-    app.config['COMPRESS_LEVEL'] = 6                                       
-    app.config['COMPRESS_MIN_SIZE'] = 500                                         
+    app.config['COMPRESS_LEVEL'] = 6
+    app.config['COMPRESS_MIN_SIZE'] = 500
 
     from .monitoring.performance_monitoring import performance_monitor
     performance_monitor.init_app(app)
 
-    from .database import init_connection_pool, close_db_connection
+    from .database import close_db_connection, init_connection_pool
     from .db import ensure_implantacoes_status_constraint
     if not app.config.get('USE_SQLITE_LOCALLY', False):
         init_connection_pool(app)
@@ -123,7 +125,7 @@ def create_app(test_config=None):
 
     setup_logging(app)
 
-    from .security.middleware import init_security_headers, configure_cors
+    from .security.middleware import configure_cors, init_security_headers
     init_security_headers(app)
     configure_cors(app)
 
@@ -141,12 +143,13 @@ def create_app(test_config=None):
                         conn.close()
                 except Exception as e:
                     app.logger.warning(f"Banco não existe ainda, será criado: {e}")
-                
+
                 db.init_db()
-                
+
                 # Criar usuário admin padrão automaticamente
                 try:
                     from werkzeug.security import generate_password_hash
+
                     from .constants import ADMIN_EMAIL
                     seeded_hash = generate_password_hash('admin123@')
                     # Usar INSERT OR REPLACE para garantir que o admin existe
@@ -162,7 +165,7 @@ def create_app(test_config=None):
                     app.logger.warning(f"Falha ao garantir usuário admin: {e_seed}")
     except Exception as e_dbinit:
         app.logger.warning(f"Falha na inicialização do banco (dev): {e_dbinit}")
-    
+
     if app.config.get('AUTH0_ENABLED', True):
         raw_domain = (app.config.get('AUTH0_DOMAIN') or '').strip().strip('`').strip()
         if raw_domain.startswith('http://') or raw_domain.startswith('https://'):
@@ -199,39 +202,39 @@ def create_app(test_config=None):
                 },
             )
         pass
-    except Exception as e:
+    except Exception:
         pass
 
-    from .blueprints.main import main_bp
-    from .blueprints.auth import auth_bp  # Blueprint de autenticação
-    from .blueprints.api import api_bp
-    from .blueprints.api_v1 import api_v1_bp                  
-    from .blueprints.implantacao_actions import implantacao_actions_bp
-    from .blueprints.profile import profile_bp
-    from .blueprints.management import management_bp
-    from .blueprints.analytics import analytics_bp
-    from .blueprints.gamification import gamification_bp
     from .blueprints.agenda import agenda_bp
-    from .blueprints.health import health_bp
+    from .blueprints.analytics import analytics_bp
+    from .blueprints.api import api_bp
     from .blueprints.api_docs import api_docs_bp
-    from .blueprints.planos_bp import planos_bp
     from .blueprints.api_h import api_h_bp
+    from .blueprints.api_v1 import api_v1_bp
+    from .blueprints.auth import auth_bp  # Blueprint de autenticação
     from .blueprints.checklist_api import checklist_bp
+    from .blueprints.gamification import gamification_bp
+    from .blueprints.health import health_bp
+    from .blueprints.implantacao_actions import implantacao_actions_bp
+    from .blueprints.main import main_bp
+    from .blueprints.management import management_bp
+    from .blueprints.planos_bp import planos_bp
+    from .blueprints.profile import profile_bp
 
     try:
-        
-        csrf.exempt(api_v1_bp)                              
-        csrf.exempt(health_bp)                                      
+
+        csrf.exempt(api_v1_bp)
+        csrf.exempt(health_bp)
         csrf.exempt(api_docs_bp)
         csrf.exempt(api_h_bp)
         # checklist_bp deixa de ser isento para proteger mutações
-    except Exception as e:
+    except Exception:
         pass
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(api_bp)
-    app.register_blueprint(api_v1_bp)                   
+    app.register_blueprint(api_v1_bp)
     app.register_blueprint(implantacao_actions_bp)
     app.register_blueprint(profile_bp)
     app.register_blueprint(management_bp)
@@ -250,7 +253,7 @@ def create_app(test_config=None):
             app.gamification_rules = _get_all_gamification_rules_grouped()
     except Exception as e:
         app.logger.error(f"Falha ao carregar regras de gamificação na inicialização: {e}", exc_info=True)
-        app.gamification_rules = {}                                       
+        app.gamification_rules = {}
 
     @app.cli.command('backup-db')
     def backup_db_command():
@@ -266,29 +269,29 @@ def create_app(test_config=None):
     @app.before_request
     def load_logged_in_user():
         # Ignorar rotas estáticas, API health e favicon
-        if (request.path.startswith('/static/') or 
-            request.path.startswith('/api/health') or 
+        if (request.path.startswith('/static/') or
+            request.path.startswith('/api/health') or
             request.path == '/favicon.ico'):
             return
-        
+
         # Importar constantes no início da função para garantir escopo
-        from .constants import ADMIN_EMAIL, PERFIL_ADMIN, PERFIS_COM_GESTAO
-        
+        from .constants import ADMIN_EMAIL, PERFIL_ADMIN
+
         # Carregar usuário da sessão PRIMEIRO
         g.user_email = session.get('user', {}).get('email')
         g.user = session.get('user')
-        
+
         # Login automático em desenvolvimento local
         use_sqlite = app.config.get('USE_SQLITE_LOCALLY', False)
         flask_debug = app.config.get('DEBUG', False)
         flask_env = os.environ.get('FLASK_ENV', 'production')
         auth0_enabled = app.config.get('AUTH0_ENABLED', True)
-        
+
         # Se estiver em dev local, Auth0 desabilitado, não houver usuário, e não for rota de auth
         if (use_sqlite or flask_debug) and flask_env != 'production' and not auth0_enabled:
             rotas_auth = ['/login', '/dev-login', '/dev-login-as', '/logout', '/callback', '/login/google', '/login/google/callback']
             is_rota_auth = any(request.path.startswith(rota) for rota in rotas_auth)
-            
+
             if not is_rota_auth and not g.user_email:
                 try:
                     admin_email = ADMIN_EMAIL
@@ -309,8 +312,8 @@ def create_app(test_config=None):
                         app.logger.warning(f"Falha ao sincronizar perfil automático: {e}")
                 except Exception as e:
                     app.logger.error(f"Erro no login automático: {e}")
-        
-        g.perfil = None 
+
+        g.perfil = None
         if g.user_email:
             try:
                 g.perfil = query_db("SELECT * FROM perfil_usuario WHERE usuario = %s", (g.user_email,), one=True)
@@ -318,7 +321,7 @@ def create_app(test_config=None):
                 # Se a tabela não existir ainda, criar perfil básico
                 app.logger.warning(f"Falha ao buscar perfil para {g.user_email}: {e}")
                 g.perfil = None
-        
+
         # Fallback para admin em desenvolvimento local
         if not auth0_enabled and g.user_email and g.user_email == ADMIN_EMAIL:
             if not g.perfil or g.perfil.get('perfil_acesso') is None:
@@ -329,7 +332,7 @@ def create_app(test_config=None):
                     'cargo': None,
                     'perfil_acesso': PERFIL_ADMIN
                 }
-        
+
         if g.perfil is None:
              g.perfil = {
                 'nome': g.user.get('name', g.user_email) if g.user else 'Visitante',
@@ -338,7 +341,7 @@ def create_app(test_config=None):
                 'cargo': None,
                 'perfil_acesso': None
             }
-        
+
         g.R2_CONFIGURED = app.config.get('R2_CONFIGURADO', False)
         g.PERFIS_COM_GESTAO = PERFIS_COM_GESTAO
         g.PERFIL_ADMIN = PERFIL_ADMIN
@@ -353,14 +356,14 @@ def create_app(test_config=None):
                 g.gamification_rules = {}
         except Exception as e:
             app.logger.warning(f"Falha ao carregar regras de gamificação: {e}")
-            g.gamification_rules = {} 
+            g.gamification_rules = {}
 
     @app.errorhandler(404)
     def page_not_found(e):
 
         if request.path.startswith('/api'):
             return jsonify({'ok': False, 'error': 'Recurso não encontrado'}), 404
-        
+
         # Renderiza template 404 em vez de redirecionar
         return render_template('404.html'), 404
 
@@ -375,7 +378,7 @@ def create_app(test_config=None):
 
         if request.path.startswith('/api'):
             return jsonify({'ok': False, 'error': 'Erro interno do servidor'}), 500
-            
+
         flash("Ocorreu um erro interno no servidor. Redirecionando para o Dashboard.", "error")
         return redirect(url_for('main.dashboard'))
 

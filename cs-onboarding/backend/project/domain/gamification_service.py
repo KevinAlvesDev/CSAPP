@@ -1,13 +1,15 @@
-from ..db import query_db, execute_db
-from datetime import datetime, date
 import calendar
 from collections import OrderedDict
+from datetime import date, datetime
+
+from ..db import execute_db, query_db
 
 
 def _get_gamification_rules_as_dict():
     """Busca todas as regras do DB e retorna um dicionário (com cache)."""
-    from ..core.extensions import gamification_rules_cache
     from flask import current_app
+
+    from ..core.extensions import gamification_rules_cache
 
     cache_key = 'gamification_rules_dict'
     if cache_key in gamification_rules_cache:
@@ -24,7 +26,7 @@ def _get_gamification_rules_as_dict():
         else:
             result = {r['regra_id']: r['valor_pontos'] for r in regras_raw}
             current_app.logger.info(f"Carregadas {len(result)} regras de gamificação do banco de dados.")
-        
+
         gamification_rules_cache[cache_key] = result
         return result
     except Exception as e:
@@ -56,7 +58,7 @@ def _get_all_gamification_rules_grouped():
 
         gamification_rules_cache[cache_key] = result
         return result
-    except Exception as e:
+    except Exception:
         # Se a tabela não existir ainda, retornar dict vazio
         return {}
 
@@ -157,7 +159,7 @@ def _get_gamification_automatic_data_bulk(mes, ano, primeiro_dia_str, fim_ultimo
     if target_cs_email:
         sql_tarefas += " AND i.usuario_cs = %s"
         args_tarefas.append(target_cs_email)
-    sql_tarefas += " GROUP BY i.usuario_cs, s.tag"
+    sql_tarefas += " GROUP BY i.usuario_cs, ci.tag"
 
     tarefas_concluidas_raw = query_db(sql_tarefas, tuple(args_tarefas))
     tarefas_concluidas_raw = tarefas_concluidas_raw if tarefas_concluidas_raw is not None else []
@@ -569,6 +571,7 @@ def get_gamification_report_data(mes, ano, target_cs_email=None, all_cs_users_li
     Resolve o problema N+1 ao buscar todos os dados em massa.
     """
     from flask import current_app
+
     from ..core.extensions import gamification_rules_cache
 
     regras_db = _get_gamification_rules_as_dict()
@@ -579,7 +582,7 @@ def get_gamification_report_data(mes, ano, target_cs_email=None, all_cs_users_li
             del gamification_rules_cache[cache_key]
             current_app.logger.warning("Cache de regras estava vazio, limpando e tentando novamente...")
             regras_db = _get_gamification_rules_as_dict()
-        
+
         if not regras_db:
             current_app.logger.error("Tabela gamificacao_regras está vazia ou não acessível.")
             raise ValueError("Falha ao carregar as regras de pontuação da gamificação do banco de dados. Verifique se a tabela gamificacao_regras tem dados.")

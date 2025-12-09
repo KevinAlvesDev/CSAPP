@@ -1,14 +1,16 @@
+import re
 import smtplib
 import socket
-from email.mime.text import MIMEText
 import ssl
 from email.mime.multipart import MIMEMultipart
-from werkzeug.security import generate_password_hash, check_password_hash
+from email.mime.text import MIMEText
+
 import requests
-from ..db import query_db, execute_db
 from flask import current_app
-from ..config.logging_config import security_logger, app_logger
-import re
+from werkzeug.security import check_password_hash, generate_password_hash
+
+from ..config.logging_config import app_logger, security_logger
+from ..db import execute_db, query_db
 
 
 class NetworkError(Exception):
@@ -214,11 +216,11 @@ def test_smtp_connection(settings, plain_password):
 
     except (OSError, socket.gaierror, smtplib.SMTPConnectError, smtplib.SMTPServerDisconnected, TimeoutError) as e:
         app_logger.warning(f"Falha de conectividade SMTP para {user} em {host}:{port}: {e}")
-        raise NetworkError(f"Erro de conexao: {e}")
+        raise NetworkError(f"Erro de conexao: {e}") from e
 
     except Exception as e:
         app_logger.error(f"Erro inesperado no teste SMTP para {user}: {e}")
-        raise ValueError(f"Erro de conexao: {e}")
+        raise ValueError(f"Erro de conexao: {e}") from e
 
 
 def send_email(subject, body_html, recipients, smtp_settings, plain_password, from_name=None, reply_to=None):
@@ -436,11 +438,11 @@ def send_external_comment_notification(implantacao, comentario):
     """
     Envia notificação de um novo comentário externo para o responsável da implantação.
     Usa o sistema de email global (SMTP ou SendGrid).
-    
+
     Args:
         implantacao: dict com 'nome_empresa', 'email_responsavel'
         comentario: dict com 'texto', 'tarefa_filho', 'usuario_cs'
-    
+
     Returns:
         True se enviado com sucesso, False caso contrário
     """
@@ -449,13 +451,13 @@ def send_external_comment_notification(implantacao, comentario):
     tarefa_nome = comentario.get('tarefa_filho', 'Tarefa')
     texto = comentario.get('texto', '')
     usuario_cs = comentario.get('usuario_cs', 'CS')
-    
+
     if not to_email:
         app_logger.warning("Email do responsável não configurado para envio de comentário externo")
         return False
-    
+
     subject = f"[CS Onboarding] Novo comentário na implantação - {nome_empresa}"
-    
+
     body_html = f"""
     <html>
     <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
@@ -480,7 +482,7 @@ def send_external_comment_notification(implantacao, comentario):
     </body>
     </html>
     """
-    
+
     body_text = f"""
 Novo Comentário - CS Onboarding
 
@@ -494,7 +496,7 @@ Comentário de: {usuario_cs}
 
 Este é um email automático do sistema CS Onboarding.
     """
-    
+
     try:
         send_email_global(
             subject=subject,

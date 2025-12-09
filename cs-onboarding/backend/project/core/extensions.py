@@ -1,9 +1,9 @@
-from authlib.integrations.flask_client import OAuth
 import boto3
+from authlib.integrations.flask_client import OAuth
 from botocore.client import Config as BotocoreConfig
+from cachetools import TTLCache
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from cachetools import TTLCache
 
 oauth = OAuth()
 
@@ -33,7 +33,7 @@ def init_limiter(app):
         )
 
         limiter.init_app(app)
-    except Exception as e:
+    except Exception:
         limiter = None
 
 
@@ -55,5 +55,5 @@ def init_r2(app):
                 region_name='auto'
             )
             pass
-    except Exception as e:
+    except Exception:
         pass

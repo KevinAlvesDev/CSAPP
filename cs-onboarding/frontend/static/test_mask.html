@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Máscara de Data</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+</head>
+<body class="p-5">
+    <div class="container">
+        <h1>Teste de Máscara de Data (IMask + Flatpickr)</h1>
+        
+        <div class="row mt-5">
+            <div class="col-md-4">
+                <label class="form-label">Data com Máscara</label>
+                <div class="input-group">
+                    <!-- Simulating the input structure from _detalhes_empresa.html -->
+                    <input type="text" class="form-control date-mask custom-datepicker no-datepicker" placeholder="__/__/____">
+                    <button class="btn btn-outline-secondary" type="button"><i class="bi bi-calendar3"></i></button>
+                </div>
+                <div class="form-text">Digite uma data (dd/mm/aaaa) ou use o calendário.</div>
+            </div>
+        </div>
+
+        <div class="row mt-3">
+            <div class="col-md-4">
+                <label class="form-label">Data Simples (sem máscara)</label>
+                <div class="input-group">
+                    <input type="text" class="form-control custom-datepicker no-datepicker" placeholder="Sem máscara">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
+    <script src="https://unpkg.com/imask"></script>
+    
+    <script>
+        // Mock configuration
+        const baseConfig = {
+            dateFormat: 'Y-m-d',
+            altInput: true,
+            altFormat: 'd/m/Y',
+            allowInput: true,
+            locale: 'pt'
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.custom-datepicker').forEach(input => {
+                const config = Object.assign({}, baseConfig);
+                
+                // Logic copied from implantacao_detalhes_ui.js
+                if (input.classList.contains('date-mask') && window.IMask) {
+                    config.onReady = function(selectedDates, dateStr, instance) {
+                        if (instance.altInput) {
+                            const mask = IMask(instance.altInput, {
+                                mask: Date,
+                                pattern: 'd/`m/`Y',
+                                lazy: false,
+                                format: function (date) {
+                                    var day = date.getDate();
+                                    var month = date.getMonth() + 1;
+                                    var year = date.getFullYear();
+                                    if (day < 10) day = "0" + day;
+                                    if (month < 10) month = "0" + month;
+                                    return [day, month, year].join('/');
+                                },
+                                parse: function (str) {
+                                    var yearMonthDay = str.split('/');
+                                    return new Date(yearMonthDay[2], yearMonthDay[1] - 1, yearMonthDay[0]);
+                                },
+                                blocks: {
+                                    d: { mask: IMask.MaskedRange, from: 1, to: 31, maxLength: 2 },
+                                    m: { mask: IMask.MaskedRange, from: 1, to: 12, maxLength: 2 },
+                                    Y: { mask: IMask.MaskedRange, from: 1900, to: 2100 }
+                                }
+                            });
+                            
+                            mask.on('accept', function() {
+                                if (mask.masked.isComplete) {
+                                    instance.setDate(mask.value, true, 'd/m/Y');
+                                }
+                            });
+                        }
+                    };
+                }
+
+                const fp = flatpickr(input, config);
+                
+                // Button trigger logic
+                const btn = input.nextElementSibling;
+                if (btn && btn.tagName === 'BUTTON') {
+                    btn.addEventListener('click', () => {
+                        fp.open();
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

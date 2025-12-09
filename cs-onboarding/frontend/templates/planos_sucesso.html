@@ -321,43 +321,11 @@
   </div>
 </div>
 
-<script>
-  document.addEventListener('DOMContentLoaded', function () {
-    let planoIdParaExcluir = null;
-
-    document.querySelectorAll('.btn-excluir-plano').forEach(btn => {
-      btn.addEventListener('click', function () {
-        planoIdParaExcluir = this.dataset.planoId;
-        const planoNome = this.dataset.planoNome;
-        document.getElementById('planoNomeExcluir').textContent = planoNome;
-      });
-    });
-
-    document.getElementById('btnConfirmarExclusao')?.addEventListener('click', function () {
-      if (!planoIdParaExcluir) return;
-
-      fetch(`/planos/${planoIdParaExcluir}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': '{{ csrf_token() }}'
-        }
-      })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            window.location.reload();
-          } else {
-            alert(data.error || 'Erro ao excluir plano');
-          }
-        })
-        .catch(error => {
-          console.error('Erro:', error);
-          alert('Erro ao excluir plano');
-        });
-    });
-  });
-</script>
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   </main>
 </div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script src="{{ url_for('static', filename='js/planos_sucesso_ui.js') }}"></script>
 {% endblock %}

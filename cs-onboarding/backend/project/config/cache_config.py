@@ -4,6 +4,7 @@ Usa Flask-Caching com backend configurável (Redis em produção, Simple em dese
 """
 
 import os
+
 from flask_caching import Cache
 
 cache = None

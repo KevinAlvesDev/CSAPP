@@ -1,15 +1,12 @@
-import sqlite3
-import psycopg2
-from psycopg2.extras import DictCursor
-from flask import current_app, g
-from datetime import datetime
-import os
-import click
-from flask.cli import with_appcontext
 from contextlib import contextmanager
+from datetime import datetime
 
-from .database import get_db_connection as get_pooled_connection
+import click
+from flask import current_app
+from flask.cli import with_appcontext
+
 from .common.exceptions import DatabaseError
+from .database import get_db_connection as get_pooled_connection
 
 
 def get_db_connection():
@@ -32,7 +29,7 @@ def db_connection():
     try:
         conn, db_type = get_db_connection()
         yield conn, db_type
-    except Exception as e:
+    except Exception:
         if conn:
             conn.rollback()
         raise
@@ -186,7 +183,7 @@ def db_transaction_with_lock():
             except Exception:
                 pass
 
-    except Exception as e:
+    except Exception:
         if conn:
             try:
                 conn.rollback()
@@ -211,7 +208,7 @@ def logar_timeline(implantacao_id, usuario_cs, tipo_evento, detalhe):
             sql = sql.replace('%s', '?')
         cursor.execute(sql, (implantacao_id, usuario_cs, tipo_evento, detalhe, datetime.now()))
         conn.commit()
-    except Exception as e:
+    except Exception:
         if conn:
             conn.rollback()
     finally:
@@ -239,7 +236,7 @@ def init_db():
             # ... [Mantido o resto das queries DDL para PostgreSQL sem alterações lógicas, apenas formatação] ...
             # Devido ao tamanho, as queries foram mantidas como estavam, apenas limpando espaçamentos.
             # (O código real no write tool abaixo contém todas as queries completas)
-            
+
             # (Bloco DDL PostgreSQL omitido aqui no pensamento para brevidade, mas incluído no tool call)
 
             try:
@@ -275,16 +272,16 @@ def init_db():
         elif db_type == 'sqlite':
              # Criar TODAS as tabelas diretamente (sem depender de script externo)
              _criar_tabelas_basicas_sqlite(cursor)
-             
+
              # Migrar colunas faltantes na tabela implantacoes
              _migrar_colunas_implantacoes(cursor)
-             
+
              # Migrar coluna detalhes na tabela timeline_log
              _migrar_coluna_timeline_detalhes(cursor)
-             
+
              # Migrar colunas faltantes na tabela planos_sucesso
              _migrar_colunas_planos_sucesso(cursor)
-             
+
              # Migrar coluna checklist_item_id na tabela comentarios_h
              _migrar_coluna_comentarios_checklist_item(cursor)
 
@@ -293,14 +290,14 @@ def init_db():
 
              # Criar tabela de histórico de responsável
              _criar_tabela_responsavel_history(cursor, db_type)
-             
+
              # Inserir regras de gamificação padrão se não existirem
              try:
                  cursor.execute("SELECT COUNT(*) FROM gamificacao_regras")
                  count = cursor.fetchone()[0] if cursor.rowcount > 0 else 0
                  if count == 0:
                      _inserir_regras_gamificacao_padrao(cursor)
-             except Exception as e:
+             except Exception:
                  pass
 
         # Criar índices básicos para performance
@@ -346,7 +343,7 @@ def _criar_tabelas_basicas_sqlite(cursor):
             senha TEXT NOT NULL
         )
     """)
-    
+
     # Tabela perfil_usuario
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS perfil_usuario (
@@ -358,7 +355,7 @@ def _criar_tabelas_basicas_sqlite(cursor):
             FOREIGN KEY (usuario) REFERENCES usuarios(usuario)
         )
     """)
-    
+
     # Tabela implantacoes
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS implantacoes (
@@ -411,7 +408,7 @@ def _criar_tabelas_basicas_sqlite(cursor):
             FOREIGN KEY (usuario_cs) REFERENCES usuarios(usuario)
         )
     """)
-    
+
     # Tabela checklist_items (COMPLETA)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS checklist_items (
@@ -439,7 +436,7 @@ def _criar_tabelas_basicas_sqlite(cursor):
             CHECK (percentual_conclusao >= 0 AND percentual_conclusao <= 100)
         )
     """)
-    
+
     # Tabela comentarios_h
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS comentarios_h (
@@ -456,7 +453,7 @@ def _criar_tabelas_basicas_sqlite(cursor):
             FOREIGN KEY (checklist_item_id) REFERENCES checklist_items(id)
         )
     """)
-    
+
     # Tabela timeline_log
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS timeline_log (
@@ -470,7 +467,7 @@ def _criar_tabelas_basicas_sqlite(cursor):
             FOREIGN KEY (usuario_cs) REFERENCES usuarios(usuario)
         )
     """)
-    
+
     # Tabela planos_sucesso
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS planos_sucesso (
@@ -485,7 +482,7 @@ def _criar_tabelas_basicas_sqlite(cursor):
             FOREIGN KEY (criado_por) REFERENCES usuarios(usuario)
         )
     """)
-    
+
     # Tabela gamificacao_regras
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS gamificacao_regras (
@@ -497,7 +494,7 @@ def _criar_tabelas_basicas_sqlite(cursor):
             tipo_valor TEXT DEFAULT 'pontos'
         )
     """)
-    
+
     # Tabela gamificacao_metricas_mensais
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS gamificacao_metricas_mensais (
@@ -517,7 +514,7 @@ def _criar_tabelas_basicas_sqlite(cursor):
             FOREIGN KEY (usuario_cs) REFERENCES usuarios(usuario)
         )
     """)
-    
+
     # Tabela smtp_settings
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS smtp_settings (
@@ -530,7 +527,7 @@ def _criar_tabelas_basicas_sqlite(cursor):
             ativo INTEGER DEFAULT 1
         )
     """)
-    
+
     # Criar TODOS os índices necessários
     indices = [
         "CREATE INDEX IF NOT EXISTS idx_checklist_parent_id ON checklist_items(parent_id)",
@@ -547,7 +544,7 @@ def _criar_tabelas_basicas_sqlite(cursor):
         "CREATE INDEX IF NOT EXISTS idx_checklist_tag ON checklist_items(tag)",
         "CREATE INDEX IF NOT EXISTS idx_checklist_data_conclusao ON checklist_items(data_conclusao)",
     ]
-    
+
     for idx_sql in indices:
         try:
             cursor.execute(idx_sql)
@@ -562,7 +559,7 @@ def _migrar_coluna_timeline_detalhes(cursor):
         colunas = [row[1] for row in cursor.fetchall()]
         if 'detalhes' not in colunas:
             cursor.execute("ALTER TABLE timeline_log ADD COLUMN detalhes TEXT")
-    except Exception as e:
+    except Exception:
         pass
 
 
@@ -571,22 +568,22 @@ def _migrar_colunas_planos_sucesso(cursor):
     try:
         cursor.execute("PRAGMA table_info(planos_sucesso)")
         colunas_existentes = [row[1] for row in cursor.fetchall()]
-        
+
         colunas_para_adicionar = {
             'data_atualizacao': 'DATETIME DEFAULT CURRENT_TIMESTAMP',
             'dias_duracao': 'INTEGER'
         }
-        
+
         colunas_adicionadas = 0
         for coluna, tipo in colunas_para_adicionar.items():
             if coluna not in colunas_existentes:
                 try:
                     cursor.execute(f"ALTER TABLE planos_sucesso ADD COLUMN {coluna} {tipo}")
                     colunas_adicionadas += 1
-                except Exception as e:
+                except Exception:
                     pass
-        
-    except Exception as e:
+
+    except Exception:
         pass
 
 
@@ -595,10 +592,10 @@ def _migrar_coluna_comentarios_checklist_item(cursor):
     try:
         cursor.execute("PRAGMA table_info(comentarios_h)")
         colunas_existentes = [row[1] for row in cursor.fetchall()]
-        
+
         if 'checklist_item_id' not in colunas_existentes:
             cursor.execute("ALTER TABLE comentarios_h ADD COLUMN checklist_item_id INTEGER")
-    except Exception as e:
+    except Exception:
         pass
 
 
@@ -652,7 +649,7 @@ def _migrar_colunas_implantacoes(cursor):
     try:
         cursor.execute("PRAGMA table_info(implantacoes)")
         colunas_existentes = [row[1] for row in cursor.fetchall()]
-        
+
         colunas_para_adicionar = {
             'cargo_responsavel': 'TEXT',
             'telefone_responsavel': 'TEXT',
@@ -691,17 +688,17 @@ def _migrar_colunas_implantacoes(cursor):
             'motivo_cancelamento': 'TEXT',
             'comprovante_cancelamento_url': 'TEXT'
         }
-        
+
         colunas_adicionadas = 0
         for coluna, tipo in colunas_para_adicionar.items():
             if coluna not in colunas_existentes:
                 try:
                     cursor.execute(f"ALTER TABLE implantacoes ADD COLUMN {coluna} {tipo}")
                     colunas_adicionadas += 1
-                except Exception as e:
+                except Exception:
                     pass
-        
-    except Exception as e:
+
+    except Exception:
         pass
 
 
@@ -714,7 +711,7 @@ def _inserir_regras_gamificacao_padrao(cursor):
         ('eleg_reclamacoes_max', 'Elegibilidade', 'Reclamações (Máx)', 1, 'quantidade'),
         ('eleg_perda_prazo_max', 'Elegibilidade', 'Perda de Prazo (Máx)', 2, 'quantidade'),
     ]
-    
+
     for regra_id, categoria, descricao, valor_pontos, tipo_valor in regras:
         try:
             cursor.execute("""
@@ -722,7 +719,7 @@ def _inserir_regras_gamificacao_padrao(cursor):
                 (regra_id, categoria, descricao, valor_pontos, tipo_valor) 
                 VALUES (?, ?, ?, ?, ?)
             """, (regra_id, categoria, descricao, valor_pontos, tipo_valor))
-        except Exception as e:
+        except Exception:
             pass
 
 

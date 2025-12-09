@@ -1,5 +1,5 @@
 
-from flask import current_app, request
+from flask import request
 
 
 def init_security_headers(app):
@@ -62,6 +62,8 @@ def init_rate_limiting_headers(app):
 
 def configure_cors(app):
     allowed_origins = app.config.get('CORS_ALLOWED_ORIGINS', [])
+    if isinstance(allowed_origins, str):
+        allowed_origins = [o.strip() for o in allowed_origins.split(',') if o.strip()]
     if allowed_origins:
         @app.after_request
         def add_cors_headers(response):
@@ -69,7 +71,7 @@ def configure_cors(app):
             if origin in allowed_origins:
                 response.headers['Access-Control-Allow-Origin'] = origin
                 response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-                response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+                response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-CSRFToken'
                 response.headers['Access-Control-Allow-Credentials'] = 'true'
             return response
         app.logger.info(f"CORS configured for origins: {allowed_origins}")

@@ -135,62 +135,64 @@ class ChecklistRenderer {
                              id="progress-bar-${item.id}"></div>
                     ` : ''}
                     
-                    <div class="d-flex align-items-center gap-2 py-2 px-3 hover-bg" 
+                    <div class="d-flex align-items-center gap-0 py-2 px-2 hover-bg" 
                          style="cursor: pointer;"
                          onclick="if(event.target.closest('.btn-expand, .btn-comment-toggle, .checklist-checkbox')) return; if(window.checklistRenderer && ${hasChildren}) { window.checklistRenderer.toggleExpand(${item.id}); }">
-                        ${hasChildren ? `
-                            <button class="btn-icon btn-expand p-1 border-0 bg-transparent" 
-                                    data-item-id="${item.id}" 
-                                    title="${isExpanded ? 'Colapsar' : 'Expandir'}"
-                                    style="cursor: pointer; z-index: 10; position: relative;"
-                                <i class="bi ${isExpanded ? 'bi-chevron-down' : 'bi-chevron-right'} text-muted" style="pointer-events: none;"></i>
-                            </button>
-                        ` : '<span class="btn-icon-placeholder" style="width: 24px;"></span>'}
-                        
-                        <input type="checkbox" 
-                               class="checklist-checkbox form-check-input" 
-                               id="checklist-${item.id}"
-                               data-item-id="${item.id}"
-                               ${item.completed ? 'checked' : ''}
-                               style="cursor: pointer; width: 18px; height: 18px;">
-                        
-                        <i class="bi ${iconClass} ${iconColor}" style="font-size: 1.1rem;"></i>
-                        
-                        <span class="checklist-item-title flex-grow-1 mb-0" 
-                               style="${item.completed ? 'text-decoration: line-through; color: #6c757d;' : ''}">
-                            ${this.escapeHtml(item.title)}
+                        <span class="col-title flex-grow-1 d-flex align-items-center gap-2">
+                            ${hasChildren ? `
+                                <button class="btn-icon btn-expand p-1 border-0 bg-transparent" 
+                                        data-item-id="${item.id}" 
+                                        title="${isExpanded ? 'Colapsar' : 'Expandir'}"
+                                        style="cursor: pointer; z-index: 10; position: relative;">
+                                    <i class="bi ${isExpanded ? 'bi-chevron-down' : 'bi-chevron-right'} text-muted" style="pointer-events: none;"></i>
+                                </button>
+                            ` : '<span class="btn-icon-placeholder" style="width: 24px;"></span>'}
+                            
+                            <input type="checkbox" 
+                                   class="checklist-checkbox form-check-input" 
+                                   id="checklist-${item.id}"
+                                   data-item-id="${item.id}"
+                                   ${item.completed ? 'checked' : ''}
+                                   style="cursor: pointer; width: 18px; height: 18px;">
+                            
+                            <i class="bi ${iconClass} ${iconColor}" style="font-size: 1.1rem;"></i>
+                            
+                            <span class="checklist-item-title mb-0" 
+                                   style="${item.completed ? 'text-decoration: line-through; color: #6c757d;' : ''}">
+                                ${this.escapeHtml(item.title)}
+                            </span>
                         </span>
-                        <span class="col-qtd" style="width:90px">
-                            ${progressLabel ? `
-                                <span class="checklist-progress-badge badge bg-light text-dark" style="font-size: 0.75rem;">
-                                    ${progressLabel}
-                                </span>
-                            ` : ''}
                         </span>
 
-                        <span class="col-tag" style="width:140px">
+                        <span class="col-tag" style="width:130px; overflow:hidden">
                             ${item.tag ? `
-                                <span class="badge ${item.tag === 'Ação interna' ? 'bg-secondary' : (item.tag === 'Reunião' ? 'bg-info text-dark' : 'bg-light text-dark')}" style="font-size: 0.75rem;">
+                                <span class="badge badge-truncate ${item.tag === 'Ação interna' ? 'bg-secondary' : (item.tag === 'Reunião' ? 'bg-info text-dark' : 'bg-light text-dark')}" style="font-size: 0.75rem;">
                                     ${this.escapeHtml(item.tag)}
                                 </span>
                             ` : ''}
                         </span>
 
-                        <span class="col-responsavel" style="width:220px">
-                            ${item.responsavel ? `<span class="badge bg-primary js-edit-resp badge-resp-ellipsis" data-item-id="${item.id}" style="font-size: 0.75rem;" title="${this.escapeHtml(item.responsavel)}">${this.escapeHtml(this.abbrevResponsavel(item.responsavel))}</span>` : `<span class="badge bg-primary js-edit-resp badge-resp-ellipsis" data-item-id="${item.id}" style="font-size: 0.75rem;">Definir responsável</span>`}
+                        <span class="col-qtd" style="width:60px; overflow:hidden">
+                            ${progressLabel ? `
+                                <span class="checklist-progress-badge badge badge-truncate bg-light text-dark" style="font-size: 0.75rem;">
+                                    ${progressLabel}
+                                </span>
+                            ` : ''}
                         </span>
-                        <span class="col-prev-orig" style="width:160px">
-                            ${item.previsao_original ? `<span class="badge bg-warning text-dark" id="badge-prev-orig-${item.id}" style="font-size: 0.75rem;" title="Previsão original: ${item.previsao_original}" aria-label="Previsão original: ${this.formatDate(item.previsao_original)}">Prev. orig.: ${this.formatDate(item.previsao_original)}</span>` : `<span class="badge bg-warning text-dark d-none" id="badge-prev-orig-${item.id}" style="font-size: 0.75rem;" aria-hidden="true"></span>`}
+
+                        <span class="col-responsavel" style="width:120px">
+                            ${item.responsavel ? `<span class="badge bg-primary js-edit-resp badge-resp-ellipsis badge-truncate" data-item-id="${item.id}" style="font-size: 0.75rem;" title="${this.escapeHtml(item.responsavel)}">${this.escapeHtml(this.abbrevResponsavel(item.responsavel))}</span>` : `<span class="badge bg-primary js-edit-resp badge-resp-ellipsis badge-truncate" data-item-id="${item.id}" style="font-size: 0.75rem;">Definir responsável</span>`}
                         </span>
-                        <span class="col-prev-atual" style="width:160px">
-                            ${item.nova_previsao ? `<span class="badge bg-danger text-white js-edit-prev" id="badge-prev-nova-${item.id}" data-item-id="${item.id}" style="font-size: 0.75rem;" title="Previsão atual: ${item.nova_previsao}" aria-label="Previsão atual: ${this.formatDate(item.nova_previsao)}">Prev.: ${this.formatDate(item.nova_previsao)}</span>` : `<span class="badge bg-warning text-dark js-edit-prev" id="badge-prev-nova-${item.id}" data-item-id="${item.id}" style="font-size: 0.75rem;" aria-label="Definir nova previsão">Definir nova previsão</span>`}
+                        <span class="col-prev-orig" style="width:150px">
+                            ${item.previsao_original ? `<span class="badge badge-truncate bg-warning text-dark" id="badge-prev-orig-${item.id}" style="font-size: 0.75rem;" title="Previsão original: ${item.previsao_original}" aria-label="Previsão original: ${this.formatDate(item.previsao_original)}">${this.formatDate(item.previsao_original)}</span>` : `<span class="badge bg-warning text-dark d-none" id="badge-prev-orig-${item.id}" style="font-size: 0.75rem;" aria-hidden="true"></span>`}
                         </span>
-                        ${item.atrasada ? `<span class="badge bg-danger ms-2" id="badge-atrasada-${item.id}" style="font-size: 0.75rem;">Prazo excedido</span>` : `<span class="badge bg-danger ms-2 d-none" id="badge-atrasada-${item.id}" style="font-size: 0.75rem;">Prazo excedido</span>`}
-                        ${item.data_conclusao ? `<span class="badge bg-success ms-2" id="badge-concl-${item.id}" style="font-size: 0.75rem;" title="Concluída em: ${item.data_conclusao}">Concl.: ${this.formatDate(item.data_conclusao)}</span>` : `<span class="badge bg-success ms-2 d-none" id="badge-concl-${item.id}" style="font-size: 0.75rem;"></span>`}
-                        
-                        <span class="col-status" style="width:120px">
-                            <span class="badge ${statusClass}" id="status-badge-${item.id}" title="Status: ${statusText}" aria-label="Status: ${statusText}">
+                        <span class="col-prev-atual" style="width:150px">
+                            ${item.nova_previsao ? `<span class="badge badge-truncate bg-warning text-dark js-edit-prev" id="badge-prev-nova-${item.id}" data-item-id="${item.id}" style="font-size: 0.75rem;" title="Previsão atual: ${item.nova_previsao}" aria-label="Previsão atual: ${this.formatDate(item.nova_previsao)}">${this.formatDate(item.nova_previsao)}</span>` : ((item.previsao_original || this.previsaoTermino) ? `<span class="badge badge-truncate bg-warning text-dark js-edit-prev" id="badge-prev-nova-${item.id}" data-item-id="${item.id}" style="font-size: 0.75rem;" title="Previsão atual: ${item.previsao_original || this.previsaoTermino}" aria-label="Previsão atual: ${this.formatDate(item.previsao_original || this.previsaoTermino)}">${this.formatDate(item.previsao_original || this.previsaoTermino)}</span>` : `<span class="badge badge-truncate bg-warning text-dark js-edit-prev" id="badge-prev-nova-${item.id}" data-item-id="${item.id}" style="font-size: 0.75rem;" aria-label="Definir nova previsão">Definir nova previsão</span>`)}
+                        </span>
+                        <span class="col-status" style="width:110px">
+                            <span class="badge badge-truncate ${statusClass}" id="status-badge-${item.id}" title="Status: ${statusText}" aria-label="Status: ${statusText}">
                                 <i class="bi ${statusIcon} me-1" aria-hidden="true"></i>${statusText}
+                                ${item.atrasada ? '<i class="bi bi-exclamation-triangle-fill ms-1" aria-hidden="true"></i>' : ''}
                             </span>
                         </span>
                         
@@ -636,7 +638,13 @@ class ChecklistRenderer {
                 prevNova.classList.remove('d-none');
                 prevNova.classList.remove('bg-danger','text-white');
                 prevNova.classList.add('bg-warning','text-dark');
-                prevNova.textContent = 'Definir nova previsão';
+                const fallbackPrev = node.previsao_original || this.previsaoTermino;
+                if (fallbackPrev) {
+                    prevNova.setAttribute('title', `Previsão: ${fallbackPrev}`);
+                    prevNova.textContent = `Prev.: ${this.formatDate(fallbackPrev)}`;
+                } else {
+                    prevNova.textContent = 'Definir nova previsão';
+                }
             }
         }
 

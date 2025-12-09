@@ -1,11 +1,12 @@
-from flask import Blueprint, request, jsonify, render_template, redirect, url_for, flash, g
 from functools import wraps
-from ..domain import planos_sucesso_service
-from ..db import logar_timeline
+
+from flask import Blueprint, flash, g, jsonify, redirect, render_template, request, url_for
+
 from ..__init__ import csrf
-from ..common.exceptions import ValidationError
 from ..blueprints.auth import login_required
+from ..common.exceptions import ValidationError
 from ..config.logging_config import planos_logger
+from ..domain import planos_sucesso_service
 
 planos_bp = Blueprint('planos', __name__, url_prefix='/planos')
 
@@ -245,7 +246,7 @@ def atualizar_plano(plano_id):
                 except json.JSONDecodeError:
                     planos_logger.error(f"Erro ao fazer parse da estrutura JSON: {estrutura[:200]}")
                     raise ValidationError("Estrutura inválida: JSON malformado")
-            
+
             if estrutura and (estrutura.get('items') or estrutura.get('fases')):
                 planos_sucesso_service.atualizar_estrutura_plano(plano_id, estrutura)
 
@@ -357,16 +358,6 @@ def aplicar_plano_implantacao(implantacao_id):
             responsavel_nome=responsavel_nome
         )
 
-        try:
-            logar_timeline(
-                implantacao_id,
-                usuario,
-                'plano_aplicado',
-                f'Plano {plano_id} aplicado à implantação {implantacao_id} por {usuario}'
-            )
-        except Exception:
-            pass
-
         if request.is_json:
             return jsonify({
                 'success': True,
@@ -423,16 +414,6 @@ def remover_plano_implantacao(implantacao_id):
             implantacao_id=implantacao_id,
             usuario=usuario
         )
-
-        try:
-            logar_timeline(
-                implantacao_id,
-                usuario,
-                'plano_removido',
-                f'Plano removido da implantação {implantacao_id} por {usuario}'
-            )
-        except Exception:
-            pass
 
         if request.is_json:
             return jsonify({

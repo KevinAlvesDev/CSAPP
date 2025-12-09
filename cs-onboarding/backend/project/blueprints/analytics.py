@@ -1,18 +1,17 @@
-from flask import Blueprint, render_template, g, flash, redirect, url_for, request, jsonify, make_response
-from ..blueprints.auth import permission_required
+from flask import Blueprint, flash, g, jsonify, make_response, redirect, render_template, request, url_for
 
-from ..domain.analytics_service import get_analytics_data
+from ..blueprints.auth import permission_required
+from ..common.validation import ValidationError, sanitize_string, validate_date, validate_email
+from ..config.cache_config import cache
+from ..constants import PERFIS_COM_ANALYTICS, PERFIS_COM_GESTAO
+from ..db import query_db
 from ..domain.analytics_service import (
-    get_implants_by_day,
+    get_analytics_data,
+    get_cancelamentos_data,
     get_funnel_counts,
     get_gamification_rank,
-    get_cancelamentos_data,
+    get_implants_by_day,
 )
-
-from ..db import query_db
-from ..constants import PERFIS_COM_ANALYTICS, PERFIS_COM_GESTAO
-from ..common.validation import validate_email, sanitize_string, validate_date, ValidationError
-from ..config.cache_config import cache
 
 analytics_bp = Blueprint('analytics', __name__)
 

@@ -3,9 +3,10 @@ Módulo de Connection Pooling para PostgreSQL.
 Melhora performance e evita esgotamento de conexões.
 """
 
-import sqlite3
 import os
+import sqlite3
 from threading import Lock
+
 from flask import current_app, g
 from psycopg2 import pool
 from psycopg2.extras import DictCursor
@@ -53,8 +54,12 @@ def get_db_connection():
             if database_url and database_url.startswith('sqlite'):
                 # Extrair caminho do arquivo da URL sqlite:///path/to/file.db
                 db_path = database_url.replace('sqlite:///', '')
+
+                # Handle in-memory database specifically
+                if db_path == ':memory:':
+                    pass
                 # Se for caminho relativo, tornar absoluto a partir da raiz do projeto
-                if not os.path.isabs(db_path):
+                elif not os.path.isabs(db_path):
                     base_dir = os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
                     db_path = os.path.join(base_dir, db_path)
             else:
@@ -63,7 +68,7 @@ def get_db_connection():
                 is_testing = current_app.config.get('TESTING', False)
                 db_filename = 'dashboard_simples_test.db' if is_testing else 'dashboard_simples.db'
                 db_path = os.path.join(base_dir, db_filename)
-            
+
             conn = sqlite3.connect(db_path, isolation_level=None)
             conn.row_factory = sqlite3.Row
             return conn, 'sqlite'

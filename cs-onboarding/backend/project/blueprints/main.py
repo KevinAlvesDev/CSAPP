@@ -1,22 +1,37 @@
 import os
+
 from flask import (
-    Blueprint, render_template, request, flash, redirect, url_for, g, session,
-    current_app, send_from_directory
+    Blueprint,
+    current_app,
+    flash,
+    g,
+    redirect,
+    render_template,
+    request,
+    send_from_directory,
+    session,
+    url_for,
 )
 
 from ..blueprints.auth import login_required
+from ..common.validation import ValidationError, sanitize_string, validate_integer
+from ..constants import (
+    CARGOS_RESPONSAVEL,
+    FORMAS_PAGAMENTO,
+    HORARIOS_FUNCIONAMENTO,
+    MODALIDADES_LIST,
+    NIVEIS_RECEITA,
+    PERFIS_COM_CRIACAO,
+    PERFIS_COM_GESTAO,
+    RECORRENCIA_USADA,
+    SEGUIMENTOS_LIST,
+    SIM_NAO_OPTIONS,
+    SISTEMAS_ANTERIORES,
+    TIPOS_PLANOS,
+)
 from ..db import query_db
 from ..domain.dashboard_service import get_dashboard_data
 from ..domain.implantacao_service import get_implantacao_details
-
-from ..constants import (
-    CARGOS_RESPONSAVEL, PERFIS_COM_CRIACAO,
-    NIVEIS_RECEITA, SEGUIMENTOS_LIST, TIPOS_PLANOS, MODALIDADES_LIST,
-    HORARIOS_FUNCIONAMENTO, FORMAS_PAGAMENTO, SISTEMAS_ANTERIORES,
-    RECORRENCIA_USADA, SIM_NAO_OPTIONS, PERFIS_COM_GESTAO
-)
-
-from ..common.validation import sanitize_string, validate_integer, ValidationError
 
 main_bp = Blueprint('main', __name__)
 
@@ -132,7 +147,7 @@ def dashboard():
             sort_days=sort_days
         )
 
-    except Exception as e:
+    except Exception:
         flash("Erro ao carregar dados do dashboard.", "error")
 
         perfil_acesso_erro = g.perfil.get('perfil_acesso') if g.get('perfil') else None
