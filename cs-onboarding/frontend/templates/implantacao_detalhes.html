@@ -296,15 +296,15 @@
         position: relative;
     }
 
-    .timeline-list::before {
-        content: '';
-        position: absolute;
-        left: 20px;
+.timeline-list::before {
+    content: '';
+    position: absolute;
+    left: 20px;
         top: 0;
         bottom: 0;
         width: 2px;
-        background: #e2e8f0;
-    }
+    background: #e2e8f0;
+}
 
     .timeline-item {
         position: relative;
@@ -335,10 +335,10 @@
         position: relative;
     }
 
-    .timeline-content::before {
-        content: '';
-        position: absolute;
-        left: -8px;
+.timeline-content::before {
+    content: '';
+    position: absolute;
+    left: -8px;
         top: 15px;
         width: 16px;
         height: 16px;
@@ -679,94 +679,7 @@
         border-color: #cbd5e0;
         background: #f7fafc;
     }
-
-    .tarefa-item.concluida {
-        background: #f0fdf4;
-        border-color: #86efac;
-    }
-
-    .tarefa-item.concluida .tarefa-nome {
-        text-decoration: line-through;
-        color: #6b7280;
-    }
-
-    .tarefa-header {
-        padding: 0.75rem 1rem;
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        position: relative;
-    }
     
-    .tarefa-header.cursor-pointer {
-        cursor: pointer;
-    }
-
-    .tarefa-checkbox {
-        width: 20px;
-        height: 20px;
-        cursor: pointer;
-        accent-color: #667eea;
-        background-color: white !important;
-    }
-    
-    .tarefa-checkbox:not(:checked) {
-        background-color: white !important;
-        appearance: checkbox;
-        -webkit-appearance: checkbox;
-    }
-
-    .tarefa-nome {
-        flex: 1;
-        font-size: 0.9rem;
-        color: #374151;
-        font-weight: 500;
-    }
-
-    .tarefa-status {
-        font-size: 0.75rem;
-        padding: 0.25rem 0.5rem;
-        border-radius: 20px;
-        font-weight: 600;
-    }
-
-    .tarefa-status.pendente {
-        background: #fef3c7;
-        color: #92400e;
-    }
-
-    .tarefa-status.concluido {
-        background: #d1fae5;
-        color: #065f46;
-    }
-
-    .tarefa-actions {
-        display: flex;
-        gap: 0.25rem;
-    }
-
-    .tarefa-actions .btn-icon {
-        width: 32px;
-        height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 6px;
-        border: none;
-        background: transparent;
-        color: #6b7280;
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-
-    .tarefa-actions .btn-icon:hover {
-        background: #e5e7eb;
-        color: #374151;
-    }
-
-    .tarefa-actions .btn-icon.has-comments {
-        color: #667eea;
-    }
 
     /* Comentários Section */
     .comentarios-section {
@@ -1151,6 +1064,10 @@
                 </div>
                 
                 <div class="tab-content">
+                    <style>
+                        .custom-card .tab-content > .tab-pane:not(.active) { display: none !important; }
+                        .custom-card .tab-content > .tab-pane.active { display: block !important; }
+                    </style>
                     <!-- Tab: Plano de Sucesso -->
                     <div class="tab-pane fade show active" id="plano-content" role="tabpanel">
                         <div class="custom-card-body plano-sucesso-container" id="plano-hierarquia">
@@ -1175,14 +1092,14 @@
                                     <span class="col-qtd" style="width:60px">QTD</span>
                                     <span class="col-responsavel" style="width:120px">Responsável</span>
                                     <span class="col-prev-orig" style="width:150px">Prev. orig</span>
-                                    <span class="col-prev-atual" style="width:150px">Prev</span>
+                                    <span class="col-prev-atual" style="width:150px">Nova previsão</span>
                                     <span class="col-status" style="width:110px">Status</span>
                                     <span class="col-comment" style="width:28px"></span>
                                     <span class="col-delete" style="width:28px"></span>
                                 </div>
                                 <div id="checklist-tree-root"></div>
                             </div>
-                            {% elif hierarquia and hierarquia.fases %}
+                            {% elif false %}
                             <!-- Modelo Antigo (Compatibilidade) -->
                                 {% for fase in hierarquia.fases %}
                                 <div class="fase-card" data-fase-id="{{ fase.id }}">
@@ -1358,9 +1275,9 @@
                     </div>
                     
                     <!-- Tab: Linha do Tempo -->
-                    <div class="tab-pane fade" id="timeline-content" role="tabpanel">
+                    <div class="tab-pane fade d-none" id="timeline-content" role="tabpanel" data-impl-id="{{ implantacao.id }}">
                         <div class="custom-card-body" style="max-height: calc(100vh - 350px); overflow-y: auto;">
-                            <ul class="timeline-list">
+                            <ul class="timeline-list" id="timeline-list">
                         {% if not logs_timeline %}
                         <li class="alert alert-light text-center small py-2">Nenhum evento registrado.</li>
                         {% endif %}
@@ -1387,11 +1304,7 @@
                                         Ver comentários
                                     </button>
                                     {% endif %}
-                                    {% if log.related_item_id and log.tipo_evento != 'novo_comentario' %}
-                                    <button class="btn btn-sm btn-outline-secondary timeline-action-task" data-item-id="{{ log.related_item_id }}">
-                                        Ver tarefa
-                                    </button>
-                                    {% endif %}
+                                    
                                 </div>
                             </div>
                         </li>
@@ -1401,7 +1314,7 @@
                     </div>
                     
                     <!-- Tab: Comentários -->
-                    <div class="tab-pane fade" id="comments-content" role="tabpanel">
+                    <div class="tab-pane fade d-none" id="comments-content" role="tabpanel">
                         <div class="custom-card-body">
                             <div id="comments-list-container" class="d-flex flex-column gap-3" style="max-height: calc(100vh - 350px); overflow-y: auto;">
                                 <!-- Comments will be loaded here -->
@@ -1790,3 +1703,4 @@
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 {% endblock %}
     /* cabeçalho e linhas continuam com flex; larguras são controladas pelos wrappers de coluna */
+    

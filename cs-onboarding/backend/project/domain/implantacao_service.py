@@ -551,10 +551,9 @@ def _get_timeline_logs(impl_id):
             import re
             detalhes = log.get('detalhes') or ''
             m = re.search(r'(Item|Subtarefa|TarefaH)\s+(\d+)', detalhes)
-            if m:
-                log['related_item_id'] = int(m.group(2))
-            else:
-                log['related_item_id'] = None
+            if not m:
+                m = re.search(r'data-item-id="(\d+)"', detalhes)
+            log['related_item_id'] = int(m.group(2) if m and m.groups() and len(m.groups())>1 else (m.group(1) if m else 0)) or None
         except Exception:
             log['related_item_id'] = None
     return logs_timeline

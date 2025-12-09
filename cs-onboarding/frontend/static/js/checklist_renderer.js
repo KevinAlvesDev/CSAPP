@@ -46,18 +46,10 @@ class ChecklistRenderer {
         
         this.buildFlatData(this.data);
         
-        if (this.data.length > 0 && this.data[0]) {
-            this.expandedItems.add(this.data[0].id);
-        }
-        
         this.render();
         this.attachEventListeners();
         
-        if (this.data.length > 0 && this.data[0]) {
-            setTimeout(() => {
-                this.updateExpandedState(this.data[0].id, false);
-            }, 0);
-        }
+        // Render com todas as tarefas minimizadas por padrão (sem expandir nós inicialmente)
         
         this.updateProgressFromLocalData();
     }
@@ -187,7 +179,7 @@ class ChecklistRenderer {
                             ${item.previsao_original ? `<span class="badge badge-truncate bg-warning text-dark" id="badge-prev-orig-${item.id}" style="font-size: 0.75rem;" title="Previsão original: ${item.previsao_original}" aria-label="Previsão original: ${this.formatDate(item.previsao_original)}">${this.formatDate(item.previsao_original)}</span>` : `<span class="badge bg-warning text-dark d-none" id="badge-prev-orig-${item.id}" style="font-size: 0.75rem;" aria-hidden="true"></span>`}
                         </span>
                         <span class="col-prev-atual" style="width:150px">
-                            ${item.nova_previsao ? `<span class="badge badge-truncate bg-warning text-dark js-edit-prev" id="badge-prev-nova-${item.id}" data-item-id="${item.id}" style="font-size: 0.75rem;" title="Previsão atual: ${item.nova_previsao}" aria-label="Previsão atual: ${this.formatDate(item.nova_previsao)}">${this.formatDate(item.nova_previsao)}</span>` : ((item.previsao_original || this.previsaoTermino) ? `<span class="badge badge-truncate bg-warning text-dark js-edit-prev" id="badge-prev-nova-${item.id}" data-item-id="${item.id}" style="font-size: 0.75rem;" title="Previsão atual: ${item.previsao_original || this.previsaoTermino}" aria-label="Previsão atual: ${this.formatDate(item.previsao_original || this.previsaoTermino)}">${this.formatDate(item.previsao_original || this.previsaoTermino)}</span>` : `<span class="badge badge-truncate bg-warning text-dark js-edit-prev" id="badge-prev-nova-${item.id}" data-item-id="${item.id}" style="font-size: 0.75rem;" aria-label="Definir nova previsão">Definir nova previsão</span>`)}
+                            ${item.nova_previsao ? `<span class="badge badge-truncate bg-danger text-white js-edit-prev" id="badge-prev-nova-${item.id}" data-item-id="${item.id}" style="font-size: 0.75rem;" title="Nova previsão: ${item.nova_previsao}" aria-label="Nova previsão: ${this.formatDate(item.nova_previsao)}">${this.formatDate(item.nova_previsao)}</span>` : ((item.previsao_original || this.previsaoTermino) ? `<span class="badge badge-truncate bg-warning text-dark js-edit-prev" id="badge-prev-nova-${item.id}" data-item-id="${item.id}" style="font-size: 0.75rem;" title="Nova previsão: ${item.previsao_original || this.previsaoTermino}" aria-label="Nova previsão: ${this.formatDate(item.previsao_original || this.previsaoTermino)}">${this.formatDate(item.previsao_original || this.previsaoTermino)}</span>` : `<span class="badge badge-truncate bg-warning text-dark js-edit-prev" id="badge-prev-nova-${item.id}" data-item-id="${item.id}" style="font-size: 0.75rem;" aria-label="Definir nova previsão">Definir nova previsão</span>`)}
                         </span>
                         <span class="col-status" style="width:110px">
                             <span class="badge badge-truncate ${statusClass}" id="status-badge-${item.id}" title="Status: ${statusText}" aria-label="Status: ${statusText}">
@@ -471,6 +463,8 @@ class ChecklistRenderer {
                 if (window.updateProgressBar && typeof window.updateProgressBar === 'function') {
                     window.updateProgressBar(serverProgress);
                 }
+                try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) {}
+                try { if (typeof window.appendTimelineEvent === 'function') window.appendTimelineEvent('tarefa_alterada', `Status: ${completed ? 'Concluída' : 'Pendente'} — ${(this.flatData[itemId] && this.flatData[itemId].title) || ''}`); } catch (_) {}
             } else {
                 throw new Error(data.error || 'Erro ao alterar status');
             }
@@ -620,7 +614,7 @@ class ChecklistRenderer {
             if (node.previsao_original) {
                 prevOrig.classList.remove('d-none');
                 prevOrig.setAttribute('title', `Previsão original: ${node.previsao_original}`);
-                prevOrig.textContent = `Prev. orig.: ${this.formatDate(node.previsao_original)}`;
+                prevOrig.textContent = this.formatDate(node.previsao_original);
             } else {
                 prevOrig.classList.add('d-none');
             }
@@ -633,15 +627,15 @@ class ChecklistRenderer {
                 prevNova.classList.remove('bg-warning','text-dark');
                 prevNova.classList.add('bg-danger','text-white');
                 prevNova.setAttribute('title', `Nova previsão: ${node.nova_previsao}`);
-                prevNova.textContent = `Nova prev.: ${this.formatDate(node.nova_previsao)}`;
+                prevNova.textContent = this.formatDate(node.nova_previsao);
             } else {
                 prevNova.classList.remove('d-none');
                 prevNova.classList.remove('bg-danger','text-white');
                 prevNova.classList.add('bg-warning','text-dark');
                 const fallbackPrev = node.previsao_original || this.previsaoTermino;
                 if (fallbackPrev) {
-                    prevNova.setAttribute('title', `Previsão: ${fallbackPrev}`);
-                    prevNova.textContent = `Prev.: ${this.formatDate(fallbackPrev)}`;
+                    prevNova.setAttribute('title', `Nova previsão: ${fallbackPrev}`);
+                    prevNova.textContent = this.formatDate(fallbackPrev);
                 } else {
                     prevNova.textContent = 'Definir nova previsão';
                 }
@@ -777,6 +771,8 @@ class ChecklistRenderer {
                     const m = bootstrap.Modal.getInstance(modal) || new bootstrap.Modal(modal);
                     m.hide();
                     if (typeof this.showToast === 'function') this.showToast('Responsável atualizado', 'success');
+                    try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) {}
+                    try { if (typeof window.appendTimelineEvent === 'function') window.appendTimelineEvent('responsavel_alterado', `Responsável: ${(current || '')} → ${data.responsavel} — ${(this.flatData[itemId] && this.flatData[itemId].title) || ''}`); } catch (_) {}
                 } else {
                     if (typeof this.showToast === 'function') this.showToast(data.error || 'Erro ao atualizar responsável', 'error'); else alert(data.error || 'Erro ao atualizar responsável');
                 }
@@ -859,6 +855,8 @@ class ChecklistRenderer {
                     saveBtn.disabled = false;
                     saveBtn.innerHTML = originalText;
                     if (typeof this.showToast === 'function') this.showToast('Prazo atualizado', 'success');
+                    try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) {}
+                    try { if (typeof window.appendTimelineEvent === 'function') window.appendTimelineEvent('prazo_alterado', `Nova previsão: ${data.nova_previsao} — ${(this.flatData[itemId] && this.flatData[itemId].title) || ''}`); } catch (_) {}
                 } else {
                     this.flatData[itemId].nova_previsao = prevOld;
                     this.updateItemUI(itemId);
@@ -972,6 +970,8 @@ class ChecklistRenderer {
                 }
                 
                 await this.loadComments(itemId);
+                try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) {}
+                try { if (typeof window.appendTimelineEvent === 'function') window.appendTimelineEvent('novo_comentario', `Comentário criado — ${(this.flatData[itemId] && this.flatData[itemId].title) || ''}`); } catch (_) {}
                 
             } else {
                 throw new Error(data.error || 'Erro ao salvar comentário');
@@ -1027,6 +1027,8 @@ class ChecklistRenderer {
             
             if (data.ok) {
                 await this.loadComments(itemId);
+                try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) {}
+                try { if (typeof window.appendTimelineEvent === 'function') window.appendTimelineEvent('comentario_excluido', `Comentário excluído — ${(this.flatData[itemId] && this.flatData[itemId].title) || ''}`); } catch (_) {}
             } else {
                 throw new Error(data.error || 'Erro ao excluir comentário');
             }
@@ -1102,8 +1104,8 @@ class ChecklistRenderer {
                     this.updateProgressFromLocalData();
                 }
                 
-                // Opcional: Recarregar para garantir consistência se necessário
-                // await this.reloadChecklist();
+                try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) {}
+                try { if (typeof window.appendTimelineEvent === 'function') window.appendTimelineEvent('tarefa_excluida', `Tarefa excluída — ${(this.flatData[itemId] && this.flatData[itemId].title) || ''}`); } catch (_) {}
                 
             } else {
                 throw new Error(data.error || 'Erro ao excluir tarefa');

@@ -232,7 +232,13 @@
                   setTimeout(() => taskElement.classList.remove('highlight-task'), 2000);
                   const commentsSection = document.getElementById(`comments-${taskId}`);
                   if (commentsSection && window.bootstrap && bootstrap.Collapse) {
-                      try { new bootstrap.Collapse(commentsSection, { toggle: true }); } catch (_) {}
+                      try {
+                          const inst = bootstrap.Collapse.getInstance(commentsSection) || new bootstrap.Collapse(commentsSection, { toggle: false });
+                          inst.show();
+                          if (window.checklistRenderer && typeof window.checklistRenderer.loadComments === 'function') {
+                              try { window.checklistRenderer.loadComments(taskId); } catch (_) {}
+                          }
+                      } catch (_) {}
                   }
               }, 200);
           } else {
@@ -476,27 +482,7 @@
       }
     }
 
-    function computeProgress() {
-      const tarefaCheckboxes = document.querySelectorAll('.tarefa-checkbox');
-      const total = tarefaCheckboxes.length;
-      if (!total) return;
-      const done = Array.from(tarefaCheckboxes).filter(cb => cb.checked).length;
-      const pct = Math.round((done / total) * 100);
-      const bar = document.getElementById('progress-total-bar');
-      const valorEl = document.getElementById('progresso-valor');
-      if (bar) {
-        bar.style.width = pct + '%';
-        bar.setAttribute('aria-valuenow', pct);
-      }
-      if (valorEl) valorEl.textContent = pct + '%';
-    }
-
-    document.querySelectorAll('.tarefa-nome.no-checkbox-toggle').forEach(label => {
-      label.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-      });
-    });
+    
 
     // Navegação entre abas (Timeline -> Comentários / Plano)
     function activateTab(targetId) {
@@ -522,7 +508,13 @@
             taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
             const commentsSection = document.getElementById(`comments-${itemId}`);
             if (commentsSection && window.bootstrap && bootstrap.Collapse) {
-              try { new bootstrap.Collapse(commentsSection, { toggle: true }); } catch (_) {}
+              try {
+                const inst = bootstrap.Collapse.getInstance(commentsSection) || new bootstrap.Collapse(commentsSection, { toggle: false });
+                inst.show();
+                if (window.checklistRenderer && typeof window.checklistRenderer.loadComments === 'function') {
+                    try { window.checklistRenderer.loadComments(itemId); } catch (_) {}
+                }
+              } catch (_) {}
             }
           }
         }, 200);
@@ -540,70 +532,10 @@
       }
     });
 
-    document.querySelectorAll('.tarefa-checkbox').forEach(checkbox => {
-      checkbox.addEventListener('change', async function () {
-        const tarefaId = this.dataset.tarefaId;
-        const concluido = this.checked;
+    
 
-        try {
-          const response = await fetch(`/api/toggle_tarefa_h/${tarefaId}`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              'X-CSRFToken': CONFIG.csrfToken
-            },
-            body: JSON.stringify({ concluido })
-          });
 
-          if (!response.ok) {
-            this.checked = !concluido;
-            showToast('Erro ao atualizar tarefa', 'error');
-            return;
-          }
 
-          const data = await response.json();
-          if (data.ok || data.success) {
-            computeProgress();
-            showToast('Tarefa atualizada', 'success', 2000);
-          } else {
-            this.checked = !concluido;
-            showToast('Erro ao atualizar tarefa', 'error');
-          }
-        } catch (error) {
-          this.checked = !concluido;
-          showToast('Erro ao comunicar com o servidor', 'error');
-        }
-      });
-    });
-
-    document.querySelectorAll('.btn-toggle-comentarios').forEach(btn => {
-      btn.addEventListener('click', async function () {
-        const tarefaId = this.dataset.tarefaId;
-        const comentariosSection = document.getElementById(`comentarios-tarefa-${tarefaId}`);
-
-        if (!comentariosSection) return;
-
-        const isShown = comentariosSection.classList.contains('show');
-        if (!isShown) {
-          await carregarComentarios(tarefaId);
-        }
-
-        new bootstrap.Collapse(comentariosSection, { toggle: true });
-      });
-    });
-
-    document.querySelectorAll('[id^="comentarios-tarefa-"]').forEach(section => {
-      section.addEventListener('shown.bs.collapse', function () {
-        const tarefaId = this.id.replace('comentarios-tarefa-', '');
-        if (tarefaId) {
-          setTimeout(() => {
-            inicializarTagsComentario();
-            atualizarVisibilidadeBotaoEmail(tarefaId);
-          }, 100);
-        }
-      });
-    });
 
     function atualizarVisibilidadeBotaoEmail(tarefaId) {
       const tagAtiva = document.querySelector(`.comentario-tipo-tag.active[data-tarefa-id="${tarefaId}"]`);
@@ -726,6 +658,282 @@
       }
     });
 
+    async function reloadTimeline() {
+      try {
+        const tab = document.getElementById('timeline-content');
+        if (!tab) return;
+        const implId = tab.getAttribute('data-impl-id');
+        if (!implId) return;
+        const resp = await fetch(`/api/implantacao/${implId}/timeline?per_page=100`, {
+          headers: { 'Accept': 'application/json', 'X-CSRFToken': (window.CONFIG && window.CONFIG.csrfToken) ? window.CONFIG.csrfToken : '' },
+          credentials: 'same-origin'
+        });
+        const data = await resp.json();
+        if (data && data.ok) {
+          const serverLogs = data.logs || [];
+          const merged = mergeWithBufferedEvents(serverLogs);
+          renderTimelineList(merged);
+        } else {
+          const merged = mergeWithBufferedEvents([]);
+          renderTimelineList(merged);
+        }
+      } catch (_) {}
+    }
+
+    function renderTimelineList(items) {
+      const ul = document.getElementById('timeline-list') || document.querySelector('.timeline-list');
+      if (!ul) return;
+      ul.innerHTML = '';
+      if (!items.length) {
+        ul.innerHTML = '<li class="alert alert-light text-center small py-2">Nenhum evento registrado.</li>';
+        return;
+      }
+      const html = items.map(log => {
+        const t = log.tipo_evento || '';
+        let icon = 'bi-info-circle-fill';
+        if (t === 'novo_comentario') icon = 'bi-chat-left-text-fill';
+        else if (t.includes('tarefa')) icon = 'bi-check-circle-fill';
+        else if (t.includes('status')) icon = 'bi-flag-fill';
+        const dt = (window.formatDate ? window.formatDate(log.data_criacao, true) : (log.data_criacao || ''));
+        const detalhes = (log.detalhes || '').replace(/\n/g, '<br>');
+        let actions = '';
+        const m = /Item\s+(\d+)/.exec(log.detalhes || '');
+        const itemId = m ? parseInt(m[1], 10) : null;
+        if (t === 'novo_comentario' && itemId) actions += `<button class="btn btn-sm btn-outline-primary timeline-action-comments" data-item-id="${itemId}">Ver comentários</button>`;
+        return `
+          <li class="timeline-item">
+            <div class="timeline-icon"><i class="bi ${icon}"></i></div>
+            <div class="timeline-content shadow-sm">
+              <div class="d-flex justify-content-between mb-2">
+                <span class="fw-bold text-primary">${log.usuario_nome || ''}</span>
+                <span class="small text-muted">${dt}</span>
+              </div>
+              <p class="mb-0 text-secondary">${detalhes}</p>
+              <div class="mt-2 d-flex gap-2">${actions}</div>
+            </div>
+          </li>`;
+      }).join('');
+      ul.innerHTML = html;
+    }
+
+    function getImplId() {
+      const tab = document.getElementById('timeline-content');
+      return tab ? tab.getAttribute('data-impl-id') : null;
+    }
+
+    function readTimelineBuffer() {
+      try {
+        const implId = getImplId();
+        if (!implId) return [];
+        const raw = localStorage.getItem(`timelineBuffer:${implId}`);
+        const arr = raw ? JSON.parse(raw) : [];
+        return Array.isArray(arr) ? arr : [];
+      } catch (_) { return []; }
+    }
+
+    function writeTimelineBuffer(items) {
+      try {
+        const implId = getImplId();
+        if (!implId) return;
+        const capped = (items || []).slice(-100);
+        localStorage.setItem(`timelineBuffer:${implId}`, JSON.stringify(capped));
+      } catch (_) {}
+    }
+
+    function mergeWithBufferedEvents(serverLogs) {
+      const buf = readTimelineBuffer();
+      const byKey = new Map();
+      const push = (log) => {
+        if (!log) return;
+        const k = `${log.tipo_evento || ''}|${log.detalhes || ''}|${log.data_criacao || ''}`;
+        if (!byKey.has(k)) byKey.set(k, log);
+      };
+      (serverLogs || []).forEach(push);
+      buf.forEach(push);
+      // Return newest first by data_criacao if possible
+      const arr = Array.from(byKey.values());
+      arr.sort((a,b)=>{
+        const da = new Date(a.data_criacao || 0).getTime();
+        const db = new Date(b.data_criacao || 0).getTime();
+        return db - da;
+      });
+      return arr;
+    }
+
+    window.reloadTimeline = reloadTimeline;
+    window.appendTimelineEvent = function(type, detalhes) {
+      const ul = document.getElementById('timeline-list') || document.querySelector('.timeline-list');
+      if (!ul) return;
+      const t = type || '';
+      let icon = 'bi-info-circle-fill';
+      if (t === 'novo_comentario') icon = 'bi-chat-left-text-fill';
+      else if (t.indexOf('tarefa') >= 0) icon = 'bi-check-circle-fill';
+      else if (t.indexOf('status') >= 0) icon = 'bi-flag-fill';
+      const now = new Date().toISOString();
+      const dt = window.formatDate ? window.formatDate(now, true) : now;
+      const text = (detalhes || '').replace(/\n/g, '<br>');
+      let actions = '';
+      const m = /Item\s+(\d+)/.exec(detalhes || '');
+      const itemId = m ? parseInt(m[1], 10) : null;
+      if (t === 'novo_comentario' && itemId) actions += `<button class="btn btn-sm btn-outline-primary timeline-action-comments" data-item-id="${itemId}">Ver comentários</button>`;
+      const usuario = (window.CONFIG && window.CONFIG.emailUsuarioLogado) ? window.CONFIG.emailUsuarioLogado : '';
+      const li = document.createElement('li');
+      li.className = 'timeline-item';
+      li.innerHTML = `
+        <div class="timeline-icon"><i class="bi ${icon}"></i></div>
+        <div class="timeline-content shadow-sm">
+          <div class="d-flex justify-content-between mb-2">
+            <span class="fw-bold text-primary">${usuario}</span>
+            <span class="small text-muted">${dt}</span>
+          </div>
+          <p class="mb-0 text-secondary">${text}</p>
+          <div class="mt-2 d-flex gap-2">${actions}</div>
+        </div>
+      `;
+      ul.prepend(li);
+
+      // Persist optimistic event to buffer
+      const buf = readTimelineBuffer();
+      buf.push({ tipo_evento: t, detalhes: detalhes || '', usuario_nome: usuario, data_criacao: now });
+      writeTimelineBuffer(buf);
+    };
+
+    try {
+      const timelineTabBtn = document.getElementById('timeline-tab');
+      if (timelineTabBtn) {
+        timelineTabBtn.addEventListener('shown.bs.tab', function () { try { window.reloadTimeline(); } catch (_) {} });
+      }
+    } catch (_) {}
+
+    try {
+      document.addEventListener('DOMContentLoaded', function() {
+        try {
+          const planoTabBtn = document.getElementById('plano-tab');
+          const timelineTabBtn = document.getElementById('timeline-tab');
+          const commentsTabBtn = document.getElementById('comments-tab');
+          const planoPane = document.getElementById('plano-content');
+          const timelinePane = document.getElementById('timeline-content');
+          const commentsPane = document.getElementById('comments-content');
+
+          try {
+            if (window.location && window.location.hash && (window.location.hash === '#timeline-content' || window.location.hash === '#comments-content')) {
+              if (history && history.replaceState) {
+                history.replaceState(null, document.title, window.location.pathname + window.location.search);
+              } else {
+                window.location.hash = '';
+              }
+            }
+          } catch (_) {}
+
+          // Reset panes
+          [timelinePane, commentsPane].forEach(p => {
+            if (!p) return;
+            p.classList.remove('show');
+            p.classList.remove('active');
+          });
+          if (planoPane) {
+            planoPane.classList.add('show');
+            planoPane.classList.add('active');
+          }
+
+          // Reset tabs
+          [timelineTabBtn, commentsTabBtn].forEach(b => { if (b) b.classList.remove('active'); });
+          if (planoTabBtn) planoTabBtn.classList.add('active');
+
+          // Ensure bootstrap tab API reflects the state
+          if (window.bootstrap && bootstrap.Tab && planoTabBtn) {
+            const inst = bootstrap.Tab.getOrCreateInstance(planoTabBtn);
+            inst.show();
+          }
+
+          // Defensive: keep only one pane active at any time
+          const tabContent = document.querySelector('.tab-content');
+          const enforceSingleActive = () => {
+            const panes = document.querySelectorAll('.tab-content .tab-pane');
+            let foundActive = false;
+            panes.forEach(p => {
+              const isActive = p.classList.contains('active');
+              if (isActive && !foundActive) {
+                foundActive = true;
+                p.classList.add('show');
+                p.style.display = 'block';
+                p.classList.remove('d-none');
+              } else {
+                p.classList.remove('show');
+                p.classList.remove('active');
+                p.style.display = 'none';
+                p.classList.add('d-none');
+              }
+            });
+            if (!foundActive && planoPane) {
+              planoPane.classList.add('active');
+              planoPane.classList.add('show');
+              planoPane.style.display = 'block';
+              planoPane.classList.remove('d-none');
+            }
+          };
+          enforceSingleActive();
+          try {
+            if (tabContent) {
+              const mo = new MutationObserver(() => enforceSingleActive());
+              mo.observe(tabContent, { attributes: true, subtree: true, attributeFilter: ['class'] });
+            }
+          } catch (_) {}
+
+          // Tab click handlers to toggle d-none properly
+          try {
+            const allTabBtns = document.querySelectorAll('[data-bs-toggle="tab"]');
+            allTabBtns.forEach(btn => {
+              btn.addEventListener('shown.bs.tab', function(ev) {
+                const target = ev.target.getAttribute('data-bs-target');
+                const panes = document.querySelectorAll('.tab-content .tab-pane');
+                panes.forEach(p => {
+                  if ('#'+p.id === target) {
+                    p.classList.remove('d-none');
+                    p.classList.add('active');
+                    p.classList.add('show');
+                    p.style.display = 'block';
+                  } else {
+                    p.classList.remove('show');
+                    p.classList.remove('active');
+                    p.classList.add('d-none');
+                    p.style.display = 'none';
+                  }
+                });
+              });
+            });
+          } catch(_) {}
+        } catch (_) {}
+      });
+    } catch (_) {}
+
+    try {
+      document.body.addEventListener('submit', async function(e) {
+        const form = e.target;
+        const modal = form.closest('#modalDetalhesEmpresa');
+        if (!modal) return;
+        e.preventDefault();
+        try {
+          const fd = new FormData(form);
+          fd.set('redirect_to','modal');
+          const resp = await fetch('/atualizar_detalhes_empresa', {
+            method: 'POST',
+            headers: { 'Accept': 'application/json', 'X-CSRFToken': (window.CONFIG && window.CONFIG.csrfToken) ? window.CONFIG.csrfToken : '' },
+            body: fd,
+            credentials: 'same-origin'
+          });
+          const data = await resp.json();
+          if (data && data.ok) {
+            showToast('Detalhes atualizados', 'success');
+          } else {
+            showToast('Erro ao salvar detalhes', 'error');
+          }
+        } catch (err) {
+          showToast('Falha ao comunicar com o servidor', 'error');
+        }
+      });
+    } catch (_) {}
+
     document.body.addEventListener('click', async function (e) {
       const targetBtn = e.target.closest('.btn-excluir-comentario');
       if (!targetBtn) return;
@@ -784,300 +992,15 @@
         if (itemId) await carregarComentarios(itemId);
 
         showToast('Comentário excluído com sucesso', 'success');
+        try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) {}
       } catch (error) {
         showToast('Erro ao comunicar com o servidor: ' + error.message, 'error');
       }
     });
 
-    document.querySelectorAll('.btn-salvar-comentario').forEach(btn => {
-      btn.addEventListener('click', async function () {
-        const tarefaId = this.dataset.tarefaId;
-        const textarea = document.getElementById(`comentario-texto-${tarefaId}`);
-        const texto = textarea?.value?.trim();
 
-        if (!texto) {
-          showToast('Digite um comentário', 'warning');
-          return;
-        }
 
-        const tipoTag = document.querySelector(`.comentario-tipo-tag.active[data-tarefa-id="${tarefaId}"]`);
-        const visibilidade = tipoTag?.dataset?.tipo || 'interno';
-        const imagemInput = document.querySelector(`.comentario-imagem-input[data-tarefa-id="${tarefaId}"]`);
-
-        this.disabled = true;
-        this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Salvando...';
-
-        try {
-          const formData = new FormData();
-          formData.append('comentario', texto);
-          formData.append('visibilidade', visibilidade);
-          if (imagemInput && imagemInput.files[0]) {
-            formData.append('imagem', imagemInput.files[0]);
-          }
-
-          const response = await fetch(`/api/adicionar_comentario_h/tarefa/${tarefaId}`, {
-            method: 'POST',
-            headers: {
-              'Accept': 'application/json',
-              'X-CSRFToken': CONFIG.csrfToken
-            },
-            body: formData
-          });
-
-          if (!response.ok) {
-            const errorText = await response.text();
-            showToast('Erro ao salvar comentário: ' + (errorText || `Status ${response.status}`), 'error');
-            return;
-          }
-
-          let data;
-          const contentType = response.headers.get('content-type') || '';
-          if (contentType.includes('application/json')) {
-            data = await response.json();
-          } else {
-            try {
-              const text = await response.text();
-              data = JSON.parse(text);
-            } catch (err) {
-              data = { ok: true, success: true };
-            }
-          }
-
-          if (data.ok || data.success) {
-            textarea.value = '';
-            if (imagemInput) imagemInput.value = '';
-            await carregarComentarios(tarefaId);
-            atualizarVisibilidadeBotaoEmail(tarefaId);
-            const btnComentarios = document.querySelector(`.btn-toggle-comentarios[data-tarefa-id="${tarefaId}"]`);
-            if (btnComentarios) btnComentarios.classList.add('has-comments');
-            showToast('Comentário salvo com sucesso!', 'success');
-          } else {
-            showToast('Erro ao salvar comentário: ' + (data.error || 'Erro desconhecido'), 'error');
-          }
-        } catch (error) {
-          showToast('Erro ao comunicar com o servidor: ' + error.message, 'error');
-        } finally {
-          this.disabled = false;
-          this.innerHTML = '<i class="bi bi-send me-1"></i>Salvar';
-        }
-      });
-    });
-
-    document.body.addEventListener('click', async function (e) {
-      const btn = e.target.closest('.btn-enviar-email');
-      if (!btn) return;
-
-      if (btn.disabled) {
-        e.preventDefault();
-        e.stopPropagation();
-        showToast('Email do responsável não cadastrado. Acesse "Editar Detalhes" para adicionar o email antes de enviar comentários externos.', 'warning');
-        return;
-      }
-
-      const tarefaId = btn.dataset.tarefaId || btn.getAttribute('data-tarefa-id');
-      const textarea = document.getElementById(`comentario-texto-${tarefaId}`);
-      const texto = textarea?.value?.trim();
-
-      if (!texto) {
-        showToast('Digite uma mensagem para enviar', 'warning');
-        return;
-      }
-
-      const temEmail = CONFIG.emailResponsavel && CONFIG.emailResponsavel.trim() !== '';
-      if (!temEmail) {
-        showToast('Email do responsável não cadastrado. Acesse "Editar Detalhes" para adicionar o email antes de enviar comentários externos.', 'warning');
-        return;
-      }
-
-      const confirmed = await showConfirm({
-        title: 'Enviar Email',
-        message: `Deseja enviar este comentário por email para ${CONFIG.emailResponsavel}?`,
-        confirmText: 'Enviar',
-        cancelText: 'Cancelar',
-        type: 'primary',
-        icon: 'bi-envelope-fill'
-      });
-
-      if (!confirmed) return;
-
-      btn.disabled = true;
-      const originalHtml = btn.innerHTML;
-      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Enviando...';
-
-      try {
-        const formData = new FormData();
-        formData.append('comentario', texto);
-        formData.append('visibilidade', 'externo');
-
-        const saveResponse = await fetch(`/api/adicionar_comentario_h/tarefa/${tarefaId}`, {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'X-CSRFToken': CONFIG.csrfToken
-          },
-          body: formData
-        });
-
-        if (!saveResponse.ok) {
-          const errorText = await saveResponse.text();
-          showToast('Erro ao salvar comentário: ' + (errorText || `Status ${saveResponse.status}`), 'error');
-          return;
-        }
-
-        let data;
-        const contentType = saveResponse.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-          data = await saveResponse.json();
-        } else {
-          data = { ok: true, success: true };
-        }
-
-        if (!data.ok && !data.success) {
-          showToast('Erro ao salvar comentário: ' + (data.error || 'Erro desconhecido'), 'error');
-          return;
-        }
-
-        textarea.value = '';
-        await carregarComentarios(tarefaId);
-
-        const novoComentarioId = (data && data.comentario && data.comentario.id) ? data.comentario.id : null;
-        const emailEndpoint = novoComentarioId ? `/api/enviar_email_comentario_h/${novoComentarioId}` : `/api/enviar_email_comentario_h/${tarefaId}`;
-        const emailResponse = await fetch(emailEndpoint, {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'X-CSRFToken': CONFIG.csrfToken
-          },
-          body: JSON.stringify({ comentario: texto })
-        });
-
-        if (!emailResponse.ok) {
-          const errorText = await emailResponse.text();
-          showToast('Comentário salvo, mas falha ao enviar email: ' + (errorText || `Status ${emailResponse.status}`), 'warning');
-          return;
-        }
-
-        const emailData = await emailResponse.json();
-        if (!emailData.ok && !emailData.success) {
-          showToast('Comentário salvo, mas falha ao enviar email: ' + (emailData.error || 'Erro desconhecido'), 'warning');
-          return;
-        }
-
-        showToast('Comentário salvo e email enviado com sucesso!', 'success');
-      } catch (error) {
-        showToast('Erro ao comunicar com o servidor: ' + error.message, 'error');
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalHtml;
-      }
-    });
-
-    async function carregarComentarios(itemId) {
-      const historicoContainer = document.getElementById(`historico-tarefa-${itemId}`);
-      if (!historicoContainer) return;
-
-      window.showSkeleton?.(historicoContainer, 2);
-
-      try {
-        const response = await fetch(`/api/listar_comentarios_h/tarefa/${itemId}`, {
-          headers: { 'Accept': 'application/json' }
-        });
-
-        if (!response.ok) {
-          historicoContainer.innerHTML = `
-            <div class="alert alert-danger small py-2 mb-0">
-              <i class="bi bi-exclamation-triangle me-1"></i>Erro ao carregar comentários: ${response.status}
-            </div>`;
-          return;
-        }
-
-        let data;
-        const contentType = response.headers.get('content-type') || '';
-        if (contentType.includes('application/json')) {
-          data = await response.json();
-        } else {
-          const text = await response.text();
-          try {
-            data = JSON.parse(text);
-          } catch (err) {
-            historicoContainer.innerHTML = `
-              <div class="alert alert-danger small py-2 mb-0">
-                <i class="bi bi-exclamation-triangle me-1"></i>Erro ao carregar comentários: resposta inválida
-              </div>`;
-            return;
-          }
-        }
-
-        if (data.ok || data.success) {
-          const comentarios = data.comentarios || [];
-          if (comentarios.length === 0) {
-            historicoContainer.innerHTML = `
-              <div class="text-center text-muted small py-2">
-                <i class="bi bi-chat-left-text"></i> Nenhum comentário ainda
-              </div>`;
-            return;
-          }
-
-          historicoContainer.innerHTML = comentarios.map(c => {
-            const canEdit = (CONFIG.userEmail && c.usuario_cs === CONFIG.userEmail) || CONFIG.isManager;
-            return `
-              <div class="comentario-item ${c.visibilidade || 'interno'}" data-comentario-id="${c.id}">
-                <div class="comentario-meta">
-                  <span class="comentario-autor">
-                    <i class="bi bi-person-circle me-1"></i>${c.usuario_nome || c.usuario_cs || 'Usuário'}
-                    <span class="badge ${c.visibilidade === 'externo' ? 'bg-warning' : 'bg-info'} ms-2" style="font-size: 0.65rem;">
-                      ${c.visibilidade === 'externo' ? 'Externo' : 'Interno'}
-                    </span>
-                  </span>
-                  <div class="d-flex align-items-center gap-2">
-                    <span class="comentario-data">${formatarData(c.data_criacao, false)}</span>
-                    ${canEdit ? `
-                      <button type="button" class="btn btn-sm btn-outline-danger btn-excluir-comentario" data-comentario-id="${c.id}" title="Excluir">
-                        <i class="bi bi-trash"></i>
-                      </button>` : ''}
-                  </div>
-                </div>
-                <div class="comentario-texto">${escapeHtml(c.texto)}</div>
-                ${c.imagem_url ? `<img src="${c.imagem_url}" class="comentario-imagem" alt="Imagem anexada">` : ''}
-              </div>`;
-          }).join('');
-        } else {
-          historicoContainer.innerHTML = `
-            <div class="alert alert-danger small py-2 mb-0">
-              <i class="bi bi-exclamation-triangle me-1"></i>${data.error || 'Erro ao carregar comentários'}
-            </div>`;
-        }
-      } catch (error) {
-        historicoContainer.innerHTML = `
-          <div class="alert alert-danger small py-2 mb-0">
-            <i class="bi bi-exclamation-triangle me-1"></i>Erro ao processar resposta do servidor
-          </div>`;
-      }
-    }
-
-    document.querySelectorAll('.tarefa-item').forEach(item => {
-      const checkbox = item.querySelector('.tarefa-checkbox');
-      if (!checkbox) return;
-
-      let status = item.getAttribute('data-tarefa-status') || '';
-      status = status.toLowerCase();
-      const isConcluida = (status === 'concluida' || status === 'concluido');
-
-      checkbox.checked = isConcluida;
-      item.setAttribute('data-tarefa-status', isConcluida ? 'concluida' : 'pendente');
-      item.classList.toggle('concluida', isConcluida);
-
-      const statusBadge = item.querySelector('.tarefa-status');
-      if (statusBadge) {
-        statusBadge.textContent = isConcluida ? 'Concluído' : 'Pendente';
-        statusBadge.classList.remove('concluido', 'pendente');
-        statusBadge.classList.add(isConcluida ? 'concluido' : 'pendente');
-      }
-    });
-
-    computeProgress();
-    document.body.addEventListener('progress_update', computeProgress);
+    
 
     
 

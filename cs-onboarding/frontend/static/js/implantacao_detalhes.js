@@ -545,53 +545,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     tabs.forEach(tab => {
         tab.addEventListener('shown.bs.tab', event => {
-            localStorage.setItem(tabStorageKey, event.target.id);
             if (window.location.hash) {
                 history.pushState("", document.title, window.location.pathname + window.location.search);
             }
         });
     });
     
-    let activated = false;
-    const urlHash = window.location.hash;
-    if (urlHash) {
-        let hashId = urlHash.substring(1);
-        let buttonIdToActivate = null;
-        if (hashId.endsWith('-content')) {
-            buttonIdToActivate = hashId.replace('-content', '-tab');
-        } else {
-            const directButton = document.getElementById(hashId);
-            if (directButton && directButton.matches(tabSelector)) {
-                buttonIdToActivate = hashId;
-            }
-        }
-        if (buttonIdToActivate) {
-            if (activateTabById(buttonIdToActivate)) {
-                activated = true;
-                history.pushState("", document.title, window.location.pathname + window.location.search);
-            } else {
-                history.pushState("", document.title, window.location.pathname + window.location.search);
-            }
-        } else {
-            history.pushState("", document.title, window.location.pathname + window.location.search);
-        }
-    }
-    if (!activated) {
-        const savedTabId = localStorage.getItem(tabStorageKey);
-        if (savedTabId) {
-            if (!activateTabById(savedTabId)) {
-                localStorage.removeItem(tabStorageKey);
-            } else {
-                activated = true;
-            }
-        }
-    }
-    if (!activated) {
-        const firstTabButton = document.querySelector(tabSelector);
-        if (firstTabButton) {
-            activateTabById(firstTabButton.id);
-        }
-    }
+    // Forçar aba padrão: Plano de Sucesso
+    activateTabById('plano-tab');
     
     document.querySelectorAll('.comment-text').forEach(textEl => {
         const wrapper = textEl.closest('.comment-content-wrapper');

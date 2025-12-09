@@ -84,6 +84,21 @@ def toggle_item(item_id):
 
         result = toggle_item_status(item_id, new_status, usuario_email)
 
+        # Log status change to timeline (item-level)
+        try:
+            from ..db import query_db, logar_timeline
+            info = query_db(
+                "SELECT title, implantacao_id FROM checklist_items WHERE id = %s",
+                (item_id,), one=True
+            )
+            status_text = 'Concluída' if new_status else 'Pendente'
+            item_title = (info.get('title') if isinstance(info, dict) else None) or ''
+            detalhe = f"Status: {status_text} — {item_title}"
+            impl_id = info['implantacao_id'] if info else None
+            logar_timeline(impl_id, usuario_email, 'tarefa_alterada', detalhe)
+        except Exception:
+            pass
+
         return jsonify({
             'ok': True,
             'item_id': item_id,
@@ -145,7 +160,7 @@ def add_comment(item_id):
 
     try:
         item = query_db(
-            "SELECT id, implantacao_id FROM checklist_items WHERE id = %s",
+            "SELECT id, implantacao_id, title FROM checklist_items WHERE id = %s",
             (item_id,),
             one=True
         )
@@ -195,6 +210,14 @@ def add_comment(item_id):
                 data_criacao = data_criacao.isoformat()
             else:
                 data_criacao = str(data_criacao)
+
+        # Log in timeline
+        try:
+            from ..db import logar_timeline
+            detalhe = f"Comentário criado — {item['title'] if isinstance(item, dict) else ''} <span class=\"d-none related-id\" data-item-id=\"{item_id}\"></span>"
+            logar_timeline(item['implantacao_id'] if isinstance(item, dict) else item[1], usuario_email, 'novo_comentario', detalhe)
+        except Exception:
+            pass
 
         return jsonify({
             'ok': True,
@@ -416,7 +439,13 @@ def send_comment_email(comentario_id):
 
         result = send_external_comment_notification(implantacao, comentario)
 
-        if result:
+        if email_sent:
+            try:
+                from ..db import logar_timeline
+                detalhe = f"E-mail enviado para responsável com resumo de '{dados.get('tarefa_nome') or dados.get('tarefa_nome', '')}'."
+                logar_timeline(dados['impl_id'], g.user_email if hasattr(g, 'user_email') else None, 'email_comentario_enviado', detalhe)
+            except Exception:
+                pass
             return jsonify({'ok': True, 'message': 'Email enviado com sucesso'})
         else:
             return jsonify({'ok': False, 'error': 'Falha ao enviar email'}), 500
@@ -459,7 +488,26 @@ def delete_comment(comentario_id):
         if not (is_owner or is_manager):
             return jsonify({'ok': False, 'error': 'Permissão negada'}), 403
 
+        # Fetch related item info BEFORE delete, to log timeline properly
+        item_info = query_db(
+            """
+            SELECT ci.id as item_id, ci.title as item_title, ci.implantacao_id
+            FROM comentarios_h c
+            JOIN checklist_items ci ON c.checklist_item_id = ci.id
+            WHERE c.id = %s
+            """,
+            (comentario_id,), one=True
+        )
+
         execute_db("DELETE FROM comentarios_h WHERE id = %s", (comentario_id,))
+
+        try:
+            if item_info:
+                from ..db import logar_timeline
+                detalhe = f"Comentário em '{item_info.get('item_title', '')}' excluído."
+                logar_timeline(item_info['implantacao_id'], usuario_email, 'comentario_excluido', detalhe)
+        except Exception:
+            pass
 
         return jsonify({'ok': True, 'message': 'Comentário excluído'})
     except Exception as e:
@@ -514,9 +562,10 @@ def delete_item(item_id):
 
         if result.get('ok'):
             # Log to timeline for compatibility with frontend
-            from ..core.api import format_date_iso_for_json, logar_timeline
+            from ..common.utils import format_date_iso_for_json
+            from ..db import logar_timeline
 
-            log_details = f"Item '{item_info.get('title', '')}' foi excluído."
+            log_details = f"Tarefa excluída — {item_info.get('title', '')}"
             logar_timeline(item_info['implantacao_id'], usuario_email, 'tarefa_excluida', log_details)
 
             # Fetch the log entry to return to frontend
@@ -695,13 +744,14 @@ def update_responsavel(item_id):
     from datetime import datetime
     with db_transaction_with_lock() as (conn, cursor, db_type):
         try:
-            q = "SELECT responsavel FROM checklist_items WHERE id = %s"
+            q = "SELECT responsavel, title, implantacao_id FROM checklist_items WHERE id = %s"
             if db_type == 'sqlite': q = q.replace('%s', '?')
             cursor.execute(q, (item_id,))
             row = cursor.fetchone()
             if not row:
                 return jsonify({'ok': False, 'error': 'Item não encontrado'}), 404
             old_resp = row[0] if not hasattr(row, 'keys') else row['responsavel']
+            item_title = row['title'] if hasattr(row, 'keys') else (row[1] if len(row) > 1 else '')
             uq = "UPDATE checklist_items SET responsavel = %s, updated_at = %s WHERE id = %s"
             if db_type == 'sqlite': uq = uq.replace('%s', '?')
             cursor.execute(uq, (novo_resp, datetime.now(), item_id))
@@ -712,14 +762,14 @@ def update_responsavel(item_id):
             except Exception:
                 pass
             try:
-                from ..db import logar_timeline
-                # Recuperar impl_id
-                qi = "SELECT implantacao_id FROM checklist_items WHERE id = %s"
-                if db_type == 'sqlite': qi = qi.replace('%s', '?')
-                cursor.execute(qi, (item_id,))
-                irow = cursor.fetchone()
-                impl_id = irow[0] if not hasattr(irow, 'keys') else irow['implantacao_id']
-                detalhe = f"Item {item_id} responsavel_alterado: {old_resp or ''} -> {novo_resp}"
+                from ..db import logar_timeline, query_db
+                info = query_db(
+                    "SELECT title, implantacao_id FROM checklist_items WHERE id = %s",
+                    (item_id,), one=True
+                )
+                impl_id = info['implantacao_id'] if info else None
+                title_val = info['title'] if info else item_title
+                detalhe = f"Responsável: {(old_resp or '')} → {novo_resp} — {title_val}"
                 logar_timeline(impl_id, usuario_email, 'responsavel_alterado', detalhe)
             except Exception:
                 pass
@@ -756,7 +806,7 @@ def update_prazos(item_id):
     usuario_email = g.user_email if hasattr(g, 'user_email') else None
     with db_transaction_with_lock() as (conn, cursor, db_type):
         try:
-            q = "SELECT implantacao_id, previsao_original FROM checklist_items WHERE id = %s"
+            q = "SELECT implantacao_id, previsao_original, title FROM checklist_items WHERE id = %s"
             if db_type == 'sqlite': q = q.replace('%s', '?')
             cursor.execute(q, (item_id,))
             row = cursor.fetchone()
@@ -773,7 +823,8 @@ def update_prazos(item_id):
             try:
                 from ..db import logar_timeline
                 impl_id = row['implantacao_id'] if hasattr(row, 'keys') else row[0]
-                detalhe = f"Item {item_id} nova_previsao: {nova_dt.isoformat()}"
+                title_val = row['title'] if hasattr(row, 'keys') else (row[2] if len(row) > 2 else '')
+                detalhe = f"Nova previsão: {nova_dt.isoformat()} — {title_val}"
                 logar_timeline(impl_id, usuario_email, 'prazo_alterado', detalhe)
             except Exception:
                 pass

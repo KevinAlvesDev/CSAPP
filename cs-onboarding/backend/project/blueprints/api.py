@@ -143,6 +143,126 @@ def toggle_subtarefa_h(sub_id):
         return jsonify({'ok': False, 'error': f"Erro interno: {e}"}), 500
 
 
+@api_bp.route('/implantacao/<int:impl_id>/timeline', methods=['GET'])
+@login_required
+@validate_api_origin
+@limiter.limit("200 per minute", key_func=lambda: g.user_email or get_remote_address())
+def get_timeline(impl_id):
+    try:
+        impl_id = validate_integer(impl_id, min_value=1)
+    except ValidationError as e:
+        return jsonify({'ok': False, 'error': f'ID inválido: {str(e)}'}), 400
+
+    page = request.args.get('page', type=int) or 1
+    per_page = request.args.get('per_page', type=int) or 50
+    if per_page > 200:
+        per_page = 200
+    types_param = request.args.get('types', '')
+    q = request.args.get('q', '')
+    dt_from = request.args.get('from', '')
+    dt_to = request.args.get('to', '')
+
+    where = ["tl.implantacao_id = %s"]
+    params = [impl_id]
+    if types_param:
+        types = [t.strip() for t in types_param.split(',') if t.strip()]
+        if types:
+            where.append("tl.tipo_evento = ANY(%s)")
+            params.append(types)
+    if q:
+        where.append("tl.detalhes ILIKE %s")
+        params.append(f"%{q}%")
+    if dt_from:
+        where.append("tl.data_criacao >= %s")
+        params.append(dt_from)
+    if dt_to:
+        where.append("tl.data_criacao <= %s")
+        params.append(dt_to)
+
+    offset = (page - 1) * per_page
+
+    sql = f"""
+        SELECT tl.id, tl.implantacao_id, tl.usuario_cs, tl.tipo_evento, tl.detalhes, tl.data_criacao,
+               COALESCE(p.nome, tl.usuario_cs) as usuario_nome
+        FROM timeline_log tl
+        LEFT JOIN perfil_usuario p ON tl.usuario_cs = p.usuario
+        WHERE {' AND '.join(where)}
+        ORDER BY tl.data_criacao DESC
+        LIMIT %s OFFSET %s
+    """
+    params_with_pagination = params + [per_page, offset]
+    try:
+        rows = query_db(sql, tuple(params_with_pagination)) or []
+        items = []
+        for r in rows:
+            d = dict(r)
+            dt = d.get('data_criacao')
+            d['data_criacao'] = dt.isoformat() if hasattr(dt, 'isoformat') else str(dt)
+            items.append(d)
+        return jsonify({'ok': True, 'logs': items, 'pagination': {'page': page, 'per_page': per_page}})
+    except Exception as e:
+        api_logger.error(f"Erro ao buscar timeline da implantação {impl_id}: {e}", exc_info=True)
+        return jsonify({'ok': False, 'error': 'Erro interno ao buscar timeline'}), 500
+
+
+@api_bp.route('/implantacao/<int:impl_id>/timeline/export', methods=['GET'])
+@login_required
+@validate_api_origin
+@limiter.limit("30 per minute", key_func=lambda: g.user_email or get_remote_address())
+def export_timeline(impl_id):
+    try:
+        impl_id = validate_integer(impl_id, min_value=1)
+    except ValidationError as e:
+        return jsonify({'ok': False, 'error': f'ID inválido: {str(e)}'}), 400
+
+    types_param = request.args.get('types', '')
+    q = request.args.get('q', '')
+    dt_from = request.args.get('from', '')
+    dt_to = request.args.get('to', '')
+
+    where = ["tl.implantacao_id = %s"]
+    params = [impl_id]
+    if types_param:
+        types = [t.strip() for t in types_param.split(',') if t.strip()]
+        if types:
+            where.append("tl.tipo_evento = ANY(%s)")
+            params.append(types)
+    if q:
+        where.append("tl.detalhes ILIKE %s")
+        params.append(f"%{q}%")
+    if dt_from:
+        where.append("tl.data_criacao >= %s")
+        params.append(dt_from)
+    if dt_to:
+        where.append("tl.data_criacao <= %s")
+        params.append(dt_to)
+
+    sql = f"""
+        SELECT tl.data_criacao, tl.tipo_evento, COALESCE(p.nome, tl.usuario_cs) as usuario_nome, tl.detalhes
+        FROM timeline_log tl
+        LEFT JOIN perfil_usuario p ON tl.usuario_cs = p.usuario
+        WHERE {' AND '.join(where)}
+        ORDER BY tl.data_criacao DESC
+    """
+    try:
+        rows = query_db(sql, tuple(params)) or []
+        import io, csv
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['data_criacao', 'tipo_evento', 'usuario', 'detalhes'])
+        for r in rows:
+            dc = r['data_criacao']
+            dc_str = dc.isoformat() if hasattr(dc, 'isoformat') else str(dc)
+            writer.writerow([dc_str, r.get('tipo_evento', ''), r.get('usuario_nome', ''), r.get('detalhes', '')])
+        resp = make_response(output.getvalue())
+        resp.headers['Content-Type'] = 'text/csv; charset=utf-8'
+        resp.headers['Content-Disposition'] = f'attachment; filename="timeline_implantacao_{impl_id}.csv"'
+        return resp
+    except Exception as e:
+        api_logger.error(f"Erro ao exportar timeline da implantação {impl_id}: {e}", exc_info=True)
+        return jsonify({'ok': False, 'error': 'Erro interno ao exportar timeline'}), 500
+
+
 @api_bp.route('/consultar_empresa', methods=['GET'])
 @login_required
 @validate_api_origin

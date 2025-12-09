@@ -732,6 +732,12 @@ def remover_plano_de_implantacao(implantacao_id: int, usuario: str) -> bool:
         f"Plano removido da implantação {implantacao_id} por {usuario}"
     )
 
+    try:
+        from ..db import logar_timeline
+        logar_timeline(implantacao_id, usuario, 'plano_removido', f"Plano de sucesso removido da implantação por {usuario}.")
+    except Exception:
+        pass
+
     return result is not None
 
 
@@ -1031,6 +1037,16 @@ def aplicar_plano_a_implantacao_checklist(implantacao_id: int, plano_id: int, us
                 data_previsao_termino
             )
 
+            # Contagem de itens existentes antes da aplicação
+            try:
+                if db_type == 'postgres':
+                    cursor.execute("SELECT COUNT(*) FROM checklist_items WHERE implantacao_id = %s", (implantacao_id,))
+                else:
+                    cursor.execute("SELECT COUNT(*) FROM checklist_items WHERE implantacao_id = ?", (implantacao_id,))
+                count_before = cursor.fetchone()[0]
+            except Exception:
+                count_before = None
+
             sql_update = """
                 UPDATE implantacoes
                 SET plano_sucesso_id = %s, data_atribuicao_plano = %s, data_previsao_termino = %s
@@ -1046,6 +1062,33 @@ def aplicar_plano_a_implantacao_checklist(implantacao_id: int, plano_id: int, us
             current_app.logger.info(
                 f"Plano '{plano['nome']}' aplicado à implantação {implantacao_id} usando checklist_items por {usuario}. Previsão: {data_previsao_termino}"
             )
+
+            try:
+                from ..db import logar_timeline
+                from ..common.utils import format_date_iso_for_json
+                prev_txt = format_date_iso_for_json(data_previsao_termino) if data_previsao_termino else None
+                # Contagem após aplicação
+                try:
+                    if db_type == 'postgres':
+                        cursor.execute("SELECT COUNT(*) FROM checklist_items WHERE implantacao_id = %s", (implantacao_id,))
+                    else:
+                        cursor.execute("SELECT COUNT(*) FROM checklist_items WHERE implantacao_id = ?", (implantacao_id,))
+                    count_after = cursor.fetchone()[0]
+                except Exception:
+                    count_after = None
+                delta = None
+                if isinstance(count_before, int) and isinstance(count_after, int):
+                    delta = max(0, count_after - count_before)
+
+                detalhe = f"Plano aplicado: '{plano.get('nome')}'"
+                if prev_txt:
+                    detalhe += f"; previsão de término: {prev_txt}"
+                if delta is not None:
+                    detalhe += f"; itens clonados: {delta}"
+                logar_timeline(implantacao_id, usuario, 'plano_aplicado', detalhe)
+            except Exception:
+                pass
+
             return True
 
         except Exception as e:

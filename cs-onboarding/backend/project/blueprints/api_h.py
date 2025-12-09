@@ -162,9 +162,7 @@ def adicionar_comentario_h(tipo, item_id):
                 )
                 novo_id = query_db("SELECT last_insert_rowid() as id", one=True)['id']
 
-        detalhe = f"Comentário em '{info['item_nome']}':\n{texto}"
-        if img_url:
-            detalhe += "\n[Imagem Adicionada]"
+        detalhe = f"Comentário criado — {info['item_nome']} <span class=\"d-none related-id\" data-item-id=\"{item_id}\"></span>"
         logar_timeline(info['implantacao_id'], usuario_cs_email, 'novo_comentario', detalhe)
 
         novo_comentario_dados = query_db(
@@ -299,8 +297,15 @@ def excluir_comentario_h(comentario_id):
         if not (is_owner or is_impl_owner or is_manager):
             return jsonify({'ok': False, 'error': 'Permissão negada'}), 403
 
+        # Capture related checklist item id BEFORE deletion
+        try:
+            item_id_row = query_db("SELECT checklist_item_id FROM comentarios_h WHERE id = %s", (comentario_id,), one=True)
+        except Exception:
+            item_id_row = None
         execute_db("DELETE FROM comentarios_h WHERE id = %s", (comentario_id,))
-        logar_timeline(comentario['impl_id'], usuario_cs_email, 'comentario_excluido', f"Comentário em '{comentario['item_nome']}' excluído.")
+        related_id = item_id_row['checklist_item_id'] if (item_id_row and isinstance(item_id_row, dict)) else (item_id_row[0] if item_id_row else None)
+        detalhe = f"Comentário excluído — {comentario.get('item_nome','')} <span class=\"d-none related-id\" data-item-id=\"{related_id or ''}\"></span>"
+        logar_timeline(comentario['impl_id'], usuario_cs_email, 'comentario_excluido', detalhe)
 
         return jsonify({'ok': True, 'success': True}), 200
     except Exception as e:

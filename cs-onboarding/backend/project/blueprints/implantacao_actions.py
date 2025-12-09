@@ -822,6 +822,15 @@ def atualizar_detalhes_empresa():
     except Exception as e:
         app_logger.error(f"ERRO COMPLETO ao atualizar detalhes (Impl. ID {implantacao_id}): {e}")
         flash(f'Erro ao atualizar detalhes: {str(e)}', 'error')
+
+    try:
+        wants_json = 'application/json' in (request.headers.get('Accept') or '')
+        is_modal = (request.form.get('redirect_to') or '').lower() == 'modal'
+        if wants_json or is_modal:
+            from flask import jsonify
+            return jsonify({'ok': True, 'implantacao_id': implantacao_id})
+    except Exception:
+        pass
     return redirect(dest_url)
 
 
@@ -849,6 +858,11 @@ def remover_plano_implantacao():
         return redirect(url_for('main.dashboard'))
 
     try:
+        try:
+            before = query_db("SELECT COUNT(*) as total FROM checklist_items WHERE implantacao_id = %s", (implantacao_id,), one=True) or {'total': 0}
+            total_removed = int(before.get('total', 0) or 0)
+        except Exception:
+            total_removed = None
         execute_db("DELETE FROM checklist_items WHERE implantacao_id = %s", (implantacao_id,))
 
         execute_db(
@@ -856,11 +870,14 @@ def remover_plano_implantacao():
             (implantacao_id,)
         )
 
+        detalhe = f'Plano de sucesso removido da implantação por {usuario_cs_email}.'
+        if isinstance(total_removed, int):
+            detalhe += f' Itens removidos: {total_removed}.'
         logar_timeline(
             implantacao_id,
             usuario_cs_email,
             'plano_removido',
-            f'Plano de sucesso removido da implantação por {usuario_cs_email}.'
+            detalhe
         )
 
         flash('Plano de sucesso removido com sucesso!', 'success')

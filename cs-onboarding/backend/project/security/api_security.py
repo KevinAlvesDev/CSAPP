@@ -18,6 +18,11 @@ def validate_api_origin(f):
         referer = request.headers.get('Referer')
 
         if not origin and not referer:
+            try:
+                if request.host_url:
+                    return f(*args, **kwargs)
+            except Exception:
+                pass
             current_app.logger.warning(
                 f'API request without Origin/Referer: {request.method} {request.path} '
                 f'from {request.remote_addr}'
