@@ -11,7 +11,6 @@ from werkzeug.security import generate_password_hash
 from ..config.logging_config import auth_logger, security_logger
 from ..constants import ADMIN_EMAIL, PERFIL_ADMIN, PERFIL_IMPLANTADOR, PERFIS_COM_GESTAO
 from ..core.extensions import limiter
-from ..database.external_db import find_cs_user_by_email
 from ..db import execute_db, query_db
 
 auth_bp = Blueprint('auth', __name__)
@@ -231,7 +230,7 @@ def check_user_external():
          return {'status': 'error', 'message': 'Email inválido'}, 400
 
     try:
-        cs_user = find_cs_user_by_email(email)
+        cs_user = _find_cs_user_by_email_safe(email)
         if cs_user:
             if cs_user.get('ativo'):
                 return {
@@ -381,7 +380,7 @@ def google_callback():
             # Em produção sem URL, find_cs_user_by_email retornaria None, mas queremos tratar isso diferentemente
 
             if external_db_configured or current_app.config.get('DEBUG', False):
-                cs_user = find_cs_user_by_email(email)
+                cs_user = _find_cs_user_by_email_safe(email)
 
                 if not cs_user:
                     # Se o banco está configurado e não achou -> Bloqueia
@@ -571,3 +570,12 @@ def register():
     """Rota desativada: registro não permitido (login exclusivo via Google)."""
     flash('Novos cadastros devem ser feitos pelo administrador ou via Google Login.', 'info')
     return redirect(url_for('auth.login'))
+def _find_cs_user_by_email_safe(email):
+    try:
+        if not current_app.config.get('EXTERNAL_DB_URL'):
+            return None
+        from ..database.external_db import find_cs_user_by_email
+        return find_cs_user_by_email(email)
+    except Exception as e:
+        auth_logger.warning(f"External DB lookup failed: {e}")
+        return None
