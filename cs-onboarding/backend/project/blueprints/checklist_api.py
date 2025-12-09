@@ -66,19 +66,10 @@ def toggle_item(item_id):
     try:
         new_status = None
         if request.is_json:
-            data = request.get_json(silent=True) or {}
+            data = request.get_json() or {}
             completed_param = data.get('completed')
             if completed_param is not None:
-                if isinstance(completed_param, str):
-                    val = completed_param.strip().lower()
-                    if val in ('true', '1', 'yes', 'y', 'sim'):
-                        new_status = True
-                    elif val in ('false', '0', 'no', 'n', 'nao', 'não'):
-                        new_status = False
-                    else:
-                        new_status = bool(val)
-                else:
-                    new_status = bool(completed_param)
+                new_status = bool(completed_param)
 
         if new_status is None:
             from ..db import query_db
