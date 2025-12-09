@@ -165,21 +165,6 @@
 
     function renderGlobalComments(comentarios, container, append) {
       if (!container) return;
-      
-      // If not appending, clear existing items (be careful not to remove placeholders if they are mixed, 
-      // but we structure them separately usually. Here we just append to end or clear all items first)
-      // Our structure: container has loading/empty divs + comment items.
-      // We should insert items before the pagination or just append to container if pagination is outside (it is inside in HTML structure?)
-      // Looking at HTML: pagination is sibling to list container or inside?
-      // HTML: <div id="comments-list-container"> ... </div> <div id="comments-pagination"> ... </div>
-      // Wait, HTML snippet was:
-      // <div id="comments-list-container" ...> 
-      //    <div id="comments-loading">...</div>
-      //    <div id="comments-empty">...</div>
-      // </div>
-      // <div id="comments-pagination">...</div>
-      // So we can just append to container.
-      
       const html = comentarios.map(c => {
         const canEdit = (CONFIG.userEmail && c.usuario_cs === CONFIG.userEmail) || CONFIG.isManager;
         // Task reference link (scroll to task)
@@ -218,10 +203,6 @@
           </div>`;
       }).join('');
       
-      // Need to convert string to nodes to append properly or just innerHTML if not append
-      // But since we have loading/empty divs inside, we should insert After them or handle visibility.
-      // Easier: Create a wrapper for items if not exists, or just append to container.
-      // The loading/empty divs are toggled with d-none.
       
       if (!append) {
         // Remove old comment items
@@ -1278,7 +1259,6 @@
         e.preventDefault();
         e.stopPropagation();
 
-        console.log('Global Click Listener: Consultar button clicked');
 
         const loaderConsultar = document.getElementById('btn-consultar-oamd-loader');
         const iconConsultar = document.getElementById('btn-consultar-oamd-icon');
@@ -1286,7 +1266,6 @@
         
         // Get ID from input or button dataset
         const currentId = inputIdFav ? inputIdFav.value.trim() : (btnConsultar.dataset.idFavorecido || '');
-        console.log('ID for consultation:', currentId);
         
         if (!currentId) {
              showToast('ID Favorecido não informado', 'warning');

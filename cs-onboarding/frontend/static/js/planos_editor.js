@@ -54,6 +54,7 @@
       const title = dados?.title || dados?.nome || '';
       const comment = dados?.comment || dados?.descricao || '';
       const obrigatoria = dados?.obrigatoria || false;
+      const tag = dados?.tag || '';
       const isExpanded = dados?.expanded !== false;
       const hasChildren = dados?.children && dados.children.length > 0;
       const showToggle = hasChildren || level >= 0;
@@ -74,6 +75,11 @@
                 value="${this.escapeHtml(title)}"
                 required
               >
+              <select class="form-select form-select-sm item-tag-select" style="max-width: 150px;">
+                <option value="">Sem tag</option>
+                <option value="Ação interna" ${tag === 'Ação interna' ? 'selected' : ''}>Ação interna</option>
+                <option value="Reunião" ${tag === 'Reunião' ? 'selected' : ''}>Reunião</option>
+              </select>
             </div>
             <div class="d-flex align-items-center gap-1">
               <button type="button" class="btn btn-sm btn-primary btn-add-child" title="Adicionar filho">
@@ -241,12 +247,15 @@
       const comment = element.querySelector('.item-comment-input').value.trim();
       const obrigatoriaInput = element.querySelector('.item-obrigatoria-input');
       const obrigatoria = obrigatoriaInput ? obrigatoriaInput.checked : false;
+      const tagInput = element.querySelector('.item-tag-select');
+      const tag = tagInput ? tagInput.value : '';
       const level = parseInt(element.getAttribute('data-level'));
       
       const item = {
         title: title,
         comment: comment,
         obrigatoria: obrigatoria,
+        tag: tag,
         level: level,
         ordem: 0, // Será calculado no backend se necessário
         children: []

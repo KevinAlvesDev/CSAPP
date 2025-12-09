@@ -28,11 +28,11 @@ if __name__ == '__main__':
         sys.exit(1)
 
     try:
-        from project.extensions import r2_client
+        from project.core.extensions import r2_client
         if not r2_client:
             print("\n!!! ATENÇÃO: Cliente R2 não inicializado. Uploads não funcionarão. !!!\n")
     except ImportError:
-        print("\nAviso: Não foi possível importar 'project.extensions' para verificar R2.")
+        print("\nAviso: Não foi possível importar 'project.core.extensions' para verificar R2.")
     except Exception:
         pass
 

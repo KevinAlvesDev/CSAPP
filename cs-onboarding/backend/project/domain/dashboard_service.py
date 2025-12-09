@@ -1,13 +1,13 @@
-from flask import g, current_app
-from ..db import query_db, execute_db
-from .implantacao_service import _get_progress
-from .time_calculator import calculate_days_passed, calculate_days_parada
-from ..constants import (
-    PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR
-)
-from ..common.utils import format_date_iso_for_json, format_date_br
+from datetime import date, datetime
+
+from flask import current_app, g
+
+from ..common.utils import format_date_br, format_date_iso_for_json
 from ..config.cache_config import cache
-from datetime import datetime, date
+from ..constants import PERFIL_ADMIN, PERFIL_COORDENADOR, PERFIL_GERENTE
+from ..db import execute_db, query_db
+from .implantacao_service import _get_progress
+from .time_calculator import calculate_days_parada, calculate_days_passed
 
 
 def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=None, use_cache=True):
@@ -141,7 +141,7 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
             status = status_raw.replace('\xa0', ' ').strip().lower()
         else:
             status = str(status_raw).strip().lower() if status_raw else ''
-        
+
         if not status:
             current_app.logger.warning(f"Implantacao {impl_id} has empty/null status. Raw value: {status_raw}. Will try to categorize anyway.")
             status = 'andamento'

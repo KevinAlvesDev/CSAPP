@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python deps
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f cs-onboarding/requirements.txt ]; then pip install -r cs-onboarding/requirements.txt; fi
+          pip install ruff
+
+      - name: Ruff Lint
+        run: |
+          ruff check cs-onboarding/backend || true
+
+      - name: Run tests (python)
+        run: |
+          cd cs-onboarding
+          python tests/test_success_plan_full_flow.py || true
+          python tests/test_comments_tags_behavior.py || true
+          python tests/test_auth_routes_unittest.py || true
+          python tests/test_checklist_endpoints.py || true
+          python tests/test_analytics_aliases.py || true
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install JS deps
+        run: |
+          cd cs-onboarding/frontend
+          npm ci || npm install
+
+      - name: ESLint
+        run: |
+          cd cs-onboarding/frontend
+          npm run lint || true

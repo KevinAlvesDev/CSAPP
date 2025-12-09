@@ -1,6 +1,7 @@
-from ..db import query_db, execute_db
-from ..config.logging_config import get_logger
 from datetime import datetime
+
+from ..config.logging_config import get_logger
+from ..db import execute_db, query_db
 
 logger = get_logger('hierarquia_service')
 
@@ -64,7 +65,7 @@ def get_hierarquia_implantacao(implantacao_id):
         return {'fases': []}
 
     items_map = {item['id']: item for item in items}
-    
+
     fases_items = [item for item in items if item['tipo_item'] == 'fase' and item['parent_id'] is None]
     grupos_items = {}
     tarefas_items = {}
@@ -73,7 +74,7 @@ def get_hierarquia_implantacao(implantacao_id):
     for item in items:
         parent_id = item.get('parent_id')
         tipo = item.get('tipo_item', '')
-        
+
         if tipo == 'grupo' and parent_id:
             if parent_id not in grupos_items:
                 grupos_items[parent_id] = []
@@ -99,7 +100,7 @@ def get_hierarquia_implantacao(implantacao_id):
         }
 
         grupos_fase = sorted(grupos_items.get(fase_item['id'], []), key=lambda x: x.get('ordem', 0))
-        
+
         for grupo_item in grupos_fase:
             grupo_dict = {
                 'id': grupo_item['id'],
@@ -109,7 +110,7 @@ def get_hierarquia_implantacao(implantacao_id):
             }
 
             tarefas_grupo = sorted(tarefas_items.get(grupo_item['id'], []), key=lambda x: x.get('ordem', 0))
-            
+
             for tarefa_item in tarefas_grupo:
                 status_raw = tarefa_item.get('status') or 'pendente'
                 status_normalizado = str(status_raw).lower().strip()
@@ -130,7 +131,7 @@ def get_hierarquia_implantacao(implantacao_id):
                 }
 
                 subtarefas_tarefa = sorted(subtarefas_items.get(tarefa_item['id'], []), key=lambda x: x.get('ordem', 0))
-                
+
                 for subtarefa_item in subtarefas_tarefa:
                     subtarefa_dict = {
                         'id': subtarefa_item['id'],
@@ -143,7 +144,7 @@ def get_hierarquia_implantacao(implantacao_id):
                         subtarefa_dict['tag'] = subtarefa_item.get('tag')
                     if subtarefa_item.get('data_conclusao'):
                         subtarefa_dict['data_conclusao'] = subtarefa_item.get('data_conclusao')
-                    
+
                     tarefa_dict['subtarefas'].append(subtarefa_dict)
 
                 grupo_dict['tarefas'].append(tarefa_dict)
@@ -176,10 +177,10 @@ def toggle_subtarefa(subtarefa_id):
 
     novo_estado = not subtarefa.get('completed', False)
     tarefa_id = subtarefa.get('parent_id')
-    
+
     if not tarefa_id:
         return {'ok': False, 'error': 'Tarefa pai não encontrada'}
-    
+
     if novo_estado:
         execute_db(
             "UPDATE checklist_items SET completed = %s, data_conclusao = %s WHERE id = %s",
@@ -209,7 +210,7 @@ def toggle_subtarefa(subtarefa_id):
         percentual = 0
 
     novo_status = 'concluida' if percentual == 100 else ('em_andamento' if percentual > 0 else 'pendente')
-    
+
     execute_db(
         "UPDATE checklist_items SET percentual_conclusao = %s, status = %s, completed = %s WHERE id = %s",
         (percentual, novo_status, percentual == 100, tarefa_id)

@@ -11,17 +11,17 @@ Endpoints disponíveis:
 - POST /api/v1/implantacoes/<id>/tarefas/<tarefa_id>/comentarios - Adicionar comentário
 """
 
-from flask import Blueprint, request, jsonify, g
-from ..blueprints.auth import login_required
-from ..constants import PERFIS_COM_GESTAO
-from ..db import query_db, execute_db
-from ..core.extensions import limiter
-from ..config.logging_config import api_logger
-from flask_limiter.util import get_remote_address
-from ..security.api_security import validate_api_origin
-from ..domain.hierarquia_service import get_hierarquia_implantacao
-from datetime import datetime, date
 
+from flask import Blueprint, g, jsonify, request
+from flask_limiter.util import get_remote_address
+
+from ..blueprints.auth import login_required
+from ..config.logging_config import api_logger
+from ..constants import PERFIS_COM_GESTAO
+from ..core.extensions import limiter
+from ..db import query_db
+from ..domain.hierarquia_service import get_hierarquia_implantacao
+from ..security.api_security import validate_api_origin
 
 api_v1_bp = Blueprint('api_v1', __name__, url_prefix='/api/v1')
 

@@ -1,9 +1,9 @@
 """
 Módulo de validação e sanitização de inputs.
 """
-import re
 import html
-from typing import Optional, Any
+import re
+from typing import Any, Optional
 
 
 class ValidationError(Exception):

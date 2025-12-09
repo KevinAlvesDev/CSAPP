@@ -2,9 +2,10 @@
 Blueprint para health checks e monitoramento.
 """
 
-from flask import Blueprint, jsonify, current_app
 from datetime import datetime
+
 from botocore.exceptions import ClientError
+from flask import Blueprint, current_app, jsonify
 
 health_bp = Blueprint('health', __name__)
 
@@ -35,6 +36,37 @@ def check_database_connection():
         end_time = datetime.now()
         response_time = (end_time - start_time).total_seconds() * 1000
         return False, f"Database connection failed: {str(e)}", response_time
+
+
+def check_external_database_connection():
+    """
+    Verifica se a conexão com o banco de dados externo está funcionando.
+    Retorna (status: bool, message: str, response_time_ms: float)
+    """
+    if not current_app.config.get('EXTERNAL_DB_URL'):
+        return False, "Not configured", 0.0
+
+    start_time = datetime.now()
+    try:
+        from ..database.external_db import query_external_db
+
+        # Tenta uma query simples
+        # Nota: "SELECT 1" funciona na maioria dos bancos SQL (Postgres, MySQL, SQL Server, SQLite)
+        # Para Oracle seria "SELECT 1 FROM DUAL"
+        result = query_external_db("SELECT 1 as test")
+
+        end_time = datetime.now()
+        response_time = (end_time - start_time).total_seconds() * 1000
+
+        if result and len(result) > 0:
+            return True, "External connection OK", response_time
+        else:
+            return False, "External query returned no result", response_time
+
+    except Exception as e:
+        end_time = datetime.now()
+        response_time = (end_time - start_time).total_seconds() * 1000
+        return False, f"External connection failed: {str(e)}", response_time
 
 
 def check_r2_connection():
@@ -76,9 +108,15 @@ def health_check():
 
     db_status, db_message, db_response_time = check_database_connection()
 
+    ext_db_status, ext_db_message, ext_db_response_time = check_external_database_connection()
+    has_external_db = current_app.config.get('EXTERNAL_DB_URL') is not None
+
     r2_status, r2_message = check_r2_connection()
 
     overall_status = "healthy" if db_status else "unhealthy"
+    # Se banco externo estiver configurado mas falhando, considera unhealthy?
+    # Por enquanto, vamos considerar warning, mas não derrubar o health check principal
+    # a menos que seja crítico. Vamos manter "healthy" se o principal estiver ok.
 
     response = {
         "status": overall_status,
@@ -101,6 +139,13 @@ def health_check():
         }
     }
 
+    if has_external_db:
+        response["checks"]["external_database"] = {
+            "status": "up" if ext_db_status else "down",
+            "message": ext_db_message,
+            "response_time_ms": round(ext_db_response_time, 2)
+        }
+
     status_code = 200 if overall_status == "healthy" else 503
 
     return jsonify(response), status_code
@@ -113,11 +158,17 @@ def readiness_check():
     Verifica se a aplicação está pronta para receber tráfego.
     """
     db_status, _, _ = check_database_connection()
-
-    if db_status:
+    ext_ok = True
+    if current_app.config.get('EXTERNAL_DB_URL'):
+        try:
+            from .blueprints.health import check_external_database_connection
+            ext_ok, _, _ = check_external_database_connection()
+        except Exception:
+            ext_ok = False
+    if db_status and ext_ok:
         return jsonify({"status": "ready"}), 200
-    else:
-        return jsonify({"status": "not ready", "reason": "database unavailable"}), 503
+    reason = "database unavailable" if not db_status else "external database unavailable"
+    return jsonify({"status": "not ready", "reason": reason}), 503
 
 
 @health_bp.route('/health/live', methods=['GET'])

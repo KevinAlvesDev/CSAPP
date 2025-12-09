@@ -1,13 +1,14 @@
 import os
-from dotenv import load_dotenv, find_dotenv
 from pathlib import Path
+
+from dotenv import find_dotenv, load_dotenv
 
 # Prioridade: .env.local (desenvolvimento) > .env (produção)
 try:
     root_path = Path(__file__).resolve().parents[3]
     env_local = root_path / '.env.local'
     env_prod = root_path / '.env'
-    
+
     if env_local.exists():
         load_dotenv(str(env_local), override=True)
     elif env_prod.exists():
@@ -18,7 +19,7 @@ try:
             load_dotenv(_dotenv_path, override=True)
         else:
             load_dotenv(override=True)
-except Exception as e:
+except Exception:
     pass
 
 
@@ -30,6 +31,11 @@ class Config:
         raise ValueError("Nenhuma variável de ambiente SECRET_KEY ou FLASK_SECRET_KEY foi definida.")
 
     DATABASE_URL = os.environ.get('DATABASE_URL')
+
+    # --- BANCO DE DADOS EXTERNO ---
+    EXTERNAL_DB_URL = os.environ.get('EXTERNAL_DB_URL')
+    # ------------------------------
+
     USE_SQLITE_ENV = os.environ.get('USE_SQLITE_LOCALLY', '').lower() in ('true', '1', 'yes')
 
     # Verificar se é SQLite pela URL ou pela variável USE_SQLITE_LOCALLY
@@ -46,7 +52,7 @@ class Config:
         AUTH0_ENABLED = False  # Desabilitar Auth0 em desenvolvimento local
     else:
         AUTH0_ENABLED = os.environ.get('AUTH0_ENABLED', 'true').lower() in ('true', '1', 'yes')
-    
+
     AUTH0_DOMAIN = os.environ.get('AUTH0_DOMAIN')
     AUTH0_CLIENT_ID = os.environ.get('AUTH0_CLIENT_ID')
     AUTH0_CLIENT_SECRET = os.environ.get('AUTH0_CLIENT_SECRET')
@@ -69,9 +75,14 @@ class Config:
 
     PERMANENT_SESSION_LIFETIME = 60 * 60 * 24 * 7
 
-    SESSION_COOKIE_SECURE = not USE_SQLITE_LOCALLY
+    # Ajuste para Localhost (HTTP) vs Produção (HTTPS)
+    # Em localhost, SECURE deve ser False para o cookie ser enviado
+    # SAMESITE='Lax' é recomendado para fluxos OAuth
+    SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'True').lower() == 'true' if not USE_SQLITE_LOCALLY else False
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
+    PREFERRED_URL_SCHEME = 'http'
+    # SERVER_NAME não será forçado para evitar inconsistências; use o host atual da requisição
 
     GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
     GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
@@ -99,13 +110,8 @@ class Config:
     if EMAIL_DRIVER == 'smtp':
         EMAIL_CONFIGURADO = all([SMTP_HOST, SMTP_PORT, SMTP_FROM])
     elif EMAIL_DRIVER == 'sendgrid':
-        EMAIL_CONFIGURADO = all([SENDGRID_API_KEY, SMTP_FROM])
+        EMAIL_CONFIGURADO = bool(SENDGRID_API_KEY)
     else:
         EMAIL_CONFIGURADO = False
 
-    LANG = os.environ.get('LANG', 'pt')
-
-    LOG_DIR = os.environ.get('LOG_DIR')
-    LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
-    LOG_ROTATION_ENABLED = os.environ.get('LOG_ROTATION_ENABLED', 'true').lower() in ('1', 'true', 'yes')
-    LOG_RETENTION_DAYS = int(os.environ.get('LOG_RETENTION_DAYS', '14'))
+    CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', '')

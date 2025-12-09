@@ -1,10 +1,12 @@
-from flask import Blueprint, render_template, g, session, redirect, url_for, current_app, request, flash, jsonify
-from ..blueprints.auth import login_required
-from ..core.extensions import oauth
-from ..config.logging_config import get_logger
-import requests
-from datetime import date, timedelta
 import uuid
+from datetime import date, timedelta
+
+import requests
+from flask import Blueprint, current_app, flash, g, jsonify, redirect, render_template, request, session, url_for
+
+from ..blueprints.auth import login_required
+from ..config.logging_config import get_logger
+from ..core.extensions import oauth
 
 agenda_bp = Blueprint('agenda', __name__)
 agenda_logger = get_logger('agenda')

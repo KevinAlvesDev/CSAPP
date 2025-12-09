@@ -6,10 +6,11 @@ that match the expectations in CSAPP/tests/test_api.py. These functions are
 intentionally lightweight and do not depend on Flask request context.
 """
 
-from datetime import datetime
 import re
-from ..db import get_db_connection
+from datetime import datetime
+
 from ..config.logging_config import api_logger, security_logger
+from ..db import get_db_connection
 
 
 class _DummyG:

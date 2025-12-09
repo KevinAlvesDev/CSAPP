@@ -1,7 +1,8 @@
 
 from functools import wraps
-from flask import request, jsonify, current_app
 from urllib.parse import urlparse
+
+from flask import current_app, jsonify, request
 
 
 def validate_api_origin(f):
@@ -12,8 +13,6 @@ def validate_api_origin(f):
                 return f(*args, **kwargs)
         except Exception:
             pass
-        if request.method in ['GET', 'HEAD', 'OPTIONS']:
-            return f(*args, **kwargs)
 
         origin = request.headers.get('Origin')
         referer = request.headers.get('Referer')
@@ -57,9 +56,13 @@ def _get_allowed_origins():
     if request.host_url:
         allowed.append(request.host_url.rstrip('/'))
     custom_origins = current_app.config.get('CORS_ALLOWED_ORIGINS', '')
-    if custom_origins:
+    if isinstance(custom_origins, str) and custom_origins:
         for origin in custom_origins.split(','):
             origin = origin.strip()
+            if origin:
+                allowed.append(origin)
+    elif isinstance(custom_origins, list):
+        for origin in custom_origins:
             if origin:
                 allowed.append(origin)
     return allowed

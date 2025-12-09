@@ -1,10 +1,12 @@
-from flask import Blueprint, request, jsonify, render_template, redirect, url_for, flash, g
 from functools import wraps
-from ..domain import planos_sucesso_service
+
+from flask import Blueprint, flash, g, jsonify, redirect, render_template, request, url_for
+
 from ..__init__ import csrf
-from ..common.exceptions import ValidationError
 from ..blueprints.auth import login_required
+from ..common.exceptions import ValidationError
 from ..config.logging_config import planos_logger
+from ..domain import planos_sucesso_service
 
 planos_bp = Blueprint('planos', __name__, url_prefix='/planos')
 
@@ -244,7 +246,7 @@ def atualizar_plano(plano_id):
                 except json.JSONDecodeError:
                     planos_logger.error(f"Erro ao fazer parse da estrutura JSON: {estrutura[:200]}")
                     raise ValidationError("Estrutura inválida: JSON malformado")
-            
+
             if estrutura and (estrutura.get('items') or estrutura.get('fases')):
                 planos_sucesso_service.atualizar_estrutura_plano(plano_id, estrutura)
 
@@ -340,11 +342,20 @@ def aplicar_plano_implantacao(implantacao_id):
 
         user = get_current_user()
         usuario = user.get('usuario') if user else 'sistema'
+        responsavel_nome = None
+        if user:
+            responsavel_nome = user.get('nome') or None
+            try:
+                if not responsavel_nome and hasattr(g, 'user') and g.user:
+                    responsavel_nome = g.user.get('name')
+            except Exception:
+                pass
 
         planos_sucesso_service.aplicar_plano_a_implantacao_checklist(
             implantacao_id=implantacao_id,
             plano_id=plano_id,
-            usuario=usuario
+            usuario=usuario,
+            responsavel_nome=responsavel_nome
         )
 
         if request.is_json:

@@ -1,0 +1,9 @@
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+select = ["E", "F", "W", "I", "B"]
+ignore = ["E501"]
+
+[tool.ruff.isort]
+known-first-party = ["backend"]
+combine-as-imports = true

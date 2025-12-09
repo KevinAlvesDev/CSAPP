@@ -1,24 +1,28 @@
 
-from flask import g, current_app
-from ..db import query_db, execute_db, logar_timeline
+from collections import OrderedDict
+from datetime import datetime
 from functools import wraps
 
-from ..domain.task_definitions import (
-    MODULO_OBRIGATORIO, MODULO_PENDENCIAS, TASK_TIPS
-)
+from flask import current_app, g
 
-from ..domain.hierarquia_service import get_hierarquia_implantacao
+from ..common.utils import format_date_br, format_date_iso_for_json
 from ..constants import (
+    CARGOS_RESPONSAVEL,
+    FORMAS_PAGAMENTO,
+    HORARIOS_FUNCIONAMENTO,
+    JUSTIFICATIVAS_PARADA,
+    MODALIDADES_LIST,
+    NIVEIS_RECEITA,
     PERFIS_COM_GESTAO,
-    JUSTIFICATIVAS_PARADA, CARGOS_RESPONSAVEL, NIVEIS_RECEITA,
-    SEGUIMENTOS_LIST, TIPOS_PLANOS, MODALIDADES_LIST,
-    HORARIOS_FUNCIONAMENTO, FORMAS_PAGAMENTO, SISTEMAS_ANTERIORES,
-    RECORRENCIA_USADA, SIM_NAO_OPTIONS
+    RECORRENCIA_USADA,
+    SEGUIMENTOS_LIST,
+    SIM_NAO_OPTIONS,
+    SISTEMAS_ANTERIORES,
+    TIPOS_PLANOS,
 )
-
-from ..common.utils import format_date_iso_for_json, format_date_br
-from datetime import datetime
-from collections import OrderedDict
+from ..db import execute_db, logar_timeline, query_db
+from ..domain.hierarquia_service import get_hierarquia_implantacao
+from ..domain.task_definitions import MODULO_OBRIGATORIO, MODULO_PENDENCIAS, TASK_TIPS
 
 try:
     from ..config.cache_config import cache
@@ -73,7 +77,7 @@ def invalidar_cache_progresso(impl_id):
     """
     if not cache:
         return
-    
+
     try:
         cache_key = f'progresso_impl_{impl_id}'
         cache.delete(cache_key)
@@ -94,8 +98,8 @@ def _get_progress_optimized(impl_id):
     """
     try:
         items_exist = query_db(
-            "SELECT id FROM checklist_items WHERE implantacao_id = %s LIMIT 1", 
-            (impl_id,), 
+            "SELECT id FROM checklist_items WHERE implantacao_id = %s LIMIT 1",
+            (impl_id,),
             one=True
         )
     except Exception:
@@ -167,7 +171,7 @@ def _get_progress_optimized(impl_id):
                         WHERE implantacao_id = %s
                     """
                     fallback_result = query_db(fallback_query, (impl_id,), one=True) or {}
-                
+
                 total = int(fallback_result.get('total', 0) or 0)
                 done = int(fallback_result.get('done', 0) or 0)
 
@@ -185,8 +189,8 @@ def _get_progress_legacy(impl_id):
     """
     try:
         items_exist = query_db(
-            "SELECT id FROM checklist_items WHERE implantacao_id = %s LIMIT 1", 
-            (impl_id,), 
+            "SELECT id FROM checklist_items WHERE implantacao_id = %s LIMIT 1",
+            (impl_id,),
             one=True
         )
     except Exception:
@@ -246,8 +250,8 @@ def auto_finalizar_implantacao(impl_id, usuario_cs_email):
     Agora usa checklist_items (estrutura consolidada).
     """
     items_exist = query_db(
-        "SELECT id FROM checklist_items WHERE implantacao_id = %s LIMIT 1", 
-        (impl_id,), 
+        "SELECT id FROM checklist_items WHERE implantacao_id = %s LIMIT 1",
+        (impl_id,),
         one=True
     )
 
@@ -423,7 +427,7 @@ def _get_tarefas_and_comentarios(impl_id, is_owner=False, is_manager=False):
 
     try:
         fases_raw = query_db(
-            "SELECT id, title as nome, ordem FROM checklist_items WHERE implantacao_id = %s AND tipo_item = 'fase' AND parent_id IS NULL ORDER BY ordem DESC", 
+            "SELECT id, title as nome, ordem FROM checklist_items WHERE implantacao_id = %s AND tipo_item = 'fase' AND parent_id IS NULL ORDER BY ordem DESC",
             (impl_id,)
         ) or []
     except Exception as e:
@@ -439,7 +443,7 @@ def _get_tarefas_and_comentarios(impl_id, is_owner=False, is_manager=False):
         for fase in fases_raw:
             try:
                 grupos_raw = query_db(
-                    "SELECT id, title as nome FROM checklist_items WHERE parent_id = %s AND tipo_item = 'grupo'", 
+                    "SELECT id, title as nome FROM checklist_items WHERE parent_id = %s AND tipo_item = 'grupo'",
                     (fase['id'],)
                 ) or []
             except Exception as e:
@@ -453,7 +457,7 @@ def _get_tarefas_and_comentarios(impl_id, is_owner=False, is_manager=False):
                 todos_modulos_temp.add(modulo_nome)
                 try:
                     tarefas_h_raw = query_db(
-                        "SELECT * FROM checklist_items WHERE parent_id = %s AND tipo_item = 'tarefa'", 
+                        "SELECT * FROM checklist_items WHERE parent_id = %s AND tipo_item = 'tarefa'",
                         (grupo['id'],)
                     ) or []
                 except Exception as e:
@@ -465,7 +469,7 @@ def _get_tarefas_and_comentarios(impl_id, is_owner=False, is_manager=False):
                 for th in tarefas_h_raw:
                         try:
                             subs_raw = query_db(
-                                "SELECT * FROM checklist_items WHERE parent_id = %s AND tipo_item = 'subtarefa'", 
+                                "SELECT * FROM checklist_items WHERE parent_id = %s AND tipo_item = 'subtarefa'",
                                 (th['id'],)
                             ) or []
                         except Exception as e:
@@ -543,6 +547,16 @@ def _get_timeline_logs(impl_id):
     )
     for log in logs_timeline:
         log['data_criacao_fmt_dt_hr'] = format_date_br(log.get('data_criacao'), True)
+        try:
+            import re
+            detalhes = log.get('detalhes') or ''
+            m = re.search(r'(Item|Subtarefa|TarefaH)\s+(\d+)', detalhes)
+            if m:
+                log['related_item_id'] = int(m.group(2))
+            else:
+                log['related_item_id'] = None
+        except Exception:
+            log['related_item_id'] = None
     return logs_timeline
 
 
@@ -629,7 +643,7 @@ def get_implantacao_details(impl_id, usuario_cs_email, user_perfil):
     checklist_tree = None
     checklist_nested = None
     try:
-        from ..domain.checklist_service import get_checklist_tree, build_nested_tree
+        from ..domain.checklist_service import build_nested_tree, get_checklist_tree
         checklist_flat = get_checklist_tree(
             implantacao_id=impl_id,
             include_progress=True

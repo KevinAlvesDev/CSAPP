@@ -1,17 +1,17 @@
-from flask import (
-    Blueprint, render_template, request, flash, redirect, url_for, g, jsonify, current_app
-)
+import csv
+import io
+import os
+import shutil
+import zipfile
+from datetime import datetime
+
+from flask import Blueprint, current_app, flash, g, jsonify, redirect, render_template, request, url_for
+
 from ..blueprints.auth import admin_required
-from ..db import query_db, execute_db, db_connection
 from ..config.logging_config import management_logger, security_logger
 from ..constants import ADMIN_EMAIL, PERFIL_ADMIN
 from ..core.extensions import r2_client
-import os
-import io
-import csv
-import zipfile
-import shutil
-from datetime import datetime
+from ..db import db_connection, execute_db, query_db
 
 management_bp = Blueprint('management', __name__, url_prefix='/management')
 

@@ -1,28 +1,22 @@
 import os
-import time
 import re
-from datetime import datetime, date
+import time
+from datetime import date, datetime
 
-from flask import (
-    Blueprint, request, flash, redirect, url_for, g, current_app
-)
-from flask_limiter.util import get_remote_address
 from botocore.exceptions import ClientError
+from flask import Blueprint, current_app, flash, g, redirect, request, url_for
+from flask_limiter.util import get_remote_address
 from werkzeug.utils import secure_filename
 
 from ..blueprints.auth import login_required, permission_required
-from ..db import query_db, execute_db, logar_timeline, execute_and_fetch_one
-from ..config.cache_config import clear_user_cache, clear_implantacao_cache
-from ..domain.task_definitions import MODULO_PENDENCIAS
-from ..constants import (
-    PERFIS_COM_CRIACAO,
-    NAO_DEFINIDO_BOOL,
-    PERFIS_COM_GESTAO
-)
 from ..common import utils
-from ..core.extensions import r2_client, limiter
-from ..common.validation import validate_integer, sanitize_string, validate_date, ValidationError
+from ..common.validation import ValidationError, sanitize_string, validate_date, validate_integer
+from ..config.cache_config import clear_implantacao_cache, clear_user_cache
 from ..config.logging_config import app_logger
+from ..constants import NAO_DEFINIDO_BOOL, PERFIS_COM_CRIACAO, PERFIS_COM_GESTAO
+from ..core.extensions import limiter, r2_client
+from ..db import execute_and_fetch_one, execute_db, logar_timeline, query_db
+from ..domain.task_definitions import MODULO_PENDENCIAS
 
 implantacao_actions_bp = Blueprint('actions', __name__)
 
@@ -41,6 +35,15 @@ def criar_implantacao():
 
         usuario_atribuido = sanitize_string(request.form.get('usuario_atribuido_cs', ''), max_length=100)
         usuario_atribuido = usuario_atribuido or usuario_criador
+
+        id_favorecido = request.form.get('id_favorecido')
+        if not id_favorecido:
+             raise ValidationError('ID Favorecido é obrigatório.')
+
+        try:
+            id_favorecido = validate_integer(id_favorecido, min_value=1)
+        except ValidationError:
+             raise ValidationError('ID Favorecido inválido. Deve ser um número inteiro positivo.')
 
     except ValidationError as e:
         flash(f'Erro nos dados: {str(e)}', 'error')
@@ -83,9 +86,9 @@ def criar_implantacao():
         agora = datetime.now()
 
         result = execute_and_fetch_one(
-            "INSERT INTO implantacoes (usuario_cs, nome_empresa, tipo, data_criacao, status, data_inicio_previsto, data_inicio_efetivo) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id",
-            (usuario_atribuido, nome_empresa, tipo, agora, status, data_inicio_previsto, data_inicio_efetivo)
+            "INSERT INTO implantacoes (usuario_cs, nome_empresa, tipo, data_criacao, status, data_inicio_previsto, data_inicio_efetivo, id_favorecido) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
+            (usuario_atribuido, nome_empresa, tipo, agora, status, data_inicio_previsto, data_inicio_efetivo, id_favorecido)
         )
 
         implantacao_id = result.get('id') if result else None
@@ -643,13 +646,13 @@ def atualizar_detalhes_empresa():
         # Remover valores vazios e "Selecione..."
         values = [v.strip() for v in values if v and v.strip() and v.strip() != "Selecione..."]
         return ','.join(values) if values else None
-    
+
     seguimento_val = get_multiple_value('seguimento')
     tipos_planos_val = get_multiple_value('tipos_planos')
     modalidades_val = get_multiple_value('modalidades')
     horarios_val = get_multiple_value('horarios_func')
     formas_pagamento_val = get_multiple_value('formas_pagamento')
-    
+
     cargo_responsavel_val = get_form_value('cargo_responsavel')
     nivel_receita_val = get_form_value('nivel_receita')
     sistema_anterior_val = get_form_value('sistema_anterior')
@@ -926,7 +929,7 @@ def excluir_implantacao():
                     WHERE c.checklist_item_id = ci.id
                     AND ci.implantacao_id = %s
                 )
-                AND c.imagem_url IS NOT NULL AND c.imagem_url != '' """, 
+                AND c.imagem_url IS NOT NULL AND c.imagem_url != '' """,
             (implantacao_id,)
         )
         public_url_base = current_app.config.get('CLOUDFLARE_PUBLIC_URL')
@@ -984,8 +987,13 @@ def adicionar_tarefa():
         if impl.get('status') == 'finalizada':
             flash('Não é possível adicionar tarefas a implantações finalizadas.', 'warning')
             return redirect(dest_url)
-        flash('A funcionalidade de adicionar tarefas foi migrada para a estrutura hierárquica. Use a interface de hierarquia para adicionar tarefas.', 'warning')
-        app_logger.warning(f"Tentativa de usar adicionar_tarefa (deprecated) para impl_id={implantacao_id} user={usuario_cs_email}")
+        flash('Esta rota foi descontinuada. Adição de tarefas ocorre na interface hierárquica.', 'warning')
+        app_logger.warning(f"Tentativa de usar rota deprecated: adicionar_tarefa para impl_id={implantacao_id} user={usuario_cs_email}")
+        try:
+            from flask import abort
+            abort(410)
+        except Exception:
+            pass
     except Exception as e:
         app_logger.error(f"Erro ao adicionar tarefa para implantação ID {implantacao_id}: {e}")
         flash(f'Erro ao adicionar tarefa: {e}', 'error')

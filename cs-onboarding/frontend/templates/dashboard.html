@@ -608,6 +608,17 @@
                 <div class="modal-body">
                     {% if g.perfil.perfil_acesso in PERFIS_COM_CRIACAO %}
                     <div class="mb-3">
+                        <label for="idFavorecido" class="form-label">ID Favorecido</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="idFavorecido" name="id_favorecido" placeholder="Digite o ID Favorecido" min="1" required>
+                            <button class="btn btn-outline-primary" type="button" id="btnConsultarEmpresa">
+                                <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                                Consultar
+                            </button>
+                        </div>
+                        <div id="consultaFeedback" class="form-text"></div>
+                    </div>
+                    <div class="mb-3">
                         <label for="nomeEmpresa" class="form-label">Nome Empresa</label>
                         <input type="text" class="form-control" id="nomeEmpresa" name="nome_empresa" required>
                     </div>
@@ -889,4 +900,124 @@
       });
     }
 </script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const btnConsultar = document.getElementById('btnConsultarEmpresa');
+        if (btnConsultar) {
+            btnConsultar.addEventListener('click', async function() {
+                const idFavorecidoInput = document.getElementById('idFavorecido');
+                const idFavorecido = idFavorecidoInput.value;
+                const feedbackEl = document.getElementById('consultaFeedback');
+                const btn = this;
+                const spinner = btn.querySelector('.spinner-border');
+                const nomeEmpresaInput = document.getElementById('nomeEmpresa');
+
+                if (!idFavorecido) {
+                    feedbackEl.textContent = 'Por favor, digite um ID Favorecido.';
+                    feedbackEl.className = 'form-text text-danger';
+                    return;
+                }
+
+                // Reset state
+                feedbackEl.textContent = '';
+                feedbackEl.className = 'form-text';
+                btn.disabled = true;
+                spinner.classList.remove('d-none');
+                
+                try {
+                    const response = await fetch(`/api/consultar_empresa?id_favorecido=${idFavorecido}`);
+                    const data = await response.json();
+
+                    if (data.ok) {
+                        feedbackEl.textContent = 'Empresa encontrada: ' + (data.empresa.nomefantasia || data.empresa.razaosocial);
+                        feedbackEl.className = 'form-text text-success';
+                        
+                        // Auto-fill name if available and empty
+                        if (!nomeEmpresaInput.value) {
+                            if (data.empresa.nomefantasia) {
+                                nomeEmpresaInput.value = data.empresa.nomefantasia;
+                            } else if (data.empresa.razaosocial) {
+                                nomeEmpresaInput.value = data.empresa.razaosocial;
+                            }
+                        }
+                    } else {
+                        feedbackEl.textContent = data.error || 'Erro ao consultar empresa.';
+                        feedbackEl.className = 'form-text text-danger';
+                    }
+                } catch (error) {
+                    console.error('Erro:', error);
+                    feedbackEl.textContent = 'Erro de conexão ao consultar empresa.';
+                    feedbackEl.className = 'form-text text-danger';
+                } finally {
+                     btn.disabled = false;
+                     spinner.classList.add('d-none');
+                 }
+             });
+         }
+
+         // Logic to populate details modal from OAMD data
+         const modalDetalhes = document.getElementById('modalDetalhesEmpresa');
+         if (modalDetalhes) {
+             modalDetalhes.addEventListener('show.bs.modal', async function (event) {
+                 const button = event.relatedTarget;
+                 if (!button) return;
+
+                 // Ensure ID Favorecido is populated from the button data attribute
+                 const idFavorecido = button.getAttribute('data-id-favorecido');
+                 const modalIdFavorecidoInput = modalDetalhes.querySelector('#modal-id_favorecido');
+                 
+                 if (modalIdFavorecidoInput && idFavorecido) {
+                     console.debug("ID Favorecido passed to modal:", idFavorecido);
+                     modalIdFavorecidoInput.value = idFavorecido;
+                     
+                     // Fetch from OAMD to auto-fill fields if they are empty
+                     try {
+                         const response = await fetch(`/api/consultar_empresa?id_favorecido=${idFavorecido}`);
+                         const data = await response.json();
+                         
+                         if (data.ok && data.empresa) {
+                             console.debug("Dados OAMD encontrados:", data.empresa);
+                             const emp = data.empresa;
+                             
+                             const map = {
+                                 'modal-responsavel_cliente': emp.nomedono,
+                                 'modal-email_responsavel': emp.email || emp.responsavelemail,
+                                 'modal-telefone_responsavel': emp.telefone || emp.responsaveltelefone,
+                                 'modal-nivel_receita': emp.nivelreceitamensal
+                             };
+                             
+                             for (const [id, value] of Object.entries(map)) {
+                                 const input = modalDetalhes.querySelector('#' + id);
+                                 if (input && !input.value && value) {
+                                     input.value = value;
+                                 }
+                             }
+
+                             // Handle dates
+                             const dateMap = {
+                                 'modal-data_inicio_producao': emp.inicioproducao,
+                                 'modal-data_final_implantacao': emp.finalimplantacao,
+                                 'modal-inicio_efetivo': emp.inicioimplantacao
+                             };
+
+                             for (const [id, value] of Object.entries(dateMap)) {
+                                 if (!value) continue;
+                                 const input = modalDetalhes.querySelector('#' + id);
+                                 if (input && !input.value) {
+                                     const dateStr = value.split('T')[0];
+                                     input.value = dateStr;
+                                     if (input._flatpickr) {
+                                         input._flatpickr.setDate(dateStr, true);
+                                     }
+                                 }
+                             }
+                         }
+                     } catch (e) {
+                         console.error("Erro ao buscar dados OAMD para detalhes:", e);
+                     }
+                 }
+             });
+         }
+     });
+ </script>
 {% endblock %}

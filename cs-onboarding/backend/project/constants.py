@@ -20,7 +20,7 @@ NAO_DEFINIDO_BOOL = "Não definido"
 
 SIM_NAO_OPTIONS = [NAO_DEFINIDO_BOOL, "Sim", "Não"]
 
-ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'admin@gmail.com')
+ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'kevinpereira@pactosolucoes.com.br')
 
 CARGOS_LIST = ["Júnior", "Pleno", "Sênior"]
 

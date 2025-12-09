@@ -385,12 +385,15 @@
     .checklist-item-header.level-3, .checklist-item-header.level-4, .checklist-item-header.level-5 { border-left: 3px solid #a855f7; background: rgba(168,85,247,0.06); }
 
     .checklist-item-children { padding-left: 0.75rem; }
-    .checklist-item-header > .d-flex { flex-wrap: nowrap; align-items: flex-start; }
-    .checklist-item-title { min-width: 0; white-space: normal; word-break: break-word; }
-    .col-qtd, .col-tag, .col-responsavel, .col-prev-orig, .col-prev-atual, .col-status, .col-comment, .col-delete { flex: 0 0 auto; }
+    .checklist-item-header > .d-flex { flex-wrap: nowrap; align-items: center; gap: 0.25rem; width: 100%; }
+    .col-title { min-width: 0; overflow: hidden; }
+    .checklist-item-title { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .col-group, .col-qtd, .col-tag, .col-responsavel, .col-prev-orig, .col-prev-atual, .col-status, .col-comment, .col-delete { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 0.25rem; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-width: 0; }
+    .checklist-item-header .badge { display: inline-flex; align-items: center; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+    .badge-truncate { max-width: 100%; display: inline-flex; align-items: center; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .btn-icon-placeholder { display: inline-block; width: 24px; height: 18px; }
     @media (max-width: 768px) {
-        .checklist-item-header > .d-flex { flex-wrap: wrap; }
-        .col-prev-orig, .col-prev-atual { width: 100% !important; }
+        .checklist-item-header > .d-flex { flex-wrap: nowrap; }
     }
 
     .badge-resp-ellipsis {
@@ -565,7 +568,7 @@
     .plano-sucesso-container {
         max-height: calc(100vh - 300px);
         overflow-y: auto;
-        overflow-x: hidden;
+        overflow-x: auto;
     }
 
     /* Fase Card */
@@ -1166,17 +1169,14 @@
                                 </div>
                                 
                                 <!-- Checklist Tree será renderizado via JavaScript -->
-                                <div class="d-flex align-items-center gap-2 px-3 py-1 text-muted small" style="border-bottom: 1px solid rgba(0,0,0,0.06);">
-                                    <span class="col-expand" style="width:24px"></span>
-                                    <span class="col-checkbox" style="width:24px"></span>
-                                    <span class="col-icon" style="width:20px"></span>
+                                <div class="d-flex align-items-center gap-0 px-2 py-1 text-muted small" style="border-bottom: 1px solid rgba(0,0,0,0.06);">
                                     <span class="col-title flex-grow-1">Tarefa</span>
-                                    <span class="col-qtd" style="width:90px">QTD</span>
-                                    <span class="col-tag" style="width:140px">Tag</span>
-                                    <span class="col-responsavel" style="width:220px">Responsável</span>
-                                    <span class="col-prev-orig" style="width:160px">Prev. orig</span>
-                                    <span class="col-prev-atual" style="width:160px">Prev</span>
-                                    <span class="col-status" style="width:120px">Status</span>
+                                    <span class="col-tag" style="width:130px">Tag</span>
+                                    <span class="col-qtd" style="width:60px">QTD</span>
+                                    <span class="col-responsavel" style="width:120px">Responsável</span>
+                                    <span class="col-prev-orig" style="width:150px">Prev. orig</span>
+                                    <span class="col-prev-atual" style="width:150px">Prev</span>
+                                    <span class="col-status" style="width:110px">Status</span>
                                     <span class="col-comment" style="width:28px"></span>
                                     <span class="col-delete" style="width:28px"></span>
                                 </div>

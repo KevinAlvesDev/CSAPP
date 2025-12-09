@@ -1,20 +1,18 @@
-from flask import Blueprint, request, jsonify, g, current_app, render_template, make_response, url_for
-from datetime import datetime
 import os
 import time
-import json
-from werkzeug.utils import secure_filename
-from botocore.exceptions import ClientError, NoCredentialsError
+from datetime import datetime
+
+from flask import Blueprint, current_app, g, jsonify, make_response, render_template, request, url_for
+from flask_limiter.util import get_remote_address
 
 from ..blueprints.auth import login_required
-from ..db import query_db, execute_db, logar_timeline, execute_and_fetch_one
-from ..core.extensions import r2_client, limiter
-from ..common.utils import allowed_file, format_date_iso_for_json, format_date_br
 from ..common.file_validation import validate_uploaded_file
+from ..common.utils import format_date_iso_for_json
+from ..common.validation import ValidationError, sanitize_string, validate_integer
+from ..config.logging_config import api_logger
 from ..constants import PERFIS_COM_GESTAO
-from ..common.validation import validate_integer, sanitize_string, ValidationError
-from ..config.logging_config import api_logger, security_logger
-from flask_limiter.util import get_remote_address
+from ..core.extensions import limiter, r2_client
+from ..db import execute_and_fetch_one, execute_db, logar_timeline, query_db
 from ..security.api_security import validate_api_origin
 
 api_h_bp = Blueprint('api_h', __name__, url_prefix='/api')
@@ -46,10 +44,10 @@ def adicionar_comentario_h(tipo, item_id):
         item_id = validate_integer(item_id, min_value=1)
     except ValidationError as e:
         return render_hx_error(f'ID inválido: {str(e)}', 400)
-    
+
     if tipo not in ('tarefa', 'subtarefa'):
         return render_hx_error('Tipo inválido. Deve ser "tarefa" ou "subtarefa".', 400)
-    
+
     coluna_id = 'checklist_item_id'
 
     try:
@@ -60,7 +58,7 @@ def adicionar_comentario_h(tipo, item_id):
             texto = ''
     except ValidationError as e:
         return render_hx_error(f'Texto do comentário inválido: {str(e)}', 400)
-    
+
     img_url = None
     visibilidade = (request.form.get('visibilidade', 'interno') or 'interno').strip().lower()
     if visibilidade not in ('interno', 'externo'):
@@ -90,10 +88,10 @@ def adicionar_comentario_h(tipo, item_id):
 
     is_owner = info.get('usuario_cs') == usuario_cs_email
     is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
-    
+
     if not (is_owner or is_manager):
         return render_hx_error('Permissão negada.', 403)
-        
+
     if info.get('status') in ['finalizada', 'parada']:
         return render_hx_error(f'Não é possível adicionar comentários a implantações com status "{info.get("status")}".', 400)
 
@@ -107,7 +105,7 @@ def adicionar_comentario_h(tipo, item_id):
             try:
                 if not r2_client or not current_app.config.get('CLOUDFLARE_PUBLIC_URL'):
                     return render_hx_error('Serviço de armazenamento (R2) não configurado.', 500)
-                
+
                 impl_id = info['implantacao_id']
                 safe_filename = metadata['safe_filename']
                 nome_base, extensao = os.path.splitext(safe_filename)
@@ -132,7 +130,7 @@ def adicionar_comentario_h(tipo, item_id):
 
     try:
         agora = datetime.now()
-        
+
         try:
             from project.database.db_pool import get_db_connection
             conn_check, db_type_check = get_db_connection()
@@ -146,13 +144,13 @@ def adicionar_comentario_h(tipo, item_id):
                 conn_check.close()
         except Exception:
             pass
-        
+
         result = execute_and_fetch_one(
             "INSERT INTO comentarios_h (checklist_item_id, usuario_cs, texto, data_criacao, imagem_url, visibilidade) "
             "VALUES (%s, %s, %s, %s, %s, %s) RETURNING id",
             (item_id, usuario_cs_email, texto, agora, img_url, visibilidade)
         )
-        
+
         novo_id = result.get('id') if result else None
         if not novo_id:
             # Fallback para SQLite
@@ -168,7 +166,7 @@ def adicionar_comentario_h(tipo, item_id):
         if img_url:
             detalhe += "\n[Imagem Adicionada]"
         logar_timeline(info['implantacao_id'], usuario_cs_email, 'novo_comentario', detalhe)
-        
+
         novo_comentario_dados = query_db(
             """
             SELECT c.*, p.nome as usuario_nome
@@ -177,7 +175,7 @@ def adicionar_comentario_h(tipo, item_id):
             WHERE c.id = %s
             """, (novo_id,), one=True
         )
-        
+
         if not novo_comentario_dados:
              return render_hx_error('Erro ao recuperar comentário.', 500)
 
@@ -192,10 +190,10 @@ def adicionar_comentario_h(tipo, item_id):
             resp = make_response(item_html + oob_stub, 200)
             resp.headers['Content-Type'] = 'text/html; charset=utf-8'
             return resp
-        
+
         if novo_comentario_dados.get('data_criacao'):
             novo_comentario_dados['data_criacao'] = format_date_iso_for_json(novo_comentario_dados['data_criacao'])
-        
+
         resp = jsonify({
             'ok': True,
             'success': True,
@@ -217,12 +215,12 @@ def listar_comentarios_h(tipo, item_id):
         item_id = validate_integer(item_id, min_value=1)
     except ValidationError as e:
         return jsonify({'ok': False, 'error': f'ID inválido: {str(e)}'}), 400
-    
+
     if tipo not in ('tarefa', 'subtarefa'):
         return jsonify({'ok': False, 'error': 'Tipo inválido. Deve ser "tarefa" ou "subtarefa".'}), 400
-    
+
     coluna_id = 'checklist_item_id'
-    
+
     try:
         impl_info = {}
         try:
@@ -247,7 +245,7 @@ def listar_comentarios_h(tipo, item_id):
         except Exception as e:
             api_logger.warning(f"Erro ao buscar email_responsavel: {e}")
             impl_info = {}
-        
+
         comentarios = query_db(
             """
             SELECT c.id, c.texto, c.usuario_cs, c.data_criacao, c.imagem_url, c.visibilidade,
@@ -259,15 +257,15 @@ def listar_comentarios_h(tipo, item_id):
             """,
             (item_id,)
         ) or []
-        
+
         email_resp = impl_info.get('email_responsavel', '')
         for c in comentarios:
             c['email_responsavel'] = email_resp
             if c.get('data_criacao'):
                 c['data_criacao'] = format_date_iso_for_json(c['data_criacao'])
-        
+
         return jsonify({'ok': True, 'success': True, 'comentarios': comentarios}), 200
-        
+
     except Exception as e:
         api_logger.error(f"Erro ao listar comentários_h: {e}", exc_info=True)
         return jsonify({'ok': False, 'error': str(e)}), 500
@@ -290,20 +288,20 @@ def excluir_comentario_h(comentario_id):
             WHERE c.id = %s
             """, (comentario_id,), one=True
         )
-        
+
         if not comentario:
             return jsonify({'ok': False, 'error': 'Comentário não encontrado'}), 404
 
         is_owner = comentario.get('usuario_cs') == usuario_cs_email
         is_impl_owner = comentario.get('implantacao_owner') == usuario_cs_email
         is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
-        
+
         if not (is_owner or is_impl_owner or is_manager):
             return jsonify({'ok': False, 'error': 'Permissão negada'}), 403
-        
+
         execute_db("DELETE FROM comentarios_h WHERE id = %s", (comentario_id,))
         logar_timeline(comentario['impl_id'], usuario_cs_email, 'comentario_excluido', f"Comentário em '{comentario['item_nome']}' excluído.")
-        
+
         return jsonify({'ok': True, 'success': True}), 200
     except Exception as e:
         api_logger.error(f"Erro ao excluir comentario_h: {e}")
@@ -357,11 +355,11 @@ def enviar_email_comentario_h(comentario_id):
             """,
             (comentario_id,), one=True
         )
-        
+
         is_owner = dados.get('usuario_cs') == usuario_cs_email
         is_impl_owner = dados.get('implantacao_owner') == usuario_cs_email
         is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
-        
+
         if not (is_owner or is_impl_owner or is_manager):
             return render_inline_notice({'email_send_status': 'error', 'email_send_error': 'Permissão negada.', 'tarefa_id': dados.get('tarefa_id')})
 

@@ -1,8 +1,10 @@
+from datetime import date, datetime, timedelta
+
 from flask import current_app
-from ..db import query_db
+
 from ..constants import NIVEIS_RECEITA
-from .time_calculator import calculate_days_passed, calculate_days_parada
-from datetime import datetime, timedelta, date
+from ..db import query_db
+from .time_calculator import calculate_days_parada, calculate_days_passed
 
 
 def calculate_time_in_status(impl_id, status_target='parada'):
@@ -254,15 +256,15 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
 
     task_start_op, task_start_date_val = _format_date_for_query(task_start_date_to_query, is_sqlite=is_sqlite)
     if task_start_op:
-        query_tasks += f" AND {date_col_expr('s.data_conclusao')} {task_start_op} {date_param_expr()} "
+        query_tasks += f" AND {date_col_expr('ci.data_conclusao')} {task_start_op} {date_param_expr()} "
         args_tasks.append(task_start_date_val)
 
     task_end_op, task_end_date_val = _format_date_for_query(task_end_date_to_query, is_end_date=True, is_sqlite=is_sqlite)
     if task_end_op:
-        query_tasks += f" AND {date_col_expr('s.data_conclusao')} {task_end_op} {date_param_expr()} "
+        query_tasks += f" AND {date_col_expr('ci.data_conclusao')} {task_end_op} {date_param_expr()} "
         args_tasks.append(task_end_date_val)
-    
-    query_tasks += " GROUP BY i.usuario_cs, p.nome, s.tag ORDER BY cs_nome, s.tag "
+
+    query_tasks += " GROUP BY i.usuario_cs, p.nome, ci.tag ORDER BY cs_nome, ci.tag "
 
     tasks_summary_raw = query_db(query_tasks, tuple(args_tasks))
     tasks_summary_raw = tasks_summary_raw if tasks_summary_raw is not None else []

@@ -1,14 +1,14 @@
-from flask import (
-    Blueprint, render_template, request, flash, redirect, url_for, g, current_app, session
-)
-from ..blueprints.auth import login_required
-from ..db import execute_db
-from ..core.extensions import r2_client
-from werkzeug.utils import secure_filename
-from ..config.logging_config import app_logger
+import io
 import os
 import time
-import io
+
+from flask import Blueprint, current_app, flash, g, redirect, render_template, request, session, url_for
+from werkzeug.utils import secure_filename
+
+from ..blueprints.auth import login_required
+from ..config.logging_config import app_logger
+from ..core.extensions import r2_client
+from ..db import execute_db
 
 profile_bp = Blueprint('profile', __name__, url_prefix='/profile')
 

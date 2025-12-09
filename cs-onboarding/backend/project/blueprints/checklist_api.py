@@ -3,19 +3,20 @@ API Blueprint para Checklist Hierárquico Infinito
 Endpoints REST para gerenciar checklist com propagação de status e comentários
 """
 
-from flask import Blueprint, request, jsonify, g
+from flask import Blueprint, g, jsonify, request
+from flask_limiter.util import get_remote_address
+
 from ..blueprints.auth import login_required
+from ..common.validation import ValidationError, validate_integer
+from ..config.logging_config import api_logger
+from ..core.extensions import limiter
 from ..domain.checklist_service import (
-    toggle_item_status,
+    build_nested_tree,
     delete_checklist_item,
     get_checklist_tree,
-    build_nested_tree,
-    get_item_progress_stats
+    get_item_progress_stats,
+    toggle_item_status,
 )
-from ..common.validation import validate_integer, ValidationError
-from ..config.logging_config import api_logger
-from flask_limiter.util import get_remote_address
-from ..core.extensions import limiter
 from ..security.api_security import validate_api_origin
 
 checklist_bp = Blueprint('checklist', __name__, url_prefix='/api/checklist')
@@ -116,9 +117,10 @@ def add_comment(item_id):
         }
     """
     from datetime import datetime
-    from ..db import query_db, execute_db
+
     from ..common.validation import sanitize_string
-    
+    from ..db import execute_db, query_db
+
     try:
         item_id = validate_integer(item_id, min_value=1)
     except ValidationError as e:
@@ -133,9 +135,9 @@ def add_comment(item_id):
 
     if not texto or not texto.strip():
         return jsonify({'ok': False, 'error': 'O texto do comentário é obrigatório'}), 400
-    
+
     texto = sanitize_string(texto.strip(), max_length=8000, min_length=1)
-    
+
     if visibilidade not in ('interno', 'externo'):
         visibilidade = 'interno'
 
@@ -149,7 +151,7 @@ def add_comment(item_id):
         )
         if not item:
             return jsonify({'ok': False, 'error': f'Item {item_id} não encontrado'}), 404
-        
+
         try:
             from project.database.db_pool import get_db_connection
             conn_check, db_type_check = get_db_connection()
@@ -163,7 +165,7 @@ def add_comment(item_id):
                 conn_check.close()
         except Exception:
             pass
-        
+
         agora = datetime.now()
         execute_db(
             """
@@ -172,7 +174,7 @@ def add_comment(item_id):
             """,
             (item_id, usuario_email, texto, agora, visibilidade)
         )
-        
+
         novo_comentario = query_db(
             """
             SELECT c.id, c.texto, c.usuario_cs, c.data_criacao, c.visibilidade,
@@ -186,14 +188,14 @@ def add_comment(item_id):
             (item_id,),
             one=True
         )
-        
+
         data_criacao = novo_comentario['data_criacao']
         if data_criacao:
             if hasattr(data_criacao, 'isoformat'):
                 data_criacao = data_criacao.isoformat()
             else:
                 data_criacao = str(data_criacao)
-        
+
         return jsonify({
             'ok': True,
             'item_id': item_id,
@@ -224,7 +226,7 @@ def get_implantacao_comments(impl_id):
     Paginação via query params page/per_page.
     """
     from ..db import query_db
-    
+
     try:
         page = int(request.args.get('page', 1))
         per_page = int(request.args.get('per_page', 20))
@@ -234,9 +236,9 @@ def get_implantacao_comments(impl_id):
     except ValueError:
         page = 1
         per_page = 20
-        
+
     offset = (page - 1) * per_page
-    
+
     try:
         # Query total count
         count_query = """
@@ -247,7 +249,7 @@ def get_implantacao_comments(impl_id):
         """
         total_res = query_db(count_query, (impl_id,), one=True)
         total = total_res['total'] if total_res else 0
-        
+
         # Query comments
         # Inclui nome da tarefa
         comments_query = """
@@ -262,9 +264,9 @@ def get_implantacao_comments(impl_id):
             ORDER BY c.data_criacao ASC
             LIMIT %s OFFSET %s
         """
-        
+
         comments = query_db(comments_query, (impl_id, per_page, offset))
-        
+
         # Format dates
         formatted_comments = []
         for c in comments:
@@ -273,7 +275,7 @@ def get_implantacao_comments(impl_id):
                  dt = c_dict['data_criacao']
                  c_dict['data_criacao'] = dt.isoformat() if hasattr(dt, 'isoformat') else str(dt)
             formatted_comments.append(c_dict)
-            
+
         return jsonify({
             'ok': True,
             'comments': formatted_comments,
@@ -298,7 +300,7 @@ def get_comments(item_id):
     Retorna o histórico de comentários de um item.
     """
     from ..db import query_db
-    
+
     try:
         item_id = validate_integer(item_id, min_value=1)
     except ValidationError as e:
@@ -316,7 +318,7 @@ def get_comments(item_id):
             """,
             (item_id,)
         ) or []
-        
+
         item_info = query_db(
             """
             SELECT i.email_responsavel
@@ -328,7 +330,7 @@ def get_comments(item_id):
             one=True
         )
         email_responsavel = item_info.get('email_responsavel', '') if item_info else ''
-        
+
         comentarios_formatados = []
         for c in comentarios:
             data_criacao = c['data_criacao']
@@ -337,7 +339,7 @@ def get_comments(item_id):
                     data_criacao = data_criacao.isoformat()
                 else:
                     data_criacao = str(data_criacao)
-            
+
             comentarios_formatados.append({
                 'id': c['id'],
                 'texto': c['texto'],
@@ -348,7 +350,7 @@ def get_comments(item_id):
                 'imagem_url': c.get('imagem_url'),
                 'email_responsavel': email_responsavel
             })
-        
+
         return jsonify({
             'ok': True,
             'item_id': item_id,
@@ -370,7 +372,7 @@ def send_comment_email(comentario_id):
     """
     from ..db import query_db
     from ..mail.email_utils import send_external_comment_notification
-    
+
     try:
         comentario_id = validate_integer(comentario_id, min_value=1)
     except ValidationError as e:
@@ -390,16 +392,16 @@ def send_comment_email(comentario_id):
             (comentario_id,),
             one=True
         )
-        
+
         if not dados:
             return jsonify({'ok': False, 'error': 'Comentário não encontrado'}), 404
-        
+
         if dados['visibilidade'] != 'externo':
             return jsonify({'ok': False, 'error': 'Apenas comentários externos podem ser enviados por email'}), 400
-        
+
         if not dados['email_responsavel']:
             return jsonify({'ok': False, 'error': 'Email do responsável não configurado. Configure em "Editar Detalhes".'}), 400
-        
+
         implantacao = {
             'id': dados['impl_id'],
             'nome_empresa': dados['nome_empresa'],
@@ -411,14 +413,14 @@ def send_comment_email(comentario_id):
             'tarefa_filho': dados['tarefa_nome'],
             'usuario_cs': dados['usuario_cs']
         }
-        
+
         result = send_external_comment_notification(implantacao, comentario)
-        
+
         if result:
             return jsonify({'ok': True, 'message': 'Email enviado com sucesso'})
         else:
             return jsonify({'ok': False, 'error': 'Falha ao enviar email'}), 500
-            
+
     except Exception as e:
         api_logger.error(f"Erro ao enviar email do comentário {comentario_id}: {e}", exc_info=True)
         return jsonify({'ok': False, 'error': 'Erro interno ao enviar email'}), 500
@@ -431,9 +433,9 @@ def delete_comment(comentario_id):
     """
     Exclui um comentário (apenas o próprio autor ou gestores).
     """
-    from ..db import query_db, execute_db
     from ..constants import PERFIS_COM_GESTAO
-    
+    from ..db import execute_db, query_db
+
     try:
         comentario_id = validate_integer(comentario_id, min_value=1)
     except ValidationError as e:
@@ -447,18 +449,18 @@ def delete_comment(comentario_id):
             (comentario_id,),
             one=True
         )
-        
+
         if not comentario:
             return jsonify({'ok': False, 'error': 'Comentário não encontrado'}), 404
-        
+
         is_owner = comentario['usuario_cs'] == usuario_email
         is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
-        
+
         if not (is_owner or is_manager):
             return jsonify({'ok': False, 'error': 'Permissão negada'}), 403
-        
+
         execute_db("DELETE FROM comentarios_h WHERE id = %s", (comentario_id,))
-        
+
         return jsonify({'ok': True, 'message': 'Comentário excluído'})
     except Exception as e:
         api_logger.error(f"Erro ao excluir comentário {comentario_id}: {e}", exc_info=True)
@@ -473,9 +475,9 @@ def delete_item(item_id):
     """
     Exclui um item do checklist e toda a sua hierarquia (apenas gestores ou dono da implantação).
     """
-    from ..db import query_db
     from ..constants import PERFIS_COM_GESTAO
-    
+    from ..db import query_db
+
     try:
         item_id = validate_integer(item_id, min_value=1)
     except ValidationError as e:
@@ -495,28 +497,28 @@ def delete_item(item_id):
             (item_id,),
             one=True
         )
-        
+
         if not item_info:
             return jsonify({'ok': False, 'error': 'Item não encontrado'}), 404
-        
+
         if item_info.get('status') in ['finalizada', 'parada', 'cancelada']:
             return jsonify({'ok': False, 'error': 'Implantação bloqueada para alterações.'}), 400
-        
+
         is_owner = item_info['usuario_cs'] == usuario_email
         is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
-        
+
         if not (is_owner or is_manager):
             return jsonify({'ok': False, 'error': 'Permissão negada. Apenas o responsável ou gestores podem excluir itens.'}), 403
-        
+
         result = delete_checklist_item(item_id, usuario_email)
 
         if result.get('ok'):
             # Log to timeline for compatibility with frontend
-            from ..core.api import logar_timeline, format_date_iso_for_json
-            
+            from ..core.api import format_date_iso_for_json, logar_timeline
+
             log_details = f"Item '{item_info.get('title', '')}' foi excluído."
             logar_timeline(item_info['implantacao_id'], usuario_email, 'tarefa_excluida', log_details)
-            
+
             # Fetch the log entry to return to frontend
             nome_usuario = g.perfil.get('nome', usuario_email) if g.perfil else usuario_email
             log_exclusao = query_db(
@@ -525,12 +527,12 @@ def delete_item(item_id):
             )
             if log_exclusao:
                 log_exclusao['data_criacao'] = format_date_iso_for_json(log_exclusao.get('data_criacao'))
-            
+
             result['log_exclusao'] = log_exclusao
             result['novo_progresso'] = result.get('progress') # Alias for compatibility
-        
+
         return jsonify(result)
-        
+
     except Exception as e:
         api_logger.error(f"Erro ao excluir item {item_id}: {e}", exc_info=True)
         return jsonify({'ok': False, 'error': f'Erro interno ao excluir item: {e}'}), 500
@@ -572,11 +574,12 @@ def get_tree():
 
         global_progress = None
         if implantacao_id:
-            from ..db import query_db
             from flask import current_app
-            
+
+            from ..db import query_db
+
             is_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
-            
+
             if is_sqlite:
                 progress_query = """
                     SELECT
@@ -605,7 +608,7 @@ def get_tree():
                     )
                 """
                 progress_result = query_db(progress_query, (implantacao_id, implantacao_id), one=True)
-            
+
             if progress_result:
                 total = int(progress_result.get('total', 0) or 0)
                 completed = int(progress_result.get('completed', 0) or 0)

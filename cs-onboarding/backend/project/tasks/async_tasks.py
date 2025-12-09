@@ -1,6 +1,8 @@
 import threading
+from typing import Any, Callable, Dict, Optional
+
 from flask import current_app
-from typing import Callable, Any, Dict, Optional
+
 from ..mail.email_utils import send_email_global
 
 
