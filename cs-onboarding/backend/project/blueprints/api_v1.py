@@ -22,6 +22,7 @@ from ..core.extensions import limiter
 from ..db import query_db
 from ..domain.hierarquia_service import get_hierarquia_implantacao
 from ..security.api_security import validate_api_origin
+from ..database.external_db import query_external_db
 
 api_v1_bp = Blueprint('api_v1', __name__, url_prefix='/api/v1')
 
@@ -177,5 +178,125 @@ def get_implantacao(impl_id):
     except Exception as e:
         api_logger.error(f"Error getting implantacao {impl_id}: {e}")
         return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@api_v1_bp.route('/oamd/implantacoes/<int:impl_id>/consulta', methods=['GET'])
+@login_required
+@limiter.limit("60 per minute", key_func=lambda: g.user_email or get_remote_address())
+def consultar_oamd_implantacao(impl_id):
+    try:
+        impl = query_db("SELECT id, id_favorecido, chave_oamd FROM implantacoes WHERE id = %s", (impl_id,), one=True)
+        if not impl:
+            return jsonify({'ok': False, 'error': 'Implantação não encontrada'}), 404
+        fav = impl.get('id_favorecido')
+        key = impl.get('chave_oamd')
+        cnpj = None
+        where = []
+        params = {}
+        if fav:
+            where.append("ef.codigo = :codigo")
+            params['codigo'] = int(fav)
+        if key:
+            where.append("ef.chavezw = :chavezw")
+            params['chavezw'] = key
+        if cnpj:
+            where.append("ef.cnpj = :cnpj")
+            params['cnpj'] = cnpj
+        if not where:
+            return jsonify({'ok': False, 'error': 'Implantação sem chave de correlação (ID Favorecido/Chave ZW/CNPJ)'}), 400
+        q = (
+            "SELECT ef.codigo AS ef_codigo, ef.cnpj, ef.endereco, ef.estado, ef.nomefantasia, ef.razaosocial, ef.chavezw, ef.datacadastro, ef.ativazw, ef.dataexpiracaozw, ef.datadesativacao, ef.datasuspensaoempresazw, ef.ultimaatualizacao, ef.nomeempresazw, ef.tipoempresa, ef.nicho, ef.bairro, ef.cidade, ef.urlcontatoresponsavelpacto, ef.detalheempresa_codigo, "
+            "ef.empresazw, "
+            "de.inicioimplantacao, de.finalimplantacao, de.tipocliente, de.inicioproducao, de.condicaoespecial, de.nivelreceitamensal, de.categoria, de.nivelatendimento, de.statusimplantacao, de.customersuccess_codigo, de.implantador_codigo, de.responsavelpacto_codigo, "
+            "cs.nome AS cs_nome, cs.telefone AS cs_telefone, cs.url AS cs_url "
+            "FROM empresafinanceiro ef "
+            "LEFT JOIN detalheempresa de ON ef.detalheempresa_codigo = de.codigo "
+            "LEFT JOIN customersuccess cs ON de.customersuccess_codigo = cs.codigo "
+            "WHERE " + " OR ".join(where)
+        )
+        rows = query_external_db(q, params) or []
+        if not rows:
+            return jsonify({'ok': True, 'data': {'persistibles': {}, 'extras': {}, 'derived': {}, 'found': False}})
+        r = rows[0]
+        def to_iso_date(val):
+            try:
+                import datetime
+                if isinstance(val, datetime.date):
+                    return val.isoformat()
+                if isinstance(val, datetime.datetime):
+                    return val.date().isoformat()
+                return None
+            except Exception:
+                return None
+        persistibles = {
+            'id_favorecido': r.get('ef_codigo'),
+            'chave_oamd': r.get('chavezw'),
+            'cnpj': (r.get('cnpj') or ''),
+            'data_cadastro': to_iso_date(r.get('datacadastro')),
+            'status_implantacao': r.get('statusimplantacao'),
+            'tipo_do_cliente': r.get('tipocliente'),
+            'inicio_implantacao': to_iso_date(r.get('inicioimplantacao')),
+            'final_implantacao': to_iso_date(r.get('finalimplantacao')),
+            'inicio_producao': to_iso_date(r.get('inicioproducao')),
+            'nivel_receita_do_cliente': r.get('nivelreceitamensal'),
+            'categorias': r.get('categoria'),
+            'nivel_atendimento': r.get('nivelatendimento'),
+            'condicao_especial': r.get('condicaoespecial'),
+            'analista_cs_responsavel': r.get('cs_nome'),
+            'link_agendamento_cs': r.get('cs_url'),
+            'telefone_cs': r.get('cs_telefone')
+        }
+        derived = {}
+        # Extrair código da infra (ZW_###) e URL de integração
+        infra_code = None
+        # 1) Preferir coluna numerica empresazw
+        if r.get('empresazw') is not None:
+            try:
+                code_int = int(r.get('empresazw'))
+                if code_int > 0:
+                    infra_code = f"ZW_{code_int}"
+            except Exception:
+                pass
+        # 2) Tentar extrair do nomeempresazw (ex.: "ZW_804" ou "zw804")
+        if not infra_code and r.get('nomeempresazw'):
+            namezw = str(r.get('nomeempresazw')).strip()
+            import re
+            m = re.search(r"zw[_\-]?(\d+)", namezw, re.IGNORECASE)
+            if m:
+                infra_code = f"ZW_{m.group(1)}"
+        # 3) Se ainda não tiver, montar informacao_infra com tipo/estado
+        if infra_code:
+            derived['informacao_infra'] = infra_code
+            # host para URL integração é sempre "zw<codigo>"
+            try:
+                digits = ''.join([c for c in infra_code if c.isdigit()])
+                if digits:
+                    host = f"zw{digits}"
+                    derived['tela_apoio_link'] = f"http://{host}.pactosolucoes.com.br/app"
+            except Exception:
+                pass
+        else:
+            infra_parts = []
+            if r.get('tipoempresa'): infra_parts.append(str(r.get('tipoempresa')).strip())
+            if r.get('ativazw') is not None: infra_parts.append('ATIVA' if r.get('ativazw') else 'INATIVA')
+            if r.get('dataexpiracaozw'): infra_parts.append(f"Expira {to_iso_date(r.get('dataexpiracaozw'))}")
+            if r.get('datadesativacao'): infra_parts.append(f"Desativada {to_iso_date(r.get('datadesativacao'))}")
+            if r.get('datasuspensaoempresazw'): infra_parts.append(f"Suspensa {to_iso_date(r.get('datasuspensaoempresazw'))}")
+            if infra_parts:
+                derived['informacao_infra'] = ' | '.join([p for p in infra_parts if p])
+        extras = {
+            'nome_fantasia': r.get('nomefantasia'),
+            'razao_social': r.get('razaosocial'),
+            'endereco': r.get('endereco'),
+            'bairro': r.get('bairro'),
+            'cidade': r.get('cidade'),
+            'estado': r.get('estado'),
+            'nicho': r.get('nicho'),
+            'ultima_atualizacao': r.get('ultimaatualizacao')
+        }
+        return jsonify({'ok': True, 'data': {'persistibles': persistibles, 'derived': derived, 'extras': extras, 'found': True}})
+    except Exception as e:
+        api_logger.error(f"Erro ao consultar OAMD para implantação {impl_id}: {e}")
+        return jsonify({'ok': False, 'error': 'Erro interno na consulta ao OAMD'}), 500
 
 

@@ -282,6 +282,7 @@
                     }
                 });
                 formHasChanges = false;
+                window.__saveFormSnapshot = saveFormInitialValues;
             }
 
             function checkFormChanges() {
@@ -352,7 +353,7 @@
                 if (dataInicioProd && dataInicioProd.value) dataInicioProd.value = toIso(dataInicioProd.value);
                 if (dataFinalImpl && dataFinalImpl.value) dataFinalImpl.value = toIso(dataFinalImpl.value);
 
-                if (window.fpInicioEfetivo && window.fpInicioEfetivo._input) {
+            if (window.fpInicioEfetivo && window.fpInicioEfetivo._input && typeof window.fpInicioEfetivo.setDate === 'function') {
                     const v = window.fpInicioEfetivo._input.value;
                     if (v) {
                         const iso = toIso(v);
@@ -361,7 +362,7 @@
                         }
                     }
                 }
-                if (window.fpInicioProd && window.fpInicioProd._input) {
+            if (window.fpInicioProd && window.fpInicioProd._input && typeof window.fpInicioProd.setDate === 'function') {
                     const v = window.fpInicioProd._input.value;
                     if (v) {
                         const iso = toIso(v);
@@ -370,7 +371,7 @@
                         }
                     }
                 }
-                if (window.fpFinalImpl && window.fpFinalImpl._input) {
+            if (window.fpFinalImpl && window.fpFinalImpl._input && typeof window.fpFinalImpl.setDate === 'function') {
                     const v = window.fpFinalImpl._input.value;
                     if (v) {
                         const iso = toIso(v);
@@ -535,6 +536,79 @@
                     processarDatas();
                     formHasChanges = false;
                     modalForm.submit();
+                }
+            });
+
+            document.addEventListener('click', async function(e) {
+                const consultarBtn = e.target.closest('#btn-consultar-oamd');
+                if (!consultarBtn) return;
+                const implIdEl = modalForm.querySelector('#modal-implantacao_id');
+                const implId = implIdEl && implIdEl.value ? implIdEl.value : '';
+                if (!implId) return;
+                const loader = document.getElementById('btn-consultar-oamd-loader');
+                const icon = document.getElementById('btn-consultar-oamd-icon');
+                if (loader) loader.classList.remove('d-none');
+                if (icon) icon.classList.add('d-none');
+                consultarBtn.disabled = true;
+                try {
+                    const res = await fetch(`/api/v1/oamd/implantacoes/${implId}/consulta`, { headers: { 'Accept': 'application/json' } });
+                    const j = await res.json();
+                    if (!res.ok || !j.ok || !j.data || !j.data.found) throw new Error(j.error || 'Falha na consulta');
+                    const d = j.data;
+                    window.__oamdApplying = true;
+                    const setIfEmpty = (sel, val) => {
+                        const el = modalForm.querySelector(sel);
+                        if (!el) return;
+                        const cur = (el.value || '').trim();
+                        if (!cur && val != null && String(val).trim() !== '') {
+                            el.value = String(val).trim();
+                        }
+                    };
+                    const toBr = (iso) => {
+                        if (!iso) return '';
+                        const m = String(iso).trim().match(/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/);
+                        return m ? `${m[3]}/${m[2]}/${m[1]}` : '';
+                    };
+                    setIfEmpty('#modal-id_favorecido', d.persistibles.id_favorecido);
+                    setIfEmpty('#modal-chave_oamd', d.persistibles.chave_oamd);
+                    setIfEmpty('#modal-cnpj', d.persistibles.cnpj);
+                    setIfEmpty('#modal-status_implantacao', d.persistibles.status_implantacao);
+                    setIfEmpty('#modal-nivel_atendimento', d.persistibles.nivel_atendimento);
+                    const dc = toBr(d.persistibles.data_cadastro);
+                    if (dc) setIfEmpty('#modal-data_cadastro', dc);
+                    const setFp = (fp, isoSel, inputSel) => {
+                        const iso = d.persistibles[isoSel];
+                        if (fp && typeof fp.setDate === 'function' && iso) fp.setDate(iso, true, 'Y-m-d');
+                        else if (iso) {
+                            const el = modalForm.querySelector(inputSel);
+                            if (el) el.value = toBr(iso);
+                        }
+                    };
+                    setFp(window.fpInicioEfetivo, 'inicio_implantacao', '#modal-inicio_efetivo');
+                    setFp(window.fpFinalImpl, 'final_implantacao', '#modal-data_final_implantacao');
+                    setFp(window.fpInicioProd, 'inicio_producao', '#modal-data_inicio_producao');
+                    const forceSet = (sel, val) => {
+                        const el = modalForm.querySelector(sel);
+                        if (!el) return;
+                        el.value = (val == null) ? '' : String(val).trim();
+                    };
+                    forceSet('#modal-informacao_infra', d.derived.informacao_infra);
+                    forceSet('#modal-tela_apoio_link', d.derived.tela_apoio_link);
+                    if (typeof window.__saveFormSnapshot === 'function') window.__saveFormSnapshot();
+                    const ts = document.getElementById('oamd-last-update');
+                    const tspan = document.getElementById('oamd-last-update-time');
+                    if (ts && tspan) {
+                        const now = new Date();
+                        tspan.innerText = `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
+                        ts.style.display = '';
+                    }
+                } catch (err) {
+                    if (window.showToast) showToast(err.message || 'Erro na consulta', 'error');
+                } finally {
+                    window.__oamdApplying = false;
+                    consultarBtn.disabled = false;
+                    if (loader) loader.classList.add('d-none');
+                    if (icon) icon.classList.remove('d-none');
                 }
             });
 
