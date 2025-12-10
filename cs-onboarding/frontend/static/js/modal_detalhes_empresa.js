@@ -253,6 +253,10 @@
 
             toggleModelo(catracaSel, catracaRow, catracaModelo);
             toggleModelo(facialSel, facialRow, facialModelo);
+
+            if (window.__modalDetalhesInitDone) {
+                window.__modalDetalhesInitDone();
+            }
         });
 
         // Cleanup TomSelect somente após o modal ser realmente ocultado
@@ -262,6 +266,7 @@
             let formInitialValues = {};
             let formHasChanges = false;
             let isClosingAfterConfirm = false;
+            let initializing = false;
             const modalForm = modalDetalhesEmpresa.querySelector('form');
 
             if (!modalForm) return;
@@ -386,9 +391,10 @@
 
             modalDetalhesEmpresa.addEventListener('show.bs.modal', function() {
                 isClosingAfterConfirm = false;
-                setTimeout(() => {
-                    saveFormInitialValues();
-                }, 100);
+                initializing = true;
+                const finishInit = () => { saveFormInitialValues(); initializing = false; };
+                window.__modalDetalhesInitDone = finishInit;
+                setTimeout(finishInit, 500);
             });
 
             modalDetalhesEmpresa.addEventListener('hide.bs.modal', async function(e) {
@@ -484,29 +490,29 @@
             });
 
             modalForm.addEventListener('input', function() {
-                checkFormChanges();
+                if (!initializing) checkFormChanges();
             });
 
-        modalForm.addEventListener('change', function() {
-            checkFormChanges();
-            // react to catraca/facial selection changes
-            const modal = document.getElementById('modalDetalhesEmpresa');
-            if (modal) {
-                const catracaSel = modal.querySelector('#modal-catraca');
-                const facialSel = modal.querySelector('#modal-facial');
-                const catracaRow = modal.querySelector('#row-catraca-modelo');
-                const facialRow = modal.querySelector('#row-facial-modelo');
-                const catracaModelo = modal.querySelector('#modal-modelo_catraca');
-                const facialModelo = modal.querySelector('#modal-modelo_facial');
-                const toggleModelo = (sel, row, input) => {
-                    const isSim = (sel && (sel.value || '').trim().toLowerCase() === 'sim');
-                    if (row) row.style.display = isSim ? '' : 'none';
-                    if (input) input.required = !!isSim;
-                };
-                toggleModelo(catracaSel, catracaRow, catracaModelo);
-                toggleModelo(facialSel, facialRow, facialModelo);
-            }
-        });
+            modalForm.addEventListener('change', function() {
+                if (!initializing) checkFormChanges();
+                // react to catraca/facial selection changes
+                const modal = document.getElementById('modalDetalhesEmpresa');
+                if (modal) {
+                    const catracaSel = modal.querySelector('#modal-catraca');
+                    const facialSel = modal.querySelector('#modal-facial');
+                    const catracaRow = modal.querySelector('#row-catraca-modelo');
+                    const facialRow = modal.querySelector('#row-facial-modelo');
+                    const catracaModelo = modal.querySelector('#modal-modelo_catraca');
+                    const facialModelo = modal.querySelector('#modal-modelo_facial');
+                    const toggleModelo = (sel, row, input) => {
+                        const isSim = (sel && (sel.value || '').trim().toLowerCase() === 'sim');
+                        if (row) row.style.display = isSim ? '' : 'none';
+                        if (input) input.required = !!isSim;
+                    };
+                    toggleModelo(catracaSel, catracaRow, catracaModelo);
+                    toggleModelo(facialSel, facialRow, facialModelo);
+                }
+            });
 
             document.addEventListener('click', function(e) {
                 const submitBtn = e.target.closest('#modalDetalhesEmpresa .btn-salvar-detalhes');
