@@ -194,8 +194,11 @@ def consultar_oamd_implantacao(impl_id):
         where = []
         params = {}
         if fav:
-            where.append("ef.codigo = :codigo")
-            params['codigo'] = int(fav)
+            where.append("ef.codigofinanceiro = :codigofinanceiro")
+            try:
+                params['codigofinanceiro'] = int(str(fav))
+            except Exception:
+                params['codigofinanceiro'] = fav
         if key:
             where.append("ef.chavezw = :chavezw")
             params['chavezw'] = key
@@ -214,9 +217,21 @@ def consultar_oamd_implantacao(impl_id):
             "LEFT JOIN customersuccess cs ON de.customersuccess_codigo = cs.codigo "
             "WHERE " + " OR ".join(where)
         )
-        rows = query_external_db(q, params) or []
+        rows = []
+        try:
+            rows = query_external_db(q, params) or []
+        except Exception:
+            rows = []
         if not rows:
-            return jsonify({'ok': True, 'data': {'persistibles': {}, 'extras': {}, 'derived': {}, 'found': False}})
+            # Fallback: derivar a partir dos dados locais quando disponível
+            local = query_db("SELECT tela_apoio_link, chave_oamd FROM implantacoes WHERE id = %s", (impl_id,), one=True) or {}
+            derived = {}
+            link = local.get('tela_apoio_link')
+            if not link:
+                # tentar gerar pela infra derivada de chave/host conhecido (não confiável sem empresazw)
+                # mantemos vazio se não for possível
+                link = ''
+            return jsonify({'ok': True, 'data': {'persistibles': {}, 'extras': {}, 'derived': {'tela_apoio_link': link}, 'found': False}})
         r = rows[0]
         def to_iso_date(val):
             try:

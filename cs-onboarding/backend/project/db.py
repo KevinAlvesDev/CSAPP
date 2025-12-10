@@ -357,7 +357,7 @@ def _criar_tabelas_basicas_sqlite(cursor):
     """)
 
     # Tabela implantacoes
-    cursor.execute("""
+        cursor.execute("""
         CREATE TABLE IF NOT EXISTS implantacoes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             usuario_cs TEXT NOT NULL,
@@ -381,6 +381,7 @@ def _criar_tabelas_basicas_sqlite(cursor):
             nivel_receita TEXT,
             chave_oamd TEXT,
             tela_apoio_link TEXT,
+            informacao_infra TEXT,
             seguimento TEXT,
             tipos_planos TEXT,
             modalidades TEXT,
@@ -407,7 +408,7 @@ def _criar_tabelas_basicas_sqlite(cursor):
             comprovante_cancelamento_url TEXT,
             FOREIGN KEY (usuario_cs) REFERENCES usuarios(usuario)
         )
-    """)
+        """)
 
     # Tabela checklist_items (COMPLETA)
     cursor.execute("""
@@ -659,6 +660,7 @@ def _migrar_colunas_implantacoes(cursor):
             'nivel_receita': 'TEXT',
             'chave_oamd': 'TEXT',
             'tela_apoio_link': 'TEXT',
+            'informacao_infra': 'TEXT',
             'seguimento': 'TEXT',
             'tipos_planos': 'TEXT',
             'modalidades': 'TEXT',
