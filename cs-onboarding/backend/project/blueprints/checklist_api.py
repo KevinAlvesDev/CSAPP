@@ -897,3 +897,54 @@ def get_prazos_history(item_id):
     except Exception as e:
         api_logger.error(f"Erro ao buscar histórico de prazos do item {item_id}: {e}", exc_info=True)
         return jsonify({'ok': False, 'error': 'Erro interno ao buscar histórico de prazos'}), 500
+
+
+@checklist_bp.route('/item/<int:item_id>/tag', methods=['PATCH'])
+@login_required
+@validate_api_origin
+@limiter.limit("200 per minute", key_func=lambda: g.user_email or get_remote_address())
+def update_tag(item_id):
+    from ..db import db_transaction_with_lock
+    from ..common.validation import sanitize_string
+    try:
+        item_id = validate_integer(item_id, min_value=1)
+    except ValidationError as e:
+        return jsonify({'ok': False, 'error': f'ID inválido: {str(e)}'}), 400
+    if not request.is_json:
+        return jsonify({'ok': False, 'error': 'Content-Type deve ser application/json'}), 400
+    data = request.get_json() or {}
+    nova_tag = sanitize_string((data.get('tag') or '').strip(), max_length=100, min_length=0)
+    if nova_tag is None:
+        nova_tag = ''
+    usuario_email = g.user_email if hasattr(g, 'user_email') else None
+    from datetime import datetime
+    with db_transaction_with_lock() as (conn, cursor, db_type):
+        try:
+            q = "SELECT tag, title, implantacao_id FROM checklist_items WHERE id = %s"
+            if db_type == 'sqlite': q = q.replace('%s', '?')
+            cursor.execute(q, (item_id,))
+            row = cursor.fetchone()
+            if not row:
+                return jsonify({'ok': False, 'error': 'Item não encontrado'}), 404
+            old_tag = row['tag'] if hasattr(row, 'keys') else (row[0] if len(row) > 0 else None)
+            uq = "UPDATE checklist_items SET tag = %s, updated_at = %s WHERE id = %s"
+            if db_type == 'sqlite': uq = uq.replace('%s', '?')
+            cursor.execute(uq, (nova_tag, datetime.now(), item_id))
+            try:
+                from ..db import logar_timeline, execute_db
+                impl_id = row['implantacao_id'] if hasattr(row, 'keys') else row[2]
+                title_val = row['title'] if hasattr(row, 'keys') else (row[1] if len(row) > 1 else '')
+                detalhe = f"Tag: {(old_tag or '')} → {(nova_tag or '')} — {title_val}"
+                try:
+                    logar_timeline(impl_id, usuario_email, 'tag_alterada', detalhe)
+                except Exception:
+                    execute_db(
+                        "INSERT INTO timeline_log (implantacao_id, usuario_cs, tipo_evento, detalhes, data_criacao) VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)",
+                        (impl_id, usuario_email, 'tag_alterada', detalhe)
+                    )
+            except Exception:
+                pass
+            return jsonify({'ok': True, 'item_id': item_id, 'tag': nova_tag})
+        except Exception as e:
+            api_logger.error(f"Erro ao atualizar tag do item {item_id}: {e}", exc_info=True)
+            return jsonify({'ok': False, 'error': 'Erro interno ao atualizar tag'}), 500

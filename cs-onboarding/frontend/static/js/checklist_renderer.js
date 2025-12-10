@@ -158,10 +158,14 @@ class ChecklistRenderer {
 
                         <span class="col-tag" style="width:130px; overflow:hidden">
                             ${item.tag ? `
-                                <span class="badge badge-truncate ${item.tag === 'Ação interna' ? 'bg-secondary' : (item.tag === 'Reunião' ? 'bg-info text-dark' : 'bg-light text-dark')}" style="font-size: 0.75rem;">
+                                <span class="badge badge-truncate ${this.getTagClass(item.tag)} js-edit-tag" id="badge-tag-${item.id}" data-item-id="${item.id}" style="font-size: 0.75rem; cursor: pointer;" title="Editar tag">
                                     ${this.escapeHtml(item.tag)}
                                 </span>
-                            ` : ''}
+                            ` : `
+                                <span class="badge badge-truncate bg-light text-dark js-edit-tag" id="badge-tag-${item.id}" data-item-id="${item.id}" style="font-size: 0.75rem; cursor: pointer;" title="Definir tag">
+                                    Definir tag
+                                </span>
+                            `}
                         </span>
 
                         <span class="col-qtd" style="width:60px; overflow:hidden">
@@ -312,6 +316,12 @@ class ChecklistRenderer {
             if (prevBadge) {
                 const itemId = parseInt(prevBadge.dataset.itemId);
                 this.openPrevModal(itemId);
+                return;
+            }
+            const tagBadge = e.target.closest('.js-edit-tag');
+            if (tagBadge) {
+                const itemId = parseInt(tagBadge.dataset.itemId);
+                this.openTagModal(itemId);
                 return;
             }
         });
@@ -596,6 +606,20 @@ class ChecklistRenderer {
             progressBadge.textContent = `${completed}/${total}`;
         }
 
+        const tagBadge = itemElement.querySelector(`#badge-tag-${itemId}`);
+        if (tagBadge) {
+            const val = (this.flatData[itemId]?.tag || '').trim();
+            if (val) {
+                tagBadge.className = `badge badge-truncate ${this.getTagClass(val)} js-edit-tag`;
+                tagBadge.textContent = val;
+                tagBadge.setAttribute('title', 'Editar tag');
+            } else {
+                tagBadge.className = `badge badge-truncate bg-light text-dark js-edit-tag`;
+                tagBadge.textContent = 'Definir tag';
+                tagBadge.setAttribute('title', 'Definir tag');
+            }
+        }
+
         const respBadge = itemElement.querySelector('.js-edit-resp');
         if (respBadge) {
             if (node.responsavel) {
@@ -875,6 +899,95 @@ class ChecklistRenderer {
         const m = new bootstrap.Modal(modal);
         m.show();
         setTimeout(()=>input.focus(),100);
+    }
+
+    getTagClass(tag) {
+        if (tag === 'Ação interna') return 'bg-secondary';
+        if (tag === 'Reunião') return 'bg-info text-dark';
+        if (tag === 'Cliente') return 'bg-warning text-dark';
+        return 'bg-light text-dark';
+    }
+
+    openTagModal(itemId) {
+        const current = (this.flatData[itemId]?.tag || '').trim();
+        let modal = document.getElementById('tag-edit-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'tag-edit-modal';
+            modal.className = 'modal fade';
+            modal.innerHTML = `
+            <div class="modal-dialog">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title">Editar Tag</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                  <div class="mb-2">
+                    <label class="form-label small">Selecione a tag</label>
+                    <select class="form-select" id="tag-edit-select">
+                      <option value="">Definir tag</option>
+                      <option value="Ação interna">Ação interna</option>
+                      <option value="Reunião">Reunião</option>
+                      <option value="Cliente">Cliente</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                  <button type="button" class="btn btn-primary" id="tag-edit-save">Salvar</button>
+                </div>
+              </div>
+            </div>`;
+            document.body.appendChild(modal);
+        }
+        const select = modal.querySelector('#tag-edit-select');
+        select.value = current || '';
+        const saveBtn = modal.querySelector('#tag-edit-save');
+        saveBtn.onclick = async () => {
+            const novo = (select.value || '').trim();
+            const csrf = this.csrfToken;
+            const prev = this.flatData[itemId]?.tag || '';
+            this.flatData[itemId] = this.flatData[itemId] || {};
+            this.flatData[itemId].tag = novo;
+            this.updateItemUI(itemId);
+            const originalText = saveBtn.innerHTML;
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...';
+            try {
+                const res = await fetch(`/api/checklist/item/${itemId}/tag`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                    body: JSON.stringify({ tag: novo })
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    if (this.flatData[itemId]) this.flatData[itemId].tag = data.tag;
+                    this.updateItemUI(itemId);
+                    const m = bootstrap.Modal.getInstance(modal) || new bootstrap.Modal(modal);
+                    m.hide();
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = originalText;
+                    if (typeof this.showToast === 'function') this.showToast('Tag atualizada', 'success');
+                    try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) {}
+                    try { if (typeof window.appendTimelineEvent === 'function') window.appendTimelineEvent('tag_alterada', `Tag: ${(prev||'')} → ${novo} — ${(this.flatData[itemId] && this.flatData[itemId].title) || ''}`); } catch (_) {}
+                } else {
+                    this.flatData[itemId].tag = prev;
+                    this.updateItemUI(itemId);
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = originalText;
+                    if (typeof this.showToast === 'function') this.showToast(data.error || 'Erro ao atualizar tag', 'error'); else alert(data.error || 'Erro ao atualizar tag');
+                }
+            } catch (e) {
+                this.flatData[itemId].tag = prev;
+                this.updateItemUI(itemId);
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = originalText;
+                if (typeof this.showToast === 'function') this.showToast('Erro ao atualizar tag', 'error'); else alert('Erro ao atualizar tag');
+            }
+        };
+        const m = new bootstrap.Modal(modal);
+        m.show();
     }
     
     renderCommentsHistory(itemId, comentarios, emailResponsavel) {
