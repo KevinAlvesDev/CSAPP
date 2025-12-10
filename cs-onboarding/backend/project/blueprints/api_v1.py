@@ -23,6 +23,7 @@ from ..db import query_db
 from ..domain.hierarquia_service import get_hierarquia_implantacao
 from ..security.api_security import validate_api_origin
 from ..database.external_db import query_external_db
+from ..db import db_transaction_with_lock
 
 api_v1_bp = Blueprint('api_v1', __name__, url_prefix='/api/v1')
 
@@ -313,5 +314,50 @@ def consultar_oamd_implantacao(impl_id):
     except Exception as e:
         api_logger.error(f"Erro ao consultar OAMD para implantação {impl_id}: {e}")
         return jsonify({'ok': False, 'error': 'Erro interno na consulta ao OAMD'}), 500
+
+
+@api_v1_bp.route('/oamd/implantacoes/<int:impl_id>/aplicar', methods=['POST'])
+@login_required
+@limiter.limit("60 per minute", key_func=lambda: g.user_email or get_remote_address())
+def aplicar_oamd_implantacao(impl_id):
+    try:
+        impl = query_db("SELECT id FROM implantacoes WHERE id = %s", (impl_id,), one=True)
+        if not impl:
+            return jsonify({'ok': False, 'error': 'Implantação não encontrada'}), 404
+        # Reaproveitar a consulta externa para obter os dados
+        base = consultar_oamd_implantacao(impl_id)
+        try:
+            status_code = base[1]
+            payload = base[0].get_json()
+        except Exception:
+            status_code = getattr(base, 'status_code', 200)
+            payload = base.get_json() if hasattr(base, 'get_json') else None
+        if status_code != 200 or not payload or not payload.get('ok'):
+            return jsonify({'ok': False, 'error': 'Falha ao consultar dados no OAMD'}), 502
+        data = payload.get('data') or {}
+        persist = data.get('persistibles') or {}
+        derived = data.get('derived') or {}
+        id_fav = persist.get('id_favorecido')
+        chave = persist.get('chave_oamd')
+        infra = derived.get('informacao_infra')
+        link = derived.get('tela_apoio_link')
+        updates = {}
+        if id_fav: updates['id_favorecido'] = str(id_fav)
+        if chave: updates['chave_oamd'] = str(chave)
+        if infra: updates['informacao_infra'] = str(infra)
+        if link: updates['tela_apoio_link'] = str(link)
+        if not updates:
+            return jsonify({'ok': True, 'updated': False})
+        set_clause = ", ".join([f"{k} = %s" for k in updates.keys()])
+        values = list(updates.values()) + [impl_id]
+        with db_transaction_with_lock() as (conn, cursor, db_type):
+            q = f"UPDATE implantacoes SET {set_clause} WHERE id = %s"
+            if db_type == 'sqlite':
+                q = q.replace('%s', '?')
+            cursor.execute(q, tuple(values))
+        return jsonify({'ok': True, 'updated': True, 'fields': updates})
+    except Exception as e:
+        api_logger.error(f"Erro ao aplicar dados OAMD na implantação {impl_id}: {e}", exc_info=True)
+        return jsonify({'ok': False, 'error': 'Erro interno ao aplicar dados'}), 500
 
 

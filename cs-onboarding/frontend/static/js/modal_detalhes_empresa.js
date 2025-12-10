@@ -543,7 +543,15 @@
                 const consultarBtn = e.target.closest('#btn-consultar-oamd');
                 if (!consultarBtn) return;
                 const implIdEl = modalForm.querySelector('#modal-implantacao_id');
-                const implId = implIdEl && implIdEl.value ? implIdEl.value : '';
+                let implId = implIdEl && implIdEl.value ? implIdEl.value : '';
+                if (!implId) {
+                    const mc = document.getElementById('main-content');
+                    if (mc && mc.dataset && mc.dataset.implantacaoId) implId = mc.dataset.implantacaoId;
+                }
+                if (!implId) {
+                    const m = (location.pathname || '').match(/\/implantacao\/(\d+)/);
+                    if (m && m[1]) implId = m[1];
+                }
                 if (!implId) return;
                 const loader = document.getElementById('btn-consultar-oamd-loader');
                 const icon = document.getElementById('btn-consultar-oamd-icon');
@@ -593,7 +601,12 @@
                         el.value = (val == null) ? '' : String(val).trim();
                     };
                     forceSet('#modal-informacao_infra', d.derived.informacao_infra);
-                    forceSet('#modal-tela_apoio_link', d.derived.tela_apoio_link);
+                    let link = d.derived.tela_apoio_link;
+                    if ((!link || !link.trim()) && d.derived.informacao_infra) {
+                        const digits = String(d.derived.informacao_infra).match(/(\d+)/);
+                        if (digits && digits[1]) link = `http://zw${digits[1]}.pactosolucoes.com.br/app`;
+                    }
+                    forceSet('#modal-tela_apoio_link', link);
                     if (typeof window.__saveFormSnapshot === 'function') window.__saveFormSnapshot();
                     const ts = document.getElementById('oamd-last-update');
                     const tspan = document.getElementById('oamd-last-update-time');
@@ -602,6 +615,21 @@
                         tspan.innerText = `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
                         ts.style.display = '';
                     }
+                    try {
+                        const csrfEl = modalForm.querySelector('input[name="csrf_token"]');
+                        const csrf = csrfEl ? csrfEl.value : '';
+                        await fetch(`/api/v1/oamd/implantacoes/${implId}/aplicar`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                            body: JSON.stringify({})
+                        }).then(r => r.json()).then(ap => {
+                            if (ap && ap.ok) {
+                                if (window.showToast) showToast('Dados do OAMD aplicados', 'success');
+                            } else {
+                                if (window.showToast) showToast((ap && ap.error) || 'Falha ao aplicar dados', 'error');
+                            }
+                        }).catch(() => {});
+                    } catch (_) {}
                 } catch (err) {
                     if (window.showToast) showToast(err.message || 'Erro na consulta', 'error');
                 } finally {
