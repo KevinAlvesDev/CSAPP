@@ -153,6 +153,8 @@
             safeSet('#modal-nota_fiscal', getData('nota-fiscal', 'Não definido'), modal);
             safeSet('#modal-catraca', getData('catraca', 'Não preenchido'), modal);
             safeSet('#modal-facial', getData('facial', 'Não preenchido'), modal);
+            safeSet('#modal-modelo_catraca', getData('modelo-catraca'), modal);
+            safeSet('#modal-modelo_facial', getData('modelo-facial'), modal);
             safeSet('#modal-valor_atribuido', getData('valor-atribuido', '0.00'), modal);
             safeSet('#modal-resp_estrategico_nome', getData('resp-estrategico-nome'), modal);
             safeSet('#modal-resp_onb_nome', getData('resp-onb-nome'), modal);
@@ -228,6 +230,29 @@
             
             const isDetailsPage = document.getElementById('checklist-area-treinamento');
             safeSet('#modal-redirect_to', isDetailsPage ? 'detalhes' : 'dashboard', modal);
+
+            // Show/Hide modelo fields based on selections
+            const catracaSel = modal.querySelector('#modal-catraca');
+            const facialSel = modal.querySelector('#modal-facial');
+            const catracaRow = modal.querySelector('#row-catraca-modelo');
+            const facialRow = modal.querySelector('#row-facial-modelo');
+            const catracaModelo = modal.querySelector('#modal-modelo_catraca');
+            const facialModelo = modal.querySelector('#modal-modelo_facial');
+
+            const toggleModelo = (sel, row, input) => {
+                const isSim = (sel && (sel.value || '').trim().toLowerCase() === 'sim');
+                if (row) row.style.display = isSim ? '' : 'none';
+                if (input) {
+                    input.required = !!isSim;
+                    if (!isSim) {
+                        // keep value but not required; backend não persiste se não for "Sim"
+                        input.removeAttribute('aria-invalid');
+                    }
+                }
+            };
+
+            toggleModelo(catracaSel, catracaRow, catracaModelo);
+            toggleModelo(facialSel, facialRow, facialModelo);
         });
 
         // Cleanup TomSelect on Hide
@@ -462,9 +487,26 @@
                 checkFormChanges();
             });
 
-            modalForm.addEventListener('change', function() {
-                checkFormChanges();
-            });
+        modalForm.addEventListener('change', function() {
+            checkFormChanges();
+            // react to catraca/facial selection changes
+            const modal = document.getElementById('modalDetalhesEmpresa');
+            if (modal) {
+                const catracaSel = modal.querySelector('#modal-catraca');
+                const facialSel = modal.querySelector('#modal-facial');
+                const catracaRow = modal.querySelector('#row-catraca-modelo');
+                const facialRow = modal.querySelector('#row-facial-modelo');
+                const catracaModelo = modal.querySelector('#modal-modelo_catraca');
+                const facialModelo = modal.querySelector('#modal-modelo_facial');
+                const toggleModelo = (sel, row, input) => {
+                    const isSim = (sel && (sel.value || '').trim().toLowerCase() === 'sim');
+                    if (row) row.style.display = isSim ? '' : 'none';
+                    if (input) input.required = !!isSim;
+                };
+                toggleModelo(catracaSel, catracaRow, catracaModelo);
+                toggleModelo(facialSel, facialRow, facialModelo);
+            }
+        });
 
             document.addEventListener('click', function(e) {
                 const submitBtn = e.target.closest('#modalDetalhesEmpresa .btn-salvar-detalhes');
