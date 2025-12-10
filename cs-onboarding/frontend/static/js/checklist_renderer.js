@@ -184,12 +184,12 @@ class ChecklistRenderer {
                         <span class="col-status" style="width:110px">
                             <span class="badge badge-truncate ${statusClass}" id="status-badge-${item.id}" title="Status: ${statusText}" aria-label="Status: ${statusText}">
                                 <i class="bi ${statusIcon} me-1" aria-hidden="true"></i>${statusText}
-                                ${item.atrasada ? '<i class="bi bi-exclamation-triangle-fill ms-1" aria-hidden="true"></i>' : ''}
+                                ${item.atrasada ? '<i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>' : ''}
                             </span>
                         </span>
                         
                         <span class="col-comment" style="width:28px">
-                        <button class="btn-icon btn-comment-toggle p-1 border-0 bg-transparent ms-2" 
+                        <button class="btn-icon btn-comment-toggle p-1 border-0 bg-transparent" 
                                 data-item-id="${item.id}" 
                                 title="Comentários">
                             <i class="bi bi-chat-left-text ${hasComment ? 'text-primary' : 'text-muted'} position-relative">
@@ -198,7 +198,7 @@ class ChecklistRenderer {
                         </button>
                         </span>
                         <span class="col-delete" style="width:28px">
-                        <button class="btn-icon btn-delete-item p-1 border-0 bg-transparent ms-1" 
+                        <button class="btn-icon btn-delete-item p-1 border-0 bg-transparent" 
                                 data-item-id="${item.id}" 
                                 title="Excluir tarefa">
                             <i class="bi bi-trash text-danger"></i>
@@ -585,7 +585,7 @@ class ChecklistRenderer {
             const statusClass = node.completed ? 'bg-success' : 'bg-warning';
             const statusText = node.completed ? 'Concluído' : 'Pendente';
             const statusIcon = node.completed ? 'bi-check-circle-fill' : 'bi-clock-fill';
-            badge.className = `badge ${statusClass} ms-2`;
+            badge.className = `badge badge-truncate ${statusClass}`;
             badge.innerHTML = `<i class="bi ${statusIcon} me-1"></i>${statusText}`;
         }
         
