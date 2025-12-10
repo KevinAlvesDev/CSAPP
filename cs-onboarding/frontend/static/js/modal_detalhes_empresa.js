@@ -255,15 +255,7 @@
             toggleModelo(facialSel, facialRow, facialModelo);
         });
 
-        // Cleanup TomSelect on Hide
-        modalDetalhesEmpresa.addEventListener('hide.bs.modal', function(event) {
-            for (const selector in tomSelectInstances) {
-                if (tomSelectInstances[selector]) {
-                    tomSelectInstances[selector].destroy();
-                }
-            }
-            tomSelectInstances = {};
-        });
+        // Cleanup TomSelect somente após o modal ser realmente ocultado
 
         // Form Change Detection & Validation Logic
         (function() {
@@ -481,6 +473,14 @@
                 formHasChanges = false;
                 isClosingAfterConfirm = false;
                 formInitialValues = {};
+
+                // destruir instâncias TomSelect somente agora
+                for (const selector in tomSelectInstances) {
+                    if (tomSelectInstances[selector]) {
+                        try { tomSelectInstances[selector].destroy(); } catch(_) {}
+                    }
+                }
+                tomSelectInstances = {};
             });
 
             modalForm.addEventListener('input', function() {
