@@ -36,3 +36,8 @@ Thumbs.db
 # Arquivos temporários
 tmp/
 temp/
+
+# Node/Frontend
+frontend/node_modules/
+**/node_modules/
+frontend/.cache/
