@@ -337,13 +337,7 @@ def consultar_empresa():
                 pass
 
         if not results:
-            link = None
-            try:
-                if id_favorecido:
-                    link = f"https://app.pactosolucoes.com.br/apoio/apoio/{id_favorecido}"
-            except Exception:
-                link = None
-            return jsonify({'ok': True, 'empresa': {}, 'mapped': {'tela_apoio_link': link or ''}, 'found': False})
+            return jsonify({'ok': False, 'error': 'Empresa não encontrada para este ID Favorecido.'}), 404
 
         empresa = results[0]
 
@@ -470,18 +464,12 @@ def consultar_empresa():
         api_logger.error(f"Erro de conexão OAMD ao consultar ID {id_favorecido}: {e}")
         error_msg = str(e).lower()
         if "timeout" in error_msg or "timed out" in error_msg:
-            # Fallback 200 para não quebrar criação; retorna apenas link derivado
-            link = f"https://app.pactosolucoes.com.br/apoio/apoio/{id_favorecido}" if id_favorecido else ''
-            return jsonify({'ok': True, 'empresa': {}, 'mapped': {'tela_apoio_link': link}, 'found': False}), 200
-        # Fallback 200 geral
-        link = f"https://app.pactosolucoes.com.br/apoio/apoio/{id_favorecido}" if id_favorecido else ''
-        return jsonify({'ok': True, 'empresa': {}, 'mapped': {'tela_apoio_link': link}, 'found': False}), 200
+            return jsonify({'ok': False, 'error': 'Tempo limite excedido. Verifique sua conexão com a VPN/Rede.'}), 504
+        return jsonify({'ok': False, 'error': 'Falha na conexão com o banco externo.'}), 502
 
     except Exception as e:
         api_logger.error(f"Erro ao consultar empresa ID {id_favorecido}: {e}", exc_info=True)
-        # Fallback 200 para fluxo de criação
-        link = f"https://app.pactosolucoes.com.br/apoio/apoio/{id_favorecido}" if id_favorecido else ''
-        return jsonify({'ok': True, 'empresa': {}, 'mapped': {'tela_apoio_link': link}, 'found': False}), 200
+        return jsonify({'ok': False, 'error': 'Erro ao consultar banco de dados externo.'}), 500
 
 @api_bp.route('/toggle_tarefa_h/<int:tarefa_h_id>', methods=['POST'])
 @login_required
