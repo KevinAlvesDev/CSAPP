@@ -339,14 +339,45 @@ def consultar_empresa():
 
 
 
-        # Sanitização básica para evitar problemas no JSON
-        for k, v in list(empresa.items()):
+        def _json_safe(v):
             if v is None:
-                empresa[k] = ""
-            elif hasattr(v, 'isoformat'):
-                empresa[k] = v.isoformat()
-            elif isinstance(v, Decimal):
-                empresa[k] = str(v)
+                return ""
+            if hasattr(v, 'isoformat'):
+                try:
+                    return v.isoformat()
+                except Exception:
+                    pass
+            if isinstance(v, Decimal):
+                return str(v)
+            if isinstance(v, (bytes, bytearray, memoryview)):
+                try:
+                    return bytes(v).decode('utf-8', 'replace')
+                except Exception:
+                    return str(v)
+            if isinstance(v, (list, tuple)):
+                try:
+                    return [_json_safe(x) for x in v]
+                except Exception:
+                    return [str(x) for x in v]
+            if isinstance(v, dict):
+                try:
+                    return {str(k): _json_safe(val) for k, val in v.items()}
+                except Exception:
+                    return {str(k): str(val) for k, val in v.items()}
+            try:
+                json.dumps(v)
+                return v
+            except Exception:
+                return str(v)
+
+        tipos = {}
+        for k, v in list(empresa.items()):
+            tipos[k] = type(v).__name__
+            empresa[k] = _json_safe(v)
+        try:
+            api_logger.info(f"consulta_oamd_tipos: {tipos}")
+        except Exception:
+            pass
 
         # Mapeamento de campos OAMD para campos do Frontend
         # Tentativa de normalizar chaves comuns
