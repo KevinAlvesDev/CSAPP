@@ -25,14 +25,29 @@ body {
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    
-    background: linear-gradient(-45deg, var(--bg-start), var(--bg-end), #4a90e2, #007bff);
-    background-size: 400% 400%;
-    animation: gradientAnimation 15s ease infinite;
     color: var(--main-text-color);
 }
 
+.login-page {
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-color: #f5f7fb;
+    position: relative;
+}
+
+.login-page::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.6) 35%, rgba(255,255,255,0.4) 100%);
+    pointer-events: none;
+    z-index: 0;
+}
+
 .login-box {
+    position: relative;
     text-align: center;
     padding: 40px;
     background-color: var(--box-bg);
@@ -40,7 +55,7 @@ body {
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     max-width: 400px;
     width: 90%;
-    z-index: 10;
+    z-index: 1;
     
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);

@@ -186,16 +186,23 @@ def get_implantacao(impl_id):
 @limiter.limit("60 per minute", key_func=lambda: g.user_email or get_remote_address())
 def consultar_oamd_implantacao(impl_id):
     try:
-        impl = query_db("SELECT id, id_favorecido, chave_oamd FROM implantacoes WHERE id = %s", (impl_id,), one=True)
+        impl = query_db("SELECT id, id_favorecido, chave_oamd, cnpj, informacao_infra, tela_apoio_link FROM implantacoes WHERE id = %s", (impl_id,), one=True)
         if not impl:
             return jsonify({'ok': False, 'error': 'Implantação não encontrada'}), 404
-        fav = impl.get('id_favorecido')
-        key = impl.get('chave_oamd')
-        cnpj = None
+        fav = impl.get('id_favorecido') or request.args.get('fav') or request.args.get('id_favorecido')
+        key = impl.get('chave_oamd') or request.args.get('chavezw') or request.args.get('chave_oamd')
+        infra_req = request.args.get('infra') or request.args.get('zw') or request.args.get('infra_code')
+        cnpj_raw = impl.get('cnpj') or request.args.get('cnpj')
+        cnpj = ''.join(filter(str.isdigit, str(cnpj_raw))) if cnpj_raw else None
         where = []
         params = {}
         if fav:
+            where.append("ef.codigo = :codigo")
             where.append("ef.codigofinanceiro = :codigofinanceiro")
+            try:
+                params['codigo'] = int(str(fav))
+            except Exception:
+                params['codigo'] = fav
             try:
                 params['codigofinanceiro'] = int(str(fav))
             except Exception:
@@ -206,32 +213,65 @@ def consultar_oamd_implantacao(impl_id):
         if cnpj:
             where.append("ef.cnpj = :cnpj")
             params['cnpj'] = cnpj
-        if not where:
-            return jsonify({'ok': False, 'error': 'Implantação sem chave de correlação (ID Favorecido/Chave ZW/CNPJ)'}), 400
-        q = (
-            "SELECT ef.codigo AS ef_codigo, ef.cnpj, ef.endereco, ef.estado, ef.nomefantasia, ef.razaosocial, ef.chavezw, ef.datacadastro, ef.ativazw, ef.dataexpiracaozw, ef.datadesativacao, ef.datasuspensaoempresazw, ef.ultimaatualizacao, ef.nomeempresazw, ef.tipoempresa, ef.nicho, ef.bairro, ef.cidade, ef.urlcontatoresponsavelpacto, ef.detalheempresa_codigo, "
+        infra_digits = None
+        try:
+            import re as _re
+            if infra_req:
+                m0 = _re.search(r"(\d+)", str(infra_req))
+                if m0:
+                    infra_digits = m0.group(1)
+            if impl.get('informacao_infra'):
+                m1 = _re.findall(r"(\d+)", str(impl.get('informacao_infra')))
+                if m1:
+                    infra_digits = ''.join(m1)
+            if not infra_digits and impl.get('tela_apoio_link'):
+                m3 = _re.search(r"zw(\d+)", str(impl.get('tela_apoio_link')), _re.IGNORECASE)
+                if m3:
+                    infra_digits = m3.group(1)
+        except Exception:
+            infra_digits = None
+
+        base_select = (
+            "SELECT ef.codigo AS ef_codigo, ef.codigofinanceiro AS ef_codigofinanceiro, ef.cnpj, ef.endereco, ef.estado, ef.nomefantasia, ef.razaosocial, ef.chavezw, ef.datacadastro, ef.ativazw, ef.dataexpiracaozw, ef.datadesativacao, ef.datasuspensaoempresazw, ef.ultimaatualizacao, ef.nomeempresazw, ef.tipoempresa, ef.nicho, ef.bairro, ef.cidade, ef.urlcontatoresponsavelpacto, ef.detalheempresa_codigo, "
             "ef.empresazw, "
             "de.inicioimplantacao, de.finalimplantacao, de.tipocliente, de.inicioproducao, de.condicaoespecial, de.nivelreceitamensal, de.categoria, de.nivelatendimento, de.statusimplantacao, de.customersuccess_codigo, de.implantador_codigo, de.responsavelpacto_codigo, "
             "cs.nome AS cs_nome, cs.telefone AS cs_telefone, cs.url AS cs_url "
             "FROM empresafinanceiro ef "
             "LEFT JOIN detalheempresa de ON ef.detalheempresa_codigo = de.codigo "
             "LEFT JOIN customersuccess cs ON de.customersuccess_codigo = cs.codigo "
-            "WHERE " + " OR ".join(where)
         )
         rows = []
         try:
-            rows = query_external_db(q, params) or []
+            if infra_digits:
+                try:
+                    emp_int = int(str(infra_digits))
+                except Exception:
+                    emp_int = None
+                if emp_int is not None:
+                    q0 = base_select + "WHERE ef.empresazw = :empresazw LIMIT 1"
+                    rows = query_external_db(q0, {'empresazw': emp_int}) or []
+            if not rows and fav:
+                q1 = base_select + "WHERE ef.codigo = :codigo LIMIT 1"
+                rows = query_external_db(q1, {'codigo': params.get('codigo')}) or []
+                if not rows:
+                    q2 = base_select + "WHERE ef.codigofinanceiro = :codigofinanceiro LIMIT 1"
+                    rows = query_external_db(q2, {'codigofinanceiro': params.get('codigofinanceiro')}) or []
+            if not rows and key:
+                q3 = base_select + "WHERE ef.chavezw = :chavezw LIMIT 1"
+                rows = query_external_db(q3, {'chavezw': params.get('chavezw')}) or []
+            if not rows and cnpj:
+                q5 = base_select + "WHERE ef.cnpj = :cnpj LIMIT 1"
+                rows = query_external_db(q5, {'cnpj': params.get('cnpj') or cnpj}) or []
         except Exception:
             rows = []
         if not rows:
-            # Fallback: derivar a partir dos dados locais quando disponível
-            local = query_db("SELECT tela_apoio_link, chave_oamd FROM implantacoes WHERE id = %s", (impl_id,), one=True) or {}
-            derived = {}
-            link = local.get('tela_apoio_link')
-            if not link:
-                # tentar gerar pela infra derivada de chave/host conhecido (não confiável sem empresazw)
-                # mantemos vazio se não for possível
-                link = ''
+            local = query_db("SELECT tela_apoio_link, id_favorecido FROM implantacoes WHERE id = %s", (impl_id,), one=True) or {}
+            fav_id = local.get('id_favorecido') or fav
+            link = None
+            if fav_id:
+                link = f"https://app.pactosolucoes.com.br/apoio/apoio/{fav_id}"
+            else:
+                link = local.get('tela_apoio_link') or ''
             return jsonify({'ok': True, 'data': {'persistibles': {}, 'extras': {}, 'derived': {'tela_apoio_link': link}, 'found': False}})
         r = rows[0]
         def to_iso_date(val):
@@ -244,9 +284,37 @@ def consultar_oamd_implantacao(impl_id):
                 return None
             except Exception:
                 return None
+        # Normalizar chave ZW: evitar confundir com ID Favorecido quando vier como números
+        raw_chavezw = str(r.get('chavezw') or '').strip()
+        nomezw = str(r.get('nomeempresazw') or '').strip()
+        empresazw_val = r.get('empresazw')
+        chave_oamd_norm = ''
+        try:
+            import re as _re
+            digits_pref = None
+            if nomezw:
+                mname = _re.search(r"zw[_\-]?(\d+)", nomezw, _re.IGNORECASE)
+                if mname:
+                    digits_pref = mname.group(1)
+            if not digits_pref and empresazw_val is not None:
+                try:
+                    ci = int(empresazw_val)
+                    if ci > 0:
+                        digits_pref = str(ci)
+                except Exception:
+                    pass
+            if digits_pref:
+                chave_oamd_norm = f"ZW_{digits_pref}"
+            else:
+                if raw_chavezw:
+                    m = _re.search(r"zw[_\-]?(\d+)", raw_chavezw, _re.IGNORECASE)
+                    if m:
+                        chave_oamd_norm = f"ZW_{m.group(1)}"
+        except Exception:
+            pass
         persistibles = {
             'id_favorecido': r.get('ef_codigo'),
-            'chave_oamd': r.get('chavezw'),
+            'chave_oamd': raw_chavezw,
             'cnpj': (r.get('cnpj') or ''),
             'data_cadastro': to_iso_date(r.get('datacadastro')),
             'status_implantacao': r.get('statusimplantacao'),
@@ -265,41 +333,85 @@ def consultar_oamd_implantacao(impl_id):
         derived = {}
         # Extrair código da infra (ZW_###) e URL de integração
         infra_code = None
-        # 1) Preferir coluna numerica empresazw
-        if r.get('empresazw') is not None:
-            try:
-                code_int = int(r.get('empresazw'))
-                if code_int > 0:
-                    infra_code = f"ZW_{code_int}"
-            except Exception:
-                pass
-        # 2) Tentar extrair do nomeempresazw (ex.: "ZW_804" ou "zw804")
-        if not infra_code and r.get('nomeempresazw'):
+        digits_from_name = None
+        try:
+            import re as _re
+            for _k, _v in r.items():
+                if isinstance(_v, str) and _v:
+                    m = _re.search(r"(?i)\bZW[_\-]?(\d{2,})\b", _v)
+                    if m:
+                        infra_code = f"ZW_{m.group(1)}"
+                        break
+        except Exception:
+            pass
+        # 1) Extrair do nome (ex.: "ZW_804" ou "zw804") e priorizar se existir
+        if r.get('nomeempresazw'):
             namezw = str(r.get('nomeempresazw')).strip()
             import re
             m = re.search(r"zw[_\-]?(\d+)", namezw, re.IGNORECASE)
             if m:
-                infra_code = f"ZW_{m.group(1)}"
+                digits_from_name = m.group(1)
+                infra_code = f"ZW_{digits_from_name}"
+        # 2) Se não vier pelo nome, usar empresazw numérico apenas se plausível (>0 e !=1)
+        if not infra_code and r.get('empresazw') is not None:
+            try:
+                code_int = int(r.get('empresazw'))
+                if code_int > 0 and code_int != 1:
+                    infra_code = f"ZW_{code_int}"
+            except Exception:
+                pass
+        # 3) Se ambos existem e divergem, preferir o código contido no nome (mais confiável para host)
+        if infra_code and digits_from_name:
+            # Se o infra_code atual não usar os dígitos do nome, reescreva
+            import re as _re
+            cur_digits = ''.join(_re.findall(r"\d+", infra_code))
+            if cur_digits and cur_digits != digits_from_name:
+                infra_code = f"ZW_{digits_from_name}"
         # 3) Se ainda não tiver, montar informacao_infra com tipo/estado
         if infra_code:
             derived['informacao_infra'] = infra_code
-            # host para URL integração é sempre "zw<codigo>"
             try:
-                digits = ''.join([c for c in infra_code if c.isdigit()])
+                import re as _re
+                digits = ''.join(_re.findall(r"\d+", infra_code))
                 if digits:
                     host = f"zw{digits}"
                     derived['tela_apoio_link'] = f"http://{host}.pactosolucoes.com.br/app"
             except Exception:
                 pass
+        if not derived.get('tela_apoio_link'):
+            try:
+                import re as _re
+                for _k, _v in r.items():
+                    sv = str(_v) if _v is not None else ''
+                    m = _re.search(r"(?i)\bhttps?://[^\s]*zw(\d+)[^\s]*", sv)
+                    if m:
+                        digits = m.group(1)
+                        derived['tela_apoio_link'] = f"http://zw{digits}.pactosolucoes.com.br/app"
+                        break
+            except Exception:
+                pass
         else:
             infra_parts = []
-            if r.get('tipoempresa'): infra_parts.append(str(r.get('tipoempresa')).strip())
-            if r.get('ativazw') is not None: infra_parts.append('ATIVA' if r.get('ativazw') else 'INATIVA')
-            if r.get('dataexpiracaozw'): infra_parts.append(f"Expira {to_iso_date(r.get('dataexpiracaozw'))}")
-            if r.get('datadesativacao'): infra_parts.append(f"Desativada {to_iso_date(r.get('datadesativacao'))}")
-            if r.get('datasuspensaoempresazw'): infra_parts.append(f"Suspensa {to_iso_date(r.get('datasuspensaoempresazw'))}")
+            if r.get('tipoempresa'):
+                infra_parts.append(str(r.get('tipoempresa')).strip())
+            if r.get('ativazw') is not None:
+                infra_parts.append('ATIVA' if r.get('ativazw') else 'INATIVA')
+            if r.get('dataexpiracaozw'):
+                infra_parts.append(f"Expira {to_iso_date(r.get('dataexpiracaozw'))}")
+            if r.get('datadesativacao'):
+                infra_parts.append(f"Desativada {to_iso_date(r.get('datadesativacao'))}")
+            if r.get('datasuspensaoempresazw'):
+                infra_parts.append(f"Suspensa {to_iso_date(r.get('datasuspensaoempresazw'))}")
             if infra_parts:
                 derived['informacao_infra'] = ' | '.join([p for p in infra_parts if p])
+        # Forçar padrão de Tela de Apoio com ID Favorecido
+        try:
+            fav_id = persistibles.get('id_favorecido')
+            if fav_id:
+                derived['tela_apoio_link'] = f"https://app.pactosolucoes.com.br/apoio/apoio/{fav_id}"
+        except Exception:
+            pass
+
         extras = {
             'nome_fantasia': r.get('nomefantasia'),
             'razao_social': r.get('razaosocial'),
@@ -342,10 +454,14 @@ def aplicar_oamd_implantacao(impl_id):
         infra = derived.get('informacao_infra')
         link = derived.get('tela_apoio_link')
         updates = {}
-        if id_fav: updates['id_favorecido'] = str(id_fav)
-        if chave: updates['chave_oamd'] = str(chave)
-        if infra: updates['informacao_infra'] = str(infra)
-        if link: updates['tela_apoio_link'] = str(link)
+        if id_fav:
+            updates['id_favorecido'] = str(id_fav)
+        if chave:
+            updates['chave_oamd'] = str(chave)
+        if infra:
+            updates['informacao_infra'] = str(infra)
+        if link:
+            updates['tela_apoio_link'] = str(link)
         if not updates:
             return jsonify({'ok': True, 'updated': False})
         set_clause = ", ".join([f"{k} = %s" for k in updates.keys()])

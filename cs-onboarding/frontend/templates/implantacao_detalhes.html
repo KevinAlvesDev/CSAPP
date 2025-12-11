@@ -1413,15 +1413,14 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <div class="alert alert-warning">
-                        <i class="bi bi-exclamation-triangle me-2"></i>Só é permitido finalizar se todas as tarefas
-                        obrigatórias estiverem concluídas.
+                        <i class="bi bi-exclamation-triangle me-2"></i>Para finalizar, conclua as tarefas do Plano de Sucesso associado.
                     </div>
                     <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
                     <input type="hidden" name="redirect_to" value="detalhes">
                     <div class="mb-3">
                         <label for="data_finalizacao" class="form-label fw-bold">Data da Finalização *</label>
                         <div class="input-group">
-                            <input type="text" class="form-control flatpickr-date" id="data_finalizacao" name="data_finalizacao"
+                            <input type="text" class="form-control custom-datepicker date-mask no-datepicker" id="data_finalizacao" name="data_finalizacao"
                                 required placeholder="DD/MM/AAAA">
                             <button class="btn btn-outline-secondary" type="button" id="btn_cal_data_finalizacao"><i
                                     class="bi bi-calendar3"></i></button>

@@ -272,14 +272,16 @@ def consultar_empresa():
     Endpoint para consultar dados da empresa no banco externo (OAMD) via ID Favorecido (codigofinanceiro).
     """
     id_favorecido = request.args.get('id_favorecido')
+    infra_req = request.args.get('infra') or request.args.get('zw') or request.args.get('infra_code')
 
-    if not id_favorecido:
-        return jsonify({'ok': False, 'error': 'ID Favorecido não informado.'}), 400
+    if not id_favorecido and not infra_req:
+        return jsonify({'ok': False, 'error': 'Informe ID Favorecido ou Infra (ZW_###).'}), 400
 
-    try:
-        id_favorecido = validate_integer(id_favorecido, min_value=1)
-    except ValidationError:
-        return jsonify({'ok': False, 'error': 'ID Favorecido inválido. Deve ser um número inteiro positivo.'}), 400
+    if id_favorecido:
+        try:
+            id_favorecido = validate_integer(id_favorecido, min_value=1)
+        except ValidationError:
+            return jsonify({'ok': False, 'error': 'ID Favorecido inválido. Deve ser um número inteiro positivo.'}), 400
 
     from ..database.external_db import query_external_db
 
@@ -303,14 +305,42 @@ def consultar_empresa():
                 ef.responsavelemail,
                 ef.responsaveltelefone,
                 ef.datacadastro,
+                ef.chavezw,
+                ef.nomeempresazw,
+                ef.empresazw,
                 de.*
             FROM empresafinanceiro ef
             LEFT JOIN detalheempresa de ON ef.detalheempresa_codigo = de.codigo
-            WHERE ef.codigofinanceiro = :id_favorecido
+            WHERE {where_clause}
             LIMIT 1
         """
+        params = {}
+        where_clause = "ef.codigofinanceiro = :id_favorecido"
+        if infra_req and not id_favorecido:
+            import re as _re
+            digits = ''.join(_re.findall(r"\d+", str(infra_req)))
+            try:
+                emp_int = int(digits)
+            except Exception:
+                emp_int = None
+            if emp_int:
+                where_clause = "ef.empresazw = :empresazw"
+                params['empresazw'] = emp_int
+            else:
+                where_clause = "LOWER(ef.nomeempresazw) LIKE :nomezw"
+                params['nomezw'] = f"%{str(infra_req).lower()}%"
+        else:
+            params['id_favorecido'] = id_favorecido
 
-        results = query_external_db(query, {'id_favorecido': id_favorecido})
+        results = query_external_db(query.format(where_clause=where_clause), params) or []
+        if not results and id_favorecido:
+            try:
+                # Tentar pelo codigo (Id Favorecido) caso seja diferente do codigofinanceiro
+                alt_where = "ef.codigo = :codigo"
+                alt_params = {'codigo': id_favorecido}
+                results = query_external_db(query.format(where_clause=alt_where), alt_params) or []
+            except Exception:
+                pass
 
         if not results:
             return jsonify({'ok': False, 'error': 'Empresa não encontrada para este ID Favorecido.'}), 404
@@ -344,9 +374,49 @@ def consultar_empresa():
         mapped['status_implantacao'] = find_value(['status', 'statusimplantacao', 'situacao'])
         mapped['nivel_atendimento'] = find_value(['nivelatendimento', 'nivel_atendimento', 'classificacao'])
         mapped['nivel_receita'] = find_value(['nivelreceita', 'nivel_receita', 'faixareceita', 'mrr', 'nivelreceitamensal'])
-        mapped['chave_oamd'] = empresa.get('codigofinanceiro')
-        mapped['tela_apoio_link'] = find_value(['urltelaapoio', 'link_tela_apoio', 'tela_apoio', 'url_integracao'])
-        mapped['informacao_infra'] = find_value(['infrainfraestrutura', 'infra_info', 'informacao_infra'])
+        mapped['chave_oamd'] = empresa.get('chavezw')
+        try:
+            infra_code = None
+            digits_pref = None
+            import re as _re
+            for _k, _v in empresa.items():
+                if isinstance(_v, str) and _v:
+                    m = _re.search(r"(?i)\bZW[_\-]?(\d{2,})\b", _v)
+                    if m:
+                        digits_pref = m.group(1)
+                        break
+            nomezw = str(empresa.get('nomeempresazw') or '').strip()
+            if nomezw:
+                mname = _re.search(r"zw[_\-]?(\d+)", nomezw, _re.IGNORECASE)
+                if mname:
+                    digits_pref = mname.group(1)
+            if not digits_pref:
+                # tentar extrair de qualquer URL presente nos campos retornados
+                for k, v in empresa.items():
+                    if k and 'url' in str(k).lower() and v:
+                        murl = _re.search(r"zw(\d+)", str(v), _re.IGNORECASE)
+                        if murl:
+                            digits_pref = murl.group(1)
+                            break
+            if not digits_pref:
+                empzw = empresa.get('empresazw')
+                try:
+                    ci = int(empzw) if empzw is not None else None
+                    if ci is not None and ci > 0 and ci != 1:
+                        digits_pref = str(ci)
+                except Exception:
+                    pass
+            if digits_pref and len(digits_pref) >= 2:
+                infra_code = f"ZW_{digits_pref}"
+                mapped['informacao_infra'] = infra_code
+            else:
+                mapped['informacao_infra'] = mapped.get('informacao_infra') or ''
+            # Forçar padrão de Tela de Apoio com ID Favorecido
+            if id_favorecido:
+                mapped['tela_apoio_link'] = f"https://app.pactosolucoes.com.br/apoio/apoio/{id_favorecido}"
+        except Exception:
+            mapped['informacao_infra'] = mapped.get('informacao_infra') or ''
+            mapped['tela_apoio_link'] = mapped.get('tela_apoio_link') or ''
         mapped['cnpj'] = empresa.get('cnpj')
         mapped['data_cadastro'] = find_value(['datacadastro', 'data_cadastro', 'created_at', 'dt_cadastro'])
 

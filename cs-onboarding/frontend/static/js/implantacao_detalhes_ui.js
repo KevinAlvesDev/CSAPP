@@ -411,6 +411,34 @@
         });
       }
 
+      const modalFinalizar = document.getElementById('modalFinalizar');
+      if (modalFinalizar) {
+        modalFinalizar.addEventListener('shown.bs.modal', function() {
+          const dataFinalizacaoInput = document.getElementById('data_finalizacao');
+          const btnCal = document.getElementById('btn_cal_data_finalizacao');
+          if (dataFinalizacaoInput && !dataFinalizacaoInput._flatpickr) {
+            const parent = dataFinalizacaoInput.closest('.input-group') || modalFinalizar.querySelector('.modal-body');
+            if (parent && parent.style.position !== 'relative') { parent.style.position = 'relative'; }
+            const fp = window.flatpickr(dataFinalizacaoInput, Object.assign({}, baseConfig, {
+              appendTo: modalFinalizar.querySelector('.modal-body'),
+              positionElement: dataFinalizacaoInput,
+              static: true,
+              onChange: function(selectedDates, dateStr, instance) {
+                if (selectedDates.length > 0) {
+                  dataFinalizacaoInput.value = dateStr;
+                }
+              }
+            }));
+            if (btnCal) {
+              btnCal.addEventListener('click', function(e) {
+                e.preventDefault();
+                fp.open();
+              });
+            }
+          }
+        });
+      }
+
       const formParar = document.getElementById('formPararImplantacao');
       if (formParar) {
         formParar.addEventListener('submit', function(e) {
@@ -1275,8 +1303,36 @@
               updateText('modal-status_implantacao', m.status_implantacao);
               updateText('modal-nivel_atendimento', m.nivel_atendimento);
               updateText('modal-chave_oamd', m.chave_oamd);
-              updateText('modal-tela_apoio_link', m.tela_apoio_link);
-              updateText('modal-informacao_infra', m.informacao_infra);
+              (function(){
+                const empresa = data.empresa || {};
+                let infraVal = m.informacao_infra || '';
+                if (!infraVal) {
+                  const nomezw = String(empresa.nomeempresazw || '').trim();
+                  const mName = nomezw.match(/zw[_-]?(\d+)/i);
+                  if (mName && mName[1]) infraVal = `ZW_${mName[1]}`;
+                }
+                if (!infraVal) {
+                  const empzw = empresa.empresazw;
+                  const empzwNum = typeof empzw === 'number' ? empzw : parseInt(String(empzw||'').trim(), 10);
+                  if (!Number.isNaN(empzwNum) && empzwNum > 1) infraVal = `ZW_${empzwNum}`;
+                }
+                updateText('modal-informacao_infra', infraVal);
+
+                let linkVal = m.tela_apoio_link || '';
+                if ((!linkVal || !String(linkVal).trim()) && infraVal) {
+                  const mDigits = String(infraVal).match(/(\d+)/);
+                  if (mDigits && mDigits[1]) linkVal = `http://zw${mDigits[1]}.pactosolucoes.com.br/app`;
+                }
+                if (!linkVal || !String(linkVal).trim()) {
+                  const entries = Object.entries(empresa);
+                  for (let i = 0; i < entries.length; i++) {
+                    const v = String(entries[i][1] || '');
+                    const mUrl = v.match(/https?:\/\/[^\s]*zw(\d+)[^\s]*/i);
+                    if (mUrl && mUrl[1]) { linkVal = `http://zw${mUrl[1]}.pactosolucoes.com.br/app`; break; }
+                  }
+                }
+                updateText('modal-tela_apoio_link', linkVal);
+              })();
 
               if (m.cnpj) {
                 const cnpjInput = document.getElementById('modal-cnpj');

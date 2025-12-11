@@ -278,7 +278,7 @@ def agendar_implantacao():
 
     try:
         impl = query_db(
-            "SELECT usuario_cs, nome_empresa, status FROM implantacoes WHERE id = %s",
+            "SELECT usuario_cs, nome_empresa, status, plano_sucesso_id FROM implantacoes WHERE id = %s",
             (implantacao_id,), one=True
         )
 
@@ -392,43 +392,53 @@ def finalizar_implantacao():
             flash(f"Operação não permitida: status atual é '{impl.get('status')}'. Retome ou inicie antes de finalizar.", 'warning')
             return redirect(dest_url)
 
-        pending_tasks = query_db(
-            """SELECT COUNT(*) as total 
-               FROM checklist_items ci
-               WHERE ci.implantacao_id = %s 
-               AND ci.tipo_item = 'subtarefa' 
-               AND ci.completed = %s""",
-            (implantacao_id, False), one=True
-        )
+        plano_id = impl.get('plano_sucesso_id')
+        if plano_id:
+            subtarefas_pendentes = query_db(
+                """
+                SELECT COUNT(*) as total
+                FROM checklist_items
+                WHERE implantacao_id = %s
+                AND tipo_item = 'subtarefa'
+                AND completed = false
+                """,
+                (implantacao_id,), one=True
+            ) or {}
 
-        total_tasks_row = query_db(
-            """SELECT COUNT(*) as total 
-               FROM checklist_items ci
-               WHERE ci.implantacao_id = %s 
-               AND ci.tipo_item = 'subtarefa'""",
-            (implantacao_id,), one=True
-        )
+            tarefas_pendentes_sem_sub = query_db(
+                """
+                SELECT COUNT(*) as total
+                FROM checklist_items ci
+                WHERE ci.implantacao_id = %s
+                AND ci.tipo_item = 'tarefa'
+                AND ci.completed = false
+                AND NOT EXISTS (
+                    SELECT 1 FROM checklist_items s
+                    WHERE s.parent_id = ci.id
+                    AND s.tipo_item = 'subtarefa'
+                )
+                """,
+                (implantacao_id,), one=True
+            ) or {}
 
-        total_all = total_tasks_row.get('total', 0) if total_tasks_row else 0
-        app_logger.info(f"Finalizar validação tarefas: total={total_all} pendentes={pending_tasks.get('total', 0) if pending_tasks else 0} id={implantacao_id} user={usuario_cs_email}")
-        if total_all == 0:
-            flash('Não é possível finalizar: nenhuma tarefa foi cadastrada.', 'error')
-            return redirect(dest_url)
+            total_pendentes = int(subtarefas_pendentes.get('total', 0) or 0) + int(tarefas_pendentes_sem_sub.get('total', 0) or 0)
+            app_logger.info(f"Finalizar validação Plano de Sucesso: pendentes={total_pendentes} id={implantacao_id} user={usuario_cs_email}")
 
-        if pending_tasks and pending_tasks.get('total', 0) > 0:
-            total_pendentes = pending_tasks.get('total')
-            nomes = query_db(
-                """SELECT ci.title as tarefa_filho 
-                   FROM checklist_items ci
-                   WHERE ci.implantacao_id = %s 
-                   AND ci.tipo_item = 'subtarefa' 
-                   AND ci.completed = %s 
-                   ORDER BY ci.title LIMIT 10""",
-                (implantacao_id, False)
-            ) or []
-            nomes_txt = ", ".join([n.get('tarefa_filho') for n in nomes])
-            flash(f'Não é possível finalizar: {total_pendentes} tarefa(s) pendente(s). Pendentes: {nomes_txt}...', 'error')
-            return redirect(dest_url)
+            if total_pendentes > 0:
+                nomes = query_db(
+                    """
+                    SELECT title as nome
+                    FROM checklist_items
+                    WHERE implantacao_id = %s
+                      AND tipo_item = 'subtarefa'
+                      AND completed = false
+                    ORDER BY title LIMIT 10
+                    """,
+                    (implantacao_id,)
+                ) or []
+                nomes_txt = ", ".join([n.get('nome') for n in nomes])
+                flash(f'Não é possível finalizar: {total_pendentes} tarefa(s) do Plano de Sucesso pendente(s). Pendentes: {nomes_txt}...', 'error')
+                return redirect(dest_url)
 
         data_finalizacao = request.form.get('data_finalizacao')
         if not data_finalizacao:
@@ -444,7 +454,7 @@ def finalizar_implantacao():
             "UPDATE implantacoes SET status = 'finalizada', data_finalizacao = %s WHERE id = %s",
             (data_final_iso, implantacao_id)
         )
-        logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Implantação "{impl.get("nome_empresa", "N/A")}" finalizada manually.')
+        logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Implantação "{impl.get("nome_empresa", "N/A")}" finalizada.')
         flash('Implantação finalizada com sucesso!', 'success')
         try:
             clear_user_cache(usuario_cs_email)
@@ -495,8 +505,21 @@ def parar_implantacao():
             "SELECT usuario_cs, nome_empresa, status FROM implantacoes WHERE id = %s",
             (implantacao_id,), one=True
         )
-        if not impl or impl.get('usuario_cs') != usuario_cs_email or impl.get('status') != 'andamento':
-            raise Exception('Operação negada. Implantação não está "em andamento".')
+        user_perfil_acesso = g.perfil.get('perfil_acesso') if getattr(g, 'perfil', None) else None
+        is_owner = impl and impl.get('usuario_cs') == usuario_cs_email
+        is_manager = user_perfil_acesso in PERFIS_COM_GESTAO
+
+        if not impl:
+            flash('Implantação não encontrada.', 'error')
+            return redirect(dest_url)
+
+        if not (is_owner or is_manager):
+            flash('Permissão negada. Esta implantação não pertence a você.', 'error')
+            return redirect(dest_url)
+
+        if impl.get('status') != 'andamento':
+            flash('Apenas implantações "Em Andamento" podem ser marcadas como "Parada".', 'warning')
+            return redirect(dest_url)
 
         execute_db(
             "UPDATE implantacoes SET status = 'parada', data_finalizacao = %s, motivo_parada = %s WHERE id = %s",
@@ -534,9 +557,21 @@ def retomar_implantacao():
             "SELECT usuario_cs, nome_empresa, status FROM implantacoes WHERE id = %s",
             (implantacao_id,), one=True
         )
-        if not impl or impl.get('usuario_cs') != usuario_cs_email or impl.get('status') != 'parada':
+        user_perfil_acesso = g.perfil.get('perfil_acesso') if getattr(g, 'perfil', None) else None
+        is_owner = impl and impl.get('usuario_cs') == usuario_cs_email
+        is_manager = user_perfil_acesso in PERFIS_COM_GESTAO
+
+        if not impl:
+            flash('Implantação não encontrada.', 'error')
+            return redirect(request.referrer or dest_url)
+
+        if not (is_owner or is_manager):
+            flash('Permissão negada. Esta implantação não pertence a você.', 'error')
+            return redirect(request.referrer or dest_url)
+
+        if impl.get('status') != 'parada':
             flash('Apenas implantações "Paradas" podem ser retomadas.', 'warning')
-            return redirect(request.referrer or url_for('main.dashboard'))
+            return redirect(request.referrer or dest_url)
 
         execute_db(
             "UPDATE implantacoes SET status = 'andamento', data_finalizacao = NULL, motivo_parada = '' WHERE id = %s",
@@ -744,6 +779,7 @@ def atualizar_detalhes_empresa():
             'data_final_implantacao': data_final_implantacao,
             'data_inicio_efetivo': data_inicio_efetivo_iso,
             'id_favorecido': get_form_value('id_favorecido'),
+            'cnpj': get_form_value('cnpj'),
             'nivel_receita': nivel_receita_val,
             'chave_oamd': get_form_value('chave_oamd'),
             'tela_apoio_link': get_form_value('tela_apoio_link'),
@@ -772,6 +808,17 @@ def atualizar_detalhes_empresa():
             'resp_estrategico_obs': get_form_value('resp_estrategico_obs'),
             'contatos': get_form_value('contatos'),
         }
+        try:
+            co = campos.get('chave_oamd')
+            if co:
+                import re as _re
+                if _re.fullmatch(r"\d+", co):
+                    campos['chave_oamd'] = None
+                else:
+                    if _re.fullmatch(r"(?i)zw[_-]?\d+", co):
+                        campos['chave_oamd'] = None
+        except Exception:
+            pass
         set_clauses = [f"{k} = %s" for k in campos.keys()]
         query = f"UPDATE implantacoes SET {', '.join(set_clauses)} WHERE id = %s"
         args = list(campos.values())

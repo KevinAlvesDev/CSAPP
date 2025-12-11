@@ -207,7 +207,8 @@ def login():
         return redirect(url_for('main.dashboard'))
 
     # Renderiza a página de login (que agora só tem o botão do Google)
-    return render_template('login.html', auth0_enabled=False, use_custom_auth=True)
+    login_bg_file = current_app.config.get('LOGIN_BG_FILE', 'imagens/teladelogin.jpg')
+    return render_template('login.html', auth0_enabled=False, use_custom_auth=True, login_bg_file=login_bg_file)
 
 
 

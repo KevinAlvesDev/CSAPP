@@ -320,3 +320,11 @@ table > :not(caption) > * > * {
 .btn-edit-empresa:focus {
   color: #0b5ed7;
 }
+.modal .input-group { position: relative; }
+.modal .flatpickr-calendar {
+  position: absolute !important;
+  left: 0 !important;
+  top: 100% !important;
+  margin-top: 4px;
+  z-index: 1060 !important; /* acima do conteúdo do modal */
+}
