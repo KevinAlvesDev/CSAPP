@@ -430,7 +430,7 @@ def consultar_empresa():
         api_logger.error(f"Erro de conexão OAMD ao consultar ID {id_favorecido}: {e}")
         error_msg = str(e).lower()
         if "timeout" in error_msg or "timed out" in error_msg:
-             return jsonify({'ok': False, 'error': 'Tempo limite excedido. Verifique sua conexão com a VPN/Rede.'}), 504
+            return jsonify({'ok': False, 'error': 'Tempo limite excedido. Verifique sua conexão com a VPN/Rede.'}), 504
         return jsonify({'ok': False, 'error': 'Falha na conexão com o banco externo.'}), 502
 
     except Exception as e:

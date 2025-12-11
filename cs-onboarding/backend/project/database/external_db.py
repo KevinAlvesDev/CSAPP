@@ -29,7 +29,24 @@ def get_external_engine():
 
         try:
             # Cria a engine (pool de conexões é gerenciado pelo SQLAlchemy)
-            engine = create_engine(external_db_url, pool_pre_ping=True, pool_recycle=3600)
+            connect_args = {}
+            try:
+                if external_db_url.lower().startswith('postgresql'):
+                    connect_args = {
+                        'connect_timeout': 8,
+                        'options': '-c statement_timeout=8000'
+                    }
+            except Exception:
+                connect_args = {}
+
+            engine = create_engine(
+                external_db_url,
+                pool_pre_ping=True,
+                pool_recycle=3600,
+                pool_size=5,
+                max_overflow=10,
+                connect_args=connect_args
+            )
             current_app.external_db_engine = engine
             logger.info("Engine do banco externo criada com sucesso.")
         except Exception as e:
