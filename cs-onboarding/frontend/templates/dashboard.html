@@ -929,16 +929,17 @@
                     const data = await response.json();
 
                     if (data.ok) {
-                        feedbackEl.textContent = 'Empresa encontrada: ' + (data.empresa.nomefantasia || data.empresa.razaosocial);
-                        feedbackEl.className = 'form-text text-success';
-                        
-                        // Auto-fill name if available and empty
-                        if (!nomeEmpresaInput.value) {
-                            if (data.empresa.nomefantasia) {
-                                nomeEmpresaInput.value = data.empresa.nomefantasia;
-                            } else if (data.empresa.razaosocial) {
-                                nomeEmpresaInput.value = data.empresa.razaosocial;
+                        const nome = (data.empresa && (data.empresa.nomefantasia || data.empresa.razaosocial)) || '';
+                        if (nome) {
+                            feedbackEl.textContent = 'Empresa encontrada: ' + nome;
+                            feedbackEl.className = 'form-text text-success';
+                            // Auto-fill name if available and empty
+                            if (!nomeEmpresaInput.value) {
+                                nomeEmpresaInput.value = nome;
                             }
+                        } else {
+                            feedbackEl.textContent = 'Consulta parcial: Tela de Apoio gerada pelo ID Favorecido.';
+                            feedbackEl.className = 'form-text text-warning';
                         }
                     } else {
                         feedbackEl.textContent = data.error || 'Erro ao consultar empresa.';
