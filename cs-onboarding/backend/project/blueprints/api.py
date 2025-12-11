@@ -428,14 +428,64 @@ def consultar_empresa():
 
     except OperationalError as e:
         api_logger.error(f"Erro de conexão OAMD ao consultar ID {id_favorecido}: {e}")
-        error_msg = str(e).lower()
-        if "timeout" in error_msg or "timed out" in error_msg:
-             return jsonify({'ok': False, 'error': 'Tempo limite excedido. Verifique sua conexão com a VPN/Rede.'}), 504
-        return jsonify({'ok': False, 'error': 'Falha na conexão com o banco externo.'}), 502
+        try:
+            local = query_db(
+                "SELECT nome_empresa FROM implantacoes WHERE id_favorecido = %s ORDER BY id DESC LIMIT 1",
+                (str(id_favorecido),), one=True
+            ) or {}
+            nome_local = (local.get('nome_empresa') or '').strip()
+            fallback_link = f"https://app.pactosolucoes.com.br/apoio/apoio/{id_favorecido}" if id_favorecido else ''
+            empresa_out = {
+                'codigofinanceiro': id_favorecido,
+                'nomefantasia': nome_local or f"ID {id_favorecido}",
+                'razaosocial': nome_local or f"ID {id_favorecido}"
+            }
+            mapped_out = {
+                'tela_apoio_link': fallback_link,
+                'informacao_infra': '',
+                'chave_oamd': '',
+                'cnpj': '',
+                'data_cadastro': None,
+                'data_inicio_producao': None,
+                'data_inicio_efetivo': None,
+                'data_final_implantacao': None,
+                'status_implantacao': ''
+            }
+            return jsonify({'ok': True, 'empresa': empresa_out, 'mapped': mapped_out})
+        except Exception:
+            error_msg = str(e).lower()
+            if "timeout" in error_msg or "timed out" in error_msg:
+                 return jsonify({'ok': False, 'error': 'Tempo limite excedido. Verifique sua conexão com a VPN/Rede.'}), 504
+            return jsonify({'ok': False, 'error': 'Falha na conexão com o banco externo.'}), 502
 
     except Exception as e:
         api_logger.error(f"Erro ao consultar empresa ID {id_favorecido}: {e}", exc_info=True)
-        return jsonify({'ok': False, 'error': 'Erro ao consultar banco de dados externo.'}), 500
+        try:
+            local = query_db(
+                "SELECT nome_empresa FROM implantacoes WHERE id_favorecido = %s ORDER BY id DESC LIMIT 1",
+                (str(id_favorecido),), one=True
+            ) or {}
+            nome_local = (local.get('nome_empresa') or '').strip()
+            fallback_link = f"https://app.pactosolucoes.com.br/apoio/apoio/{id_favorecido}" if id_favorecido else ''
+            empresa_out = {
+                'codigofinanceiro': id_favorecido,
+                'nomefantasia': nome_local or f"ID {id_favorecido}",
+                'razaosocial': nome_local or f"ID {id_favorecido}"
+            }
+            mapped_out = {
+                'tela_apoio_link': fallback_link,
+                'informacao_infra': '',
+                'chave_oamd': '',
+                'cnpj': '',
+                'data_cadastro': None,
+                'data_inicio_producao': None,
+                'data_inicio_efetivo': None,
+                'data_final_implantacao': None,
+                'status_implantacao': ''
+            }
+            return jsonify({'ok': True, 'empresa': empresa_out, 'mapped': mapped_out})
+        except Exception:
+            return jsonify({'ok': False, 'error': 'Erro ao consultar banco de dados externo.'}), 500
 
 @api_bp.route('/toggle_tarefa_h/<int:tarefa_h_id>', methods=['POST'])
 @login_required
