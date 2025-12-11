@@ -59,8 +59,10 @@ def query_external_db(query_str, params=None):
 
     try:
         with engine.connect() as conn:
-            # Forçar modo somente leitura para esta sessão
-            conn.execute(text("SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY"))
+            try:
+                conn.execute(text("SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY"))
+            except Exception:
+                logger.debug("Read-only session not supported by this dialect; proceeding without it.")
 
             result = conn.execute(text(query_str), params)
 
