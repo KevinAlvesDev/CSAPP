@@ -287,9 +287,7 @@ def consultar_empresa():
     from ..database.external_db import query_external_db
 
     try:
-        # Consulta robusta com JOIN para trazer o máximo de informação possível
-        # Prioriza o codigofinanceiro na tabela empresafinanceiro
-        # Alterado para trazer TODAS as colunas de detalheempresa (de.*) para inspeção
+        # Consulta simplificada: somente campos essenciais de empresafinanceiro
         query = """
             SELECT 
                 ef.codigofinanceiro,
@@ -298,20 +296,11 @@ def consultar_empresa():
                 ef.cnpj,
                 ef.email,
                 ef.telefone,
-                ef.cidade,
-                ef.estado,
-                ef.bairro,
-                ef.endereco,
-                ef.nomedono,
-                ef.responsavelemail,
-                ef.responsaveltelefone,
                 ef.datacadastro,
                 ef.chavezw,
                 ef.nomeempresazw,
-                ef.empresazw,
-                de.*
+                ef.empresazw
             FROM empresafinanceiro ef
-            LEFT JOIN detalheempresa de ON ef.detalheempresa_codigo = de.codigo
             WHERE {where_clause}
             LIMIT 1
         """
