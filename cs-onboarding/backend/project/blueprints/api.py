@@ -272,17 +272,21 @@ def consultar_empresa():
     """
     Endpoint para consultar dados da empresa no banco externo (OAMD) via ID Favorecido (codigofinanceiro).
     """
-    id_favorecido = request.args.get('id_favorecido')
+    raw_id = request.args.get('id_favorecido')
     infra_req = request.args.get('infra') or request.args.get('zw') or request.args.get('infra_code')
+
+    id_favorecido = None
+    if raw_id:
+        try:
+            import re as _re
+            digits_only = ''.join(_re.findall(r"\d+", str(raw_id)))
+            if digits_only:
+                id_favorecido = validate_integer(digits_only, min_value=1)
+        except Exception:
+            id_favorecido = None
 
     if not id_favorecido and not infra_req:
         return jsonify({'ok': False, 'error': 'Informe ID Favorecido ou Infra (ZW_###).'}), 400
-
-    if id_favorecido:
-        try:
-            id_favorecido = validate_integer(id_favorecido, min_value=1)
-        except ValidationError:
-            return jsonify({'ok': False, 'error': 'ID Favorecido inválido. Deve ser um número inteiro positivo.'}), 400
 
     from ..database.external_db import query_external_db
 
@@ -333,7 +337,13 @@ def consultar_empresa():
                 pass
 
         if not results:
-            return jsonify({'ok': False, 'error': 'Empresa não encontrada para este ID Favorecido.'}), 404
+            link = None
+            try:
+                if id_favorecido:
+                    link = f"https://app.pactosolucoes.com.br/apoio/apoio/{id_favorecido}"
+            except Exception:
+                link = None
+            return jsonify({'ok': True, 'empresa': {}, 'mapped': {'tela_apoio_link': link or ''}, 'found': False})
 
         empresa = results[0]
 
@@ -443,22 +453,35 @@ def consultar_empresa():
         mapped['cnpj'] = empresa.get('cnpj')
         mapped['data_cadastro'] = find_value(['datacadastro', 'data_cadastro', 'created_at', 'dt_cadastro'])
 
-        return jsonify({
-            'ok': True,
-            'empresa': empresa,
-            'mapped': mapped
-        })
+        try:
+            test_payload = {'ok': True, 'empresa': empresa, 'mapped': mapped}
+            json.dumps(test_payload)
+            return jsonify(test_payload)
+        except Exception as se:
+            try:
+                api_logger.error(f"json_serialize_error consultar_empresa: {se}")
+            except Exception:
+                pass
+            empresa_safe = {str(k): str(v) if not isinstance(v, (dict, list)) else json.dumps(v, ensure_ascii=False) for k, v in empresa.items()}
+            mapped_safe = {str(k): str(v) if not isinstance(v, (dict, list)) else json.dumps(v, ensure_ascii=False) for k, v in mapped.items()}
+            return jsonify({'ok': True, 'empresa': empresa_safe, 'mapped': mapped_safe})
 
     except OperationalError as e:
         api_logger.error(f"Erro de conexão OAMD ao consultar ID {id_favorecido}: {e}")
         error_msg = str(e).lower()
         if "timeout" in error_msg or "timed out" in error_msg:
-            return jsonify({'ok': False, 'error': 'Tempo limite excedido. Verifique sua conexão com a VPN/Rede.'}), 504
-        return jsonify({'ok': False, 'error': 'Falha na conexão com o banco externo.'}), 502
+            # Fallback 200 para não quebrar criação; retorna apenas link derivado
+            link = f"https://app.pactosolucoes.com.br/apoio/apoio/{id_favorecido}" if id_favorecido else ''
+            return jsonify({'ok': True, 'empresa': {}, 'mapped': {'tela_apoio_link': link}, 'found': False}), 200
+        # Fallback 200 geral
+        link = f"https://app.pactosolucoes.com.br/apoio/apoio/{id_favorecido}" if id_favorecido else ''
+        return jsonify({'ok': True, 'empresa': {}, 'mapped': {'tela_apoio_link': link}, 'found': False}), 200
 
     except Exception as e:
         api_logger.error(f"Erro ao consultar empresa ID {id_favorecido}: {e}", exc_info=True)
-        return jsonify({'ok': False, 'error': 'Erro ao consultar banco de dados externo.'}), 500
+        # Fallback 200 para fluxo de criação
+        link = f"https://app.pactosolucoes.com.br/apoio/apoio/{id_favorecido}" if id_favorecido else ''
+        return jsonify({'ok': True, 'empresa': {}, 'mapped': {'tela_apoio_link': link}, 'found': False}), 200
 
 @api_bp.route('/toggle_tarefa_h/<int:tarefa_h_id>', methods=['POST'])
 @login_required

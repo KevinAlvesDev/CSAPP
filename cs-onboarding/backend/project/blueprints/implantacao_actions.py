@@ -36,14 +36,16 @@ def criar_implantacao():
         usuario_atribuido = sanitize_string(request.form.get('usuario_atribuido_cs', ''), max_length=100)
         usuario_atribuido = usuario_atribuido or usuario_criador
 
-        id_favorecido = request.form.get('id_favorecido')
-        if not id_favorecido:
-             raise ValidationError('ID Favorecido é obrigatório.')
-
-        try:
-            id_favorecido = validate_integer(id_favorecido, min_value=1)
-        except ValidationError:
-             raise ValidationError('ID Favorecido inválido. Deve ser um número inteiro positivo.')
+        id_favorecido_raw = request.form.get('id_favorecido')
+        id_favorecido = None
+        if id_favorecido_raw:
+            try:
+                import re as _re
+                digits_only = ''.join(_re.findall(r"\d+", str(id_favorecido_raw)))
+                if digits_only:
+                    id_favorecido = validate_integer(digits_only, min_value=1)
+            except Exception:
+                id_favorecido = None
 
     except ValidationError as e:
         flash(f'Erro nos dados: {str(e)}', 'error')
