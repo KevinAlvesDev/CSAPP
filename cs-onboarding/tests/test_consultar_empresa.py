@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import patch
+from decimal import Decimal
 import sys
 import os
 from flask import g
@@ -39,7 +40,8 @@ class TestConsultarEmpresa(unittest.TestCase):
             'email': 'teste@teste.com',
             'telefone': '123456789',
             'inicioimplantacao': None,
-            'nivelreceitamensal': 'Baixo'
+            'nivelreceitamensal': 'Baixo',
+            'mrr': Decimal('123.45')
         }]
 
         response = self.client.get('/api/consultar_empresa?id_favorecido=123')
@@ -49,6 +51,7 @@ class TestConsultarEmpresa(unittest.TestCase):
         self.assertTrue(data['ok'])
         self.assertEqual(data['empresa']['nomefantasia'], 'Empresa Teste')
         self.assertEqual(data['empresa']['email'], 'teste@teste.com')
+        self.assertEqual(data['empresa']['mrr'], '123.45')
 
     def test_consultar_empresa_missing_id(self):
         response = self.client.get('/api/consultar_empresa')

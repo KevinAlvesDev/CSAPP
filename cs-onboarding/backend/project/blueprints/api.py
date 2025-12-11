@@ -2,6 +2,7 @@
 import json
 
 from flask import Blueprint, g, jsonify, make_response, render_template, request
+from decimal import Decimal
 
 from ..blueprints.auth import login_required
 
@@ -350,11 +351,13 @@ def consultar_empresa():
 
 
         # Sanitização básica para evitar problemas no JSON
-        for k, v in empresa.items():
+        for k, v in list(empresa.items()):
             if v is None:
                 empresa[k] = ""
-            elif hasattr(v, 'isoformat'): # Datas
+            elif hasattr(v, 'isoformat'):
                 empresa[k] = v.isoformat()
+            elif isinstance(v, Decimal):
+                empresa[k] = str(v)
 
         # Mapeamento de campos OAMD para campos do Frontend
         # Tentativa de normalizar chaves comuns
