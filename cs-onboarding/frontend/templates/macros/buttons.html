@@ -1,0 +1,77 @@
+{#
+Macros para Botões reutilizáveis
+Uso: {% from 'macros/buttons.html' import btn_primary, btn_secondary %}
+#}
+
+{% macro btn_primary(text, onclick='', type='button', icon='', disabled=false, class='', id='') %}
+<button type="{{ type }}" class="btn btn-primary {{ class }}" {% if id %}id="{{ id }}" {% endif %} {% if onclick
+    %}onclick="{{ onclick }}" {% endif %} {% if disabled %}disabled{% endif %}>
+    {% if icon %}
+    <i class="{{ icon }}"></i>
+    {% endif %}
+    {{ text }}
+</button>
+{% endmacro %}
+
+{% macro btn_secondary(text, onclick='', type='button', icon='', disabled=false, class='') %}
+<button type="{{ type }}" class="btn btn-secondary {{ class }}" {% if onclick %}onclick="{{ onclick }}" {% endif %} {%
+    if disabled %}disabled{% endif %}>
+    {% if icon %}
+    <i class="{{ icon }}"></i>
+    {% endif %}
+    {{ text }}
+</button>
+{% endmacro %}
+
+{% macro btn_success(text, onclick='', type='button', icon='', disabled=false) %}
+<button type="{{ type }}" class="btn btn-success" {% if onclick %}onclick="{{ onclick }}" {% endif %} {% if disabled
+    %}disabled{% endif %}>
+    {% if icon %}
+    <i class="{{ icon }}"></i>
+    {% endif %}
+    {{ text }}
+</button>
+{% endmacro %}
+
+{% macro btn_danger(text, onclick='', type='button', icon='', disabled=false, confirm='') %}
+<button type="{{ type }}" class="btn btn-danger" {% if onclick
+    %}onclick="{% if confirm %}if(confirm('{{ confirm }}')) { {% endif %}{{ onclick }}{% if confirm %} }{% endif %}" {%
+    endif %} {% if disabled %}disabled{% endif %}>
+    {% if icon %}
+    <i class="{{ icon }}"></i>
+    {% endif %}
+    {{ text }}
+</button>
+{% endmacro %}
+
+{% macro btn_link(text, href, icon='', target='', class='') %}
+<a href="{{ href }}" class="btn btn-primary {{ class }}" {% if target %}target="{{ target }}" {% endif %}>
+    {% if icon %}
+    <i class="{{ icon }}"></i>
+    {% endif %}
+    {{ text }}
+</a>
+{% endmacro %}
+
+{% macro btn_icon(icon, onclick='', title='', variant='primary', size='', disabled=false) %}
+<button type="button" class="btn btn-{{ variant }} btn-icon {{ 'btn-' + size if size }}" {% if onclick
+    %}onclick="{{ onclick }}" {% endif %} {% if title %}title="{{ title }}" data-bs-toggle="tooltip" {% endif %} {% if
+    disabled %}disabled{% endif %}>
+    <i class="{{ icon }}"></i>
+</button>
+{% endmacro %}
+
+{% macro btn_group(buttons) %}
+<div class="btn-group" role="group">
+    {% for btn in buttons %}
+    {{ btn }}
+    {% endfor %}
+</div>
+{% endmacro %}
+
+{% macro btn_loading(text='Carregando...', variant='primary') %}
+<button type="button" class="btn btn-{{ variant }}" disabled>
+    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+    {{ text }}
+</button>
+{% endmacro %}

@@ -1,0 +1,102 @@
+{#
+Macros para Cards reutilizáveis
+Uso: {% from 'macros/cards.html' import card_stats, card_base %}
+#}
+
+{% macro card_base(title='', variant='', class='', id='') %}
+<div class="card {{ variant }} {{ class }}" {% if id %}id="{{ id }}" {% endif %}>
+    {% if title %}
+    <div class="card-header">
+        <h3 class="card-title">{{ title }}</h3>
+        {% if caller is defined and caller.name == 'header_actions' %}
+        <div class="card-actions">
+            {{ caller() }}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="card-body">
+        {{ caller() if caller else '' }}
+    </div>
+</div>
+{% endmacro %}
+
+{% macro card_stats(label, value, variant='primary', icon='', trend=none, monetary_value=none) %}
+<div class="card card-stats card-{{ variant }} p-3 text-center">
+    <h6 class="text-secondary">{{ label }}</h6>
+    <h4 class="mb-0 text-{{ variant }}">{{ value }}</h4>
+    {% if monetary_value is not none %}
+    <div class="text-muted small">R$ {{ "%.2f"|format(monetary_value|float) if monetary_value else '0.00' }}</div>
+    {% endif %}
+    {% if trend is not none %}
+    <div class="stats-trend {{ 'trend-up' if trend > 0 else 'trend-down' if trend < 0 else 'trend-neutral' }}">
+        <i class="bi bi-{{ 'arrow-up' if trend > 0 else 'arrow-down' if trend < 0 else 'dash' }}"></i>
+        {{ trend|abs }}%
+    </div>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{% macro card_implantacao(impl) %}
+<div class="card card-implantacao" data-impl-id="{{ impl.id }}">
+    <div class="card-header">
+        <div class="implantacao-header">
+            <h4 class="implantacao-nome">{{ impl.nome_empresa }}</h4>
+            <span class="badge badge-{{ impl.status_class }}">{{ impl.status }}</span>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="implantacao-info">
+            {% if impl.usuario_cs %}
+            <div class="info-item">
+                <i class="bi bi-person"></i>
+                <span>{{ impl.usuario_cs_nome or impl.usuario_cs }}</span>
+            </div>
+            {% endif %}
+            {% if impl.data_criacao %}
+            <div class="info-item">
+                <i class="bi bi-calendar"></i>
+                <span>{{ impl.data_criacao|format_date_br }}</span>
+            </div>
+            {% endif %}
+            {% if impl.progresso is defined %}
+            <div class="info-item">
+                <div class="progress-wrapper">
+                    <div class="progress">
+                        <div class="progress-bar" style="width: {{ impl.progresso }}%"></div>
+                    </div>
+                    <span class="progress-text">{{ impl.progresso }}%</span>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    <div class="card-footer">
+        <a href="{{ url_for('implantacao_actions.detalhes_implantacao', impl_id=impl.id) }}"
+            class="btn btn-sm btn-primary">
+            <i class="bi bi-eye"></i> Ver Detalhes
+        </a>
+    </div>
+</div>
+{% endmacro %}
+
+{% macro card_loading(message='Carregando...') %}
+<div class="card card-loading">
+    <div class="card-body text-center">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">{{ message }}</span>
+        </div>
+        <p class="mt-2">{{ message }}</p>
+    </div>
+</div>
+{% endmacro %}
+
+{% macro card_empty(message='Nenhum item encontrado', icon='bi-inbox') %}
+<div class="card card-empty">
+    <div class="card-body text-center">
+        <i class="{{ icon }} empty-icon"></i>
+        <p class="empty-message">{{ message }}</p>
+    </div>
+</div>
+{% endmacro %}

@@ -3,841 +3,7 @@
 {% block title %}Detalhes da Implantação - {{ implantacao.nome_empresa }}{% endblock %}
 
 {% block head_extra %}
-<style>
-    :root {
-        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-        --card-hover-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-        --border-radius: 16px;
-    }
-
-    /* Espaço para o botão do menu */
-    .content-wrapper {
-        padding-top: 50px;
-    }
-
-    /* Título da página */
-    .page-title-header {
-        text-align: center;
-        padding: 0.5rem 0;
-        margin-bottom: 0.75rem;
-    }
-
-    .page-title-header h2 {
-        font-size: 0.85rem;
-        font-weight: 700;
-        letter-spacing: 2px;
-        color: #667eea;
-        text-transform: uppercase;
-        margin: 0;
-    }
-
-    /* Tabs para Plano/Timeline */
-    .tab-switcher {
-        display: flex;
-        background: #f1f5f9;
-        border-radius: 10px;
-        padding: 4px;
-        margin-bottom: 0;
-    }
-
-    .tab-switcher .nav-link {
-        flex: 1;
-        text-align: center;
-        padding: 0.6rem 1rem;
-        border-radius: 8px;
-        color: #64748b;
-        font-weight: 600;
-        font-size: 0.875rem;
-        border: none;
-        background: transparent;
-        transition: all 0.2s ease;
-    }
-
-    .tab-switcher .nav-link:hover {
-        color: #475569;
-    }
-
-    .tab-switcher .nav-link.active {
-        background: white;
-        color: #667eea;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-
-    /* Info de datas do plano */
-    .plano-datas-info {
-        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-        border: 1px solid #bae6fd;
-        border-radius: 10px;
-        padding: 1rem;
-        margin-bottom: 1rem;
-    }
-
-    .plano-datas-info .data-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0.4rem 0;
-    }
-
-    .plano-datas-info .data-item:not(:last-child) {
-        border-bottom: 1px dashed #bae6fd;
-    }
-
-    .plano-datas-info .data-label {
-        font-size: 0.8rem;
-        color: #0369a1;
-        font-weight: 500;
-    }
-
-    .plano-datas-info .data-value {
-        font-size: 0.9rem;
-        font-weight: 700;
-        color: #0c4a6e;
-    }
-
-    .plano-datas-info .data-value.destaque {
-        color: #059669;
-        background: #d1fae5;
-        padding: 0.2rem 0.6rem;
-        border-radius: 6px;
-    }
-
-    .custom-card {
-        background: white;
-        border-radius: var(--border-radius);
-        border: none;
-        box-shadow: var(--card-shadow);
-        transition: all 0.3s ease;
-        overflow: hidden;
-        margin-bottom: 1rem;
-    }
-
-    .custom-card:hover {
-        transform: translateY(-2px);
-        box-shadow: var(--card-hover-shadow);
-    }
-
-    .custom-card-header {
-        padding: 0.85rem 1.1rem;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-        background: white;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .custom-card-title {
-        font-size: 0.95rem;
-        font-weight: 700;
-        color: #2d3748;
-        margin: 0;
-    }
-
-    .custom-card-body {
-        padding: 1rem;
-    }
-    
-    /* Layout das colunas customizado */
-    .sidebar-column {
-        flex: 0 0 20%;
-        max-width: 20%;
-        padding-right: 0.5rem;
-        padding-left: 0.5rem;
-    }
-    
-    .main-column {
-        flex: 0 0 80%;
-        max-width: 80%;
-        padding-right: 0.5rem;
-        padding-left: 0.5rem;
-    }
-    
-    @media (max-width: 991.98px) {
-        .sidebar-column,
-        .main-column {
-            flex: 0 0 100%;
-            max-width: 100%;
-        }
-    }
-    
-    /* Cards da sidebar (coluna esquerda) compactos */
-    .sidebar-column .custom-card {
-        margin-bottom: 0.5rem;
-    }
-    
-    .sidebar-column .custom-card-header {
-        padding: 0.5rem 0.7rem;
-    }
-    
-    .sidebar-column .custom-card-title {
-        font-size: 0.85rem;
-    }
-    
-    .sidebar-column .custom-card-body {
-        padding: 0.6rem 0.7rem;
-    }
-    
-    .sidebar-column .list-group-item {
-        padding: 0.5rem 0.7rem !important;
-    }
-    
-    .sidebar-column .list-group-item h6 {
-        font-size: 0.8rem;
-        margin-bottom: 0 !important;
-    }
-    
-    .sidebar-column .list-group-item small {
-        font-size: 0.7rem;
-    }
-    
-    .sidebar-column .list-group-item .bg-light {
-        padding: 0.35rem !important;
-    }
-    
-    .sidebar-column .list-group-item .bg-light i {
-        font-size: 0.85rem;
-    }
-    
-    .sidebar-column .cta-card .custom-card-body i {
-        font-size: 1.75rem !important;
-    }
-    
-    .sidebar-column .cta-card h5 {
-        font-size: 0.9rem;
-    }
-    
-    .sidebar-column .cta-card p {
-        font-size: 0.75rem;
-    }
-    
-    .sidebar-column .cta-card .btn {
-        font-size: 0.8rem;
-        padding: 0.4rem 0.8rem;
-    }
-
-    /* Module Cards (Accordions) */
-    .module-card {
-        border: 1px solid rgba(0, 0, 0, 0.08);
-        border-radius: 12px;
-        margin-bottom: 1rem;
-        background: #fff;
-        transition: all 0.2s;
-    }
-
-    .module-header {
-        padding: 1rem 1.25rem;
-        cursor: pointer;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background: #f8f9fa;
-        border-radius: 12px;
-    }
-
-    .module-header:hover {
-        background: #f1f3f5;
-    }
-
-    .module-header[aria-expanded="true"] {
-        background: #eef2ff;
-        border-bottom-left-radius: 0;
-        border-bottom-right-radius: 0;
-    }
-
-    .module-title {
-        font-weight: 600;
-        color: #4a5568;
-        margin: 0;
-    }
-
-    .module-content-collapse {
-        border-top: 1px solid rgba(0, 0, 0, 0.05);
-    }
-
-    /* Tasks List */
-    .tasks-list-group .list-group-item {
-        border: none;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.03);
-        padding: 0.75rem 1.25rem;
-    }
-
-    .tasks-list-group .list-group-item:last-child {
-        border-bottom: none;
-    }
-
-    /* Progress Bar */
-    .progress-thick {
-        height: 12px;
-        border-radius: 10px;
-        background-color: #e2e8f0;
-        overflow: hidden;
-    }
-
-    .progress-thick .progress-bar {
-        background: var(--primary-gradient);
-        display: block;
-        height: 100%;
-    }
-
-    /* Ensure readability even outside .progress-thick */
-    #progress-total-bar,
-    #checklist-global-progress-bar {
-        /* keep default bootstrap/progress styles */
-    }
-
-    /* No checklist, mostramos o percentual fora da barra à direita; esconder texto interno para evitar corte/duplicidade */
-    /* Only remove inner number from checklist bar via template; keep styles intact */
-
-    /* Timeline */
-    .timeline-list {
-        list-style: none;
-        padding: 0;
-        position: relative;
-    }
-
-.timeline-list::before {
-    content: '';
-    position: absolute;
-    left: 20px;
-        top: 0;
-        bottom: 0;
-        width: 2px;
-    background: #e2e8f0;
-}
-
-    .timeline-item {
-        position: relative;
-        padding-left: 50px;
-        margin-bottom: 1.5rem;
-    }
-
-    .timeline-icon {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 42px;
-        height: 42px;
-        border-radius: 50%;
-        background: white;
-        border: 2px solid #667eea;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #667eea;
-        z-index: 1;
-    }
-
-    .timeline-content {
-        background: #f8f9fa;
-        padding: 1rem;
-        border-radius: 12px;
-        position: relative;
-    }
-
-.timeline-content::before {
-    content: '';
-    position: absolute;
-    left: -8px;
-        top: 15px;
-        width: 16px;
-        height: 16px;
-        background: #f8f9fa;
-        transform: rotate(45deg);
-    }
-
-    /* CTA Card */
-    .cta-card {
-        background: linear-gradient(135deg, #fff5f5 0%, #fff 100%);
-        border: 2px dashed #fc8181;
-    }
-
-    .cta-title {
-        color: #c53030;
-        font-weight: 700;
-    }
-
-    /* ============================================
-       ESTILOS DO PLANO DE SUCESSO (HIERARQUIA)
-       ============================================ */
-    
-    /* Checklist Hierárquico Infinito - Melhorado */
-    .checklist-item {
-        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-        position: relative;
-        z-index: auto;
-    }
-    
-    .checklist-item:last-child {
-        border-bottom: none;
-    }
-    
-    .checklist-item-header {
-        transition: background-color 0.2s ease;
-        position: relative;
-        z-index: 1;
-    }
-
-    /* Visual de níveis: borda à esquerda e leve fundo para orientar hierarquia */
-    .checklist-item-header.level-0 { border-left: 0; }
-    .checklist-item-header.level-1 { border-left: 3px solid #60a5fa; background: rgba(96,165,250,0.06); }
-    .checklist-item-header.level-2 { border-left: 3px solid #22c55e; background: rgba(34,197,94,0.06); }
-    .checklist-item-header.level-3, .checklist-item-header.level-4, .checklist-item-header.level-5 { border-left: 3px solid #a855f7; background: rgba(168,85,247,0.06); }
-
-    .checklist-item-children { padding-left: 0.75rem; }
-    .checklist-item-header > .d-flex { flex-wrap: nowrap; align-items: center; gap: 0.25rem; width: 100%; }
-    .col-title { min-width: 0; overflow: hidden; }
-    .checklist-item-title { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .col-group, .col-qtd, .col-tag, .col-responsavel, .col-prev-orig, .col-prev-atual, .col-status, .col-comment, .col-delete { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 0.25rem; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-width: 0; }
-    .checklist-item-header .badge { display: inline-flex; align-items: center; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
-    .badge-truncate { max-width: 100%; display: inline-flex; align-items: center; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-    .btn-icon-placeholder { display: inline-block; width: 24px; height: 18px; }
-    @media (max-width: 768px) {
-        .checklist-item-header > .d-flex { flex-wrap: nowrap; }
-    }
-
-    .badge-resp-ellipsis {
-        display: inline-block;
-        max-width: 100%;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-    
-    .checklist-item-header .hover-bg:hover {
-        background-color: #f8f9fa;
-    }
-    
-    .checklist-item-header .hover-bg {
-        position: relative;
-        z-index: auto;
-    }
-    
-    .checklist-item-title {
-        font-weight: 500;
-        color: #4a5568;
-        cursor: pointer;
-        margin: 0;
-        transition: all 0.2s ease;
-    }
-    
-    .checklist-item-title:hover {
-        color: #667eea;
-    }
-    
-    .checklist-checkbox {
-        cursor: pointer;
-        accent-color: #667eea;
-        transition: all 0.2s ease;
-    }
-    
-    .checklist-checkbox:disabled {
-        opacity: 0.5;
-        cursor: wait;
-    }
-    
-    .checklist-progress-badge {
-        font-size: 0.75rem;
-        font-weight: 600;
-        padding: 0.25rem 0.5rem;
-        border-radius: 12px;
-    }
-    
-    .checklist-item-children {
-        padding-left: 0;
-        transition: all 0.3s ease-in-out;
-    }
-    
-    .checklist-item-children.d-none {
-        display: none !important;
-    }
-    
-    .checklist-item-children:not(.d-none) {
-        display: block !important;
-    }
-    
-    .btn-icon {
-        background: none;
-        border: none;
-        padding: 0.25rem;
-        color: #64748b;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 28px;
-        height: 28px;
-        border-radius: 6px;
-        transition: all 0.2s ease;
-    }
-    
-    .btn-icon:hover {
-        background-color: #e2e8f0;
-        color: #667eea;
-        transform: scale(1.1);
-    }
-    
-    .btn-icon:focus {
-        outline: 2px solid #667eea;
-        outline-offset: 2px;
-    }
-    
-    .btn-icon-placeholder {
-        width: 28px;
-        height: 28px;
-        display: inline-block;
-    }
-    
-    /* Barra de progresso por item */
-    .progress-bar-item {
-        height: 3px;
-        border-radius: 0 0 4px 4px;
-        transition: width 0.3s ease, opacity 0.3s ease;
-        z-index: 0;
-        pointer-events: none;
-    }
-    
-    /* Comentários */
-    .checklist-comments-section {
-        border-top: 1px solid rgba(0, 0, 0, 0.05);
-        transition: all 0.3s ease;
-    }
-    
-    .checklist-comment-form {
-        background-color: #f8f9fa;
-        border-radius: 0 0 8px 8px;
-    }
-    
-    .checklist-comment-form textarea {
-        resize: vertical;
-        min-height: 60px;
-    }
-    
-    /* Status badges melhorados */
-    .checklist-item .badge {
-        font-size: 0.7rem;
-        padding: 0.35rem 0.65rem;
-        border-radius: 12px;
-        font-weight: 600;
-        transition: all 0.2s ease;
-    }
-    
-    /* Animação suave para chevron */
-    .btn-icon i.bi-chevron-right,
-    .btn-icon i.bi-chevron-down {
-        transition: transform 0.2s ease;
-    }
-    
-    /* Ícones de comentário com notificação */
-    .btn-comment-toggle i.text-primary {
-        color: #667eea !important;
-    }
-    
-    /* Progresso global melhorado */
-    .checklist-global-progress {
-        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-        border: 1px solid #bae6fd;
-        border-radius: 10px;
-        padding: 1rem;
-        margin-bottom: 1.5rem;
-    }
-    
-    .checklist-global-progress .progress-thick {
-        height: 10px;
-        border-radius: 10px;
-        background-color: #e0f2fe;
-        overflow: hidden;
-    }
-    
-    .checklist-global-progress .progress-bar {
-        transition: width 0.5s ease, background-color 0.3s ease;
-        font-size: 0.7rem;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    
-    .checklist-global-progress {
-        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-        border: 1px solid #bae6fd;
-        border-radius: 10px;
-        padding: 1rem;
-    }
-
-    .plano-sucesso-container {
-        max-height: calc(100vh - 300px);
-        overflow-y: auto;
-        overflow-x: auto;
-    }
-
-    /* Fase Card */
-    .fase-card {
-        background: linear-gradient(135deg, #f8fafc 0%, #fff 100%);
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        margin-bottom: 1rem;
-        overflow: hidden;
-        transition: all 0.2s ease;
-    }
-
-    .fase-card:hover {
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    }
-
-    .fase-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 1rem 1.25rem;
-        cursor: pointer;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        transition: all 0.2s ease;
-    }
-
-    .fase-header:hover {
-        filter: brightness(1.05);
-    }
-
-    .fase-header .fase-title {
-        font-weight: 700;
-        font-size: 1rem;
-        margin: 0;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .fase-header .fase-progress {
-        font-size: 0.85rem;
-        opacity: 0.9;
-    }
-
-    .fase-header .chevron-icon {
-        transition: transform 0.3s ease;
-    }
-
-    .fase-header[aria-expanded="true"] .chevron-icon {
-        transform: rotate(180deg);
-    }
-
-    .fase-content {
-        padding: 1rem;
-    }
-
-    /* Grupo Card */
-    .grupo-card {
-        background: #fff;
-        border: 1px solid #e2e8f0;
-        border-radius: 10px;
-        margin-bottom: 0.75rem;
-        overflow: hidden;
-    }
-
-    .grupo-header {
-        background: #f1f5f9;
-        padding: 0.875rem 1rem;
-        cursor: pointer;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        transition: all 0.2s ease;
-        border-left: 4px solid #667eea;
-    }
-
-    .grupo-header:hover {
-        background: #e2e8f0;
-    }
-
-    .grupo-header .grupo-title {
-        font-weight: 600;
-        font-size: 0.95rem;
-        color: #4a5568;
-        margin: 0;
-    }
-
-    .grupo-header .grupo-count {
-        font-size: 0.8rem;
-        color: #718096;
-    }
-
-    .grupo-content {
-        padding: 0.75rem;
-    }
-
-    /* Tarefa Item */
-    .tarefa-item {
-        background: #fafafa;
-        border: 1px solid #e8e8e8;
-        border-radius: 8px;
-        margin-bottom: 0.5rem;
-        transition: all 0.2s ease;
-    }
-
-    .tarefa-item:hover {
-        border-color: #cbd5e0;
-        background: #f7fafc;
-    }
-    
-
-    /* Comentários Section */
-    .comentarios-section {
-        background: #f8fafc;
-        border-top: 1px solid #e2e8f0;
-        padding: 1rem;
-        margin-top: 0.5rem;
-        border-radius: 0 0 8px 8px;
-    }
-
-    .comentario-form {
-        background: white;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        padding: 1rem;
-        margin-bottom: 1rem;
-    }
-
-    .comentario-form textarea {
-        border: 1px solid #e2e8f0;
-        border-radius: 6px;
-        resize: none;
-        font-size: 0.9rem;
-    }
-
-    .comentario-form textarea:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-    }
-
-    .comentario-tipo-tag {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.25rem;
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        border: 2px solid transparent;
-    }
-
-    .comentario-tipo-tag.interno {
-        background: #dbeafe;
-        color: #1e40af;
-    }
-
-    .comentario-tipo-tag.interno.active {
-        border-color: #1e40af;
-    }
-
-    .comentario-tipo-tag.externo {
-        background: #fef3c7;
-        color: #92400e;
-    }
-
-    .comentario-tipo-tag.externo.active {
-        border-color: #92400e;
-    }
-
-    .comentario-historico {
-        max-height: 300px;
-        overflow-y: auto;
-    }
-
-    .comentario-item {
-        background: white;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        padding: 0.875rem;
-        margin-bottom: 0.5rem;
-    }
-
-    .comentario-item.externo {
-        border-left: 3px solid #f59e0b;
-    }
-
-    .comentario-item.interno {
-        border-left: 3px solid #3b82f6;
-    }
-
-    .comentario-meta {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 0.5rem;
-    }
-
-    .comentario-autor {
-        font-weight: 600;
-        font-size: 0.85rem;
-        color: #374151;
-    }
-
-    .comentario-data {
-        font-size: 0.75rem;
-        color: #9ca3af;
-    }
-
-    .comentario-texto {
-        font-size: 0.9rem;
-        color: #4b5563;
-        line-height: 1.5;
-    }
-
-    .comentario-imagem {
-        margin-top: 0.5rem;
-        max-width: 100%;
-        border-radius: 6px;
-    }
-
-    .btn-enviar-email {
-        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-        color: white;
-        border: none;
-        padding: 0.375rem 0.75rem;
-        border-radius: 6px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-
-    .btn-enviar-email:hover {
-        transform: scale(1.02);
-        box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
-    }
-
-    .alert-sm {
-        font-size: 0.8rem;
-        padding: 0.5rem 0.75rem;
-        margin-bottom: 0.5rem;
-    }
-
-    .alert-sm .alert-link {
-        text-decoration: underline;
-        font-weight: 600;
-    }
-
-    /* Animações */
-    .collapse-content {
-        transition: all 0.3s ease;
-    }
-
-    /* Empty State */
-    .empty-state {
-        text-align: center;
-        padding: 2rem;
-        color: #9ca3af;
-    }
-
-    .empty-state i {
-        font-size: 3rem;
-        margin-bottom: 1rem;
-        opacity: 0.5;
-    }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/implantacao_detalhes.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -878,8 +44,8 @@
                 <div class="custom-card-header">
                     <h5 class="custom-card-title"><i class="bi bi-diagram-3-fill me-2 text-primary"></i>Plano Atual</h5>
                     <div class="d-flex gap-1">
-                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
-                        data-bs-target="#modalSelecionarPlano">Alterar</button>
+                        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
+                            data-bs-target="#modalSelecionarPlano">Alterar</button>
                         <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal"
                             data-bs-target="#modalRemoverPlano" title="Remover plano da implantação">
                             <i class="bi bi-trash"></i>
@@ -889,12 +55,13 @@
                 <div class="custom-card-body">
                     <h5 class="fw-bold mb-1">{{ plano_sucesso.nome }}</h5>
                     <p class="text-muted small mb-3">{{ plano_sucesso.descricao }}</p>
-                    
+
                     <!-- Info de datas da implantação -->
                     <div class="plano-datas-info">
                         <div class="data-item">
                             <span class="data-label"><i class="bi bi-calendar-event me-1"></i>Início</span>
-                            <span class="data-value">{{ implantacao.data_inicio_efetivo_fmt_d or implantacao.data_criacao_fmt_d or 'Não definido' }}</span>
+                            <span class="data-value">{{ implantacao.data_inicio_efetivo_fmt_d or
+                                implantacao.data_criacao_fmt_d or 'Não definido' }}</span>
                         </div>
                         {% if plano_sucesso.dias_duracao %}
                         <div class="data-item">
@@ -903,7 +70,8 @@
                         </div>
                         <div class="data-item">
                             <span class="data-label"><i class="bi bi-calendar-check me-1"></i>Previsão Término</span>
-                            <span class="data-value destaque">{{ implantacao.data_previsao_termino_fmt_d or 'Calculando...' }}</span>
+                            <span class="data-value destaque">{{ implantacao.data_previsao_termino_fmt_d or
+                                'Calculando...' }}</span>
                         </div>
                         {% endif %}
                     </div>
@@ -940,9 +108,7 @@
                         </div>
                     </button>
                     <button class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-3"
-                        data-bs-toggle="modal" 
-                        data-bs-target="#modalDetalhesEmpresa"
-                        data-id="{{ implantacao.id }}"
+                        data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa" data-id="{{ implantacao.id }}"
                         data-id-favorecido="{{ implantacao.id_favorecido | default('') }}"
                         data-cargo="{{ implantacao.cargo_responsavel | default('') }}"
                         data-nivel-receita="{{ implantacao.nivel_receita | default('') }}"
@@ -1033,52 +199,65 @@
                         <h5 class="custom-card-title mb-0">
                             <i class="bi bi-clipboard-data me-2 text-primary"></i>Acompanhamento
                         </h5>
-                </div>
-                    
+                    </div>
+
                     <!-- Tabs de navegação -->
                     <ul class="nav tab-switcher" id="contentTabs" role="tablist">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="plano-tab" data-bs-toggle="tab" data-bs-target="#plano-content" type="button" role="tab">
+                            <button class="nav-link active" id="plano-tab" data-bs-toggle="tab"
+                                data-bs-target="#plano-content" type="button" role="tab">
                                 <i class="bi bi-diagram-3 me-1"></i>Plano de Sucesso
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="timeline-tab" data-bs-toggle="tab" data-bs-target="#timeline-content" type="button" role="tab">
+                            <button class="nav-link" id="timeline-tab" data-bs-toggle="tab"
+                                data-bs-target="#timeline-content" type="button" role="tab">
                                 <i class="bi bi-clock-history me-1"></i>Linha do Tempo
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="comments-tab" data-bs-toggle="tab" data-bs-target="#comments-content" type="button" role="tab">
+                            <button class="nav-link" id="comments-tab" data-bs-toggle="tab"
+                                data-bs-target="#comments-content" type="button" role="tab">
                                 <i class="bi bi-chat-square-text me-1"></i>Comentários
                             </button>
                         </li>
                     </ul>
                 </div>
-                
+
                 <div class="tab-content">
                     <style>
-                        .custom-card .tab-content > .tab-pane:not(.active) { display: none !important; }
-                        .custom-card .tab-content > .tab-pane.active { display: block !important; }
+                        .custom-card .tab-content>.tab-pane:not(.active) {
+                            display: none !important;
+                        }
+
+                        .custom-card .tab-content>.tab-pane.active {
+                            display: block !important;
+                        }
                     </style>
                     <!-- Tab: Plano de Sucesso -->
                     <div class="tab-pane fade show active" id="plano-content" role="tabpanel">
                         <div class="custom-card-body plano-sucesso-container" id="plano-hierarquia">
                             {% if checklist_tree and checklist_tree|length > 0 %}
                             <!-- Novo Checklist Hierárquico -->
-                            <div id="checklist-container" data-implantacao-id="{{ implantacao.id }}" data-previsao-termino="{{ implantacao.data_previsao_termino or '' }}">
+                            <div id="checklist-container" data-implantacao-id="{{ implantacao.id }}"
+                                data-previsao-termino="{{ implantacao.data_previsao_termino or '' }}">
                                 <!-- Progresso Global -->
                                 <div class="checklist-global-progress mb-4">
                                     <div class="d-flex justify-content-between align-items-center mb-2">
                                         <span class="text-muted small">Progresso Global do Onboarding</span>
-                                        <span id="checklist-global-progress-percent" class="fw-bold text-primary">0%</span>
+                                        <span id="checklist-global-progress-percent"
+                                            class="fw-bold text-primary">0%</span>
                                     </div>
                                     <div class="progress-thick">
-                                        <div id="checklist-global-progress-bar" class="progress-bar" role="progressbar" style="width: 0%; transition: width 0.25s ease-in-out;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                        <div id="checklist-global-progress-bar" class="progress-bar" role="progressbar"
+                                            style="width: 0%; transition: width 0.25s ease-in-out;" aria-valuenow="0"
+                                            aria-valuemin="0" aria-valuemax="100"></div>
                                     </div>
                                 </div>
-                                
+
                                 <!-- Checklist Tree será renderizado via JavaScript -->
-                                <div class="d-flex align-items-center gap-0 px-2 py-1 text-muted small" style="border-bottom: 1px solid rgba(0,0,0,0.06);">
+                                <div class="d-flex align-items-center gap-0 px-2 py-1 text-muted small"
+                                    style="border-bottom: 1px solid rgba(0,0,0,0.06);">
                                     <span class="col-title flex-grow-1">Tarefa</span>
                                     <span class="col-tag" style="width:130px">Tag</span>
                                     <span class="col-qtd" style="width:60px">QTD</span>
@@ -1093,222 +272,240 @@
                             </div>
                             {% elif false %}
                             <!-- Modelo Antigo (Compatibilidade) -->
-                                {% for fase in hierarquia.fases %}
-                                <div class="fase-card" data-fase-id="{{ fase.id }}">
-                                    <div class="fase-header" data-bs-toggle="collapse" data-bs-target="#fase-{{ fase.id }}" aria-expanded="false">
-                                        <h6 class="fase-title">
-                                            <i class="bi bi-layers-fill"></i>
-                                            {{ fase.nome }}
-                                            {% if fase.responsavel %}
-                                            <span class="badge bg-light text-dark ms-2" style="font-size: 0.65rem; font-weight: 500;">
-                                                <i class="bi bi-person-fill me-1"></i>{{ fase.responsavel }}
-                                            </span>
-                                            {% endif %}
-                                        </h6>
-                                        <div class="d-flex align-items-center gap-3">
-                                            <span class="fase-progress">
-                                                <span class="fase-progresso-valor" data-fase-id="{{ fase.id }}">0</span>%
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div class="collapse" id="fase-{{ fase.id }}">
-                                        <div class="fase-content">
-                                            {% if fase.grupos %}
-                                                {% for grupo in fase.grupos %}
-                                                <div class="grupo-card" data-grupo-id="{{ grupo.id }}">
-                                                    <div class="grupo-header" data-bs-toggle="collapse" data-bs-target="#grupo-{{ grupo.id }}" aria-expanded="false">
-                                                        <h6 class="grupo-title">
-                                                            <i class="bi bi-folder2 me-2"></i>{{ grupo.nome }}
-                                                            {% if grupo.responsavel %}
-                                                            <span class="badge bg-secondary bg-opacity-25 text-dark ms-2" style="font-size: 0.6rem; font-weight: 500;">
-                                                                <i class="bi bi-person me-1"></i>{{ grupo.responsavel }}
-                                                            </span>
-                                                            {% endif %}
-                                                        </h6>
-                                                        <div class="d-flex align-items-center gap-2">
-                                                            <span class="grupo-count">
-                                                                <span class="grupo-concluidas" data-grupo-id="{{ grupo.id }}">0</span>/{{ grupo.tarefas|length }} tarefas
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                    <div class="collapse" id="grupo-{{ grupo.id }}">
-                                                        <div class="grupo-content">
-                                                            {% if grupo.tarefas %}
-                                                                {% for tarefa in grupo.tarefas %}
-                                                                {% set status_raw = tarefa.status or 'pendente' %}
-                                                                {% set status_lower = status_raw|lower %}
-                                                                {% if status_lower == 'concluida' %}
-                                                                    {% set status_tarefa = 'concluida' %}
-                                                                    {% set is_concluida = True %}
-                                                                {% elif status_lower == 'concluido' %}
-                                                                    {% set status_tarefa = 'concluida' %}
-                                                                    {% set is_concluida = True %}
-                                                                {% else %}
-                                                                    {% set status_tarefa = 'pendente' %}
-                                                                    {% set is_concluida = False %}
-                                                                {% endif %}
-                                                                <div class="tarefa-item {% if is_concluida %}concluida{% endif %}" 
-                                                                     data-tarefa-id="{{ tarefa.id }}"
-                                                                     data-tarefa-status="{{ status_tarefa }}">
-                                                                    <div class="tarefa-header">
-                                                                        <input type="checkbox" 
-                                                                               class="tarefa-checkbox" 
-                                                                               id="tarefa-{{ tarefa.id }}"
-                                                                               data-tarefa-id="{{ tarefa.id }}"
-                                                                               {% if is_concluida %}checked{% endif %}>
-                                                                        <label class="tarefa-nome" for="tarefa-{{ tarefa.id }}">
-                                                                            {{ tarefa.nome }}
-                                                                        </label>
-                                                                        <div class="tarefa-actions">
-                                                                            <button type="button" 
-                                                                                    class="btn-icon btn-toggle-comentarios" 
-                                                                                    data-tarefa-id="{{ tarefa.id }}"
-                                                                                    title="Comentários">
-                                                                                <i class="bi bi-chat-left-text"></i>
-                                                                            </button>
-                                                                            <button type="button" 
-                                                                                    class="btn-icon btn-excluir-tarefa" 
-                                                                                    data-tarefa-id="{{ tarefa.id }}"
-                                                                                    data-delete-url="/api/checklist/delete/{{ tarefa.id }}"
-                                                                                    title="Excluir tarefa">
-                                                                                <i class="bi bi-trash text-danger"></i>
-                                                                            </button>
-                                                                        </div>
-                                                                    </div>
-                                                                    
-
-                                                                    <!-- Comentários da Tarefa -->
-                                                                    <div class="comentarios-section collapse" id="comentarios-tarefa-{{ tarefa.id }}">
-                                                                        <div class="comentario-form">
-                                                                            <textarea class="form-control mb-2" 
-                                                                                      placeholder="Escreva um comentário..." 
-                                                                                      rows="2"
-                                                                                      id="comentario-texto-{{ tarefa.id }}"></textarea>
-                                                                            <div class="alert alert-warning alert-sm d-none mb-2 py-2" 
-                                                                                 id="alerta-email-{{ tarefa.id }}" 
-                                                                                 role="alert">
-                                                                                <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                                                                                <small>Email do responsável não cadastrado. <a href="#" class="alert-link" data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa">Acesse "Editar Detalhes"</a> para adicionar o email antes de enviar comentários externos.</small>
-                                                                            </div>
-                                                                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                                                                <div class="d-flex gap-2 align-items-center">
-                                                                                    <span class="comentario-tipo-tag interno active" 
-                                                                                          data-tipo="interno"
-                                                                                          data-tarefa-id="{{ tarefa.id }}">
-                                                                                        <i class="bi bi-lock-fill"></i> Interno
-                                                                                    </span>
-                                                                                    <span class="comentario-tipo-tag externo" 
-                                                                                          data-tipo="externo"
-                                                                                          data-tarefa-id="{{ tarefa.id }}">
-                                                                                        <i class="bi bi-globe"></i> Externo
-                                                                                    </span>
-                                                                                    <label class="btn btn-sm btn-outline-secondary mb-0">
-                                                                                        <i class="bi bi-image"></i>
-                                                                                        <input type="file" 
-                                                                                               class="d-none comentario-imagem-input" 
-                                                                                               accept="image/*"
-                                                                                               data-tarefa-id="{{ tarefa.id }}">
-                                                                                    </label>
-                                                                                </div>
-                                                                                <div class="d-flex gap-2">
-                                                                                    <button type="button" 
-                                                                                            class="btn btn-sm btn-primary btn-salvar-comentario"
-                                                                                            data-tarefa-id="{{ tarefa.id }}"
-                                                                                            data-tipo="tarefa">
-                                                                                        <i class="bi bi-send me-1"></i>Salvar
-                                                                                    </button>
-                                                                                    <button type="button" 
-                                                                                            class="btn btn-sm btn-primary btn-enviar-email d-none"
-                                                                                            data-tarefa-id="{{ tarefa.id }}"
-                                                                                            id="btn-email-{{ tarefa.id }}">
-                                                                                        <i class="bi bi-envelope me-1"></i>Enviar Email
-                                                                                    </button>
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                        <div class="comentario-historico" id="historico-tarefa-{{ tarefa.id }}">
-                                                                            <!-- Comentários carregados via JS -->
-                                                                            <div class="text-center text-muted small py-2">
-                                                                                <i class="bi bi-chat-left-text"></i> Nenhum comentário ainda
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                                {% endfor %}
-                                                            {% else %}
-                                                            <div class="empty-state py-3">
-                                                                <i class="bi bi-inbox"></i>
-                                                                <p class="mb-0 small">Nenhuma tarefa neste grupo</p>
-                                                            </div>
-                                                            {% endif %}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                {% endfor %}
-                                            {% else %}
-                                            <div class="empty-state py-3">
-                                                <i class="bi bi-folder2-open"></i>
-                                                <p class="mb-0 small">Nenhum grupo nesta fase</p>
-                                            </div>
-                                            {% endif %}
-                                        </div>
+                            {% for fase in hierarquia.fases %}
+                            <div class="fase-card" data-fase-id="{{ fase.id }}">
+                                <div class="fase-header" data-bs-toggle="collapse" data-bs-target="#fase-{{ fase.id }}"
+                                    aria-expanded="false">
+                                    <h6 class="fase-title">
+                                        <i class="bi bi-layers-fill"></i>
+                                        {{ fase.nome }}
+                                        {% if fase.responsavel %}
+                                        <span class="badge bg-light text-dark ms-2"
+                                            style="font-size: 0.65rem; font-weight: 500;">
+                                            <i class="bi bi-person-fill me-1"></i>{{ fase.responsavel }}
+                                        </span>
+                                        {% endif %}
+                                    </h6>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <span class="fase-progress">
+                                            <span class="fase-progresso-valor" data-fase-id="{{ fase.id }}">0</span>%
+                                        </span>
                                     </div>
                                 </div>
-                                {% endfor %}
+                                <div class="collapse" id="fase-{{ fase.id }}">
+                                    <div class="fase-content">
+                                        {% if fase.grupos %}
+                                        {% for grupo in fase.grupos %}
+                                        <div class="grupo-card" data-grupo-id="{{ grupo.id }}">
+                                            <div class="grupo-header" data-bs-toggle="collapse"
+                                                data-bs-target="#grupo-{{ grupo.id }}" aria-expanded="false">
+                                                <h6 class="grupo-title">
+                                                    <i class="bi bi-folder2 me-2"></i>{{ grupo.nome }}
+                                                    {% if grupo.responsavel %}
+                                                    <span class="badge bg-secondary bg-opacity-25 text-dark ms-2"
+                                                        style="font-size: 0.6rem; font-weight: 500;">
+                                                        <i class="bi bi-person me-1"></i>{{ grupo.responsavel }}
+                                                    </span>
+                                                    {% endif %}
+                                                </h6>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="grupo-count">
+                                                        <span class="grupo-concluidas"
+                                                            data-grupo-id="{{ grupo.id }}">0</span>/{{
+                                                        grupo.tarefas|length }} tarefas
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="collapse" id="grupo-{{ grupo.id }}">
+                                                <div class="grupo-content">
+                                                    {% if grupo.tarefas %}
+                                                    {% for tarefa in grupo.tarefas %}
+                                                    {% set status_raw = tarefa.status or 'pendente' %}
+                                                    {% set status_lower = status_raw|lower %}
+                                                    {% if status_lower == 'concluida' %}
+                                                    {% set status_tarefa = 'concluida' %}
+                                                    {% set is_concluida = True %}
+                                                    {% elif status_lower == 'concluido' %}
+                                                    {% set status_tarefa = 'concluida' %}
+                                                    {% set is_concluida = True %}
+                                                    {% else %}
+                                                    {% set status_tarefa = 'pendente' %}
+                                                    {% set is_concluida = False %}
+                                                    {% endif %}
+                                                    <div class="tarefa-item {% if is_concluida %}concluida{% endif %}"
+                                                        data-tarefa-id="{{ tarefa.id }}"
+                                                        data-tarefa-status="{{ status_tarefa }}">
+                                                        <div class="tarefa-header">
+                                                            <input type="checkbox" class="tarefa-checkbox"
+                                                                id="tarefa-{{ tarefa.id }}"
+                                                                data-tarefa-id="{{ tarefa.id }}" {% if is_concluida
+                                                                %}checked{% endif %}>
+                                                            <label class="tarefa-nome" for="tarefa-{{ tarefa.id }}">
+                                                                {{ tarefa.nome }}
+                                                            </label>
+                                                            <div class="tarefa-actions">
+                                                                <button type="button"
+                                                                    class="btn-icon btn-toggle-comentarios"
+                                                                    data-tarefa-id="{{ tarefa.id }}"
+                                                                    title="Comentários">
+                                                                    <i class="bi bi-chat-left-text"></i>
+                                                                </button>
+                                                                <button type="button"
+                                                                    class="btn-icon btn-excluir-tarefa"
+                                                                    data-tarefa-id="{{ tarefa.id }}"
+                                                                    data-delete-url="/api/checklist/delete/{{ tarefa.id }}"
+                                                                    title="Excluir tarefa">
+                                                                    <i class="bi bi-trash text-danger"></i>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
+
+                                                        <!-- Comentários da Tarefa -->
+                                                        <div class="comentarios-section collapse"
+                                                            id="comentarios-tarefa-{{ tarefa.id }}">
+                                                            <div class="comentario-form">
+                                                                <textarea class="form-control mb-2"
+                                                                    placeholder="Escreva um comentário..." rows="2"
+                                                                    id="comentario-texto-{{ tarefa.id }}"></textarea>
+                                                                <div class="alert alert-warning alert-sm d-none mb-2 py-2"
+                                                                    id="alerta-email-{{ tarefa.id }}" role="alert">
+                                                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                                                    <small>Email do responsável não cadastrado. <a
+                                                                            href="#" class="alert-link"
+                                                                            data-bs-toggle="modal"
+                                                                            data-bs-target="#modalDetalhesEmpresa">Acesse
+                                                                            "Editar Detalhes"</a> para adicionar o email
+                                                                        antes de enviar comentários externos.</small>
+                                                                </div>
+                                                                <div
+                                                                    class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                                                    <div class="d-flex gap-2 align-items-center">
+                                                                        <span class="comentario-tipo-tag interno active"
+                                                                            data-tipo="interno"
+                                                                            data-tarefa-id="{{ tarefa.id }}">
+                                                                            <i class="bi bi-lock-fill"></i> Interno
+                                                                        </span>
+                                                                        <span class="comentario-tipo-tag externo"
+                                                                            data-tipo="externo"
+                                                                            data-tarefa-id="{{ tarefa.id }}">
+                                                                            <i class="bi bi-globe"></i> Externo
+                                                                        </span>
+                                                                        <label
+                                                                            class="btn btn-sm btn-outline-secondary mb-0">
+                                                                            <i class="bi bi-image"></i>
+                                                                            <input type="file"
+                                                                                class="d-none comentario-imagem-input"
+                                                                                accept="image/*"
+                                                                                data-tarefa-id="{{ tarefa.id }}">
+                                                                        </label>
+                                                                    </div>
+                                                                    <div class="d-flex gap-2">
+                                                                        <button type="button"
+                                                                            class="btn btn-sm btn-primary btn-salvar-comentario"
+                                                                            data-tarefa-id="{{ tarefa.id }}"
+                                                                            data-tipo="tarefa">
+                                                                            <i class="bi bi-send me-1"></i>Salvar
+                                                                        </button>
+                                                                        <button type="button"
+                                                                            class="btn btn-sm btn-primary btn-enviar-email d-none"
+                                                                            data-tarefa-id="{{ tarefa.id }}"
+                                                                            id="btn-email-{{ tarefa.id }}">
+                                                                            <i class="bi bi-envelope me-1"></i>Enviar
+                                                                            Email
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="comentario-historico"
+                                                                id="historico-tarefa-{{ tarefa.id }}">
+                                                                <!-- Comentários carregados via JS -->
+                                                                <div class="text-center text-muted small py-2">
+                                                                    <i class="bi bi-chat-left-text"></i> Nenhum
+                                                                    comentário ainda
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    {% endfor %}
+                                                    {% else %}
+                                                    <div class="empty-state py-3">
+                                                        <i class="bi bi-inbox"></i>
+                                                        <p class="mb-0 small">Nenhuma tarefa neste grupo</p>
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                        {% else %}
+                                        <div class="empty-state py-3">
+                                            <i class="bi bi-folder2-open"></i>
+                                            <p class="mb-0 small">Nenhum grupo nesta fase</p>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
                             {% else %}
                             <!-- Nenhum plano aplicado -->
                             <div class="empty-state">
                                 <i class="bi bi-diagram-3"></i>
                                 <h6 class="text-muted">Nenhum plano aplicado</h6>
-                                <p class="small text-muted mb-3">Selecione um plano de sucesso para visualizar a estrutura de fases, ações e tarefas.</p>
+                                <p class="small text-muted mb-3">Selecione um plano de sucesso para visualizar a
+                                    estrutura de fases, ações e tarefas.</p>
                             </div>
                             {% endif %}
                         </div>
                     </div>
-                    
+
                     <!-- Tab: Linha do Tempo -->
-                    <div class="tab-pane fade d-none" id="timeline-content" role="tabpanel" data-impl-id="{{ implantacao.id }}">
+                    <div class="tab-pane fade d-none" id="timeline-content" role="tabpanel"
+                        data-impl-id="{{ implantacao.id }}">
                         <div class="custom-card-body" style="max-height: calc(100vh - 350px); overflow-y: auto;">
                             <ul class="timeline-list" id="timeline-list">
-                        {% if not logs_timeline %}
-                        <li class="alert alert-light text-center small py-2">Nenhum evento registrado.</li>
-                        {% endif %}
-                        {% for log in logs_timeline %}
-                        <li class="timeline-item">
-                            <div class="timeline-icon">
-                                {% if log.tipo_evento == 'novo_comentario' %} <i
-                                    class="bi bi-chat-left-text-fill"></i>
-                                {% elif 'tarefa' in log.tipo_evento %} <i class="bi bi-check-circle-fill"></i>
-                                {% elif 'status' in log.tipo_evento %} <i class="bi bi-flag-fill"></i>
-                                {% else %} <i class="bi bi-info-circle-fill"></i>
+                                {% if not logs_timeline %}
+                                <li class="alert alert-light text-center small py-2">Nenhum evento registrado.</li>
                                 {% endif %}
-                            </div>
-                            <div class="timeline-content shadow-sm">
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span class="fw-bold text-primary">{{ log.usuario_nome }}</span>
-                                    <span class="small text-muted">{{ log.data_criacao_fmt_dt_hr }}</span>
-                                </div>
-                                <p class="mb-0 text-secondary">{{ log.detalhes | safe | replace('\n', '<br>') }}
-                                </p>
-                                <div class="mt-2 d-flex gap-2">
-                                    {% if log.tipo_evento == 'novo_comentario' and log.related_item_id %}
-                                    <button class="btn btn-sm btn-outline-primary timeline-action-comments" data-item-id="{{ log.related_item_id }}">
-                                        Ver comentários
-                                    </button>
-                                    {% endif %}
-                                    
-                                </div>
-                            </div>
-                        </li>
-                        {% endfor %}
-                    </ul>
+                                {% for log in logs_timeline %}
+                                <li class="timeline-item">
+                                    <div class="timeline-icon">
+                                        {% if log.tipo_evento == 'novo_comentario' %} <i
+                                            class="bi bi-chat-left-text-fill"></i>
+                                        {% elif 'tarefa' in log.tipo_evento %} <i class="bi bi-check-circle-fill"></i>
+                                        {% elif 'status' in log.tipo_evento %} <i class="bi bi-flag-fill"></i>
+                                        {% else %} <i class="bi bi-info-circle-fill"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="timeline-content shadow-sm">
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span class="fw-bold text-primary">{{ log.usuario_nome }}</span>
+                                            <span class="small text-muted">{{ log.data_criacao_fmt_dt_hr }}</span>
+                                        </div>
+                                        <p class="mb-0 text-secondary">{{ log.detalhes | safe | replace('\n', '<br>') }}
+                                        </p>
+                                        <div class="mt-2 d-flex gap-2">
+                                            {% if log.tipo_evento == 'novo_comentario' and log.related_item_id %}
+                                            <button class="btn btn-sm btn-outline-primary timeline-action-comments"
+                                                data-item-id="{{ log.related_item_id }}">
+                                                Ver comentários
+                                            </button>
+                                            {% endif %}
+
+                                        </div>
+                                    </div>
+                                </li>
+                                {% endfor %}
+                            </ul>
                         </div>
                     </div>
-                    
+
                     <!-- Tab: Comentários -->
                     <div class="tab-pane fade d-none" id="comments-content" role="tabpanel">
                         <div class="custom-card-body">
-                            <div id="comments-list-container" class="d-flex flex-column gap-3" style="max-height: calc(100vh - 350px); overflow-y: auto;">
+                            <div id="comments-list-container" class="d-flex flex-column gap-3"
+                                style="max-height: calc(100vh - 350px); overflow-y: auto;">
                                 <!-- Comments will be loaded here -->
                                 <div class="text-center py-5 text-muted" id="comments-loading">
                                     <div class="spinner-border text-primary" role="status">
@@ -1346,23 +543,20 @@
                 <i class="bi bi-plus-lg me-2"></i>Adicionar Tarefa
             </button>
             <hr>
-            <button class="btn btn-outline-dark" 
-                            data-bs-toggle="modal" 
-                            data-bs-target="#modalDetalhesEmpresa"
-                            data-id="{{ implantacao.id }}"
-                            data-id-favorecido="{{ implantacao.id_favorecido | default('') }}"
-                            data-cargo="{{ implantacao.cargo_responsavel | default('') }}"
-                            data-nivel-receita="{{ implantacao.nivel_receita | default('') }}"
-                    data-seguimento="{{ implantacao.seguimento | default('') }}"
-                    data-tipos-planos="{{ implantacao.tipos_planos | default('') }}"
-                    data-sistema-anterior="{{ implantacao.sistema_anterior | default('') }}"
-                    data-recorrencia-usa="{{ implantacao.recorrencia_usa | default('') }}"
-                    data-catraca="{{ implantacao.catraca | default('') }}"
-                    data-facial="{{ implantacao.facial | default('') }}"
-                    data-modelo-catraca="{{ implantacao.modelo_catraca | default('') }}"
-                    data-modelo-facial="{{ implantacao.modelo_facial | default('') }}"
-                    data-wellhub="{{ implantacao.wellhub | default('') }}"
-                    data-totalpass="{{ implantacao.totalpass | default('') }}">
+            <button class="btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa"
+                data-id="{{ implantacao.id }}" data-id-favorecido="{{ implantacao.id_favorecido | default('') }}"
+                data-cargo="{{ implantacao.cargo_responsavel | default('') }}"
+                data-nivel-receita="{{ implantacao.nivel_receita | default('') }}"
+                data-seguimento="{{ implantacao.seguimento | default('') }}"
+                data-tipos-planos="{{ implantacao.tipos_planos | default('') }}"
+                data-sistema-anterior="{{ implantacao.sistema_anterior | default('') }}"
+                data-recorrencia-usa="{{ implantacao.recorrencia_usa | default('') }}"
+                data-catraca="{{ implantacao.catraca | default('') }}"
+                data-facial="{{ implantacao.facial | default('') }}"
+                data-modelo-catraca="{{ implantacao.modelo_catraca | default('') }}"
+                data-modelo-facial="{{ implantacao.modelo_facial | default('') }}"
+                data-wellhub="{{ implantacao.wellhub | default('') }}"
+                data-totalpass="{{ implantacao.totalpass | default('') }}">
                 Editar Detalhes
             </button>
             <!-- Mais botões mobile aqui se necessário -->
@@ -1384,7 +578,8 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
                 <div class="modal-body">
-                    <p>Tem certeza que deseja remover o plano <strong>{{ plano_sucesso.nome if plano_sucesso else '' }}</strong> desta implantação?</p>
+                    <p>Tem certeza que deseja remover o plano <strong>{{ plano_sucesso.nome if plano_sucesso else ''
+                            }}</strong> desta implantação?</p>
                     <p class="text-danger small mb-0">
                         <i class="bi bi-info-circle me-1"></i>
                         Esta ação irá remover todas as fases, ações e tarefas associadas a este plano nesta implantação.
@@ -1413,15 +608,16 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <div class="alert alert-warning">
-                        <i class="bi bi-exclamation-triangle me-2"></i>Para finalizar, conclua as tarefas do Plano de Sucesso associado.
+                        <i class="bi bi-exclamation-triangle me-2"></i>Para finalizar, conclua as tarefas do Plano de
+                        Sucesso associado.
                     </div>
                     <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
                     <input type="hidden" name="redirect_to" value="detalhes">
                     <div class="mb-3">
                         <label for="data_finalizacao" class="form-label fw-bold">Data da Finalização *</label>
                         <div class="input-group">
-                            <input type="text" class="form-control custom-datepicker date-mask no-datepicker" id="data_finalizacao" name="data_finalizacao"
-                                required placeholder="DD/MM/AAAA">
+                            <input type="text" class="form-control custom-datepicker date-mask no-datepicker"
+                                id="data_finalizacao" name="data_finalizacao" required placeholder="DD/MM/AAAA">
                             <button class="btn btn-outline-secondary" type="button" id="btn_cal_data_finalizacao"><i
                                     class="bi bi-calendar3"></i></button>
                         </div>
@@ -1525,7 +721,7 @@
     </div>
 </div>
 
-<!-- Modal Adicionar Tarefa -->
+<!-- Modal Adicionar Tarefa - DESABILITADO: endpoint 'actions.adicionar_tarefa' não implementado
 <div class="modal fade" id="adicionarTarefaModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -1533,7 +729,7 @@
                 <h5 class="modal-title">Adicionar Tarefa Avulsa</h5><button type="button" class="btn-close"
                     data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ url_for('actions.adicionar_tarefa') }}" method="POST">
+            <form action="#" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
@@ -1562,12 +758,13 @@
                 </div>
                 <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Adicionar</button>
+                    <button type="submit" class="btn btn-primary" disabled title="Funcionalidade não implementada">Adicionar</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+-->
 
 <!-- Modal Transferir -->
 <div class="modal fade" id="modalTransferir" tabindex="-1">
@@ -1639,7 +836,8 @@
                 <h5 class="modal-title text-danger">Cancelar Implantação</h5><button type="button" class="btn-close"
                     data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ url_for('actions.cancelar_implantacao') }}" method="POST" enctype="multipart/form-data" id="formCancelarImplantacao">
+            <form action="{{ url_for('actions.cancelar_implantacao') }}" method="POST" enctype="multipart/form-data"
+                id="formCancelarImplantacao">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <p class="fw-bold">Deseja realmente cancelar esta implantação?</p>
@@ -1652,7 +850,8 @@
                             <button class="btn btn-outline-secondary" type="button" id="btn_cal_data_cancelamento"><i
                                     class="bi bi-calendar3"></i></button>
                         </div>
-                        <small class="text-danger d-none" id="data_cancelamento_error">A data do cancelamento é obrigatória.</small>
+                        <small class="text-danger d-none" id="data_cancelamento_error">A data do cancelamento é
+                            obrigatória.</small>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold">Motivo *</label>
@@ -1680,7 +879,7 @@
     window.IMPLANTACAO_ID = {{ implantacao.id }};
 </script>
 <script src="{{ url_for('static', filename='js/checklist_renderer.js') }}"></script>
-<script src="{{ url_for('static', filename='js/implantacao_detalhes.js') }}"></script>
+
 <script src="{{ url_for('static', filename='js/implantacao_detalhes_ui.js') }}"></script>
 
 <!-- Modal Selecionar Plano (Externo) -->
@@ -1693,5 +892,4 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 {% endblock %}
-    /* cabeçalho e linhas continuam com flex; larguras são controladas pelos wrappers de coluna */
-    
+/* cabeçalho e linhas continuam com flex; larguras são controladas pelos wrappers de coluna */

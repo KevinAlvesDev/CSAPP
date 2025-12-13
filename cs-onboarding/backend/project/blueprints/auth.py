@@ -1,17 +1,19 @@
 import secrets
 from functools import wraps
-from sqlite3 import IntegrityError as Sqlite3IntegrityError
 from urllib.parse import urlencode
 
 from flask import Blueprint, abort, current_app, flash, g, redirect, render_template, request, session, url_for
 from itsdangerous import URLSafeTimedSerializer
-from psycopg2 import IntegrityError as Psycopg2IntegrityError
-from werkzeug.security import generate_password_hash
 
 from ..config.logging_config import auth_logger, security_logger
 from ..constants import ADMIN_EMAIL, PERFIL_ADMIN, PERFIL_IMPLANTADOR, PERFIS_COM_GESTAO
 from ..core.extensions import limiter
-from ..db import execute_db, query_db
+from ..domain.auth_service import (
+    sync_user_profile_service,
+    get_user_profile_service,
+    update_user_role_service,
+    find_cs_user_external_service
+)
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -19,50 +21,6 @@ auth_bp = Blueprint('auth', __name__)
 def _get_reset_serializer():
     secret_key = current_app.config.get('SECRET_KEY') or current_app.secret_key
     return URLSafeTimedSerializer(secret_key, salt='password-reset')
-
-
-def _sync_user_profile(user_email, user_name, auth0_user_id):
-    """Garante que o usuário do Auth0 exista no DB local e defina o perfil inicial."""
-    try:
-        usuario_existente = query_db("SELECT usuario FROM usuarios WHERE usuario = %s", (user_email,), one=True)
-        perfil_existente = query_db("SELECT nome FROM perfil_usuario WHERE usuario = %s", (user_email,), one=True)
-
-        perfil_acesso_final = None
-        if user_email == ADMIN_EMAIL:
-            perfil_acesso_final = PERFIL_ADMIN
-            auth_logger.info(f'Admin user {user_email} detected')
-
-        if not usuario_existente:
-            try:
-                senha_placeholder = generate_password_hash(secrets.token_urlsafe(32))
-                execute_db(
-                    "INSERT INTO usuarios (usuario, senha) VALUES (%s, %s)",
-                    (user_email, senha_placeholder)
-                )
-                auth_logger.info(f'User account created: {user_email}')
-            except (Psycopg2IntegrityError, Sqlite3IntegrityError):
-                raise ValueError("Usuário já cadastrado")
-            except Exception as db_error:
-                raise db_error
-
-        if not perfil_existente:
-            execute_db(
-                "INSERT INTO perfil_usuario (usuario, nome, perfil_acesso) VALUES (%s, %s, %s)",
-                (user_email, user_name, perfil_acesso_final)
-            )
-            auth_logger.info(f'User profile created: {user_email} with role {perfil_acesso_final}')
-        elif user_email == ADMIN_EMAIL:
-            perfil_acesso_atual = query_db("SELECT perfil_acesso FROM perfil_usuario WHERE usuario = %s", (user_email,), one=True)
-            if perfil_acesso_atual.get('perfil_acesso') != PERFIL_ADMIN:
-                execute_db("UPDATE perfil_usuario SET perfil_acesso = %s WHERE usuario = %s", (PERFIL_ADMIN, user_email))
-                auth_logger.info(f'Admin role enforced for user: {user_email}')
-
-    except ValueError as ve:
-        raise ve
-    except Exception as db_error:
-        auth_logger.error(f'Critical error syncing user profile {user_email}: {str(db_error)}')
-        flash("Erro ao sincronizar perfil do usuário com o banco de dados.", "warning")
-        raise db_error
 
 
 def login_required(f):
@@ -91,8 +49,8 @@ def login_required(f):
 
         if not g.perfil or g.perfil.get('perfil_acesso') is None:
             try:
-                _sync_user_profile(g.user_email, g.user.get('name', g.user_email), g.user.get('sub'))
-                g.perfil = query_db("SELECT * FROM perfil_usuario WHERE usuario = %s", (g.user_email,), one=True)
+                sync_user_profile_service(g.user_email, g.user.get('name', g.user_email), g.user.get('sub'))
+                g.perfil = get_user_profile_service(g.user_email)
 
                 if not g.perfil:
                     g.perfil = {
@@ -231,7 +189,7 @@ def check_user_external():
          return {'status': 'error', 'message': 'Email inválido'}, 400
 
     try:
-        cs_user = _find_cs_user_by_email_safe(email)
+        cs_user = find_cs_user_external_service(email)
         if cs_user:
             if cs_user.get('ativo'):
                 return {
@@ -280,7 +238,7 @@ def callback():
         user_name = userinfo.get('name', user_email)
         auth0_user_id = userinfo.get('sub')
 
-        _sync_user_profile(user_email, user_name, auth0_user_id)
+        sync_user_profile_service(user_email, user_name, auth0_user_id)
 
         auth_logger.info(f'User logged in successfully: {user_email}')
         return redirect(url_for('main.dashboard'))
@@ -381,7 +339,7 @@ def google_callback():
             # Em produção sem URL, find_cs_user_by_email retornaria None, mas queremos tratar isso diferentemente
 
             if external_db_configured or current_app.config.get('DEBUG', False):
-                cs_user = _find_cs_user_by_email_safe(email)
+                cs_user = find_cs_user_external_service(email)
 
                 if not cs_user:
                     # Se o banco está configurado e não achou -> Bloqueia
@@ -423,7 +381,7 @@ def google_callback():
 
         # Sincronizar usuário
         # Usamos o 'sub' do Google como ID único
-        _sync_user_profile(email, user_name_final, user_info.get('sub'))
+        sync_user_profile_service(email, user_name_final, user_info.get('sub'))
 
         # Configurar sessão (compatível com a estrutura existente que espera session['user'])
         session['user'] = user_info
@@ -490,7 +448,7 @@ def dev_login():
     session.permanent = True
 
     try:
-        _sync_user_profile(dev_email, 'Dev User', 'dev|local')
+        sync_user_profile_service(dev_email, 'Dev User', 'dev|local')
     except Exception as e:
         auth_logger.warning(f"Falha ao sincronizar perfil dev {dev_email}: {e}")
 
@@ -549,14 +507,11 @@ def dev_login_as():
     session.permanent = True
 
     try:
-        _sync_user_profile(email, name or email, 'dev|manual')
+        sync_user_profile_service(email, name or email, 'dev|manual')
 
         if email != ADMIN_EMAIL:
             try:
-                execute_db(
-                    "UPDATE perfil_usuario SET perfil_acesso = %s WHERE usuario = %s AND (perfil_acesso IS NULL OR perfil_acesso = '')",
-                    (PERFIL_IMPLANTADOR, email)
-                )
+                update_user_role_service(email, PERFIL_IMPLANTADOR)
             except Exception as role_err:
                 auth_logger.warning(f"Não foi possível definir perfil Implantador para {email}: {role_err}")
     except Exception as e:
@@ -571,12 +526,3 @@ def register():
     """Rota desativada: registro não permitido (login exclusivo via Google)."""
     flash('Novos cadastros devem ser feitos pelo administrador ou via Google Login.', 'info')
     return redirect(url_for('auth.login'))
-def _find_cs_user_by_email_safe(email):
-    try:
-        if not current_app.config.get('EXTERNAL_DB_URL'):
-            return None
-        from ..database.external_db import find_cs_user_by_email
-        return find_cs_user_by_email(email)
-    except Exception as e:
-        auth_logger.warning(f"External DB lookup failed: {e}")
-        return None

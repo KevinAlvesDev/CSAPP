@@ -11,7 +11,15 @@ from ..blueprints.auth import admin_required
 from ..config.logging_config import management_logger, security_logger
 from ..constants import ADMIN_EMAIL, PERFIL_ADMIN
 from ..core.extensions import r2_client
-from ..db import db_connection, execute_db, query_db
+from ..db import db_connection, execute_db
+from ..domain.management_service import (
+    listar_usuarios_service,
+    atualizar_perfil_usuario_service,
+    excluir_usuario_service,
+    limpar_implantacoes_orfas_service,
+    obter_perfis_disponiveis,
+    verificar_usuario_existe
+)
 
 management_bp = Blueprint('management', __name__, url_prefix='/management')
 
@@ -27,13 +35,8 @@ def before_request():
 def manage_users():
     """Renderiza a página principal de gerenciamento de usuários."""
     try:
-        users_data = query_db(
-            "SELECT usuario as usuario, nome, perfil_acesso FROM perfil_usuario ORDER BY nome"
-        ) or []
-
-        perfis_disponiveis = current_app.config.get(
-            'PERFIS_DE_ACESSO', ['Visitante', 'Implantador', 'Gestor', 'Administrador']
-        )
+        users_data = listar_usuarios_service()
+        perfis_disponiveis = obter_perfis_disponiveis()
 
         return render_template(
             'manage_users.html',
@@ -49,13 +52,8 @@ def manage_users():
 def manage_users_modal():
     """Renderiza somente o conteúdo do modal de gerenciamento de usuários (sem coluna 'Implantações')."""
     try:
-        users_data = query_db(
-            "SELECT usuario as usuario, nome, perfil_acesso FROM perfil_usuario ORDER BY nome"
-        ) or []
-
-        perfis_disponiveis = current_app.config.get(
-            'PERFIS_DE_ACESSO', ['Visitante', 'Implantador', 'Gestor', 'Administrador']
-        )
+        users_data = listar_usuarios_service()
+        perfis_disponiveis = obter_perfis_disponiveis()
 
         return render_template(
             '_manage_users_content.html',
@@ -148,27 +146,11 @@ def update_user_profile():
     usuario_alvo = data['usuario']
     novo_perfil = data['perfil']
 
-    perfis_disponiveis = current_app.config.get('PERFIS_DE_ACESSO', [])
-    if novo_perfil not in perfis_disponiveis:
-        security_logger.warning(f"Tentativa de atribuir perfil inválido '{novo_perfil}' para {usuario_alvo} por {g.user_email}")
-        return jsonify({'ok': False, 'error': 'Perfil de acesso inválido'}), 400
-
-    if usuario_alvo == g.user_email:
-        security_logger.warning(f"Admin {g.user_email} tentou alterar o próprio perfil via 'update_user_profile'")
-        return jsonify({'ok': False, 'error': 'Não pode alterar o seu próprio perfil por esta interface.'}), 403
-
     try:
-        user_exists = query_db("SELECT 1 FROM perfil_usuario WHERE usuario = %s", (usuario_alvo,), one=True)
-        if not user_exists:
-            return jsonify({'ok': False, 'error': 'Usuário não encontrado'}), 404
-
-        execute_db(
-            "UPDATE perfil_usuario SET perfil_acesso = %s WHERE usuario = %s",
-            (novo_perfil, usuario_alvo)
-        )
-        management_logger.info(f"Admin {g.user_email} atualizou o perfil de {usuario_alvo} para {novo_perfil}")
+        atualizar_perfil_usuario_service(usuario_alvo, novo_perfil, g.user_email)
         return jsonify({'ok': True})
-
+    except ValueError as e:
+        return jsonify({'ok': False, 'error': str(e)}), 400 if 'não encontrado' in str(e) else 403
     except Exception as e:
         management_logger.error(f"Erro ao atualizar perfil de {usuario_alvo} por {g.user_email}: {e}")
         return jsonify({'ok': False, 'error': f'Erro de banco de dados: {e}'}), 500
@@ -181,127 +163,38 @@ def update_user_perfil():
     usuario_alvo = request.form.get('usuario_email')
     novo_perfil = request.form.get('new_perfil')
 
+    def render_users_list():
+        """Helper para renderizar lista de usuários."""
+        users_data = listar_usuarios_service()
+        perfis_disponiveis = obter_perfis_disponiveis()
+        return render_template('_manage_users_content.html', users=users_data, perfis_list=perfis_disponiveis)
+
     if usuario_alvo is None:
         flash('Usuário não especificado.', 'error')
         if request.headers.get('HX-Request') == 'true':
-            users_data = query_db(
-                "SELECT usuario as usuario, nome, perfil_acesso FROM perfil_usuario ORDER BY nome"
-            ) or []
-            perfis_disponiveis = current_app.config.get(
-                'PERFIS_DE_ACESSO', ['Visitante', 'Implantador', 'Gestor', 'Administrador']
-            )
-            return render_template('_manage_users_content.html', users=users_data, perfis_list=perfis_disponiveis)
+            return render_users_list()
         return redirect(url_for('management.manage_users'))
 
     if novo_perfil == "":
         novo_perfil = None
 
-    if usuario_alvo == g.user_email:
-        security_logger.warning(f"Admin {g.user_email} tentou alterar o próprio perfil via 'update_user_perfil'")
-        flash('Você não pode alterar o seu próprio perfil por esta interface.', 'warning')
-        if request.headers.get('HX-Request') == 'true':
-            users_data = query_db(
-                "SELECT usuario as usuario, nome, perfil_acesso FROM perfil_usuario ORDER BY nome"
-            ) or []
-            perfis_disponiveis = current_app.config.get(
-                'PERFIS_DE_ACESSO', ['Visitante', 'Implantador', 'Gestor', 'Administrador']
-            )
-            return render_template('_manage_users_content.html', users=users_data, perfis_list=perfis_disponiveis)
-        return redirect(url_for('management.manage_users'))
-
-    if usuario_alvo == ADMIN_EMAIL and (novo_perfil is None or novo_perfil != PERFIL_ADMIN):
-        security_logger.warning("Tentativa de rebaixar administrador detectada por " + str(g.user_email))
-        flash('Não é permitido alterar o perfil do administrador principal.', 'warning')
-        if request.headers.get('HX-Request') == 'true':
-            users_data = query_db(
-                "SELECT usuario as usuario, nome, perfil_acesso FROM perfil_usuario ORDER BY nome"
-            ) or []
-            perfis_disponiveis = current_app.config.get(
-                'PERFIS_DE_ACESSO', ['Visitante', 'Implantador', 'Gestor', 'Administrador']
-            )
-            return render_template('_manage_users_content.html', users=users_data, perfis_list=perfis_disponiveis)
-        return redirect(url_for('management.manage_users'))
-
-    perfis_disponiveis = current_app.config.get('PERFIS_DE_ACESSO', [])
-    if novo_perfil is not None and novo_perfil not in perfis_disponiveis:
-        security_logger.warning(
-            f"Tentativa de atribuir perfil inválido '{novo_perfil}' para {usuario_alvo} por {g.user_email}"
-        )
-        flash('Perfil de acesso inválido.', 'error')
-        if request.headers.get('HX-Request') == 'true':
-            users_data = query_db(
-                "SELECT usuario as usuario, nome, perfil_acesso FROM perfil_usuario ORDER BY nome"
-            ) or []
-            perfis_disponiveis = current_app.config.get(
-                'PERFIS_DE_ACESSO', ['Visitante', 'Implantador', 'Gestor', 'Administrador']
-            )
-            return render_template('_manage_users_content.html', users=users_data, perfis_list=perfis_disponiveis)
-        return redirect(url_for('management.manage_users'))
-
     try:
-        user_exists = query_db("SELECT 1 FROM perfil_usuario WHERE usuario = %s", (usuario_alvo,), one=True)
-        if not user_exists:
-            flash('Usuário não encontrado.', 'error')
-            if request.headers.get('HX-Request') == 'true':
-                users_data = query_db(
-                    "SELECT usuario as usuario, nome, perfil_acesso FROM perfil_usuario ORDER BY nome"
-                ) or []
-                perfis_disponiveis = current_app.config.get(
-                    'PERFIS_DE_ACESSO', ['Visitante', 'Implantador', 'Gestor', 'Administrador']
-                )
-                return render_template('_manage_users_content.html', users=users_data, perfis_list=perfis_disponiveis)
-            return redirect(url_for('management.manage_users'))
-
-        from ..blueprints.auth import security_logger as auth_security_logger
-        try:
-            target_is_admin = query_db(
-                "SELECT perfil_acesso FROM perfil_usuario WHERE usuario = %s",
-                (usuario_alvo,), one=True
-            )
-            target_is_admin = target_is_admin and target_is_admin.get('perfil_acesso') == PERFIL_ADMIN
-        except Exception:
-            target_is_admin = False
-
-        if target_is_admin and (g.perfil or {}).get('perfil_acesso') != PERFIL_ADMIN:
-            auth_security_logger.warning("Tentativa de rebaixar administrador detectada por " + str(g.user_email))
-            flash('Apenas Administradores podem alterar perfis de Administradores.', 'warning')
-            if request.headers.get('HX-Request') == 'true':
-                users_data = query_db(
-                    "SELECT usuario as usuario, nome, perfil_acesso FROM perfil_usuario ORDER BY nome"
-                ) or []
-                perfis_disponiveis = current_app.config.get(
-                    'PERFIS_DE_ACESSO', ['Visitante', 'Implantador', 'Gestor', 'Administrador']
-                )
-                return render_template('_manage_users_content.html', users=users_data, perfis_list=perfis_disponiveis)
-            return redirect(url_for('management.manage_users'))
-
-        execute_db(
-            "UPDATE perfil_usuario SET perfil_acesso = %s WHERE usuario = %s",
-            (novo_perfil, usuario_alvo)
-        )
-        management_logger.info(f"Admin {g.user_email} atualizou o perfil de {usuario_alvo} para {novo_perfil}")
+        atualizar_perfil_usuario_service(usuario_alvo, novo_perfil, g.user_email)
         flash('Perfil atualizado com sucesso.', 'success')
         if request.headers.get('HX-Request') == 'true':
-            users_data = query_db(
-                "SELECT usuario as usuario, nome, perfil_acesso FROM perfil_usuario ORDER BY nome"
-            ) or []
-            perfis_disponiveis = current_app.config.get(
-                'PERFIS_DE_ACESSO', ['Visitante', 'Implantador', 'Gestor', 'Administrador']
-            )
-            return render_template('_manage_users_content.html', users=users_data, perfis_list=perfis_disponiveis)
+            return render_users_list()
         return redirect(url_for('management.manage_users'))
 
+    except ValueError as e:
+        flash(str(e), 'warning' if 'próprio perfil' in str(e) or 'administrador' in str(e) else 'error')
+        if request.headers.get('HX-Request') == 'true':
+            return render_users_list()
+        return redirect(url_for('management.manage_users'))
     except Exception as e:
         management_logger.error(f"Erro ao atualizar perfil de {usuario_alvo} por {g.user_email}: {e}")
         flash(f'Erro de banco de dados: {e}', 'error')
         if request.headers.get('HX-Request') == 'true':
-            users_data = query_db(
-                "SELECT usuario as usuario, nome, perfil_acesso FROM perfil_usuario ORDER BY nome"
-            ) or []
-            perfis_disponiveis = current_app.config.get(
-                'PERFIS_DE_ACESSO', ['Visitante', 'Implantador', 'Gestor', 'Administrador']
-            )
-            return render_template('_manage_users_content.html', users=users_data, perfis_list=perfis_disponiveis)
+            return render_users_list()
         return redirect(url_for('management.manage_users'))
 
 
@@ -309,92 +202,49 @@ def update_user_perfil():
 def delete_user():
     """Exclui um usuário via formulário, com redirecionamento e logs (compatível com testes)."""
     usuario_alvo = request.form.get('usuario_email')
+
+    def render_users_list():
+        """Helper para renderizar lista de usuários."""
+        users_data = listar_usuarios_service()
+        perfis_disponiveis = obter_perfis_disponiveis()
+        return render_template('_manage_users_content.html', users=users_data, perfis_list=perfis_disponiveis)
+
     if not usuario_alvo:
         flash('Usuário não especificado.', 'error')
-
         if request.headers.get('HX-Request') == 'true':
-            users_data = query_db(
-                "SELECT usuario as usuario, nome, perfil_acesso FROM perfil_usuario ORDER BY nome"
-            ) or []
-            perfis_disponiveis = current_app.config.get(
-                'PERFIS_DE_ACESSO', ['Visitante', 'Implantador', 'Gestor', 'Administrador']
-            )
-            return render_template(
-                '_manage_users_content.html',
-                users=users_data,
-                perfis_list=perfis_disponiveis
-            )
-        return redirect(url_for('management.manage_users'))
-
-    if usuario_alvo == g.user_email:
-        security_logger.warning(f"Tentativa de exclusão do próprio usuário por {g.user_email}")
-        flash('Você não pode excluir a si mesmo.', 'warning')
-        if request.headers.get('HX-Request') == 'true':
-            users_data = query_db(
-                "SELECT usuario as usuario, nome, perfil_acesso FROM perfil_usuario ORDER BY nome"
-            ) or []
-            perfis_disponiveis = current_app.config.get(
-                'PERFIS_DE_ACESSO', ['Visitante', 'Implantador', 'Gestor', 'Administrador']
-            )
-            return render_template('_manage_users_content.html', users=users_data, perfis_list=perfis_disponiveis)
-        return redirect(url_for('management.manage_users'))
-
-    if usuario_alvo == ADMIN_EMAIL:
-        security_logger.warning("Tentativa de exclusão do administrador principal detectada por " + str(g.user_email))
-        flash('Não é permitido excluir o administrador principal.', 'warning')
-        if request.headers.get('HX-Request') == 'true':
-            users_data = query_db(
-                "SELECT usuario as usuario, nome, perfil_acesso FROM perfil_usuario ORDER BY nome"
-            ) or []
-            perfis_disponiveis = current_app.config.get(
-                'PERFIS_DE_ACESSO', ['Visitante', 'Implantador', 'Gestor', 'Administrador']
-            )
-            return render_template('_manage_users_content.html', users=users_data, perfis_list=perfis_disponiveis)
+            return render_users_list()
         return redirect(url_for('management.manage_users'))
 
     try:
-        perfil = query_db("SELECT foto_url FROM perfil_usuario WHERE usuario = %s", (usuario_alvo,), one=True)
-        public_base = current_app.config.get('CLOUDFLARE_PUBLIC_URL')
-        bucket = current_app.config.get('CLOUDFLARE_BUCKET_NAME')
-        if perfil and perfil.get('foto_url') and public_base and bucket and r2_client:
-            foto_url = perfil['foto_url']
-            if foto_url.startswith(public_base):
+        result = excluir_usuario_service(usuario_alvo, g.user_email)
+
+        # Deletar foto do R2 se houver
+        foto_url = result.get('foto_url')
+        if foto_url:
+            public_base = current_app.config.get('CLOUDFLARE_PUBLIC_URL')
+            bucket = current_app.config.get('CLOUDFLARE_BUCKET_NAME')
+            if public_base and bucket and r2_client and foto_url.startswith(public_base):
                 key = foto_url[len(public_base):].lstrip('/')
                 try:
                     r2_client.delete_object(Bucket=bucket, Key=key)
                 except Exception:
                     pass
 
-        implantacoes_ids = query_db("SELECT id FROM implantacoes WHERE usuario_cs = %s", (usuario_alvo,)) or []
-        for impl in implantacoes_ids:
-            execute_db("DELETE FROM implantacoes WHERE id = %s", (impl['id'],))
-
-        execute_db("DELETE FROM perfil_usuario WHERE usuario = %s", (usuario_alvo,))
-        execute_db("DELETE FROM usuarios WHERE usuario = %s", (usuario_alvo,))
-
-        management_logger.info(f"Usuário {usuario_alvo} excluído por {g.user_email} (implantações vinculadas removidas: {len(implantacoes_ids)})")
-        flash(f"Usuário e {len(implantacoes_ids)} implantações vinculadas excluídos.", 'success')
+        flash(f"Usuário e {result['implantacoes_excluidas']} implantações vinculadas excluídos.", 'success')
         if request.headers.get('HX-Request') == 'true':
-            users_data = query_db(
-                "SELECT usuario as usuario, nome, perfil_acesso FROM perfil_usuario ORDER BY nome"
-            ) or []
-            perfis_disponiveis = current_app.config.get(
-                'PERFIS_DE_ACESSO', ['Visitante', 'Implantador', 'Gestor', 'Administrador']
-            )
-            return render_template('_manage_users_content.html', users=users_data, perfis_list=perfis_disponiveis)
+            return render_users_list()
         return redirect(url_for('management.manage_users'))
 
+    except ValueError as e:
+        flash(str(e), 'warning')
+        if request.headers.get('HX-Request') == 'true':
+            return render_users_list()
+        return redirect(url_for('management.manage_users'))
     except Exception as e:
         management_logger.error(f"Erro ao excluir usuário {usuario_alvo} por {g.user_email}: {e}")
         flash(f'Erro de banco de dados: {e}', 'error')
         if request.headers.get('HX-Request') == 'true':
-            users_data = query_db(
-                "SELECT usuario as usuario, nome, perfil_acesso FROM perfil_usuario ORDER BY nome"
-            ) or []
-            perfis_disponiveis = current_app.config.get(
-                'PERFIS_DE_ACESSO', ['Visitante', 'Implantador', 'Gestor', 'Administrador']
-            )
-            return render_template('_manage_users_content.html', users=users_data, perfis_list=perfis_disponiveis)
+            return render_users_list()
         return redirect(url_for('management.manage_users'))
 
 
@@ -402,10 +252,7 @@ def delete_user():
 def cleanup_orphan_implantacoes():
     """Remove implantações órfãs (sem usuário proprietário). Admin-only."""
     try:
-        stats = query_db("SELECT COUNT(*) as c FROM implantacoes WHERE usuario_cs IS NULL", (), one=True) or {'c': 0}
-        execute_db("DELETE FROM implantacoes WHERE usuario_cs IS NULL")
-        count = stats.get('c', 0)
-        management_logger.info(f"Admin {g.user_email} removeu {count} implantações órfãs")
+        count = limpar_implantacoes_orfas_service(g.user_email)
         flash(f"{count} implantações órfãs removidas.", 'success')
         return redirect(url_for('management.manage_users'))
     except Exception as e:

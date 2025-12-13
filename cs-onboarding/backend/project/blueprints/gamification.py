@@ -8,21 +8,18 @@ from ..blueprints.auth import permission_required
 from ..common.validation import ValidationError, sanitize_string, validate_email, validate_integer
 from ..constants import PERFIS_COM_GESTAO
 from ..core.extensions import limiter
-from ..db import execute_db, query_db
 from ..domain.gamification_service import (
     _get_all_gamification_rules_grouped,
     _get_gamification_automatic_data_bulk,
     clear_gamification_cache,
     get_gamification_report_data,
+    get_all_cs_users_for_gamification,
+    salvar_regras_gamificacao,
+    obter_metricas_mensais,
+    salvar_metricas_mensais
 )
 
 gamification_bp = Blueprint('gamification', __name__, url_prefix='/gamification')
-
-
-def _get_all_cs_users_for_gamification():
-    """Busca todos os usuários com nome e e-mail para o filtro de gamificação."""
-    result = query_db("SELECT usuario, nome, cargo FROM perfil_usuario WHERE perfil_acesso IS NOT NULL AND perfil_acesso != '' ORDER BY nome", ())
-    return result if result is not None else []
 
 
 @gamification_bp.route('/save-rules-modal', methods=['POST'])
@@ -53,16 +50,7 @@ def save_gamification_rules_from_modal():
             flash('Nenhum dado válido foi enviado para atualização.', 'warning')
             return fallback_redirect
 
-        total_atualizado = 0
-        for valor, regra_id in updates_to_make:
-            execute_db(
-                "UPDATE gamificacao_regras SET valor_pontos = %s WHERE regra_id = %s",
-                (valor, regra_id)
-            )
-            total_atualizado += 1
-
-        clear_gamification_cache()
-
+        total_atualizado = salvar_regras_gamificacao(updates_to_make)
         flash(f'{total_atualizado} regras de pontuação foram atualizadas com sucesso!', 'success')
 
     except Exception as e:
@@ -77,8 +65,7 @@ def save_gamification_rules_from_modal():
 def manage_gamification_metrics():
     """Rota para gestores inserirem/atualizarem as métricas manuais de um CS."""
 
-    all_cs_users = _get_all_cs_users_for_gamification()
-
+    all_cs_users = get_all_cs_users_for_gamification()
     regras_agrupadas = _get_all_gamification_rules_grouped()
 
     target_cs_email = None
@@ -106,15 +93,9 @@ def manage_gamification_metrics():
     metricas_automaticas = {}
 
     if target_cs_email:
-
-        metricas_atuais = query_db(
-            "SELECT * FROM gamificacao_metricas_mensais WHERE usuario_cs = %s AND mes = %s AND ano = %s",
-            (target_cs_email, target_mes, target_ano),
-            one=True
-        )
+        metricas_atuais = obter_metricas_mensais(target_cs_email, target_mes, target_ano)
 
         try:
-
             primeiro_dia = datetime(target_ano, target_mes, 1)
             dias_no_mes = calendar.monthrange(target_ano, target_mes)[1]
             ultimo_dia = datetime(target_ano, target_mes, dias_no_mes)
@@ -248,27 +229,9 @@ def manage_gamification_metrics():
 
             existing_record_id = metricas_atuais.get('id') if metricas_atuais else None
 
-            if existing_record_id:
-                set_clauses = [f"{key} = %s" for key in data_to_save.keys() if key not in ['usuario_cs', 'mes', 'ano']]
-                sql_update = f"""
-                    UPDATE gamificacao_metricas_mensais
-                    SET {', '.join(set_clauses)}
-                    WHERE id = %s
-                """
-                args = list(data_to_save.values())[3:] + [existing_record_id]
-
-                execute_db(sql_update, tuple(args))
-                flash("Métricas manuais atualizadas com sucesso!", "success")
-
-            else:
-                columns = data_to_save.keys()
-                values_placeholders = ['%s'] * len(columns)
-                sql_insert = f"INSERT INTO gamificacao_metricas_mensais ({', '.join(columns)}) VALUES ({', '.join(values_placeholders)})"
-                args = list(data_to_save.values())
-
-                execute_db(sql_insert, tuple(args))
-                flash("Métricas manuais salvas com sucesso!", "success")
-
+            salvar_metricas_mensais(data_to_save, existing_record_id)
+            
+            flash("Métricas manuais atualizadas com sucesso!" if existing_record_id else "Métricas manuais salvas com sucesso!", "success")
             return redirect(url_for('gamification.manage_gamification_metrics', cs_email=target_cs_email, mes=target_mes, ano=target_ano))
 
         except Exception as e:
@@ -292,7 +255,7 @@ def manage_gamification_metrics():
 def gamification_report():
     """Rota para exibir o relatório de pontuação da gamificação."""
 
-    all_cs_users = _get_all_cs_users_for_gamification()
+    all_cs_users = get_all_cs_users_for_gamification()
 
     hoje = datetime.now()
 

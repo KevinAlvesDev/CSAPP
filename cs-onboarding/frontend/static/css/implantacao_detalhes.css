@@ -1,0 +1,423 @@
+/* 
+ * Estilos para Implantação Detalhes
+ * Extraído de implantacao_detalhes.html para melhor organização
+ */
+
+:root {
+    --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    --card-hover-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    --border-radius: 16px;
+}
+
+/* Layout */
+.content-wrapper {
+    padding-top: 50px;
+}
+
+/* Título da página */
+.page-title-header {
+    text-align: center;
+    padding: 0.5rem 0;
+    margin-bottom: 0.75rem;
+}
+
+.page-title-header h2 {
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #667eea;
+    text-transform: uppercase;
+    margin: 0;
+}
+
+/* Tabs */
+.tab-switcher {
+    display: flex;
+    background: #f1f5f9;
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 0;
+}
+
+.tab-switcher .nav-link {
+    flex: 1;
+    text-align: center;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    color: #64748b;
+    font-weight: 600;
+    font-size: 0.875rem;
+    border: none;
+    background: transparent;
+    transition: all 0.2s ease;
+}
+
+.tab-switcher .nav-link:hover {
+    color: #475569;
+}
+
+.tab-switcher .nav-link.active {
+    background: white;
+    color: #667eea;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Info de datas do plano */
+.plano-datas-info {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border: 1px solid #bae6fd;
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.plano-datas-info .data-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.4rem 0;
+}
+
+.plano-datas-info .data-item:not(:last-child) {
+    border-bottom: 1px dashed #bae6fd;
+}
+
+.plano-datas-info .data-label {
+    font-size: 0.8rem;
+    color: #0369a1;
+    font-weight: 500;
+}
+
+.plano-datas-info .data-value {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #0c4a6e;
+}
+
+.plano-datas-info .data-value.destaque {
+    color: #059669;
+    background: #d1fae5;
+    padding: 0.2rem 0.6rem;
+    border-radius: 6px;
+}
+
+/* Cards */
+.custom-card {
+    background: white;
+    border-radius: var(--border-radius);
+    border: none;
+    box-shadow: var(--card-shadow);
+    transition: all 0.3s ease;
+    overflow: hidden;
+    margin-bottom: 1rem;
+}
+
+.custom-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--card-hover-shadow);
+}
+
+.custom-card-header {
+    padding: 0.85rem 1.1rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    background: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.custom-card-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #2d3748;
+    margin: 0;
+}
+
+.custom-card-body {
+    padding: 1rem;
+}
+
+/* Layout das colunas */
+.sidebar-column {
+    flex: 0 0 20%;
+    max-width: 20%;
+    padding-right: 0.5rem;
+    padding-left: 0.5rem;
+}
+
+.main-column {
+    flex: 0 0 80%;
+    max-width: 80%;
+    padding-right: 0.5rem;
+    padding-left: 0.5rem;
+}
+
+@media (max-width: 991.98px) {
+    .sidebar-column,
+    .main-column {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+}
+
+/* Cards da sidebar compactos */
+.sidebar-column .custom-card {
+    margin-bottom: 0.5rem;
+}
+
+.sidebar-column .custom-card-header {
+    padding: 0.5rem 0.7rem;
+}
+
+.sidebar-column .custom-card-title {
+    font-size: 0.85rem;
+}
+
+.sidebar-column .custom-card-body {
+    padding: 0.6rem 0.7rem;
+}
+
+/* Progress Bar */
+.progress-thick {
+    height: 12px;
+    border-radius: 10px;
+    background-color: #e2e8f0;
+    overflow: hidden;
+}
+
+.progress-thick .progress-bar {
+    background: var(--primary-gradient);
+    display: block;
+    height: 100%;
+}
+
+/* Timeline */
+.timeline-list {
+    list-style: none;
+    padding: 0;
+    position: relative;
+}
+
+.timeline-list::before {
+    content: '';
+    position: absolute;
+    left: 20px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #e2e8f0;
+}
+
+.timeline-item {
+    position: relative;
+    padding-left: 50px;
+    margin-bottom: 1.5rem;
+}
+
+.timeline-icon {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: white;
+    border: 2px solid #667eea;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #667eea;
+    z-index: 1;
+}
+
+.timeline-content {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 12px;
+    position: relative;
+}
+
+.timeline-content::before {
+    content: '';
+    position: absolute;
+    left: -8px;
+    top: 15px;
+    width: 16px;
+    height: 16px;
+    background: #f8f9fa;
+    transform: rotate(45deg);
+}
+
+/* CTA Card */
+.cta-card {
+    background: linear-gradient(135deg, #fff5f5 0%, #fff 100%);
+    border: 2px dashed #fc8181;
+}
+
+.cta-title {
+    color: #c53030;
+    font-weight: 700;
+}
+
+/* Checklist Hierárquico */
+.checklist-item {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    position: relative;
+}
+
+.checklist-item:last-child {
+    border-bottom: none;
+}
+
+.checklist-item-header {
+    transition: background-color 0.2s ease;
+    position: relative;
+    z-index: 1;
+}
+
+.checklist-item-header.level-0 { border-left: 0; }
+.checklist-item-header.level-1 { border-left: 3px solid #60a5fa; background: rgba(96,165,250,0.06); }
+.checklist-item-header.level-2 { border-left: 3px solid #22c55e; background: rgba(34,197,94,0.06); }
+.checklist-item-header.level-3,
+.checklist-item-header.level-4,
+.checklist-item-header.level-5 { border-left: 3px solid #a855f7; background: rgba(168,85,247,0.06); }
+
+.checklist-item-title {
+    font-weight: 500;
+    color: #4a5568;
+    cursor: pointer;
+    margin: 0;
+    transition: all 0.2s ease;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.checklist-item-title:hover {
+    color: #667eea;
+}
+
+.checklist-checkbox {
+    cursor: pointer;
+    accent-color: #667eea;
+    transition: all 0.2s ease;
+}
+
+.checklist-checkbox:disabled {
+    opacity: 0.5;
+    cursor: wait;
+}
+
+/* Fase e Grupo Cards */
+.fase-card {
+    background: linear-gradient(135deg, #f8fafc 0%, #fff 100%);
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+    overflow: hidden;
+    transition: all 0.2s ease;
+}
+
+.fase-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.fase-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1rem 1.25rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s ease;
+}
+
+.fase-header:hover {
+    filter: brightness(1.05);
+}
+
+.grupo-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+}
+
+.grupo-header {
+    background: #f1f5f9;
+    padding: 0.875rem 1rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s ease;
+    border-left: 4px solid #667eea;
+}
+
+.grupo-header:hover {
+    background: #e2e8f0;
+}
+
+/* Botões de ícone */
+.btn-icon {
+    background: none;
+    border: none;
+    padding: 0.25rem;
+    color: #64748b;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.btn-icon:hover {
+    background-color: #e2e8f0;
+    color: #667eea;
+    transform: scale(1.1);
+}
+
+.btn-icon:focus {
+    outline: 2px solid #667eea;
+    outline-offset: 2px;
+}
+
+/* Comentários */
+.comentarios-section {
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    padding: 1rem;
+    margin-top: 0.5rem;
+    border-radius: 0 0 8px 8px;
+}
+
+.comentario-form {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.comentario-item {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.875rem;
+    margin-bottom: 0.5rem;
+}
+
+.comentario-item.externo {
+    border-left: 3px solid #f59e0b;
+}
+
+.comentario-item.interno {
+    border-left: 3px solid #3b82f6;
+}

@@ -78,6 +78,7 @@ def create_app(test_config=None):
     from .constants import ADMIN_EMAIL, PERFIL_ADMIN, PERFIS_COM_GESTAO
     from .db import execute_db, query_db
     from .domain.gamification_service import _get_all_gamification_rules_grouped
+    from .database import schema
 
     app.jinja_env.filters['format_date_br'] = format_date_br
     app.jinja_env.filters['format_date_iso'] = format_date_iso_for_json
@@ -86,7 +87,7 @@ def create_app(test_config=None):
     oauth.init_app(app)
 
     init_r2(app)
-    db.init_app(app)
+    schema.init_app(app)
 
     try:
         from .config.sentry_config import init_sentry
@@ -108,7 +109,7 @@ def create_app(test_config=None):
     performance_monitor.init_app(app)
 
     from .database import close_db_connection, init_connection_pool
-    from .db import ensure_implantacoes_status_constraint
+    from .database.schema import ensure_implantacoes_status_constraint
     if not app.config.get('USE_SQLITE_LOCALLY', False):
         init_connection_pool(app)
         try:
@@ -144,7 +145,7 @@ def create_app(test_config=None):
                 except Exception as e:
                     app.logger.warning(f"Banco não existe ainda, será criado: {e}")
 
-                db.init_db()
+                schema.init_db()
 
                 # Criar usuário admin padrão automaticamente
                 try:
@@ -209,7 +210,7 @@ def create_app(test_config=None):
     from .blueprints.analytics import analytics_bp
     from .blueprints.api import api_bp
     from .blueprints.api_docs import api_docs_bp
-    from .blueprints.api_h import api_h_bp
+
     from .blueprints.api_v1 import api_v1_bp
     from .blueprints.auth import auth_bp  # Blueprint de autenticação
     from .blueprints.checklist_api import checklist_bp
@@ -226,7 +227,7 @@ def create_app(test_config=None):
         csrf.exempt(api_v1_bp)
         csrf.exempt(health_bp)
         csrf.exempt(api_docs_bp)
-        csrf.exempt(api_h_bp)
+
         # checklist_bp deixa de ser isento para proteger mutações
     except Exception:
         pass
@@ -244,7 +245,7 @@ def create_app(test_config=None):
     app.register_blueprint(health_bp)
     app.register_blueprint(api_docs_bp)
     app.register_blueprint(planos_bp)
-    app.register_blueprint(api_h_bp)
+
     app.register_blueprint(checklist_bp)
 
 

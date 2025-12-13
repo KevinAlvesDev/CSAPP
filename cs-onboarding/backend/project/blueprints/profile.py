@@ -8,7 +8,7 @@ from werkzeug.utils import secure_filename
 from ..blueprints.auth import login_required
 from ..config.logging_config import app_logger
 from ..core.extensions import r2_client
-from ..db import execute_db
+from ..domain.auth_service import atualizar_dados_perfil_service
 
 profile_bp = Blueprint('profile', __name__, url_prefix='/profile')
 
@@ -118,10 +118,7 @@ def save_profile():
             flash("Erro ao salvar foto local.", "error")
 
     try:
-        execute_db(
-            "UPDATE perfil_usuario SET nome = %s, cargo = %s, foto_url = %s WHERE usuario = %s",
-            (nome, cargo, foto_url, g.user_email)
-        )
+        atualizar_dados_perfil_service(g.user_email, nome, cargo, foto_url)
 
         session['user'] = session.get('user', {})
         session['user']['name'] = nome

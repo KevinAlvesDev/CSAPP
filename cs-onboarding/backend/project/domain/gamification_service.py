@@ -710,3 +710,78 @@ def clear_gamification_cache():
         return True
     except Exception:
         return False
+
+
+def get_all_cs_users_for_gamification():
+    """Busca todos os usuários com nome e e-mail para o filtro de gamificação."""
+    result = query_db(
+        "SELECT usuario, nome, cargo FROM perfil_usuario WHERE perfil_acesso IS NOT NULL AND perfil_acesso != '' ORDER BY nome",
+        ()
+    )
+    return result if result is not None else []
+
+
+def salvar_regras_gamificacao(updates_list):
+    """
+    Salva atualizações de regras de gamificação.
+    
+    Args:
+        updates_list: Lista de tuplas (valor_pontos, regra_id)
+        
+    Returns:
+        int: Número de regras atualizadas
+    """
+    if not updates_list:
+        return 0
+    
+    total_atualizado = 0
+    for valor, regra_id in updates_list:
+        execute_db(
+            "UPDATE gamificacao_regras SET valor_pontos = %s WHERE regra_id = %s",
+            (valor, regra_id)
+        )
+        total_atualizado += 1
+    
+    clear_gamification_cache()
+    return total_atualizado
+
+
+def obter_metricas_mensais(usuario_cs, mes, ano):
+    """Busca as métricas mensais de um usuário específico."""
+    return query_db(
+        "SELECT * FROM gamificacao_metricas_mensais WHERE usuario_cs = %s AND mes = %s AND ano = %s",
+        (usuario_cs, mes, ano),
+        one=True
+    )
+
+
+def salvar_metricas_mensais(data_to_save, existing_record_id=None):
+    """
+    Salva ou atualiza métricas mensais de gamificação.
+    
+    Args:
+        data_to_save: Dicionário com os dados a salvar
+        existing_record_id: ID do registro existente (None para inserir novo)
+        
+    Returns:
+        bool: True se sucesso
+    """
+    if existing_record_id:
+        # Atualizar registro existente
+        set_clauses = [f"{key} = %s" for key in data_to_save.keys() if key not in ['usuario_cs', 'mes', 'ano']]
+        sql_update = f"""
+            UPDATE gamificacao_metricas_mensais
+            SET {', '.join(set_clauses)}
+            WHERE id = %s
+        """
+        args = list(data_to_save.values())[3:] + [existing_record_id]
+        execute_db(sql_update, tuple(args))
+    else:
+        # Inserir novo registro
+        columns = data_to_save.keys()
+        values_placeholders = ['%s'] * len(columns)
+        sql_insert = f"INSERT INTO gamificacao_metricas_mensais ({', '.join(columns)}) VALUES ({', '.join(values_placeholders)})"
+        args = list(data_to_save.values())
+        execute_db(sql_insert, tuple(args))
+    
+    return True

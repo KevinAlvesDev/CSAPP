@@ -2,9 +2,7 @@ from flask import Blueprint, flash, g, jsonify, make_response, redirect, render_
 
 from ..blueprints.auth import permission_required
 from ..common.validation import ValidationError, sanitize_string, validate_date, validate_email
-from ..config.cache_config import cache
 from ..constants import PERFIS_COM_ANALYTICS, PERFIS_COM_GESTAO
-from ..db import query_db
 from ..domain.analytics_service import (
     get_analytics_data,
     get_cancelamentos_data,
@@ -12,30 +10,10 @@ from ..domain.analytics_service import (
     get_gamification_rank,
     get_implants_by_day,
 )
+from ..domain.management_service import listar_todos_cs_com_cache
 
 analytics_bp = Blueprint('analytics', __name__)
 
-
-def get_all_customer_success():
-    """
-    Busca a lista de todos os CS com nome e e-mail para o filtro.
-
-    PERFORMANCE: Cacheado por 10 minutos (600s) pois lista de CS muda raramente.
-    """
-
-    if cache:
-        cache_key = 'all_customer_success'
-        cached_result = cache.get(cache_key)
-        if cached_result:
-            return cached_result
-
-    result = query_db("SELECT usuario, nome, perfil_acesso FROM perfil_usuario WHERE perfil_acesso IS NOT NULL AND perfil_acesso != '' ORDER BY nome", ())
-    result = result if result is not None else []
-
-    if cache:
-        cache.set(cache_key, result, timeout=600)
-
-    return result
 
 
 @analytics_bp.route('/analytics')
@@ -138,7 +116,7 @@ def analytics_dashboard():
             sort_impl_date=sort_impl_date
         )
 
-        all_cs = get_all_customer_success()
+        all_cs = listar_todos_cs_com_cache()
 
         status_options = [
             {'value': 'todas', 'label': 'Todas as Implantações'},

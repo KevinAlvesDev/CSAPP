@@ -38,12 +38,12 @@
     // Event listeners for Phone Input (moved from inline HTML)
     const telefoneInput = document.getElementById('modal-telefone_responsavel');
     if (telefoneInput) {
-        telefoneInput.addEventListener('input', function() {
-            if (window.formatarTelefone) window.formatarTelefone(this);
-        });
-        telefoneInput.addEventListener('blur', function() {
-            if (window.validarTelefoneCompleto) window.validarTelefoneCompleto(this);
-        });
+      telefoneInput.addEventListener('input', function () {
+        if (window.formatarTelefone) window.formatarTelefone(this);
+      });
+      telefoneInput.addEventListener('blur', function () {
+        if (window.validarTelefoneCompleto) window.validarTelefoneCompleto(this);
+      });
     }
 
     if (!CONFIG.implantacaoId) {
@@ -105,7 +105,7 @@
 
     async function carregarComentariosGerais(append = false) {
       if (globalCommentsState.isLoading) return;
-      
+
       globalCommentsState.isLoading = true;
       const loadingEl = document.getElementById('comments-loading');
       const emptyEl = document.getElementById('comments-empty');
@@ -114,24 +114,24 @@
 
       if (!append && loadingEl) loadingEl.classList.remove('d-none');
 
-          try {
-            const url = `/api/checklist/implantacao/${CONFIG.implantacaoId}/comments?page=${globalCommentsState.page}&per_page=${globalCommentsState.perPage}`;
-            const response = await fetch(url, {
-              headers: { 'Accept': 'application/json' }
-            });
+      try {
+        const url = `/api/checklist/implantacao/${CONFIG.implantacaoId}/comments?page=${globalCommentsState.page}&per_page=${globalCommentsState.perPage}`;
+        const response = await fetch(url, {
+          headers: { 'Accept': 'application/json' }
+        });
 
         if (!response.ok) {
           throw new Error(`Erro ${response.status}`);
         }
 
         const data = await response.json();
-        
+
         if (!append && loadingEl) loadingEl.classList.add('d-none');
 
         if (data.ok) {
           const comentarios = data.comments || [];
           const meta = data.pagination;
-          
+
           // Update state
           globalCommentsState.hasMore = meta.page < meta.total_pages;
 
@@ -141,7 +141,7 @@
           } else {
             if (emptyEl) emptyEl.classList.add('d-none');
             renderGlobalComments(comentarios, container, append);
-            
+
             if (paginationEl) {
               if (globalCommentsState.hasMore) {
                 paginationEl.classList.remove('d-none');
@@ -171,7 +171,7 @@
         const taskLink = `<a href="#" class="text-decoration-none fw-bold ms-1 small text-primary task-scroll-link" data-task-id="${c.item_id}">
            <i class="bi bi-check2-square me-1"></i>${escapeHtml(c.item_title || 'Tarefa #' + c.item_id)}
         </a>`;
-        
+
         return `
           <div class="comentario-item card mb-2 border-0 shadow-sm ${c.visibilidade || 'interno'}" data-comentario-id="${c.id}">
             <div class="card-body p-3">
@@ -202,47 +202,47 @@
             </div>
           </div>`;
       }).join('');
-      
-      
+
+
       if (!append) {
         // Remove old comment items
         container.querySelectorAll('.comentario-item').forEach(e => e.remove());
       }
-      
+
       container.insertAdjacentHTML('beforeend', html);
-      
+
       // Add event listeners for task links
       container.querySelectorAll('.task-scroll-link').forEach(link => {
-        link.addEventListener('click', function(e) {
-            e.preventDefault();
-            const taskId = parseInt(this.dataset.taskId, 10);
-            if (window.checklistRenderer && Number.isFinite(taskId)) {
-                try { window.checklistRenderer.ensureItemVisible(taskId); } catch (_) {}
-            }
+        link.addEventListener('click', function (e) {
+          e.preventDefault();
+          const taskId = parseInt(this.dataset.taskId, 10);
+          if (window.checklistRenderer && Number.isFinite(taskId)) {
+            try { window.checklistRenderer.ensureItemVisible(taskId); } catch (_) { }
+          }
           const taskElement = document.getElementById(`checklist-item-${taskId}`) || document.querySelector(`.checklist-item[data-item-id="${taskId}"]`);
           if (taskElement) {
-              const planoTabBtn = document.querySelector('button[data-bs-target="#plano-content"]');
-              if (planoTabBtn) {
-                   const tabInstance = new bootstrap.Tab(planoTabBtn);
-                   tabInstance.show();
-              }
-              setTimeout(() => {
-                  taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                  taskElement.classList.add('highlight-task');
-                  setTimeout(() => taskElement.classList.remove('highlight-task'), 2000);
-                  const commentsSection = document.getElementById(`comments-${taskId}`);
-                  if (commentsSection && window.bootstrap && bootstrap.Collapse) {
-                      try {
-                          const inst = bootstrap.Collapse.getInstance(commentsSection) || new bootstrap.Collapse(commentsSection, { toggle: false });
-                          inst.show();
-                          if (window.checklistRenderer && typeof window.checklistRenderer.loadComments === 'function') {
-                              try { window.checklistRenderer.loadComments(taskId); } catch (_) {}
-                          }
-                      } catch (_) {}
+            const planoTabBtn = document.querySelector('button[data-bs-target="#plano-content"]');
+            if (planoTabBtn) {
+              const tabInstance = new bootstrap.Tab(planoTabBtn);
+              tabInstance.show();
+            }
+            setTimeout(() => {
+              taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              taskElement.classList.add('highlight-task');
+              setTimeout(() => taskElement.classList.remove('highlight-task'), 2000);
+              const commentsSection = document.getElementById(`comments-${taskId}`);
+              if (commentsSection && window.bootstrap && bootstrap.Collapse) {
+                try {
+                  const inst = bootstrap.Collapse.getInstance(commentsSection) || new bootstrap.Collapse(commentsSection, { toggle: false });
+                  inst.show();
+                  if (window.checklistRenderer && typeof window.checklistRenderer.loadComments === 'function') {
+                    try { window.checklistRenderer.loadComments(taskId); } catch (_) { }
                   }
-              }, 200);
+                } catch (_) { }
+              }
+            }, 200);
           } else {
-              showToast('Tarefa não encontrada na visualização atual.', 'warning');
+            showToast('Tarefa não encontrada na visualização atual.', 'warning');
           }
         });
       });
@@ -253,59 +253,59 @@
     function escapeHtml(text) { return window.escapeHtml(text); }
 
     function showToast(message, type = 'info', duration = 3000) {
-        // Reuse existing toast logic if available globally or create simple one
-        if (window.showToast) {
-            window.showToast(message, type, duration);
-        } else {
-            alert(message);
-        }
+      // Reuse existing toast logic if available globally or create simple one
+      if (window.showToast) {
+        window.showToast(message, type, duration);
+      } else {
+        alert(message);
+      }
     }
 
     if (window.flatpickr) {
       document.querySelectorAll('.custom-datepicker').forEach(input => {
         const config = Object.assign({}, baseConfig);
-        
+
         // Integrar IMask se a classe date-mask estiver presente
         if (input.classList.contains('date-mask') && window.IMask) {
-            config.onReady = function(selectedDates, dateStr, instance) {
-                if (instance.altInput) {
-                    // Aplica a máscara ao input visível (altInput)
-                    const mask = IMask(instance.altInput, {
-                        mask: Date,
-                        pattern: 'd/`m/`Y',
-                        lazy: false,
-                        format: function (date) {
-                            var day = date.getDate();
-                            var month = date.getMonth() + 1;
-                            var year = date.getFullYear();
-                            if (day < 10) day = "0" + day;
-                            if (month < 10) month = "0" + month;
-                            return [day, month, year].join('/');
-                        },
-                        parse: function (str) {
-                            var yearMonthDay = str.split('/');
-                            return new Date(yearMonthDay[2], yearMonthDay[1] - 1, yearMonthDay[0]);
-                        },
-                        blocks: {
-                            d: { mask: IMask.MaskedRange, from: 1, to: 31, maxLength: 2 },
-                            m: { mask: IMask.MaskedRange, from: 1, to: 12, maxLength: 2 },
-                            Y: { mask: IMask.MaskedRange, from: 1900, to: 2100 }
-                        }
-                    });
-                    
-                    // Sincronizar alterações manuais na máscara com o Flatpickr
-                    mask.on('accept', function() {
-                        if (mask.masked.isComplete) {
-                            instance.setDate(mask.value, true, 'd/m/Y');
-                        }
-                    });
+          config.onReady = function (selectedDates, dateStr, instance) {
+            if (instance.altInput) {
+              // Aplica a máscara ao input visível (altInput)
+              const mask = IMask(instance.altInput, {
+                mask: Date,
+                pattern: 'd/`m/`Y',
+                lazy: false,
+                format: function (date) {
+                  var day = date.getDate();
+                  var month = date.getMonth() + 1;
+                  var year = date.getFullYear();
+                  if (day < 10) day = "0" + day;
+                  if (month < 10) month = "0" + month;
+                  return [day, month, year].join('/');
+                },
+                parse: function (str) {
+                  var yearMonthDay = str.split('/');
+                  return new Date(yearMonthDay[2], yearMonthDay[1] - 1, yearMonthDay[0]);
+                },
+                blocks: {
+                  d: { mask: IMask.MaskedRange, from: 1, to: 31, maxLength: 2 },
+                  m: { mask: IMask.MaskedRange, from: 1, to: 12, maxLength: 2 },
+                  Y: { mask: IMask.MaskedRange, from: 1900, to: 2100 }
                 }
-            };
+              });
+
+              // Sincronizar alterações manuais na máscara com o Flatpickr
+              mask.on('accept', function () {
+                if (mask.masked.isComplete) {
+                  instance.setDate(mask.value, true, 'd/m/Y');
+                }
+              });
+            }
+          };
         }
 
         const fp = window.flatpickr(input, config);
         if (input.hasAttribute('required')) {
-          input.addEventListener('change', function() {
+          input.addEventListener('change', function () {
             if (this._flatpickr && this._flatpickr.selectedDates.length > 0) {
               const date = this._flatpickr.selectedDates[0];
               this._flatpickr.setDate(date, false);
@@ -318,43 +318,43 @@
         btn.addEventListener('click', (e) => {
           e.preventDefault();
           const target = btn.previousElementSibling; // Assumindo que o input está imediatamente antes do botão (estrutura input-group)
-                                                     // No DOM final do flatpickr (com altInput), a estrutura é:
-                                                     // input[hidden], input[text].form-control, button
-                                                     // Portanto, previousElementSibling do botão é o altInput.
-                                                     // Mas o target para inicializar flatpickr deve ser o input original.
-                                                     
+          // No DOM final do flatpickr (com altInput), a estrutura é:
+          // input[hidden], input[text].form-control, button
+          // Portanto, previousElementSibling do botão é o altInput.
+          // Mas o target para inicializar flatpickr deve ser o input original.
+
           // Se o flatpickr já estiver inicializado no input original (que pode estar oculto antes do altInput)
           // O input original geralmente é acessível.
           // Vamos verificar se o elemento anterior tem a instância _flatpickr.
-          
+
           // Caso altInput esteja presente, o DOM é:
           // <input type="hidden" ...> (original)
           // <input type="text" ...> (altInput)
           // <button ...>
-          
+
           // O previousElementSibling do botão é o altInput.
           // O altInput não tem a propriedade _flatpickr, mas podemos acessá-lo?
           // Não diretamente.
-          
+
           // Mas se já foi inicializado, podemos buscar a instância flatpickr associada.
-          
+
           // Se target for o altInput, precisamos achar o original?
           // Na verdade, se já está inicializado, podemos apenas chamar open() na instância.
-          
+
           // Vamos tentar encontrar o input original.
           let inputOriginal = target;
-          
+
           // Se o target for o altInput (não tem a classe original custom-datepicker se o flatpickr moveu as classes, mas geralmente copia)
           // Mas o _flatpickr fica no elemento original.
-          
+
           // Melhor abordagem: procurar o input com a classe custom-datepicker dentro do mesmo parent node.
           const parent = btn.parentElement;
           const originalInput = parent.querySelector('.custom-datepicker');
-          
+
           if (originalInput && originalInput._flatpickr) {
             originalInput._flatpickr.open();
           } else if (target && target.classList.contains('custom-datepicker')) {
-             // Fallback se não estiver inicializado (ex: dinamicamente)
+            // Fallback se não estiver inicializado (ex: dinamicamente)
             const fp = window.flatpickr(target, Object.assign({}, baseConfig));
             fp.open();
           }
@@ -363,21 +363,21 @@
 
       const modalParar = document.getElementById('modalParar');
       if (modalParar) {
-        modalParar.addEventListener('shown.bs.modal', function() {
+        modalParar.addEventListener('shown.bs.modal', function () {
           const dataParadaInput = document.getElementById('data_parada');
           const btnCal = document.getElementById('btn_cal_data_parada');
           if (dataParadaInput && !dataParadaInput._flatpickr) {
             const fp = window.flatpickr(dataParadaInput, Object.assign({}, baseConfig, {
               appendTo: modalParar.querySelector('.modal-body'),
               static: true,
-              onChange: function(selectedDates, dateStr, instance) {
+              onChange: function (selectedDates, dateStr, instance) {
                 if (selectedDates.length > 0) {
                   dataParadaInput.value = dateStr;
                 }
               }
             }));
             if (btnCal) {
-              btnCal.addEventListener('click', function(e) {
+              btnCal.addEventListener('click', function (e) {
                 e.preventDefault();
                 fp.open();
               });
@@ -388,21 +388,21 @@
 
       const modalCancelar = document.getElementById('modalCancelar');
       if (modalCancelar) {
-        modalCancelar.addEventListener('shown.bs.modal', function() {
+        modalCancelar.addEventListener('shown.bs.modal', function () {
           const dataCancelamentoInput = document.getElementById('data_cancelamento');
           const btnCal = document.getElementById('btn_cal_data_cancelamento');
           if (dataCancelamentoInput && !dataCancelamentoInput._flatpickr) {
             const fp = window.flatpickr(dataCancelamentoInput, Object.assign({}, baseConfig, {
               appendTo: modalCancelar.querySelector('.modal-body'),
               static: true,
-              onChange: function(selectedDates, dateStr, instance) {
+              onChange: function (selectedDates, dateStr, instance) {
                 if (selectedDates.length > 0) {
                   dataCancelamentoInput.value = dateStr;
                 }
               }
             }));
             if (btnCal) {
-              btnCal.addEventListener('click', function(e) {
+              btnCal.addEventListener('click', function (e) {
                 e.preventDefault();
                 fp.open();
               });
@@ -413,7 +413,7 @@
 
       const modalFinalizar = document.getElementById('modalFinalizar');
       if (modalFinalizar) {
-        modalFinalizar.addEventListener('shown.bs.modal', function() {
+        modalFinalizar.addEventListener('shown.bs.modal', function () {
           const dataFinalizacaoInput = document.getElementById('data_finalizacao');
           const btnCal = document.getElementById('btn_cal_data_finalizacao');
           if (dataFinalizacaoInput && !dataFinalizacaoInput._flatpickr) {
@@ -423,14 +423,14 @@
               appendTo: modalFinalizar.querySelector('.modal-body'),
               positionElement: dataFinalizacaoInput,
               static: true,
-              onChange: function(selectedDates, dateStr, instance) {
+              onChange: function (selectedDates, dateStr, instance) {
                 if (selectedDates.length > 0) {
                   dataFinalizacaoInput.value = dateStr;
                 }
               }
             }));
             if (btnCal) {
-              btnCal.addEventListener('click', function(e) {
+              btnCal.addEventListener('click', function (e) {
                 e.preventDefault();
                 fp.open();
               });
@@ -441,13 +441,13 @@
 
       const formParar = document.getElementById('formPararImplantacao');
       if (formParar) {
-        formParar.addEventListener('submit', function(e) {
+        formParar.addEventListener('submit', function (e) {
           const dataParadaInput = document.getElementById('data_parada');
           const errorMsg = document.getElementById('data_parada_error');
-          
+
           if (dataParadaInput) {
             let dataValida = false;
-            
+
             if (dataParadaInput._flatpickr && dataParadaInput._flatpickr.selectedDates.length > 0) {
               dataValida = true;
             } else if (dataParadaInput.value && dataParadaInput.value.trim() !== '') {
@@ -457,7 +457,7 @@
                 dataValida = true;
               }
             }
-            
+
             if (!dataValida) {
               e.preventDefault();
               if (errorMsg) {
@@ -476,13 +476,13 @@
 
       const formCancelar = document.getElementById('formCancelarImplantacao');
       if (formCancelar) {
-        formCancelar.addEventListener('submit', function(e) {
+        formCancelar.addEventListener('submit', function (e) {
           const dataCancelamentoInput = document.getElementById('data_cancelamento');
           const errorMsg = document.getElementById('data_cancelamento_error');
-          
+
           if (dataCancelamentoInput) {
             let dataValida = false;
-            
+
             if (dataCancelamentoInput._flatpickr && dataCancelamentoInput._flatpickr.selectedDates.length > 0) {
               dataValida = true;
             } else if (dataCancelamentoInput.value && dataCancelamentoInput.value.trim() !== '') {
@@ -492,7 +492,7 @@
                 dataValida = true;
               }
             }
-            
+
             if (!dataValida) {
               e.preventDefault();
               if (errorMsg) {
@@ -510,7 +510,7 @@
       }
     }
 
-    
+
 
     // Navegação entre abas (Timeline -> Comentários / Plano)
     function activateTab(targetId) {
@@ -522,13 +522,13 @@
       }
     }
 
-    document.addEventListener('click', function(e) {
+    document.addEventListener('click', function (e) {
       const btnComments = e.target.closest('.timeline-action-comments');
       if (btnComments) {
         const itemId = parseInt(btnComments.dataset.itemId);
         activateTab('#plano-content');
         if (window.checklistRenderer && Number.isFinite(itemId)) {
-          try { window.checklistRenderer.ensureItemVisible(itemId); } catch (_) {}
+          try { window.checklistRenderer.ensureItemVisible(itemId); } catch (_) { }
         }
         setTimeout(() => {
           const taskElement = document.getElementById(`checklist-item-${itemId}`) || document.querySelector(`.checklist-item[data-item-id="${itemId}"]`);
@@ -540,9 +540,9 @@
                 const inst = bootstrap.Collapse.getInstance(commentsSection) || new bootstrap.Collapse(commentsSection, { toggle: false });
                 inst.show();
                 if (window.checklistRenderer && typeof window.checklistRenderer.loadComments === 'function') {
-                    try { window.checklistRenderer.loadComments(itemId); } catch (_) {}
+                  try { window.checklistRenderer.loadComments(itemId); } catch (_) { }
                 }
-              } catch (_) {}
+              } catch (_) { }
             }
           }
         }, 200);
@@ -554,13 +554,13 @@
         const itemId = parseInt(btnTask.dataset.itemId);
         activateTab('#plano-content');
         if (window.checklistRenderer && itemId) {
-          try { window.checklistRenderer.ensureItemVisible(itemId); } catch (_) {}
+          try { window.checklistRenderer.ensureItemVisible(itemId); } catch (_) { }
         }
         e.preventDefault();
       }
     });
 
-    
+
 
 
 
@@ -574,14 +574,14 @@
       const tipo = tagAtiva.getAttribute('data-tipo') || tagAtiva.dataset.tipo;
       const btnEmail = document.getElementById(`btn-email-${tarefaId}`);
       const alertaEmail = document.getElementById(`alerta-email-${tarefaId}`);
-      
+
       const temEmail = CONFIG.emailResponsavel && CONFIG.emailResponsavel.trim() !== '';
-      
+
       if (btnEmail) {
         const deveMostrar = tipo === 'externo';
         if (deveMostrar) {
           btnEmail.classList.remove('d-none');
-          
+
           if (!temEmail) {
             btnEmail.disabled = true;
             btnEmail.classList.add('btn-secondary');
@@ -589,7 +589,7 @@
             btnEmail.title = 'Email do responsável não cadastrado. Acesse "Editar Detalhes" para adicionar.';
             btnEmail.setAttribute('data-bs-toggle', 'tooltip');
             btnEmail.setAttribute('data-bs-placement', 'top');
-            
+
             if (alertaEmail) {
               alertaEmail.classList.remove('d-none');
             }
@@ -600,12 +600,12 @@
             btnEmail.removeAttribute('title');
             btnEmail.removeAttribute('data-bs-toggle');
             btnEmail.removeAttribute('data-bs-placement');
-            
+
             if (alertaEmail) {
               alertaEmail.classList.add('d-none');
             }
           }
-          
+
           if (window.bootstrap && window.bootstrap.Tooltip) {
             const tooltipInstance = bootstrap.Tooltip.getInstance(btnEmail);
             if (tooltipInstance) {
@@ -656,10 +656,10 @@
 
     inicializarTagsComentario();
 
-    const observer = new MutationObserver(function(mutations) {
-      mutations.forEach(function(mutation) {
+    const observer = new MutationObserver(function (mutations) {
+      mutations.forEach(function (mutation) {
         if (mutation.type === 'childList') {
-          mutation.addedNodes.forEach(function(node) {
+          mutation.addedNodes.forEach(function (node) {
             if (node.nodeType === 1) {
               const tags = node.querySelectorAll ? node.querySelectorAll('.comentario-tipo-tag') : [];
               tags.forEach(tag => {
@@ -705,7 +705,7 @@
           const merged = mergeWithBufferedEvents([]);
           renderTimelineList(merged);
         }
-      } catch (_) {}
+      } catch (_) { }
     }
 
     function renderTimelineList(items) {
@@ -765,7 +765,7 @@
         if (!implId) return;
         const capped = (items || []).slice(-100);
         localStorage.setItem(`timelineBuffer:${implId}`, JSON.stringify(capped));
-      } catch (_) {}
+      } catch (_) { }
     }
 
     function mergeWithBufferedEvents(serverLogs) {
@@ -780,7 +780,7 @@
       buf.forEach(push);
       // Return newest first by data_criacao if possible
       const arr = Array.from(byKey.values());
-      arr.sort((a,b)=>{
+      arr.sort((a, b) => {
         const da = new Date(a.data_criacao || 0).getTime();
         const db = new Date(b.data_criacao || 0).getTime();
         return db - da;
@@ -789,7 +789,7 @@
     }
 
     window.reloadTimeline = reloadTimeline;
-    window.appendTimelineEvent = function(type, detalhes) {
+    window.appendTimelineEvent = function (type, detalhes) {
       const ul = document.getElementById('timeline-list') || document.querySelector('.timeline-list');
       if (!ul) return;
       const t = type || '';
@@ -829,12 +829,12 @@
     try {
       const timelineTabBtn = document.getElementById('timeline-tab');
       if (timelineTabBtn) {
-        timelineTabBtn.addEventListener('shown.bs.tab', function () { try { window.reloadTimeline(); } catch (_) {} });
+        timelineTabBtn.addEventListener('shown.bs.tab', function () { try { window.reloadTimeline(); } catch (_) { } });
       }
-    } catch (_) {}
+    } catch (_) { }
 
     try {
-      document.addEventListener('DOMContentLoaded', function() {
+      document.addEventListener('DOMContentLoaded', function () {
         try {
           const planoTabBtn = document.getElementById('plano-tab');
           const timelineTabBtn = document.getElementById('timeline-tab');
@@ -851,7 +851,7 @@
                 window.location.hash = '';
               }
             }
-          } catch (_) {}
+          } catch (_) { }
 
           // Reset panes
           [timelinePane, commentsPane].forEach(p => {
@@ -906,17 +906,17 @@
               const mo = new MutationObserver(() => enforceSingleActive());
               mo.observe(tabContent, { attributes: true, subtree: true, attributeFilter: ['class'] });
             }
-          } catch (_) {}
+          } catch (_) { }
 
           // Tab click handlers to toggle d-none properly
           try {
             const allTabBtns = document.querySelectorAll('[data-bs-toggle="tab"]');
             allTabBtns.forEach(btn => {
-              btn.addEventListener('shown.bs.tab', function(ev) {
+              btn.addEventListener('shown.bs.tab', function (ev) {
                 const target = ev.target.getAttribute('data-bs-target');
                 const panes = document.querySelectorAll('.tab-content .tab-pane');
                 panes.forEach(p => {
-                  if ('#'+p.id === target) {
+                  if ('#' + p.id === target) {
                     p.classList.remove('d-none');
                     p.classList.add('active');
                     p.classList.add('show');
@@ -930,20 +930,20 @@
                 });
               });
             });
-          } catch(_) {}
-        } catch (_) {}
+          } catch (_) { }
+        } catch (_) { }
       });
-    } catch (_) {}
+    } catch (_) { }
 
     try {
-      document.body.addEventListener('submit', async function(e) {
+      document.body.addEventListener('submit', async function (e) {
         const form = e.target;
         const modal = form.closest('#modalDetalhesEmpresa');
         if (!modal) return;
         e.preventDefault();
         try {
           const fd = new FormData(form);
-          fd.set('redirect_to','modal');
+          fd.set('redirect_to', 'modal');
           const resp = await fetch('/atualizar_detalhes_empresa', {
             method: 'POST',
             headers: { 'Accept': 'application/json', 'X-CSRFToken': (window.CONFIG && window.CONFIG.csrfToken) ? window.CONFIG.csrfToken : '' },
@@ -960,7 +960,7 @@
           showToast('Falha ao comunicar com o servidor', 'error');
         }
       });
-    } catch (_) {}
+    } catch (_) { }
 
     document.body.addEventListener('click', async function (e) {
       const targetBtn = e.target.closest('.btn-excluir-comentario');
@@ -979,8 +979,8 @@
       if (!confirmed) return;
 
       try {
-        const response = await fetch(`/api/excluir_comentario_h/${comentarioId}`, {
-          method: 'POST',
+        const response = await fetch(`/api/checklist/comment/${comentarioId}`, {
+          method: 'DELETE',
           headers: {
             'Accept': 'application/json',
             'X-CSRFToken': CONFIG.csrfToken
@@ -1020,7 +1020,7 @@
         if (itemId) await carregarComentarios(itemId);
 
         showToast('Comentário excluído com sucesso', 'success');
-        try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) {}
+        try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) { }
       } catch (error) {
         showToast('Erro ao comunicar com o servidor: ' + error.message, 'error');
       }
@@ -1028,39 +1028,39 @@
 
 
 
-    
 
-    
+
+
 
     const modalDetalhesEmpresa = document.getElementById('modalDetalhesEmpresa');
     if (modalDetalhesEmpresa && window.flatpickr) {
-      modalDetalhesEmpresa.addEventListener('shown.bs.modal', function(event) {
+      modalDetalhesEmpresa.addEventListener('shown.bs.modal', function (event) {
         const configWithMask = Object.assign({}, baseConfig, {
-          onReady: function(selectedDates, dateStr, instance) {
+          onReady: function (selectedDates, dateStr, instance) {
             if (instance.altInput && window.IMask) {
-                IMask(instance.altInput, {
-                    mask: Date,
-                    pattern: 'd/`m/`Y',
-                    blocks: {
-                        d: { mask: IMask.MaskedRange, from: 1, to: 31, maxLength: 2 },
-                        m: { mask: IMask.MaskedRange, from: 1, to: 12, maxLength: 2 },
-                        Y: { mask: IMask.MaskedRange, from: 1900, to: 2100, maxLength: 4 }
-                    },
-                    format: function (date) {
-                        var day = date.getDate();
-                        var month = date.getMonth() + 1;
-                        var year = date.getFullYear();
-                        if (day < 10) day = "0" + day;
-                        if (month < 10) month = "0" + month;
-                        return [day, month, year].join('/');
-                    },
-                    parse: function (str) {
-                        var yearMonthDay = str.split('/');
-                        return new Date(yearMonthDay[2], yearMonthDay[1] - 1, yearMonthDay[0]);
-                    },
-                    lazy: false,
-                    overwrite: true
-                });
+              IMask(instance.altInput, {
+                mask: Date,
+                pattern: 'd/`m/`Y',
+                blocks: {
+                  d: { mask: IMask.MaskedRange, from: 1, to: 31, maxLength: 2 },
+                  m: { mask: IMask.MaskedRange, from: 1, to: 12, maxLength: 2 },
+                  Y: { mask: IMask.MaskedRange, from: 1900, to: 2100, maxLength: 4 }
+                },
+                format: function (date) {
+                  var day = date.getDate();
+                  var month = date.getMonth() + 1;
+                  var year = date.getFullYear();
+                  if (day < 10) day = "0" + day;
+                  if (month < 10) month = "0" + month;
+                  return [day, month, year].join('/');
+                },
+                parse: function (str) {
+                  var yearMonthDay = str.split('/');
+                  return new Date(yearMonthDay[2], yearMonthDay[1] - 1, yearMonthDay[0]);
+                },
+                lazy: false,
+                overwrite: true
+              });
             }
           }
         });
@@ -1074,7 +1074,7 @@
           const valorInicial = inicioEfetivoInput.value || '';
           const fp1 = window.flatpickr(inicioEfetivoInput, Object.assign({}, configWithMask, {
             defaultDate: valorInicial || null,
-            onChange: function(selectedDates, dateStr, instance) {
+            onChange: function (selectedDates, dateStr, instance) {
               if (selectedDates.length > 0) {
                 inicioEfetivoInput.value = dateStr;
               } else {
@@ -1086,7 +1086,7 @@
             fp1.setDate(valorInicial, false);
           }
           if (btnCalInicioEfetivo) {
-            btnCalInicioEfetivo.addEventListener('click', function(e) {
+            btnCalInicioEfetivo.addEventListener('click', function (e) {
               e.preventDefault();
               fp1.open();
             });
@@ -1102,7 +1102,7 @@
           const valorInicial = inicioProducaoInput.value || '';
           const fp2 = window.flatpickr(inicioProducaoInput, Object.assign({}, configWithMask, {
             defaultDate: valorInicial || null,
-            onChange: function(selectedDates, dateStr, instance) {
+            onChange: function (selectedDates, dateStr, instance) {
               if (selectedDates.length > 0) {
                 inicioProducaoInput.value = dateStr;
               } else {
@@ -1114,7 +1114,7 @@
             fp2.setDate(valorInicial, false);
           }
           if (btnCalInicioProducao) {
-            btnCalInicioProducao.addEventListener('click', function(e) {
+            btnCalInicioProducao.addEventListener('click', function (e) {
               e.preventDefault();
               fp2.open();
             });
@@ -1130,7 +1130,7 @@
           const valorInicial = finalImplantacaoInput.value || '';
           const fp3 = window.flatpickr(finalImplantacaoInput, Object.assign({}, configWithMask, {
             defaultDate: valorInicial || null,
-            onChange: function(selectedDates, dateStr, instance) {
+            onChange: function (selectedDates, dateStr, instance) {
               if (selectedDates.length > 0) {
                 finalImplantacaoInput.value = dateStr;
               } else {
@@ -1142,7 +1142,7 @@
             fp3.setDate(valorInicial, false);
           }
           if (btnCalFinalImplantacao) {
-            btnCalFinalImplantacao.addEventListener('click', function(e) {
+            btnCalFinalImplantacao.addEventListener('click', function (e) {
               e.preventDefault();
               fp3.open();
             });
@@ -1203,10 +1203,10 @@
       }
 
       // Global Click Listener for Consultar OAMD Button (Delegation)
-    document.addEventListener('click', async function(e) {
+      document.addEventListener('click', async function (e) {
         const btnConsultar = e.target.closest('#btn-consultar-oamd');
         if (!btnConsultar) return;
-        
+
         e.preventDefault();
         e.stopPropagation();
 
@@ -1214,13 +1214,13 @@
         const loaderConsultar = document.getElementById('btn-consultar-oamd-loader');
         const iconConsultar = document.getElementById('btn-consultar-oamd-icon');
         const inputIdFav = document.getElementById('modal-id_favorecido');
-        
+
         // Get ID from input or button dataset
         const currentId = inputIdFav ? inputIdFav.value.trim() : (btnConsultar.dataset.idFavorecido || '');
-        
+
         if (!currentId) {
-             showToast('ID Favorecido não informado', 'warning');
-             return;
+          showToast('ID Favorecido não informado', 'warning');
+          return;
         }
 
         btnConsultar.disabled = true;
@@ -1228,171 +1228,171 @@
         if (iconConsultar) iconConsultar.classList.add('d-none');
 
         try {
-             const response = await fetch(`/api/consultar_empresa?id_favorecido=${currentId}`, {
-                method: 'GET',
-                headers: {
-                 'Accept': 'application/json',
-                 'X-CSRFToken': CONFIG.csrfToken
-               }
-             });
+          const response = await fetch(`/api/consultar_empresa?id_favorecido=${currentId}`, {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+              'X-CSRFToken': CONFIG.csrfToken
+            }
+          });
 
-             if (!response.ok) {
-                let errorMsg = `Erro na requisição: ${response.status}`;
-                try {
-                  const errData = await response.json();
-                  if (errData.error) errorMsg = errData.error;
-                } catch(e) {}
-                throw new Error(errorMsg);
+          if (!response.ok) {
+            let errorMsg = `Erro na requisição: ${response.status}`;
+            try {
+              const errData = await response.json();
+              if (errData.error) errorMsg = errData.error;
+            } catch (e) { }
+            throw new Error(errorMsg);
+          }
+
+          const data = await response.json();
+
+          if (data.ok && data.mapped) {
+            const m = data.mapped;
+
+            const updateDate = (inputId, val) => {
+              const input = document.getElementById(inputId);
+              if (!input || !val) return;
+
+              let dateVal = String(val).split('T')[0];
+
+              if (input._flatpickr) {
+                input._flatpickr.setDate(dateVal, true);
+
+                const altInput = input._flatpickr.altInput;
+                if (altInput) {
+                  altInput.classList.add('bg-success', 'bg-opacity-10');
+                  setTimeout(() => altInput.classList.remove('bg-success', 'bg-opacity-10'), 2000);
+                  altInput.readOnly = true;
+                  altInput.classList.add('bg-light');
+                  altInput.style.cursor = 'not-allowed';
+                }
+              } else {
+                input.value = dateVal;
               }
 
-              const data = await response.json();
+              input.readOnly = true;
+              input.classList.add('bg-light');
+              input.style.cursor = 'not-allowed';
+              const parent = input.closest('.input-group');
+              if (parent) {
+                const btn = parent.querySelector('button');
+                if (btn) btn.disabled = true;
+              }
+            };
 
-             if (data.ok && data.mapped) {
-               const m = data.mapped;
-               
-               const updateDate = (inputId, val) => {
-                 const input = document.getElementById(inputId);
-                 if (!input || !val) return;
+            updateDate('modal-data_inicio_producao', m.data_inicio_producao);
+            updateDate('modal-inicio_efetivo', m.data_inicio_efetivo);
+            updateDate('modal-data_final_implantacao', m.data_final_implantacao);
+            updateDate('modal-data_cadastro', m.data_cadastro);
 
-                 let dateVal = String(val).split('T')[0];
+            const updateText = (inputId, val) => {
+              const input = document.getElementById(inputId);
+              if (input && val) {
+                input.value = val;
+                input.classList.add('bg-success', 'bg-opacity-10');
+                setTimeout(() => input.classList.remove('bg-success', 'bg-opacity-10'), 2000);
 
-                 if (input._flatpickr) {
-                   input._flatpickr.setDate(dateVal, true);
-                   
-                   const altInput = input._flatpickr.altInput;
-                   if (altInput) {
-                     altInput.classList.add('bg-success', 'bg-opacity-10');
-                     setTimeout(() => altInput.classList.remove('bg-success', 'bg-opacity-10'), 2000);
-                     altInput.readOnly = true;
-                     altInput.classList.add('bg-light');
-                     altInput.style.cursor = 'not-allowed';
-                   }
-                 } else {
-                   input.value = dateVal;
-                 }
-                 
-                 input.readOnly = true;
-                 input.classList.add('bg-light');
-                 input.style.cursor = 'not-allowed';
-                 const parent = input.closest('.input-group');
-                 if (parent) {
-                     const btn = parent.querySelector('button');
-                     if (btn) btn.disabled = true;
-                 }
-               };
+                // Make read-only
+                input.readOnly = true;
+                input.classList.add('bg-light');
+                input.style.cursor = 'not-allowed';
+              }
+            };
 
-               updateDate('modal-data_inicio_producao', m.data_inicio_producao);
-              updateDate('modal-inicio_efetivo', m.data_inicio_efetivo);
-              updateDate('modal-data_final_implantacao', m.data_final_implantacao);
-              updateDate('modal-data_cadastro', m.data_cadastro);
+            updateText('modal-status_implantacao', m.status_implantacao);
+            updateText('modal-nivel_atendimento', m.nivel_atendimento);
+            updateText('modal-chave_oamd', m.chave_oamd);
+            (function () {
+              const empresa = data.empresa || {};
+              let infraVal = m.informacao_infra || '';
+              if (!infraVal) {
+                const nomezw = String(empresa.nomeempresazw || '').trim();
+                const mName = nomezw.match(/zw[_-]?(\d+)/i);
+                if (mName && mName[1]) infraVal = `ZW_${mName[1]}`;
+              }
+              if (!infraVal) {
+                const empzw = empresa.empresazw;
+                const empzwNum = typeof empzw === 'number' ? empzw : parseInt(String(empzw || '').trim(), 10);
+                if (!Number.isNaN(empzwNum) && empzwNum > 1) infraVal = `ZW_${empzwNum}`;
+              }
+              updateText('modal-informacao_infra', infraVal);
 
-              const updateText = (inputId, val) => {
-                const input = document.getElementById(inputId);
-                if (input && val) {
-                  input.value = val;
-                  input.classList.add('bg-success', 'bg-opacity-10');
-                  setTimeout(() => input.classList.remove('bg-success', 'bg-opacity-10'), 2000);
-                  
-                  // Make read-only
-                  input.readOnly = true;
-                  input.classList.add('bg-light');
-                  input.style.cursor = 'not-allowed';
-                }
-              };
-
-              updateText('modal-status_implantacao', m.status_implantacao);
-              updateText('modal-nivel_atendimento', m.nivel_atendimento);
-              updateText('modal-chave_oamd', m.chave_oamd);
-              (function(){
-                const empresa = data.empresa || {};
-                let infraVal = m.informacao_infra || '';
-                if (!infraVal) {
-                  const nomezw = String(empresa.nomeempresazw || '').trim();
-                  const mName = nomezw.match(/zw[_-]?(\d+)/i);
-                  if (mName && mName[1]) infraVal = `ZW_${mName[1]}`;
-                }
-                if (!infraVal) {
-                  const empzw = empresa.empresazw;
-                  const empzwNum = typeof empzw === 'number' ? empzw : parseInt(String(empzw||'').trim(), 10);
-                  if (!Number.isNaN(empzwNum) && empzwNum > 1) infraVal = `ZW_${empzwNum}`;
-                }
-                updateText('modal-informacao_infra', infraVal);
-
-                let linkVal = m.tela_apoio_link || '';
-                if ((!linkVal || !String(linkVal).trim()) && infraVal) {
-                  const mDigits = String(infraVal).match(/(\d+)/);
-                  if (mDigits && mDigits[1]) linkVal = `http://zw${mDigits[1]}.pactosolucoes.com.br/app`;
-                }
-                if (!linkVal || !String(linkVal).trim()) {
-                  const entries = Object.entries(empresa);
-                  for (let i = 0; i < entries.length; i++) {
-                    const v = String(entries[i][1] || '');
-                    const mUrl = v.match(/https?:\/\/[^\s]*zw(\d+)[^\s]*/i);
-                    if (mUrl && mUrl[1]) { linkVal = `http://zw${mUrl[1]}.pactosolucoes.com.br/app`; break; }
-                  }
-                }
-                updateText('modal-tela_apoio_link', linkVal);
-              })();
-
-              if (m.cnpj) {
-                const cnpjInput = document.getElementById('modal-cnpj');
-                if (cnpjInput) {
-                    cnpjInput.value = m.cnpj;
-                    cnpjInput.dispatchEvent(new Event('input'));
-                    cnpjInput.classList.add('bg-success', 'bg-opacity-10');
-                    setTimeout(() => cnpjInput.classList.remove('bg-success', 'bg-opacity-10'), 2000);
-                    
-                    cnpjInput.readOnly = true;
-                    cnpjInput.classList.add('bg-light');
-                    cnpjInput.style.cursor = 'not-allowed';
+              let linkVal = m.tela_apoio_link || '';
+              if ((!linkVal || !String(linkVal).trim()) && infraVal) {
+                const mDigits = String(infraVal).match(/(\d+)/);
+                if (mDigits && mDigits[1]) linkVal = `http://zw${mDigits[1]}.pactosolucoes.com.br/app`;
+              }
+              if (!linkVal || !String(linkVal).trim()) {
+                const entries = Object.entries(empresa);
+                for (let i = 0; i < entries.length; i++) {
+                  const v = String(entries[i][1] || '');
+                  const mUrl = v.match(/https?:\/\/[^\s]*zw(\d+)[^\s]*/i);
+                  if (mUrl && mUrl[1]) { linkVal = `http://zw${mUrl[1]}.pactosolucoes.com.br/app`; break; }
                 }
               }
+              updateText('modal-tela_apoio_link', linkVal);
+            })();
 
-              if (m.nivel_receita) {
-                 const mrrInput = document.getElementById('modal-valor_atribuido');
-                 if (mrrInput) {
-                     mrrInput.value = m.nivel_receita;
-                     mrrInput.dispatchEvent(new Event('input'));
-                     mrrInput.classList.add('bg-success', 'bg-opacity-10');
-                     setTimeout(() => mrrInput.classList.remove('bg-success', 'bg-opacity-10'), 2000);
-                     
-                     mrrInput.readOnly = true;
-                     mrrInput.classList.add('bg-light');
-                     mrrInput.style.cursor = 'not-allowed';
-                 }
+            if (m.cnpj) {
+              const cnpjInput = document.getElementById('modal-cnpj');
+              if (cnpjInput) {
+                cnpjInput.value = m.cnpj;
+                cnpjInput.dispatchEvent(new Event('input'));
+                cnpjInput.classList.add('bg-success', 'bg-opacity-10');
+                setTimeout(() => cnpjInput.classList.remove('bg-success', 'bg-opacity-10'), 2000);
+
+                cnpjInput.readOnly = true;
+                cnpjInput.classList.add('bg-light');
+                cnpjInput.style.cursor = 'not-allowed';
               }
+            }
 
-               const now = new Date().getTime();
-               const lastUpdateSpan = document.getElementById('oamd-last-update');
-               const lastUpdateTimeSpan = document.getElementById('oamd-last-update-time');
-               if (lastUpdateSpan && lastUpdateTimeSpan) {
-                 lastUpdateSpan.style.display = 'inline-block';
-                 lastUpdateTimeSpan.textContent = new Date(now).toLocaleTimeString();
-               }
-               
-               const cacheKey = `oamd_cache_${currentId}`;
-               localStorage.setItem(cacheKey, JSON.stringify({
-                 timestamp: now,
-                 data: m
-               }));
+            if (m.nivel_receita) {
+              const mrrInput = document.getElementById('modal-valor_atribuido');
+              if (mrrInput) {
+                mrrInput.value = m.nivel_receita;
+                mrrInput.dispatchEvent(new Event('input'));
+                mrrInput.classList.add('bg-success', 'bg-opacity-10');
+                setTimeout(() => mrrInput.classList.remove('bg-success', 'bg-opacity-10'), 2000);
 
-               showToast('Dados atualizados com sucesso do OAMD', 'success');
+                mrrInput.readOnly = true;
+                mrrInput.classList.add('bg-light');
+                mrrInput.style.cursor = 'not-allowed';
+              }
+            }
 
-             } else {
-               showToast('Não foi possível obter dados do OAMD', 'warning');
-             }
+            const now = new Date().getTime();
+            const lastUpdateSpan = document.getElementById('oamd-last-update');
+            const lastUpdateTimeSpan = document.getElementById('oamd-last-update-time');
+            if (lastUpdateSpan && lastUpdateTimeSpan) {
+              lastUpdateSpan.style.display = 'inline-block';
+              lastUpdateTimeSpan.textContent = new Date(now).toLocaleTimeString();
+            }
 
-           } catch (error) {
-             console.error('Erro ao consultar OAMD:', error);
-             showToast('Erro ao consultar OAMD: ' + error.message, 'error');
-           } finally {
-             btnConsultar.disabled = false;
-             if (loaderConsultar) loaderConsultar.classList.add('d-none');
-             if (iconConsultar) iconConsultar.classList.remove('d-none');
-           }
-    });
+            const cacheKey = `oamd_cache_${currentId}`;
+            localStorage.setItem(cacheKey, JSON.stringify({
+              timestamp: now,
+              data: m
+            }));
 
-    modalDetalhesEmpresa.addEventListener('shown.bs.modal', function(event) {
+            showToast('Dados atualizados com sucesso do OAMD', 'success');
+
+          } else {
+            showToast('Não foi possível obter dados do OAMD', 'warning');
+          }
+
+        } catch (error) {
+          console.error('Erro ao consultar OAMD:', error);
+          showToast('Erro ao consultar OAMD: ' + error.message, 'error');
+        } finally {
+          btnConsultar.disabled = false;
+          if (loaderConsultar) loaderConsultar.classList.add('d-none');
+          if (iconConsultar) iconConsultar.classList.remove('d-none');
+        }
+      });
+
+      modalDetalhesEmpresa.addEventListener('shown.bs.modal', function (event) {
         const btn = event.relatedTarget || document.querySelector('[data-bs-target="#modalDetalhesEmpresa"]');
         let cargo = '', nivelReceita = '', seguimento = '', tiposPlanos = '', sistemaAnterior = '', recorrenciaUsa = '';
         let catraca = '', facial = '', modeloCatraca = '', modeloFacial = '';
@@ -1411,14 +1411,14 @@
           const wellhub = btn.dataset.wellhub || '';
           const totalpass = btn.dataset.totalpass || '';
           let idFavorecido = btn.dataset.idFavorecido || '';
-          
+
           if (!idFavorecido) {
             const inputIdFav = document.getElementById('modal-id_favorecido');
             if (inputIdFav && inputIdFav.value) {
-                idFavorecido = inputIdFav.value;
+              idFavorecido = inputIdFav.value;
             }
           }
-          
+
           const wellhubSelect = document.getElementById('modal-wellhub');
           const totalpassSelect = document.getElementById('modal-totalpass');
           if (wellhubSelect && wellhub) wellhubSelect.value = wellhub;
@@ -1441,7 +1441,7 @@
 
         initTomSelectMulti('modal-seguimento', seguimento);
         initTomSelectMulti('modal-tipos_planos', tiposPlanos);
-        
+
         initTomSelectSingle('modal-cargo_responsavel', cargo);
         initTomSelectSingle('modal-nivel_receita', nivelReceita);
         initTomSelectSingle('modal-sistema_anterior', sistemaAnterior);
@@ -1459,17 +1459,17 @@
             const isCatracaSim = catracaSelect.value === 'Sim';
             rowCatracaModelo.style.display = isCatracaSim ? 'block' : 'none';
             if (modeloCatracaInput) {
-                modeloCatracaInput.required = isCatracaSim;
-                if (!isCatracaSim) modeloCatracaInput.value = '';
+              modeloCatracaInput.required = isCatracaSim;
+              if (!isCatracaSim) modeloCatracaInput.value = '';
             }
           }
-          
+
           if (facialSelect && rowFacialModelo) {
             const isFacialSim = facialSelect.value === 'Sim';
             rowFacialModelo.style.display = isFacialSim ? 'block' : 'none';
             if (modeloFacialInput) {
-                modeloFacialInput.required = isFacialSim;
-                if (!isFacialSim) modeloFacialInput.value = '';
+              modeloFacialInput.required = isFacialSim;
+              if (!isFacialSim) modeloFacialInput.value = '';
             }
           }
         }
@@ -1502,31 +1502,31 @@
         const lastUpdateTimeSpan = document.getElementById('oamd-last-update-time');
         const inputIdFav = document.getElementById('modal-id_favorecido');
 
-          // Verificar cache local se houver ID inicial
-          if (idFavorecido) {
-             const cacheKey = `oamd_cache_${idFavorecido}`;
-             const cachedData = localStorage.getItem(cacheKey);
-             
-             if (cachedData) {
-               try {
-                 const parsed = JSON.parse(cachedData);
-                 const now = new Date().getTime();
-                 if (now - parsed.timestamp < 300000) { // 5 min
-                   if (lastUpdateSpan && lastUpdateTimeSpan) {
-                     lastUpdateSpan.style.display = 'inline-block';
-                     lastUpdateTimeSpan.textContent = new Date(parsed.timestamp).toLocaleTimeString();
-                   }
-                 }
-               } catch (e) {
-                 console.error('Erro ao ler cache OAMD', e);
-               }
-             }
+        // Verificar cache local se houver ID inicial
+        if (idFavorecido) {
+          const cacheKey = `oamd_cache_${idFavorecido}`;
+          const cachedData = localStorage.getItem(cacheKey);
+
+          if (cachedData) {
+            try {
+              const parsed = JSON.parse(cachedData);
+              const now = new Date().getTime();
+              if (now - parsed.timestamp < 300000) { // 5 min
+                if (lastUpdateSpan && lastUpdateTimeSpan) {
+                  lastUpdateSpan.style.display = 'inline-block';
+                  lastUpdateTimeSpan.textContent = new Date(parsed.timestamp).toLocaleTimeString();
+                }
+              }
+            } catch (e) {
+              console.error('Erro ao ler cache OAMD', e);
+            }
           }
-   
+        }
+
 
       });
 
-      modalDetalhesEmpresa.addEventListener('hidden.bs.modal', function() {
+      modalDetalhesEmpresa.addEventListener('hidden.bs.modal', function () {
         Object.keys(tomSelectInstances).forEach(key => {
           if (tomSelectInstances[key]) {
             try {
@@ -1538,7 +1538,7 @@
         });
       });
 
-      modalDetalhesEmpresa.addEventListener('shown.bs.modal', function() {
+      modalDetalhesEmpresa.addEventListener('shown.bs.modal', function () {
         const telefoneInput = document.getElementById('modal-telefone_responsavel');
         if (telefoneInput && window.formatarTelefone) {
           formatarTelefone(telefoneInput);
@@ -1548,7 +1548,7 @@
         if (alunosAtivosInput) {
           alunosAtivosInput.setAttribute('min', '0');
           alunosAtivosInput.setAttribute('step', '1');
-          alunosAtivosInput.addEventListener('input', function() {
+          alunosAtivosInput.addEventListener('input', function () {
             const value = this.value;
             if (value.includes('.')) {
               this.value = Math.floor(parseFloat(value) || 0);
@@ -1557,7 +1557,7 @@
               this.value = 0;
             }
           });
-          alunosAtivosInput.addEventListener('blur', function() {
+          alunosAtivosInput.addEventListener('blur', function () {
             const numValue = parseInt(this.value, 10);
             if (isNaN(numValue) || numValue < 0 || this.value === '') {
               this.value = 0;
@@ -1566,98 +1566,98 @@
             }
           });
         }
-        
+
         const idFavorecidoInput = document.getElementById('modal-id_favorecido');
         if (idFavorecidoInput) {
-          idFavorecidoInput.addEventListener('input', function() {
+          idFavorecidoInput.addEventListener('input', function () {
             this.value = this.value.replace(/[^0-9]/g, '');
           });
         }
-        
+
         const valorAtribuidoInput = document.getElementById('modal-valor_atribuido');
         if (valorAtribuidoInput) {
           // Remove existing listeners to avoid duplication if any (though 'blur' at 1316 was simple)
           // Initialize IMask for Currency
           if (window.IMask) {
-             // Remove previous instance if stored? Not storing currently.
-             // Just init.
-             IMask(valorAtribuidoInput, {
-                mask: 'R$ num',
-                blocks: {
-                    num: {
-                        mask: Number,
-                        thousandsSeparator: '.',
-                        radix: ',',
-                        scale: 2,
-                        signed: false,
-                        normalizeZeros: true,
-                        padFractionalZeros: true,
-                        min: 0
-                    }
+            // Remove previous instance if stored? Not storing currently.
+            // Just init.
+            IMask(valorAtribuidoInput, {
+              mask: 'R$ num',
+              blocks: {
+                num: {
+                  mask: Number,
+                  thousandsSeparator: '.',
+                  radix: ',',
+                  scale: 2,
+                  signed: false,
+                  normalizeZeros: true,
+                  padFractionalZeros: true,
+                  min: 0
                 }
+              }
             });
           }
         }
-        
+
         const cnpjInput = document.getElementById('modal-cnpj');
         if (cnpjInput && window.IMask) {
-             const cnpjMask = IMask(cnpjInput, {
-                mask: '00.000.000/0000-00'
-            });
-            
-            cnpjInput.addEventListener('blur', function() {
-                const val = cnpjMask.unmaskedValue;
-                if (val && !validateCNPJ(val)) {
-                    this.classList.add('is-invalid');
-                    let feedback = this.parentNode.querySelector('.invalid-feedback');
-                    if (!feedback) {
-                        feedback = document.createElement('div');
-                        feedback.className = 'invalid-feedback';
-                        feedback.innerText = 'CNPJ inválido';
-                        this.parentNode.appendChild(feedback);
-                    }
-                    feedback.style.display = 'block';
-                } else {
-                    this.classList.remove('is-invalid');
-                     let feedback = this.parentNode.querySelector('.invalid-feedback');
-                     if (feedback) feedback.style.display = 'none';
-                }
-            });
-             cnpjInput.addEventListener('input', function() {
-                 this.classList.remove('is-invalid');
-                 let feedback = this.parentNode.querySelector('.invalid-feedback');
-                 if (feedback) feedback.style.display = 'none';
-            });
+          const cnpjMask = IMask(cnpjInput, {
+            mask: '00.000.000/0000-00'
+          });
+
+          cnpjInput.addEventListener('blur', function () {
+            const val = cnpjMask.unmaskedValue;
+            if (val && !validateCNPJ(val)) {
+              this.classList.add('is-invalid');
+              let feedback = this.parentNode.querySelector('.invalid-feedback');
+              if (!feedback) {
+                feedback = document.createElement('div');
+                feedback.className = 'invalid-feedback';
+                feedback.innerText = 'CNPJ inválido';
+                this.parentNode.appendChild(feedback);
+              }
+              feedback.style.display = 'block';
+            } else {
+              this.classList.remove('is-invalid');
+              let feedback = this.parentNode.querySelector('.invalid-feedback');
+              if (feedback) feedback.style.display = 'none';
+            }
+          });
+          cnpjInput.addEventListener('input', function () {
+            this.classList.remove('is-invalid');
+            let feedback = this.parentNode.querySelector('.invalid-feedback');
+            if (feedback) feedback.style.display = 'none';
+          });
         }
 
         const telaApoioInput = document.getElementById('modal-tela_apoio_link');
         if (telaApoioInput) {
-            telaApoioInput.addEventListener('blur', function() {
-                const val = this.value;
-                if (val && !isValidURL(val)) {
-                    this.classList.add('is-invalid');
-                    let feedback = this.parentNode.querySelector('.invalid-feedback');
-                    if (!feedback) {
-                        feedback = document.createElement('div');
-                        feedback.className = 'invalid-feedback';
-                        feedback.innerText = 'URL inválida (ex: https://exemplo.com)';
-                        this.parentNode.appendChild(feedback);
-                    }
-                    feedback.style.display = 'block';
-                } else {
-                    this.classList.remove('is-invalid');
-                    let feedback = this.parentNode.querySelector('.invalid-feedback');
-                    if (feedback) feedback.style.display = 'none';
-                }
-            });
-            telaApoioInput.addEventListener('input', function() {
-                 this.classList.remove('is-invalid');
-                 let feedback = this.parentNode.querySelector('.invalid-feedback');
-                 if (feedback) feedback.style.display = 'none';
-            });
+          telaApoioInput.addEventListener('blur', function () {
+            const val = this.value;
+            if (val && !isValidURL(val)) {
+              this.classList.add('is-invalid');
+              let feedback = this.parentNode.querySelector('.invalid-feedback');
+              if (!feedback) {
+                feedback = document.createElement('div');
+                feedback.className = 'invalid-feedback';
+                feedback.innerText = 'URL inválida (ex: https://exemplo.com)';
+                this.parentNode.appendChild(feedback);
+              }
+              feedback.style.display = 'block';
+            } else {
+              this.classList.remove('is-invalid');
+              let feedback = this.parentNode.querySelector('.invalid-feedback');
+              if (feedback) feedback.style.display = 'none';
+            }
+          });
+          telaApoioInput.addEventListener('input', function () {
+            this.classList.remove('is-invalid');
+            let feedback = this.parentNode.querySelector('.invalid-feedback');
+            if (feedback) feedback.style.display = 'none';
+          });
         }
 
-          // Duplicate dataCadastro initialization removed
+        // Duplicate dataCadastro initialization removed
       });
     }
   });
@@ -1667,7 +1667,7 @@
       new URL(string);
       return true;
     } catch (_) {
-      return false;  
+      return false;
     }
   }
 
@@ -1676,9 +1676,9 @@
     if (cnpj == '') return false;
     if (cnpj.length != 14) return false;
     if (/^(\d)\1+$/.test(cnpj)) return false;
-    
+
     let tamanho = cnpj.length - 2
-    let numeros = cnpj.substring(0,tamanho);
+    let numeros = cnpj.substring(0, tamanho);
     let digitos = cnpj.substring(tamanho);
     let soma = 0;
     let pos = tamanho - 7;
@@ -1688,9 +1688,9 @@
     }
     let resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
     if (resultado != digitos.charAt(0)) return false;
-    
+
     tamanho = tamanho + 1;
-    numeros = cnpj.substring(0,tamanho);
+    numeros = cnpj.substring(0, tamanho);
     soma = 0;
     pos = tamanho - 7;
     for (let i = tamanho; i >= 1; i--) {
@@ -1699,7 +1699,7 @@
     }
     resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
     if (resultado != digitos.charAt(1)) return false;
-    
+
     return true;
   }
 })();
