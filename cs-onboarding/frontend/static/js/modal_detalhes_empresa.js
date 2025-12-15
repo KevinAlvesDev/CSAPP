@@ -7,6 +7,7 @@
     'use strict';
 
     let tomSelectInstances = {};
+    let lastTriggerEl = null;
 
     // Initialize TomSelect for multi-select fields
     const initializeMultiTagInput = (selector, dataValue) => {
@@ -102,6 +103,7 @@
             };
 
             const button = event.relatedTarget;
+            lastTriggerEl = button || null;
             // Helper to get data attributes safely
             const getData = (key, defaultVal = '') => {
                 const val = button && button.getAttribute ? button.getAttribute(`data-${key}`) : null;
@@ -219,6 +221,62 @@
                         setFpDate(window.fpInicioEfetivo, impl.data_inicio_efetivo);
                         setFpDate(window.fpInicioProd, impl.data_inicio_producao);
                         setFpDate(window.fpFinalImpl, impl.data_final_implantacao);
+                        
+                        // Populate all fields from server to avoid stale button dataset
+                        safeSet('#modal-implantacao_id', impl.id, modal);
+                        safeSet('#modal-responsavel_cliente', impl.responsavel_cliente || '', modal);
+                        safeSet('#modal-cargo_responsavel', impl.cargo_responsavel || '', modal);
+                        safeSet('#modal-telefone_responsavel', impl.telefone_responsavel || '', modal);
+                        safeSet('#modal-email_responsavel', impl.email_responsavel || '', modal);
+                        safeSet('#modal-id_favorecido', impl.id_favorecido || '', modal);
+                        safeSet('#modal-chave_oamd', impl.chave_oamd || '', modal);
+                        safeSet('#modal-tela_apoio_link', impl.tela_apoio_link || '', modal);
+                        safeSet('#modal-valor_atribuido', (impl.valor_atribuido != null ? String(impl.valor_atribuido) : ''), modal);
+                        safeSet('#modal-status_implantacao', impl.status_implantacao_oamd || '', modal);
+                        safeSet('#modal-nivel_atendimento', impl.nivel_atendimento || '', modal);
+                        safeSet('#modal-catraca', impl.catraca || '', modal);
+                        safeSet('#modal-modelo_catraca', impl.modelo_catraca || '', modal);
+                        safeSet('#modal-facial', impl.facial || '', modal);
+                        safeSet('#modal-modelo_facial', impl.modelo_facial || '', modal);
+                        safeSet('#modal-wellhub', impl.wellhub || '', modal);
+                        safeSet('#modal-totalpass', impl.totalpass || '', modal);
+                        safeSet('#modal-cnpj', impl.cnpj || '', modal);
+                        safeSet('#modal-sistema_anterior', impl.sistema_anterior || '', modal);
+                        safeSet('#modal-recorrencia_usa', impl.recorrencia_usa || '', modal);
+                        safeSet('#modal-importacao', impl.importacao || '', modal);
+                        safeSet('#modal-boleto', impl.boleto || '', modal);
+                        safeSet('#modal-nota_fiscal', impl.nota_fiscal || '', modal);
+                        safeSet('#modal-diaria', impl.diaria || '', modal);
+                        safeSet('#modal-freepass', impl.freepass || '', modal);
+                        safeSet('#modal-alunos_ativos', (impl.alunos_ativos != null ? String(impl.alunos_ativos) : ''), modal);
+                        safeSet('#modal-informacao_infra', impl.informacao_infra || '', modal);
+                        
+                        // Multi-selects with TomSelect: reinitialize with current values
+                        initializeMultiTagInput('#modal-modalidades', impl.modalidades || '');
+                        initializeMultiTagInput('#modal-horarios_func', impl.horarios_func || '');
+                        initializeMultiTagInput('#modal-formas_pagamento', impl.formas_pagamento || '');
+                        initializeMultiTagInput('#modal-seguimento', impl.seguimento || '');
+                        initializeMultiTagInput('#modal-tipos_planos', impl.tipos_planos || '');
+                        
+                        // Post-populate toggles for dependent fields
+                        const catracaSel = modal.querySelector('#modal-catraca');
+                        const facialSel = modal.querySelector('#modal-facial');
+                        const catracaRow = modal.querySelector('#row-catraca-modelo');
+                        const facialRow = modal.querySelector('#row-facial-modelo');
+                        const catracaModelo = modal.querySelector('#modal-modelo_catraca');
+                        const facialModelo = modal.querySelector('#modal-modelo_facial');
+                        const toggleModelo = (sel, row, input) => {
+                            const isSim = (sel && (sel.value || '').trim().toLowerCase() === 'sim');
+                            if (row) row.style.display = isSim ? '' : 'none';
+                            if (input) input.required = !!isSim;
+                        };
+                        toggleModelo(catracaSel, catracaRow, catracaModelo);
+                        toggleModelo(facialSel, facialRow, facialModelo);
+                        
+                        // Format phone after setting value
+                        if (window.formatarTelefone) {
+                            formatarTelefone(modal.querySelector('#modal-telefone_responsavel'));
+                        }
                     })
                     .catch(() => {});
             }
@@ -262,14 +320,15 @@
         // Cleanup TomSelect somente após o modal ser realmente ocultado
 
         // Form Change Detection & Validation Logic
-        (function() {
-            let formInitialValues = {};
-            let formHasChanges = false;
-            let isClosingAfterConfirm = false;
-            let initializing = false;
-            const modalForm = modalDetalhesEmpresa.querySelector('form');
+            (function() {
+                let formInitialValues = {};
+                let formHasChanges = false;
+                let isClosingAfterConfirm = false;
+                let justSaved = false;
+                let initializing = false;
+                const modalForm = modalDetalhesEmpresa.querySelector('form');
 
-            if (!modalForm) return;
+                if (!modalForm) return;
 
             function saveFormInitialValues() {
                 formInitialValues = {};
@@ -277,6 +336,9 @@
                 inputs.forEach(input => {
                     if (input.type === 'checkbox' || input.type === 'radio') {
                         formInitialValues[input.name || input.id] = input.checked;
+                    } else if (input.tagName === 'SELECT' && input.multiple) {
+                        const vals = Array.from(input.selectedOptions).map(o => String(o.value).trim()).filter(Boolean);
+                        formInitialValues[input.name || input.id] = vals.join(',');
                     } else {
                         formInitialValues[input.name || input.id] = input.value;
                     }
@@ -290,9 +352,15 @@
                 const inputs = modalForm.querySelectorAll('input, select, textarea');
                 for (let input of inputs) {
                     const key = input.name || input.id;
+                    if (key === 'redirect_to' || key === 'modal-redirect_to' || key === 'csrf_token') {
+                        continue;
+                    }
                     let currentValue;
                     if (input.type === 'checkbox' || input.type === 'radio') {
                         currentValue = input.checked;
+                    } else if (input.tagName === 'SELECT' && input.multiple) {
+                        const vals = Array.from(input.selectedOptions).map(o => String(o.value).trim()).filter(Boolean);
+                        currentValue = vals.join(',');
                     } else {
                         currentValue = input.value;
                     }
@@ -382,16 +450,122 @@
                 }
             }
 
+            const submitModalForm = async () => {
+                const validation = validateFormFields();
+                if (!validation.valid) {
+                    if (validation.field) {
+                        validation.field.focus();
+                        validation.field.reportValidity();
+                    }
+                    if (window.showToast) {
+                        showToast(validation.message, 'error');
+                    }
+                    return false;
+                }
+                processarDatas();
+                try {
+                    const redir = modalForm.querySelector('#modal-redirect_to');
+                    if (redir) redir.value = 'modal';
+                } catch(_) {}
+                const actionUrl = modalForm.getAttribute('action') || (typeof modalForm.action === 'string' ? modalForm.action : '/actions/atualizar_detalhes_empresa');
+                const formData = new FormData(modalForm);
+                const saveBtn = document.querySelector('#modalDetalhesEmpresa .btn-salvar-detalhes');
+                if (saveBtn) {
+                    saveBtn.disabled = true;
+                    saveBtn.dataset._originalText = saveBtn.innerHTML;
+                    saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...';
+                }
+                try {
+                    const res = await fetch(actionUrl, {
+                        method: 'POST',
+                        headers: { 'Accept': 'application/json' },
+                        body: formData,
+                        credentials: 'same-origin'
+                    });
+                    let ok = res.ok;
+                    let j = null;
+                    try { j = await res.json(); ok = ok && j && j.ok; } catch(_) {}
+                    if (ok) {
+                        formHasChanges = false;
+                        justSaved = true;
+                        saveFormInitialValues();
+                        if (window.showToast) showToast('Detalhes salvos com sucesso', 'success');
+                        const ts = document.getElementById('oamd-last-update');
+                        const tspan = document.getElementById('oamd-last-update-time');
+                        if (ts && tspan) {
+                            const now = new Date();
+                            tspan.innerText = `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
+                            ts.style.display = '';
+                        }
+                        try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch(_) {}
+                        try {
+                            if (lastTriggerEl) {
+                                const getVal = (sel) => {
+                                    const el = modalForm.querySelector(sel);
+                                    return el ? (el.value || '') : '';
+                                };
+                                lastTriggerEl.setAttribute('data-responsavel', getVal('#modal-responsavel_cliente'));
+                                lastTriggerEl.setAttribute('data-cargo', getVal('#modal-cargo_responsavel'));
+                                lastTriggerEl.setAttribute('data-telefone', getVal('#modal-telefone_responsavel'));
+                                lastTriggerEl.setAttribute('data-email', getVal('#modal-email_responsavel'));
+                                lastTriggerEl.setAttribute('data-id-favorecido', getVal('#modal-id_favorecido'));
+                                lastTriggerEl.setAttribute('data-chave-oamd', getVal('#modal-chave_oamd'));
+                                lastTriggerEl.setAttribute('data-tela-apoio-link', getVal('#modal-tela_apoio_link'));
+                                lastTriggerEl.setAttribute('data-nivel-receita', getVal('#modal-nivel_receita'));
+                                lastTriggerEl.setAttribute('data-modalidades', getVal('#modal-modalidades'));
+                                lastTriggerEl.setAttribute('data-horarios-func', getVal('#modal-horarios_func'));
+                                lastTriggerEl.setAttribute('data-formas-pagamento', getVal('#modal-formas_pagamento'));
+                                lastTriggerEl.setAttribute('data-seguimento', getVal('#modal-seguimento'));
+                                lastTriggerEl.setAttribute('data-tipos-planos', getVal('#modal-tipos_planos'));
+                                lastTriggerEl.setAttribute('data-diaria', getVal('#modal-diaria'));
+                                lastTriggerEl.setAttribute('data-freepass', getVal('#modal-freepass'));
+                                lastTriggerEl.setAttribute('data-alunos-ativos', getVal('#modal-alunos_ativos'));
+                                lastTriggerEl.setAttribute('data-sistema-anterior', getVal('#modal-sistema_anterior'));
+                                lastTriggerEl.setAttribute('data-recorrencia-usa', getVal('#modal-recorrencia_usa'));
+                                lastTriggerEl.setAttribute('data-importacao', getVal('#modal-importacao'));
+                                lastTriggerEl.setAttribute('data-boleto', getVal('#modal-boleto'));
+                                lastTriggerEl.setAttribute('data-nota-fiscal', getVal('#modal-nota_fiscal'));
+                                lastTriggerEl.setAttribute('data-catraca', getVal('#modal-catraca'));
+                                lastTriggerEl.setAttribute('data-facial', getVal('#modal-facial'));
+                                lastTriggerEl.setAttribute('data-modelo-catraca', getVal('#modal-modelo_catraca'));
+                                lastTriggerEl.setAttribute('data-modelo-facial', getVal('#modal-modelo_facial'));
+                                lastTriggerEl.setAttribute('data-valor-atribuido', getVal('#modal-valor_atribuido'));
+                                lastTriggerEl.setAttribute('data-resp-estrategico-nome', getVal('#modal-resp_estrategico_nome'));
+                                lastTriggerEl.setAttribute('data-resp-onb-nome', getVal('#modal-resp_onb_nome'));
+                                lastTriggerEl.setAttribute('data-contatos', getVal('#modal-contatos'));
+                                lastTriggerEl.setAttribute('data-resp-estrategico-obs', getVal('#modal-resp_estrategico_obs'));
+                                lastTriggerEl.setAttribute('data-inicio-efetivo-iso', getVal('#modal-inicio_efetivo'));
+                                lastTriggerEl.setAttribute('data-inicio-producao', getVal('#modal-data_inicio_producao'));
+                                lastTriggerEl.setAttribute('data-final-implantacao', getVal('#modal-data_final_implantacao'));
+                            }
+                        } catch(_) {}
+                    } else {
+                        if (window.showToast) showToast((j && j.error) || 'Erro ao salvar detalhes', 'error');
+                    }
+                } catch (error) {
+                    if (window.showToast) showToast('Erro de rede ao salvar detalhes', 'error');
+                } finally {
+                    if (saveBtn) {
+                        saveBtn.disabled = false;
+                        saveBtn.innerHTML = saveBtn.dataset._originalText || 'Salvar Alterações';
+                        delete saveBtn.dataset._originalText;
+                    }
+                }
+                return false;
+            };
+
             modalForm.addEventListener('submit', function(e) {
                 if (isClosingAfterConfirm) {
                     e.preventDefault();
                     return false;
                 }
-                processarDatas();
+                e.preventDefault();
+                submitModalForm();
             });
 
             modalDetalhesEmpresa.addEventListener('show.bs.modal', function() {
                 isClosingAfterConfirm = false;
+                justSaved = false;
                 initializing = true;
                 const finishInit = () => { saveFormInitialValues(); initializing = false; };
                 window.__modalDetalhesInitDone = finishInit;
@@ -400,6 +574,10 @@
 
             modalDetalhesEmpresa.addEventListener('hide.bs.modal', async function(e) {
                 if (isClosingAfterConfirm) {
+                    return;
+                }
+                if (justSaved) {
+                    justSaved = false;
                     return;
                 }
 
@@ -520,22 +698,7 @@
                 if (submitBtn && modalForm) {
                     e.preventDefault();
                     e.stopPropagation();
-
-                    const validation = validateFormFields();
-                    if (!validation.valid) {
-                        if (validation.field) {
-                            validation.field.focus();
-                            validation.field.reportValidity();
-                        }
-                        if (window.showToast) {
-                            showToast(validation.message, 'error');
-                        }
-                        return false;
-                    }
-
-                    processarDatas();
-                    formHasChanges = false;
-                    modalForm.submit();
+                    submitModalForm();
                 }
             });
 

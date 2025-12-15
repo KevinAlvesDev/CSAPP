@@ -1,4 +1,5 @@
 import secrets
+import os
 from functools import wraps
 from urllib.parse import urlencode
 
@@ -164,9 +165,39 @@ def login():
     if g.user:
         return redirect(url_for('main.dashboard'))
 
-    # Renderiza a página de login (que agora só tem o botão do Google)
+    # Renderiza a página de login
     login_bg_file = current_app.config.get('LOGIN_BG_FILE', 'imagens/teladelogin.jpg')
-    return render_template('login.html', auth0_enabled=False, use_custom_auth=True, login_bg_file=login_bg_file)
+    try:
+        static_folder = os.path.abspath(current_app.static_folder or '')
+        candidate_path = os.path.join(static_folder, login_bg_file)
+        if not (static_folder and os.path.isfile(candidate_path)):
+            # Tentar fallback padrão
+            fallback = os.path.join(static_folder, 'imagens', 'teladelogin.jpg')
+            if os.path.isfile(fallback):
+                login_bg_file = 'imagens/teladelogin.jpg'
+            else:
+                # Detectar automaticamente qualquer imagem disponível em /static/imagens
+                imgs_dir = os.path.join(static_folder, 'imagens')
+                chosen = None
+                try:
+                    for fname in os.listdir(imgs_dir):
+                        lower = fname.lower()
+                        if lower.endswith(('.jpg', '.jpeg', '.png', '.webp')):
+                            chosen = fname
+                            # Preferir arquivos contendo '25' ou 'anos'
+                            if '25' in lower or 'anos' in lower:
+                                chosen = fname
+                                break
+                    if chosen:
+                        login_bg_file = f'imagens/{chosen}'
+                    else:
+                        login_bg_file = 'imagens/teladelogin.jpg'
+                except Exception:
+                    login_bg_file = 'imagens/teladelogin.jpg'
+    except Exception:
+        login_bg_file = 'imagens/teladelogin.jpg'
+    google_enabled = current_app.config.get('GOOGLE_OAUTH_ENABLED', False)
+    return render_template('login.html', auth0_enabled=False, use_custom_auth=google_enabled, login_bg_file=login_bg_file)
 
 
 
@@ -331,57 +362,41 @@ def google_callback():
             return redirect(url_for('auth.login'))
 
         # --- VALIDAÇÃO EXTERNA (OAMD) ---
-        try:
-            # Verificar se a URL do banco externo está configurada
-            external_db_configured = bool(current_app.config.get('EXTERNAL_DB_URL'))
-
-            # Tentar buscar usuário se o banco estiver configurado ou se estivermos em modo DEBUG (para usar o mock)
-            # Em produção sem URL, find_cs_user_by_email retornaria None, mas queremos tratar isso diferentemente
-
-            if external_db_configured or current_app.config.get('DEBUG', False):
+        external_db_configured = bool(current_app.config.get('EXTERNAL_DB_URL'))
+        if external_db_configured:
+            try:
                 cs_user = find_cs_user_external_service(email)
-
                 if not cs_user:
-                    # Se o banco está configurado e não achou -> Bloqueia
-                    if external_db_configured:
-                        auth_logger.warning(f'Login blocked: User not found in External CS DB: {email}')
-                        flash('Acesso negado. Usuário não identificado na base de Customer Success (OAMD). Por favor, entre em contato com o suporte ou verifique se seu cadastro no OAMD está ativo e correto.', 'error')
-                        return redirect(url_for('auth.login'))
-                    else:
-                        # Se não está configurado mas tentou (DEBUG mock), e falhou -> Bloqueia (comportamento do mock)
-                        # Mas se o mock não rodou (ex: email errado), cai aqui
-                         auth_logger.warning(f'Login blocked: User not found (Mock/Dev): {email}')
-                         flash('Acesso negado. Usuário não identificado (Dev Mode).', 'error')
-                         return redirect(url_for('auth.login'))
-
+                    auth_logger.warning(f'Login blocked: User not found in External CS DB: {email}')
+                    flash('Acesso negado. Usuário não identificado na base de Customer Success (OAMD). Por favor, entre em contato com o suporte ou verifique se seu cadastro no OAMD está ativo e correto.', 'error')
+                    return redirect(url_for('auth.login'))
                 if not cs_user.get('ativo'):
                     auth_logger.warning(f'Login blocked: Inactive user in External CS DB: {email}')
                     flash('Acesso negado. Seu cadastro de CS está inativo.', 'error')
                     return redirect(url_for('auth.login'))
-
                 auth_logger.info(f"External auth check passed for {email} (CS: {cs_user.get('nome')})")
                 user_name_final = cs_user.get('nome')
-
-            else:
-                # FALLBACK DE PRODUÇÃO SEM BANCO EXTERNO
-                # Se não temos URL de banco externo e NÃO estamos em DEBUG,
-                # assumimos que a validação de domínio do Google é suficiente.
-                auth_logger.warning(f"External DB check SKIPPED for {email} (No Config). Relying on Google Domain.")
-                # Usar nome do Google
-                user_name_final = user_info.get('name', email)
-
-        except Exception as e:
-            auth_logger.error(f'External DB check failed during login: {e}', exc_info=True)
-            # Em caso de erro técnico no banco (timeout, etc), decidir se bloqueia ou libera.
-            # Por segurança, geralmente bloqueia, ou libera com restrições.
-            # Vamos manter o bloqueio para forçar correção, a menos que explicitamente desejado o contrário.
-            flash('Erro ao validar credenciais externas. Tente novamente.', 'error')
-            return redirect(url_for('auth.login'))
+            except Exception as e:
+                auth_logger.error(f'External DB check failed during login: {e}', exc_info=True)
+                flash('Erro ao validar credenciais externas. Tente novamente.', 'error')
+                return redirect(url_for('auth.login'))
+        else:
+            # Sem banco externo configurado, aceitar por domínio do Google
+            auth_logger.info(f"External DB not configured. Accepting Google domain for {email}")
+            user_name_final = user_info.get('name', email)
         # -------------------------------------
 
         # Sincronizar usuário
         # Usamos o 'sub' do Google como ID único
         sync_user_profile_service(email, user_name_final, user_info.get('sub'))
+
+        # Enforce admin role for ADMIN_EMAIL
+        try:
+            from ..constants import ADMIN_EMAIL, PERFIL_ADMIN
+            if (email or '').strip().lower() == (ADMIN_EMAIL or '').strip().lower():
+                update_user_role_service(email, PERFIL_ADMIN)
+        except Exception:
+            pass
 
         # Configurar sessão (compatível com a estrutura existente que espera session['user'])
         session['user'] = user_info

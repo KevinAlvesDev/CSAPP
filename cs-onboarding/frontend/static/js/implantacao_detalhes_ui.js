@@ -941,6 +941,7 @@
         const modal = form.closest('#modalDetalhesEmpresa');
         if (!modal) return;
         e.preventDefault();
+        e.stopPropagation();
         try {
           const fd = new FormData(form);
           fd.set('redirect_to', 'modal');
@@ -953,6 +954,7 @@
           const data = await resp.json();
           if (data && data.ok) {
             showToast('Detalhes atualizados', 'success');
+            // permanece no modal; opcionalmente, reativar botão salvar
           } else {
             showToast('Erro ao salvar detalhes', 'error');
           }

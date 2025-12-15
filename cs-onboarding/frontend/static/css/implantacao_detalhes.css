@@ -295,6 +295,39 @@
     text-overflow: ellipsis;
 }
 
+.checklist-grid,
+.checklist-item-grid {
+    display: grid;
+    grid-template-columns: 24px 24px minmax(0,1fr) 1fr 100px 40px 120px 100px 100px 110px 28px 28px;
+    column-gap: 2px;
+    align-items: center;
+}
+
+.col-tag,
+.col-responsavel,
+.col-prev-orig,
+.col-prev-atual {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.col-qtd,
+.col-status,
+.col-comment,
+.col-delete {
+    text-align: center;
+}
+
+.badge-truncate,
+.badge-resp-ellipsis {
+    display: inline-block;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .checklist-item-title:hover {
     color: #667eea;
 }

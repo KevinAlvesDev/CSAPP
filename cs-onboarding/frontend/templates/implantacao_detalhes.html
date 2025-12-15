@@ -256,17 +256,19 @@
                                 </div>
 
                                 <!-- Checklist Tree será renderizado via JavaScript -->
-                                <div class="d-flex align-items-center gap-0 px-2 py-1 text-muted small"
-                                    style="border-bottom: 1px solid rgba(0,0,0,0.06);">
-                                    <span class="col-title flex-grow-1">Tarefa</span>
-                                    <span class="col-tag" style="width:130px">Tag</span>
-                                    <span class="col-qtd" style="width:60px">QTD</span>
-                                    <span class="col-responsavel" style="width:120px">Responsável</span>
-                                    <span class="col-prev-orig" style="width:150px">Prev. orig</span>
-                                    <span class="col-prev-atual" style="width:150px">Nova previsão</span>
-                                    <span class="col-status" style="width:110px">Status</span>
-                                    <span class="col-comment" style="width:28px"></span>
-                                    <span class="col-delete" style="width:28px"></span>
+                                <div class="checklist-grid px-2 py-1 text-muted small" style="border-bottom: 1px solid rgba(0,0,0,0.06);">
+                                    <span class="col-empty"></span>
+                                    <span class="col-checkbox"></span>
+                                    <span class="col-title">Tarefa</span>
+                                    <span class="col-spacer"></span>
+                                    <span class="col-tag">Tag</span>
+                                    <span class="col-qtd" style="text-align:center">QTD</span>
+                                    <span class="col-responsavel">Responsável</span>
+                                    <span class="col-prev-orig">Prev. orig</span>
+                                    <span class="col-prev-atual">Nova previsão</span>
+                                    <span class="col-status">Status</span>
+                                    <span class="col-comment"></span>
+                                    <span class="col-delete"></span>
                                 </div>
                                 <div id="checklist-tree-root"></div>
                             </div>
@@ -753,6 +755,8 @@
                             <option value="Ação interna">Ação interna</option>
                             <option value="Reunião">Reunião</option>
                             <option value="Configuração">Configuração</option>
+                            <option value="Rede">Rede</option>
+                            <option value="No Show">No Show</option>
                         </select>
                     </div>
                 </div>

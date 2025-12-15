@@ -1052,20 +1052,51 @@ def atualizar_detalhes_empresa_service(implantacao_id, usuario_cs_email, user_pe
     if not (is_owner or is_manager):
         raise ValueError('Permissão negada.')
 
+    allowed_fields = {
+        'email_responsavel',
+        'responsavel_cliente',
+        'cargo_responsavel',
+        'telefone_responsavel',
+        'data_inicio_producao',
+        'data_final_implantacao',
+        'data_inicio_efetivo',
+        'id_favorecido',
+        'nivel_receita',
+        'chave_oamd',
+        'tela_apoio_link',
+        'informacao_infra',
+        'seguimento',
+        'tipos_planos',
+        'modalidades',
+        'horarios_func',
+        'formas_pagamento',
+        'diaria',
+        'freepass',
+        'alunos_ativos',
+        'sistema_anterior',
+        'importacao',
+        'recorrencia_usa',
+        'boleto',
+        'nota_fiscal',
+        'catraca',
+        'facial',
+        'valor_atribuido',
+        'resp_estrategico_nome',
+        'resp_onb_nome',
+        'resp_estrategico_obs',
+        'contatos',
+    }
     set_clauses = []
     values = []
     for k, v in campos.items():
-        set_clauses.append(f"{k} = %s")
-        values.append(v)
-    
+        if k in allowed_fields:
+            set_clauses.append(f"{k} = %s")
+            values.append(v)
     if not set_clauses:
         return False
-
     values.append(implantacao_id)
     query = f"UPDATE implantacoes SET {', '.join(set_clauses)} WHERE id = %s"
-    
     execute_db(query, tuple(values))
-    
     return True
 
 
