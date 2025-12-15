@@ -845,29 +845,27 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, include_progress=
             col_names = [d[0] for d in cursor.description]
             
             for row in rows:
-                if isinstance(row, (tuple, list)):
-                    item = dict(zip(col_names, row))
-                else:
-                    item = row # Assuming row proxy acting as dict
+                # Unify row into a plain dict
+                item = row if isinstance(row, dict) else dict(zip(col_names, row))
                 
                 # Normalize formatting
                 item_dict = {
                     'id': item['id'],
-                    'parent_id': item.get('parent_id'),
-                    'title': item.get('title'),
-                    'completed': bool(item.get('completed')),
-                    'comment': item.get('comment'),
-                    'level': item.get('level'),
-                    'ordem': item.get('ordem'),
-                    'implantacao_id': item.get('implantacao_id'),
-                    'obrigatoria': bool(item.get('obrigatoria')),
-                    'tag': item.get('tag'),
-                    'responsavel': item.get('responsavel'),
-                    'previsao_original': _format_datetime(item.get('previsao_original')),
-                    'nova_previsao': _format_datetime(item.get('nova_previsao')),
-                    'data_conclusao': _format_datetime(item.get('data_conclusao')),
-                    'created_at': _format_datetime(item.get('created_at')),
-                    'updated_at': _format_datetime(item.get('updated_at')),
+                    'parent_id': item.get('parent_id') if isinstance(item, dict) else item['parent_id'],
+                    'title': item.get('title') if isinstance(item, dict) else item['title'],
+                    'completed': bool(item.get('completed') if isinstance(item, dict) else item['completed']),
+                    'comment': item.get('comment') if isinstance(item, dict) else item['comment'],
+                    'level': item.get('level') if isinstance(item, dict) else item['level'],
+                    'ordem': item.get('ordem') if isinstance(item, dict) else item['ordem'],
+                    'implantacao_id': item.get('implantacao_id') if isinstance(item, dict) else item['implantacao_id'],
+                    'obrigatoria': bool(item.get('obrigatoria') if isinstance(item, dict) else item['obrigatoria']),
+                    'tag': item.get('tag') if isinstance(item, dict) else item['tag'],
+                    'responsavel': item.get('responsavel') if isinstance(item, dict) else item.get('responsavel', None),
+                    'previsao_original': _format_datetime((item.get('previsao_original') if isinstance(item, dict) else item.get('previsao_original', None))),
+                    'nova_previsao': _format_datetime((item.get('nova_previsao') if isinstance(item, dict) else item.get('nova_previsao', None))),
+                    'data_conclusao': _format_datetime((item.get('data_conclusao') if isinstance(item, dict) else item.get('data_conclusao', None))),
+                    'created_at': _format_datetime((item.get('created_at') if isinstance(item, dict) else item.get('created_at', None))),
+                    'updated_at': _format_datetime((item.get('updated_at') if isinstance(item, dict) else item.get('updated_at', None))),
                 }
                 
                 # Enrich responsavel name

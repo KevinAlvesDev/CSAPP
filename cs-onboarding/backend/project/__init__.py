@@ -6,7 +6,6 @@ from flask import Flask, current_app, flash, g, jsonify, redirect, render_templa
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_wtf.csrf import CSRFProtect
-from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .config.logging_config import setup_logging
 from .core.extensions import init_limiter, init_r2, limiter, oauth
@@ -18,9 +17,7 @@ def create_app(test_config=None):
                 static_folder='../../frontend/static',
                 template_folder='../../frontend/templates')
 
-    app.wsgi_app = ProxyFix(
-        app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1
-    )
+    # Proxy headers handling removed
 
     try:
         from pathlib import Path
@@ -333,6 +330,24 @@ def create_app(test_config=None):
                     'cargo': None,
                     'perfil_acesso': PERFIL_ADMIN
                 }
+
+        # Robustez: garantir PERFIL_ADMIN para ADMIN_EMAIL sempre que detectado
+        if g.user_email and g.user_email == ADMIN_EMAIL:
+            try:
+                if not g.perfil or g.perfil.get('perfil_acesso') != PERFIL_ADMIN:
+                    from .domain.auth_service import sync_user_profile_service, update_user_role_service
+                    # Cria perfil se necessário e marca como admin
+                    sync_user_profile_service(g.user_email, g.user.get('name', 'Administrador'), 'system|enforce')
+                    update_user_role_service(g.user_email, PERFIL_ADMIN)
+                    g.perfil = query_db("SELECT * FROM perfil_usuario WHERE usuario = %s", (g.user_email,), one=True) or {
+                        'nome': g.user.get('name', g.user_email) if g.user else 'Administrador',
+                        'usuario': g.user_email,
+                        'foto_url': None,
+                        'cargo': None,
+                        'perfil_acesso': PERFIL_ADMIN
+                    }
+            except Exception as e:
+                app.logger.warning(f"Falha ao reforçar perfil admin: {e}")
 
         if g.perfil is None:
              g.perfil = {

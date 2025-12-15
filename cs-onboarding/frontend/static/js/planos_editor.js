@@ -75,10 +75,13 @@
                 value="${this.escapeHtml(title)}"
                 required
               >
-              <select class="form-select form-select-sm item-tag-select" style="max-width: 150px;">
+              <select class="form-select form-select-sm item-tag-select" style="max-width: 180px;">
                 <option value="">Sem tag</option>
                 <option value="Ação interna" ${tag === 'Ação interna' ? 'selected' : ''}>Ação interna</option>
                 <option value="Reunião" ${tag === 'Reunião' ? 'selected' : ''}>Reunião</option>
+                <option value="Cliente" ${tag === 'Cliente' ? 'selected' : ''}>Cliente</option>
+                <option value="Rede" ${tag === 'Rede' ? 'selected' : ''}>Rede</option>
+                <option value="No Show" ${tag === 'No Show' ? 'selected' : ''}>No Show</option>
               </select>
             </div>
             <div class="d-flex align-items-center gap-1">
@@ -95,13 +98,7 @@
           </div>
           
           <div class="item-body ${isExpanded ? '' : 'd-none'}">
-            <div class="mb-2 mt-2">
-              <textarea 
-                class="form-control form-control-sm item-comment-input" 
-                rows="2"
-                placeholder="Descrição/Comentário (opcional)"
-              >${this.escapeHtml(comment)}</textarea>
-            </div>
+            <!-- Campo de descrição/comentário removido na criação de tarefas -->
             <div class="mb-2">
               <div class="form-check">
                 <input 
@@ -244,7 +241,8 @@
 
     coletarItemRecursivo(element) {
       const title = element.querySelector('.item-title-input').value.trim();
-      const comment = element.querySelector('.item-comment-input').value.trim();
+      const commentEl = element.querySelector('.item-comment-input');
+      const comment = commentEl ? commentEl.value.trim() : '';
       const obrigatoriaInput = element.querySelector('.item-obrigatoria-input');
       const obrigatoria = obrigatoriaInput ? obrigatoriaInput.checked : false;
       const tagInput = element.querySelector('.item-tag-select');

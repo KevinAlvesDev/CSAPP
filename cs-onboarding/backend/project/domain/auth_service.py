@@ -76,9 +76,34 @@ def atualizar_dados_perfil_service(usuario_email, nome, cargo, foto_url):
     Returns:
         bool: True se sucesso
     """
+    # Obter nome anterior para sincronizar responsáveis
+    try:
+        row = query_db("SELECT nome FROM perfil_usuario WHERE usuario = %s", (usuario_email,), one=True)
+        old_nome = (row or {}).get('nome')
+    except Exception:
+        old_nome = None
+
     execute_db(
         "UPDATE perfil_usuario SET nome = %s, cargo = %s, foto_url = %s WHERE usuario = %s",
         (nome, cargo, foto_url, usuario_email)
     )
+
+    # Sincronizar responsáveis nos itens do checklist:
+    # - Se responsável for exatamente o nome antigo, substituir pelo novo nome
+    # - Se responsável for o email do usuário, substituir pelo novo nome
+    try:
+        if nome and isinstance(nome, str):
+            if old_nome and old_nome.strip():
+                execute_db(
+                    "UPDATE checklist_items SET responsavel = %s WHERE responsavel = %s",
+                    (nome.strip(), old_nome.strip())
+                )
+            execute_db(
+                "UPDATE checklist_items SET responsavel = %s WHERE responsavel = %s",
+                (nome.strip(), usuario_email)
+            )
+    except Exception:
+        # Sincronização é best-effort; falhas não bloqueiam atualização de perfil
+        pass
     return True
 

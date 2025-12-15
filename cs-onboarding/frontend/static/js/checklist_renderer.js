@@ -116,21 +116,21 @@ class ChecklistRenderer {
         const statusText = item.completed ? 'Concluído' : 'Pendente';
         const statusIcon = item.completed ? 'bi-check-circle-fill' : 'bi-clock-fill';
         
-        const paddingLeft = `${(item.level || 0) * 2 + 0.75}rem`;
+        const indentPx = Math.max(0, (item.level || 0) * 14);
         
         return `
             <div id="checklist-item-${item.id}" class="checklist-item" data-item-id="${item.id}" data-level="${item.level || 0}">
-                <div class="checklist-item-header position-relative level-${item.level || 0}" style="padding-left: ${paddingLeft};">
+                <div class="checklist-item-header position-relative level-${item.level || 0}" style="padding-left: 0;">
                     ${hasChildren ? `
                         <div class="position-absolute bottom-0 left-0 h-1 progress-bar-item" 
                              style="width: 0%; background-color: #28a745; opacity: 0; transition: all 0.3s;"
                              id="progress-bar-${item.id}"></div>
                     ` : ''}
                     
-                    <div class="d-flex align-items-center gap-0 py-2 px-2 hover-bg" 
+                    <div class="checklist-item-grid py-1 px-2 hover-bg" 
                          style="cursor: pointer;"
                          onclick="if(event.target.closest('.btn-expand, .btn-comment-toggle, .checklist-checkbox')) return; if(window.checklistRenderer && ${hasChildren}) { window.checklistRenderer.toggleExpand(${item.id}); }">
-                        <span class="col-title flex-grow-1 d-flex align-items-center gap-2">
+                        <span class="col-empty d-flex align-items-center justify-content-center">
                             ${hasChildren ? `
                                 <button class="btn-icon btn-expand p-1 border-0 bg-transparent" 
                                         data-item-id="${item.id}" 
@@ -139,36 +139,39 @@ class ChecklistRenderer {
                                     <i class="bi ${isExpanded ? 'bi-chevron-down' : 'bi-chevron-right'} text-muted" style="pointer-events: none;"></i>
                                 </button>
                             ` : '<span class="btn-icon-placeholder" style="width: 24px;"></span>'}
-                            
+                        </span>
+                        <span class="col-checkbox d-flex align-items-center justify-content-center">
                             <input type="checkbox" 
                                    class="checklist-checkbox form-check-input" 
                                    id="checklist-${item.id}"
                                    data-item-id="${item.id}"
                                    ${item.completed ? 'checked' : ''}
                                    style="cursor: pointer; width: 18px; height: 18px;">
-                            
+                        </span>
+                        <span class="col-title d-flex align-items-center gap-2">
+                            <span class="indent-spacer" style="display:inline-block; width: ${indentPx}px;"></span>
                             <i class="bi ${iconClass} ${iconColor}" style="font-size: 1.1rem;"></i>
-                            
                             <span class="checklist-item-title mb-0" 
                                    style="${item.completed ? 'text-decoration: line-through; color: #6c757d;' : ''}">
                                 ${this.escapeHtml(item.title)}
                             </span>
                         </span>
-                        </span>
 
-                        <span class="col-tag" style="width:130px; overflow:hidden">
+                        <span class="col-spacer"></span>
+
+                        <span class="col-tag d-flex align-items-center" style="overflow:hidden; white-space:nowrap;">
                             ${item.tag ? `
-                                <span class="badge badge-truncate ${this.getTagClass(item.tag)} js-edit-tag" id="badge-tag-${item.id}" data-item-id="${item.id}" style="font-size: 0.75rem; cursor: pointer;" title="Editar tag">
+                                <span class="badge badge-truncate ${this.getTagClass(item.tag)} js-edit-tag" id="badge-tag-${item.id}" data-item-id="${item.id}" style="font-size: 0.75rem; cursor: pointer; display:inline-block; max-width:100%;" title="Editar tag">
                                     ${this.escapeHtml(item.tag)}
                                 </span>
                             ` : `
-                                <span class="badge badge-truncate bg-light text-dark js-edit-tag" id="badge-tag-${item.id}" data-item-id="${item.id}" style="font-size: 0.75rem; cursor: pointer;" title="Definir tag">
+                                <span class="badge badge-truncate bg-light text-dark js-edit-tag" id="badge-tag-${item.id}" data-item-id="${item.id}" style="font-size: 0.75rem; cursor: pointer; display:inline-block; max-width:100%;" title="Definir tag">
                                     Definir tag
                                 </span>
                             `}
                         </span>
 
-                        <span class="col-qtd" style="width:60px; overflow:hidden">
+                        <span class="col-qtd d-flex align-items-center justify-content-center" style="overflow:hidden">
                             ${progressLabel ? `
                                 <span class="checklist-progress-badge badge badge-truncate bg-light text-dark" style="font-size: 0.75rem;">
                                     ${progressLabel}
@@ -176,23 +179,24 @@ class ChecklistRenderer {
                             ` : ''}
                         </span>
 
-                        <span class="col-responsavel" style="width:120px">
+                        <span class="col-responsavel d-flex align-items-center" style="overflow:hidden; white-space:nowrap;">
                             ${item.responsavel ? `<span class="badge bg-primary js-edit-resp badge-resp-ellipsis badge-truncate" data-item-id="${item.id}" style="font-size: 0.75rem;" title="${this.escapeHtml(item.responsavel)}">${this.escapeHtml(this.abbrevResponsavel(item.responsavel))}</span>` : `<span class="badge bg-primary js-edit-resp badge-resp-ellipsis badge-truncate" data-item-id="${item.id}" style="font-size: 0.75rem;">Definir responsável</span>`}
                         </span>
-                        <span class="col-prev-orig" style="width:150px">
+
+                        <span class="col-prev-orig">
                             ${item.previsao_original ? `<span class="badge badge-truncate bg-warning text-dark" id="badge-prev-orig-${item.id}" style="font-size: 0.75rem;" title="Previsão original: ${item.previsao_original}" aria-label="Previsão original: ${this.formatDate(item.previsao_original)}">${this.formatDate(item.previsao_original)}</span>` : `<span class="badge bg-warning text-dark d-none" id="badge-prev-orig-${item.id}" style="font-size: 0.75rem;" aria-hidden="true"></span>`}
                         </span>
-                        <span class="col-prev-atual" style="width:150px">
+                        <span class="col-prev-atual">
                             ${item.nova_previsao ? `<span class="badge badge-truncate bg-danger text-white js-edit-prev" id="badge-prev-nova-${item.id}" data-item-id="${item.id}" style="font-size: 0.75rem;" title="Nova previsão: ${item.nova_previsao}" aria-label="Nova previsão: ${this.formatDate(item.nova_previsao)}">${this.formatDate(item.nova_previsao)}</span>` : ((item.previsao_original || this.previsaoTermino) ? `<span class="badge badge-truncate bg-warning text-dark js-edit-prev" id="badge-prev-nova-${item.id}" data-item-id="${item.id}" style="font-size: 0.75rem;" title="Nova previsão: ${item.previsao_original || this.previsaoTermino}" aria-label="Nova previsão: ${this.formatDate(item.previsao_original || this.previsaoTermino)}">${this.formatDate(item.previsao_original || this.previsaoTermino)}</span>` : `<span class="badge badge-truncate bg-warning text-dark js-edit-prev" id="badge-prev-nova-${item.id}" data-item-id="${item.id}" style="font-size: 0.75rem;" aria-label="Definir nova previsão">Definir nova previsão</span>`)}
                         </span>
-                        <span class="col-status" style="width:110px">
+                        <span class="col-status">
                             <span class="badge badge-truncate ${statusClass}" id="status-badge-${item.id}" title="Status: ${statusText}" aria-label="Status: ${statusText}">
                                 <i class="bi ${statusIcon} me-1" aria-hidden="true"></i>${statusText}
                                 ${item.atrasada ? '<i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>' : ''}
                             </span>
                         </span>
                         
-                        <span class="col-comment" style="width:28px">
+                        <span class="col-comment">
                         <button class="btn-icon btn-comment-toggle p-1 border-0 bg-transparent" 
                                 data-item-id="${item.id}" 
                                 title="Comentários">
@@ -201,13 +205,13 @@ class ChecklistRenderer {
                             </i>
                         </button>
                         </span>
-                        <span class="col-delete" style="width:28px">
-                        <button class="btn-icon btn-delete-item p-1 border-0 bg-transparent" 
-                                data-item-id="${item.id}" 
-                                title="Excluir tarefa">
-                            <i class="bi bi-trash text-danger"></i>
-                        </button>
-                        </span>
+                        <span class="col-delete">
+                         <button class="btn-icon btn-delete-item p-1 border-0 bg-transparent" 
+                                 data-item-id="${item.id}" 
+                                 title="Excluir tarefa">
+                             <i class="bi bi-trash text-danger"></i>
+                         </button>
+                         </span>
                     </div>
                 </div>
                 
@@ -905,6 +909,8 @@ class ChecklistRenderer {
         if (tag === 'Ação interna') return 'bg-secondary';
         if (tag === 'Reunião') return 'bg-info text-dark';
         if (tag === 'Cliente') return 'bg-warning text-dark';
+        if (tag === 'Rede') return 'bg-primary';
+        if (tag === 'No Show') return 'bg-danger';
         return 'bg-light text-dark';
     }
 
@@ -930,6 +936,8 @@ class ChecklistRenderer {
                       <option value="Ação interna">Ação interna</option>
                       <option value="Reunião">Reunião</option>
                       <option value="Cliente">Cliente</option>
+                      <option value="Rede">Rede</option>
+                      <option value="No Show">No Show</option>
                     </select>
                   </div>
                 </div>
@@ -1332,7 +1340,7 @@ class ChecklistRenderer {
             const shortDomain = baseDomain.length > 5 ? baseDomain.slice(0, 5) + '...' : baseDomain + (baseDomain ? '' : '');
             return `${local}@${shortDomain}`;
         }
-        return s.length > 12 ? s.slice(0, 12) + '...' : s;
+        return s;
     }
 }
 

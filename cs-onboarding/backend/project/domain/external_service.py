@@ -1,6 +1,5 @@
 
 import json
-import os
 from decimal import Decimal
 from flask import current_app
 from sqlalchemy.exc import OperationalError
@@ -10,53 +9,10 @@ from ..database.external_db import query_external_db
 from ..common.validation import validate_integer
 
 
-def _consultar_via_proxy(id_favorecido=None, infra_req=None):
-    """
-    Fallback: Consulta via proxy HTTP quando banco direto não está acessível.
-    """
-    import requests
-    
-    proxy_url = os.getenv('OAMD_PROXY_URL', 'http://localhost:5001')
-    proxy_token = os.getenv('OAMD_PROXY_TOKEN', '')
-    
-    if not proxy_url:
-        return None
-    
-    try:
-        params = {}
-        if id_favorecido:
-            params['id_favorecido'] = id_favorecido
-        if infra_req:
-            params['infra'] = infra_req
-        
-        headers = {}
-        if proxy_token:
-            headers['X-API-Token'] = proxy_token
-        
-        response = requests.get(
-            f"{proxy_url}/api/consultar_empresa",
-            params=params,
-            headers=headers,
-            timeout=10
-        )
-        
-        if response.status_code == 200:
-            data = response.json()
-            api_logger.info(f"Consulta OAMD via proxy bem-sucedida para ID {id_favorecido}")
-            return data
-        else:
-            api_logger.warning(f"Proxy retornou status {response.status_code}: {response.text}")
-            return None
-            
-    except Exception as e:
-        api_logger.error(f"Erro ao consultar via proxy: {e}")
-        return None
-
-
 def consultar_empresa_oamd(id_favorecido=None, infra_req=None):
     """
     Consulta dados da empresa no banco externo (OAMD) via ID Favorecido ou Infra.
-    Tenta conexão direta primeiro, depois proxy HTTP como fallback.
+    Tenta conexão direta e retorna erro apropriado caso indisponível.
     Retorna um dicionário com 'ok', 'empresa', 'mapped' ou 'error'.
     """
     if not id_favorecido and not infra_req:
@@ -249,23 +205,12 @@ def consultar_empresa_oamd(id_favorecido=None, infra_req=None):
 
     except OperationalError as e:
         api_logger.error(f"Erro de conexão OAMD ao consultar ID {id_favorecido}: {e}")
-        
-        # Tentar via proxy como fallback
-        proxy_result = _consultar_via_proxy(id_favorecido, infra_req)
-        if proxy_result and proxy_result.get('ok'):
-            return proxy_result
-        
+
         error_msg = str(e).lower()
         if "timeout" in error_msg or "timed out" in error_msg:
             return {'ok': False, 'error': 'Tempo limite excedido. Verifique sua conexão com a VPN/Rede.', 'status_code': 504}
-        return {'ok': False, 'error': 'Falha na conexão com o banco externo. Proxy também indisponível.', 'status_code': 502}
+        return {'ok': False, 'error': 'Falha na conexão com o banco externo.', 'status_code': 502}
 
     except Exception as e:
         api_logger.error(f"Erro ao consultar empresa ID {id_favorecido}: {e}", exc_info=True)
-        
-        # Tentar via proxy como fallback
-        proxy_result = _consultar_via_proxy(id_favorecido, infra_req)
-        if proxy_result and proxy_result.get('ok'):
-            return proxy_result
-            
-        return {'ok': False, 'error': 'Erro ao consultar banco de dados externo. Proxy também indisponível.', 'status_code': 500}
+        return {'ok': False, 'error': 'Erro ao consultar banco de dados externo.', 'status_code': 500}

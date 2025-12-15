@@ -36,6 +36,9 @@ class Config:
     EXTERNAL_DB_URL = os.environ.get('EXTERNAL_DB_URL')
     # ------------------------------
 
+    # Imagem de fundo da tela de login (arquivo em 'frontend/static')
+    LOGIN_BG_FILE = os.environ.get('LOGIN_BG_FILE', 'imagens/25 ANOS - FUNDO MEET.jpg')
+
     USE_SQLITE_ENV = os.environ.get('USE_SQLITE_LOCALLY', '').lower() in ('true', '1', 'yes')
 
     # Verificar se é SQLite pela URL ou pela variável USE_SQLITE_LOCALLY

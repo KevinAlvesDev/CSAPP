@@ -41,7 +41,7 @@ body {
     content: "";
     position: fixed;
     inset: 0;
-    background: linear-gradient(180deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.6) 35%, rgba(255,255,255,0.4) 100%);
+    background: none;
     pointer-events: none;
     z-index: 0;
 }
