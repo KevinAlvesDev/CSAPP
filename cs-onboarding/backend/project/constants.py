@@ -70,3 +70,10 @@ RECORRENCIA_USADA = [
     "Não", "Afinz", "Caixa", "Ceopag", "Cielo", "Getnet", "One Payment", "Pagar.me",
     "PagBnk", "PinBank", "Rede", "Stone", "Strip", "Vind"
 ]
+
+MODULO_OPCOES = {
+    'nota_fiscal': 'Nota fiscal',
+    'vendas_online': 'Vendas Online',
+    'app_treino': 'App Treino',
+    'recorrencia': 'Recorrência'
+}

@@ -1,4 +1,3 @@
-
 from collections import OrderedDict
 from datetime import datetime
 from functools import wraps
@@ -19,6 +18,7 @@ from ..constants import (
     SIM_NAO_OPTIONS,
     SISTEMAS_ANTERIORES,
     TIPOS_PLANOS,
+    MODULO_OPCOES,
 )
 from ..db import execute_and_fetch_one, execute_db, logar_timeline, query_db, db_transaction_with_lock
 from ..domain.hierarquia_service import get_hierarquia_implantacao
@@ -735,7 +735,7 @@ def criar_implantacao_service(nome_empresa, usuario_atribuido, usuario_criador, 
     return implantacao_id
 
 
-def criar_implantacao_modulo_service(nome_empresa, usuario_atribuido, usuario_criador, modulo_tipo):
+def criar_implantacao_modulo_service(nome_empresa, usuario_atribuido, usuario_criador, modulo_tipo, id_favorecido=None):
     """
     Cria uma nova implantação de módulo.
     """
@@ -772,16 +772,16 @@ def criar_implantacao_modulo_service(nome_empresa, usuario_atribuido, usuario_cr
     agora = datetime.now()
 
     result = execute_and_fetch_one(
-        "INSERT INTO implantacoes (usuario_cs, nome_empresa, tipo, data_criacao, status, data_inicio_previsto, data_inicio_efetivo) "
-        "VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id",
-        (usuario_atribuido, nome_empresa, tipo, agora, status, None, None)
+        "INSERT INTO implantacoes (usuario_cs, nome_empresa, tipo, data_criacao, status, data_inicio_previsto, data_inicio_efetivo, id_favorecido) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
+        (usuario_atribuido, nome_empresa, tipo, agora, status, None, None, id_favorecido)
     )
 
     implantacao_id = result.get('id') if result else None
     if not implantacao_id:
         raise Exception("Falha ao obter ID da nova implantação de módulo.")
 
-    modulo_label = modulo_opcoes.get(modulo_tipo, modulo_tipo)
+    modulo_label = MODULO_OPCOES.get(modulo_tipo, modulo_tipo)
     logar_timeline(implantacao_id, usuario_criador, 'implantacao_criada', f'Implantação de Módulo "{nome_empresa}" (módulo: {modulo_label}) criada e atribuída a {usuario_atribuido}.')
 
     return implantacao_id

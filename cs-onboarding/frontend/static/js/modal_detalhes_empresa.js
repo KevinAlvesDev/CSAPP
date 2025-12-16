@@ -405,6 +405,9 @@
             function processarDatas() {
                 const toIso = (br) => {
                     if (!br || typeof br !== 'string') return '';
+                    // Se já estiver em formato ISO YYYY-MM-DD, retorna como está
+                    if (/^\d{4}-\d{2}-\d{2}$/.test(br)) return br;
+                    
                     const m = br.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
                     if (!m) return br;
                     const dd = m[1],
@@ -420,34 +423,6 @@
                 if (inicioEfetivo && inicioEfetivo.value) inicioEfetivo.value = toIso(inicioEfetivo.value);
                 if (dataInicioProd && dataInicioProd.value) dataInicioProd.value = toIso(dataInicioProd.value);
                 if (dataFinalImpl && dataFinalImpl.value) dataFinalImpl.value = toIso(dataFinalImpl.value);
-
-            if (window.fpInicioEfetivo && window.fpInicioEfetivo._input && typeof window.fpInicioEfetivo.setDate === 'function') {
-                    const v = window.fpInicioEfetivo._input.value;
-                    if (v) {
-                        const iso = toIso(v);
-                        if (iso) {
-                            window.fpInicioEfetivo.setDate(iso, true, 'Y-m-d');
-                        }
-                    }
-                }
-            if (window.fpInicioProd && window.fpInicioProd._input && typeof window.fpInicioProd.setDate === 'function') {
-                    const v = window.fpInicioProd._input.value;
-                    if (v) {
-                        const iso = toIso(v);
-                        if (iso) {
-                            window.fpInicioProd.setDate(iso, true, 'Y-m-d');
-                        }
-                    }
-                }
-            if (window.fpFinalImpl && window.fpFinalImpl._input && typeof window.fpFinalImpl.setDate === 'function') {
-                    const v = window.fpFinalImpl._input.value;
-                    if (v) {
-                        const iso = toIso(v);
-                        if (iso) {
-                            window.fpFinalImpl.setDate(iso, true, 'Y-m-d');
-                        }
-                    }
-                }
             }
 
             const submitModalForm = async () => {

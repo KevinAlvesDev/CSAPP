@@ -100,13 +100,7 @@
                     <h5 class="custom-card-title">Ações Rápidas</h5>
                 </div>
                 <div class="list-group list-group-flush">
-                    <button class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-3"
-                        data-bs-toggle="modal" data-bs-target="#adicionarTarefaModal">
-                        <div class="bg-light p-2 rounded text-primary"><i class="bi bi-plus-lg"></i></div>
-                        <div>
-                            <h6 class="mb-0 fw-bold">Adicionar Tarefa</h6>
-                        </div>
-                    </button>
+                    <!-- Removido: Adicionar Tarefa -->
                     <button class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-3"
                         data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa" data-id="{{ implantacao.id }}"
                         data-id-favorecido="{{ implantacao.id_favorecido | default('') }}"
@@ -266,6 +260,7 @@
                                     <span class="col-responsavel">Responsável</span>
                                     <span class="col-prev-orig">Prev. orig</span>
                                     <span class="col-prev-atual">Nova previsão</span>
+                                    <span class="col-conclusao d-none">Data de conclusão</span>
                                     <span class="col-status">Status</span>
                                     <span class="col-comment"></span>
                                     <span class="col-delete"></span>
@@ -451,12 +446,8 @@
                             </div>
                             {% endfor %}
                             {% else %}
-                            <!-- Nenhum plano aplicado -->
                             <div class="empty-state">
                                 <i class="bi bi-diagram-3"></i>
-                                <h6 class="text-muted">Nenhum plano aplicado</h6>
-                                <p class="small text-muted mb-3">Selecione um plano de sucesso para visualizar a
-                                    estrutura de fases, ações e tarefas.</p>
                             </div>
                             {% endif %}
                         </div>
@@ -541,10 +532,6 @@
     </div>
     <div class="offcanvas-body">
         <div class="d-grid gap-2">
-            <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#adicionarTarefaModal">
-                <i class="bi bi-plus-lg me-2"></i>Adicionar Tarefa
-            </button>
-            <hr>
             <button class="btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa"
                 data-id="{{ implantacao.id }}" data-id-favorecido="{{ implantacao.id_favorecido | default('') }}"
                 data-cargo="{{ implantacao.cargo_responsavel | default('') }}"

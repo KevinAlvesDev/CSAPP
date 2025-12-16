@@ -368,12 +368,11 @@
           const btnCal = document.getElementById('btn_cal_data_parada');
           if (dataParadaInput && !dataParadaInput._flatpickr) {
             const fp = window.flatpickr(dataParadaInput, Object.assign({}, baseConfig, {
+              altInput: true,
               appendTo: modalParar.querySelector('.modal-body'),
               static: true,
               onChange: function (selectedDates, dateStr, instance) {
-                if (selectedDates.length > 0) {
-                  dataParadaInput.value = dateStr;
-                }
+                // Force update if needed, though altInput usually handles it
               }
             }));
             if (btnCal) {
@@ -393,12 +392,11 @@
           const btnCal = document.getElementById('btn_cal_data_cancelamento');
           if (dataCancelamentoInput && !dataCancelamentoInput._flatpickr) {
             const fp = window.flatpickr(dataCancelamentoInput, Object.assign({}, baseConfig, {
+              altInput: true,
               appendTo: modalCancelar.querySelector('.modal-body'),
               static: true,
               onChange: function (selectedDates, dateStr, instance) {
-                if (selectedDates.length > 0) {
-                  dataCancelamentoInput.value = dateStr;
-                }
+                 // Force update if needed
               }
             }));
             if (btnCal) {
