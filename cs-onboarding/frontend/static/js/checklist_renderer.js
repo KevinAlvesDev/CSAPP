@@ -52,6 +52,7 @@ class ChecklistRenderer {
         // Render com todas as tarefas minimizadas por padrão (sem expandir nós inicialmente)
         
         this.updateProgressFromLocalData();
+        this.updateAllItemsUI();
     }
     
     /**
@@ -79,6 +80,7 @@ class ChecklistRenderer {
         if (!treeRoot) return;
         
         treeRoot.innerHTML = this.renderTree(this.data);
+        this.updateConclusionHeaderVisibility();
     }
     
     renderTree(items) {
@@ -189,6 +191,9 @@ class ChecklistRenderer {
                         <span class="col-prev-atual">
                             ${item.nova_previsao ? `<span class="badge badge-truncate bg-danger text-white js-edit-prev" id="badge-prev-nova-${item.id}" data-item-id="${item.id}" style="font-size: 0.75rem;" title="Nova previsão: ${item.nova_previsao}" aria-label="Nova previsão: ${this.formatDate(item.nova_previsao)}">${this.formatDate(item.nova_previsao)}</span>` : ((item.previsao_original || this.previsaoTermino) ? `<span class="badge badge-truncate bg-warning text-dark js-edit-prev" id="badge-prev-nova-${item.id}" data-item-id="${item.id}" style="font-size: 0.75rem;" title="Nova previsão: ${item.previsao_original || this.previsaoTermino}" aria-label="Nova previsão: ${this.formatDate(item.previsao_original || this.previsaoTermino)}">${this.formatDate(item.previsao_original || this.previsaoTermino)}</span>` : `<span class="badge badge-truncate bg-warning text-dark js-edit-prev" id="badge-prev-nova-${item.id}" data-item-id="${item.id}" style="font-size: 0.75rem;" aria-label="Definir nova previsão">Definir nova previsão</span>`)}
                         </span>
+                        <span class="col-conclusao">
+                            <span class="badge badge-truncate bg-success text-white d-none" id="badge-concl-${item.id}" style="font-size: 0.75rem;"></span>
+                        </span>
                         <span class="col-status">
                             <span class="badge badge-truncate ${statusClass}" id="status-badge-${item.id}" title="Status: ${statusText}" aria-label="Status: ${statusText}">
                                 <i class="bi ${statusIcon} me-1" aria-hidden="true"></i>${statusText}
@@ -271,8 +276,6 @@ class ChecklistRenderer {
             treeRoot.innerHTML = `
                 <div class="empty-state text-center py-5">
                     <i class="bi bi-diagram-3" style="font-size: 3rem; color: #ccc;"></i>
-                    <h6 class="text-muted mt-3">Nenhum plano aplicado</h6>
-                    <p class="small text-muted mb-3">Selecione um plano de sucesso para visualizar a estrutura.</p>
                     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalSelecionarPlano">
                         <i class="bi bi-plus-circle me-2"></i>Selecionar Plano
                     </button>
@@ -319,6 +322,11 @@ class ChecklistRenderer {
             const prevBadge = e.target.closest('.js-edit-prev');
             if (prevBadge) {
                 const itemId = parseInt(prevBadge.dataset.itemId);
+                const node = this.flatData[itemId] || {};
+                if (node.completed || node.data_conclusao) {
+                    if (typeof this.showToast === 'function') this.showToast('Tarefa concluída: não é possível adicionar nova previsão', 'warning'); else alert('Tarefa concluída: não é possível adicionar nova previsão');
+                    return;
+                }
                 this.openPrevModal(itemId);
                 return;
             }
@@ -524,6 +532,18 @@ class ChecklistRenderer {
     
     updateProgressDisplay(progress) {
         if (window.updateProgressBar) window.updateProgressBar(progress);
+        this.updateConclusionHeaderVisibility();
+    }
+    
+    updateConclusionHeaderVisibility() {
+        const headerEl = this.container.querySelector('.checklist-grid .col-conclusao');
+        if (!headerEl) return;
+        const hasConclusion = Object.values(this.flatData || {}).some(item => !!item.data_conclusao);
+        if (hasConclusion) {
+            headerEl.classList.remove('d-none');
+        } else {
+            headerEl.classList.add('d-none');
+        }
     }
     
     /**
@@ -675,7 +695,7 @@ class ChecklistRenderer {
             if (node.data_conclusao) {
                 concl.classList.remove('d-none');
                 concl.setAttribute('title', `Concluída em: ${node.data_conclusao}`);
-                concl.textContent = `Concl.: ${this.formatDate(node.data_conclusao)}`;
+                concl.textContent = this.formatDate(node.data_conclusao);
             } else {
                 concl.classList.add('d-none');
             }

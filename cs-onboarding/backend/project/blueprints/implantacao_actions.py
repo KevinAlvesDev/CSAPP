@@ -79,8 +79,18 @@ def criar_implantacao_modulo():
         usuario_atribuido = sanitize_string(request.form.get('usuario_atribuido_cs_modulo', ''), max_length=100)
         modulo_tipo = sanitize_string(request.form.get('modulo_tipo', ''), max_length=50)
 
+        id_favorecido_raw = request.form.get('id_favorecido')
+        id_favorecido = None
+        if id_favorecido_raw:
+            try:
+                digits_only = ''.join(re.findall(r"\d+", str(id_favorecido_raw)))
+                if digits_only:
+                    id_favorecido = validate_integer(digits_only, min_value=1)
+            except Exception:
+                id_favorecido = None
+
         from ..domain.implantacao_service import criar_implantacao_modulo_service
-        implantacao_id = criar_implantacao_modulo_service(nome_empresa, usuario_atribuido, usuario_criador, modulo_tipo)
+        implantacao_id = criar_implantacao_modulo_service(nome_empresa, usuario_atribuido, usuario_criador, modulo_tipo, id_favorecido)
 
         try:
             clear_user_cache(usuario_criador)

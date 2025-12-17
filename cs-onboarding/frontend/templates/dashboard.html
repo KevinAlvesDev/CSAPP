@@ -871,6 +871,17 @@
                     <p>Isso criará uma nova implantação do tipo "Módulo" e a definirá como "Nova" para o implantador
                         selecionado.</p>
                     <div class="mb-3">
+                        <label for="idFavorecidoModulo" class="form-label">ID Favorecido</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="idFavorecidoModulo" name="id_favorecido" placeholder="Digite o ID Favorecido" min="1" required>
+                            <button class="btn btn-outline-primary" type="button" id="btnConsultarEmpresaModulo">
+                                <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                                Consultar
+                            </button>
+                        </div>
+                        <div id="consultaFeedbackModulo" class="form-text"></div>
+                    </div>
+                    <div class="mb-3">
                         <label for="nomeEmpresaModulo" class="form-label">Nome Empresa (Cliente Existente)</label>
                         <input type="text" class="form-control" id="nomeEmpresaModulo" name="nome_empresa_modulo"
                             required>
@@ -1165,6 +1176,56 @@
                     }
                 } catch (error) {
                     console.error('Erro:', error);
+                    feedbackEl.textContent = 'Erro de conexão ao consultar empresa.';
+                    feedbackEl.className = 'form-text text-danger';
+                } finally {
+                    btn.disabled = false;
+                    spinner.classList.add('d-none');
+                }
+            });
+        }
+
+        const btnConsultarModulo = document.getElementById('btnConsultarEmpresaModulo');
+        if (btnConsultarModulo) {
+            btnConsultarModulo.addEventListener('click', async function () {
+                const idFavorecidoInput = document.getElementById('idFavorecidoModulo');
+                const idFavorecido = idFavorecidoInput.value;
+                const feedbackEl = document.getElementById('consultaFeedbackModulo');
+                const btn = this;
+                const spinner = btn.querySelector('.spinner-border');
+                const nomeEmpresaInput = document.getElementById('nomeEmpresaModulo');
+
+                if (!idFavorecido) {
+                    feedbackEl.textContent = 'Por favor, digite um ID Favorecido.';
+                    feedbackEl.className = 'form-text text-danger';
+                    return;
+                }
+
+                feedbackEl.textContent = '';
+                feedbackEl.className = 'form-text';
+                btn.disabled = true;
+                spinner.classList.remove('d-none');
+
+                try {
+                    const response = await fetch(`/api/consultar_empresa?id_favorecido=${idFavorecido}`);
+                    const data = await response.json();
+
+                    if (data.ok) {
+                        feedbackEl.textContent = 'Empresa encontrada: ' + (data.empresa.nomefantasia || data.empresa.razaosocial);
+                        feedbackEl.className = 'form-text text-success';
+
+                        if (!nomeEmpresaInput.value) {
+                            if (data.empresa.nomefantasia) {
+                                nomeEmpresaInput.value = data.empresa.nomefantasia;
+                            } else if (data.empresa.razaosocial) {
+                                nomeEmpresaInput.value = data.empresa.razaosocial;
+                            }
+                        }
+                    } else {
+                        feedbackEl.textContent = data.error || 'Erro ao consultar empresa.';
+                        feedbackEl.className = 'form-text text-danger';
+                    }
+                } catch (error) {
                     feedbackEl.textContent = 'Erro de conexão ao consultar empresa.';
                     feedbackEl.className = 'form-text text-danger';
                 } finally {
