@@ -84,7 +84,8 @@ class Config:
     SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'True').lower() == 'true' if not USE_SQLITE_LOCALLY else False
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
-    PREFERRED_URL_SCHEME = 'http'
+    # Em produção, forçar HTTPS para evitar redirect_uri_mismatch
+    PREFERRED_URL_SCHEME = 'https' if not USE_SQLITE_LOCALLY else 'http'
     # SERVER_NAME não será forçado para evitar inconsistências; use o host atual da requisição
 
     GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')

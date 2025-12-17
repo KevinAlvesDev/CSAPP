@@ -17,7 +17,9 @@ def create_app(test_config=None):
                 static_folder='../../frontend/static',
                 template_folder='../../frontend/templates')
 
-    # Proxy headers handling removed
+    # Configuração do ProxyFix para lidar com HTTPS atrás de proxies (Render, Heroku, etc.)
+    from werkzeug.middleware.proxy_fix import ProxyFix
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
     try:
         from pathlib import Path
