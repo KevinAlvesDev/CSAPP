@@ -388,7 +388,11 @@ def google_callback():
                 user_name_final = cs_user.get('nome')
             except Exception as e:
                 auth_logger.error(f'External DB check failed during login: {e}', exc_info=True)
-                flash('Erro ao validar credenciais externas. Tente novamente.', 'error')
+                error_msg = str(e).lower()
+                if 'timeout' in error_msg or 'connection' in error_msg:
+                    flash('Erro de conexão com o banco de dados externo. Verifique sua rede ou contate o suporte.', 'error')
+                else:
+                    flash('Erro ao validar credenciais externas. Tente novamente.', 'error')
                 return redirect(url_for('auth.login'))
         else:
             # Sem banco externo configurado, aceitar por domínio do Google

@@ -12,6 +12,8 @@ def normalize_text(text):
         return ""
     return unicodedata.normalize('NFKD', text).encode('ASCII', 'ignore').decode('utf-8').lower()
 
+import os
+
 def get_external_engine():
     """
     Retorna uma engine SQLAlchemy para o banco de dados externo.
@@ -32,9 +34,11 @@ def get_external_engine():
             connect_args = {}
             try:
                 if external_db_url.lower().startswith('postgresql'):
+                    # Timeout configurável via env var (default 30s)
+                    timeout = int(os.environ.get('EXTERNAL_DB_TIMEOUT', 30))
                     connect_args = {
-                        'connect_timeout': 8,
-                        'options': '-c statement_timeout=8000'
+                        'connect_timeout': timeout,
+                        'options': f'-c statement_timeout={timeout * 1000}'
                     }
             except Exception:
                 connect_args = {}
@@ -170,4 +174,5 @@ def find_cs_user_by_email(email):
 
     except Exception as e:
         logger.error(f"Erro ao buscar usuário CS por email: {e}")
-        return None
+        # Propagar erro para diferenciar 'não encontrado' de 'falha de conexão'
+        raise
