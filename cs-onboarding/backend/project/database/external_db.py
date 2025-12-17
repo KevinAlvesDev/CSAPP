@@ -34,19 +34,25 @@ def get_external_engine():
             connect_args = {}
             try:
                 if external_db_url.lower().startswith('postgresql'):
-                    # Timeout configurável via env var (default 30s)
-                    timeout = int(os.environ.get('EXTERNAL_DB_TIMEOUT', 30))
+                    # Timeout configurável via env var (default aumentado para 60s)
+                    timeout = int(os.environ.get('EXTERNAL_DB_TIMEOUT', 60))
                     connect_args = {
                         'connect_timeout': timeout,
-                        'options': f'-c statement_timeout={timeout * 1000}'
+                        'options': f'-c statement_timeout={timeout * 1000}',
+                        'keepalives': 1,
+                        'keepalives_idle': 30,
+                        'keepalives_interval': 10,
+                        'keepalives_count': 5
                     }
             except Exception:
                 connect_args = {}
 
+            logger.info(f"Tentando conectar ao banco externo (Timeout: {connect_args.get('connect_timeout', 'default')})...")
+            
             engine = create_engine(
                 external_db_url,
                 pool_pre_ping=True,
-                pool_recycle=3600,
+                pool_recycle=1800,
                 pool_size=5,
                 max_overflow=10,
                 connect_args=connect_args

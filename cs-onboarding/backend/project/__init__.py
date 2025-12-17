@@ -23,17 +23,19 @@ def create_app(test_config=None):
 
     try:
         from pathlib import Path
-        root_path = Path(__file__).resolve().parents[3]
-
+        # Ajuste: A raiz do projeto (onde está o .env) é parents[2] (cs-onboarding), não parents[3]
+        project_root = Path(__file__).resolve().parents[2]
+        
         # Prioridade: .env.local (desenvolvimento) > .env (produção)
-        env_local = root_path / '.env.local'
-        env_prod = root_path / '.env'
+        env_local = project_root / '.env.local'
+        env_prod = project_root / '.env'
 
         if env_local.exists():
             load_dotenv(str(env_local), override=True)
         elif env_prod.exists():
             load_dotenv(str(env_prod), override=True)
         else:
+            # Fallback para tentar encontrar o .env subindo diretórios
             _dotenv_path = find_dotenv()
             if _dotenv_path:
                 load_dotenv(_dotenv_path, override=True)
