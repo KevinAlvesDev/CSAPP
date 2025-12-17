@@ -33,7 +33,8 @@ class Config:
     DATABASE_URL = os.environ.get('DATABASE_URL')
 
     # --- BANCO DE DADOS EXTERNO ---
-    EXTERNAL_DB_URL = os.environ.get('EXTERNAL_DB_URL')
+    # Suporta EXTERNAL_DB_URL ou DB_EXT_URL (nome usado no .env)
+    EXTERNAL_DB_URL = os.environ.get('EXTERNAL_DB_URL') or os.environ.get('DB_EXT_URL')
     # ------------------------------
 
     # Imagem de fundo da tela de login (arquivo em 'frontend/static')
