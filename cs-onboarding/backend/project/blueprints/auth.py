@@ -312,7 +312,8 @@ def google_login():
     redirect_uri = url_for('auth.google_callback', _external=True)
 
     auth_logger.info(f"Redirecionando para Google com callback: {redirect_uri}")
-    return oauth.google.authorize_redirect(redirect_uri)
+    # prompt='select_account' força o Google a mostrar a tela de escolha de conta
+    return oauth.google.authorize_redirect(redirect_uri, prompt='select_account')
 
 
 @auth_bp.route('/login/google/callback')
