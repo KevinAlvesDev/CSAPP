@@ -311,7 +311,15 @@ def google_login():
     # Usar SEMPRE o host atual para evitar perda de sessão/state
     redirect_uri = url_for('auth.google_callback', _external=True)
 
-    auth_logger.info(f"Redirecionando para Google com callback: {redirect_uri}")
+    # CORREÇÃO CRÍTICA PARA REDIRECT_URI_MISMATCH:
+    # Se não estivermos rodando localmente (SQLite/Debug), forçar HTTPS na URI de retorno.
+    # Isso resolve problemas onde o servidor está atrás de um proxy HTTP mas o Google espera HTTPS.
+    is_local = current_app.config.get('USE_SQLITE_LOCALLY', False) or current_app.config.get('DEBUG', False)
+    if not is_local:
+        if redirect_uri.startswith('http://'):
+            redirect_uri = redirect_uri.replace('http://', 'https://', 1)
+    
+    auth_logger.info(f"Redirecionando para Google com callback (FINAL): {redirect_uri}")
     # prompt='select_account' força o Google a mostrar a tela de escolha de conta
     return oauth.google.authorize_redirect(redirect_uri, prompt='select_account')
 
