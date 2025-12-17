@@ -427,19 +427,23 @@ def google_callback():
 
 @auth_bp.route('/logout')
 def logout():
-    """Desloga o usuário da sessão local e do Auth0."""
+    """Desloga o usuário da sessão local."""
     session.clear()
+    flash('Você saiu do sistema.', 'info')
+    
+    # Se Auth0 estiver explicitamente habilitado, tentar redirecionar (legado)
+    if current_app.config.get('AUTH0_ENABLED', False):
+        try:
+            params = {
+                'returnTo': url_for('main.home', _external=True),
+                'client_id': current_app.config['AUTH0_CLIENT_ID']
+            }
+            logout_url = f"https://{current_app.config['AUTH0_DOMAIN']}/v2/logout?{urlencode(params)}"
+            return redirect(logout_url)
+        except Exception:
+            pass
 
-    if current_app.config.get('AUTH0_ENABLED', True):
-        params = {
-            'returnTo': url_for('main.home', _external=True),
-            'client_id': current_app.config['AUTH0_CLIENT_ID']
-        }
-        logout_url = f"https://{current_app.config['AUTH0_DOMAIN']}/v2/logout?{urlencode(params)}"
-        return redirect(logout_url)
-    else:
-        flash('Logout local efetuado (Auth0 desativado).', 'info')
-        return redirect(url_for('main.home'))
+    return redirect(url_for('auth.login'))
 
 
 @auth_bp.route('/dev-login', methods=['GET'])
