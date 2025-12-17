@@ -318,6 +318,7 @@ def google_login():
     if not is_local:
         if redirect_uri.startswith('http://'):
             redirect_uri = redirect_uri.replace('http://', 'https://', 1)
+            auth_logger.info(f"Forçando HTTPS na redirect_uri: {redirect_uri}")
     
     auth_logger.info(f"Redirecionando para Google com callback (FINAL): {redirect_uri}")
     # prompt='select_account' força o Google a mostrar a tela de escolha de conta
