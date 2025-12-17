@@ -21,7 +21,8 @@ def create_app_for_tests():
 
 
 def setup_implantacao(app, id_favorecido: int):
-    from backend.project.db import init_db, execute_db
+    from backend.project.db import execute_db
+    from backend.project.database.schema import init_db
     with app.app_context():
         init_db()
         execute_db("INSERT OR IGNORE INTO usuarios(usuario, senha) VALUES(?, ?)", ('admin@pacto.com', 'x'))
