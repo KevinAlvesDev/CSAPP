@@ -7,6 +7,25 @@ from dotenv import load_dotenv
 load_dotenv()
 load_dotenv('.env.local', override=True)
 
+import socket
+import sys
+
+def check_tcp_port(host, port, timeout=5):
+    """Testa se a porta TCP está aberta (indica se é firewall ou aplicação)."""
+    print(f"\n📡 Testando conectividade TCP com {host}:{port} (Timeout: {timeout}s)...")
+    try:
+        sock = socket.create_connection((host, port), timeout=timeout)
+        sock.close()
+        print("✅ Porta TCP 5432 está ABERTA e acessível!")
+        return True
+    except socket.timeout:
+        print("❌ TIMEOUT TCP: O firewall do servidor está descartando pacotes.")
+        print("   -> O IP desta máquina NÃO está na allowlist do servidor de banco.")
+        return False
+    except socket.error as e:
+        print(f"❌ ERRO TCP: {e}")
+        return False
+
 def test_connection():
     db_url = os.environ.get('EXTERNAL_DB_URL') or os.environ.get('DB_EXT_URL')
     
@@ -14,12 +33,26 @@ def test_connection():
         print("❌ ERRO: Nenhuma URL de banco externo encontrada (EXTERNAL_DB_URL ou DB_EXT_URL).")
         return
 
-    print(f"🔍 Testando conexão com: {db_url.split('@')[-1]}")  # Esconde senha
+    # Parse da URL para pegar host e porta
+    try:
+        parsed = urlparse(db_url)
+        host = parsed.hostname
+        port = parsed.port or 5432
+    except Exception:
+        print("❌ Erro ao fazer parse da URL do banco.")
+        return
+
+    print(f"🔍 URL Configurada (mascarada): {db_url.split('@')[-1]}")
     
-    # Tentar conectar ao banco 'postgres' (padrão do sistema) para listar os outros
-    base_url = db_url.rsplit('/', 1)[0] + '/postgres'
-    
-    print(f"🕵️  Tentando descobrir o nome correto do banco conectando em 'postgres'...")
+    # 1. Teste de TCP/Firewall
+    if not check_tcp_port(host, port):
+        print("\n⚠️  DIAGNÓSTICO: BLOQUEIO DE REDE DETECTADO")
+        print("   A aplicação não consegue nem estabelecer conexão de rede com o banco.")
+        print("   SOLUÇÃO: Libere o IP desta máquina no Security Group/Firewall da AWS do banco OAMD.")
+        return
+
+    # 2. Teste de Conexão Postgres
+    print(f"\n🕵️  Tentando descobrir o nome correto do banco conectando em 'postgres'...")
     
     try:
         # Tenta conectar no banco default 'postgres'
