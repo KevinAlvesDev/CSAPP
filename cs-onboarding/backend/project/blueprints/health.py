@@ -99,6 +99,30 @@ def check_r2_connection():
         return False, f"R2 check failed: {str(e)}"
 
 
+@health_bp.route('/ip', methods=['GET'])
+def get_public_ip_route():
+    """
+    Retorna o IP público do servidor onde a aplicação está rodando.
+    Útil para configurar whitelists de banco de dados.
+    """
+    try:
+        import urllib.request
+        # Tenta obter IP via serviço externo
+        with urllib.request.urlopen('https://api.ipify.org', timeout=5) as response:
+            public_ip = response.read().decode('utf8')
+        
+        return jsonify({
+            'status': 'success',
+            'public_ip': public_ip,
+            'message': 'Use este IP para liberar acesso no firewall do banco de dados.'
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Não foi possível determinar o IP público: {str(e)}'
+        }), 500
+
+
 @health_bp.route('/health', methods=['GET'])
 def health_check():
     """
