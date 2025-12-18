@@ -456,3 +456,55 @@
 .comentario-item.interno {
     border-left: 3px solid #3b82f6;
 }
+
+/* Tags de tipo de comentário */
+.comentario-tipo-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    user-select: none;
+}
+
+.comentario-tipo-tag.interno {
+    background: #e9ecef;
+    color: #6c757d;
+}
+
+.comentario-tipo-tag.interno.active {
+    background: #3b82f6;
+    color: white;
+    border-color: #2563eb;
+}
+
+.comentario-tipo-tag.externo {
+    background: #e9ecef;
+    color: #6c757d;
+}
+
+.comentario-tipo-tag.externo.active {
+    background: #17a2b8;
+    color: white;
+    border-color: #138496;
+}
+
+.comentario-tipo-tag.noshow {
+    background: #e9ecef;
+    color: #6c757d;
+}
+
+.comentario-tipo-tag.noshow.active {
+    background: #f59e0b;
+    color: white;
+    border-color: #d97706;
+}
+
+.comentario-tipo-tag:hover:not(.active) {
+    background: #dee2e6;
+}

@@ -244,16 +244,20 @@ class ChecklistRenderer {
                                   placeholder="Escreva um comentário para esta tarefa..."></textarea>
                         <div class="d-flex align-items-center justify-content-between gap-2 mt-2">
                             <div class="d-flex align-items-center gap-2">
-                                <select class="form-select form-select-sm" id="comment-visibility-${item.id}" style="max-width: 120px;">
-                                    <option value="interno" selected>Interno</option>
-                                    <option value="externo">Externo</option>
-                                </select>
-                                <span class="comment-noshow-tag badge rounded-pill bg-light text-dark border" 
+                                <span class="comentario-tipo-tag interno active" 
+                                      data-tipo="interno"
+                                      data-item-id="${item.id}">
+                                    <i class="bi bi-lock-fill"></i> Interno
+                                </span>
+                                <span class="comentario-tipo-tag externo" 
+                                      data-tipo="externo"
+                                      data-item-id="${item.id}">
+                                    <i class="bi bi-globe"></i> Externo
+                                </span>
+                                <span class="comentario-tipo-tag noshow" 
                                       id="comment-noshow-${item.id}"
                                       data-item-id="${item.id}"
-                                      data-noshow="false"
-                                      style="cursor: pointer; font-size: 0.75rem;"
-                                      title="Clique para marcar como No show">
+                                      data-noshow="false">
                                     <i class="bi bi-calendar-x"></i> No show
                                 </span>
                             </div>
@@ -380,17 +384,27 @@ class ChecklistRenderer {
                 this.deleteItem(itemId);
             }
 
-            if (e.target.closest('.comment-noshow-tag')) {
-                const tag = e.target.closest('.comment-noshow-tag');
-                const isActive = tag.dataset.noshow === 'true';
+            // Handle visibility tags (Interno/Externo) - mutually exclusive
+            const visibilityTag = e.target.closest('.comentario-tipo-tag.interno, .comentario-tipo-tag.externo');
+            if (visibilityTag) {
+                const container = visibilityTag.closest('.d-flex');
+                if (container) {
+                    // Remove active from Interno and Externo only (not noshow)
+                    container.querySelectorAll('.comentario-tipo-tag.interno, .comentario-tipo-tag.externo').forEach(t => t.classList.remove('active'));
+                }
+                visibilityTag.classList.add('active');
+            }
+
+            // Handle No show tag - independent toggle
+            const noshowTag = e.target.closest('.comentario-tipo-tag.noshow');
+            if (noshowTag) {
+                const isActive = noshowTag.classList.contains('active');
                 if (isActive) {
-                    tag.dataset.noshow = 'false';
-                    tag.classList.remove('bg-warning', 'text-dark');
-                    tag.classList.add('bg-light', 'text-dark', 'border');
+                    noshowTag.classList.remove('active');
+                    noshowTag.dataset.noshow = 'false';
                 } else {
-                    tag.dataset.noshow = 'true';
-                    tag.classList.remove('bg-light', 'border');
-                    tag.classList.add('bg-warning', 'text-dark');
+                    noshowTag.classList.add('active');
+                    noshowTag.dataset.noshow = 'true';
                 }
             }
         });
@@ -1097,12 +1111,16 @@ class ChecklistRenderer {
 
     async saveComment(itemId) {
         const textarea = this.container.querySelector(`#comment-input-${itemId}`);
-        const visibilitySelect = this.container.querySelector(`#comment-visibility-${itemId}`);
+        const commentsSection = this.container.querySelector(`#comments-${itemId}`);
         const noshowTag = this.container.querySelector(`#comment-noshow-${itemId}`);
+
+        // Find the active visibility tag (interno or externo)
+        const activeVisibilityTag = commentsSection?.querySelector('.comentario-tipo-tag.interno.active, .comentario-tipo-tag.externo.active');
+        const visibilidade = activeVisibilityTag?.classList.contains('externo') ? 'externo' : 'interno';
+
         if (!textarea) return;
 
         const texto = textarea.value.trim();
-        const visibilidade = visibilitySelect ? visibilitySelect.value : 'interno';
         const noshow = noshowTag ? noshowTag.dataset.noshow === 'true' : false;
 
         if (!texto) {
@@ -1124,11 +1142,16 @@ class ChecklistRenderer {
 
             if (data.ok) {
                 textarea.value = '';
-                if (visibilitySelect) visibilitySelect.value = 'interno';
+                // Reset visibility tags - set Interno as active
+                if (commentsSection) {
+                    commentsSection.querySelectorAll('.comentario-tipo-tag.interno, .comentario-tipo-tag.externo').forEach(t => t.classList.remove('active'));
+                    const internoTag = commentsSection.querySelector('.comentario-tipo-tag.interno');
+                    if (internoTag) internoTag.classList.add('active');
+                }
+                // Reset noshow tag
                 if (noshowTag) {
                     noshowTag.dataset.noshow = 'false';
-                    noshowTag.classList.remove('bg-warning');
-                    noshowTag.classList.add('bg-light', 'border');
+                    noshowTag.classList.remove('active');
                 }
 
                 const commentButton = this.container.querySelector(`.btn-comment-toggle[data-item-id="${itemId}"]`);
