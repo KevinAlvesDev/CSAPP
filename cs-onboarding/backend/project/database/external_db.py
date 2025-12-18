@@ -104,14 +104,19 @@ def get_external_engine():
                 logger.info(f"Usando Proxy Bridge (pg8000) para OAMD via: {proxy_url}")
                 
                 def proxy_creator():
-                    # TAG: V6 - SSL_ULTRA_PERMISSIVE
+                    # TAG: V7 - CREDENTIALS_DECODE_FIX
                     proxy_parsed = urllib.parse.urlparse(proxy_url)
                     db_parsed = urllib.parse.urlparse(external_db_url)
                     
+                    # CORREÇÃO CRÍTICA: Decodificar user/pass da URL (%40 -> @, etc)
+                    # urlparse NÃO decodifica automaticamente
+                    db_user = urllib.parse.unquote(db_parsed.username) if db_parsed.username else None
+                    db_pass = urllib.parse.unquote(db_parsed.password) if db_parsed.password else None
+                    db_name = urllib.parse.unquote(db_parsed.path.lstrip('/')) if db_parsed.path else None
+                    
                     p_type = socks.SOCKS5 if proxy_parsed.scheme.startswith('socks5') else socks.HTTP
                     
-                    # 1. Configurar contexto SSL Ultra-Permissivo (DH_KEY_TOO_SMALL fix)
-                    # Forçamos o nível 0 e habilitamos legados para Python 3.13+
+                    # 1. Contexto SSL Ultra-Permissivo
                     ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
                     ssl_context.check_hostname = False
                     ssl_context.verify_mode = ssl.CERT_NONE
@@ -119,8 +124,7 @@ def get_external_engine():
                         ssl_context.set_ciphers('DEFAULT@SECLEVEL=0')
                     except:
                         pass
-                    # Habilita conexões com servidores antigos dependentes de DH pequeno
-                    ssl_context.options |= 0x4 # OP_LEGACY_SERVER_CONNECT
+                    ssl_context.options |= 0x4 
 
                     # 2. Monkey-patch TEMPORÁRIO do socket global
                     original_socket = socket.socket
@@ -135,35 +139,35 @@ def get_external_engine():
                             password=proxy_parsed.password
                         )
                         
-                        logger.info(f"V6: Tentando conexão via Proxy + SSL Legado (SEC0)...")
+                        logger.info(f"V7: Tentando conexão para {db_user} @ {db_parsed.hostname}...")
                         
                         try:
                             # pg8000 usará o socket interceptado e nosso contexto SSL
                             return pg8000.connect(
-                                user=db_parsed.username,
-                                password=db_parsed.password,
+                                user=db_user,
+                                password=db_pass,
                                 host=db_parsed.hostname,
                                 port=db_parsed.port or 5432,
-                                database=db_parsed.path.lstrip('/'),
+                                database=db_name,
                                 ssl_context=ssl_context,
                                 timeout=timeout
                             )
                         except Exception as ssl_fail:
-                            # Caso ainda dê erro de SSL (DH SMALL), tenta sem SSL como última esperança
-                            if "dh key too small" in str(ssl_fail).lower() or "ssl" in str(ssl_fail).lower():
-                                logger.warning(f"V6: Falha SSL ({ssl_fail}). Tentando ÚLTIMO RECURSO SEM SSL...")
+                            # Fallback sem SSL
+                            if "ssl" in str(ssl_fail).lower() or "dh key" in str(ssl_fail).lower():
+                                logger.warning(f"V7: Falha SSL ({ssl_fail}). Tentando ÚLTIMO RECURSO SEM SSL...")
                                 return pg8000.connect(
-                                    user=db_parsed.username,
-                                    password=db_parsed.password,
+                                    user=db_user,
+                                    password=db_pass,
                                     host=db_parsed.hostname,
                                     port=db_parsed.port or 5432,
-                                    database=db_parsed.path.lstrip('/'),
+                                    database=db_name,
                                     ssl_context=None,
                                     timeout=timeout
                                 )
                             raise ssl_fail
                     except Exception as proxy_err:
-                        logger.error(f"V6: Falha total na ponte do proxy: {proxy_err}")
+                        logger.error(f"V7: Falha total na ponte do proxy: {proxy_err}")
                         raise proxy_err
                     finally:
                         socket.socket = original_socket

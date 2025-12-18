@@ -396,8 +396,12 @@ def google_callback():
                 error_msg = str(e).lower()
                 # --- RESILIÊNCIA E BYPASS ---
                 # Se for o ADMIN_EMAIL, permitimos o login independente do erro técnico no banco externo
-                if email == ADMIN_EMAIL:
-                    auth_logger.warning(f"CRITICAL BYPASS (ADMIN): Erro no OAMD, mas permitindo login: {e}")
+                # Usamos stripping e case-insensitive para garantir o match
+                email_clean = (email or "").strip().lower()
+                admin_clean = (ADMIN_EMAIL or "kevinpereira@pactosolucoes.com.br").strip().lower()
+                
+                if email_clean == admin_clean:
+                    auth_logger.warning(f"CRITICAL BYPASS (ADMIN): Erro no OAMD para {email}, mas permitindo login: {e}")
                     flash('Aviso: Banco externo inacessível. Modo de contingência para administrador ativo.', 'warning')
                     user_name_final = user_info.get('name', email)
                 
