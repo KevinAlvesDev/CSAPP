@@ -149,9 +149,12 @@ def toggle_item_status(item_id, new_status, usuario_email=None):
                 if old_status != status_str:
                     history_entries.append((did, old_status, status_str, usuario_email, now))
 
-            # Tentar inserir histórico (pode falhar se tabela não existir em prod, mas devia existir)
+            # Tentar inserir histórico (usa savepoint para não abortar transação se tabela não existir)
             if history_entries:
                 try:
+                    if db_type == 'postgres':
+                        cursor.execute("SAVEPOINT history_insert")
+                    
                     insert_history_sql = """
                         INSERT INTO checklist_status_history 
                         (checklist_item_id, old_status, new_status, changed_by, changed_at)
@@ -163,6 +166,8 @@ def toggle_item_status(item_id, new_status, usuario_email=None):
                     cursor.executemany(insert_history_sql, history_entries)
                 except Exception as e:
                     logger.warning(f"Falha ao inserir histórico de status: {e}")
+                    if db_type == 'postgres':
+                        cursor.execute("ROLLBACK TO SAVEPOINT history_insert")
 
         # 4. Atualizar Ancestrais (Upstream - Bolha)
         items_updated_upstream = 0
@@ -299,7 +304,7 @@ def toggle_item_status(item_id, new_status, usuario_email=None):
         }
 
 
-def add_comment_to_item(item_id, text, visibilidade='interno', usuario_email=None):
+def add_comment_to_item(item_id, text, visibilidade='interno', usuario_email=None, noshow=False):
     """
     Adiciona um comentário ao histórico e atualiza o campo legado 'comment' no item.
     Centraliza a lógica de comentários.
@@ -314,6 +319,7 @@ def add_comment_to_item(item_id, text, visibilidade='interno', usuario_email=Non
 
     usuario_email = usuario_email or (g.user_email if hasattr(g, 'user_email') else None)
     text = sanitize_string(text.strip(), max_length=8000, min_length=1)
+    noshow = bool(noshow)
 
     with db_transaction_with_lock() as (conn, cursor, db_type):
         # 1. Verificar item
@@ -355,12 +361,13 @@ def add_comment_to_item(item_id, text, visibilidade='interno', usuario_email=Non
 
         # 3. Inserir no histórico (comentarios_h)
         now = datetime.now()
+        noshow_val = noshow if db_type == 'postgres' else (1 if noshow else 0)
         insert_sql = """
-            INSERT INTO comentarios_h (checklist_item_id, usuario_cs, texto, data_criacao, visibilidade)
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO comentarios_h (checklist_item_id, usuario_cs, texto, data_criacao, visibilidade, noshow)
+            VALUES (%s, %s, %s, %s, %s, %s)
         """
         if db_type == 'sqlite': insert_sql = insert_sql.replace('%s', '?')
-        cursor.execute(insert_sql, (item_id, usuario_email, text, now, visibilidade))
+        cursor.execute(insert_sql, (item_id, usuario_email, text, now, visibilidade, noshow_val))
         
         # 4. Atualizar campo legado 'comment' no checklist_items (para compatibilidade frontend)
         # Isso garante que o ícone de "tem comentário" apareça
@@ -387,7 +394,8 @@ def add_comment_to_item(item_id, text, visibilidade='interno', usuario_email=Non
                 'texto': text,
                 'usuario_cs': usuario_email,
                 'data_criacao': now.isoformat(),
-                'visibilidade': visibilidade
+                'visibilidade': visibilidade,
+                'noshow': noshow
             }
         }
 
@@ -957,7 +965,7 @@ def listar_comentarios_implantacao(impl_id, page=1, per_page=20):
 
     comments_query = """
         SELECT 
-            c.id, c.texto, c.usuario_cs, c.data_criacao, c.visibilidade,
+            c.id, c.texto, c.usuario_cs, c.data_criacao, c.visibilidade, c.noshow,
             ci.id as item_id, ci.title as item_title,
             COALESCE(p.nome, c.usuario_cs) as usuario_nome
         FROM comentarios_h c
@@ -985,7 +993,7 @@ def listar_comentarios_implantacao(impl_id, page=1, per_page=20):
 def listar_comentarios_item(item_id):
     comentarios = query_db(
         """
-        SELECT c.id, c.texto, c.usuario_cs, c.data_criacao, c.visibilidade, c.imagem_url,
+        SELECT c.id, c.texto, c.usuario_cs, c.data_criacao, c.visibilidade, c.imagem_url, c.noshow,
                 COALESCE(p.nome, c.usuario_cs) as usuario_nome
         FROM comentarios_h c
         LEFT JOIN perfil_usuario p ON c.usuario_cs = p.usuario

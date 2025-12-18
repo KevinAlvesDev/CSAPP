@@ -7,6 +7,11 @@
                 class="badge rounded-pill small {% if comentario.visibilidade == 'interno' %} bg-secondary {% else %} bg-info text-dark {% endif %}">{{
                 comentario.visibilidade | capitalize }}</span>
             {% endif %}
+            {% if comentario.noshow %}
+            <span class="badge rounded-pill small bg-warning text-dark">
+                <i class="bi bi-calendar-x"></i> No show
+            </span>
+            {% endif %}
         </div>
         <small class="text-secondary">{{ comentario.data_criacao | format_date_br }}</small>
     </div>

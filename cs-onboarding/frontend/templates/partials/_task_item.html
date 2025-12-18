@@ -42,10 +42,16 @@
         <textarea class="form-control form-control-sm" name="comentario" maxlength="8000" rows="1"
             placeholder="Adicionar comentário..."></textarea>
         <div class="d-flex align-items-center gap-2 mt-1">
-            <select name="visibilidade" class="form-select form-select-sm" style="max-width: 160px;">
+            <select name="visibilidade" class="form-select form-select-sm" style="max-width: 120px;">
                 <option value="interno" selected>Interno</option>
                 <option value="externo">Externo</option>
             </select>
+            <div class="form-check form-check-inline mb-0">
+                <input class="form-check-input" type="checkbox" name="noshow" id="noshow-{{ tarefa.id }}" value="true">
+                <label class="form-check-label small text-warning" for="noshow-{{ tarefa.id }}">
+                    <i class="bi bi-calendar-x"></i> No show
+                </label>
+            </div>
             <input type="file" id="img-{{ tarefa.id }}" name="imagem" class="visually-hidden"
                 accept="image/png, image/jpeg, image/gif" aria-label="Selecionar imagem" title="Selecionar imagem">
             <label for="img-{{ tarefa.id }}" class="btn btn-outline-secondary btn-sm" title="Selecionar imagem"><i
