@@ -3,6 +3,12 @@ import unicodedata
 
 from flask import current_app
 from sqlalchemy import create_engine, text
+import socket
+import urllib.parse
+try:
+    import socks
+except ImportError:
+    socks = None
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +67,35 @@ def get_external_engine():
         if not external_db_url:
             logger.warning("EXTERNAL_DB_URL não configurada.")
             return None
+
+        # --- Lógica de Proxy (Monkey-Patching) ---
+        proxy_url = os.environ.get('EXTERNAL_DB_PROXY_URL')
+        if proxy_url and socks:
+            try:
+                parsed = urllib.parse.urlparse(proxy_url)
+                proxy_type = socks.SOCKS5 if parsed.scheme == 'socks5' else socks.HTTP
+                
+                # Extrair credenciais se houver
+                username = parsed.username
+                password = parsed.password
+                
+                logger.info(f"Configurando Proxy {parsed.scheme} para OAMD: {parsed.hostname}:{parsed.port}")
+                
+                # Monkey-patch do socket global
+                # IMPORTANTE: Isso afeta apenas o momento da criação da engine se não tomarmos cuidado,
+                # mas o SQLAlchemy/Psycopg2 cria sockets sob demanda.
+                # Como essa engine é específica para o OAMD, tentamos isolar.
+                socks.set_default_proxy(
+                    proxy_type, 
+                    parsed.hostname, 
+                    parsed.port, 
+                    rdns=True, 
+                    username=username, 
+                    password=password
+                )
+                socket.socket = socks.socksocket
+            except Exception as proxy_err:
+                logger.error(f"Erro ao configurar proxy OAMD: {proxy_err}")
 
         try:
             # Timeout via env var ou default 15s (mais que 10s para ser tolerante mas não infinito)
