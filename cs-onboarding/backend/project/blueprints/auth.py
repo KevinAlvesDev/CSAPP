@@ -12,10 +12,7 @@ from ..core.extensions import limiter
 from ..domain.auth_service import (
     sync_user_profile_service,
     get_user_profile_service,
-    update_user_role_service,
-    find_cs_user_external_service,
-    marcar_sucesso_check_externo_service,
-    buscar_ultimo_check_externo_service
+    update_user_role_service
 )
 
 auth_bp = Blueprint('auth', __name__)
