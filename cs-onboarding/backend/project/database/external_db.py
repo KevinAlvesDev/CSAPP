@@ -12,17 +12,50 @@ def normalize_text(text):
         return ""
     return unicodedata.normalize('NFKD', text).encode('ASCII', 'ignore').decode('utf-8').lower()
 
-import os
+import time
+from functools import wraps
+from sqlalchemy.exc import OperationalError, InterfaceError
+
+def with_retries(max_retries=3, delay=2, backoff=2, exceptions=(OperationalError, InterfaceError, RuntimeError)):
+    """Decorator para repetir uma operação em caso de erro de conexão."""
+    def decorator(f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            retries = 0
+            current_delay = delay
+            last_exception = None
+            
+            while retries < max_retries:
+                try:
+                    return f(*args, **kwargs)
+                except exceptions as e:
+                    retries += 1
+                    last_exception = e
+                    
+                    # Se for RuntimeError e não for relacionado a conexão, não faz sentido repetir
+                    if isinstance(e, RuntimeError) and "conexão" not in str(e).lower() and "engine" not in str(e).lower():
+                        raise
+                        
+                    if retries >= max_retries:
+                        logger.error(f"Falha definitiva após {max_retries} tentativas: {e}")
+                        break
+                        
+                    logger.warning(f"Falha na conexão com banco externo. Tentativa {retries}/{max_retries} em {current_delay}s... Erro: {e}")
+                    time.sleep(current_delay)
+                    current_delay *= backoff
+            
+            if last_exception:
+                raise last_exception
+        return wrapper
+    return decorator
 
 def get_external_engine():
     """
     Retorna uma engine SQLAlchemy para o banco de dados externo.
-    A engine é armazenada em 'g' para ser reutilizada durante a requisição,
-    mas idealmente deveria ser um singleton global se a aplicação suportar.
-    Como o Flask recria o contexto, podemos usar cache simples ou armazenar no app.
+    Implementa singleton pattern no app context para eficiência.
     """
     # Tenta pegar do contexto da aplicação (cache global simples)
-    if not hasattr(current_app, 'external_db_engine'):
+    if not hasattr(current_app, 'external_db_engine') or current_app.external_db_engine is None:
         external_db_url = current_app.config.get('EXTERNAL_DB_URL')
 
         if not external_db_url:
@@ -30,75 +63,74 @@ def get_external_engine():
             return None
 
         try:
-            # Cria a engine (pool de conexões é gerenciado pelo SQLAlchemy)
-            connect_args = {}
-            try:
-                if external_db_url.lower().startswith('postgresql'):
-                    # Timeout configurável via env var (default aumentado para 60s)
-                    timeout = int(os.environ.get('EXTERNAL_DB_TIMEOUT', 60))
-                    connect_args = {
-                        'connect_timeout': timeout,
-                        'options': f'-c statement_timeout={timeout * 1000}',
-                        'keepalives': 1,
-                        'keepalives_idle': 30,
-                        'keepalives_interval': 10,
-                        'keepalives_count': 5
-                    }
-            except Exception:
-                connect_args = {}
+            # Timeout configurável via env var
+            timeout = int(os.environ.get('EXTERNAL_DB_TIMEOUT', 30))
+            
+            connect_args = {
+                'connect_timeout': timeout,
+                'keepalives': 1,
+                'keepalives_idle': 30,
+                'keepalives_interval': 10,
+                'keepalives_count': 5
+            }
+            
+            if external_db_url.lower().startswith('postgresql'):
+                connect_args['options'] = f'-c statement_timeout={timeout * 1000}'
 
-            logger.info(f"Tentando conectar ao banco externo (Timeout: {connect_args.get('connect_timeout', 'default')})...")
+            logger.info(f"Criando engine do banco externo (Timeout: {timeout}s)...")
             
             engine = create_engine(
                 external_db_url,
-                pool_pre_ping=True,
-                pool_recycle=1800,
-                pool_size=5,
-                max_overflow=10,
+                pool_pre_ping=True,       # Verifica se a conexão está viva antes de usar
+                pool_recycle=1800,        # Recicla conexões a cada 30 min
+                pool_size=10,             # Aumentado para suportar mais concorrência
+                max_overflow=20,          # Permite picos de carga
+                pool_timeout=30,          # Tempo máximo esperando conexão do pool
                 connect_args=connect_args
             )
             current_app.external_db_engine = engine
-            logger.info("Engine do banco externo criada com sucesso.")
+            logger.info("Engine do banco externo configurada com sucesso.")
         except Exception as e:
-            logger.error(f"Erro ao criar engine do banco externo: {e}")
+            logger.error(f"Erro crítico ao configurar engine do banco externo: {e}")
             return None
 
     return current_app.external_db_engine
 
+@with_retries(max_retries=3, delay=1)
 def query_external_db(query_str, params=None):
     """
-    Executa uma query SELECT no banco de dados externo e retorna lista de dicionários.
+    Executa uma query SELECT no banco de dados externo com lógica de retry.
     Garante que a conexão seja APENAS LEITURA.
-    
-    Args:
-        query_str (str): A query SQL.
-        params (dict, optional): Parâmetros para a query.
-        
-    Returns:
-        list[dict]: Lista de resultados como dicionários.
     """
     engine = get_external_engine()
     if not engine:
-        raise RuntimeError("Não foi possível conectar ao banco de dados externo (URL não configurada ou erro de conexão).")
+        raise RuntimeError("Engine do banco externo não disponível.")
 
     if params is None:
         params = {}
 
     try:
+        # Usamos translate(True) para garantir read-only se o dialeto suportar
         with engine.connect() as conn:
+            # Tentar setar session read only (Postgres específico)
             try:
-                conn.execute(text("SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY"))
+                conn.execute(text("SET TRANSACTION READ ONLY"))
             except Exception:
-                logger.debug("Read-only session not supported by this dialect; proceeding without it.")
+                pass
 
             result = conn.execute(text(query_str), params)
-
-            # Mapeia as colunas para retornar dicts
             keys = result.keys()
             return [dict(zip(keys, row)) for row in result]
 
+    except (OperationalError, InterfaceError) as e:
+        # Esses erros costumam ser transitórios (rede, VPN caindo, etc)
+        logger.warning(f"Erro transiente no banco externo: {e}")
+        # Invalidamos a engine para que a próxima tentativa (do retry) crie uma nova
+        if hasattr(current_app, 'external_db_engine'):
+            current_app.external_db_engine = None
+        raise
     except Exception as e:
-        logger.error(f"Erro ao executar query no banco externo: {e}")
+        logger.error(f"Erro não recuperável na query externa: {e}")
         raise
 
 def find_cs_user_by_email(email):
