@@ -104,6 +104,7 @@ def get_external_engine():
                 logger.info(f"Usando Proxy Bridge (pg8000) para OAMD via: {proxy_url}")
                 
                 def proxy_creator():
+                    # TAG: V5 - SSL_FIX_SEC0
                     proxy_parsed = urllib.parse.urlparse(proxy_url)
                     db_parsed = urllib.parse.urlparse(external_db_url)
                     
@@ -112,7 +113,7 @@ def get_external_engine():
                     # 1. Configurar contexto SSL permissivo para bancos legados (DH_KEY_TOO_SMALL)
                     # Isso é necessário porque o Python moderno (3.13+) bloqueia chaves DH fracas
                     ssl_context = ssl.create_default_context()
-                    ssl_context.set_ciphers('DEFAULT@SECLEVEL=1')
+                    ssl_context.set_ciphers('DEFAULT@SECLEVEL=0')
                     ssl_context.check_hostname = False
                     ssl_context.verify_mode = ssl.CERT_NONE
 
@@ -130,7 +131,7 @@ def get_external_engine():
                             password=proxy_parsed.password
                         )
                         
-                        logger.info(f"Estabelecendo conexão via túnel SOCKS5 com SSL permissivo...")
+                        logger.info(f"V5: Estabelecendo conexão via túnel SOCKS5 (SEC0)...")
                         
                         # pg8000 usará o socket interceptado e nosso contexto SSL
                         return pg8000.connect(
