@@ -57,3 +57,4 @@ sentry-sdk[flask]==1.40.0
 # Utilitários
 python-dateutil==2.9.0.post0
 PySocks==1.7.1
+pg8000>=1.31.2

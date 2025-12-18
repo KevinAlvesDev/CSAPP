@@ -9,6 +9,10 @@ try:
     import socks
 except ImportError:
     socks = None
+try:
+    import pg8000
+except ImportError:
+    pg8000 = None
 
 logger = logging.getLogger(__name__)
 
@@ -68,34 +72,11 @@ def get_external_engine():
             logger.warning("EXTERNAL_DB_URL não configurada.")
             return None
 
-        # --- Lógica de Proxy (Monkey-Patching) ---
+        # --- Lógica de Proxy ---
         proxy_url = os.environ.get('EXTERNAL_DB_PROXY_URL')
-        if proxy_url and socks:
-            try:
-                parsed = urllib.parse.urlparse(proxy_url)
-                proxy_type = socks.SOCKS5 if parsed.scheme == 'socks5' else socks.HTTP
-                
-                # Extrair credenciais se houver
-                username = parsed.username
-                password = parsed.password
-                
-                logger.info(f"Configurando Proxy {parsed.scheme} para OAMD: {parsed.hostname}:{parsed.port}")
-                
-                # Monkey-patch do socket global
-                # IMPORTANTE: Isso afeta apenas o momento da criação da engine se não tomarmos cuidado,
-                # mas o SQLAlchemy/Psycopg2 cria sockets sob demanda.
-                # Como essa engine é específica para o OAMD, tentamos isolar.
-                socks.set_default_proxy(
-                    proxy_type, 
-                    parsed.hostname, 
-                    parsed.port, 
-                    rdns=True, 
-                    username=username, 
-                    password=password
-                )
-                socket.socket = socks.socksocket
-            except Exception as proxy_err:
-                logger.error(f"Erro ao configurar proxy OAMD: {proxy_err}")
+        
+        # Se houver proxy, usamos pg8000 (Pure Python) pois psycopg2 (C) ignora proxies SOCKS do Python
+        use_pg8000 = bool(proxy_url and socks and pg8000)
 
         try:
             # Timeout via env var ou default 15s (mais que 10s para ser tolerante mas não infinito)
@@ -117,19 +98,63 @@ def get_external_engine():
                 # Timeout de query no nível do protocolo Postgres
                 connect_args['options'] = f'-c statement_timeout={timeout * 1000}'
 
-            logger.info(f"Conectando ao OAMD (Timeout: {timeout}s, host: {external_db_url.split('@')[-1].split('/')[0] if '@' in external_db_url else 'hidden'})")
-            
-            engine = create_engine(
-                external_db_url,
-                pool_pre_ping=True,       # Crucial: testa a conexão antes de usar
-                pool_recycle=1200,        # Recicla a cada 20 min (menor que os 30 min habituais para segurança)
-                pool_size=3,              # Reduzido: evita esgotar conexões no servidor legado que pode ter limites baixos
-                max_overflow=5,           # Limite de transbordo pequeno
-                pool_timeout=timeout,     # Tempo que a thread espera por uma conexão do pool
-                connect_args=connect_args,
-                # Garante que as conexões sejam read-only no nível da transação se possível
-                execution_options={"isolation_level": "AUTOCOMMIT"} 
-            )
+            if use_pg8000:
+                logger.info(f"Usando Proxy Bridge (pg8000) para OAMD via: {proxy_url}")
+                
+                def proxy_creator():
+                    proxy_parsed = urllib.parse.urlparse(proxy_url)
+                    db_parsed = urllib.parse.urlparse(external_db_url)
+                    
+                    # Tipo de proxy
+                    p_type = socks.SOCKS5 if proxy_parsed.scheme.startswith('socks5') else socks.HTTP
+                    
+                    # Criar socket tunelado
+                    s = socks.socksocket()
+                    s.set_proxy(
+                        p_type,
+                        proxy_parsed.hostname,
+                        proxy_parsed.port or (1080 if p_type == socks.SOCKS5 else 8080),
+                        rdns=True,
+                        username=proxy_parsed.username,
+                        password=proxy_parsed.password
+                    )
+                    
+                    # Conectar ao destino
+                    db_host = db_parsed.hostname
+                    db_port = db_parsed.port or 5432
+                    s.connect((db_host, db_port))
+                    
+                    # Retornar conexão pg8000
+                    return pg8000.connect(
+                        user=db_parsed.username,
+                        password=db_parsed.password,
+                        database=db_parsed.path.lstrip('/'),
+                        sock=s
+                    )
+                
+                engine = create_engine(
+                    "postgresql+pg8000://",
+                    creator=proxy_creator,
+                    pool_pre_ping=True,
+                    pool_recycle=1200,
+                    pool_size=3,
+                    max_overflow=5,
+                    pool_timeout=timeout,
+                    execution_options={"isolation_level": "AUTOCOMMIT"}
+                )
+            else:
+                # Conexão direta via Psycopg2
+                logger.info(f"Conectando diretamente ao OAMD (psycopg2, Timeout: {timeout}s)")
+                engine = create_engine(
+                    external_db_url,
+                    pool_pre_ping=True,
+                    pool_recycle=1200,
+                    pool_size=3,
+                    max_overflow=5,
+                    pool_timeout=timeout,
+                    connect_args=connect_args,
+                    execution_options={"isolation_level": "AUTOCOMMIT"} 
+                )
             
             current_app.external_db_engine = engine
             logger.info("Engine OAMD inicializada.")
