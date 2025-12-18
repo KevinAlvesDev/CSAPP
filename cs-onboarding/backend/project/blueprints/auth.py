@@ -406,7 +406,7 @@ def google_callback():
                     user_name_final = user_info.get('name', email)
                 
                 # Para outros usuários, verificamos o Grace Period (Cache de Segurança)
-                elif any(x in error_msg for x in ['timeout', 'connection', 'engine', 'can\'t reconnect', 'ssl', 'dh key']):
+                elif any(x in error_msg for x in ['timeout', 'connection', 'engine', 'can\'t reconnect', 'ssl', 'dh key', 'não existe', 'database', 'autenticação']):
                     ultimo_check = buscar_ultimo_check_externo_service(email)
                     
                     if ultimo_check:

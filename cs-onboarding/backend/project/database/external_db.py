@@ -108,11 +108,11 @@ def get_external_engine():
                     proxy_parsed = urllib.parse.urlparse(proxy_url)
                     db_parsed = urllib.parse.urlparse(external_db_url)
                     
-                    # CORREÇÃO CRÍTICA: Decodificar user/pass da URL (%40 -> @, etc)
-                    # urlparse NÃO decodifica automaticamente
-                    db_user = urllib.parse.unquote(db_parsed.username) if db_parsed.username else None
-                    db_pass = urllib.parse.unquote(db_parsed.password) if db_parsed.password else None
-                    db_name = urllib.parse.unquote(db_parsed.path.lstrip('/')) if db_parsed.path else None
+                    # CORREÇÃO CRÍTICA: Decodificar e LIMPAR espaços (strip)
+                    db_user = urllib.parse.unquote(db_parsed.username).strip() if db_parsed.username else None
+                    db_pass = urllib.parse.unquote(db_parsed.password).strip() if db_parsed.password else None
+                    db_name = urllib.parse.unquote(db_parsed.path.lstrip('/')).strip() if db_parsed.path else None
+                    db_host = (db_parsed.hostname or "").strip()
                     
                     p_type = socks.SOCKS5 if proxy_parsed.scheme.startswith('socks5') else socks.HTTP
                     
@@ -139,14 +139,14 @@ def get_external_engine():
                             password=proxy_parsed.password
                         )
                         
-                        logger.info(f"V7: Tentando conexão para {db_user} @ {db_parsed.hostname}...")
+                        logger.info(f"V8: Conectando {db_user} ao banco '{db_name}' em {db_host}...")
                         
                         try:
                             # pg8000 usará o socket interceptado e nosso contexto SSL
                             return pg8000.connect(
                                 user=db_user,
                                 password=db_pass,
-                                host=db_parsed.hostname,
+                                host=db_host,
                                 port=db_parsed.port or 5432,
                                 database=db_name,
                                 ssl_context=ssl_context,
