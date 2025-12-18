@@ -55,7 +55,7 @@ class Config:
     if USE_SQLITE_ENV or (DATABASE_URL and DATABASE_URL.startswith('sqlite')):
         AUTH0_ENABLED = False  # Desabilitar Auth0 em desenvolvimento local
     else:
-        AUTH0_ENABLED = os.environ.get('AUTH0_ENABLED', 'true').lower() in ('true', '1', 'yes')
+        AUTH0_ENABLED = os.environ.get('AUTH0_ENABLED', 'false').lower() in ('true', '1', 'yes')
 
     AUTH0_DOMAIN = os.environ.get('AUTH0_DOMAIN')
     AUTH0_CLIENT_ID = os.environ.get('AUTH0_CLIENT_ID')
