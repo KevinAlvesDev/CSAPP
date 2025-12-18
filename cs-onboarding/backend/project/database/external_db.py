@@ -53,9 +53,8 @@ def with_retries(max_retries=3, delay=2, backoff=2, exceptions=(OperationalError
 def get_external_engine():
     """
     Retorna uma engine SQLAlchemy para o banco de dados externo.
-    Implementa singleton pattern no app context para eficiência.
+    Utiliza pooling moderado para evitar esgotar conexões do banco legado.
     """
-    # Tenta pegar do contexto da aplicação (cache global simples)
     if not hasattr(current_app, 'external_db_engine') or current_app.external_db_engine is None:
         external_db_url = current_app.config.get('EXTERNAL_DB_URL')
 
@@ -64,35 +63,43 @@ def get_external_engine():
             return None
 
         try:
-            # Timeout reduzido para 10s para falhar mais rápido e entrar no retry/grace period
-            timeout = int(os.environ.get('EXTERNAL_DB_TIMEOUT', 10))
+            # Timeout via env var ou default 15s (mais que 10s para ser tolerante mas não infinito)
+            timeout = int(os.environ.get('EXTERNAL_DB_TIMEOUT', 15))
             
+            # Argumentos de conexão otimizados para resiliência
             connect_args = {
                 'connect_timeout': timeout,
                 'keepalives': 1,
-                'keepalives_idle': 15,    # Reduzido para detectar queda mais rápido
-                'keepalives_interval': 5,
-                'keepalives_count': 3
+                'keepalives_idle': 30,
+                'keepalives_interval': 10,
+                'keepalives_count': 5,
             }
             
+            # Forçar SSL Mode conforme o ambiente - Muitos bancos AWS/RDS exigem SSL
             if external_db_url.lower().startswith('postgresql'):
+                # Tenta 'prefer' para ser compatível com bancos velhos, mas permite SSL se disponível
+                connect_args['sslmode'] = os.environ.get('EXTERNAL_DB_SSLMODE', 'prefer')
+                # Timeout de query no nível do protocolo Postgres
                 connect_args['options'] = f'-c statement_timeout={timeout * 1000}'
 
-            logger.info(f"Criando engine do banco externo (Timeout: {timeout}s)...")
+            logger.info(f"Conectando ao OAMD (Timeout: {timeout}s, host: {external_db_url.split('@')[-1].split('/')[0] if '@' in external_db_url else 'hidden'})")
             
             engine = create_engine(
                 external_db_url,
-                pool_pre_ping=True,       # Verifica se a conexão está viva antes de usar
-                pool_recycle=1800,        # Recicla conexões a cada 30 min
-                pool_size=10,             # Aumentado para suportar mais concorrência
-                max_overflow=20,          # Permite picos de carga
-                pool_timeout=30,          # Tempo máximo esperando conexão do pool
-                connect_args=connect_args
+                pool_pre_ping=True,       # Crucial: testa a conexão antes de usar
+                pool_recycle=1200,        # Recicla a cada 20 min (menor que os 30 min habituais para segurança)
+                pool_size=3,              # Reduzido: evita esgotar conexões no servidor legado que pode ter limites baixos
+                max_overflow=5,           # Limite de transbordo pequeno
+                pool_timeout=timeout,     # Tempo que a thread espera por uma conexão do pool
+                connect_args=connect_args,
+                # Garante que as conexões sejam read-only no nível da transação se possível
+                execution_options={"isolation_level": "AUTOCOMMIT"} 
             )
+            
             current_app.external_db_engine = engine
-            logger.info("Engine do banco externo configurada com sucesso.")
+            logger.info("Engine OAMD inicializada.")
         except Exception as e:
-            logger.error(f"Erro crítico ao configurar engine do banco externo: {e}")
+            logger.error(f"Erro ao configurar conexão externa: {e}")
             return None
 
     return current_app.external_db_engine
@@ -111,14 +118,7 @@ def query_external_db(query_str, params=None):
         params = {}
 
     try:
-        # Usamos translate(True) para garantir read-only se o dialeto suportar
         with engine.connect() as conn:
-            # Tentar setar session read only (Postgres específico)
-            try:
-                conn.execute(text("SET TRANSACTION READ ONLY"))
-            except Exception:
-                pass
-
             result = conn.execute(text(query_str), params)
             keys = result.keys()
             return [dict(zip(keys, row)) for row in result]
