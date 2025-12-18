@@ -12,6 +12,7 @@ def normalize_text(text):
         return ""
     return unicodedata.normalize('NFKD', text).encode('ASCII', 'ignore').decode('utf-8').lower()
 
+import os
 import time
 from functools import wraps
 from sqlalchemy.exc import OperationalError, InterfaceError
