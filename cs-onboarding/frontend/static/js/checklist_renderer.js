@@ -248,12 +248,14 @@ class ChecklistRenderer {
                                     <option value="interno" selected>Interno</option>
                                     <option value="externo">Externo</option>
                                 </select>
-                                <div class="form-check form-check-inline mb-0">
-                                    <input class="form-check-input" type="checkbox" id="comment-noshow-${item.id}">
-                                    <label class="form-check-label small text-warning" for="comment-noshow-${item.id}">
-                                        <i class="bi bi-calendar-x"></i> No show
-                                    </label>
-                                </div>
+                                <span class="comment-noshow-tag badge rounded-pill bg-light text-dark border" 
+                                      id="comment-noshow-${item.id}"
+                                      data-item-id="${item.id}"
+                                      data-noshow="false"
+                                      style="cursor: pointer; font-size: 0.75rem;"
+                                      title="Clique para marcar como No show">
+                                    <i class="bi bi-calendar-x"></i> No show
+                                </span>
                             </div>
                             <div class="d-flex gap-2">
                                 <button class="btn btn-sm btn-secondary btn-cancel-comment" data-item-id="${item.id}">
@@ -376,6 +378,20 @@ class ChecklistRenderer {
                 const button = e.target.closest('.btn-delete-item');
                 const itemId = parseInt(button.dataset.itemId);
                 this.deleteItem(itemId);
+            }
+
+            if (e.target.closest('.comment-noshow-tag')) {
+                const tag = e.target.closest('.comment-noshow-tag');
+                const isActive = tag.dataset.noshow === 'true';
+                if (isActive) {
+                    tag.dataset.noshow = 'false';
+                    tag.classList.remove('bg-warning', 'text-dark');
+                    tag.classList.add('bg-light', 'text-dark', 'border');
+                } else {
+                    tag.dataset.noshow = 'true';
+                    tag.classList.remove('bg-light', 'border');
+                    tag.classList.add('bg-warning', 'text-dark');
+                }
             }
         });
     }
@@ -1082,12 +1098,12 @@ class ChecklistRenderer {
     async saveComment(itemId) {
         const textarea = this.container.querySelector(`#comment-input-${itemId}`);
         const visibilitySelect = this.container.querySelector(`#comment-visibility-${itemId}`);
-        const noshowCheckbox = this.container.querySelector(`#comment-noshow-${itemId}`);
+        const noshowTag = this.container.querySelector(`#comment-noshow-${itemId}`);
         if (!textarea) return;
 
         const texto = textarea.value.trim();
         const visibilidade = visibilitySelect ? visibilitySelect.value : 'interno';
-        const noshow = noshowCheckbox ? noshowCheckbox.checked : false;
+        const noshow = noshowTag ? noshowTag.dataset.noshow === 'true' : false;
 
         if (!texto) {
             if (typeof this.showToast === 'function') this.showToast('O texto do comentário é obrigatório', 'warning'); else alert('O texto do comentário é obrigatório');
@@ -1109,7 +1125,11 @@ class ChecklistRenderer {
             if (data.ok) {
                 textarea.value = '';
                 if (visibilitySelect) visibilitySelect.value = 'interno';
-                if (noshowCheckbox) noshowCheckbox.checked = false;
+                if (noshowTag) {
+                    noshowTag.dataset.noshow = 'false';
+                    noshowTag.classList.remove('bg-warning');
+                    noshowTag.classList.add('bg-light', 'border');
+                }
 
                 const commentButton = this.container.querySelector(`.btn-comment-toggle[data-item-id="${itemId}"]`);
                 if (commentButton) {
