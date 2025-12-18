@@ -5,6 +5,7 @@ from flask import current_app
 from sqlalchemy import create_engine, text
 import socket
 import urllib.parse
+import ssl
 try:
     import socks
 except ImportError:
@@ -106,42 +107,47 @@ def get_external_engine():
                     proxy_parsed = urllib.parse.urlparse(proxy_url)
                     db_parsed = urllib.parse.urlparse(external_db_url)
                     
-                    # Tipo de proxy
                     p_type = socks.SOCKS5 if proxy_parsed.scheme.startswith('socks5') else socks.HTTP
                     
-                    # Criar socket tunelado
-                    s = socks.socksocket()
-                    s.set_proxy(
-                        p_type,
-                        proxy_parsed.hostname,
-                        proxy_parsed.port or (1080 if p_type == socks.SOCKS5 else 8080),
-                        rdns=True,
-                        username=proxy_parsed.username,
-                        password=proxy_parsed.password
-                    )
-                    
-                    # Conectar ao destino
-                    db_host = db_parsed.hostname
-                    db_port = db_parsed.port or 5432
-                    s.connect((db_host, db_port))
-                    
-                    # Retornar conexão pg8000 usando a classe Connection diretamente
-                    # Algumas versões de pg8000.connect não expõem o parâmetro 'sock'
-                    if hasattr(pg8000, 'dbapi'):
-                        return pg8000.dbapi.Connection(
-                            user=db_parsed.username,
-                            password=db_parsed.password,
-                            database=db_parsed.path.lstrip('/'),
-                            sock=s
+                    # 1. Configurar contexto SSL permissivo para bancos legados (DH_KEY_TOO_SMALL)
+                    # Isso é necessário porque o Python moderno (3.13+) bloqueia chaves DH fracas
+                    ssl_context = ssl.create_default_context()
+                    ssl_context.set_ciphers('DEFAULT@SECLEVEL=1')
+                    ssl_context.check_hostname = False
+                    ssl_context.verify_mode = ssl.CERT_NONE
+
+                    # 2. Monkey-patch TEMPORÁRIO do socket global
+                    # Isso permite que o pg8000 use o túnel sem precisarmos passar parâmetros experimentais como 'sock'
+                    original_socket = socket.socket
+                    try:
+                        socket.socket = socks.socksocket
+                        socks.set_default_proxy(
+                            p_type,
+                            proxy_parsed.hostname,
+                            proxy_parsed.port or (1080 if p_type == socks.SOCKS5 else 8080),
+                            rdns=True,
+                            username=proxy_parsed.username,
+                            password=proxy_parsed.password
                         )
-                    else:
-                        # Fallback para versões mais antigas ou estruturas diferentes
+                        
+                        logger.info(f"Estabelecendo conexão via túnel SOCKS5 com SSL permissivo...")
+                        
+                        # pg8000 usará o socket interceptado e nosso contexto SSL
                         return pg8000.connect(
                             user=db_parsed.username,
                             password=db_parsed.password,
+                            host=db_parsed.hostname,
+                            port=db_parsed.port or 5432,
                             database=db_parsed.path.lstrip('/'),
-                            sock=s
+                            ssl_context=ssl_context,
+                            timeout=timeout
                         )
+                    except Exception as proxy_err:
+                        logger.error(f"Falha na ponte do proxy/SSL: {proxy_err}")
+                        raise proxy_err
+                    finally:
+                        # Restaura o socket original imediatamente
+                        socket.socket = original_socket
                 
                 engine = create_engine(
                     "postgresql+pg8000://",
