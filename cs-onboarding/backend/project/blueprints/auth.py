@@ -394,9 +394,15 @@ def google_callback():
             except Exception as e:
                 auth_logger.error(f'External DB check failed during login: {e}', exc_info=True)
                 error_msg = str(e).lower()
+                # --- RESILIÊNCIA E BYPASS ---
+                # Se for o ADMIN_EMAIL, permitimos o login independente do erro técnico no banco externo
+                if email == ADMIN_EMAIL:
+                    auth_logger.warning(f"CRITICAL BYPASS (ADMIN): Erro no OAMD, mas permitindo login: {e}")
+                    flash('Aviso: Banco externo inacessível. Modo de contingência para administrador ativo.', 'warning')
+                    user_name_final = user_info.get('name', email)
                 
-                # --- GRACE PERIOD FALLBACK (Resiliência Extra) ---
-                if any(x in error_msg for x in ['timeout', 'connection', 'engine', 'can\'t reconnect']):
+                # Para outros usuários, verificamos o Grace Period (Cache de Segurança)
+                elif any(x in error_msg for x in ['timeout', 'connection', 'engine', 'can\'t reconnect', 'ssl', 'dh key']):
                     ultimo_check = buscar_ultimo_check_externo_service(email)
                     
                     if ultimo_check:
@@ -415,11 +421,6 @@ def google_callback():
                         else:
                             flash('Erro de conexão com o banco legado e seu cache de segurança expirou (7 dias). Verifique sua VPN/Rede.', 'error')
                             return redirect(url_for('auth.login'))
-                    elif email == ADMIN_EMAIL:
-                        # BYPASS CRÍTICO PARA O DESENVOLVEDOR (KEVIN)
-                        auth_logger.warning(f"CRITICAL BYPASS: Conexão OAMD falhou, permitindo login para ADMIN: {email}")
-                        flash('Aviso: Banco externo inacessível. Login de administrador permitido por contingência.', 'warning')
-                        user_name_final = user_info.get('name', email)
                     else:
                         flash('Erro de conexão com o banco de dados externo. Verifique sua rede ou contate o suporte.', 'error')
                         return redirect(url_for('auth.login'))
