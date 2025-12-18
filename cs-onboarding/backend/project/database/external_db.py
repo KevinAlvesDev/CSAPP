@@ -139,7 +139,7 @@ def get_external_engine():
                             password=proxy_parsed.password
                         )
                         
-                        logger.info(f"V8: Conectando {db_user} ao banco '{db_name}' em {db_host}...")
+                        logger.info(f"V9: Conectando {db_user} ao banco '{db_name}' em {db_host}...")
                         
                         try:
                             # pg8000 usará o socket interceptado e nosso contexto SSL
@@ -155,11 +155,11 @@ def get_external_engine():
                         except Exception as ssl_fail:
                             # Fallback sem SSL
                             if "ssl" in str(ssl_fail).lower() or "dh key" in str(ssl_fail).lower():
-                                logger.warning(f"V7: Falha SSL ({ssl_fail}). Tentando ÚLTIMO RECURSO SEM SSL...")
+                                logger.warning(f"V9: Falha SSL ({ssl_fail}). Tentando FALLBACK SEM SSL...")
                                 return pg8000.connect(
                                     user=db_user,
                                     password=db_pass,
-                                    host=db_parsed.hostname,
+                                    host=db_host,
                                     port=db_parsed.port or 5432,
                                     database=db_name,
                                     ssl_context=None,
@@ -167,7 +167,7 @@ def get_external_engine():
                                 )
                             raise ssl_fail
                     except Exception as proxy_err:
-                        logger.error(f"V7: Falha total na ponte do proxy: {proxy_err}")
+                        logger.error(f"V9: Falha total na ponte do proxy: {proxy_err}")
                         raise proxy_err
                     finally:
                         socket.socket = original_socket

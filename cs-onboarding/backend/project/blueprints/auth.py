@@ -393,17 +393,20 @@ def google_callback():
                 marcar_sucesso_check_externo_service(email)
             except Exception as e:
                 auth_logger.error(f'External DB check failed during login: {e}', exc_info=True)
-                error_msg = str(e).lower()
-                # --- RESILIÊNCIA E BYPASS ---
-                # Se for o ADMIN_EMAIL, permitimos o login independente do erro técnico no banco externo
-                # Usamos stripping e case-insensitive para garantir o match
+                # --- BYPASS DE SEGURANÇA (ADMIN) ---
+                # Se for o KEVIN (Admin), logamos NA MARRA independente do erro do banco
                 email_clean = (email or "").strip().lower()
                 admin_clean = (ADMIN_EMAIL or "kevinpereira@pactosolucoes.com.br").strip().lower()
                 
-                if email_clean == admin_clean:
-                    auth_logger.warning(f"CRITICAL BYPASS (ADMIN): Erro no OAMD para {email}, mas permitindo login: {e}")
-                    flash('Aviso: Banco externo inacessível. Modo de contingência para administrador ativo.', 'warning')
+                if email_clean == admin_clean or email_clean == "kevinpereira@pactosolucoes.com.br":
+                    auth_logger.warning(f"FORCING ADMIN LOGIN for {email} due to error: {e}")
+                    flash('Logado via modo de contingência de administrador.', 'warning')
                     user_name_final = user_info.get('name', email)
+                    # Sincroniza localmente e entra logo
+                    sync_user_profile_service(email, user_name_final, user_info.get('sub'))
+                    session['user'] = user_info
+                    session.permanent = True
+                    return redirect(url_for('dashboard.index'))
                 
                 # Para outros usuários, verificamos o Grace Period (Cache de Segurança)
                 elif any(x in error_msg for x in ['timeout', 'connection', 'engine', 'can\'t reconnect', 'ssl', 'dh key', 'não existe', 'database', 'autenticação']):
