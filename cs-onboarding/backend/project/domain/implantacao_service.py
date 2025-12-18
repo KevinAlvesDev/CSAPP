@@ -1328,24 +1328,38 @@ def obter_implantacao_basica(impl_id, user_email, is_manager=False):
     }
 
 
-def consultar_dados_oamd(impl_id, user_email=None):
+def consultar_dados_oamd(impl_id=None, user_email=None, id_favorecido_direto=None):
     """
     Consulta dados externos (OAMD) para uma implantação.
     Substitui a lógica de GET /api/v1/oamd/implantacoes/<id>/consulta.
+    
+    Args:
+        impl_id: ID da implantação (opcional se id_favorecido_direto for fornecido)
+        user_email: Email do usuário
+        id_favorecido_direto: ID Favorecido direto (opcional, usado quando implantação não existe)
     """
     from ..domain.external_service import consultar_empresa_oamd as svc_consultar_empresa
     
-    # 1. Obter dados locais
-    impl = query_db(
-        "SELECT id, id_favorecido, chave_oamd, cnpj, informacao_infra, tela_apoio_link FROM implantacoes WHERE id = %s", 
-        (impl_id,), one=True
-    )
-    if not impl:
-        raise ValueError('Implantação não encontrada')
+    # Inicializar variáveis
+    id_favorecido = id_favorecido_direto
+    infra_req = None
+    
+    # Se impl_id foi fornecido, tentar buscar dados locais
+    if impl_id:
+        impl = query_db(
+            "SELECT id, id_favorecido, chave_oamd, informacao_infra, tela_apoio_link FROM implantacoes WHERE id = %s", 
+            (impl_id,), one=True
+        )
         
-    # 2. Preparar parâmetros para consulta
-    id_favorecido = impl.get('id_favorecido')
-    infra_req = impl.get('informacao_infra')
+        if impl:
+            # Usar id_favorecido da implantação se não foi fornecido diretamente
+            if not id_favorecido:
+                id_favorecido = impl.get('id_favorecido')
+            infra_req = impl.get('informacao_infra')
+    
+    # Se não temos id_favorecido de nenhuma fonte, erro
+    if not id_favorecido and not infra_req:
+        raise ValueError('Implantação não encontrada e nenhum ID Favorecido fornecido')
     
     # Extract numeric part from infra if possible as fallback
     infra_digits = None
@@ -1359,11 +1373,11 @@ def consultar_dados_oamd(impl_id, user_email=None):
     result = svc_consultar_empresa(id_favorecido=id_favorecido, infra_req=infra_digits if not id_favorecido else None)
     
     if not result.get('ok') or not result.get('mapped'):
-        local_link = impl.get('tela_apoio_link')
+        # Construir link de apoio
         if id_favorecido:
              link = f"https://app.pactosolucoes.com.br/apoio/apoio/{id_favorecido}"
         else:
-             link = local_link or ''
+             link = ''
              
         return {
             'persistibles': {},

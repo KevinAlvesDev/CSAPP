@@ -122,13 +122,26 @@ def get_implantacao(impl_id):
 @limiter.limit("60 per minute", key_func=lambda: g.user_email or get_remote_address())
 def consultar_oamd_implantacao(impl_id):
     try:
-        user_email = g.user_email 
-        result = consultar_dados_oamd(impl_id, user_email)
+        user_email = g.user_email
+        
+        # Permitir passar id_favorecido via query parameter como fallback
+        id_favorecido_param = request.args.get('id_favorecido')
+        
+        result = consultar_dados_oamd(
+            impl_id=impl_id, 
+            user_email=user_email,
+            id_favorecido_direto=id_favorecido_param
+        )
         
         return jsonify({'ok': True, 'data': result})
 
     except ValueError as ve:
-        return jsonify({'ok': False, 'error': str(ve)}), 404
+        api_logger.warning(f"Implantação {impl_id} não encontrada para usuário {user_email}: {ve}")
+        return jsonify({
+            'ok': False, 
+            'error': f'Implantação #{impl_id} não encontrada',
+            'detail': str(ve)
+        }), 404
     except Exception as e:
         api_logger.error(f"Erro ao consultar OAMD para implantação {impl_id}: {e}", exc_info=True)
         return jsonify({'ok': False, 'error': 'Erro interno na consulta ao OAMD'}), 500

@@ -3,7 +3,7 @@
  * Extracted from base.html for better maintainability.
  */
 
-(function() {
+(function () {
     'use strict';
 
     let tomSelectInstances = {};
@@ -32,7 +32,7 @@
             delimiter: ',',
             items: [],
             plugins: ['remove_button'], // Optional: add remove button for better UX
-            onInitialize: function() {
+            onInitialize: function () {
                 // Add existing values as options if they don't exist
                 values.forEach(value => {
                     if (!this.options.hasOwnProperty(value)) {
@@ -73,24 +73,24 @@
     };
 
     // Main initialization
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         const modalDetalhesEmpresa = document.getElementById('modalDetalhesEmpresa');
         if (!modalDetalhesEmpresa) return;
 
         // Phone input event listeners (replacing inline handlers)
         const telefoneInput = modalDetalhesEmpresa.querySelector('#modal-telefone_responsavel');
         if (telefoneInput) {
-            telefoneInput.addEventListener('input', function() {
+            telefoneInput.addEventListener('input', function () {
                 if (window.formatarTelefone) window.formatarTelefone(this);
             });
-            telefoneInput.addEventListener('blur', function() {
+            telefoneInput.addEventListener('blur', function () {
                 if (window.validarTelefoneCompleto) window.validarTelefoneCompleto(this);
             });
         }
 
         // Modal Show Event
-        modalDetalhesEmpresa.addEventListener('show.bs.modal', function(event) {
-            const safeSet = function(selOrEl, value, root) {
+        modalDetalhesEmpresa.addEventListener('show.bs.modal', function (event) {
+            const safeSet = function (selOrEl, value, root) {
                 const el = typeof selOrEl === 'string' ? (root || document).querySelector(selOrEl) : selOrEl;
                 if (!el) return;
                 try {
@@ -99,7 +99,7 @@
                         // Logic for checkbox/radio if needed, currently safeSet seems used for values
                     }
                     el.value = value;
-                } catch (_) {}
+                } catch (_) { }
             };
 
             const button = event.relatedTarget;
@@ -111,7 +111,7 @@
             };
 
             const modal = event.target || modalDetalhesEmpresa;
-            
+
             // Determine Implantacao ID
             let implId = getData('id');
             if (!implId) {
@@ -129,10 +129,10 @@
             safeSet('#modal-cargo_responsavel', getData('cargo'), modal);
             safeSet('#modal-telefone_responsavel', getData('telefone'), modal);
             safeSet('#modal-email_responsavel', getData('email'), modal);
-            
+
             const inicioProducaoIsoAttr = getData('inicio-producao');
             const finalImplantacaoIsoAttr = getData('final-implantacao');
-            
+
             safeSet('#modal-id_favorecido', getData('id-favorecido'), modal);
             safeSet('#modal-chave_oamd', getData('chave-oamd'), modal);
             safeSet('#modal-tela_apoio_link', getData('tela-apoio-link'), modal);
@@ -204,7 +204,7 @@
 
             // Data Cadastro
             const inicioImplantacaoIso = getData('inicio-implantacao');
-            safeSet('#modal-data_cadastro', (function(iso) {
+            safeSet('#modal-data_cadastro', (function (iso) {
                 if (!iso) return '';
                 var p = iso.split('T')[0].split('-');
                 if (p.length !== 3) return '';
@@ -221,7 +221,7 @@
                         setFpDate(window.fpInicioEfetivo, impl.data_inicio_efetivo);
                         setFpDate(window.fpInicioProd, impl.data_inicio_producao);
                         setFpDate(window.fpFinalImpl, impl.data_final_implantacao);
-                        
+
                         // Populate all fields from server to avoid stale button dataset
                         safeSet('#modal-implantacao_id', impl.id, modal);
                         safeSet('#modal-responsavel_cliente', impl.responsavel_cliente || '', modal);
@@ -250,14 +250,14 @@
                         safeSet('#modal-freepass', impl.freepass || '', modal);
                         safeSet('#modal-alunos_ativos', (impl.alunos_ativos != null ? String(impl.alunos_ativos) : ''), modal);
                         safeSet('#modal-informacao_infra', impl.informacao_infra || '', modal);
-                        
+
                         // Multi-selects with TomSelect: reinitialize with current values
                         initializeMultiTagInput('#modal-modalidades', impl.modalidades || '');
                         initializeMultiTagInput('#modal-horarios_func', impl.horarios_func || '');
                         initializeMultiTagInput('#modal-formas_pagamento', impl.formas_pagamento || '');
                         initializeMultiTagInput('#modal-seguimento', impl.seguimento || '');
                         initializeMultiTagInput('#modal-tipos_planos', impl.tipos_planos || '');
-                        
+
                         // Post-populate toggles for dependent fields
                         const catracaSel = modal.querySelector('#modal-catraca');
                         const facialSel = modal.querySelector('#modal-facial');
@@ -272,20 +272,20 @@
                         };
                         toggleModelo(catracaSel, catracaRow, catracaModelo);
                         toggleModelo(facialSel, facialRow, facialModelo);
-                        
+
                         // Format phone after setting value
                         if (window.formatarTelefone) {
                             formatarTelefone(modal.querySelector('#modal-telefone_responsavel'));
                         }
                     })
-                    .catch(() => {});
+                    .catch(() => { });
             }
 
             // Format phone and set redirect
             if (window.formatarTelefone) {
                 formatarTelefone(modal.querySelector('#modal-telefone_responsavel'));
             }
-            
+
             const isDetailsPage = document.getElementById('checklist-area-treinamento');
             safeSet('#modal-redirect_to', isDetailsPage ? 'detalhes' : 'dashboard', modal);
 
@@ -320,15 +320,15 @@
         // Cleanup TomSelect somente após o modal ser realmente ocultado
 
         // Form Change Detection & Validation Logic
-            (function() {
-                let formInitialValues = {};
-                let formHasChanges = false;
-                let isClosingAfterConfirm = false;
-                let justSaved = false;
-                let initializing = false;
-                const modalForm = modalDetalhesEmpresa.querySelector('form');
+        (function () {
+            let formInitialValues = {};
+            let formHasChanges = false;
+            let isClosingAfterConfirm = false;
+            let justSaved = false;
+            let initializing = false;
+            const modalForm = modalDetalhesEmpresa.querySelector('form');
 
-                if (!modalForm) return;
+            if (!modalForm) return;
 
             function saveFormInitialValues() {
                 formInitialValues = {};
@@ -407,7 +407,7 @@
                     if (!br || typeof br !== 'string') return '';
                     // Se já estiver em formato ISO YYYY-MM-DD, retorna como está
                     if (/^\d{4}-\d{2}-\d{2}$/.test(br)) return br;
-                    
+
                     const m = br.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
                     if (!m) return br;
                     const dd = m[1],
@@ -441,7 +441,7 @@
                 try {
                     const redir = modalForm.querySelector('#modal-redirect_to');
                     if (redir) redir.value = 'modal';
-                } catch(_) {}
+                } catch (_) { }
                 const actionUrl = modalForm.getAttribute('action') || (typeof modalForm.action === 'string' ? modalForm.action : '/actions/atualizar_detalhes_empresa');
                 const formData = new FormData(modalForm);
                 const saveBtn = document.querySelector('#modalDetalhesEmpresa .btn-salvar-detalhes');
@@ -459,7 +459,7 @@
                     });
                     let ok = res.ok;
                     let j = null;
-                    try { j = await res.json(); ok = ok && j && j.ok; } catch(_) {}
+                    try { j = await res.json(); ok = ok && j && j.ok; } catch (_) { }
                     if (ok) {
                         formHasChanges = false;
                         justSaved = true;
@@ -472,7 +472,7 @@
                             tspan.innerText = `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
                             ts.style.display = '';
                         }
-                        try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch(_) {}
+                        try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) { }
                         try {
                             if (lastTriggerEl) {
                                 const getVal = (sel) => {
@@ -513,7 +513,7 @@
                                 lastTriggerEl.setAttribute('data-inicio-producao', getVal('#modal-data_inicio_producao'));
                                 lastTriggerEl.setAttribute('data-final-implantacao', getVal('#modal-data_final_implantacao'));
                             }
-                        } catch(_) {}
+                        } catch (_) { }
                     } else {
                         if (window.showToast) showToast((j && j.error) || 'Erro ao salvar detalhes', 'error');
                     }
@@ -529,7 +529,7 @@
                 return false;
             };
 
-            modalForm.addEventListener('submit', function(e) {
+            modalForm.addEventListener('submit', function (e) {
                 if (isClosingAfterConfirm) {
                     e.preventDefault();
                     return false;
@@ -538,7 +538,7 @@
                 submitModalForm();
             });
 
-            modalDetalhesEmpresa.addEventListener('show.bs.modal', function() {
+            modalDetalhesEmpresa.addEventListener('show.bs.modal', function () {
                 isClosingAfterConfirm = false;
                 justSaved = false;
                 initializing = true;
@@ -547,7 +547,7 @@
                 setTimeout(finishInit, 500);
             });
 
-            modalDetalhesEmpresa.addEventListener('hide.bs.modal', async function(e) {
+            modalDetalhesEmpresa.addEventListener('hide.bs.modal', async function (e) {
                 if (isClosingAfterConfirm) {
                     return;
                 }
@@ -615,7 +615,7 @@
                 }
             });
 
-            modalDetalhesEmpresa.addEventListener('hidden.bs.modal', function() {
+            modalDetalhesEmpresa.addEventListener('hidden.bs.modal', function () {
                 if (isClosingAfterConfirm) {
                     const inputs = modalForm.querySelectorAll('input, select, textarea');
                     inputs.forEach(input => {
@@ -637,17 +637,17 @@
                 // destruir instâncias TomSelect somente agora
                 for (const selector in tomSelectInstances) {
                     if (tomSelectInstances[selector]) {
-                        try { tomSelectInstances[selector].destroy(); } catch(_) {}
+                        try { tomSelectInstances[selector].destroy(); } catch (_) { }
                     }
                 }
                 tomSelectInstances = {};
             });
 
-            modalForm.addEventListener('input', function() {
+            modalForm.addEventListener('input', function () {
                 if (!initializing) checkFormChanges();
             });
 
-            modalForm.addEventListener('change', function() {
+            modalForm.addEventListener('change', function () {
                 if (!initializing) checkFormChanges();
                 // react to catraca/facial selection changes
                 const modal = document.getElementById('modalDetalhesEmpresa');
@@ -668,7 +668,7 @@
                 }
             });
 
-            document.addEventListener('click', function(e) {
+            document.addEventListener('click', function (e) {
                 const submitBtn = e.target.closest('#modalDetalhesEmpresa .btn-salvar-detalhes');
                 if (submitBtn && modalForm) {
                     e.preventDefault();
@@ -677,9 +677,11 @@
                 }
             });
 
-            document.addEventListener('click', async function(e) {
+            document.addEventListener('click', async function (e) {
                 const consultarBtn = e.target.closest('#btn-consultar-oamd');
                 if (!consultarBtn) return;
+
+                // Pegar ID da implantação
                 const implIdEl = modalForm.querySelector('#modal-implantacao_id');
                 let implId = implIdEl && implIdEl.value ? implIdEl.value : '';
                 if (!implId) {
@@ -690,14 +692,30 @@
                     const m = (location.pathname || '').match(/\/implantacao\/(\d+)/);
                     if (m && m[1]) implId = m[1];
                 }
-                if (!implId) return;
+
+                // NOVO: Pegar ID Favorecido do modal
+                const idFavorecidoEl = modalForm.querySelector('#modal-id_favorecido');
+                const idFavorecido = idFavorecidoEl && idFavorecidoEl.value ? idFavorecidoEl.value.trim() : '';
+
+                // Se não temos nem implId nem idFavorecido, não podemos consultar
+                if (!implId && !idFavorecido) {
+                    if (window.showToast) showToast('Informe o ID Favorecido para consultar', 'warning');
+                    return;
+                }
+
+                // Construir URL com fallback
+                let url = `/api/v1/oamd/implantacoes/${implId || 0}/consulta`;
+                if (idFavorecido) {
+                    url += `?id_favorecido=${encodeURIComponent(idFavorecido)}`;
+                }
+
                 const loader = document.getElementById('btn-consultar-oamd-loader');
                 const icon = document.getElementById('btn-consultar-oamd-icon');
                 if (loader) loader.classList.remove('d-none');
                 if (icon) icon.classList.add('d-none');
                 consultarBtn.disabled = true;
                 try {
-                    const res = await fetch(`/api/v1/oamd/implantacoes/${implId}/consulta`, { headers: { 'Accept': 'application/json' } });
+                    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
                     const j = await res.json();
                     if (!res.ok || !j.ok || !j.data || !j.data.found) throw new Error(j.error || 'Falha na consulta');
                     const d = j.data;
@@ -754,20 +772,26 @@
                         ts.style.display = '';
                     }
                     try {
-                        const csrfEl = modalForm.querySelector('input[name="csrf_token"]');
-                        const csrf = csrfEl ? csrfEl.value : '';
-                        await fetch(`/api/v1/oamd/implantacoes/${implId}/aplicar`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
-                            body: JSON.stringify({})
-                        }).then(r => r.json()).then(ap => {
-                            if (ap && ap.ok) {
-                                if (window.showToast) showToast('Dados do OAMD aplicados', 'success');
-                            } else {
-                                if (window.showToast) showToast((ap && ap.error) || 'Falha ao aplicar dados', 'error');
-                            }
-                        }).catch(() => {});
-                    } catch (_) {}
+                        // Só tentar aplicar se a implantação existir no banco
+                        if (implId && implId !== '0' && parseInt(implId) > 0) {
+                            const csrfEl = modalForm.querySelector('input[name="csrf_token"]');
+                            const csrf = csrfEl ? csrfEl.value : '';
+                            await fetch(`/api/v1/oamd/implantacoes/${implId}/aplicar`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                                body: JSON.stringify({})
+                            }).then(r => r.json()).then(ap => {
+                                if (ap && ap.ok) {
+                                    if (window.showToast) showToast('Dados do OAMD aplicados', 'success');
+                                } else {
+                                    if (window.showToast) showToast((ap && ap.error) || 'Falha ao aplicar dados', 'error');
+                                }
+                            }).catch(() => { });
+                        } else {
+                            // Implantação não existe ainda, apenas mostrar sucesso da consulta
+                            if (window.showToast) showToast('Dados consultados com sucesso. Salve os detalhes para persistir.', 'success');
+                        }
+                    } catch (_) { }
                 } catch (err) {
                     if (window.showToast) showToast(err.message || 'Erro na consulta', 'error');
                 } finally {
@@ -783,14 +807,14 @@
         // Init Calendars
         (function initModalCalendars() {
             if (!window.flatpickr) return;
-            var makeConfig = function() {
+            var makeConfig = function () {
                 return {
                     dateFormat: 'Y-m-d',
                     altInput: true,
                     altFormat: 'd/m/Y',
                     allowInput: false,
                     locale: flatpickr.l10ns.default || flatpickr.l10ns.pt,
-                    parseDate: function(datestr) {
+                    parseDate: function (datestr) {
                         var m = datestr && datestr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
                         if (!m) return null;
                         var d = parseInt(m[1], 10);
@@ -802,7 +826,7 @@
                     }
                 };
             };
-            var ensureInstance = function(selector) {
+            var ensureInstance = function (selector) {
                 var el = document.querySelector(selector);
                 if (!el) return null;
                 if (el._flatpickr) return el._flatpickr;
