@@ -26,35 +26,35 @@ class ChecklistRenderer {
                 try {
                     const m = document.cookie.match(/(?:^|; )csrf_token=([^;]+)/);
                     if (m) this.csrfToken = decodeURIComponent(m[1]);
-                } catch(e) {}
+                } catch (e) { }
             }
         }
         this._toggleThrottle = new Map();
-        
+
         if (!this.container) {
             return;
         }
-        
+
         this.init();
     }
-    
+
     init() {
         if (!this.data || this.data.length === 0) {
             this.renderEmpty();
             return;
         }
-        
+
         this.buildFlatData(this.data);
-        
+
         this.render();
         this.attachEventListeners();
-        
+
         // Render com todas as tarefas minimizadas por padrão (sem expandir nós inicialmente)
-        
+
         this.updateProgressFromLocalData();
         this.updateAllItemsUI();
     }
-    
+
     /**
      * Constrói estrutura plana (flatData) para acesso rápido durante propagação
      * Limita a 7 filhos por tarefa pai
@@ -62,42 +62,42 @@ class ChecklistRenderer {
     buildFlatData(nodes, parentId = null) {
         nodes.forEach(node => {
             const limitedChildren = node.children && node.children.length > 0 ? node.children.slice(0, 7) : [];
-            
+
             this.flatData[node.id] = {
                 ...node,
                 parentId: parentId,
                 childrenIds: limitedChildren.map(c => c.id)
             };
-            
+
             if (limitedChildren.length > 0) {
                 this.buildFlatData(limitedChildren, node.id);
             }
         });
     }
-    
+
     render() {
         const treeRoot = this.container.querySelector('#checklist-tree-root');
         if (!treeRoot) return;
-        
+
         treeRoot.innerHTML = this.renderTree(this.data);
         this.updateConclusionHeaderVisibility();
     }
-    
+
     renderTree(items) {
         if (!items || items.length === 0) {
             return '<div class="text-muted text-center py-4">Nenhum item encontrado</div>';
         }
-        
+
         return items.map(item => this.renderItem(item)).join('');
     }
-    
+
     renderItem(item) {
         const limitedChildren = item.children && item.children.length > 0 ? item.children.slice(0, 7) : [];
         const hasChildren = limitedChildren.length > 0;
         const isExpanded = this.expandedItems.has(item.id);
         const hasComment = item.comment && item.comment.trim().length > 0;
         const progressLabel = item.progress_label || null;
-        
+
         let iconClass = 'bi-list-ul text-secondary';
         let iconColor = '';
         if (item.level === 0) {
@@ -113,13 +113,13 @@ class ChecklistRenderer {
             iconClass = 'bi-list-ul';
             iconColor = 'text-muted';
         }
-        
+
         const statusClass = item.completed ? 'bg-success' : 'bg-warning';
         const statusText = item.completed ? 'Concluído' : 'Pendente';
         const statusIcon = item.completed ? 'bi-check-circle-fill' : 'bi-clock-fill';
-        
+
         const indentPx = Math.max(0, (item.level || 0) * 14);
-        
+
         return `
             <div id="checklist-item-${item.id}" class="checklist-item" data-item-id="${item.id}" data-level="${item.level || 0}">
                 <div class="checklist-item-header position-relative level-${item.level || 0}" style="padding-left: 0;">
@@ -243,10 +243,18 @@ class ChecklistRenderer {
                                   rows="2"
                                   placeholder="Escreva um comentário para esta tarefa..."></textarea>
                         <div class="d-flex align-items-center justify-content-between gap-2 mt-2">
-                            <select class="form-select form-select-sm" id="comment-visibility-${item.id}" style="max-width: 140px;">
-                                <option value="interno" selected>Interno</option>
-                                <option value="externo">Externo</option>
-                            </select>
+                            <div class="d-flex align-items-center gap-2">
+                                <select class="form-select form-select-sm" id="comment-visibility-${item.id}" style="max-width: 120px;">
+                                    <option value="interno" selected>Interno</option>
+                                    <option value="externo">Externo</option>
+                                </select>
+                                <div class="form-check form-check-inline mb-0">
+                                    <input class="form-check-input" type="checkbox" id="comment-noshow-${item.id}">
+                                    <label class="form-check-label small text-warning" for="comment-noshow-${item.id}">
+                                        <i class="bi bi-calendar-x"></i> No show
+                                    </label>
+                                </div>
+                            </div>
                             <div class="d-flex gap-2">
                                 <button class="btn btn-sm btn-secondary btn-cancel-comment" data-item-id="${item.id}">
                                     Cancelar
@@ -269,7 +277,7 @@ class ChecklistRenderer {
             </div>
         `;
     }
-    
+
     renderEmpty() {
         const treeRoot = this.container.querySelector('#checklist-tree-root');
         if (treeRoot) {
@@ -283,7 +291,7 @@ class ChecklistRenderer {
             `;
         }
     }
-    
+
     attachEventListeners() {
         document.addEventListener('click', (e) => {
             const button = e.target.closest('.btn-expand');
@@ -296,7 +304,7 @@ class ChecklistRenderer {
                 }
             }
         });
-        
+
         this.container.addEventListener('change', (e) => {
             if (e.target.classList.contains('checklist-checkbox')) {
                 const itemId = parseInt(e.target.dataset.itemId);
@@ -304,7 +312,7 @@ class ChecklistRenderer {
                 this.handleCheck(itemId, checked);
             }
         });
-        
+
         this.container.addEventListener('click', (e) => {
             if (e.target.closest('.btn-comment-toggle')) {
                 const button = e.target.closest('.btn-comment-toggle');
@@ -337,26 +345,26 @@ class ChecklistRenderer {
                 return;
             }
         });
-        
+
         this.container.addEventListener('click', (e) => {
             if (e.target.closest('.btn-save-comment')) {
                 const button = e.target.closest('.btn-save-comment');
                 const itemId = parseInt(button.dataset.itemId);
                 this.saveComment(itemId);
             }
-            
+
             if (e.target.closest('.btn-cancel-comment')) {
                 const button = e.target.closest('.btn-cancel-comment');
                 const itemId = parseInt(button.dataset.itemId);
                 this.cancelComment(itemId);
             }
-            
+
             if (e.target.closest('.btn-send-email-comment')) {
                 const button = e.target.closest('.btn-send-email-comment');
                 const comentarioId = parseInt(button.dataset.commentId);
                 this.sendCommentEmail(comentarioId);
             }
-            
+
             if (e.target.closest('.btn-delete-comment')) {
                 const button = e.target.closest('.btn-delete-comment');
                 const comentarioId = parseInt(button.dataset.commentId);
@@ -371,7 +379,7 @@ class ChecklistRenderer {
             }
         });
     }
-    
+
     updateElementState(children, button, itemId) {
         const isExpanded = this.expandedItems.has(itemId);
         if (isExpanded) {
@@ -395,7 +403,7 @@ class ChecklistRenderer {
             }
         }
     }
-    
+
     toggleExpand(itemId, animate = true) {
         const wasExpanded = this.expandedItems.has(itemId);
         if (wasExpanded) {
@@ -405,12 +413,12 @@ class ChecklistRenderer {
         }
         this.updateExpandedState(itemId, animate);
     }
-    
+
     updateExpandedState(itemId = null, animate = true) {
         if (itemId) {
             const children = this.container.querySelector(`.checklist-item-children[data-item-id="${itemId}"]`);
             const button = this.container.querySelector(`.btn-expand[data-item-id="${itemId}"]`);
-            
+
             if (children) {
                 this.updateElementState(children, button, itemId);
             }
@@ -438,7 +446,7 @@ class ChecklistRenderer {
         this.expandedItems.add(itemId);
         this.updateExpandedState();
     }
-    
+
     /**
      * Manipula mudança de checkbox com propagação (cascata e bolha)
      * OTIMIZADO: Atualiza UI imediatamente (otimista) e sincroniza com backend em paralelo
@@ -449,23 +457,23 @@ class ChecklistRenderer {
         const last = this._toggleThrottle.get(itemId) || 0;
         if (now - last < 300) return;
         this._toggleThrottle.set(itemId, now);
-        
+
         const checkbox = this.container.querySelector(`#checklist-${itemId}`);
         if (!checkbox) return;
-        
+
         // Marcar como loading mas NÃO desabilitar o checkbox para UX mais fluida
         this.isLoading = true;
-        
+
         if (this.flatData[itemId]) {
             this.flatData[itemId].completed = completed;
             this.flatData[itemId].data_conclusao = completed ? new Date().toISOString() : null;
         }
-        
+
         this.propagateDown(itemId, completed);
         this.propagateUp(itemId);
         this.updateAllItemsUI();
         this.updateProgressFromLocalData();
-        
+
         try {
             const response = await fetch(`/api/checklist/toggle/${itemId}`, {
                 method: 'POST',
@@ -475,23 +483,23 @@ class ChecklistRenderer {
                 },
                 body: JSON.stringify({ completed })
             });
-            
+
             const data = await response.json();
-            
+
             if (data.ok) {
                 const serverProgress = Math.round(data.progress || 0);
                 this.updateProgressDisplay(serverProgress);
-                
+
                 if (window.updateProgressBar && typeof window.updateProgressBar === 'function') {
                     window.updateProgressBar(serverProgress);
                 }
-                try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) {}
-                try { if (typeof window.appendTimelineEvent === 'function') window.appendTimelineEvent('tarefa_alterada', `Status: ${completed ? 'Concluída' : 'Pendente'} — ${(this.flatData[itemId] && this.flatData[itemId].title) || ''}`); } catch (_) {}
+                try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) { }
+                try { if (typeof window.appendTimelineEvent === 'function') window.appendTimelineEvent('tarefa_alterada', `Status: ${completed ? 'Concluída' : 'Pendente'} — ${(this.flatData[itemId] && this.flatData[itemId].title) || ''}`); } catch (_) { }
             } else {
                 throw new Error(data.error || 'Erro ao alterar status');
             }
         } catch (error) {
-            
+
             if (this.flatData[itemId]) {
                 this.flatData[itemId].completed = !completed;
             }
@@ -499,23 +507,23 @@ class ChecklistRenderer {
             this.propagateUp(itemId);
             this.updateAllItemsUI();
             this.updateProgressFromLocalData();
-            
+
             if (typeof this.showToast === 'function') this.showToast(`Erro: ${error.message}`, 'error'); else alert(`Erro: ${error.message}`);
         } finally {
             this.isLoading = false;
         }
     }
-    
+
     updateAllItemsUI() {
         Object.keys(this.flatData).forEach(id => {
             this.updateItemUI(parseInt(id));
         });
     }
-    
+
     updateProgressFromLocalData() {
         let total = 0;
         let completed = 0;
-        
+
         Object.values(this.flatData).forEach(item => {
             const isLeaf = !item.childrenIds || item.childrenIds.length === 0;
             if (isLeaf) {
@@ -525,16 +533,16 @@ class ChecklistRenderer {
                 }
             }
         });
-        
+
         const progress = total > 0 ? Math.round((completed / total) * 100) : 100;
         this.updateProgressDisplay(progress);
     }
-    
+
     updateProgressDisplay(progress) {
         if (window.updateProgressBar) window.updateProgressBar(progress);
         this.updateConclusionHeaderVisibility();
     }
-    
+
     updateConclusionHeaderVisibility() {
         const headerEl = this.container.querySelector('.checklist-grid .col-conclusao');
         if (!headerEl) return;
@@ -545,14 +553,14 @@ class ChecklistRenderer {
             headerEl.classList.add('d-none');
         }
     }
-    
+
     /**
      * Propaga status para baixo (cascata) - todos os filhos recebem o mesmo status
      */
     propagateDown(parentId, status) {
         const node = this.flatData[parentId];
         if (!node || !node.childrenIds || node.childrenIds.length === 0) return;
-        
+
         node.childrenIds.forEach(childId => {
             if (this.flatData[childId]) {
                 this.flatData[childId].completed = status;
@@ -561,48 +569,48 @@ class ChecklistRenderer {
             }
         });
     }
-    
+
     propagateUp(itemId, visited = new Set()) {
         if (!itemId || visited.has(itemId)) return;
-        
+
         visited.add(itemId);
-        
+
         const node = this.flatData[itemId];
         if (!node || !node.parentId) return;
-        
+
         const parentNode = this.flatData[node.parentId];
         if (!parentNode || !parentNode.childrenIds || parentNode.childrenIds.length === 0) return;
-        
+
         const children = parentNode.childrenIds
             .map(id => this.flatData[id])
             .filter(c => c !== undefined);
-        
+
         if (children.length === 0) return;
-        
+
         const allChecked = children.every(c => c.completed === true);
         const someChecked = children.some(c => c.completed === true);
-        
+
         const oldStatus = parentNode.completed;
         parentNode.completed = allChecked;
         parentNode.data_conclusao = allChecked ? new Date().toISOString() : null;
-        
+
         if (oldStatus !== allChecked) {
             this.propagateUp(node.parentId, visited);
         }
     }
-    
+
     updateItemUI(itemId) {
         const node = this.flatData[itemId];
         if (!node) return;
-        
+
         const itemElement = this.container.querySelector(`.checklist-item[data-item-id="${itemId}"]`);
         if (!itemElement) return;
-        
+
         const checkbox = itemElement.querySelector(`#checklist-${itemId}`);
         if (checkbox && checkbox.checked !== node.completed) {
             checkbox.checked = node.completed;
         }
-        
+
         const title = itemElement.querySelector('.checklist-item-title');
         if (title) {
             if (node.completed) {
@@ -613,7 +621,7 @@ class ChecklistRenderer {
                 title.style.color = '';
             }
         }
-        
+
         const badge = itemElement.querySelector(`#status-badge-${itemId}`);
         if (badge) {
             const statusClass = node.completed ? 'bg-success' : 'bg-warning';
@@ -622,7 +630,7 @@ class ChecklistRenderer {
             badge.className = `badge badge-truncate ${statusClass}`;
             badge.innerHTML = `<i class="bi ${statusIcon} me-1"></i>${statusText}`;
         }
-        
+
         const progressBadge = itemElement.querySelector('.checklist-progress-badge');
         if (progressBadge && node.childrenIds && node.childrenIds.length > 0) {
             const total = node.childrenIds.length;
@@ -672,14 +680,14 @@ class ChecklistRenderer {
         if (prevNova) {
             if (node.nova_previsao) {
                 prevNova.classList.remove('d-none');
-                prevNova.classList.remove('bg-warning','text-dark');
-                prevNova.classList.add('bg-danger','text-white');
+                prevNova.classList.remove('bg-warning', 'text-dark');
+                prevNova.classList.add('bg-danger', 'text-white');
                 prevNova.setAttribute('title', `Nova previsão: ${node.nova_previsao}`);
                 prevNova.textContent = this.formatDate(node.nova_previsao);
             } else {
                 prevNova.classList.remove('d-none');
-                prevNova.classList.remove('bg-danger','text-white');
-                prevNova.classList.add('bg-warning','text-dark');
+                prevNova.classList.remove('bg-danger', 'text-white');
+                prevNova.classList.add('bg-warning', 'text-dark');
                 const fallbackPrev = node.previsao_original || this.previsaoTermino;
                 if (fallbackPrev) {
                     prevNova.setAttribute('title', `Nova previsão: ${fallbackPrev}`);
@@ -708,31 +716,31 @@ class ChecklistRenderer {
             if (atrasada) atrasoBadge.classList.remove('d-none'); else atrasoBadge.classList.add('d-none');
         }
     }
-    
+
     updateChildrenUI(itemId) {
         const node = this.flatData[itemId];
         if (!node || !node.childrenIds) return;
-        
+
         node.childrenIds.forEach(childId => {
             this.updateItemUI(childId);
             this.updateChildrenUI(childId);
         });
     }
-    
+
     updateParentUI(itemId) {
         const node = this.flatData[itemId];
         if (!node || !node.parentId) return;
-        
+
         this.updateItemUI(node.parentId);
         this.updateParentUI(node.parentId);
     }
-    
+
     toggleComments(itemId) {
         const commentsSection = this.container.querySelector(`#comments-${itemId}`);
         if (!commentsSection) return;
-        
+
         const isOpening = !commentsSection.classList.contains('show');
-        
+
         if (window.bootstrap && bootstrap.Collapse) {
             const bsCollapse = new bootstrap.Collapse(commentsSection, {
                 toggle: true
@@ -740,20 +748,20 @@ class ChecklistRenderer {
         } else {
             commentsSection.classList.toggle('show');
         }
-        
+
         if (isOpening) {
             this.loadComments(itemId);
         }
     }
-    
+
     async loadComments(itemId) {
         const historyContainer = this.container.querySelector(`#comments-history-${itemId}`);
         if (!historyContainer) return;
-        
+
         try {
             const response = await fetch(`/api/checklist/comments/${itemId}`);
             const data = await response.json();
-            
+
             if (data.ok) {
                 this.renderCommentsHistory(itemId, data.comentarios, data.email_responsavel);
             } else {
@@ -819,8 +827,8 @@ class ChecklistRenderer {
                     const m = bootstrap.Modal.getInstance(modal) || new bootstrap.Modal(modal);
                     m.hide();
                     if (typeof this.showToast === 'function') this.showToast('Responsável atualizado', 'success');
-                    try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) {}
-                    try { if (typeof window.appendTimelineEvent === 'function') window.appendTimelineEvent('responsavel_alterado', `Responsável: ${(current || '')} → ${data.responsavel} — ${(this.flatData[itemId] && this.flatData[itemId].title) || ''}`); } catch (_) {}
+                    try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) { }
+                    try { if (typeof window.appendTimelineEvent === 'function') window.appendTimelineEvent('responsavel_alterado', `Responsável: ${(current || '')} → ${data.responsavel} — ${(this.flatData[itemId] && this.flatData[itemId].title) || ''}`); } catch (_) { }
                 } else {
                     if (typeof this.showToast === 'function') this.showToast(data.error || 'Erro ao atualizar responsável', 'error'); else alert(data.error || 'Erro ao atualizar responsável');
                 }
@@ -830,7 +838,7 @@ class ChecklistRenderer {
         };
         const m = new bootstrap.Modal(modal);
         m.show();
-        setTimeout(()=>input.focus(),100);
+        setTimeout(() => input.focus(), 100);
     }
 
     openPrevModal(itemId) {
@@ -868,7 +876,7 @@ class ChecklistRenderer {
         const input = modal.querySelector('#prev-edit-input');
         const origView = modal.querySelector('#prev-orig-view');
         if (origView) origView.value = this.formatDate(this.flatData[itemId]?.previsao_original) || '';
-        input.value = current ? String(current).slice(0,10) : (this.flatData[itemId]?.previsao_original ? String(this.flatData[itemId].previsao_original).slice(0,10) : '');
+        input.value = current ? String(current).slice(0, 10) : (this.flatData[itemId]?.previsao_original ? String(this.flatData[itemId].previsao_original).slice(0, 10) : '');
         if (window.flatpickr) {
             if (input._flatpickr) input._flatpickr.destroy();
             window.flatpickr(input, { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y' });
@@ -903,8 +911,8 @@ class ChecklistRenderer {
                     saveBtn.disabled = false;
                     saveBtn.innerHTML = originalText;
                     if (typeof this.showToast === 'function') this.showToast('Prazo atualizado', 'success');
-                    try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) {}
-                    try { if (typeof window.appendTimelineEvent === 'function') window.appendTimelineEvent('prazo_alterado', `Nova previsão: ${data.nova_previsao} — ${(this.flatData[itemId] && this.flatData[itemId].title) || ''}`); } catch (_) {}
+                    try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) { }
+                    try { if (typeof window.appendTimelineEvent === 'function') window.appendTimelineEvent('prazo_alterado', `Nova previsão: ${data.nova_previsao} — ${(this.flatData[itemId] && this.flatData[itemId].title) || ''}`); } catch (_) { }
                 } else {
                     this.flatData[itemId].nova_previsao = prevOld;
                     this.updateItemUI(itemId);
@@ -922,7 +930,7 @@ class ChecklistRenderer {
         };
         const m = new bootstrap.Modal(modal);
         m.show();
-        setTimeout(()=>input.focus(),100);
+        setTimeout(() => input.focus(), 100);
     }
 
     getTagClass(tag) {
@@ -997,8 +1005,8 @@ class ChecklistRenderer {
                     saveBtn.disabled = false;
                     saveBtn.innerHTML = originalText;
                     if (typeof this.showToast === 'function') this.showToast('Tag atualizada', 'success');
-                    try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) {}
-                    try { if (typeof window.appendTimelineEvent === 'function') window.appendTimelineEvent('tag_alterada', `Tag: ${(prev||'')} → ${novo} — ${(this.flatData[itemId] && this.flatData[itemId].title) || ''}`); } catch (_) {}
+                    try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) { }
+                    try { if (typeof window.appendTimelineEvent === 'function') window.appendTimelineEvent('tag_alterada', `Tag: ${(prev || '')} → ${novo} — ${(this.flatData[itemId] && this.flatData[itemId].title) || ''}`); } catch (_) { }
                 } else {
                     this.flatData[itemId].tag = prev;
                     this.updateItemUI(itemId);
@@ -1017,28 +1025,29 @@ class ChecklistRenderer {
         const m = new bootstrap.Modal(modal);
         m.show();
     }
-    
+
     renderCommentsHistory(itemId, comentarios, emailResponsavel) {
         const historyContainer = this.container.querySelector(`#comments-history-${itemId}`);
         if (!historyContainer) return;
-        
+
         if (!comentarios || comentarios.length === 0) {
             historyContainer.innerHTML = '<div class="text-muted small fst-italic py-2">Nenhum comentário ainda.</div>';
             return;
         }
-        
+
         const html = comentarios.map(c => {
             const dataFormatada = c.data_criacao ? new Date(c.data_criacao).toLocaleString('pt-BR') : '';
             const visibilidadeClass = c.visibilidade === 'interno' ? 'bg-secondary' : 'bg-info text-dark';
             const isExterno = c.visibilidade === 'externo';
             const temEmailResponsavel = emailResponsavel && emailResponsavel.trim() !== '';
-            
+
             return `
                 <div class="comment-item border rounded p-2 mb-2 bg-white" data-comment-id="${c.id}">
                     <div class="d-flex justify-content-between align-items-start mb-1">
                         <div class="d-flex align-items-center gap-2">
                             <strong class="small"><i class="bi bi-person-fill me-1"></i>${this.escapeHtml(c.usuario_nome || c.usuario_cs)}</strong>
                             <span class="badge rounded-pill small ${visibilidadeClass}">${c.visibilidade}</span>
+                            ${c.noshow ? '<span class="badge rounded-pill small bg-warning text-dark"><i class="bi bi-calendar-x"></i> No show</span>' : ''}
                         </div>
                         <small class="text-muted">${dataFormatada}</small>
                     </div>
@@ -1061,7 +1070,7 @@ class ChecklistRenderer {
                 </div>
             `;
         }).join('');
-        
+
         historyContainer.innerHTML = `
             <label class="form-label small text-muted mb-2">Histórico de Comentários</label>
             <div class="comments-list" style="max-height: 250px; overflow-y: auto;">
@@ -1069,20 +1078,22 @@ class ChecklistRenderer {
             </div>
         `;
     }
-    
+
     async saveComment(itemId) {
         const textarea = this.container.querySelector(`#comment-input-${itemId}`);
         const visibilitySelect = this.container.querySelector(`#comment-visibility-${itemId}`);
+        const noshowCheckbox = this.container.querySelector(`#comment-noshow-${itemId}`);
         if (!textarea) return;
-        
+
         const texto = textarea.value.trim();
         const visibilidade = visibilitySelect ? visibilitySelect.value : 'interno';
-        
+        const noshow = noshowCheckbox ? noshowCheckbox.checked : false;
+
         if (!texto) {
             if (typeof this.showToast === 'function') this.showToast('O texto do comentário é obrigatório', 'warning'); else alert('O texto do comentário é obrigatório');
             return;
         }
-        
+
         try {
             const response = await fetch(`/api/checklist/comment/${itemId}`, {
                 method: 'POST',
@@ -1090,15 +1101,16 @@ class ChecklistRenderer {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.csrfToken
                 },
-                body: JSON.stringify({ texto, visibilidade })
+                body: JSON.stringify({ texto, visibilidade, noshow })
             });
-            
+
             const data = await response.json();
-            
+
             if (data.ok) {
                 textarea.value = '';
                 if (visibilitySelect) visibilitySelect.value = 'interno';
-                
+                if (noshowCheckbox) noshowCheckbox.checked = false;
+
                 const commentButton = this.container.querySelector(`.btn-comment-toggle[data-item-id="${itemId}"]`);
                 if (commentButton) {
                     const icon = commentButton.querySelector('i');
@@ -1109,11 +1121,11 @@ class ChecklistRenderer {
                         }
                     }
                 }
-                
+
                 await this.loadComments(itemId);
-                try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) {}
-                try { if (typeof window.appendTimelineEvent === 'function') window.appendTimelineEvent('novo_comentario', `Comentário criado — ${(this.flatData[itemId] && this.flatData[itemId].title) || ''}`); } catch (_) {}
-                
+                try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) { }
+                try { if (typeof window.appendTimelineEvent === 'function') window.appendTimelineEvent('novo_comentario', `Comentário criado — ${(this.flatData[itemId] && this.flatData[itemId].title) || ''}`); } catch (_) { }
+
             } else {
                 throw new Error(data.error || 'Erro ao salvar comentário');
             }
@@ -1121,13 +1133,13 @@ class ChecklistRenderer {
             if (typeof this.showToast === 'function') this.showToast(`Erro: ${error.message}`, 'error'); else alert(`Erro: ${error.message}`);
         }
     }
-    
+
     async sendCommentEmail(comentarioId) {
         const proceed = window.confirmWithModal ? await window.confirmWithModal('Deseja enviar este comentário por e-mail ao responsável?') : confirm('Deseja enviar este comentário por e-mail ao responsável?');
         if (!proceed) {
             return;
         }
-        
+
         try {
             const response = await fetch(`/api/checklist/comment/${comentarioId}/email`, {
                 method: 'POST',
@@ -1136,9 +1148,9 @@ class ChecklistRenderer {
                     'X-CSRFToken': this.csrfToken
                 }
             });
-            
+
             const data = await response.json();
-            
+
             if (data.ok) {
                 if (typeof this.showToast === 'function') this.showToast('Email enviado com sucesso!', 'success'); else alert('Email enviado com sucesso!');
             } else {
@@ -1148,13 +1160,13 @@ class ChecklistRenderer {
             if (typeof this.showToast === 'function') this.showToast(`Erro: ${error.message}`, 'error'); else alert(`Erro: ${error.message}`);
         }
     }
-    
+
     async deleteComment(comentarioId, itemId) {
         const proceedDel = window.confirmWithModal ? await window.confirmWithModal('Deseja excluir este comentário?') : confirm('Deseja excluir este comentário?');
         if (!proceedDel) {
             return;
         }
-        
+
         try {
             const response = await fetch(`/api/checklist/comment/${comentarioId}`, {
                 method: 'DELETE',
@@ -1163,13 +1175,13 @@ class ChecklistRenderer {
                     'X-CSRFToken': this.csrfToken
                 }
             });
-            
+
             const data = await response.json();
-            
+
             if (data.ok) {
                 await this.loadComments(itemId);
-                try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) {}
-                try { if (typeof window.appendTimelineEvent === 'function') window.appendTimelineEvent('comentario_excluido', `Comentário excluído — ${(this.flatData[itemId] && this.flatData[itemId].title) || ''}`); } catch (_) {}
+                try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) { }
+                try { if (typeof window.appendTimelineEvent === 'function') window.appendTimelineEvent('comentario_excluido', `Comentário excluído — ${(this.flatData[itemId] && this.flatData[itemId].title) || ''}`); } catch (_) { }
             } else {
                 throw new Error(data.error || 'Erro ao excluir comentário');
             }
@@ -1185,16 +1197,16 @@ class ChecklistRenderer {
         } else {
             confirmed = confirm('Tem certeza que deseja excluir esta tarefa e todos os seus subitens? Esta ação não pode ser desfeita.');
         }
-        
+
         if (!confirmed) return;
-        
+
         // Mostrar loading ou desabilitar botão?
         const itemEl = this.container.querySelector(`.checklist-item[data-item-id="${itemId}"]`);
         if (itemEl) {
             itemEl.style.opacity = '0.5';
             itemEl.style.pointerEvents = 'none';
         }
-        
+
         try {
             const response = await fetch(`/api/checklist/delete/${itemId}`, {
                 method: 'POST',
@@ -1203,24 +1215,24 @@ class ChecklistRenderer {
                     'X-CSRFToken': this.csrfToken
                 }
             });
-            
+
             const data = await response.json();
-            
+
             if (data.ok) {
                 // Remover o item da DOM
                 if (itemEl) {
                     itemEl.remove();
                 }
-                
+
                 // Remover do flatData
                 if (this.flatData[itemId]) {
                     const parentId = this.flatData[itemId].parentId;
                     delete this.flatData[itemId];
-                    
+
                     // Atualizar lista de filhos do pai
                     if (parentId && this.flatData[parentId]) {
                         this.flatData[parentId].childrenIds = this.flatData[parentId].childrenIds.filter(id => id !== itemId);
-                        
+
                         // Se o pai ficou sem filhos, atualizar UI do pai (remover ícone de expandir)
                         if (this.flatData[parentId].childrenIds.length === 0) {
                             const parentEl = this.container.querySelector(`.checklist-item[data-item-id="${parentId}"]`);
@@ -1230,24 +1242,24 @@ class ChecklistRenderer {
                                 // Mas vamos tentar atualizar manualmente primeiro
                                 const expandBtn = parentEl.querySelector('.btn-expand');
                                 if (expandBtn) expandBtn.remove(); // Remove botão expandir
-                                
+
                                 const childrenContainer = parentEl.querySelector('.checklist-item-children');
                                 if (childrenContainer) childrenContainer.remove();
                             }
                         }
                     }
                 }
-                
+
                 // Atualizar progresso
                 if (data.progress !== undefined) {
                     this.updateProgressDisplay(data.progress);
                 } else {
                     this.updateProgressFromLocalData();
                 }
-                
-                try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) {}
-                try { if (typeof window.appendTimelineEvent === 'function') window.appendTimelineEvent('tarefa_excluida', `Tarefa excluída — ${(this.flatData[itemId] && this.flatData[itemId].title) || ''}`); } catch (_) {}
-                
+
+                try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) { }
+                try { if (typeof window.appendTimelineEvent === 'function') window.appendTimelineEvent('tarefa_excluida', `Tarefa excluída — ${(this.flatData[itemId] && this.flatData[itemId].title) || ''}`); } catch (_) { }
+
             } else {
                 throw new Error(data.error || 'Erro ao excluir tarefa');
             }
@@ -1260,49 +1272,49 @@ class ChecklistRenderer {
         }
     }
 
-    showToast(message, type='info', duration=3000) {
+    showToast(message, type = 'info', duration = 3000) {
         if (window.showToast) {
             window.showToast(message, type, duration);
         } else {
             alert(message);
         }
     }
-    
+
     cancelComment(itemId) {
         const textarea = this.container.querySelector(`#comment-input-${itemId}`);
         if (textarea && this.flatData[itemId]) {
             textarea.value = this.flatData[itemId].comment || '';
         }
-        
+
         const commentsSection = this.container.querySelector(`#comments-${itemId}`);
         if (commentsSection && window.bootstrap && bootstrap.Collapse) {
             const bsCollapse = bootstrap.Collapse.getInstance(commentsSection);
             if (bsCollapse) bsCollapse.hide();
         }
     }
-    
+
     async reloadChecklist() {
         try {
             const response = await fetch(`/api/checklist/tree?implantacao_id=${this.implantacaoId}&format=nested`);
             const data = await response.json();
-            
+
             if (data.ok && data.items) {
                 const expandedIds = Array.from(this.expandedItems);
-                
+
                 this.data = data.items;
-                
+
                 this.flatData = {};
                 this.buildFlatData(this.data);
-                
+
                 this.render();
-                
+
                 expandedIds.forEach(id => this.expandedItems.add(id));
                 this.updateExpandedState();
             }
         } catch (error) {
         }
     }
-    
+
     /**
      * Atualiza progresso global - usa dados locais para resposta imediata
      * @param {boolean} fetchFromServer - Se true, busca do servidor (mais lento mas preciso)
@@ -1310,17 +1322,17 @@ class ChecklistRenderer {
     async updateGlobalProgress(fetchFromServer = false) {
         // Primeiro, atualiza imediatamente com dados locais
         this.updateProgressFromLocalData();
-        
+
         // Se solicitado, busca do servidor para garantir precisão
         if (fetchFromServer) {
             try {
                 const response = await fetch(`/api/checklist/tree?implantacao_id=${this.implantacaoId}&format=flat`);
                 const data = await response.json();
-                
+
                 if (data.ok && data.global_progress !== undefined) {
                     const progress = Math.round(data.global_progress);
                     this.updateProgressDisplay(progress);
-                    
+
                     if (data.items) {
                         data.items.forEach(item => {
                             if (item.progress_label) {
@@ -1328,7 +1340,7 @@ class ChecklistRenderer {
                                 if (progressBadge) {
                                     progressBadge.textContent = item.progress_label;
                                 }
-                                
+
                                 // Atualizar barra de progresso do item
                                 const progressBarItem = this.container.querySelector(`#progress-bar-${item.id}`);
                                 if (progressBarItem && item.progress) {
@@ -1344,7 +1356,7 @@ class ChecklistRenderer {
             }
         }
     }
-    
+
     escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;
