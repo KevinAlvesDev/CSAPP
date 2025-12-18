@@ -43,6 +43,12 @@ def init_db():
                         ) THEN
                             ALTER TABLE checklist_items ADD COLUMN nova_previsao TIMESTAMP NULL;
                         END IF;
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns 
+                            WHERE table_name='perfil_usuario' AND column_name='ultimo_check_externo'
+                        ) THEN
+                            ALTER TABLE perfil_usuario ADD COLUMN ultimo_check_externo TIMESTAMP NULL;
+                        END IF;
                     END
                     $$;
                 """)
@@ -60,6 +66,7 @@ def init_db():
         elif db_type == 'sqlite':
              # Criar TODAS as tabelas diretamente (sem depender de script externo)
              _criar_tabelas_basicas_sqlite(cursor)
+             _migrar_colunas_perfil_usuario(cursor)
 
              # Migrar colunas faltantes na tabela implantacoes
              _migrar_colunas_implantacoes(cursor)
@@ -140,6 +147,7 @@ def _criar_tabelas_basicas_sqlite(cursor):
             foto_url TEXT,
             cargo TEXT,
             perfil_acesso TEXT,
+            ultimo_check_externo DATETIME,
             FOREIGN KEY (usuario) REFERENCES usuarios(usuario)
         )
     """)
@@ -429,6 +437,17 @@ def _criar_tabela_responsavel_history(cursor, db_type):
                 )
                 """
             )
+    except Exception:
+        pass
+
+
+def _migrar_colunas_perfil_usuario(cursor):
+    """Adiciona colunas faltantes na tabela perfil_usuario."""
+    try:
+        cursor.execute("PRAGMA table_info(perfil_usuario)")
+        colunas_existentes = [row[1] for row in cursor.fetchall()]
+        if 'ultimo_check_externo' not in colunas_existentes:
+            cursor.execute("ALTER TABLE perfil_usuario ADD COLUMN ultimo_check_externo DATETIME")
     except Exception:
         pass
 

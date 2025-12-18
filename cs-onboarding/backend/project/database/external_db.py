@@ -64,15 +64,15 @@ def get_external_engine():
             return None
 
         try:
-            # Timeout configurável via env var
-            timeout = int(os.environ.get('EXTERNAL_DB_TIMEOUT', 30))
+            # Timeout reduzido para 10s para falhar mais rápido e entrar no retry/grace period
+            timeout = int(os.environ.get('EXTERNAL_DB_TIMEOUT', 10))
             
             connect_args = {
                 'connect_timeout': timeout,
                 'keepalives': 1,
-                'keepalives_idle': 30,
-                'keepalives_interval': 10,
-                'keepalives_count': 5
+                'keepalives_idle': 15,    # Reduzido para detectar queda mais rápido
+                'keepalives_interval': 5,
+                'keepalives_count': 3
             }
             
             if external_db_url.lower().startswith('postgresql'):

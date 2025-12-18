@@ -2,6 +2,7 @@ from sqlite3 import IntegrityError as Sqlite3IntegrityError
 import secrets
 from werkzeug.security import generate_password_hash
 from psycopg2 import IntegrityError as Psycopg2IntegrityError
+from datetime import datetime
 from flask import current_app
 
 from ..config.logging_config import auth_logger
@@ -61,6 +62,24 @@ def find_cs_user_external_service(email):
         return None
     from ..database.external_db import find_cs_user_by_email
     return find_cs_user_by_email(email)
+
+def marcar_sucesso_check_externo_service(email):
+    """Atualiza o timestamp do último check externo bem-sucedido."""
+    try:
+        execute_db(
+            "UPDATE perfil_usuario SET ultimo_check_externo = %s WHERE usuario = %s",
+            (datetime.now(), email)
+        )
+    except Exception as e:
+        auth_logger.warning(f"Falha ao atualizar timestamp de check externo para {email}: {e}")
+
+def buscar_ultimo_check_externo_service(email):
+    """Retorna o timestamp do último check externo bem-sucedido."""
+    try:
+        row = query_db("SELECT ultimo_check_externo FROM perfil_usuario WHERE usuario = %s", (email,), one=True)
+        return row.get('ultimo_check_externo') if row else None
+    except Exception:
+        return None
 
 
 def atualizar_dados_perfil_service(usuario_email, nome, cargo, foto_url):

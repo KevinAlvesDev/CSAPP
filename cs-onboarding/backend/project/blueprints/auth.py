@@ -13,7 +13,9 @@ from ..domain.auth_service import (
     sync_user_profile_service,
     get_user_profile_service,
     update_user_role_service,
-    find_cs_user_external_service
+    find_cs_user_external_service,
+    marcar_sucesso_check_externo_service,
+    buscar_ultimo_check_externo_service
 )
 
 auth_bp = Blueprint('auth', __name__)
@@ -386,14 +388,43 @@ def google_callback():
                     return redirect(url_for('auth.login'))
                 auth_logger.info(f"External auth check passed for {email} (CS: {cs_user.get('nome')})")
                 user_name_final = cs_user.get('nome')
+                # Registrar sucesso para permitir Grace Period futuro
+                marcar_sucesso_check_externo_service(email)
             except Exception as e:
                 auth_logger.error(f'External DB check failed during login: {e}', exc_info=True)
                 error_msg = str(e).lower()
-                if 'timeout' in error_msg or 'connection' in error_msg:
-                    flash('Erro de conexão com o banco de dados externo. Verifique sua rede ou contate o suporte.', 'error')
+                
+                # --- GRACE PERIOD FALLBACK (Resiliência Extra) ---
+                if any(x in error_msg for x in ['timeout', 'connection', 'engine', 'can\'t reconnect']):
+                    ultimo_check = buscar_ultimo_check_externo_service(email)
+                    
+                    if ultimo_check:
+                        from datetime import datetime, timedelta
+                        # Converter para datetime se for string (SQLite fallback)
+                        if isinstance(ultimo_check, str):
+                            from dateutil import parser
+                            ultimo_check = parser.parse(ultimo_check)
+                            
+                        # Se validou nos últimos 7 dias, permite login (Robusto)
+                        if datetime.now() - ultimo_check < timedelta(days=7):
+                            auth_logger.warning(f"Usando Grace Period para {email}. Último check bem sucedido: {ultimo_check}")
+                            flash('Aviso: Falha na conexão com o banco legado OAMD. Acesso permitido via cache de segurança.', 'warning')
+                            perfil_local = get_user_profile_service(email)
+                            user_name_final = perfil_local.get('nome') if perfil_local else user_info.get('name', email)
+                        else:
+                            flash('Erro de conexão com o banco legado e seu cache de segurança expirou (7 dias). Verifique sua VPN/Rede.', 'error')
+                            return redirect(url_for('auth.login'))
+                    elif email == ADMIN_EMAIL:
+                        # BYPASS CRÍTICO PARA O DESENVOLVEDOR (KEVIN)
+                        auth_logger.warning(f"CRITICAL BYPASS: Conexão OAMD falhou, permitindo login para ADMIN: {email}")
+                        flash('Aviso: Banco externo inacessível. Login de administrador permitido por contingência.', 'warning')
+                        user_name_final = user_info.get('name', email)
+                    else:
+                        flash('Erro de conexão com o banco de dados externo. Verifique sua rede ou contate o suporte.', 'error')
+                        return redirect(url_for('auth.login'))
                 else:
                     flash('Erro ao validar credenciais externas. Tente novamente.', 'error')
-                return redirect(url_for('auth.login'))
+                    return redirect(url_for('auth.login'))
         else:
             # Sem banco externo configurado, aceitar por domínio do Google
             auth_logger.info(f"External DB not configured. Accepting Google domain for {email}")
