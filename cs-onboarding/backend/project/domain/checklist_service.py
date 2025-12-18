@@ -60,11 +60,13 @@ def toggle_item_status(item_id, new_status, usuario_email=None):
 
     # Valores normalizados para atualização
     status_str = 'Concluída' if new_status else 'Pendente'
-    completed_val = 1 if new_status else 0
     data_conclusao = datetime.now() if new_status else None
     now = datetime.now()
 
     with db_transaction_with_lock() as (conn, cursor, db_type):
+        # Determinar valor de completed baseado no tipo do banco
+        completed_val = new_status if db_type == 'postgres' else (1 if new_status else 0)
+        
         # 1. Verificar existência e pegar dados básicos
         check_query = "SELECT id, implantacao_id, title, status FROM checklist_items WHERE id = %s"
         if db_type == 'sqlite':
@@ -209,7 +211,7 @@ def toggle_item_status(item_id, new_status, usuario_email=None):
 
              should_be_complete = (total > 0 and total == completed_count)
              new_anc_status_str = 'Concluída' if should_be_complete else 'Pendente'
-             new_anc_completed = 1 if should_be_complete else 0
+             new_anc_completed = should_be_complete if db_type == 'postgres' else (1 if should_be_complete else 0)
 
              # Verificar estado atual do ancestral
              get_ancestor_query = "SELECT status FROM checklist_items WHERE id = %s"
