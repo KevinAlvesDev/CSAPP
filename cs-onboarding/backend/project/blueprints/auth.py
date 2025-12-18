@@ -374,70 +374,11 @@ def google_callback():
             flash('Acesso restrito a contas @pactosolucoes.com.br', 'error')
             return redirect(url_for('auth.login'))
 
-        # --- VALIDAÇÃO EXTERNA (OAMD) ---
-        external_db_configured = bool(current_app.config.get('EXTERNAL_DB_URL'))
-        if external_db_configured:
-            try:
-                cs_user = find_cs_user_external_service(email)
-                if not cs_user:
-                    auth_logger.warning(f'Login blocked: User not found in External CS DB: {email}')
-                    flash('Acesso negado. Usuário não identificado na base de Customer Success (OAMD). Por favor, entre em contato com o suporte ou verifique se seu cadastro no OAMD está ativo e correto.', 'error')
-                    return redirect(url_for('auth.login'))
-                if not cs_user.get('ativo'):
-                    auth_logger.warning(f'Login blocked: Inactive user in External CS DB: {email}')
-                    flash('Acesso negado. Seu cadastro de CS está inativo.', 'error')
-                    return redirect(url_for('auth.login'))
-                auth_logger.info(f"External auth check passed for {email} (CS: {cs_user.get('nome')})")
-                user_name_final = cs_user.get('nome')
-                # Registrar sucesso para permitir Grace Period futuro
-                marcar_sucesso_check_externo_service(email)
-            except Exception as e:
-                auth_logger.error(f'External DB check failed during login: {e}', exc_info=True)
-                # --- BYPASS DE SEGURANÇA (ADMIN) ---
-                # Se for o KEVIN (Admin), logamos NA MARRA independente do erro do banco
-                email_clean = (email or "").strip().lower()
-                admin_clean = (ADMIN_EMAIL or "kevinpereira@pactosolucoes.com.br").strip().lower()
-                
-                if email_clean == admin_clean or email_clean == "kevinpereira@pactosolucoes.com.br":
-                    auth_logger.warning(f"FORCING ADMIN LOGIN for {email} due to error: {e}")
-                    flash('Logado via modo de contingência de administrador.', 'warning')
-                    user_name_final = user_info.get('name', email)
-                    # Sincroniza localmente e entra logo
-                    sync_user_profile_service(email, user_name_final, user_info.get('sub'))
-                    session['user'] = user_info
-                    session.permanent = True
-                    return redirect(url_for('dashboard.index'))
-                
-                # Para outros usuários, verificamos o Grace Period (Cache de Segurança)
-                elif any(x in error_msg for x in ['timeout', 'connection', 'engine', 'can\'t reconnect', 'ssl', 'dh key', 'não existe', 'database', 'autenticação']):
-                    ultimo_check = buscar_ultimo_check_externo_service(email)
-                    
-                    if ultimo_check:
-                        from datetime import datetime, timedelta
-                        # Converter para datetime se for string (SQLite fallback)
-                        if isinstance(ultimo_check, str):
-                            from dateutil import parser
-                            ultimo_check = parser.parse(ultimo_check)
-                            
-                        # Se validou nos últimos 7 dias, permite login (Robusto)
-                        if datetime.now() - ultimo_check < timedelta(days=7):
-                            auth_logger.warning(f"Usando Grace Period para {email}. Último check bem sucedido: {ultimo_check}")
-                            flash('Aviso: Falha na conexão com o banco legado OAMD. Acesso permitido via cache de segurança.', 'warning')
-                            perfil_local = get_user_profile_service(email)
-                            user_name_final = perfil_local.get('nome') if perfil_local else user_info.get('name', email)
-                        else:
-                            flash('Erro de conexão com o banco legado e seu cache de segurança expirou (7 dias). Verifique sua VPN/Rede.', 'error')
-                            return redirect(url_for('auth.login'))
-                    else:
-                        flash('Erro de conexão com o banco de dados externo. Verifique sua rede ou contate o suporte.', 'error')
-                        return redirect(url_for('auth.login'))
-                else:
-                    flash('Erro ao validar credenciais externas. Tente novamente.', 'error')
-                    return redirect(url_for('auth.login'))
-        else:
-            # Sem banco externo configurado, aceitar por domínio do Google
-            auth_logger.info(f"External DB not configured. Accepting Google domain for {email}")
-            user_name_final = user_info.get('name', email)
+        # --- LOGIN SIMPLIFICADO ---
+        # Validação apenas por domínio Google (@pactosolucoes.com.br)
+        # O banco externo OAMD não é mais obrigatório para login
+        auth_logger.info(f"Login aprovado para {email} (domínio válido)")
+        user_name_final = user_info.get('name', email)
         # -------------------------------------
 
         # Sincronizar usuário
