@@ -129,7 +129,7 @@ def get_external_engine():
                         user=db_parsed.username,
                         password=db_parsed.password,
                         database=db_parsed.path.lstrip('/'),
-                        sock=s
+                        socket=s
                     )
                 
                 engine = create_engine(
