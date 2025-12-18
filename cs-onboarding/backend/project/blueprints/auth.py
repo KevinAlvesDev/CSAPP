@@ -345,6 +345,7 @@ def google_callback():
     - Inicia a sessão do usuário.
     """
     from ..core.extensions import oauth
+    from ..constants import ADMIN_EMAIL
 
     auth_logger.info("Recebido callback do Google")
 
