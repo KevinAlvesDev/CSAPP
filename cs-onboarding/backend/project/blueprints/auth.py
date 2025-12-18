@@ -386,9 +386,10 @@ def google_callback():
         try:
             from ..constants import ADMIN_EMAIL, PERFIL_ADMIN
             if (email or '').strip().lower() == (ADMIN_EMAIL or '').strip().lower():
+                auth_logger.info(f"Forcing admin role for {email}")
                 update_user_role_service(email, PERFIL_ADMIN)
-        except Exception:
-            pass
+        except Exception as admin_err:
+            auth_logger.error(f"Failed to set admin role: {admin_err}")
 
         # Configurar sessão (compatível com a estrutura existente que espera session['user'])
         session['user'] = user_info
