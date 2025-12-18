@@ -11,6 +11,7 @@ except ImportError:
     socks = None
 try:
     import pg8000
+    import pg8000.dbapi
 except ImportError:
     pg8000 = None
 
@@ -124,13 +125,23 @@ def get_external_engine():
                     db_port = db_parsed.port or 5432
                     s.connect((db_host, db_port))
                     
-                    # Retornar conexão pg8000
-                    return pg8000.connect(
-                        user=db_parsed.username,
-                        password=db_parsed.password,
-                        database=db_parsed.path.lstrip('/'),
-                        socket=s
-                    )
+                    # Retornar conexão pg8000 usando a classe Connection diretamente
+                    # Algumas versões de pg8000.connect não expõem o parâmetro 'sock'
+                    if hasattr(pg8000, 'dbapi'):
+                        return pg8000.dbapi.Connection(
+                            user=db_parsed.username,
+                            password=db_parsed.password,
+                            database=db_parsed.path.lstrip('/'),
+                            sock=s
+                        )
+                    else:
+                        # Fallback para versões mais antigas ou estruturas diferentes
+                        return pg8000.connect(
+                            user=db_parsed.username,
+                            password=db_parsed.password,
+                            database=db_parsed.path.lstrip('/'),
+                            sock=s
+                        )
                 
                 engine = create_engine(
                     "postgresql+pg8000://",
