@@ -837,6 +837,29 @@
             window.fpInicioProd = ensureInstance('#modal-data_inicio_producao');
             window.fpFinalImpl = ensureInstance('#modal-data_final_implantacao');
         })();
+
+        // Controlar botão "Abrir Tela de Apoio"
+        (function initTelaApoioButton() {
+            const inputTelaApoio = document.querySelector('#modal-tela_apoio_link');
+            const btnAbrirTelaApoio = document.querySelector('#btn-abrir-tela-apoio');
+
+            if (!inputTelaApoio || !btnAbrirTelaApoio) return;
+
+            const updateButton = function () {
+                const url = (inputTelaApoio.value || '').trim();
+                if (url && url.startsWith('http')) {
+                    btnAbrirTelaApoio.href = url;
+                    btnAbrirTelaApoio.style.display = '';
+                } else {
+                    btnAbrirTelaApoio.href = '#';
+                    btnAbrirTelaApoio.style.display = 'none';
+                }
+            };
+
+            inputTelaApoio.addEventListener('input', updateButton);
+            inputTelaApoio.addEventListener('change', updateButton);
+            updateButton(); // Inicializar
+        })();
     });
 
 })();
