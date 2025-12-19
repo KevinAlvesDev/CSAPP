@@ -1391,7 +1391,7 @@ def consultar_dados_oamd(impl_id=None, user_email=None, id_favorecido_direto=Non
     
     # Construir persistibles (dados que podem ser salvos na tabela implantacoes)
     persistibles = {
-        'id_favorecido': empresa.get('ef_codigo') or empresa.get('codigo'),
+        'id_favorecido': empresa.get('codigofinanceiro') or id_favorecido,
         'chave_oamd': mapped.get('chave_oamd'),
         'cnpj': mapped.get('cnpj'),
         'data_cadastro': mapped.get('data_cadastro'),
