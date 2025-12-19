@@ -748,9 +748,9 @@
                             if (el) el.value = toBr(iso);
                         }
                     };
-                    setFp(window.fpInicioEfetivo, 'inicio_implantacao', '#modal-inicio_efetivo');
-                    setFp(window.fpFinalImpl, 'final_implantacao', '#modal-data_final_implantacao');
-                    setFp(window.fpInicioProd, 'inicio_producao', '#modal-data_inicio_producao');
+                    setFp(window.fpInicioEfetivo, 'data_inicio_efetivo', '#modal-inicio_efetivo');
+                    setFp(window.fpFinalImpl, 'data_final_implantacao', '#modal-data_final_implantacao');
+                    setFp(window.fpInicioProd, 'data_inicio_producao', '#modal-data_inicio_producao');
                     const forceSet = (sel, val) => {
                         const el = modalForm.querySelector(sel);
                         if (!el) return;
