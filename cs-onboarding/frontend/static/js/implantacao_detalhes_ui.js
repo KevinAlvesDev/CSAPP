@@ -396,7 +396,7 @@
               appendTo: modalCancelar.querySelector('.modal-body'),
               static: true,
               onChange: function (selectedDates, dateStr, instance) {
-                 // Force update if needed
+                // Force update if needed
               }
             }));
             if (btnCal) {
@@ -1574,30 +1574,9 @@
           });
         }
 
-        const valorAtribuidoInput = document.getElementById('modal-valor_atribuido');
-        if (valorAtribuidoInput) {
-          // Remove existing listeners to avoid duplication if any (though 'blur' at 1316 was simple)
-          // Initialize IMask for Currency
-          if (window.IMask) {
-            // Remove previous instance if stored? Not storing currently.
-            // Just init.
-            IMask(valorAtribuidoInput, {
-              mask: 'R$ num',
-              blocks: {
-                num: {
-                  mask: Number,
-                  thousandsSeparator: '.',
-                  radix: ',',
-                  scale: 2,
-                  signed: false,
-                  normalizeZeros: true,
-                  padFractionalZeros: true,
-                  min: 0
-                }
-              }
-            });
-          }
-        }
+        // Campo valor_atribuido (Nível de Receita) não usa máscara de moeda
+        // pois o valor vindo do OAMD é texto descritivo (ex: "Platina (MRR do grupo entre R$1.000,00 a R$ 1.999,99)")
+
 
         const cnpjInput = document.getElementById('modal-cnpj');
         if (cnpjInput && window.IMask) {
