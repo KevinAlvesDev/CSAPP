@@ -224,8 +224,7 @@ def consultar_empresa_oamd(id_favorecido=None, infra_req=None):
             mapped['informacao_infra'] = mapped.get('informacao_infra') or ''
             mapped['tela_apoio_link'] = mapped.get('tela_apoio_link') or ''
             
-        mapped['cnpj'] = empresa.get('cnpj')
-        mapped['data_cadastro'] = find_value(['datacadastro', 'data_cadastro', 'created_at', 'dt_cadastro'])
+        # cnpj e data_cadastro já foram mapeados acima, remover duplicata
 
         try:
             # Tenta serializar para garantir que não há objetos complexos
