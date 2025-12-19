@@ -7,9 +7,9 @@ from datetime import datetime
 
 from flask import Blueprint, current_app, flash, g, jsonify, redirect, render_template, request, url_for
 
-from ..blueprints.auth import admin_required
+from ..blueprints.auth import permission_required
 from ..config.logging_config import management_logger, security_logger
-from ..constants import ADMIN_EMAIL, PERFIL_ADMIN
+from ..constants import ADMIN_EMAIL, PERFIL_ADMIN, PERFIS_GERENCIAR_USUARIOS
 from ..core.extensions import r2_client
 from ..db import db_connection, execute_db
 from ..domain.management_service import (
@@ -25,9 +25,9 @@ management_bp = Blueprint('management', __name__, url_prefix='/management')
 
 
 @management_bp.before_request
-@admin_required
+@permission_required(PERFIS_GERENCIAR_USUARIOS)
 def before_request():
-    """Protege todas as rotas de gerenciamento."""
+    """Protege todas as rotas de gerenciamento. Acesso: Admin, Gerente, Coordenador."""
     pass
 
 

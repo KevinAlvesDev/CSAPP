@@ -211,6 +211,14 @@ def consultar_empresa_oamd(id_favorecido=None, infra_req=None):
                         digits_pref = str(ci)
                 except Exception:
                     pass
+            
+            # Fallback: usar codigofinanceiro (ID Favorecido) se não encontrou nada
+            if not digits_pref and id_favorecido:
+                try:
+                    digits_pref = str(int(id_favorecido))
+                except Exception:
+                    pass
+            
             if digits_pref and len(digits_pref) >= 2:
                 infra_code = f"ZW_{digits_pref}"
                 mapped['informacao_infra'] = infra_code

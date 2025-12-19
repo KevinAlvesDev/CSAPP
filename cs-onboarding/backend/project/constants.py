@@ -31,11 +31,23 @@ PERFIL_IMPLANTADOR = "Implantador"
 
 PERFIS_ACESSO_LIST = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR, PERFIL_IMPLANTADOR]
 
+# Perfis com permissão de gestão completa (criar, editar, excluir implantações)
 PERFIS_COM_GESTAO = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
 
+# Perfis que podem criar implantações e módulos
 PERFIS_COM_CRIACAO = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
 
+# Perfis com acesso a Analytics (removido - Analytics não existe mais)
 PERFIS_COM_ANALYTICS = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
+
+# Perfis que veem todas as implantações no dashboard
+PERFIS_VER_TODAS_IMPLANTACOES = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
+
+# Perfis com acesso à página de Usuários (manage-users)
+PERFIS_GERENCIAR_USUARIOS = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
+
+# Perfis com acesso ao Plano de Sucesso
+PERFIS_PLANO_SUCESSO = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
 
 NIVEIS_RECEITA = [
     "Prata (MRR abaixo de R$699,99)",

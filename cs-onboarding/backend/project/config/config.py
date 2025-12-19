@@ -120,3 +120,12 @@ class Config:
         EMAIL_CONFIGURADO = False
 
     CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', '')
+
+    # Perfis de acesso disponíveis no sistema
+    # Importar aqui para evitar dependência circular
+    try:
+        from ..constants import PERFIS_ACESSO_LIST
+        PERFIS_DE_ACESSO = PERFIS_ACESSO_LIST
+    except ImportError:
+        # Fallback caso a importação falhe
+        PERFIS_DE_ACESSO = ['Administrador', 'Gerente', 'Coordenador', 'Implantador']

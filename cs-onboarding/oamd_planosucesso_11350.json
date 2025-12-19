@@ -1,0 +1,18 @@
+{
+  "codigo": "11350",
+  "criadoem": "2025-05-13 14:36:18.032000",
+  "dataconclusao": "2025-05-25 22:49:35.928000",
+  "datafinal": "2025-05-10 00:00:00",
+  "descricao": "Plano de sucesso que será utilizado com novas empresas que utilizarão as soluções do Sistema Pacto.",
+  "duracao": "21",
+  "nome": "[OB] ONBOARDING PRO",
+  "nomeresponsavel": "WEDNA",
+  "nomeresponsavelpacto": "None",
+  "porcentagemconcluida": "100.0",
+  "urlcontatoresponsavelpacto": "None",
+  "empresafinanceiro_codigo": "11227",
+  "responsavelpacto_codigo": "51",
+  "datainicio": "2025-04-10 00:00:00",
+  "modeloplanopucesso_codigo": "None",
+  "logplanosucesso": "{\"nomeEmpresa\":\"ACAD. FK UNID. CONDADO - PB\",\"codEmpresaFinanceiro\":11227,\"codFinanceiro\":10518,\"chave\":\"1e6c94adf10b3c117fdfeadc34956edd\"}"
+}

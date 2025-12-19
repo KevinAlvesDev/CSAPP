@@ -131,7 +131,7 @@
                     </div>
 
                     <div class="row">
-                        <div class="col-md-3 mb-3"><label for="modal-valor_atribuido" class="form-label">Nível de
+                        <div class="col-md-6 mb-3"><label for="modal-valor_atribuido" class="form-label">Nível de
                                 Receita (MRR)</label><input type="text" class="form-control" id="modal-valor_atribuido"
                                 name="valor_atribuido" placeholder="Ex: Gold, Platina, etc"
                                 value="{{ implantacao.valor_atribuido or '' }}"></div>
@@ -139,7 +139,7 @@
                                 Favorecido</label><input type="text" class="form-control" id="modal-id_favorecido"
                                 name="id_favorecido" pattern="[0-9]*" title="Digite apenas números"
                                 value="{{ implantacao.id_favorecido or '' }}"></div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-3 mb-3">
                             <label for="modal-cnpj" class="form-label">CNPJ</label>
                             <input type="text" class="form-control cnpj-mask" id="modal-cnpj" name="cnpj"
                                 placeholder="XX.XXX.XXX/XXXX-XX" value="{{ implantacao.cnpj or '' }}">

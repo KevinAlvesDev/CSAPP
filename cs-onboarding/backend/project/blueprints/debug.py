@@ -4,6 +4,7 @@ REMOVER APÓS USO!
 """
 from flask import Blueprint, jsonify
 from ..blueprints.auth import login_required
+from ..constants import PERFIL_ADMIN
 from ..database.external_db import query_external_db
 from flask import g
 
@@ -16,9 +17,9 @@ def schema_oamd():
     Endpoint temporário para investigar schema do banco OAMD
     ATENÇÃO: Remover após uso!
     """
-    # Verificar se é admin
+    # Verificar se é admin (CORRIGIDO: usar PERFIL_ADMIN)
     perfil_acesso = g.perfil.get('perfil_acesso') if g.get('perfil') else None
-    if perfil_acesso != 'admin':
+    if perfil_acesso != PERFIL_ADMIN:
         return jsonify({'ok': False, 'error': 'Acesso negado'}), 403
     
     try:
@@ -78,12 +79,13 @@ def schema_oamd():
         # Para cada tabela relacionada, buscar campos
         impl_tables_details = {}
         for table in impl_tables[:5]:  # Limitar a 5 tabelas
-            cols = query_external_db(f"""
+            # CORRIGIDO: usar parametrização para evitar SQL injection
+            cols = query_external_db("""
                 SELECT column_name, data_type
                 FROM information_schema.columns 
-                WHERE table_name = '{table}'
+                WHERE table_name = %s
                 ORDER BY ordinal_position
-            """)
+            """, (table,))
             impl_tables_details[table] = [{'name': c['column_name'], 'type': c['data_type']} for c in cols] if cols else []
         
         result['implantation_tables_details'] = impl_tables_details

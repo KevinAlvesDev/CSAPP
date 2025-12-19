@@ -6,7 +6,7 @@ from datetime import datetime
 from flask import current_app
 
 from ..config.logging_config import auth_logger
-from ..constants import ADMIN_EMAIL, PERFIL_ADMIN
+from ..constants import ADMIN_EMAIL, PERFIL_ADMIN, PERFIL_IMPLANTADOR
 from ..db import execute_db, query_db
 
 def sync_user_profile_service(user_email, user_name, auth0_user_id):
@@ -15,10 +15,14 @@ def sync_user_profile_service(user_email, user_name, auth0_user_id):
         usuario_existente = query_db("SELECT usuario FROM usuarios WHERE usuario = %s", (user_email,), one=True)
         perfil_existente = query_db("SELECT nome FROM perfil_usuario WHERE usuario = %s", (user_email,), one=True)
 
-        perfil_acesso_final = None
+        # Definir perfil padrão
+        # ADMIN_EMAIL recebe PERFIL_ADMIN, todos os outros recebem PERFIL_IMPLANTADOR
         if user_email == ADMIN_EMAIL:
             perfil_acesso_final = PERFIL_ADMIN
             auth_logger.info(f'Admin user [service] {user_email} detected')
+        else:
+            perfil_acesso_final = PERFIL_IMPLANTADOR
+            auth_logger.info(f'New user [service] {user_email} will receive default role: {PERFIL_IMPLANTADOR}')
 
         if not usuario_existente:
             try:

@@ -44,21 +44,17 @@
         <li class="nav-item"><a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#modalPerfil"><i
               class="bi bi-person-circle me-2"></i><span class="nav-link-text"> Perfil</span></a></li>
 
-        <!-- TEMPORARIAMENTE DESATIVADO - EM MELHORIA -->
-        <!-- <li class="nav-item"><a
-            class="nav-link {% if request.endpoint and request.endpoint.startswith('agenda.') %}active{% endif %}"
-            href="{{ url_for('agenda.agenda_home') }}"><i class="bi bi-calendar-week me-2"></i><span
-              class="nav-link-text"> Agenda</span></a></li> -->
+        {# Acesso restrito: Coordenador, Gerente e Administrador #}
+        {% if g.perfil and g.perfil.perfil_acesso in g.PERFIS_COM_GESTAO %}
+        <li class="nav-item nav-item-divider">
+          <hr>
+        </li>
 
         <li class="nav-item"><a
             class="nav-link {% if request.endpoint and request.endpoint.startswith('planos.') %}active{% endif %}"
             href="{{ url_for('planos.listar_planos') }}"><i class="bi bi-diagram-3 me-2"></i><span
               class="nav-link-text"> Planos de Sucesso</span></a></li>
 
-        {% if g.perfil and g.perfil.perfil_acesso in g.PERFIS_COM_GESTAO %}
-        <li class="nav-item nav-item-divider">
-          <hr>
-        </li>
         <li class="nav-item"><a class="nav-link" href="#" data-bs-toggle="modal"
             data-bs-target="#modalGerenciarUsuarios"><i class="bi bi-people-fill me-2"></i><span class="nav-link-text">
               Usuários</span></a></li>

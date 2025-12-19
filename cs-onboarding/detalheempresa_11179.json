@@ -1,0 +1,19 @@
+{
+  "codigo": "9864",
+  "finalimplantacao": "2025-11-25",
+  "inicioimplantacao": "2025-09-19",
+  "semconexao": null,
+  "tipocliente": "Engajado",
+  "inicioproducao": "2025-10-27",
+  "condicaoespecial": null,
+  "nivelreceitamensal": "Gold (MRR do grupo entre R$700,00 a R$ 999,99)",
+  "renegociadoate": "1899-12-29",
+  "cluster": null,
+  "customersuccess_codigo": null,
+  "responsavelpacto_codigo": null,
+  "categoria": "Normal",
+  "estado": null,
+  "implantador_codigo": "71",
+  "nivelatendimento": "CB",
+  "statusimplantacao": "Concluído"
+}
