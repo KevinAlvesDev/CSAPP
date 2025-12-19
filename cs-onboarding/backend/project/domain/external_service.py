@@ -20,7 +20,7 @@ def consultar_empresa_oamd(id_favorecido=None, infra_req=None):
 
     # Tentar conexão direta primeiro
     try:
-        # Consulta melhorada: inclui codigo e prioriza busca por ele
+        # Consulta completa com JOINs para buscar TODOS os dados necessários
         query = """
             SELECT 
                 ef.codigo,
@@ -33,9 +33,35 @@ def consultar_empresa_oamd(id_favorecido=None, infra_req=None):
                 ef.datacadastro,
                 ef.chavezw,
                 ef.nomeempresazw,
-                ef.empresazw
+                ef.empresazw,
+                ef.grupofavorecido,
+                ef.tipogrupofavorecido,
+                ef.nicho,
+                ef.detalheempresa_codigo,
+                
+                de.inicioimplantacao,
+                de.finalimplantacao,
+                de.inicioproducao,
+                de.statusimplantacao,
+                de.nivelatendimento,
+                de.nivelreceitamensal,
+                de.tipocliente,
+                de.categoria,
+                de.condicaoespecial,
+                
+                ps.datainicio as plano_datainicio,
+                ps.datafinal as plano_datafinal,
+                ps.dataconclusao as plano_dataconclusao,
+                ps.duracao as plano_duracao,
+                ps.porcentagemconcluida as plano_porcentagem,
+                ps.nomeresponsavel as plano_responsavel,
+                ps.nome as plano_nome
+                
             FROM empresafinanceiro ef
+            LEFT JOIN detalheempresa de ON de.codigo = ef.detalheempresa_codigo
+            LEFT JOIN planosucesso ps ON ps.empresafinanceiro_codigo = ef.codigo
             WHERE {where_clause}
+            ORDER BY ps.criadoem DESC
             LIMIT 1
         """
         params = {}
@@ -124,23 +150,35 @@ def consultar_empresa_oamd(id_favorecido=None, infra_req=None):
             pass
 
         # Mapeamento de campos OAMD para campos do Frontend
+        # Agora usando dados diretos do JOIN com detalheempresa e planosucesso
         mapped = {}
 
-        # Função auxiliar para buscar chaves insensíveis a maiúsculas/minúsculas e variações
-        def find_value(keys_to_try):
-            for k in keys_to_try:
-                for emp_k in empresa.keys():
-                    if emp_k.lower().replace('_', '').replace(' ', '') == k.lower().replace('_', '').replace(' ', ''):
-                        return empresa[emp_k]
-            return None
-
-        mapped['data_inicio_producao'] = find_value(['iniciodeproducao', 'inicioproducao', 'inicio_producao', 'dt_inicio_producao', 'dataproducao'])
-        mapped['data_inicio_efetivo'] = find_value(['inicioimplantacao', 'inicio_implantacao', 'dt_inicio_implantacao', 'dataimplantacao'])
-        mapped['data_final_implantacao'] = find_value(['finalimplantacao', 'final_implantacao', 'dt_final_implantacao', 'fimimplantacao', 'datafinalimplantacao'])
-        mapped['status_implantacao'] = find_value(['status', 'statusimplantacao', 'situacao'])
-        mapped['nivel_atendimento'] = find_value(['nivelatendimento', 'nivel_atendimento', 'classificacao'])
-        mapped['nivel_receita'] = find_value(['nivelreceita', 'nivel_receita', 'faixareceita', 'mrr', 'nivelreceitamensal'])
+        # Dados de detalheempresa (datas e níveis)
+        mapped['data_inicio_producao'] = empresa.get('inicioproducao')
+        mapped['data_inicio_efetivo'] = empresa.get('inicioimplantacao')
+        mapped['data_final_implantacao'] = empresa.get('finalimplantacao')
+        mapped['status_implantacao'] = empresa.get('statusimplantacao') or empresa.get('grupofavorecido')
+        mapped['nivel_atendimento'] = empresa.get('nivelatendimento')
+        mapped['nivel_receita'] = empresa.get('nivelreceitamensal')
+        mapped['tipo_cliente'] = empresa.get('tipocliente')
+        mapped['categoria'] = empresa.get('categoria')
+        mapped['condicao_especial'] = empresa.get('condicaoespecial')
+        
+        # Dados do plano de sucesso (se existir)
+        mapped['plano_data_inicio'] = empresa.get('plano_datainicio')
+        mapped['plano_data_final'] = empresa.get('plano_datafinal')
+        mapped['plano_data_conclusao'] = empresa.get('plano_dataconclusao')
+        mapped['plano_duracao'] = empresa.get('plano_duracao')
+        mapped['plano_progresso'] = empresa.get('plano_porcentagem')
+        mapped['plano_responsavel'] = empresa.get('plano_responsavel')
+        mapped['plano_nome'] = empresa.get('plano_nome')
+        
+        # Dados básicos
         mapped['chave_oamd'] = empresa.get('chavezw')
+        mapped['cnpj'] = empresa.get('cnpj')
+        mapped['data_cadastro'] = empresa.get('datacadastro')
+        mapped['grupo_favorecido'] = empresa.get('grupofavorecido')
+        mapped['nicho'] = empresa.get('nicho')
         
         try:
             infra_code = None

@@ -1,0 +1,99 @@
+"""
+Endpoint temporário de debug para investigar schema OAMD
+REMOVER APÓS USO!
+"""
+from flask import Blueprint, jsonify
+from ..blueprints.auth import login_required
+from ..database.external_db import query_external_db
+from flask import g
+
+debug_bp = Blueprint('debug', __name__, url_prefix='/api/debug')
+
+@debug_bp.route('/schema-oamd', methods=['GET'])
+@login_required
+def schema_oamd():
+    """
+    Endpoint temporário para investigar schema do banco OAMD
+    ATENÇÃO: Remover após uso!
+    """
+    # Verificar se é admin
+    perfil_acesso = g.perfil.get('perfil_acesso') if g.get('perfil') else None
+    if perfil_acesso != 'admin':
+        return jsonify({'ok': False, 'error': 'Acesso negado'}), 403
+    
+    try:
+        result = {}
+        
+        # 1. Listar tabelas
+        tables = query_external_db("""
+            SELECT table_name 
+            FROM information_schema.tables 
+            WHERE table_schema = 'public'
+            AND table_type = 'BASE TABLE'
+            ORDER BY table_name
+        """)
+        result['tables'] = [t['table_name'] for t in tables] if tables else []
+        
+        # 2. Campos da tabela empresafinanceiro
+        columns = query_external_db("""
+            SELECT 
+                column_name, 
+                data_type,
+                character_maximum_length,
+                is_nullable
+            FROM information_schema.columns 
+            WHERE table_name = 'empresafinanceiro'
+            ORDER BY ordinal_position
+        """)
+        result['empresafinanceiro_columns'] = columns if columns else []
+        
+        # 3. Campos relacionados a datas/implantação
+        date_fields = [c for c in columns if any(x in c['column_name'].lower() for x in 
+                      ['data', 'inicio', 'final', 'producao', 'implantacao', 'cadastro', 
+                       'status', 'nivel', 'receita', 'atendimento'])] if columns else []
+        result['date_related_fields'] = date_fields
+        
+        # 4. Teste com ID Favorecido 11350
+        test_result = query_external_db("""
+            SELECT *
+            FROM empresafinanceiro
+            WHERE codigofinanceiro = %s
+        """, (11350,))
+        
+        if test_result:
+            empresa = test_result[0]
+            result['test_id_11350'] = {
+                'found': True,
+                'nome': empresa.get('nomefantasia'),
+                'all_fields': {k: str(v) for k, v in empresa.items()}
+            }
+        else:
+            result['test_id_11350'] = {'found': False}
+        
+        # 5. Tabelas relacionadas a implantação
+        impl_tables = [t for t in result['tables'] if any(x in t.lower() for x in 
+                      ['implant', 'cliente', 'contrato', 'atendimento', 'producao'])]
+        result['implantation_related_tables'] = impl_tables
+        
+        # Para cada tabela relacionada, buscar campos
+        impl_tables_details = {}
+        for table in impl_tables[:5]:  # Limitar a 5 tabelas
+            cols = query_external_db(f"""
+                SELECT column_name, data_type
+                FROM information_schema.columns 
+                WHERE table_name = '{table}'
+                ORDER BY ordinal_position
+            """)
+            impl_tables_details[table] = [{'name': c['column_name'], 'type': c['data_type']} for c in cols] if cols else []
+        
+        result['implantation_tables_details'] = impl_tables_details
+        
+        return jsonify({'ok': True, 'data': result})
+        
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'ok': False, 
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
