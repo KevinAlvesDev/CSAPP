@@ -75,7 +75,8 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
                      WHEN 'parada' THEN 3
                      WHEN 'futura' THEN 4
                      WHEN 'finalizada' THEN 5
-                     ELSE 6
+                     WHEN 'cancelada' THEN 6
+                     ELSE 7
                  END, i.data_criacao DESC
     """
 
@@ -109,12 +110,12 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
 
     dashboard_data = {
         'andamento': [], 'futuras': [], 'sem_previsao': [],
-        'finalizadas': [], 'paradas': [], 'novas': []
+        'finalizadas': [], 'paradas': [], 'novas': [], 'canceladas': []
     }
     metrics = {
         'impl_andamento_total': 0,
         'implantacoes_futuras': 0, 'implantacoes_sem_previsao': 0, 'impl_finalizadas': 0, 'impl_paradas': 0,
-        'impl_novas': 0,
+        'impl_novas': 0, 'impl_canceladas': 0,
         'modulos_total': 0,
         'total_valor_andamento': 0.0,
         'total_valor_futuras': 0.0,
@@ -122,6 +123,7 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
         'total_valor_finalizadas': 0.0,
         'total_valor_paradas': 0.0,
         'total_valor_novas': 0.0,
+        'total_valor_canceladas': 0.0,
         'total_valor_modulos': 0.0,
     }
 
@@ -192,6 +194,10 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
             dashboard_data['finalizadas'].append(impl)
             metrics['impl_finalizadas'] += 1
             metrics['total_valor_finalizadas'] += impl_valor
+        elif status == 'cancelada':
+            dashboard_data['canceladas'].append(impl)
+            metrics['impl_canceladas'] += 1
+            metrics['total_valor_canceladas'] += impl_valor
         elif status == 'parada':
             try:
                 dias_parada = calculate_days_parada(impl_id)

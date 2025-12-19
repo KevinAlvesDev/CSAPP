@@ -16,10 +16,19 @@
 
     <div class="d-flex align-items-center mb-3">
       <div class="me-3 text-center">
-        <img src="{{ g.perfil.foto_url or url_for('static', filename='imagens/teladelogin.jpg') }}" 
+        {% if g.perfil.foto_url %}
+        <img id="profile-photo-preview" 
+             src="{{ g.perfil.foto_url }}" 
              alt="Foto de Perfil" 
              class="rounded-circle border" 
              style="width: 96px; height: 96px; object-fit: cover;">
+        {% else %}
+        <div id="profile-photo-preview" 
+             class="rounded-circle border d-flex align-items-center justify-content-center bg-light" 
+             style="width: 96px; height: 96px;">
+          <i class="bi bi-person-circle" style="font-size: 64px; color: #6c757d;"></i>
+        </div>
+        {% endif %}
         <label for="foto" class="btn btn-sm btn-outline-primary mt-2 w-100">Trocar Foto</label>
         <input type="file" name="foto" id="foto" class="d-none" accept="image/png, image/jpeg" {% if not r2_configurado %}disabled{% endif %}>
         {% if not r2_configurado %}
@@ -58,43 +67,10 @@
       </div>
     </div>
 
-    <div class="d-flex justify-content-between align-items-center border-top pt-3 mt-3">
-      <a class="btn btn-link p-0" data-bs-toggle="collapse" href="#perfilChangePassword" role="button" aria-expanded="false" aria-controls="perfilChangePassword">
-        <i class="fas fa-key me-1"></i> {{ t('change_title') }}
-      </a>
+    <div class="d-flex justify-content-end border-top pt-3 mt-3">
       <button type="submit" class="btn btn-primary">
         <i class="fas fa-save me-2"></i>Salvar Perfil
       </button>
     </div>
   </form>
-
-  <div class="collapse mt-3" id="perfilChangePassword">
-    <div class="card border-0" style="background-color: var(--container-bg);">
-      <div class="card-body p-0">
-        <p class="text-muted small mb-3">{{ t('change_subtitle') }}</p>
-        <form action="{{ url_for('auth.change_password') }}" method="POST">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <div class="row g-3">
-            <div class="col-md-4">
-              <label for="current_password" class="form-label">{{ t('current_password_label') }}</label>
-              <input type="password" id="current_password" name="current_password" class="form-control" required>
-            </div>
-            <div class="col-md-4">
-              <label for="new_password" class="form-label">{{ t('new_password_label') }}</label>
-              <input type="password" id="new_password" name="new_password" class="form-control" required>
-            </div>
-            <div class="col-md-4">
-              <label for="new_password_confirm" class="form-label">{{ t('confirm_new_password_label') }}</label>
-              <input type="password" id="new_password_confirm" name="new_password_confirm" class="form-control" required>
-            </div>
-          </div>
-          <div class="text-end pt-3">
-            <button type="submit" class="btn btn-warning">
-              <i class="fas fa-save me-2"></i>{{ t('change_button') }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
 </div>

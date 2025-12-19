@@ -372,7 +372,15 @@
               appendTo: modalParar.querySelector('.modal-body'),
               static: true,
               onChange: function (selectedDates, dateStr, instance) {
-                // Force update if needed, though altInput usually handles it
+                // Garantir que o valor seja preenchido no input original
+                if (selectedDates.length > 0) {
+                  dataParadaInput.value = dateStr;
+                  // Remover mensagem de erro se existir
+                  const errorMsg = document.getElementById('data_parada_error');
+                  if (errorMsg) {
+                    errorMsg.classList.add('d-none');
+                  }
+                }
               }
             }));
             if (btnCal) {
@@ -396,7 +404,15 @@
               appendTo: modalCancelar.querySelector('.modal-body'),
               static: true,
               onChange: function (selectedDates, dateStr, instance) {
-                // Force update if needed
+                // Garantir que o valor seja preenchido no input original
+                if (selectedDates.length > 0) {
+                  dataCancelamentoInput.value = dateStr;
+                  // Remover mensagem de erro se existir
+                  const errorMsg = document.getElementById('data_cancelamento_error');
+                  if (errorMsg) {
+                    errorMsg.classList.add('d-none');
+                  }
+                }
               }
             }));
             if (btnCal) {

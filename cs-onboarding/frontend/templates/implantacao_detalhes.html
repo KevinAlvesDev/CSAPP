@@ -641,12 +641,8 @@
                     <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
                     <div class="mb-3">
                         <label for="data_parada" class="form-label fw-bold">Data da Parada *</label>
-                        <div class="input-group">
-                            <input type="text" class="form-control" id="data_parada" name="data_parada" required
-                                placeholder="DD/MM/AAAA" readonly>
-                            <button class="btn btn-outline-secondary" type="button" id="btn_cal_data_parada"><i
-                                    class="bi bi-calendar3"></i></button>
-                        </div>
+                        <input type="text" class="form-control" id="data_parada" name="data_parada" required
+                            placeholder="DD/MM/AAAA">
                         <small class="text-danger d-none" id="data_parada_error">A data da parada é obrigatória.</small>
                     </div>
                     <div class="mb-3">
@@ -841,12 +837,8 @@
                     <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
                     <div class="mb-3">
                         <label class="form-label fw-bold">Data do Cancelamento *</label>
-                        <div class="input-group">
-                            <input type="text" class="form-control" id="data_cancelamento" name="data_cancelamento"
-                                required placeholder="DD/MM/AAAA" readonly>
-                            <button class="btn btn-outline-secondary" type="button" id="btn_cal_data_cancelamento"><i
-                                    class="bi bi-calendar3"></i></button>
-                        </div>
+                        <input type="text" class="form-control" id="data_cancelamento" name="data_cancelamento" required
+                            placeholder="DD/MM/AAAA">
                         <small class="text-danger d-none" id="data_cancelamento_error">A data do cancelamento é
                             obrigatória.</small>
                     </div>

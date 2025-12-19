@@ -61,6 +61,8 @@
             monetary_value=metrics.total_valor_sem_previsao) }}
             {{ card_stats('Concluídas', m.impl_finalizadas | default(0), 'success',
             monetary_value=metrics.total_valor_finalizadas) }}
+            {{ card_stats('Canceladas', m.impl_canceladas | default(0), 'secondary',
+            monetary_value=metrics.total_valor_canceladas) }}
             {{ card_stats('Módulos', m.modulos_total | default(0), 'dark', monetary_value=metrics.total_valor_modulos)
             }}
         </div>
@@ -97,6 +99,9 @@
                     <li class="nav-item" role="presentation"><button class="nav-link" id="finalizadas-tab"
                             data-bs-toggle="tab" data-bs-target="#finalizadas" type="button"
                             role="tab">Concluídas</button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" id="canceladas-tab"
+                            data-bs-toggle="tab" data-bs-target="#canceladas" type="button"
+                            role="tab">Canceladas</button></li>
                     <li class="nav-item" role="presentation"><button class="nav-link" id="modulos-tab"
                             data-bs-toggle="tab" data-bs-target="#modulos" type="button" role="tab">Módulos</button>
                     </li>
@@ -796,6 +801,49 @@
                             </table>
                         </div> {% endif %}
                     </div>
+
+                    <div class="tab-pane fade" id="canceladas" role="tabpanel" aria-labelledby="canceladas-tab">
+                        <h2 class="h5 mb-3">Implantações Canceladas</h2>
+                        {% if not implantacoes_canceladas %} <div class="alert alert-info text-center" role="alert">
+                            Nenhuma implantação cancelada. </div>
+                        {% else %} <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Empresa</th>
+                                        <th scope="col">Implantador</th>
+                                        <th scope="col">Tipo</th>
+                                        <th scope="col">Motivo</th>
+                                        <th scope="col">Data Cancelamento</th>
+                                        <th scope="col">Valor (Total: R$ {{
+                                            "%.2f"|format(metrics.total_valor_canceladas|float) if
+                                            metrics.total_valor_canceladas else '0.00' }})</th>
+                                        <th scope="col">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for impl in implantacoes_canceladas %} <tr>
+                                        <td class="text-truncate" style="max-width: 200px;">{{ impl.nome_empresa }}</td>
+                                        <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or
+                                            impl.usuario_cs }}</td>
+                                        <td><span class="badge bg-info text-dark">{{ 'Módulo' if impl.tipo == 'modulo'
+                                                else 'Completa' }}</span></td>
+                                        <td class="text-truncate" style="max-width: 200px;">{{ impl.motivo_cancelamento
+                                            |
+                                            default('N/A') }}</td>
+                                        <td>{{ impl.data_cancelamento_fmt if impl.data_cancelamento_fmt else 'N/A' }}
+                                        </td>
+                                        <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_atribuido|float) if
+                                            impl.valor_atribuido else 'N/A' }}</td>
+                                        <td class="text-nowrap">
+                                            <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}"
+                                                class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver
+                                                Detalhes</a>
+                                        </td>
+                                    </tr> {% endfor %} </tbody>
+                            </table>
+                        </div> {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
@@ -873,9 +921,11 @@
                     <div class="mb-3">
                         <label for="idFavorecidoModulo" class="form-label">ID Favorecido</label>
                         <div class="input-group">
-                            <input type="number" class="form-control" id="idFavorecidoModulo" name="id_favorecido" placeholder="Digite o ID Favorecido" min="1" required>
+                            <input type="number" class="form-control" id="idFavorecidoModulo" name="id_favorecido"
+                                placeholder="Digite o ID Favorecido" min="1" required>
                             <button class="btn btn-outline-primary" type="button" id="btnConsultarEmpresaModulo">
-                                <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                                <span class="spinner-border spinner-border-sm d-none" role="status"
+                                    aria-hidden="true"></span>
                                 Consultar
                             </button>
                         </div>

@@ -859,7 +859,39 @@
           const url = modalPerfil.dataset.url || '/profile/modal';
           fetch(url)
             .then(response => { if (!response.ok) { return response.text().then(text => { throw new Error(text || `Erro ${response.status} ao carregar perfil.`); }); } return response.text(); })
-            .then(html => { contentDiv.innerHTML = html; })
+            .then(html => { 
+              contentDiv.innerHTML = html; 
+              
+              // Adicionar preview de foto
+              const fotoInput = document.getElementById('foto');
+              if (fotoInput) {
+                fotoInput.addEventListener('change', function(e) {
+                  const file = e.target.files[0];
+                  if (file && file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                      const previewContainer = document.getElementById('profile-photo-preview');
+                      if (previewContainer) {
+                        // Se for uma div (placeholder), substituir por img
+                        if (previewContainer.tagName === 'DIV') {
+                          const img = document.createElement('img');
+                          img.id = 'profile-photo-preview';
+                          img.alt = 'Foto de Perfil';
+                          img.className = 'rounded-circle border';
+                          img.style.cssText = 'width: 96px; height: 96px; object-fit: cover;';
+                          img.src = event.target.result;
+                          previewContainer.parentNode.replaceChild(img, previewContainer);
+                        } else {
+                          // Se já for img, apenas atualizar o src
+                          previewContainer.src = event.target.result;
+                        }
+                      }
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                });
+              }
+            })
             .catch(error => { console.error('Erro ao carregar perfil:', error); contentDiv.innerHTML = `<div class="alert alert-danger">Falha ao carregar o perfil. Detalhes: ${error.message}</div>`; });
         };
         modalPerfil.addEventListener('shown.bs.modal', loadProfileContent);

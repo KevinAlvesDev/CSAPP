@@ -10,9 +10,11 @@ from ..db import execute_db, query_db
 
 
 def listar_usuarios_service():
-    """Retorna lista de todos os usuários com seus perfis."""
+    """Retorna lista de todos os usuários com seus perfis, ordenados alfabeticamente."""
     return query_db(
-        "SELECT usuario as usuario, nome, perfil_acesso FROM perfil_usuario ORDER BY nome"
+        """SELECT usuario as usuario, nome, perfil_acesso 
+           FROM perfil_usuario 
+           ORDER BY COALESCE(LOWER(nome), LOWER(usuario))"""
     ) or []
 
 

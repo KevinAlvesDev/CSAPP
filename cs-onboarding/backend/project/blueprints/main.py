@@ -130,6 +130,7 @@ def dashboard():
             implantacoes_sem_previsao=dashboard_data.get('sem_previsao', []),
             implantacoes_finalizadas=dashboard_data.get('finalizadas', []),
             implantacoes_paradas=dashboard_data.get('paradas', []),
+            implantacoes_canceladas=dashboard_data.get('canceladas', []),
             cargos_responsavel=CARGOS_RESPONSAVEL,
             PERFIS_COM_CRIACAO=PERFIS_COM_CRIACAO,
             NIVEIS_RECEITA=NIVEIS_RECEITA,
@@ -159,7 +160,7 @@ def dashboard():
         return render_template('dashboard.html', user_info=user_info, metrics={},
                                implantacoes_andamento=[], implantacoes_novas=[],
                                implantacoes_futuras=[], implantacoes_sem_previsao=[], implantacoes_finalizadas=[],
-                               implantacoes_paradas=[],
+                               implantacoes_paradas=[], implantacoes_canceladas=[],
                                cargos_responsavel=CARGOS_RESPONSAVEL, error="Falha ao carregar dados.",
                                all_cs_users=[], PERFIS_COM_CRIACAO=PERFIS_COM_CRIACAO,
                                is_manager=is_manager_erro, current_cs_filter=current_cs_filter_erro)
