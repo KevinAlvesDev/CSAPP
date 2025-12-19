@@ -132,9 +132,9 @@
 
                     <div class="row">
                         <div class="col-md-3 mb-3"><label for="modal-valor_atribuido" class="form-label">Nível de
-                                Receita (MRR)</label><input type="text" class="form-control currency-mask"
-                                id="modal-valor_atribuido" name="valor_atribuido" placeholder="R$ 0,00"
-                                inputmode="decimal" value="{{ implantacao.valor_atribuido or '' }}"></div>
+                                Receita (MRR)</label><input type="text" class="form-control" id="modal-valor_atribuido"
+                                name="valor_atribuido" placeholder="Ex: Gold, Platina, etc"
+                                value="{{ implantacao.valor_atribuido or '' }}"></div>
                         <div class="col-md-3 mb-3"><label for="modal-id_favorecido" class="form-label">ID
                                 Favorecido</label><input type="text" class="form-control" id="modal-id_favorecido"
                                 name="id_favorecido" pattern="[0-9]*" title="Digite apenas números"
