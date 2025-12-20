@@ -1480,7 +1480,10 @@ def aplicar_dados_oamd(impl_id, user_email, updates_dict):
     if not impl:
         raise ValueError('Implantação não encontrada')
         
-    allowed_fields = ['id_favorecido', 'chave_oamd', 'informacao_infra', 'tela_apoio_link']
+    allowed_fields = [
+        'id_favorecido', 'chave_oamd', 'informacao_infra', 'tela_apoio_link',
+        'status_implantacao_oamd', 'nivel_atendimento', 'cnpj', 'data_cadastro', 'valor_atribuido'
+    ]
     filtered_updates = {k: v for k, v in updates_dict.items() if k in allowed_fields}
     
     if not filtered_updates:
