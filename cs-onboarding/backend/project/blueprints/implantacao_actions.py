@@ -541,9 +541,6 @@ def atualizar_detalhes_empresa():
             'contatos': get_form_value('contatos'),
         }
         
-        # Debug log para rastrear campos problemáticos
-        app_logger.info(f"[DEBUG] Campos sendo salvos - Status: {campos.get('status_implantacao_oamd')}, Valor: {campos.get('valor_atribuido')}, Chave: {campos.get('chave_oamd')}, Tela: {campos.get('tela_apoio_link')}")
-        
         
         # Chave OAMD pode ser: hash MD5, formato ZW_123, ou número puro
         # Não fazemos validação restritiva aqui, apenas limpeza básica

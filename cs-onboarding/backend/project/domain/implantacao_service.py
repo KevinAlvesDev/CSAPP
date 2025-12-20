@@ -1131,10 +1131,6 @@ def atualizar_detalhes_empresa_service(implantacao_id, usuario_cs_email, user_pe
 
     set_clauses = []
     values = []
-    
-    # Debug: log campos críticos antes do UPDATE
-    current_app.logger.info(f"[SERVICE DEBUG] Campos após filtro - Status: {campos.get('status_implantacao_oamd')}, Valor: {campos.get('valor_atribuido')}, Chave: {campos.get('chave_oamd')}, Tela: {campos.get('tela_apoio_link')}")
-    
     for k, v in campos.items():
         if k in allowed_fields:
             set_clauses.append(f"{k} = %s")
@@ -1144,14 +1140,7 @@ def atualizar_detalhes_empresa_service(implantacao_id, usuario_cs_email, user_pe
     values.append(implantacao_id)
     query = f"UPDATE implantacoes SET {', '.join(set_clauses)} WHERE id = %s"
     
-    # Debug: log SQL sendo executado
-    current_app.logger.info(f"[SQL DEBUG] Query: {query}")
-    current_app.logger.info(f"[SQL DEBUG] Values: {values}")
-    
     execute_db(query, tuple(values))
-    
-    # Debug: confirmar que o UPDATE foi executado
-    current_app.logger.info(f"[SQL DEBUG] UPDATE executado e commitado com sucesso para implantação {implantacao_id}")
     
     return True
 
