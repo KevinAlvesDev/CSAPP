@@ -499,7 +499,8 @@ def _migrar_colunas_implantacoes(cursor):
             'motivo_cancelamento': 'TEXT',
             'comprovante_cancelamento_url': 'TEXT',
             'status_implantacao_oamd': 'TEXT',
-            'nivel_atendimento': 'TEXT'
+            'nivel_atendimento': 'TEXT',
+            'data_cadastro': 'DATETIME'
         }
 
         colunas_adicionadas = 0
@@ -552,7 +553,8 @@ def ensure_implantacoes_status_constraint():
         # Migração de colunas críticas para Postgres (Safety check)
         check_cols = {
             'status_implantacao_oamd': 'VARCHAR(255)',
-            'nivel_atendimento': 'VARCHAR(255)'
+            'nivel_atendimento': 'VARCHAR(255)',
+            'data_cadastro': 'TIMESTAMP'
         }
         for col_name, col_type in check_cols.items():
             try:
