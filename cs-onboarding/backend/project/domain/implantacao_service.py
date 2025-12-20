@@ -576,6 +576,12 @@ def get_implantacao_details(impl_id, usuario_cs_email, user_perfil):
     if user_perfil is None:
         user_perfil = {}
 
+    # Force clear cache before fetching to ensure fresh data
+    try:
+        from ..config.cache_config import clear_implantacao_cache
+        clear_implantacao_cache(impl_id)
+    except Exception:
+        pass
 
     try:
         implantacao, is_manager = _get_implantacao_and_validate_access(impl_id, usuario_cs_email, user_perfil)
