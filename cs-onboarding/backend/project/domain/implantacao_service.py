@@ -1143,6 +1143,11 @@ def atualizar_detalhes_empresa_service(implantacao_id, usuario_cs_email, user_pe
         return False
     values.append(implantacao_id)
     query = f"UPDATE implantacoes SET {', '.join(set_clauses)} WHERE id = %s"
+    
+    # Debug: log SQL sendo executado
+    current_app.logger.info(f"[SQL DEBUG] Query: {query}")
+    current_app.logger.info(f"[SQL DEBUG] Values: {values}")
+    
     execute_db(query, tuple(values))
     return True
 
