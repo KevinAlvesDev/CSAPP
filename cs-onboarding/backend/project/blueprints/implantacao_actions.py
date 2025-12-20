@@ -532,7 +532,7 @@ def atualizar_detalhes_empresa():
             'wellhub': get_boolean_value('wellhub'),
             'totalpass': get_boolean_value('totalpass'),
             'cnpj': get_form_value('cnpj'),
-            'status_implantacao_oamd': get_form_value('status_implantacao'),
+            'status_implantacao_oamd': get_form_value('status_implantacao_oamd'),
             'nivel_atendimento': get_form_value('nivel_atendimento'),
             'valor_atribuido': valor_raw,
             'resp_estrategico_nome': get_form_value('resp_estrategico_nome'),

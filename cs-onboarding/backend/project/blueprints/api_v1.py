@@ -24,8 +24,10 @@ from ..domain.implantacao_service import (
     listar_implantacoes,
     obter_implantacao_basica,
     consultar_dados_oamd,
+    consultar_dados_oamd,
     aplicar_dados_oamd
 )
+from ..config.cache_config import clear_implantacao_cache
 from ..security.api_security import validate_api_origin
 
 api_v1_bp = Blueprint('api_v1', __name__, url_prefix='/api/v1')
@@ -176,6 +178,12 @@ def aplicar_oamd_implantacao(impl_id):
             # Tentar limpar para numero se possível, mas mantemos string por enquanto pois o campo é texto no HTML
         
         result = aplicar_dados_oamd(impl_id, user_email, updates)
+        
+        # Limpar cache para refletir mudanças no frontend imediatamente
+        try:
+            clear_implantacao_cache(impl_id)
+        except Exception as e:
+            api_logger.warning(f"Erro ao limpar cache após aplicar OAMD: {e}")
         
         return jsonify({
             'ok': True, 
