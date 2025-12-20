@@ -544,18 +544,18 @@ def atualizar_detalhes_empresa():
         # Debug log para rastrear campos problemáticos
         app_logger.info(f"[DEBUG] Campos sendo salvos - Status: {campos.get('status_implantacao_oamd')}, Valor: {campos.get('valor_atribuido')}, Chave: {campos.get('chave_oamd')}, Tela: {campos.get('tela_apoio_link')}")
         
+        
+        # Chave OAMD pode ser: hash MD5, formato ZW_123, ou número puro
+        # Não fazemos validação restritiva aqui, apenas limpeza básica
         try:
             co = campos.get('chave_oamd')
-            if co:
-                import re as _re
-                if _re.fullmatch(r"\d+", co):
-                    campos['chave_oamd'] = None
-                else:
-                    if _re.fullmatch(r"(?i)zw[_-]?\d+", co):
-                        campos['chave_oamd'] = None
+            if co and isinstance(co, str):
+                # Remove espaços em branco
+                campos['chave_oamd'] = co.strip() if co.strip() else None
         except Exception as e:
-            app_logger.warning(f"Erro ao validar chave OAMD: {e}")
+            app_logger.warning(f"Erro ao processar chave OAMD: {e}")
             pass
+
 
         # Prepare fields for service
         final_campos = {}

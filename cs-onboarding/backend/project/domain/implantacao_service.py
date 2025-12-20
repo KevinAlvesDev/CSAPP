@@ -1149,6 +1149,10 @@ def atualizar_detalhes_empresa_service(implantacao_id, usuario_cs_email, user_pe
     current_app.logger.info(f"[SQL DEBUG] Values: {values}")
     
     execute_db(query, tuple(values))
+    
+    # Debug: confirmar que o UPDATE foi executado
+    current_app.logger.info(f"[SQL DEBUG] UPDATE executado e commitado com sucesso para implantação {implantacao_id}")
+    
     return True
 
 
