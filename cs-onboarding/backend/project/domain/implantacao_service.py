@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import wraps
 
 from flask import current_app, g
@@ -1060,6 +1060,7 @@ def atualizar_detalhes_empresa_service(implantacao_id, usuario_cs_email, user_pe
         'data_inicio_producao',
         'data_final_implantacao',
         'data_inicio_efetivo',
+        'data_previsao_termino',
         'id_favorecido',
         'nivel_receita',
         'chave_oamd',
@@ -1093,6 +1094,34 @@ def atualizar_detalhes_empresa_service(implantacao_id, usuario_cs_email, user_pe
         'resp_estrategico_obs',
         'contatos',
     }
+    
+    # Recalcular previsão se data_inicio_efetivo mudou
+    if 'data_inicio_efetivo' in campos and campos['data_inicio_efetivo']:
+        try:
+            # Buscar info do plano atual
+            info_plano = query_db(
+                """
+                SELECT p.dias_duracao 
+                FROM implantacoes i 
+                JOIN planos_sucesso p ON i.plano_sucesso_id = p.id 
+                WHERE i.id = %s
+                """, 
+                (implantacao_id,), one=True
+            )
+            
+            if info_plano and info_plano.get('dias_duracao'):
+                dias = int(info_plano['dias_duracao'])
+                dt_str = str(campos['data_inicio_efetivo'])[:10]
+                dt_inicio = datetime.strptime(dt_str, '%Y-%m-%d')
+                nova_prev = dt_inicio + timedelta(days=dias)
+                
+                # Atualizar campo de previsão
+                campos['data_previsao_termino'] = nova_prev.strftime('%Y-%m-%d')
+                current_app.logger.info(f"Previsão recalculada para {campos['data_previsao_termino']} (Início: {dt_str}, Duração: {dias} dias)")
+        
+        except Exception as e:
+            current_app.logger.warning(f"Erro ao recalcular previsão de término: {e}")
+
     set_clauses = []
     values = []
     for k, v in campos.items():

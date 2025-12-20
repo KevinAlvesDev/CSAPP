@@ -457,12 +457,21 @@ def aplicar_plano_a_implantacao(implantacao_id: int, plano_id: int, usuario: str
     if dias_duracao:
         data_inicio = implantacao.get('data_inicio_efetivo') or implantacao.get('data_criacao')
         if data_inicio:
-            if isinstance(data_inicio, str):
-                try:
+            try:
+                if isinstance(data_inicio, str):
                     data_inicio = datetime.strptime(data_inicio[:10], '%Y-%m-%d')
-                except Exception:
-                    data_inicio = datetime.now()
-            data_previsao_termino = data_inicio + timedelta(days=int(dias_duracao))
+                elif isinstance(data_inicio, date) and not isinstance(data_inicio, datetime):
+                     data_inicio = datetime.combine(data_inicio, datetime.min.time())
+                
+                if isinstance(data_inicio, datetime):
+                    data_previsao_termino = data_inicio + timedelta(days=int(dias_duracao))
+                else: 
+                     # Should not happen if logic above covers types
+                     data_previsao_termino = datetime.now() + timedelta(days=int(dias_duracao))
+                     
+            except Exception as e:
+                current_app.logger.warning(f"Erro ao calcular previsão término (usando data atual): {e}")
+                data_previsao_termino = datetime.now() + timedelta(days=int(dias_duracao))
 
     with db_connection() as (conn, db_type):
         cursor = conn.cursor()
