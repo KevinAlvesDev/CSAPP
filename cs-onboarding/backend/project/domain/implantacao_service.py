@@ -1131,6 +1131,10 @@ def atualizar_detalhes_empresa_service(implantacao_id, usuario_cs_email, user_pe
 
     set_clauses = []
     values = []
+    
+    # Debug: log campos críticos antes do UPDATE
+    current_app.logger.info(f"[SERVICE DEBUG] Campos após filtro - Status: {campos.get('status_implantacao_oamd')}, Valor: {campos.get('valor_atribuido')}, Chave: {campos.get('chave_oamd')}, Tela: {campos.get('tela_apoio_link')}")
+    
     for k, v in campos.items():
         if k in allowed_fields:
             set_clauses.append(f"{k} = %s")

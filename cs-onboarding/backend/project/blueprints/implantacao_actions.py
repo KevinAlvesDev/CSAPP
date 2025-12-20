@@ -540,6 +540,10 @@ def atualizar_detalhes_empresa():
             'resp_estrategico_obs': get_form_value('resp_estrategico_obs'),
             'contatos': get_form_value('contatos'),
         }
+        
+        # Debug log para rastrear campos problemáticos
+        app_logger.info(f"[DEBUG] Campos sendo salvos - Status: {campos.get('status_implantacao_oamd')}, Valor: {campos.get('valor_atribuido')}, Chave: {campos.get('chave_oamd')}, Tela: {campos.get('tela_apoio_link')}")
+        
         try:
             co = campos.get('chave_oamd')
             if co:
