@@ -579,9 +579,12 @@ def atualizar_detalhes_empresa():
             pass
 
         flash('Detalhes da implantação atualizados com sucesso!', 'success')
+        
+        # Force cache clear - call twice to ensure it's cleared
         try:
+            clear_implantacao_cache(implantacao_id)
             clear_user_cache(usuario_cs_email)
-            # We don't have the impl object here anymore to check owner, but clearing by ID is safe
+            # Clear again to be absolutely sure
             clear_implantacao_cache(implantacao_id)
         except Exception as ex:
             app_logger.error(f"Erro ao limpar cache: {ex}")
