@@ -58,11 +58,9 @@
         <li class="nav-item"><a class="nav-link" href="#" data-bs-toggle="modal"
             data-bs-target="#modalGerenciarUsuarios"><i class="bi bi-people-fill me-2"></i><span class="nav-link-text">
               Usuários</span></a></li>
-        <!-- TEMPORARIAMENTE DESATIVADO - EM MELHORIA -->
-        <!-- <li class="nav-item"><a
+        <li class="nav-item"><a
           class="nav-link {% if request.endpoint == 'analytics.analytics_dashboard' %}active{% endif %}"
-          href="{{ url_for('analytics.analytics_dashboard') }}"><i class="bi bi-graph-up me-2"></i><span class="nav-link-text"> Gerencial</span></a></li> -->
-        <!-- TEMPORARIAMENTE DESATIVADO - EM MELHORIA -->
+          href="{{ url_for('analytics.analytics_dashboard') }}"><i class="bi bi-graph-up me-2"></i><span class="nav-link-text"> Gerencial</span></a></li>
         <!-- <li class="nav-item"><a
           class="nav-link {% if request.endpoint == 'analytics.cancelamentos_dashboard' %}active{% endif %}"
           href="{{ url_for('analytics.cancelamentos_dashboard') }}"><i class="bi bi-x-circle me-2"></i><span class="nav-link-text"> Cancelamentos</span></a></li> -->

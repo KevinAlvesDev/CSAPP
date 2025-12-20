@@ -37,7 +37,7 @@ PERFIS_COM_GESTAO = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
 # Perfis que podem criar implantações e módulos
 PERFIS_COM_CRIACAO = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
 
-# Perfis com acesso a Analytics (removido - Analytics não existe mais)
+# Perfis com acesso ao Dashboard Gerencial (Analytics)
 PERFIS_COM_ANALYTICS = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
 
 # Perfis que veem todas as implantações no dashboard
