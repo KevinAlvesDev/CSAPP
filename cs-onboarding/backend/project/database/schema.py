@@ -497,7 +497,9 @@ def _migrar_colunas_implantacoes(cursor):
             'motivo_parada': 'TEXT',
             'data_cancelamento': 'DATETIME',
             'motivo_cancelamento': 'TEXT',
-            'comprovante_cancelamento_url': 'TEXT'
+            'comprovante_cancelamento_url': 'TEXT',
+            'status_implantacao_oamd': 'TEXT',
+            'nivel_atendimento': 'TEXT'
         }
 
         colunas_adicionadas = 0
@@ -546,6 +548,19 @@ def ensure_implantacoes_status_constraint():
         if db_type != 'postgres':
             return
         cursor = conn.cursor()
+        
+        # Migração de colunas críticas para Postgres (Safety check)
+        check_cols = {
+            'status_implantacao_oamd': 'VARCHAR(255)',
+            'nivel_atendimento': 'VARCHAR(255)'
+        }
+        for col_name, col_type in check_cols.items():
+            try:
+                cursor.execute(f"ALTER TABLE implantacoes ADD COLUMN IF NOT EXISTS {col_name} {col_type}")
+            except Exception:
+                pass
+        conn.commit()
+
         try:
             cursor.execute("ALTER TABLE implantacoes DROP CONSTRAINT IF EXISTS implantacoes_status_check;")
         except Exception:
