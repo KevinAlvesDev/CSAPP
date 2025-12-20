@@ -109,6 +109,10 @@ def get_implantacao(impl_id):
         if not data:
             return jsonify({'ok': False, 'error': 'Implantação não encontrada'}), 404
 
+        # Debug: verificar se os campos estão sendo retornados
+        impl_data = data.get('implantacao', {})
+        api_logger.info(f"[API DEBUG] Retornando implantação {impl_id} - Status: {impl_data.get('status_implantacao_oamd')}, Valor: {impl_data.get('valor_atribuido')}, Chave: {impl_data.get('chave_oamd')}, Tela: {impl_data.get('tela_apoio_link')}")
+
         return jsonify({
             'ok': True,
             'data': data
