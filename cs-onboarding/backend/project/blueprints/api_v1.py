@@ -166,6 +166,14 @@ def aplicar_oamd_implantacao(impl_id):
         if derived.get('informacao_infra'): updates['informacao_infra'] = str(derived['informacao_infra'])
         if derived.get('tela_apoio_link'): updates['tela_apoio_link'] = str(derived['tela_apoio_link'])
         
+        # Campos adicionais OAMD para auto-save
+        if persist.get('status_implantacao'): updates['status_implantacao_oamd'] = str(persist['status_implantacao'])
+        if persist.get('nivel_atendimento'): updates['nivel_atendimento'] = str(persist['nivel_atendimento'])
+        if persist.get('cnpj'): updates['cnpj'] = str(persist['cnpj'])
+        if persist.get('nivel_receita_do_cliente'): 
+            updates['valor_atribuido'] = str(persist['nivel_receita_do_cliente'])
+            # Tentar limpar para numero se possível, mas mantemos string por enquanto pois o campo é texto no HTML
+        
         result = aplicar_dados_oamd(impl_id, user_email, updates)
         
         return jsonify({
