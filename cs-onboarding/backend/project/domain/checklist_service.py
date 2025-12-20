@@ -464,10 +464,15 @@ def update_item_responsavel(item_id, novo_responsavel, usuario_email=None):
         return {'ok': True, 'item_id': item_id, 'responsavel': novo_responsavel}
 
 
-def delete_checklist_item(item_id, usuario_email=None):
+def delete_checklist_item(item_id, usuario_email=None, is_manager=False):
     """
     Exclui um item do checklist e toda a sua hierarquia de descendentes.
     Recalcula o status do pai (se houver) e o progresso da implantação.
+    
+    Args:
+        item_id: ID do item a ser excluído
+        usuario_email: Email do usuário que está excluindo
+        is_manager: Se o usuário tem perfil de gestor (pode excluir itens de outros)
     """
     try:
         item_id = int(item_id)
@@ -498,6 +503,22 @@ def delete_checklist_item(item_id, usuario_email=None):
             parent_id = item['parent_id']
             implantacao_id = item['implantacao_id']
             item_title = item['title']
+
+            # 2. VERIFICAÇÃO DE PERMISSÃO: usuário deve ser dono da implantação ou manager
+            if not is_manager:
+                # Buscar dono da implantação
+                owner_query = "SELECT usuario_cs FROM implantacoes WHERE id = %s"
+                if db_type == 'sqlite':
+                    owner_query = owner_query.replace('%s', '?')
+                cursor.execute(owner_query, (implantacao_id,))
+                owner_row = cursor.fetchone()
+                
+                if owner_row:
+                    owner_email = owner_row[0] if not hasattr(owner_row, 'keys') else owner_row.get('usuario_cs')
+                    if owner_email != usuario_email:
+                        raise ValueError("Permissão negada. Apenas o responsável pela implantação ou gestores podem excluir itens.")
+                else:
+                    raise ValueError("Implantação não encontrada")
 
             # 2. Identificar todos os descendentes para exclusão (incluindo o próprio item)
             if db_type == 'postgres':

@@ -435,7 +435,8 @@ def atualizar_detalhes_empresa():
                     try:
                         datetime.strptime(s, "%Y-%m-%d")
                         return s
-                    except:
+                    except Exception as e:
+                        app_logger.debug(f"Falha no parse de data YYYY-MM-DD: {e}")
                         pass
 
                 if '/' in s:
@@ -450,7 +451,8 @@ def atualizar_detalhes_empresa():
                         try:
                             datetime.strptime(result, "%Y-%m-%d")
                             return result
-                        except:
+                        except Exception as e:
+                            app_logger.debug(f"Falha no parse de data DD/MM/YYYY: {e}")
                             return None
 
                 return None
@@ -547,7 +549,8 @@ def atualizar_detalhes_empresa():
                 else:
                     if _re.fullmatch(r"(?i)zw[_-]?\d+", co):
                         campos['chave_oamd'] = None
-        except Exception:
+        except Exception as e:
+            app_logger.warning(f"Erro ao validar chave OAMD: {e}")
             pass
 
         # Prepare fields for service
@@ -624,7 +627,8 @@ def remover_plano_implantacao():
         flash('Plano de sucesso removido com sucesso!', 'success')
         try:
             clear_implantacao_cache(implantacao_id)
-        except:
+        except Exception as e:
+            app_logger.warning(f"Erro ao limpar cache após remover plano: {e}")
             pass
 
     except ValueError as e:

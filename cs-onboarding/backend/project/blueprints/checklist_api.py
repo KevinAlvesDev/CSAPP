@@ -352,12 +352,14 @@ def delete_item(item_id):
     # O serviço `delete_checklist_item` que escrevi NÃO checa owner.
     # Vou arriscar e permitir por enquanto, ou chamar um serviço auxiliar `check_permission`.
     
-    # Melhor: O serviço retorna quem apagou e logs.
-    # Se eu quiser ser estrito, deveria ter passado `is_manager` para o serviço.
+    from ..constants import PERFIS_COM_GESTAO
     
+    # Check permissão gestor
+    is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
+
     try:
-        # TODO: Adicionar verificação de permissão estrita no serviço
-        result = delete_checklist_item(item_id, g.user_email)
+        # Serviço agora valida se é owner ou manager
+        result = delete_checklist_item(item_id, g.user_email, is_manager=is_manager)
         
         # Log adicional de compatibilidade removido pois serviço já loga.
         
