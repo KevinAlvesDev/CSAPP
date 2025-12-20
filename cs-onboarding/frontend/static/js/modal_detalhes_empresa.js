@@ -860,6 +860,20 @@
             inputTelaApoio.addEventListener('change', updateButton);
             updateButton(); // Inicializar
         })();
+
+        // Destroy TomSelect instances when modal closes to prevent "already initialized" errors
+        modalDetalhesEmpresa.addEventListener('hide.bs.modal', function () {
+            Object.keys(tomSelectInstances).forEach(key => {
+                if (tomSelectInstances[key]) {
+                    try {
+                        tomSelectInstances[key].destroy();
+                    } catch (e) {
+                        console.warn('Error destroying TomSelect:', e);
+                    }
+                }
+            });
+            tomSelectInstances = {};
+        });
     });
 
 })();
