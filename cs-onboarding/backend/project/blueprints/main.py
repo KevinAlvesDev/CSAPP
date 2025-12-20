@@ -72,7 +72,12 @@ def dashboard():
     user_info = g.user
 
     perfil_acesso = g.perfil.get('perfil_acesso') if g.get('perfil') else None
-    is_manager = perfil_acesso in PERFIS_COM_GESTAO
+    
+    # Garantia explícita: Implantador visualiza apenas sua carteira (sem filtro de dashboard)
+    if perfil_acesso == 'Implantador':
+        is_manager = False
+    else:
+        is_manager = perfil_acesso in PERFIS_COM_GESTAO
 
     current_cs_filter = None
     sort_days = None
