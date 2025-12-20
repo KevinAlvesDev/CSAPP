@@ -229,6 +229,7 @@
                         safeSet('#modal-telefone_responsavel', impl.telefone_responsavel || '', modal);
                         safeSet('#modal-email_responsavel', impl.email_responsavel || '', modal);
                         safeSet('#modal-id_favorecido', impl.id_favorecido || '', modal);
+                        console.log('[DEBUG] chave_oamd value:', impl.chave_oamd);
                         safeSet('#modal-chave_oamd', impl.chave_oamd || '', modal);
                         safeSet('#modal-tela_apoio_link', impl.tela_apoio_link || '', modal);
                         safeSet('#modal-valor_atribuido', (impl.valor_atribuido != null ? String(impl.valor_atribuido) : ''), modal);
