@@ -357,6 +357,12 @@ def _format_implantacao_dates(implantacao):
     implantacao['data_inicio_producao_iso'] = format_date_iso_for_json(implantacao.get('data_inicio_producao'), only_date=True)
     implantacao['data_final_implantacao_iso'] = format_date_iso_for_json(implantacao.get('data_final_implantacao'), only_date=True)
     implantacao['data_inicio_previsto_fmt_d'] = format_date_br(implantacao.get('data_inicio_previsto'), False)
+    
+    # Formatação de novos campos
+    if implantacao.get('data_cadastro'):
+        implantacao['data_cadastro_fmt_d'] = format_date_br(implantacao.get('data_cadastro'), False)
+        implantacao['data_cadastro_iso'] = format_date_iso_for_json(implantacao.get('data_cadastro'), only_date=True)
+        
     return implantacao
 
 
