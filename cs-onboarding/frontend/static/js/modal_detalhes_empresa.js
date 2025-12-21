@@ -9,6 +9,161 @@
     let tomSelectInstances = {};
     let lastTriggerEl = null;
 
+    // =========================================================================
+    // DATA CONSISTENCY CHECKER - Automated Validation System
+    // =========================================================================
+    const DataConsistencyChecker = {
+        enabled: true, // Set to false in production
+        serverData: null,
+        displayedData: null,
+
+        captureServerData(impl) {
+            if (!this.enabled) return;
+
+            this.serverData = {
+                responsavel_cliente: impl.responsavel_cliente || '',
+                cargo_responsavel: impl.cargo_responsavel || '',
+                telefone_responsavel: impl.telefone_responsavel || '',
+                email_responsavel: impl.email_responsavel || '',
+                id_favorecido: impl.id_favorecido || '',
+                chave_oamd: impl.chave_oamd || '',
+                tela_apoio_link: impl.tela_apoio_link || '',
+                valor_atribuido: impl.valor_atribuido != null ? String(impl.valor_atribuido) : '',
+                status_implantacao_oamd: impl.status_implantacao_oamd || '',
+                nivel_atendimento: impl.nivel_atendimento || '',
+                catraca: impl.catraca || '',
+                modelo_catraca: impl.modelo_catraca || '',
+                facial: impl.facial || '',
+                modelo_facial: impl.modelo_facial || '',
+                wellhub: impl.wellhub || '',
+                totalpass: impl.totalpass || '',
+                cnpj: impl.cnpj || '',
+                sistema_anterior: impl.sistema_anterior || '',
+                recorrencia_usa: impl.recorrencia_usa || '',
+                importacao: impl.importacao || '',
+                boleto: impl.boleto || '',
+                nota_fiscal: impl.nota_fiscal || '',
+                diaria: impl.diaria || '',
+                freepass: impl.freepass || '',
+                alunos_ativos: impl.alunos_ativos != null ? String(impl.alunos_ativos) : '',
+                informacao_infra: impl.informacao_infra || '',
+                modalidades: impl.modalidades || '',
+                horarios_func: impl.horarios_func || '',
+                formas_pagamento: impl.formas_pagamento || '',
+                seguimento: impl.seguimento || '',
+                tipos_planos: impl.tipos_planos || ''
+            };
+
+            console.log('✅ [Consistency] Server data captured:', Object.keys(this.serverData).length, 'fields');
+        },
+
+        captureDisplayedData(modal) {
+            if (!this.enabled) return;
+
+            const getValue = (selector) => {
+                const el = modal.querySelector(selector);
+                if (!el) return '';
+
+                // Handle TomSelect multi-select
+                if (el.tomselect) {
+                    const values = el.tomselect.getValue();
+                    return Array.isArray(values) ? values.join(',') : String(values);
+                }
+
+                return el.value || '';
+            };
+
+            this.displayedData = {
+                responsavel_cliente: getValue('#modal-responsavel_cliente'),
+                cargo_responsavel: getValue('#modal-cargo_responsavel'),
+                telefone_responsavel: getValue('#modal-telefone_responsavel'),
+                email_responsavel: getValue('#modal-email_responsavel'),
+                id_favorecido: getValue('#modal-id_favorecido'),
+                chave_oamd: getValue('#modal-chave_oamd'),
+                tela_apoio_link: getValue('#modal-tela_apoio_link'),
+                valor_atribuido: getValue('#modal-valor_atribuido'),
+                status_implantacao_oamd: getValue('#modal-status_implantacao'),
+                nivel_atendimento: getValue('#modal-nivel_atendimento'),
+                catraca: getValue('#modal-catraca'),
+                modelo_catraca: getValue('#modal-modelo_catraca'),
+                facial: getValue('#modal-facial'),
+                modelo_facial: getValue('#modal-modelo_facial'),
+                wellhub: getValue('#modal-wellhub'),
+                totalpass: getValue('#modal-totalpass'),
+                cnpj: getValue('#modal-cnpj'),
+                sistema_anterior: getValue('#modal-sistema_anterior'),
+                recorrencia_usa: getValue('#modal-recorrencia_usa'),
+                importacao: getValue('#modal-importacao'),
+                boleto: getValue('#modal-boleto'),
+                nota_fiscal: getValue('#modal-nota_fiscal'),
+                diaria: getValue('#modal-diaria'),
+                freepass: getValue('#modal-freepass'),
+                alunos_ativos: getValue('#modal-alunos_ativos'),
+                informacao_infra: getValue('#modal-informacao_infra'),
+                modalidades: getValue('#modal-modalidades'),
+                horarios_func: getValue('#modal-horarios_func'),
+                formas_pagamento: getValue('#modal-formas_pagamento'),
+                seguimento: getValue('#modal-seguimento'),
+                tipos_planos: getValue('#modal-tipos_planos')
+            };
+
+            console.log('📋 [Consistency] Displayed data captured:', Object.keys(this.displayedData).length, 'fields');
+        },
+
+        validate() {
+            if (!this.enabled || !this.serverData || !this.displayedData) {
+                console.warn('⚠️ [Consistency] Validation skipped - missing data');
+                return true;
+            }
+
+            const inconsistencies = [];
+
+            for (const key in this.serverData) {
+                const serverValue = String(this.serverData[key] || '').trim();
+                const displayedValue = String(this.displayedData[key] || '').trim();
+
+                if (serverValue !== displayedValue) {
+                    inconsistencies.push({
+                        field: key,
+                        server: serverValue,
+                        displayed: displayedValue,
+                        diff: `"${serverValue}" → "${displayedValue}"`
+                    });
+                }
+            }
+
+            if (inconsistencies.length > 0) {
+                console.group('❌ [Consistency] INCONSISTÊNCIAS DETECTADAS!');
+                console.error(`${inconsistencies.length} campo(s) diferem do servidor:`);
+                console.table(inconsistencies);
+                console.groupEnd();
+
+                // Visual alert in development
+                if (window.showToast) {
+                    showToast(
+                        `⚠️ INCONSISTÊNCIA: ${inconsistencies.length} campo(s) diferem do servidor! Verifique o console.`,
+                        'error',
+                        8000
+                    );
+                }
+
+                return false;
+            }
+
+            console.log('✅ [Consistency] Validação completa - Todos os campos consistentes!');
+            return true;
+        },
+
+        reset() {
+            this.serverData = null;
+            this.displayedData = null;
+            console.log('🔄 [Consistency] Reset');
+        }
+    };
+
+    // Expose globally for debugging
+    window.DataConsistencyChecker = DataConsistencyChecker;
+
     // Initialize TomSelect for multi-select fields
     const initializeMultiTagInput = (selector, dataValue) => {
         const modalDetalhesEmpresa = document.getElementById('modalDetalhesEmpresa');
@@ -88,8 +243,8 @@
             });
         }
 
-        // Modal Show Event
-        modalDetalhesEmpresa.addEventListener('show.bs.modal', function (event) {
+        // Modal Show Event - REFACTORED FOR DEFINITIVE FIX
+        modalDetalhesEmpresa.addEventListener('show.bs.modal', async function (event) {
             const safeSet = function (selOrEl, value, root) {
                 const el = typeof selOrEl === 'string' ? (root || document).querySelector(selOrEl) : selOrEl;
                 if (!el) return;
@@ -104,6 +259,7 @@
 
             const button = event.relatedTarget;
             lastTriggerEl = button || null;
+
             // Helper to get data attributes safely
             const getData = (key, defaultVal = '') => {
                 const val = button && button.getAttribute ? button.getAttribute(`data-${key}`) : null;
@@ -123,48 +279,8 @@
                 implId = m && m[1] ? m[1] : implId;
             }
 
-            // Populate fields
+            // Set implantacao ID immediately
             safeSet('#modal-implantacao_id', implId, modal);
-            safeSet('#modal-responsavel_cliente', getData('responsavel'), modal);
-            safeSet('#modal-cargo_responsavel', getData('cargo'), modal);
-            safeSet('#modal-telefone_responsavel', getData('telefone'), modal);
-            safeSet('#modal-email_responsavel', getData('email'), modal);
-
-            const inicioProducaoIsoAttr = getData('inicio-producao');
-            const finalImplantacaoIsoAttr = getData('final-implantacao');
-
-            safeSet('#modal-id_favorecido', getData('id-favorecido'), modal);
-            safeSet('#modal-chave_oamd', getData('chave-oamd'), modal);
-            safeSet('#modal-tela_apoio_link', getData('tela-apoio-link'), modal);
-            safeSet('#modal-nivel_receita', getData('nivel-receita'), modal);
-
-            // Initialize TomSelects
-            initializeMultiTagInput('#modal-modalidades', getData('modalidades'));
-            initializeMultiTagInput('#modal-horarios_func', getData('horarios-func'));
-            initializeMultiTagInput('#modal-formas_pagamento', getData('formas-pagamento'));
-            initializeMultiTagInput('#modal-seguimento', getData('seguimento'));
-            initializeMultiTagInput('#modal-tipos_planos', getData('tipos-planos'));
-
-            safeSet('#modal-diaria', getData('diaria', 'Não definido'), modal);
-            safeSet('#modal-freepass', getData('freepass', 'Não definido'), modal);
-            safeSet('#modal-alunos_ativos', getData('alunos-ativos', '0'), modal);
-            safeSet('#modal-sistema_anterior', getData('sistema-anterior'), modal);
-            safeSet('#modal-recorrencia_usa', getData('recorrencia-usa'), modal);
-            safeSet('#modal-importacao', getData('importacao', 'Não definido'), modal);
-            safeSet('#modal-boleto', getData('boleto', 'Não definido'), modal);
-            safeSet('#modal-nota_fiscal', getData('nota-fiscal', 'Não definido'), modal);
-            safeSet('#modal-catraca', getData('catraca', 'Não preenchido'), modal);
-            safeSet('#modal-facial', getData('facial', 'Não preenchido'), modal);
-            safeSet('#modal-modelo_catraca', getData('modelo-catraca'), modal);
-            safeSet('#modal-modelo_facial', getData('modelo-facial'), modal);
-            safeSet('#modal-valor_atribuido', getData('valor-atribuido', '0.00'), modal);
-            safeSet('#modal-resp_estrategico_nome', getData('resp-estrategico-nome'), modal);
-            safeSet('#modal-resp_onb_nome', getData('resp-onb-nome'), modal);
-            safeSet('#modal-contatos', getData('contatos'), modal);
-            safeSet('#modal-resp_estrategico_obs', getData('resp-estrategico-obs'), modal);
-
-            // Date Handling
-            const inicioEfetivoIsoAttr = getData('inicio-efetivo-iso');
 
             const normalizeToISO = (s) => {
                 if (!s) return '';
@@ -183,137 +299,195 @@
                 }
             };
 
-            // Set dates in Flatpickr instances (global variables from initModalCalendars)
-            setFpDate(window.fpInicioEfetivo, inicioEfetivoIsoAttr);
-            setFpDate(window.fpInicioProd, inicioProducaoIsoAttr);
-            setFpDate(window.fpFinalImpl, finalImplantacaoIsoAttr);
-
-            // Fallback if data attributes are missing but inputs have values
-            if (!inicioEfetivoIsoAttr) {
-                const v = (modal.querySelector('#modal-inicio_efetivo') || {}).value || '';
-                if (v) setFpDate(window.fpInicioEfetivo, v);
-            }
-            if (!inicioProducaoIsoAttr) {
-                const v = (modal.querySelector('#modal-data_inicio_producao') || {}).value || '';
-                if (v) setFpDate(window.fpInicioProd, v);
-            }
-            if (!finalImplantacaoIsoAttr) {
-                const v = (modal.querySelector('#modal-data_final_implantacao') || {}).value || '';
-                if (v) setFpDate(window.fpFinalImpl, v);
-            }
-
-            // Data Cadastro
-            const inicioImplantacaoIso = getData('inicio-implantacao');
-            safeSet('#modal-data_cadastro', (function (iso) {
-                if (!iso) return '';
-                var p = iso.split('T')[0].split('-');
-                if (p.length !== 3) return '';
-                return p[2].padStart(2, '0') + '/' + p[1].padStart(2, '0') + '/' + p[0];
-            })(inicioImplantacaoIso), modal);
-
-            // Fetch detailed data if ID exists
-            if (implId) {
-                fetch(`/api/v1/implantacoes/${implId}`)
-                    .then(r => r.ok ? r.json() : Promise.reject(new Error('Falha ao carregar implantação')))
-                    .then(j => {
-                        if (!j || !j.ok || !j.data || !j.data.implantacao) return;
-                        const impl = j.data.implantacao;
-                        setFpDate(window.fpInicioEfetivo, impl.data_inicio_efetivo);
-                        setFpDate(window.fpInicioProd, impl.data_inicio_producao);
-                        setFpDate(window.fpFinalImpl, impl.data_final_implantacao);
-
-                        // Populate all fields from server to avoid stale button dataset
-                        safeSet('#modal-implantacao_id', impl.id, modal);
-                        safeSet('#modal-responsavel_cliente', impl.responsavel_cliente || '', modal);
-                        safeSet('#modal-cargo_responsavel', impl.cargo_responsavel || '', modal);
-                        safeSet('#modal-telefone_responsavel', impl.telefone_responsavel || '', modal);
-                        safeSet('#modal-email_responsavel', impl.email_responsavel || '', modal);
-                        safeSet('#modal-id_favorecido', impl.id_favorecido || '', modal);
-                        safeSet('#modal-chave_oamd', impl.chave_oamd || '', modal);
-                        safeSet('#modal-tela_apoio_link', impl.tela_apoio_link || '', modal);
-                        safeSet('#modal-valor_atribuido', (impl.valor_atribuido != null ? String(impl.valor_atribuido) : ''), modal);
-                        safeSet('#modal-status_implantacao', impl.status_implantacao_oamd || '', modal);
-                        safeSet('#modal-nivel_atendimento', impl.nivel_atendimento || '', modal);
-                        safeSet('#modal-catraca', impl.catraca || '', modal);
-                        safeSet('#modal-modelo_catraca', impl.modelo_catraca || '', modal);
-                        safeSet('#modal-facial', impl.facial || '', modal);
-                        safeSet('#modal-modelo_facial', impl.modelo_facial || '', modal);
-                        safeSet('#modal-wellhub', impl.wellhub || '', modal);
-                        safeSet('#modal-totalpass', impl.totalpass || '', modal);
-                        safeSet('#modal-cnpj', impl.cnpj || '', modal);
-                        safeSet('#modal-sistema_anterior', impl.sistema_anterior || '', modal);
-                        safeSet('#modal-recorrencia_usa', impl.recorrencia_usa || '', modal);
-                        safeSet('#modal-importacao', impl.importacao || '', modal);
-                        safeSet('#modal-boleto', impl.boleto || '', modal);
-                        safeSet('#modal-nota_fiscal', impl.nota_fiscal || '', modal);
-                        safeSet('#modal-diaria', impl.diaria || '', modal);
-                        safeSet('#modal-freepass', impl.freepass || '', modal);
-                        safeSet('#modal-alunos_ativos', (impl.alunos_ativos != null ? String(impl.alunos_ativos) : ''), modal);
-                        safeSet('#modal-informacao_infra', impl.informacao_infra || '', modal);
-
-                        // Multi-selects with TomSelect: reinitialize with current values
-                        initializeMultiTagInput('#modal-modalidades', impl.modalidades || '');
-                        initializeMultiTagInput('#modal-horarios_func', impl.horarios_func || '');
-                        initializeMultiTagInput('#modal-formas_pagamento', impl.formas_pagamento || '');
-                        initializeMultiTagInput('#modal-seguimento', impl.seguimento || '');
-                        initializeMultiTagInput('#modal-tipos_planos', impl.tipos_planos || '');
-
-                        // Post-populate toggles for dependent fields
-                        const catracaSel = modal.querySelector('#modal-catraca');
-                        const facialSel = modal.querySelector('#modal-facial');
-                        const catracaRow = modal.querySelector('#row-catraca-modelo');
-                        const facialRow = modal.querySelector('#row-facial-modelo');
-                        const catracaModelo = modal.querySelector('#modal-modelo_catraca');
-                        const facialModelo = modal.querySelector('#modal-modelo_facial');
-                        const toggleModelo = (sel, row, input) => {
-                            const isSim = (sel && (sel.value || '').trim().toLowerCase() === 'sim');
-                            if (row) row.style.display = isSim ? '' : 'none';
-                            if (input) input.required = !!isSim;
-                        };
-                        toggleModelo(catracaSel, catracaRow, catracaModelo);
-                        toggleModelo(facialSel, facialRow, facialModelo);
-
-                        // Format phone after setting value
-                        if (window.formatarTelefone) {
-                            formatarTelefone(modal.querySelector('#modal-telefone_responsavel'));
-                        }
-                    })
-                    .catch(() => { });
-            }
-
-            // Format phone and set redirect
-            if (window.formatarTelefone) {
-                formatarTelefone(modal.querySelector('#modal-telefone_responsavel'));
-            }
-
             const isDetailsPage = document.getElementById('checklist-area-treinamento');
             safeSet('#modal-redirect_to', isDetailsPage ? 'detalhes' : 'dashboard', modal);
 
-            // Show/Hide modelo fields based on selections
-            const catracaSel = modal.querySelector('#modal-catraca');
-            const facialSel = modal.querySelector('#modal-facial');
-            const catracaRow = modal.querySelector('#row-catraca-modelo');
-            const facialRow = modal.querySelector('#row-facial-modelo');
-            const catracaModelo = modal.querySelector('#modal-modelo_catraca');
-            const facialModelo = modal.querySelector('#modal-modelo_facial');
+            // CRITICAL FIX: Always fetch fresh data from server first
+            if (implId) {
+                // Show loading state
+                const modalBody = modal.querySelector('.modal-body');
+                const originalContent = modalBody ? modalBody.innerHTML : '';
+                if (modalBody) {
+                    modalBody.style.opacity = '0.5';
+                    modalBody.style.pointerEvents = 'none';
+                }
 
-            const toggleModelo = (sel, row, input) => {
-                const isSim = (sel && (sel.value || '').trim().toLowerCase() === 'sim');
-                if (row) row.style.display = isSim ? '' : 'none';
-                if (input) {
-                    input.required = !!isSim;
-                    if (!isSim) {
-                        // keep value but not required; backend não persiste se não for "Sim"
-                        input.removeAttribute('aria-invalid');
+                try {
+                    // Cache-busting: add timestamp to force fresh data
+                    const timestamp = new Date().getTime();
+                    const response = await fetch(`/api/v1/implantacoes/${implId}?_t=${timestamp}`, {
+                        headers: {
+                            'Cache-Control': 'no-cache, no-store, must-revalidate',
+                            'Pragma': 'no-cache'
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Falha ao carregar implantação');
+                    }
+
+                    const j = await response.json();
+
+                    if (!j || !j.ok || !j.data || !j.data.implantacao) {
+                        throw new Error('Dados inválidos retornados');
+                    }
+
+                    const impl = j.data.implantacao;
+
+                    // Populate ALL fields from server (definitive source of truth)
+                    safeSet('#modal-responsavel_cliente', impl.responsavel_cliente || '', modal);
+                    safeSet('#modal-cargo_responsavel', impl.cargo_responsavel || '', modal);
+                    safeSet('#modal-telefone_responsavel', impl.telefone_responsavel || '', modal);
+                    safeSet('#modal-email_responsavel', impl.email_responsavel || '', modal);
+                    safeSet('#modal-id_favorecido', impl.id_favorecido || '', modal);
+                    safeSet('#modal-chave_oamd', impl.chave_oamd || '', modal);
+                    safeSet('#modal-tela_apoio_link', impl.tela_apoio_link || '', modal);
+                    safeSet('#modal-valor_atribuido', (impl.valor_atribuido != null ? String(impl.valor_atribuido) : ''), modal);
+                    safeSet('#modal-status_implantacao', impl.status_implantacao_oamd || '', modal);
+                    safeSet('#modal-nivel_atendimento', impl.nivel_atendimento || '', modal);
+                    safeSet('#modal-catraca', impl.catraca || '', modal);
+                    safeSet('#modal-modelo_catraca', impl.modelo_catraca || '', modal);
+                    safeSet('#modal-facial', impl.facial || '', modal);
+                    safeSet('#modal-modelo_facial', impl.modelo_facial || '', modal);
+                    safeSet('#modal-wellhub', impl.wellhub || '', modal);
+                    safeSet('#modal-totalpass', impl.totalpass || '', modal);
+                    safeSet('#modal-cnpj', impl.cnpj || '', modal);
+                    safeSet('#modal-sistema_anterior', impl.sistema_anterior || '', modal);
+                    safeSet('#modal-recorrencia_usa', impl.recorrencia_usa || '', modal);
+                    safeSet('#modal-importacao', impl.importacao || '', modal);
+                    safeSet('#modal-boleto', impl.boleto || '', modal);
+                    safeSet('#modal-nota_fiscal', impl.nota_fiscal || '', modal);
+                    safeSet('#modal-diaria', impl.diaria || '', modal);
+                    safeSet('#modal-freepass', impl.freepass || '', modal);
+                    safeSet('#modal-alunos_ativos', (impl.alunos_ativos != null ? String(impl.alunos_ativos) : ''), modal);
+                    safeSet('#modal-informacao_infra', impl.informacao_infra || '', modal);
+                    safeSet('#modal-resp_estrategico_nome', impl.resp_estrategico_nome || '', modal);
+                    safeSet('#modal-resp_onb_nome', impl.resp_onb_nome || '', modal);
+                    safeSet('#modal-contatos', impl.contatos || '', modal);
+                    safeSet('#modal-resp_estrategico_obs', impl.resp_estrategico_obs || '', modal);
+
+                    // Set dates
+                    setFpDate(window.fpInicioEfetivo, impl.data_inicio_efetivo);
+                    setFpDate(window.fpInicioProd, impl.data_inicio_producao);
+                    setFpDate(window.fpFinalImpl, impl.data_final_implantacao);
+
+                    // Data Cadastro
+                    if (impl.data_criacao) {
+                        const iso = impl.data_criacao;
+                        const p = iso.split('T')[0].split('-');
+                        if (p.length === 3) {
+                            safeSet('#modal-data_cadastro', p[2].padStart(2, '0') + '/' + p[1].padStart(2, '0') + '/' + p[0], modal);
+                        }
+                    }
+
+                    // CRITICAL: Initialize TomSelect ONLY AFTER data is loaded
+                    initializeMultiTagInput('#modal-modalidades', impl.modalidades || '');
+                    initializeMultiTagInput('#modal-horarios_func', impl.horarios_func || '');
+                    initializeMultiTagInput('#modal-formas_pagamento', impl.formas_pagamento || '');
+                    initializeMultiTagInput('#modal-seguimento', impl.seguimento || '');
+                    initializeMultiTagInput('#modal-tipos_planos', impl.tipos_planos || '');
+
+                    // Toggle dependent fields
+                    const catracaSel = modal.querySelector('#modal-catraca');
+                    const facialSel = modal.querySelector('#modal-facial');
+                    const catracaRow = modal.querySelector('#row-catraca-modelo');
+                    const facialRow = modal.querySelector('#row-facial-modelo');
+                    const catracaModelo = modal.querySelector('#modal-modelo_catraca');
+                    const facialModelo = modal.querySelector('#modal-modelo_facial');
+
+                    const toggleModelo = (sel, row, input) => {
+                        const isSim = (sel && (sel.value || '').trim().toLowerCase() === 'sim');
+                        if (row) row.style.display = isSim ? '' : 'none';
+                        if (input) {
+                            input.required = !!isSim;
+                            if (!isSim) {
+                                input.removeAttribute('aria-invalid');
+                            }
+                        }
+                    };
+
+                    toggleModelo(catracaSel, catracaRow, catracaModelo);
+                    toggleModelo(facialSel, facialRow, facialModelo);
+
+                    // Format phone after setting value
+                    if (window.formatarTelefone) {
+                        formatarTelefone(modal.querySelector('#modal-telefone_responsavel'));
+                    }
+
+                    // Remove loading state
+                    if (modalBody) {
+                        modalBody.style.opacity = '1';
+                        modalBody.style.pointerEvents = 'auto';
+                    }
+
+                    // CONSISTENCY CHECK: Capture server data
+                    DataConsistencyChecker.captureServerData(impl);
+
+                    // Wait for TomSelect to fully initialize (100ms should be enough)
+                    await new Promise(resolve => setTimeout(resolve, 100));
+
+                    // CONSISTENCY CHECK: Capture displayed data
+                    DataConsistencyChecker.captureDisplayedData(modal);
+
+                    // CONSISTENCY CHECK: Validate
+                    DataConsistencyChecker.validate();
+
+                    // CRITICAL: Save snapshot ONLY AFTER data is fully loaded
+                    if (window.__modalDetalhesInitDone) {
+                        window.__modalDetalhesInitDone();
+                    }
+
+                } catch (error) {
+                    console.error('Error loading implantacao data:', error);
+
+                    // Remove loading state on error
+                    if (modalBody) {
+                        modalBody.style.opacity = '1';
+                        modalBody.style.pointerEvents = 'auto';
+                    }
+
+                    // Fallback: try to populate from data-attributes
+                    safeSet('#modal-responsavel_cliente', getData('responsavel'), modal);
+                    safeSet('#modal-cargo_responsavel', getData('cargo'), modal);
+                    safeSet('#modal-telefone_responsavel', getData('telefone'), modal);
+                    safeSet('#modal-email_responsavel', getData('email'), modal);
+                    safeSet('#modal-id_favorecido', getData('id-favorecido'), modal);
+                    safeSet('#modal-chave_oamd', getData('chave-oamd'), modal);
+                    safeSet('#modal-tela_apoio_link', getData('tela-apoio-link'), modal);
+                    safeSet('#modal-nivel_receita', getData('nivel-receita'), modal);
+
+                    initializeMultiTagInput('#modal-modalidades', getData('modalidades'));
+                    initializeMultiTagInput('#modal-horarios_func', getData('horarios-func'));
+                    initializeMultiTagInput('#modal-formas_pagamento', getData('formas-pagamento'));
+                    initializeMultiTagInput('#modal-seguimento', getData('seguimento'));
+                    initializeMultiTagInput('#modal-tipos_planos', getData('tipos-planos'));
+
+                    safeSet('#modal-diaria', getData('diaria', 'Não definido'), modal);
+                    safeSet('#modal-freepass', getData('freepass', 'Não definido'), modal);
+                    safeSet('#modal-alunos_ativos', getData('alunos-ativos', '0'), modal);
+                    safeSet('#modal-sistema_anterior', getData('sistema-anterior'), modal);
+                    safeSet('#modal-recorrencia_usa', getData('recorrencia-usa'), modal);
+                    safeSet('#modal-importacao', getData('importacao', 'Não definido'), modal);
+                    safeSet('#modal-boleto', getData('boleto', 'Não definido'), modal);
+                    safeSet('#modal-nota_fiscal', getData('nota-fiscal', 'Não definido'), modal);
+                    safeSet('#modal-catraca', getData('catraca', 'Não preenchido'), modal);
+                    safeSet('#modal-facial', getData('facial', 'Não preenchido'), modal);
+                    safeSet('#modal-modelo_catraca', getData('modelo-catraca'), modal);
+                    safeSet('#modal-modelo_facial', getData('modelo-facial'), modal);
+
+                    if (window.formatarTelefone) {
+                        formatarTelefone(modal.querySelector('#modal-telefone_responsavel'));
+                    }
+
+                    if (window.__modalDetalhesInitDone) {
+                        window.__modalDetalhesInitDone();
                     }
                 }
-            };
-
-            toggleModelo(catracaSel, catracaRow, catracaModelo);
-            toggleModelo(facialSel, facialRow, facialModelo);
-
-            if (window.__modalDetalhesInitDone) {
-                window.__modalDetalhesInitDone();
+            } else {
+                // No implId, just initialize empty
+                if (window.__modalDetalhesInitDone) {
+                    window.__modalDetalhesInitDone();
+                }
             }
         });
 
