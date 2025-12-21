@@ -334,6 +334,11 @@
 
                     const impl = j.data.implantacao;
 
+                    // Additional safety check
+                    if (typeof impl !== 'object' || impl === null) {
+                        throw new Error('Objeto de implantação inválido');
+                    }
+
                     // Populate ALL fields from server (definitive source of truth)
                     safeSet('#modal-responsavel_cliente', impl.responsavel_cliente || '', modal);
                     safeSet('#modal-cargo_responsavel', impl.cargo_responsavel || '', modal);

@@ -14,7 +14,7 @@ def init_security_headers(app):
             "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com",
             "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
             "img-src 'self' data: https: blob:",
-            "connect-src 'self'",
+            "connect-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com",
             "frame-ancestors 'none'",
             "base-uri 'self'",
             "form-action 'self'"
