@@ -36,6 +36,7 @@ Flask-Compress==1.15
 
 # Cache
 Flask-Caching==2.1.0
+redis==5.0.1
 
 # Segurança Headers
 Flask-Talisman==1.1.0

@@ -29,12 +29,12 @@ def init_connection_pool(app):
                 with _pool_lock:
                     if _pg_pool is None:
                         _pg_pool = pool.ThreadedConnectionPool(
-                            minconn=5,
-                            maxconn=20,
+                            minconn=10,  # Increased from 5
+                            maxconn=50,  # Increased from 20 for 30+ users
                             dsn=database_url,
                             cursor_factory=DictCursor
                         )
-                        app.logger.info("PostgreSQL connection pool initialized (5-20 connections)")
+                        app.logger.info("PostgreSQL connection pool initialized (10-50 connections)")
             except Exception as e:
                 app.logger.error(f"Failed to initialize connection pool: {e}")
                 raise
