@@ -1053,6 +1053,9 @@ def atualizar_detalhes_empresa_service(implantacao_id, usuario_cs_email, user_pe
     """
     Atualiza os detalhes da empresa de uma implantação.
     """
+    from ..common.field_validators import validate_detalhes_empresa
+    from ..common.error_messages import format_validation_errors
+    
     impl = query_db("SELECT id, usuario_cs FROM implantacoes WHERE id = %s", (implantacao_id,), one=True)
     
     if not impl:
@@ -1063,6 +1066,12 @@ def atualizar_detalhes_empresa_service(implantacao_id, usuario_cs_email, user_pe
 
     if not (is_owner or is_manager):
         raise ValueError('Permissão negada.')
+    
+    # CRITICAL: Validate all fields before saving
+    is_valid, validation_errors = validate_detalhes_empresa(campos)
+    if not is_valid:
+        error_message = format_validation_errors(validation_errors)
+        raise ValueError(error_message)
 
     allowed_fields = {
         'email_responsavel',
@@ -1146,9 +1155,42 @@ def atualizar_detalhes_empresa_service(implantacao_id, usuario_cs_email, user_pe
     values.append(implantacao_id)
     query = f"UPDATE implantacoes SET {', '.join(set_clauses)} WHERE id = %s"
     
-    execute_db(query, tuple(values))
+    # ATOMIC TRANSACTION: UPDATE + timeline logging
+    from ..database import db_connection
+    from datetime import datetime
     
-    return True
+    with db_connection() as (conn, db_type):
+        cursor = conn.cursor()
+        
+        try:
+            # Operation 1: UPDATE implantacoes
+            update_query = query
+            if db_type == 'sqlite':
+                update_query = update_query.replace('%s', '?')
+            cursor.execute(update_query, tuple(values))
+            
+            # Operation 2: INSERT timeline log
+            timeline_query = "INSERT INTO timeline_log (implantacao_id, usuario_cs, tipo_evento, detalhes, data_criacao) VALUES (%s, %s, %s, %s, %s)"
+            if db_type == 'sqlite':
+                timeline_query = timeline_query.replace('%s', '?')
+            cursor.execute(timeline_query, (
+                implantacao_id,
+                usuario_cs_email,
+                'detalhes_alterados',
+                'Detalhes da empresa foram atualizados',
+                datetime.now()
+            ))
+            
+            # COMMIT only if both operations succeed
+            conn.commit()
+            current_app.logger.info(f"Transaction committed: updated implantacao {implantacao_id} + logged timeline")
+            return True
+            
+        except Exception as e:
+            # ROLLBACK automatically by context manager
+            conn.rollback()
+            current_app.logger.error(f"Transaction failed and rolled back for implantacao {implantacao_id}: {e}")
+            raise
 
 
 def remover_plano_implantacao_service(implantacao_id, usuario_cs_email, user_perfil_acesso):

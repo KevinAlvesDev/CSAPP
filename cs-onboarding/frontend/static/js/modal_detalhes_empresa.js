@@ -619,11 +619,14 @@
                 const actionUrl = modalForm.getAttribute('action') || (typeof modalForm.action === 'string' ? modalForm.action : '/actions/atualizar_detalhes_empresa');
                 const formData = new FormData(modalForm);
                 const saveBtn = document.querySelector('#modalDetalhesEmpresa .btn-salvar-detalhes');
+
+                // Save original state
                 if (saveBtn) {
                     saveBtn.disabled = true;
                     saveBtn.dataset._originalText = saveBtn.innerHTML;
                     saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...';
                 }
+
                 try {
                     const res = await fetch(actionUrl, {
                         method: 'POST',
@@ -631,14 +634,25 @@
                         body: formData,
                         credentials: 'same-origin'
                     });
+
                     let ok = res.ok;
                     let j = null;
                     try { j = await res.json(); ok = ok && j && j.ok; } catch (_) { }
+
                     if (ok) {
                         formHasChanges = false;
                         justSaved = true;
                         saveFormInitialValues();
-                        if (window.showToast) showToast('Detalhes salvos com sucesso', 'success');
+
+                        // Show success state
+                        if (saveBtn) {
+                            saveBtn.innerHTML = '<i class="bi bi-check-circle me-2"></i>✅ Salvo com sucesso!';
+                            saveBtn.classList.remove('btn-primary');
+                            saveBtn.classList.add('btn-success');
+                        }
+
+                        if (window.showToast) showToast('✅ Detalhes salvos com sucesso!', 'success');
+
                         const ts = document.getElementById('oamd-last-update');
                         const tspan = document.getElementById('oamd-last-update-time');
                         if (ts && tspan) {
@@ -646,7 +660,9 @@
                             tspan.innerText = `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
                             ts.style.display = '';
                         }
+
                         try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) { }
+
                         try {
                             if (lastTriggerEl) {
                                 const getVal = (sel) => {
@@ -682,358 +698,393 @@
                                 lastTriggerEl.setAttribute('data-resp-estrategico-nome', getVal('#modal-resp_estrategico_nome'));
                                 lastTriggerEl.setAttribute('data-resp-onb-nome', getVal('#modal-resp_onb_nome'));
                                 lastTriggerEl.setAttribute('data-contatos', getVal('#modal-contatos'));
-                                lastTriggerEl.setAttribute('data-resp-estrategico-obs', getVal('#modal-resp_estrategico_obs'));
+                                lastTriggerEl.setAttribute('data-resp-estrategico-obs', getVal('#modal-resp_estrategico-obs'));
                                 lastTriggerEl.setAttribute('data-inicio-efetivo-iso', getVal('#modal-inicio_efetivo'));
                                 lastTriggerEl.setAttribute('data-inicio-producao', getVal('#modal-data_inicio_producao'));
                                 lastTriggerEl.setAttribute('data-final-implantacao', getVal('#modal-data_final_implantacao'));
                             }
                         } catch (_) { }
+
+                        // Auto-close modal after 1.5 seconds
+                        setTimeout(() => {
+                            const modal = bootstrap.Modal.getInstance(document.getElementById('modalDetalhesEmpresa'));
+                            if (modal) modal.hide();
+                        }, 1500);
+
                     } else {
-                        if (window.showToast) showToast((j && j.error) || 'Erro ao salvar detalhes', 'error');
+                        // Show specific error message
+                        const errorMsg = (j && j.error) || 'Erro ao salvar detalhes';
+                        if (window.showToast) showToast(`❌ ${errorMsg}`, 'error');
+
+                        // Show error state on button
+                        if (saveBtn) {
+                            saveBtn.innerHTML = '<i class="bi bi-x-circle me-2"></i>❌ Erro ao salvar';
+                            saveBtn.classList.remove('btn-primary');
+                            saveBtn.classList.add('btn-danger');
+                        }
                     }
                 } catch (error) {
-                    if (window.showToast) showToast('Erro de rede ao salvar detalhes', 'error');
-                } finally {
+                    console.error('Save error:', error);
+                    if (window.showToast) showToast('❌ Erro de conexão. Verifique sua internet e tente novamente.', 'error');
+
+                    // Show error state on button
                     if (saveBtn) {
-                        saveBtn.disabled = false;
-                        saveBtn.innerHTML = saveBtn.dataset._originalText || 'Salvar Alterações';
-                        delete saveBtn.dataset._originalText;
+                        saveBtn.innerHTML = '<i class="bi bi-x-circle me-2"></i>❌ Erro de conexão';
+                        saveBtn.classList.remove('btn-primary');
+                        saveBtn.classList.add('btn-danger');
+                    }
+                } finally {
+                    // Reset button after 2 seconds
+                    if (saveBtn) {
+                        setTimeout(() => {
+                            saveBtn.disabled = false;
+                            saveBtn.innerHTML = saveBtn.dataset._originalText || 'Salvar Alterações';
+                            saveBtn.classList.remove('btn-success', 'btn-danger');
+                            saveBtn.classList.add('btn-primary');
+                            delete saveBtn.dataset._originalText;
+                        }, 2000);
                     }
                 }
-                return false;
-            };
+            }
+        };
 
-            modalForm.addEventListener('submit', function (e) {
-                if (isClosingAfterConfirm) {
-                    e.preventDefault();
-                    return false;
-                }
+        modalForm.addEventListener('submit', function (e) {
+            if (isClosingAfterConfirm) {
                 e.preventDefault();
-                submitModalForm();
-            });
+                return false;
+            }
+            e.preventDefault();
+            submitModalForm();
+        });
 
-            modalDetalhesEmpresa.addEventListener('show.bs.modal', function () {
-                isClosingAfterConfirm = false;
+        modalDetalhesEmpresa.addEventListener('show.bs.modal', function () {
+            isClosingAfterConfirm = false;
+            justSaved = false;
+            initializing = true;
+            const finishInit = () => { saveFormInitialValues(); initializing = false; };
+            window.__modalDetalhesInitDone = finishInit;
+            setTimeout(finishInit, 500);
+        });
+
+        modalDetalhesEmpresa.addEventListener('hide.bs.modal', async function (e) {
+            if (isClosingAfterConfirm) {
+                return;
+            }
+            if (justSaved) {
                 justSaved = false;
-                initializing = true;
-                const finishInit = () => { saveFormInitialValues(); initializing = false; };
-                window.__modalDetalhesInitDone = finishInit;
-                setTimeout(finishInit, 500);
-            });
+                return;
+            }
 
-            modalDetalhesEmpresa.addEventListener('hide.bs.modal', async function (e) {
-                if (isClosingAfterConfirm) {
-                    return;
-                }
-                if (justSaved) {
-                    justSaved = false;
-                    return;
-                }
+            checkFormChanges();
 
-                checkFormChanges();
+            if (formHasChanges) {
+                e.preventDefault();
 
-                if (formHasChanges) {
-                    e.preventDefault();
+                const validation = validateFormFields();
 
-                    const validation = validateFormFields();
-
-                    if (!validation.valid) {
-                        if (validation.field) {
-                            validation.field.focus();
-                            validation.field.reportValidity();
-                        }
-
-                        if (window.showToast) {
-                            showToast(validation.message, 'error');
-                        } else {
-                            alert(validation.message);
-                        }
-
-                        const bsModal = bootstrap.Modal.getInstance(modalDetalhesEmpresa);
-                        if (bsModal) {
-                            bsModal.show();
-                        }
-                        return;
+                if (!validation.valid) {
+                    if (validation.field) {
+                        validation.field.focus();
+                        validation.field.reportValidity();
                     }
 
-                    let confirmed = false;
-                    if (window.showConfirm) {
-                        confirmed = await showConfirm({
-                            title: 'Descartar Alterações?',
-                            message: 'Você fez alterações no formulário. Deseja descartar as alterações e fechar o modal?',
-                            confirmText: 'Descartar',
-                            cancelText: 'Cancelar',
-                            type: 'warning',
-                            icon: 'bi-exclamation-triangle-fill'
-                        });
+                    if (window.showToast) {
+                        showToast(validation.message, 'error');
                     } else {
-                        confirmed = confirm('Você fez alterações no formulário. Deseja descartar as alterações e fechar o modal?');
+                        alert(validation.message);
                     }
-
-                    if (!confirmed) {
-                        e.preventDefault();
-                        const bsModal = bootstrap.Modal.getInstance(modalDetalhesEmpresa);
-                        if (bsModal) {
-                            bsModal.show();
-                        }
-                        return;
-                    }
-
-                    isClosingAfterConfirm = true;
-                    formHasChanges = false;
 
                     const bsModal = bootstrap.Modal.getInstance(modalDetalhesEmpresa);
                     if (bsModal) {
-                        bsModal.hide();
+                        bsModal.show();
                     }
-                }
-            });
-
-            modalDetalhesEmpresa.addEventListener('hidden.bs.modal', function () {
-                if (isClosingAfterConfirm) {
-                    const inputs = modalForm.querySelectorAll('input, select, textarea');
-                    inputs.forEach(input => {
-                        const key = input.name || input.id;
-                        if (formInitialValues.hasOwnProperty(key)) {
-                            if (input.type === 'checkbox' || input.type === 'radio') {
-                                input.checked = formInitialValues[key] || false;
-                            } else {
-                                input.value = formInitialValues[key] || '';
-                            }
-                        }
-                    });
-                }
-
-                formHasChanges = false;
-                isClosingAfterConfirm = false;
-                formInitialValues = {};
-
-                // destruir instâncias TomSelect somente agora
-                for (const selector in tomSelectInstances) {
-                    if (tomSelectInstances[selector]) {
-                        try { tomSelectInstances[selector].destroy(); } catch (_) { }
-                    }
-                }
-                tomSelectInstances = {};
-            });
-
-            modalForm.addEventListener('input', function () {
-                if (!initializing) checkFormChanges();
-            });
-
-            modalForm.addEventListener('change', function () {
-                if (!initializing) checkFormChanges();
-                // react to catraca/facial selection changes
-                const modal = document.getElementById('modalDetalhesEmpresa');
-                if (modal) {
-                    const catracaSel = modal.querySelector('#modal-catraca');
-                    const facialSel = modal.querySelector('#modal-facial');
-                    const catracaRow = modal.querySelector('#row-catraca-modelo');
-                    const facialRow = modal.querySelector('#row-facial-modelo');
-                    const catracaModelo = modal.querySelector('#modal-modelo_catraca');
-                    const facialModelo = modal.querySelector('#modal-modelo_facial');
-                    const toggleModelo = (sel, row, input) => {
-                        const isSim = (sel && (sel.value || '').trim().toLowerCase() === 'sim');
-                        if (row) row.style.display = isSim ? '' : 'none';
-                        if (input) input.required = !!isSim;
-                    };
-                    toggleModelo(catracaSel, catracaRow, catracaModelo);
-                    toggleModelo(facialSel, facialRow, facialModelo);
-                }
-            });
-
-            document.addEventListener('click', function (e) {
-                const submitBtn = e.target.closest('#modalDetalhesEmpresa .btn-salvar-detalhes');
-                if (submitBtn && modalForm) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    submitModalForm();
-                }
-            });
-
-            document.addEventListener('click', async function (e) {
-                const consultarBtn = e.target.closest('#btn-consultar-oamd');
-                if (!consultarBtn) return;
-
-                // Pegar ID da implantação
-                const implIdEl = modalForm.querySelector('#modal-implantacao_id');
-                let implId = implIdEl && implIdEl.value ? implIdEl.value : '';
-                if (!implId) {
-                    const mc = document.getElementById('main-content');
-                    if (mc && mc.dataset && mc.dataset.implantacaoId) implId = mc.dataset.implantacaoId;
-                }
-                if (!implId) {
-                    const m = (location.pathname || '').match(/\/implantacao\/(\d+)/);
-                    if (m && m[1]) implId = m[1];
-                }
-
-                // NOVO: Pegar ID Favorecido do modal
-                const idFavorecidoEl = modalForm.querySelector('#modal-id_favorecido');
-                const idFavorecido = idFavorecidoEl && idFavorecidoEl.value ? idFavorecidoEl.value.trim() : '';
-
-                // Se não temos nem implId nem idFavorecido, não podemos consultar
-                if (!implId && !idFavorecido) {
-                    if (window.showToast) showToast('Informe o ID Favorecido para consultar', 'warning');
                     return;
                 }
 
-                // Construir URL com fallback
-                let url = `/api/v1/oamd/implantacoes/${implId || 0}/consulta`;
-                if (idFavorecido) {
-                    url += `?id_favorecido=${encodeURIComponent(idFavorecido)}`;
+                let confirmed = false;
+                if (window.showConfirm) {
+                    confirmed = await showConfirm({
+                        title: 'Descartar Alterações?',
+                        message: 'Você fez alterações no formulário. Deseja descartar as alterações e fechar o modal?',
+                        confirmText: 'Descartar',
+                        cancelText: 'Cancelar',
+                        type: 'warning',
+                        icon: 'bi-exclamation-triangle-fill'
+                    });
+                } else {
+                    confirmed = confirm('Você fez alterações no formulário. Deseja descartar as alterações e fechar o modal?');
                 }
 
-                const loader = document.getElementById('btn-consultar-oamd-loader');
-                const icon = document.getElementById('btn-consultar-oamd-icon');
-                if (loader) loader.classList.remove('d-none');
-                if (icon) icon.classList.add('d-none');
-                consultarBtn.disabled = true;
-                try {
-                    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-                    const j = await res.json();
-                    if (!res.ok || !j.ok || !j.data || !j.data.found) throw new Error(j.error || 'Falha na consulta');
-                    const d = j.data;
-                    window.__oamdApplying = true;
-                    const setIfEmpty = (sel, val) => {
-                        const el = modalForm.querySelector(sel);
-                        if (!el) return;
-                        const cur = (el.value || '').trim();
-                        if (!cur && val != null && String(val).trim() !== '') {
-                            el.value = String(val).trim();
-                        }
-                    };
-                    const toBr = (iso) => {
-                        if (!iso) return '';
-                        const m = String(iso).trim().match(/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/);
-                        return m ? `${m[3]}/${m[2]}/${m[1]}` : '';
-                    };
-                    setIfEmpty('#modal-id_favorecido', d.persistibles.id_favorecido);
-                    setIfEmpty('#modal-chave_oamd', d.persistibles.chave_oamd);
-                    setIfEmpty('#modal-cnpj', d.persistibles.cnpj);
-                    setIfEmpty('#modal-status_implantacao', d.persistibles.status_implantacao);
-                    setIfEmpty('#modal-nivel_atendimento', d.persistibles.nivel_atendimento);
-                    const dc = toBr(d.persistibles.data_cadastro);
-                    if (dc) setIfEmpty('#modal-data_cadastro', dc);
-                    const setFp = (fp, isoSel, inputSel) => {
-                        const iso = d.persistibles[isoSel];
-                        if (fp && typeof fp.setDate === 'function' && iso) fp.setDate(iso, true, 'Y-m-d');
-                        else if (iso) {
-                            const el = modalForm.querySelector(inputSel);
-                            if (el) el.value = toBr(iso);
-                        }
-                    };
-                    setFp(window.fpInicioEfetivo, 'data_inicio_efetivo', '#modal-inicio_efetivo');
-                    setFp(window.fpFinalImpl, 'data_final_implantacao', '#modal-data_final_implantacao');
-                    setFp(window.fpInicioProd, 'data_inicio_producao', '#modal-data_inicio_producao');
-                    const forceSet = (sel, val) => {
-                        const el = modalForm.querySelector(sel);
-                        if (!el) return;
-                        el.value = (val == null) ? '' : String(val).trim();
-                    };
-                    forceSet('#modal-informacao_infra', d.derived.informacao_infra);
-                    let link = d.derived.tela_apoio_link;
-                    if ((!link || !link.trim()) && d.derived.informacao_infra) {
-                        const digits = String(d.derived.informacao_infra).match(/(\d+)/);
-                        if (digits && digits[1]) link = `http://zw${digits[1]}.pactosolucoes.com.br/app`;
+                if (!confirmed) {
+                    e.preventDefault();
+                    const bsModal = bootstrap.Modal.getInstance(modalDetalhesEmpresa);
+                    if (bsModal) {
+                        bsModal.show();
                     }
-                    forceSet('#modal-tela_apoio_link', link);
-                    if (typeof window.__saveFormSnapshot === 'function') window.__saveFormSnapshot();
-                    const ts = document.getElementById('oamd-last-update');
-                    const tspan = document.getElementById('oamd-last-update-time');
-                    if (ts && tspan) {
-                        const now = new Date();
-                        tspan.innerText = `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
-                        ts.style.display = '';
-                    }
-                    try {
-                        // Só tentar aplicar se a implantação existir no banco
-                        if (implId && implId !== '0' && parseInt(implId) > 0) {
-                            const csrfEl = modalForm.querySelector('input[name="csrf_token"]');
-                            const csrf = csrfEl ? csrfEl.value : '';
-                            await fetch(`/api/v1/oamd/implantacoes/${implId}/aplicar`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
-                                body: JSON.stringify({})
-                            }).then(r => r.json()).then(ap => {
-                                if (ap && ap.ok) {
-                                    if (window.showToast) showToast('Dados do OAMD aplicados', 'success');
-                                } else {
-                                    if (window.showToast) showToast((ap && ap.error) || 'Falha ao aplicar dados', 'error');
-                                }
-                            }).catch(() => { });
+                    return;
+                }
+
+                isClosingAfterConfirm = true;
+                formHasChanges = false;
+
+                const bsModal = bootstrap.Modal.getInstance(modalDetalhesEmpresa);
+                if (bsModal) {
+                    bsModal.hide();
+                }
+            }
+        });
+
+        modalDetalhesEmpresa.addEventListener('hidden.bs.modal', function () {
+            if (isClosingAfterConfirm) {
+                const inputs = modalForm.querySelectorAll('input, select, textarea');
+                inputs.forEach(input => {
+                    const key = input.name || input.id;
+                    if (formInitialValues.hasOwnProperty(key)) {
+                        if (input.type === 'checkbox' || input.type === 'radio') {
+                            input.checked = formInitialValues[key] || false;
                         } else {
-                            // Implantação não existe ainda, apenas mostrar sucesso da consulta
-                            if (window.showToast) showToast('Dados consultados com sucesso. Salve os detalhes para persistir.', 'success');
+                            input.value = formInitialValues[key] || '';
                         }
-                    } catch (_) { }
-                } catch (err) {
-                    if (window.showToast) showToast(err.message || 'Erro na consulta', 'error');
-                } finally {
-                    window.__oamdApplying = false;
-                    consultarBtn.disabled = false;
-                    if (loader) loader.classList.add('d-none');
-                    if (icon) icon.classList.remove('d-none');
+                    }
+                });
+            }
+
+            formHasChanges = false;
+            isClosingAfterConfirm = false;
+            formInitialValues = {};
+
+            // destruir instâncias TomSelect somente agora
+            for (const selector in tomSelectInstances) {
+                if (tomSelectInstances[selector]) {
+                    try { tomSelectInstances[selector].destroy(); } catch (_) { }
                 }
-            });
+            }
+            tomSelectInstances = {};
+        });
 
-        })();
+        modalForm.addEventListener('input', function () {
+            if (!initializing) checkFormChanges();
+        });
 
-        // Init Calendars
-        (function initModalCalendars() {
-            if (!window.flatpickr) return;
-            var makeConfig = function () {
-                return {
-                    dateFormat: 'Y-m-d',
-                    altInput: true,
-                    altFormat: 'd/m/Y',
-                    allowInput: false,
-                    locale: flatpickr.l10ns.default || flatpickr.l10ns.pt,
-                    parseDate: function (datestr) {
-                        var m = datestr && datestr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-                        if (!m) return null;
-                        var d = parseInt(m[1], 10);
-                        var mo = parseInt(m[2], 10) - 1;
-                        var y = parseInt(m[3], 10);
-                        var dd = new Date(y, mo, d);
-                        if (dd.getDate() !== d || dd.getMonth() !== mo || dd.getFullYear() !== y) return null;
-                        return dd;
+        modalForm.addEventListener('change', function () {
+            if (!initializing) checkFormChanges();
+            // react to catraca/facial selection changes
+            const modal = document.getElementById('modalDetalhesEmpresa');
+            if (modal) {
+                const catracaSel = modal.querySelector('#modal-catraca');
+                const facialSel = modal.querySelector('#modal-facial');
+                const catracaRow = modal.querySelector('#row-catraca-modelo');
+                const facialRow = modal.querySelector('#row-facial-modelo');
+                const catracaModelo = modal.querySelector('#modal-modelo_catraca');
+                const facialModelo = modal.querySelector('#modal-modelo_facial');
+                const toggleModelo = (sel, row, input) => {
+                    const isSim = (sel && (sel.value || '').trim().toLowerCase() === 'sim');
+                    if (row) row.style.display = isSim ? '' : 'none';
+                    if (input) input.required = !!isSim;
+                };
+                toggleModelo(catracaSel, catracaRow, catracaModelo);
+                toggleModelo(facialSel, facialRow, facialModelo);
+            }
+        });
+
+        document.addEventListener('click', function (e) {
+            const submitBtn = e.target.closest('#modalDetalhesEmpresa .btn-salvar-detalhes');
+            if (submitBtn && modalForm) {
+                e.preventDefault();
+                e.stopPropagation();
+                submitModalForm();
+            }
+        });
+
+        document.addEventListener('click', async function (e) {
+            const consultarBtn = e.target.closest('#btn-consultar-oamd');
+            if (!consultarBtn) return;
+
+            // Pegar ID da implantação
+            const implIdEl = modalForm.querySelector('#modal-implantacao_id');
+            let implId = implIdEl && implIdEl.value ? implIdEl.value : '';
+            if (!implId) {
+                const mc = document.getElementById('main-content');
+                if (mc && mc.dataset && mc.dataset.implantacaoId) implId = mc.dataset.implantacaoId;
+            }
+            if (!implId) {
+                const m = (location.pathname || '').match(/\/implantacao\/(\d+)/);
+                if (m && m[1]) implId = m[1];
+            }
+
+            // NOVO: Pegar ID Favorecido do modal
+            const idFavorecidoEl = modalForm.querySelector('#modal-id_favorecido');
+            const idFavorecido = idFavorecidoEl && idFavorecidoEl.value ? idFavorecidoEl.value.trim() : '';
+
+            // Se não temos nem implId nem idFavorecido, não podemos consultar
+            if (!implId && !idFavorecido) {
+                if (window.showToast) showToast('Informe o ID Favorecido para consultar', 'warning');
+                return;
+            }
+
+            // Construir URL com fallback
+            let url = `/api/v1/oamd/implantacoes/${implId || 0}/consulta`;
+            if (idFavorecido) {
+                url += `?id_favorecido=${encodeURIComponent(idFavorecido)}`;
+            }
+
+            const loader = document.getElementById('btn-consultar-oamd-loader');
+            const icon = document.getElementById('btn-consultar-oamd-icon');
+            if (loader) loader.classList.remove('d-none');
+            if (icon) icon.classList.add('d-none');
+            consultarBtn.disabled = true;
+            try {
+                // Use fetchWithRetry for automatic retry on failures
+                const res = await fetchWithRetry(
+                    url,
+                    { headers: { 'Accept': 'application/json' } },
+                    3,  // 3 retries
+                    15000  // 15s timeout per attempt
+                );
+                const j = await res.json();
+                if (!res.ok || !j.ok || !j.data || !j.data.found) throw new Error(j.error || 'Falha na consulta');
+                const d = j.data;
+                window.__oamdApplying = true;
+                const setIfEmpty = (sel, val) => {
+                    const el = modalForm.querySelector(sel);
+                    if (!el) return;
+                    const cur = (el.value || '').trim();
+                    if (!cur && val != null && String(val).trim() !== '') {
+                        el.value = String(val).trim();
                     }
                 };
-            };
-            var ensureInstance = function (selector) {
-                var el = document.querySelector(selector);
-                if (!el) return null;
-                if (el._flatpickr) return el._flatpickr;
-                return window.flatpickr(el, makeConfig());
-            };
+                const toBr = (iso) => {
+                    if (!iso) return '';
+                    const m = String(iso).trim().match(/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/);
+                    return m ? `${m[3]}/${m[2]}/${m[1]}` : '';
+                };
+                setIfEmpty('#modal-id_favorecido', d.persistibles.id_favorecido);
+                setIfEmpty('#modal-chave_oamd', d.persistibles.chave_oamd);
+                setIfEmpty('#modal-cnpj', d.persistibles.cnpj);
+                setIfEmpty('#modal-status_implantacao', d.persistibles.status_implantacao);
+                setIfEmpty('#modal-nivel_atendimento', d.persistibles.nivel_atendimento);
+                const dc = toBr(d.persistibles.data_cadastro);
+                if (dc) setIfEmpty('#modal-data_cadastro', dc);
+                const setFp = (fp, isoSel, inputSel) => {
+                    const iso = d.persistibles[isoSel];
+                    if (fp && typeof fp.setDate === 'function' && iso) fp.setDate(iso, true, 'Y-m-d');
+                    else if (iso) {
+                        const el = modalForm.querySelector(inputSel);
+                        if (el) el.value = toBr(iso);
+                    }
+                };
+                setFp(window.fpInicioEfetivo, 'data_inicio_efetivo', '#modal-inicio_efetivo');
+                setFp(window.fpFinalImpl, 'data_final_implantacao', '#modal-data_final_implantacao');
+                setFp(window.fpInicioProd, 'data_inicio_producao', '#modal-data_inicio_producao');
+                const forceSet = (sel, val) => {
+                    const el = modalForm.querySelector(sel);
+                    if (!el) return;
+                    el.value = (val == null) ? '' : String(val).trim();
+                };
+                forceSet('#modal-informacao_infra', d.derived.informacao_infra);
+                let link = d.derived.tela_apoio_link;
+                if ((!link || !link.trim()) && d.derived.informacao_infra) {
+                    const digits = String(d.derived.informacao_infra).match(/(\d+)/);
+                    if (digits && digits[1]) link = `http://zw${digits[1]}.pactosolucoes.com.br/app`;
+                }
+                forceSet('#modal-tela_apoio_link', link);
+                if (typeof window.__saveFormSnapshot === 'function') window.__saveFormSnapshot();
+                const ts = document.getElementById('oamd-last-update');
+                const tspan = document.getElementById('oamd-last-update-time');
+                if (ts && tspan) {
+                    const now = new Date();
+                    tspan.innerText = `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
+                    ts.style.display = '';
+                }
+                try {
+                    // Só tentar aplicar se a implantação existir no banco
+                    if (implId && implId !== '0' && parseInt(implId) > 0) {
+                        const csrfEl = modalForm.querySelector('input[name="csrf_token"]');
+                        const csrf = csrfEl ? csrfEl.value : '';
+                        await fetch(`/api/v1/oamd/implantacoes/${implId}/aplicar`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                            body: JSON.stringify({})
+                        }).then(r => r.json()).then(ap => {
+                            if (ap && ap.ok) {
+                                if (window.showToast) showToast('Dados do OAMD aplicados', 'success');
+                            } else {
+                                if (window.showToast) showToast((ap && ap.error) || 'Falha ao aplicar dados', 'error');
+                            }
+                        }).catch(() => { });
+                    } else {
+                        // Implantação não existe ainda, apenas mostrar sucesso da consulta
+                        if (window.showToast) showToast('Dados consultados com sucesso. Salve os detalhes para persistir.', 'success');
+                    }
+                } catch (_) { }
+            } catch (err) {
+                if (window.showToast) showToast(err.message || 'Erro na consulta', 'error');
+            } finally {
+                window.__oamdApplying = false;
+                consultarBtn.disabled = false;
+                if (loader) loader.classList.add('d-none');
+                if (icon) icon.classList.remove('d-none');
+            }
+        });
 
-            window.fpInicioEfetivo = ensureInstance('#modal-inicio_efetivo');
-            window.fpInicioProd = ensureInstance('#modal-data_inicio_producao');
-            window.fpFinalImpl = ensureInstance('#modal-data_final_implantacao');
-        })();
+    })();
 
-        // Controlar botão "Abrir Tela de Apoio"
-        (function initTelaApoioButton() {
-            const inputTelaApoio = document.querySelector('#modal-tela_apoio_link');
-            const btnAbrirTelaApoio = document.querySelector('#btn-abrir-tela-apoio');
-
-            if (!inputTelaApoio || !btnAbrirTelaApoio) return;
-
-            const updateButton = function () {
-                const url = (inputTelaApoio.value || '').trim();
-                if (url && url.startsWith('http')) {
-                    btnAbrirTelaApoio.href = url;
-                    btnAbrirTelaApoio.style.display = '';
-                } else {
-                    btnAbrirTelaApoio.href = '#';
-                    btnAbrirTelaApoio.style.display = 'none';
+    // Init Calendars
+    (function initModalCalendars() {
+        if (!window.flatpickr) return;
+        var makeConfig = function () {
+            return {
+                dateFormat: 'Y-m-d',
+                altInput: true,
+                altFormat: 'd/m/Y',
+                allowInput: false,
+                locale: flatpickr.l10ns.default || flatpickr.l10ns.pt,
+                parseDate: function (datestr) {
+                    var m = datestr && datestr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+                    if (!m) return null;
+                    var d = parseInt(m[1], 10);
+                    var mo = parseInt(m[2], 10) - 1;
+                    var y = parseInt(m[3], 10);
+                    var dd = new Date(y, mo, d);
+                    if (dd.getDate() !== d || dd.getMonth() !== mo || dd.getFullYear() !== y) return null;
+                    return dd;
                 }
             };
+        };
+        var ensureInstance = function (selector) {
+            var el = document.querySelector(selector);
+            if (!el) return null;
+            if (el._flatpickr) return el._flatpickr;
+            return window.flatpickr(el, makeConfig());
+        };
 
-            inputTelaApoio.addEventListener('input', updateButton);
-            inputTelaApoio.addEventListener('change', updateButton);
-            updateButton(); // Inicializar
-        })();
-    });
+        window.fpInicioEfetivo = ensureInstance('#modal-inicio_efetivo');
+        window.fpInicioProd = ensureInstance('#modal-data_inicio_producao');
+        window.fpFinalImpl = ensureInstance('#modal-data_final_implantacao');
+    })();
 
-})();
+    // Controlar botão "Abrir Tela de Apoio"
+    (function initTelaApoioButton() {
+        const inputTelaApoio = document.querySelector('#modal-tela_apoio_link');
+        const btnAbrirTelaApoio = document.querySelector('#btn-abrir-tela-apoio');
+
+        if (!inputTelaApoio || !btnAbrirTelaApoio) return;
+
+        const updateButton = function () {
+            const url = (inputTelaApoio.value || '').trim();
+            if (url && url.startsWith('http')) {
+                btnAbrirTelaApoio.href = url;
+                btnAbrirTelaApoio.style.display = '';
+            } else {
+                btnAbrirTelaApoio.href = '#';
+                btnAbrirTelaApoio.style.display = 'none';
+            }
+        };
+
+        inputTelaApoio.addEventListener('input', updateButton);
+        inputTelaApoio.addEventListener('change', updateButton);
+        updateButton(); // Inicializar
+    })();
+});
+
+}) ();

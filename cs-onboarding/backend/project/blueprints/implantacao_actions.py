@@ -593,14 +593,33 @@ def atualizar_detalhes_empresa():
     except AttributeError as e:
         if 'isoformat' in str(e):
             app_logger.error(f"ERRO: Tentativa de chamar .isoformat() em string: {e}")
-            flash('Erro ao processar data. Verifique o formato (DD/MM/AAAA).', 'error')
+            flash('❌ Erro ao processar data. Verifique o formato (DD/MM/AAAA).', 'error')
         else:
-            raise
+            app_logger.error(f"ERRO AttributeError: {e}")
+            flash('❌ Erro ao processar dados. Tente novamente.', 'error')
     except ValueError as e:
-        flash(str(e), 'error')
+        # ValueError is used for validation errors - show specific message
+        error_msg = str(e)
+        app_logger.warning(f"Validation error: {error_msg}")
+        flash(error_msg if error_msg else '❌ Dados inválidos. Verifique os campos.', 'error')
+    except PermissionError as e:
+        app_logger.warning(f"Permission denied: {e}")
+        flash('❌ Você não tem permissão para realizar esta ação.', 'error')
+    except TimeoutError as e:
+        app_logger.error(f"Timeout error: {e}")
+        flash('❌ Operação demorou muito tempo. Verifique sua conexão e tente novamente.', 'error')
     except Exception as e:
-        app_logger.error(f"ERRO COMPLETO ao atualizar detalhes (Impl. ID {implantacao_id}): {e}")
-        flash(f'Erro ao atualizar detalhes: {str(e)}', 'error')
+        # Log full error for debugging
+        app_logger.error(f"ERRO COMPLETO ao atualizar detalhes (Impl. ID {implantacao_id}): {e}", exc_info=True)
+        
+        # Check if it's a database error
+        error_str = str(e).lower()
+        if 'database' in error_str or 'connection' in error_str:
+            flash('❌ Erro de conexão com o banco de dados. Tente novamente em alguns segundos.', 'error')
+        elif 'timeout' in error_str:
+            flash('❌ Tempo de espera esgotado. Tente novamente.', 'error')
+        else:
+            flash('❌ Erro inesperado ao atualizar detalhes. Nossa equipe foi notificada.', 'error')
 
     try:
         wants_json = 'application/json' in (request.headers.get('Accept') or '')
