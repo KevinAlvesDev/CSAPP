@@ -59,8 +59,9 @@
             data-bs-target="#modalGerenciarUsuarios"><i class="bi bi-people-fill me-2"></i><span class="nav-link-text">
               Usuários</span></a></li>
         <li class="nav-item"><a
-          class="nav-link {% if request.endpoint == 'analytics.analytics_dashboard' %}active{% endif %}"
-          href="{{ url_for('analytics.analytics_dashboard') }}"><i class="bi bi-graph-up me-2"></i><span class="nav-link-text"> Gerencial</span></a></li>
+            class="nav-link {% if request.endpoint == 'analytics.analytics_dashboard' %}active{% endif %}"
+            href="{{ url_for('analytics.analytics_dashboard') }}"><i class="bi bi-graph-up me-2"></i><span
+              class="nav-link-text"> Gerencial</span></a></li>
         <!-- <li class="nav-item"><a
           class="nav-link {% if request.endpoint == 'analytics.cancelamentos_dashboard' %}active{% endif %}"
           href="{{ url_for('analytics.cancelamentos_dashboard') }}"><i class="bi bi-x-circle me-2"></i><span class="nav-link-text"> Cancelamentos</span></a></li> -->
@@ -129,6 +130,7 @@
   <script src="{{ url_for('static', filename='js/common.js') }}"></script>
   <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
   <script src="{{ url_for('static', filename='js/modal_detalhes_empresa.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/bug_prevention_service.js') }}"></script>
 
   {% block scripts_extra %}{% endblock %}
 </body>

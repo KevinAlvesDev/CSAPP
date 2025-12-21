@@ -180,6 +180,196 @@
                 </div>
             </div>
 
+            <!-- Card Resumo da Empresa -->
+            <div class="custom-card mt-3">
+                <div class="custom-card-header">
+                    <h5 class="custom-card-title"><i class="bi bi-building me-2 text-primary"></i>Resumo da Empresa</h5>
+                </div>
+                <div class="custom-card-body">
+                    <!-- Informações Principais -->
+                    <div class="company-summary">
+                        <!-- Nome da Empresa -->
+                        <div class="summary-item mb-3">
+                            <div class="d-flex align-items-center mb-1">
+                                <i class="bi bi-briefcase-fill text-primary me-2"></i>
+                                <span class="summary-label fw-bold">Empresa</span>
+                            </div>
+                            <div class="summary-value ps-4">{{ implantacao.nome_empresa }}</div>
+                        </div>
+
+                        <!-- Status da Implantação -->
+                        <div class="summary-item mb-3">
+                            <div class="d-flex align-items-center mb-1">
+                                <i class="bi bi-flag-fill text-primary me-2"></i>
+                                <span class="summary-label fw-bold">Status</span>
+                            </div>
+                            <div class="summary-value ps-4">
+                                {% if implantacao.status == 'nova' %}
+                                <span class="badge bg-secondary">Nova</span>
+                                {% elif implantacao.status == 'futura' %}
+                                <span class="badge bg-info">Futura</span>
+                                {% elif implantacao.status == 'andamento' %}
+                                <span class="badge bg-primary">Em Andamento</span>
+                                {% elif implantacao.status == 'parada' %}
+                                <span class="badge bg-warning">Parada</span>
+                                {% elif implantacao.status == 'finalizada' %}
+                                <span class="badge bg-success">Finalizada</span>
+                                {% elif implantacao.status == 'cancelada' %}
+                                <span class="badge bg-danger">Cancelada</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ implantacao.status|title }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Data de Início -->
+                        <div class="summary-item mb-3">
+                            <div class="d-flex align-items-center mb-1">
+                                <i class="bi bi-calendar-event text-primary me-2"></i>
+                                <span class="summary-label fw-bold">Data de Início</span>
+                            </div>
+                            <div class="summary-value ps-4">
+                                {% if implantacao.data_inicio_efetivo_fmt_d %}
+                                {{ implantacao.data_inicio_efetivo_fmt_d }}
+                                <span class="text-muted small">(Efetivo)</span>
+                                {% elif implantacao.data_inicio_previsto_fmt_d %}
+                                {{ implantacao.data_inicio_previsto_fmt_d }}
+                                <span class="text-muted small">(Previsto)</span>
+                                {% elif implantacao.data_criacao_fmt_d %}
+                                {{ implantacao.data_criacao_fmt_d }}
+                                <span class="text-muted small">(Criação)</span>
+                                {% else %}
+                                <span class="text-muted">Não definida</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- ID Favorecido -->
+                        {% if implantacao.id_favorecido %}
+                        <div class="summary-item mb-3">
+                            <div class="d-flex align-items-center mb-1">
+                                <i class="bi bi-hash text-primary me-2"></i>
+                                <span class="summary-label fw-bold">ID Favorecido</span>
+                            </div>
+                            <div class="summary-value ps-4">{{ implantacao.id_favorecido }}</div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Responsável -->
+                        {% if implantacao.responsavel_cliente %}
+                        <div class="summary-item mb-3">
+                            <div class="d-flex align-items-center mb-1">
+                                <i class="bi bi-person-fill text-primary me-2"></i>
+                                <span class="summary-label fw-bold">Responsável</span>
+                            </div>
+                            <div class="summary-value ps-4">
+                                {{ implantacao.responsavel_cliente }}
+                                {% if implantacao.cargo_responsavel %}
+                                <span class="text-muted small">- {{ implantacao.cargo_responsavel }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Contato -->
+                        {% if implantacao.email_responsavel or implantacao.telefone_responsavel %}
+                        <div class="summary-item mb-3">
+                            <div class="d-flex align-items-center mb-1">
+                                <i class="bi bi-envelope-fill text-primary me-2"></i>
+                                <span class="summary-label fw-bold">Contato</span>
+                            </div>
+                            <div class="summary-value ps-4">
+                                {% if implantacao.email_responsavel %}
+                                <div><a href="mailto:{{ implantacao.email_responsavel }}"
+                                        class="text-decoration-none">{{ implantacao.email_responsavel }}</a></div>
+                                {% endif %}
+                                {% if implantacao.telefone_responsavel %}
+                                <div class="text-muted small">{{ implantacao.telefone_responsavel }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Seguimento -->
+                        {% if implantacao.seguimento %}
+                        <div class="summary-item mb-3">
+                            <div class="d-flex align-items-center mb-1">
+                                <i class="bi bi-tag-fill text-primary me-2"></i>
+                                <span class="summary-label fw-bold">Seguimento</span>
+                            </div>
+                            <div class="summary-value ps-4">
+                                {% set seguimentos = implantacao.seguimento.split(',') if implantacao.seguimento else []
+                                %}
+                                {% for seg in seguimentos %}
+                                <span class="badge bg-primary bg-opacity-10 text-primary me-1 mb-1">{{ seg.strip()
+                                    }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Modalidades -->
+                        {% if implantacao.modalidades %}
+                        <div class="summary-item mb-3">
+                            <div class="d-flex align-items-center mb-1">
+                                <i class="bi bi-activity text-primary me-2"></i>
+                                <span class="summary-label fw-bold">Modalidades</span>
+                            </div>
+                            <div class="summary-value ps-4">
+                                {% set mods = implantacao.modalidades.split(',') if implantacao.modalidades else [] %}
+                                {% for mod in mods %}
+                                <span class="badge bg-info bg-opacity-10 text-info me-1 mb-1">{{ mod.strip() }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Alunos Ativos -->
+                        {% if implantacao.alunos_ativos %}
+                        <div class="summary-item mb-3">
+                            <div class="d-flex align-items-center mb-1">
+                                <i class="bi bi-people-fill text-primary me-2"></i>
+                                <span class="summary-label fw-bold">Alunos Ativos</span>
+                            </div>
+                            <div class="summary-value ps-4">{{ implantacao.alunos_ativos }}</div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Sistema Anterior -->
+                        {% if implantacao.sistema_anterior %}
+                        <div class="summary-item mb-3">
+                            <div class="d-flex align-items-center mb-1">
+                                <i class="bi bi-arrow-left-right text-primary me-2"></i>
+                                <span class="summary-label fw-bold">Sistema Anterior</span>
+                            </div>
+                            <div class="summary-value ps-4">{{ implantacao.sistema_anterior }}</div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Integrações -->
+                        {% set integracoes = [] %}
+                        {% if implantacao.wellhub == 'Sim' %}{% set _ = integracoes.append('Wellhub') %}{% endif %}
+                        {% if implantacao.totalpass == 'Sim' %}{% set _ = integracoes.append('TotalPass') %}{% endif %}
+                        {% if implantacao.catraca == 'Sim' %}{% set _ = integracoes.append('Catraca') %}{% endif %}
+                        {% if implantacao.facial == 'Sim' %}{% set _ = integracoes.append('Facial') %}{% endif %}
+
+                        {% if integracoes %}
+                        <div class="summary-item">
+                            <div class="d-flex align-items-center mb-1">
+                                <i class="bi bi-plugin text-primary me-2"></i>
+                                <span class="summary-label fw-bold">Integrações</span>
+                            </div>
+                            <div class="summary-value ps-4">
+                                {% for integ in integracoes %}
+                                <span class="badge bg-success bg-opacity-10 text-success me-1 mb-1">{{ integ }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
             <!-- Card Detalhes da Empresa (Resumo) -->
         </div>
 
