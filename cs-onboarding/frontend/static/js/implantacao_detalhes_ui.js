@@ -1173,9 +1173,23 @@
         const select = document.getElementById(selectId);
         if (!select || !select.classList.contains('tom-select-multi')) return;
 
+        // Check for existing instance in our tracking object
         if (tomSelectInstances[selectId]) {
-          tomSelectInstances[selectId].destroy();
+          try {
+            tomSelectInstances[selectId].destroy();
+          } catch (e) {
+            console.warn('Error destroying Tom Select instance:', e);
+          }
           delete tomSelectInstances[selectId];
+        }
+
+        // Check for existing instance on the element itself
+        if (select.tomselect) {
+          try {
+            select.tomselect.destroy();
+          } catch (e) {
+            console.warn('Error destroying Tom Select from element:', e);
+          }
         }
 
         const tomSelect = new TomSelect(select, {
@@ -1200,9 +1214,23 @@
         const select = document.getElementById(selectId);
         if (!select || !select.classList.contains('tom-select-single')) return;
 
+        // Check for existing instance in our tracking object
         if (tomSelectInstances[selectId]) {
-          tomSelectInstances[selectId].destroy();
+          try {
+            tomSelectInstances[selectId].destroy();
+          } catch (e) {
+            console.warn('Error destroying Tom Select instance:', e);
+          }
           delete tomSelectInstances[selectId];
+        }
+
+        // Check for existing instance on the element itself
+        if (select.tomselect) {
+          try {
+            select.tomselect.destroy();
+          } catch (e) {
+            console.warn('Error destroying Tom Select from element:', e);
+          }
         }
 
         const tomSelect = new TomSelect(select, {
@@ -1412,6 +1440,7 @@
         const btn = event.relatedTarget || document.querySelector('[data-bs-target="#modalDetalhesEmpresa"]');
         let cargo = '', nivelReceita = '', seguimento = '', tiposPlanos = '', sistemaAnterior = '', recorrenciaUsa = '';
         let catraca = '', facial = '', modeloCatraca = '', modeloFacial = '';
+        let idFavorecido = ''; // Declare at the top to avoid ReferenceError
 
         if (btn) {
           cargo = btn.dataset.cargo || '';
@@ -1426,7 +1455,7 @@
           modeloFacial = btn.dataset.modeloFacial || '';
           const wellhub = btn.dataset.wellhub || '';
           const totalpass = btn.dataset.totalpass || '';
-          let idFavorecido = btn.dataset.idFavorecido || '';
+          idFavorecido = btn.dataset.idFavorecido || '';
 
           if (!idFavorecido) {
             const inputIdFav = document.getElementById('modal-id_favorecido');
