@@ -138,6 +138,7 @@ def analytics_dashboard():
             implantacoes_lista_detalhada=analytics_data.get('implantacoes_lista_detalhada', []),
             modules_implantacao_lista=analytics_data.get('modules_implantacao_lista', []),
             chart_data=analytics_data.get('chart_data', {}),
+            tags_chart_data=analytics_data.get('tags_chart_data', {}),
             implantacoes_paradas_lista=analytics_data.get('implantacoes_paradas_lista', []),
             implantacoes_canceladas_lista=analytics_data.get('implantacoes_canceladas_lista', []),
             task_summary_data=analytics_data.get('task_summary_data', []),

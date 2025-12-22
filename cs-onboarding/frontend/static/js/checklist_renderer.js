@@ -57,20 +57,20 @@ class ChecklistRenderer {
 
     /**
      * Constrói estrutura plana (flatData) para acesso rápido durante propagação
-     * Limita a 7 filhos por tarefa pai
+     * Processa todas as tarefas filhas sem limite
      */
     buildFlatData(nodes, parentId = null) {
         nodes.forEach(node => {
-            const limitedChildren = node.children && node.children.length > 0 ? node.children.slice(0, 7) : [];
+            const allChildren = node.children && node.children.length > 0 ? node.children : [];
 
             this.flatData[node.id] = {
                 ...node,
                 parentId: parentId,
-                childrenIds: limitedChildren.map(c => c.id)
+                childrenIds: allChildren.map(c => c.id)
             };
 
-            if (limitedChildren.length > 0) {
-                this.buildFlatData(limitedChildren, node.id);
+            if (allChildren.length > 0) {
+                this.buildFlatData(allChildren, node.id);
             }
         });
     }
@@ -92,8 +92,8 @@ class ChecklistRenderer {
     }
 
     renderItem(item) {
-        const limitedChildren = item.children && item.children.length > 0 ? item.children.slice(0, 7) : [];
-        const hasChildren = limitedChildren.length > 0;
+        const allChildren = item.children && item.children.length > 0 ? item.children : [];
+        const hasChildren = allChildren.length > 0;
         const isExpanded = this.expandedItems.has(item.id);
         const hasComment = item.comment && item.comment.trim().length > 0;
         const progressLabel = item.progress_label || null;
@@ -224,13 +224,7 @@ class ChecklistRenderer {
                     <div class="checklist-item-children ${isExpanded ? '' : 'd-none'}" 
                          data-item-id="${item.id}"
                          style="transition: all 0.3s ease; ${isExpanded ? 'display: block;' : 'display: none;'}">
-                        ${this.renderTree(limitedChildren)}
-                        ${item.children && item.children.length > 7 ? `
-                            <div class="text-muted text-center py-2 px-3 small" style="font-style: italic;">
-                                <i class="bi bi-info-circle me-1"></i>
-                                Limite de 7 tarefas por camada. ${item.children.length - 7} tarefa(s) não exibida(s).
-                            </div>
-                        ` : ''}
+                        ${this.renderTree(allChildren)}
                     </div>
                 ` : ''}
                 

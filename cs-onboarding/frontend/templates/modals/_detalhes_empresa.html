@@ -185,8 +185,8 @@
                                     %}selected{% endif %}>{{ tp }}</option>{% endfor %}{% endif %}
                             </select></div>
                         <div class="col-md-4 mb-3"><label for="modal-modalidades"
-                                class="form-label">Modalidades</label><select id="modal-modalidades" name="modalidades"
-                                multiple>
+                                class="form-label">Modalidades</label><select class="form-select tom-select-multi"
+                                id="modal-modalidades" name="modalidades" multiple>
                                 <option value="">Selecione...</option>{% if MODALIDADES_LIST %}{% for m in
                                 MODALIDADES_LIST %}<option value="{{ m }}" {% if m in (implantacao.modalidades or ''
                                     ).split(',') %}selected{% endif %}>{{ m }}</option>{% endfor %}{% endif %}
@@ -194,15 +194,15 @@
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3"><label for="modal-horarios_func"
-                                class="form-label">Horários</label><select id="modal-horarios_func" name="horarios_func"
-                                multiple>
+                                class="form-label">Horários</label><select class="form-select tom-select-multi"
+                                id="modal-horarios_func" name="horarios_func" multiple>
                                 <option value="">Selecione...</option>{% if HORARIOS_FUNCIONAMENTO %}{% for hf in
                                 HORARIOS_FUNCIONAMENTO %}<option value="{{ hf }}" {% if hf in (implantacao.horarios_func
                                     or '' ).split(',') %}selected{% endif %}>{{ hf }}</option>{% endfor %}{% endif %}
                             </select></div>
                         <div class="col-md-6 mb-3"><label for="modal-formas_pagamento"
-                                class="form-label">Pagamento</label><select id="modal-formas_pagamento"
-                                name="formas_pagamento" multiple>
+                                class="form-label">Pagamento</label><select class="form-select tom-select-multi"
+                                id="modal-formas_pagamento" name="formas_pagamento" multiple>
                                 <option value="">Selecione...</option>{% if FORMAS_PAGAMENTO %}{% for fp in
                                 FORMAS_PAGAMENTO %}<option value="{{ fp }}" {% if fp in (implantacao.formas_pagamento
                                     or '' ).split(',') %}selected{% endif %}>{{ fp }}</option>{% endfor %}{% endif %}

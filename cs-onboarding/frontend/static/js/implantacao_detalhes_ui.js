@@ -949,6 +949,8 @@
       });
     } catch (_) { }
 
+    // DISABLED: Duplicate submit handler - already handled by modal_detalhes_empresa.js
+    /*
     try {
       document.body.addEventListener('submit', async function (e) {
         const form = e.target;
@@ -977,6 +979,7 @@
         }
       });
     } catch (_) { }
+    */
 
     document.body.addEventListener('click', async function (e) {
       const targetBtn = e.target.closest('.btn-excluir-comentario');
@@ -1486,6 +1489,19 @@
 
         initTomSelectMulti('modal-seguimento', seguimento);
         initTomSelectMulti('modal-tipos_planos', tiposPlanos);
+
+        // Initialize Modalidades, Horários, and Formas de Pagamento (same behavior as Segmento and Tipos de Planos)
+        const modalidadesSelect = document.getElementById('modal-modalidades');
+        const horariosSelect = document.getElementById('modal-horarios_func');
+        const formasPagamentoSelect = document.getElementById('modal-formas_pagamento');
+
+        const modalidades = btn ? (btn.dataset.modalidades || '') : (modalidadesSelect ? (modalidadesSelect.dataset.value || '') : '');
+        const horarios = btn ? (btn.dataset.horariosFuncamento || '') : (horariosSelect ? (horariosSelect.dataset.value || '') : '');
+        const formasPagamento = btn ? (btn.dataset.formasPagamento || '') : (formasPagamentoSelect ? (formasPagamentoSelect.dataset.value || '') : '');
+
+        initTomSelectMulti('modal-modalidades', modalidades);
+        initTomSelectMulti('modal-horarios_func', horarios);
+        initTomSelectMulti('modal-formas_pagamento', formasPagamento);
 
         initTomSelectSingle('modal-cargo_responsavel', cargo);
         initTomSelectSingle('modal-nivel_receita', nivelReceita);

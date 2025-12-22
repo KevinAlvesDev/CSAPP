@@ -154,6 +154,139 @@
             </div>
         </div>
 
+        <!-- New Chart: Tags Completed by User -->
+        <div class="card metric-card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">Relatório de tags</h5>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted mb-3">
+                    Visualização de tarefas concluídas agrupadas por tag (Ação interna, Reunião, etc.) para cada
+                    usuário.
+                    Use os filtros abaixo para refinar o período de análise.
+                </p>
+
+                <!-- Date Range Filter for Tags Chart -->
+                <form method="GET" id="tags-filter-form" class="mb-4">
+                    <!-- Preserve main filters -->
+                    {% if current_cs_email %}
+                    <input type="hidden" name="cs_email" value="{{ current_cs_email }}">
+                    {% endif %}
+                    {% if current_status_filter %}
+                    <input type="hidden" name="status_filter" value="{{ current_status_filter }}">
+                    {% endif %}
+                    {% if current_start_date %}
+                    <input type="hidden" name="start_date" value="{{ current_start_date }}">
+                    {% endif %}
+                    {% if current_end_date %}
+                    <input type="hidden" name="end_date" value="{{ current_end_date }}">
+                    {% endif %}
+
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label small">Filtrar por Usuário (Tags)</label>
+                            <select class="form-select" name="task_cs_email">
+                                <option value="">Todos os Usuários</option>
+                                {% for cs in all_cs %}
+                                <option value="{{ cs.usuario }}" {% if cs.usuario==current_task_cs_email %}selected{%
+                                    endif %}>
+                                    {{ cs.nome }} ({{ cs.perfil_acesso or 'N/A' }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Data Início (Tags)</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control flatpickr-date" name="task_start_date"
+                                    placeholder="DD/MM/AAAA" value="{{ current_task_start_date or '' }}">
+                                <button class="btn btn-outline-secondary" type="button" id="btn-cal-task-start">
+                                    <i class="bi bi-calendar3"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Data Fim (Tags)</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control flatpickr-date" name="task_end_date"
+                                    placeholder="DD/MM/AAAA" value="{{ current_task_end_date or '' }}">
+                                <button class="btn btn-outline-secondary" type="button" id="btn-cal-task-end">
+                                    <i class="bi bi-calendar3"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-3 d-flex gap-2">
+                            <button type="submit" class="btn btn-primary flex-grow-1">
+                                <i class="bi bi-funnel-fill me-1"></i> Filtrar Tags
+                            </button>
+                            <a href="{{ url_for('analytics.analytics_dashboard', cs_email=current_cs_email, status_filter=current_status_filter, start_date=current_start_date, end_date=current_end_date) }}"
+                                class="btn btn-outline-secondary" title="Limpar Filtros de Tags">
+                                <i class="bi bi-x-lg"></i>
+                            </a>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Table Container -->
+                {% if tags_chart_data and tags_chart_data.labels %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover table-bordered align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="text-center" style="min-width: 150px;">Usuário</th>
+                                {% for dataset in tags_chart_data.datasets %}
+                                <th class="text-center" style="min-width: 120px;">{{ dataset.label }}</th>
+                                {% endfor %}
+                                <th class="text-center bg-light" style="min-width: 100px;"><strong>Total</strong></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user_idx in range(tags_chart_data.labels|length) %}
+                            <tr>
+                                <td class="fw-semibold">{{ tags_chart_data.labels[user_idx] }}</td>
+                                {% set row_total = namespace(value=0) %}
+                                {% for dataset in tags_chart_data.datasets %}
+                                {% set count = dataset.data[user_idx] %}
+                                {% set row_total.value = row_total.value + count %}
+                                <td class="text-center">
+                                    {% if count > 0 %}
+                                    <span class="badge rounded-pill"
+                                        style="background-color: {{ dataset.backgroundColor }}; color: white; font-size: 0.9rem; padding: 0.4rem 0.8rem;">
+                                        {{ count }}
+                                    </span>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                                <td class="text-center bg-light">
+                                    <strong class="text-primary">{{ row_total.value }}</strong>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            <!-- Totals Row -->
+                            <tr class="table-secondary fw-bold">
+                                <td class="text-start">Total por Tag:</td>
+                                {% for dataset in tags_chart_data.datasets %}
+                                {% set col_total = dataset.data|sum %}
+                                <td class="text-center">{{ col_total }}</td>
+                                {% endfor %}
+                                <td class="text-center bg-primary text-white">
+                                    <strong>{{ tags_chart_data.total_tasks or 0 }}</strong>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info text-center">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Nenhum dado disponível para o período selecionado.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
         <div class="card metric-card mt-4">
             <div class="card-header">
                 <h5 class="mb-0">Lista Detalhada de Implantações</h5>
@@ -615,6 +748,82 @@
                 }
             });
         }
+
+
+        // 5. Tags por Usuário - NOW USING TABLE FORMAT (chart code disabled)
+        /*
+        const ctxTagsByUser = document.getElementById('chartTagsByUser');
+        const tagsData = {{ tags_chart_data | tojson | safe
+    }};
+
+    if (ctxTagsByUser && tagsData && tagsData.labels && tagsData.labels.length > 0) {
+        new Chart(ctxTagsByUser, {
+            type: 'bar',
+            data: {
+                labels: tagsData.labels,
+                datasets: tagsData.datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y', // Horizontal bars for better readability
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        stacked: true,
+                        title: {
+                            display: true,
+                            text: 'Quantidade de Tarefas Concluídas'
+                        }
+                    },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            boxWidth: 12,
+                            padding: 10
+                        }
+                    },
+                    tooltip: {
+                        ...tooltipOptions,
+                        callbacks: {
+                            label: function (context) {
+                                const label = context.dataset.label || '';
+                                const value = context.parsed.x || 0;
+                                return `${label}: ${value} tarefa${value !== 1 ? 's' : ''}`;
+                            }
+                        }
+                    },
+                    datalabels: {
+                        anchor: 'center',
+                        align: 'center',
+                        color: '#fff',
+                        font: {
+                            weight: 'bold',
+                            size: 11
+                        },
+                        formatter: (value) => {
+                            return value > 0 ? value : null;
+                        }
+                    }
+                }
+            }
+        });
+    } else if (ctxTagsByUser) {
+        // Show empty state
+        const ctx = ctxTagsByUser.getContext('2d');
+        ctx.font = '14px Arial';
+        ctx.fillStyle = '#6c757d';
+        ctx.textAlign = 'center';
+        ctx.fillText('Nenhum dado disponível para o período selecionado', ctxTagsByUser.width / 2, ctxTagsByUser.height / 2);
+    }
+    */
 
         // Inicialização dos filtros com flatpickr e máscara BR
         if (window.flatpickr) {

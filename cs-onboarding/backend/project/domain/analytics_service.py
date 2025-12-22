@@ -501,11 +501,20 @@ def get_analytics_data(target_cs_email=None, target_status=None, start_date=None
         }
     }
 
+    # Get tags by user chart data
+    from .tags_analytics import get_tags_by_user_chart_data
+    tags_chart_data = get_tags_by_user_chart_data(
+        cs_email=task_cs_email,
+        start_date=task_start_date_to_query,
+        end_date=task_end_date_to_query
+    )
+
     return {
         'kpi_cards': global_metrics,
         'implantacoes_lista_detalhada': impl_completas,
         'modules_implantacao_lista': modules_implantacao_lista,
         'chart_data': chart_data,
+        'tags_chart_data': tags_chart_data,
         'implantacoes_paradas_lista': implantacoes_paradas_detalhadas,
         'implantacoes_canceladas_lista': implantacoes_canceladas_detalhadas,
         'task_summary_data': task_summary_list,
