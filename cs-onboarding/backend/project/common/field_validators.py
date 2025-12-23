@@ -223,9 +223,9 @@ def validate_detalhes_empresa(campos: dict) -> Tuple[bool, list]:
         if not valid:
             errors.append(error)
     
-    # Validate valor atribuido
-    if 'valor_atribuido' in campos:
-        valid, error = validate_valor_monetario(campos['valor_atribuido'])
+    # Validate valor monetario
+    if 'valor_monetario' in campos:
+        valid, error = validate_valor_monetario(campos['valor_monetario'])
         if not valid:
             errors.append(error)
     

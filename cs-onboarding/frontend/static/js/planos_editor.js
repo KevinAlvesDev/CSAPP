@@ -3,7 +3,7 @@
  * Gerencia a criação e edição de planos com estrutura hierárquica ilimitada
  */
 
-(function() {
+(function () {
   'use strict';
 
   let itemCounter = 0;
@@ -30,21 +30,21 @@
       itemCounter++;
       const itemId = dados?.id || `item_${itemCounter}`;
       const container = document.getElementById('itemsContainer');
-      
+
       if (dados && dados.children && dados.children.length > 0) {
         dados.expanded = true;
       }
-      
+
       const itemElement = this.criarItemElement(itemId, dados, 0, null);
       container.insertAdjacentHTML('beforeend', itemElement);
-      
+
       const element = container.querySelector(`[data-item-id="${itemId}"]`);
       this.bindItemEvents(element);
-      
+
       if (dados && dados.children && dados.children.length > 0) {
         this.carregarFilhosRecursivo(dados, element);
       }
-      
+
       this.checkEmptyState();
       return element;
     },
@@ -58,7 +58,7 @@
       const isExpanded = dados?.expanded !== false;
       const hasChildren = dados?.children && dados.children.length > 0;
       const showToggle = hasChildren || level >= 0;
-      
+
       return `
         <div class="checklist-item-editor" data-item-id="${itemId}" data-level="${level}" data-parent-id="${parentId || ''}" data-expanded="${isExpanded}" style="margin-left: ${indent}px;">
           <div class="checklist-item-header-editor">
@@ -81,7 +81,6 @@
                 <option value="Reunião" ${tag === 'Reunião' ? 'selected' : ''}>Reunião</option>
                 <option value="Cliente" ${tag === 'Cliente' ? 'selected' : ''}>Cliente</option>
                 <option value="Rede" ${tag === 'Rede' ? 'selected' : ''}>Rede</option>
-                <option value="No Show" ${tag === 'No Show' ? 'selected' : ''}>No Show</option>
               </select>
             </div>
             <div class="d-flex align-items-center gap-1">
@@ -125,21 +124,21 @@
       const parentId = parentElement.getAttribute('data-item-id');
       const level = parseInt(parentElement.getAttribute('data-level')) + 1;
       const itemId = dados?.id || `item_${itemCounter}`;
-      
+
       const childrenContainer = parentElement.querySelector('.item-children');
       const itemElement = this.criarItemElement(itemId, dados, level, parentId);
       childrenContainer.insertAdjacentHTML('beforeend', itemElement);
-      
+
       const element = childrenContainer.querySelector(`[data-item-id="${itemId}"]`);
       this.bindItemEvents(element);
-      
+
       this.expandItem(parentElement);
     },
 
     expandItem(element) {
       const body = element.querySelector('.item-body');
       const icon = element.querySelector('.toggle-children i');
-      
+
       body.classList.remove('d-none');
       icon.classList.remove('bi-chevron-right');
       icon.classList.add('bi-chevron-down', 'expanded');
@@ -149,7 +148,7 @@
     collapseItem(element) {
       const body = element.querySelector('.item-body');
       const icon = element.querySelector('.toggle-children i');
-      
+
       body.classList.add('d-none');
       icon.classList.remove('bi-chevron-down', 'expanded');
       icon.classList.add('bi-chevron-right');
@@ -170,19 +169,19 @@
       const btnRemove = element.querySelector('.btn-remove-item');
       const btnToggle = element.querySelector('.toggle-children');
       const obrigatoriaInput = element.querySelector('.item-obrigatoria-input');
-      
+
       if (btnAddChild) {
         btnAddChild.addEventListener('click', () => this.adicionarFilho(element));
       }
-      
+
       if (btnRemove) {
         btnRemove.addEventListener('click', () => this.removerItem(element));
       }
-      
+
       if (btnToggle) {
         btnToggle.addEventListener('click', () => this.toggleItem(element));
       }
-      
+
       if (obrigatoriaInput && btnRemove) {
         obrigatoriaInput.addEventListener('change', () => {
           const isObrigatoria = obrigatoriaInput.checked;
@@ -202,12 +201,12 @@
     removerItem(element) {
       const obrigatoriaInput = element.querySelector('.item-obrigatoria-input');
       const isObrigatoria = obrigatoriaInput && obrigatoriaInput.checked;
-      
+
       if (isObrigatoria) {
         alert('Não é possível excluir uma tarefa obrigatória. Desmarque a opção "Tarefa obrigatória" antes de excluir.');
         return;
       }
-      
+
       if (confirm('Tem certeza que deseja remover este item e todos os seus filhos?')) {
         element.remove();
         this.checkEmptyState();
@@ -217,7 +216,7 @@
     checkEmptyState() {
       const itemsContainer = document.getElementById('itemsContainer');
       const emptyState = document.getElementById('emptyState');
-      
+
       if (itemsContainer && emptyState) {
         const hasItems = itemsContainer.querySelectorAll('[data-item-id]').length > 0;
         emptyState.style.display = hasItems ? 'none' : 'block';
@@ -227,7 +226,7 @@
     coletarDados() {
       const itemsContainer = document.getElementById('itemsContainer');
       const rootItems = itemsContainer.querySelectorAll('[data-item-id][data-level="0"]');
-      
+
       const items = [];
       rootItems.forEach(itemEl => {
         const item = this.coletarItemRecursivo(itemEl);
@@ -235,7 +234,7 @@
           items.push(item);
         }
       });
-      
+
       return { items };
     },
 
@@ -248,7 +247,7 @@
       const tagInput = element.querySelector('.item-tag-select');
       const tag = tagInput ? tagInput.value : '';
       const level = parseInt(element.getAttribute('data-level'));
-      
+
       const item = {
         title: title,
         comment: comment,
@@ -258,7 +257,7 @@
         ordem: 0, // Será calculado no backend se necessário
         children: []
       };
-      
+
       const childrenContainer = element.querySelector('.item-children');
       if (childrenContainer) {
         // Modificado para pegar apenas filhos diretos e evitar duplicação
@@ -270,7 +269,7 @@
           }
         });
       }
-      
+
       return item;
     },
 
@@ -279,13 +278,13 @@
         alert('Adicione pelo menos um item ao plano.');
         return false;
       }
-      
+
       const validarItem = (item) => {
         if (!item.title || !item.title.trim()) {
           alert('Todos os itens devem ter um título.');
           return false;
         }
-        
+
         if (item.children) {
           for (const child of item.children) {
             if (!validarItem(child)) {
@@ -293,16 +292,16 @@
             }
           }
         }
-        
+
         return true;
       };
-      
+
       for (const item of estrutura.items) {
         if (!validarItem(item)) {
           return false;
         }
       }
-      
+
       return true;
     },
 
@@ -329,7 +328,7 @@
           expanded: true,
           children: []
         };
-        
+
         if (fase.grupos && fase.grupos.length > 0) {
           fase.grupos.forEach(grupo => {
             const grupoItem = {
@@ -338,7 +337,7 @@
               level: 1,
               children: []
             };
-            
+
             if (grupo.tarefas && grupo.tarefas.length > 0) {
               grupo.tarefas.forEach(tarefa => {
                 grupoItem.children.push({
@@ -348,11 +347,11 @@
                 });
               });
             }
-            
+
             faseItem.children.push(grupoItem);
           });
         }
-        
+
         this.adicionarItemRaiz(faseItem);
       });
     },
@@ -361,10 +360,10 @@
       if (!itemData.children || itemData.children.length === 0) {
         return;
       }
-      
+
       itemData.children.forEach(childData => {
         this.adicionarFilho(parentElement, childData);
-        
+
         const childrenContainer = parentElement.querySelector('.item-children');
         if (childrenContainer) {
           const lastChild = childrenContainer.querySelector('[data-item-id]:last-child');
@@ -388,19 +387,19 @@
       const form = e.target;
       const nome = form.querySelector('#nome');
       const diasDuracao = form.querySelector('#dias_duracao');
-      
+
       if (!nome || !nome.value.trim()) {
         alert('O nome do plano é obrigatório.');
         if (nome) nome.focus();
         return;
       }
-      
+
       if (!diasDuracao || !diasDuracao.value || parseInt(diasDuracao.value) < 1) {
         alert('Informe os dias de duração (mínimo 1 dia).');
         if (diasDuracao) diasDuracao.focus();
         return;
       }
-      
+
       const estrutura = this.coletarDados();
 
       if (!this.validarDados(estrutura)) {

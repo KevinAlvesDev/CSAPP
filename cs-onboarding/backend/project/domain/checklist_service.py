@@ -304,10 +304,13 @@ def toggle_item_status(item_id, new_status, usuario_email=None):
         }
 
 
-def add_comment_to_item(item_id, text, visibilidade='interno', usuario_email=None, noshow=False):
+def add_comment_to_item(item_id, text, visibilidade='interno', usuario_email=None, noshow=False, tag=None):
     """
     Adiciona um comentário ao histórico e atualiza o campo legado 'comment' no item.
     Centraliza a lógica de comentários.
+    
+    Args:
+        tag: Tag do comentário (Ação interna, Reunião, No Show)
     """
     try:
         item_id = int(item_id)
@@ -319,7 +322,7 @@ def add_comment_to_item(item_id, text, visibilidade='interno', usuario_email=Non
 
     usuario_email = usuario_email or (g.user_email if hasattr(g, 'user_email') else None)
     text = sanitize_string(text.strip(), max_length=8000, min_length=1)
-    noshow = bool(noshow)
+    noshow = bool(noshow) or (tag == 'No Show')
 
     with db_transaction_with_lock() as (conn, cursor, db_type):
         # 1. Verificar item
@@ -338,7 +341,7 @@ def add_comment_to_item(item_id, text, visibilidade='interno', usuario_email=Non
             implantacao_id = item[1]
             item_title = item[2]
 
-        # 2. Garantir coluna checklist_item_id em comentarios_h (Self-healing)
+        # 2. Garantir coluna checklist_item_id e tag em comentarios_h (Self-healing)
         if db_type == 'postgres':
             try:
                 cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_name='comentarios_h' AND column_name='checklist_item_id'")
@@ -348,6 +351,10 @@ def add_comment_to_item(item_id, text, visibilidade='interno', usuario_email=Non
                         cursor.execute("ALTER TABLE comentarios_h ADD CONSTRAINT fk_comentarios_checklist_item FOREIGN KEY (checklist_item_id) REFERENCES checklist_items(id)")
                     except Exception:
                         pass
+                # Garantir coluna tag
+                cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_name='comentarios_h' AND column_name='tag'")
+                if not cursor.fetchone():
+                    cursor.execute("ALTER TABLE comentarios_h ADD COLUMN IF NOT EXISTS tag VARCHAR(50)")
             except Exception:
                 pass
         elif db_type == 'sqlite':
@@ -356,6 +363,8 @@ def add_comment_to_item(item_id, text, visibilidade='interno', usuario_email=Non
                 cols = [r[1] for r in cursor.fetchall()]
                 if 'checklist_item_id' not in cols:
                     cursor.execute("ALTER TABLE comentarios_h ADD COLUMN checklist_item_id INTEGER")
+                if 'tag' not in cols:
+                    cursor.execute("ALTER TABLE comentarios_h ADD COLUMN tag TEXT")
             except Exception:
                 pass
 
@@ -363,11 +372,11 @@ def add_comment_to_item(item_id, text, visibilidade='interno', usuario_email=Non
         now = datetime.now()
         noshow_val = noshow if db_type == 'postgres' else (1 if noshow else 0)
         insert_sql = """
-            INSERT INTO comentarios_h (checklist_item_id, usuario_cs, texto, data_criacao, visibilidade, noshow)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            INSERT INTO comentarios_h (checklist_item_id, usuario_cs, texto, data_criacao, visibilidade, noshow, tag)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
         """
         if db_type == 'sqlite': insert_sql = insert_sql.replace('%s', '?')
-        cursor.execute(insert_sql, (item_id, usuario_email, text, now, visibilidade, noshow_val))
+        cursor.execute(insert_sql, (item_id, usuario_email, text, now, visibilidade, noshow_val, tag))
         
         # 4. Atualizar campo legado 'comment' no checklist_items (para compatibilidade frontend)
         # Isso garante que o ícone de "tem comentário" apareça
@@ -395,7 +404,8 @@ def add_comment_to_item(item_id, text, visibilidade='interno', usuario_email=Non
                 'usuario_cs': usuario_email,
                 'data_criacao': now.isoformat(),
                 'visibilidade': visibilidade,
-                'noshow': noshow
+                'noshow': noshow,
+                'tag': tag
             }
         }
 

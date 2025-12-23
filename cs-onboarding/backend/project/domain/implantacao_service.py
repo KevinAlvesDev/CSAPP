@@ -1109,7 +1109,7 @@ def atualizar_detalhes_empresa_service(implantacao_id, usuario_cs_email, user_pe
         'cnpj',
         'status_implantacao_oamd',
         'nivel_atendimento',
-        'valor_atribuido',
+        'valor_monetario',
         'data_cadastro',
         'resp_estrategico_nome',
         'resp_onb_nome',

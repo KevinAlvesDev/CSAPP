@@ -1670,6 +1670,27 @@
           });
         }
 
+        // Máscara de dinheiro para valor_monetario
+        const valorInput = document.getElementById('modal-valor_monetario');
+        if (valorInput && window.IMask) {
+          IMask(valorInput, {
+            mask: 'R$ num',
+            blocks: {
+              num: {
+                mask: Number,
+                scale: 2,
+                thousandsSeparator: '.',
+                radix: ',',
+                mapToRadix: ['.'],
+                min: 0,
+                max: 9999999.99,
+                normalizeZeros: true,
+                padFractionalZeros: true
+              }
+            }
+          });
+        }
+
         const telaApoioInput = document.getElementById('modal-tela_apoio_link');
         if (telaApoioInput) {
           telaApoioInput.addEventListener('blur', function () {

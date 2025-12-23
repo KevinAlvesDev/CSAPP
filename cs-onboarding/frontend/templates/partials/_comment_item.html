@@ -12,6 +12,15 @@
                 <i class="bi bi-calendar-x"></i> No show
             </span>
             {% endif %}
+            {% if comentario.tag and not comentario.noshow %}
+            <span
+                class="badge rounded-pill small 
+                {% if comentario.tag == 'Ação interna' %}bg-primary{% elif comentario.tag == 'Reunião' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+                {% if comentario.tag == 'Ação interna' %}<i class="bi bi-briefcase"></i>{% elif comentario.tag ==
+                'Reunião' %}<i class="bi bi-calendar-event"></i>{% endif %}
+                {{ comentario.tag }}
+            </span>
+            {% endif %}
         </div>
         <small class="text-secondary">{{ comentario.data_criacao | format_date_br }}</small>
     </div>

@@ -123,12 +123,19 @@
                                 title="Status atual do processo de implantação"
                                 value="{{ implantacao.status_implantacao_oamd or '' }}">
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-3 mb-3">
                             <label for="modal-nivel_atendimento" class="form-label">Nível Atendimento</label>
                             <input type="text" class="form-control" id="modal-nivel_atendimento"
                                 name="nivel_atendimento" data-bs-toggle="tooltip"
                                 title="Classificação de atendimento do cliente"
                                 value="{{ implantacao.nivel_atendimento or '' }}">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="modal-valor_monetario" class="form-label">Valor Atribuído (R$)</label>
+                            <input type="text" class="form-control money-mask" id="modal-valor_monetario"
+                                name="valor_monetario" placeholder="R$ 0,00"
+                                title="Valor em reais atribuído à implantação"
+                                value="{{ implantacao.valor_monetario or '' }}">
                         </div>
                     </div>
 
@@ -256,6 +263,7 @@
                                 name="alunos_ativos" min="0" step="1" inputmode="numeric" pattern="[0-9]*"
                                 title="Digite apenas números inteiros" value="{{ implantacao.alunos_ativos or '' }}">
                         </div>
+
                     </div>
                     <div class="row">
                         <div class="col-md-2 mb-3"><label for="modal-catraca" class="form-label">Catraca?</label><select

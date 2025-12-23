@@ -335,6 +335,19 @@
                         </div>
                         {% endif %}
 
+                        <!-- Valor Atribuído -->
+                        {% if implantacao.valor_monetario and implantacao.valor_monetario > 0 %}
+                        <div class="summary-item mb-3">
+                            <div class="d-flex align-items-center mb-1">
+                                <i class="bi bi-currency-dollar text-success me-2"></i>
+                                <span class="summary-label fw-bold">Valor Atribuído</span>
+                            </div>
+                            <div class="summary-value ps-4 text-success fw-bold">
+                                R$ {{ "%.2f"|format(implantacao.valor_monetario)|replace('.', ',') }}
+                            </div>
+                        </div>
+                        {% endif %}
+
                         <!-- Sistema Anterior -->
                         {% if implantacao.sistema_anterior %}
                         <div class="summary-item mb-3">
@@ -935,7 +948,6 @@
                             <option value="Reunião">Reunião</option>
                             <option value="Configuração">Configuração</option>
                             <option value="Rede">Rede</option>
-                            <option value="No Show">No Show</option>
                         </select>
                     </div>
                 </div>

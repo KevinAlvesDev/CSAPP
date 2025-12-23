@@ -461,7 +461,7 @@ def atualizar_detalhes_empresa():
                 app_logger.error(f"ERRO ao normalizar data '{s}': {e}")
                 return None
 
-        valor_raw = get_form_value('valor_atribuido')
+        valor_raw = get_form_value('valor_monetario')
         if valor_raw is not None:
             v = valor_raw.replace('R$', '').strip()
             try:
@@ -534,7 +534,7 @@ def atualizar_detalhes_empresa():
             'cnpj': get_form_value('cnpj'),
             'status_implantacao_oamd': get_form_value('status_implantacao_oamd'),
             'nivel_atendimento': get_form_value('nivel_atendimento'),
-            'valor_atribuido': valor_raw,
+            'valor_monetario': valor_raw,
             'resp_estrategico_nome': get_form_value('resp_estrategico_nome'),
             'resp_onb_nome': get_form_value('resp_onb_nome'),
             'resp_estrategico_obs': get_form_value('resp_estrategico_obs'),

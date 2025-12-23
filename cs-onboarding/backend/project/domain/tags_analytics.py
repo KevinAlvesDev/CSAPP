@@ -43,13 +43,15 @@ def get_tags_by_user_chart_data(
     query = """
         SELECT 
             u.nome as user_name,
-            COALESCE(ci.tag, 'Sem tag') as tag,
+            ci.tag as tag,
             COUNT(DISTINCT ci.id) as task_count
         FROM checklist_items ci
         JOIN implantacoes i ON ci.implantacao_id = i.id
         JOIN perfil_usuario u ON i.usuario_cs = u.usuario
         WHERE ci.completed = TRUE
           AND ci.data_conclusao IS NOT NULL
+          AND ci.tag IS NOT NULL
+          AND ci.tag != ''
     """
     
     args = []
@@ -106,10 +108,8 @@ def get_tags_by_user_chart_data(
     def tag_sort_key(tag):
         if tag in standard_tags:
             return (0, standard_tags.index(tag))
-        elif tag == 'Sem tag':
-            return (2, 0)  # Sem tag goes last
         else:
-            return (1, tag)  # Other tags in the middle
+            return (1, tag)  # Other tags alphabetically
     
     sorted_tags = sorted(all_tags, key=tag_sort_key)
     sorted_users = sorted(users_data.keys())
@@ -121,7 +121,6 @@ def get_tags_by_user_chart_data(
         'Cliente': 'rgba(75, 192, 192, 0.7)',        # Teal
         'Rede': 'rgba(255, 159, 64, 0.7)',           # Orange
         'No Show': 'rgba(153, 102, 255, 0.7)',       # Purple
-        'Sem tag': 'rgba(201, 203, 207, 0.7)',       # Gray
     }
     
     # Build datasets for Chart.js

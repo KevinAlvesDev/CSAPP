@@ -248,10 +248,20 @@ class ChecklistRenderer {
                                       data-item-id="${item.id}">
                                     <i class="bi bi-globe"></i> Externo
                                 </span>
-                                <span class="comentario-tipo-tag noshow" 
+                                <span class="comentario-tipo-tag tag-option acao-interna" 
+                                      data-item-id="${item.id}"
+                                      data-tag="Ação interna">
+                                    <i class="bi bi-briefcase"></i> Ação interna
+                                </span>
+                                <span class="comentario-tipo-tag tag-option reuniao" 
+                                      data-item-id="${item.id}"
+                                      data-tag="Reunião">
+                                    <i class="bi bi-calendar-event"></i> Reunião
+                                </span>
+                                <span class="comentario-tipo-tag tag-option noshow" 
                                       id="comment-noshow-${item.id}"
                                       data-item-id="${item.id}"
-                                      data-noshow="false">
+                                      data-tag="No Show">
                                     <i class="bi bi-calendar-x"></i> No show
                                 </span>
                             </div>
@@ -389,16 +399,22 @@ class ChecklistRenderer {
                 visibilityTag.classList.add('active');
             }
 
-            // Handle No show tag - independent toggle
-            const noshowTag = e.target.closest('.comentario-tipo-tag.noshow');
-            if (noshowTag) {
-                const isActive = noshowTag.classList.contains('active');
-                if (isActive) {
-                    noshowTag.classList.remove('active');
-                    noshowTag.dataset.noshow = 'false';
+            // Handle tag options (Ação interna, Reunião, No Show) - mutually exclusive
+            const tagOption = e.target.closest('.comentario-tipo-tag.tag-option');
+            if (tagOption) {
+                const itemId = tagOption.dataset.itemId;
+                const container = tagOption.closest('.d-flex');
+
+                // Check if already active - if so, deselect it
+                if (tagOption.classList.contains('active')) {
+                    tagOption.classList.remove('active');
                 } else {
-                    noshowTag.classList.add('active');
-                    noshowTag.dataset.noshow = 'true';
+                    // Remove active from all tag-options in this container
+                    if (container) {
+                        container.querySelectorAll('.comentario-tipo-tag.tag-option').forEach(t => t.classList.remove('active'));
+                    }
+                    // Activate clicked tag
+                    tagOption.classList.add('active');
                 }
             }
         });
@@ -1071,7 +1087,9 @@ class ChecklistRenderer {
                         <div class="d-flex align-items-center gap-2">
                             <strong class="small"><i class="bi bi-person-fill me-1"></i>${this.escapeHtml(c.usuario_nome || c.usuario_cs)}</strong>
                             <span class="badge rounded-pill small ${visibilidadeClass}">${c.visibilidade}</span>
-                            ${c.noshow ? '<span class="badge rounded-pill small bg-warning text-dark"><i class="bi bi-calendar-x"></i> No show</span>' : ''}
+                            ${c.tag === 'Ação interna' ? '<span class="badge rounded-pill small bg-primary"><i class="bi bi-briefcase"></i> Ação interna</span>' : ''}
+                            ${c.tag === 'Reunião' ? '<span class="badge rounded-pill small bg-danger"><i class="bi bi-calendar-event"></i> Reunião</span>' : ''}
+                            ${(c.tag === 'No Show' || c.noshow) ? '<span class="badge rounded-pill small bg-warning text-dark"><i class="bi bi-calendar-x"></i> No show</span>' : ''}
                         </div>
                         <small class="text-muted">${dataFormatada}</small>
                     </div>
@@ -1106,16 +1124,19 @@ class ChecklistRenderer {
     async saveComment(itemId) {
         const textarea = this.container.querySelector(`#comment-input-${itemId}`);
         const commentsSection = this.container.querySelector(`#comments-${itemId}`);
-        const noshowTag = this.container.querySelector(`#comment-noshow-${itemId}`);
 
         // Find the active visibility tag (interno or externo)
         const activeVisibilityTag = commentsSection?.querySelector('.comentario-tipo-tag.interno.active, .comentario-tipo-tag.externo.active');
         const visibilidade = activeVisibilityTag?.classList.contains('externo') ? 'externo' : 'interno';
 
+        // Find the active tag option (Ação interna, Reunião, or No Show)
+        const activeTagOption = commentsSection?.querySelector('.comentario-tipo-tag.tag-option.active');
+        const tag = activeTagOption ? activeTagOption.dataset.tag : null;
+        const noshow = tag === 'No Show';
+
         if (!textarea) return;
 
         const texto = textarea.value.trim();
-        const noshow = noshowTag ? noshowTag.dataset.noshow === 'true' : false;
 
         if (!texto) {
             if (typeof this.showToast === 'function') this.showToast('O texto do comentário é obrigatório', 'warning'); else alert('O texto do comentário é obrigatório');
@@ -1129,7 +1150,7 @@ class ChecklistRenderer {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.csrfToken
                 },
-                body: JSON.stringify({ texto, visibilidade, noshow })
+                body: JSON.stringify({ texto, visibilidade, noshow, tag })
             });
 
             const data = await response.json();
@@ -1142,10 +1163,9 @@ class ChecklistRenderer {
                     const internoTag = commentsSection.querySelector('.comentario-tipo-tag.interno');
                     if (internoTag) internoTag.classList.add('active');
                 }
-                // Reset noshow tag
-                if (noshowTag) {
-                    noshowTag.dataset.noshow = 'false';
-                    noshowTag.classList.remove('active');
+                // Reset all tag options (Ação interna, Reunião, No Show)
+                if (commentsSection) {
+                    commentsSection.querySelectorAll('.comentario-tipo-tag.tag-option').forEach(t => t.classList.remove('active'));
                 }
 
                 const commentButton = this.container.querySelector(`.btn-comment-toggle[data-item-id="${itemId}"]`);
