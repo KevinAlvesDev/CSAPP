@@ -152,7 +152,6 @@ class ChecklistRenderer {
                         </span>
                         <span class="col-title d-flex align-items-center gap-2">
                             <span class="indent-spacer" style="display:inline-block; width: ${indentPx}px;"></span>
-                            <i class="bi ${iconClass} ${iconColor}" style="font-size: 1.1rem;"></i>
                             <span class="checklist-item-title mb-0" 
                                    style="${item.completed ? 'text-decoration: line-through; color: #6c757d;' : ''}">
                                 ${this.escapeHtml(item.title)}

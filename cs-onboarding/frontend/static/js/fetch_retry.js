@@ -6,14 +6,14 @@
  * 
  * @param {string} url - URL to fetch
  * @param {object} options - Fetch options (method, headers, body, etc.)
- * @param {number} maxRetries - Maximum number of retry attempts (default: 3)
- * @param {number} timeoutMs - Timeout in milliseconds per attempt (default: 15000)
+ * @param {number} maxRetries - Maximum number of retry attempts (default: 2)
+ * @param {number} timeoutMs - Timeout in milliseconds per attempt (default: 8000)
  * @returns {Promise<Response>} - Fetch response
  * @throws {Error} - If all retries fail
  */
-async function fetchWithRetry(url, options = {}, maxRetries = 3, timeoutMs = 15000) {
-    // Exponential backoff delays: 1s, 2s, 4s
-    const delays = [1000, 2000, 4000];
+async function fetchWithRetry(url, options = {}, maxRetries = 2, timeoutMs = 8000) {
+    // Exponential backoff delays: 1s, 2s
+    const delays = [1000, 2000];
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
         try {
@@ -65,9 +65,9 @@ async function fetchWithRetry(url, options = {}, maxRetries = 3, timeoutMs = 150
             if (isLastAttempt) {
                 if (window.showToast) {
                     if (isAbortError) {
-                        showToast('❌ Tempo de espera esgotado após 3 tentativas. Verifique sua conexão.', 'error');
+                        showToast('❌ Tempo de espera esgotado após 2 tentativas. Verifique sua conexão.', 'error');
                     } else if (isNetworkError) {
-                        showToast('❌ Erro de conexão após 3 tentativas. Verifique sua internet.', 'error');
+                        showToast('❌ Erro de conexão após 2 tentativas. Verifique sua internet.', 'error');
                     } else {
                         showToast(`❌ Falha após ${maxRetries} tentativas: ${error.message}`, 'error');
                     }

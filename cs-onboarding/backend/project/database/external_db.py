@@ -81,8 +81,8 @@ def get_external_engine():
         use_pg8000 = bool(proxy_url and socks and pg8000)
 
         try:
-            # Timeout via env var ou default 15s (mais que 10s para ser tolerante mas não infinito)
-            timeout = int(os.environ.get('EXTERNAL_DB_TIMEOUT', 15))
+            # Timeout via env var ou default 5s (rápido para falhar e não travar a UI)
+            timeout = int(os.environ.get('EXTERNAL_DB_TIMEOUT', 5))
             
             # Argumentos de conexão otimizados para resiliência
             connect_args = {
@@ -204,7 +204,7 @@ def get_external_engine():
 
     return current_app.external_db_engine
 
-@with_retries(max_retries=3, delay=1)
+@with_retries(max_retries=2, delay=1)
 def query_external_db(query_str, params=None):
     """
     Executa uma query SELECT no banco de dados externo com lógica de retry.

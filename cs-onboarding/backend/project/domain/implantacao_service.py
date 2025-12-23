@@ -1156,7 +1156,7 @@ def atualizar_detalhes_empresa_service(implantacao_id, usuario_cs_email, user_pe
     query = f"UPDATE implantacoes SET {', '.join(set_clauses)} WHERE id = %s"
     
     # ATOMIC TRANSACTION: UPDATE + timeline logging
-    from ..database import db_connection
+    from ..db import db_connection
     from datetime import datetime
     
     with db_connection() as (conn, db_type):
