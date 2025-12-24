@@ -550,6 +550,7 @@
         function applyTheme(isDark) {
             if (isDark) {
                 document.documentElement.setAttribute('data-bs-theme', 'dark');
+                document.documentElement.classList.add('dark-mode');
                 document.body.classList.add('dark-mode');
                 if (themeIcon) {
                     themeIcon.classList.remove('bi-moon-stars');
@@ -558,6 +559,7 @@
                 if (themeText) themeText.textContent = 'Tema Claro';
             } else {
                 document.documentElement.removeAttribute('data-bs-theme');
+                document.documentElement.classList.remove('dark-mode');
                 document.body.classList.remove('dark-mode');
                 if (themeIcon) {
                     themeIcon.classList.remove('bi-sun-fill');
@@ -567,10 +569,10 @@
             }
         }
 
-        // Carregar tema salvo
-        const savedTheme = localStorage.getItem('darkMode');
+        // Carregar tema salvo (sync with inline script in head)
+        const savedTheme = localStorage.getItem('theme');
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const isDarkMode = savedTheme === 'true' || (savedTheme === null && prefersDark);
+        const isDarkMode = savedTheme === 'dark' || (savedTheme === null && prefersDark);
         applyTheme(isDarkMode);
 
         if (themeToggle) {
@@ -578,7 +580,7 @@
                 e.preventDefault();
                 const isDark = document.body.classList.contains('dark-mode');
                 applyTheme(!isDark);
-                localStorage.setItem('darkMode', !isDark);
+                localStorage.setItem('theme', !isDark ? 'dark' : 'light');
             });
         }
     }

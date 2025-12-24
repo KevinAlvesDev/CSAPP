@@ -1,3 +1,12 @@
+/* Prevent flash of unstyled content on page load */
+html:not(.dark-mode) {
+  background-color: #f0f2f5;
+}
+
+html.dark-mode {
+  background-color: #0f172a;
+}
+
 :root {
   --shadow-sm: var(--elevation-1);
   --shadow-md: var(--elevation-2);

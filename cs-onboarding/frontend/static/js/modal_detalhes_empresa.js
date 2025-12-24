@@ -620,8 +620,14 @@
             console.log('🔧 Criando window.__submitModalFormDetalhes...');
             // CRITICAL FIX: Make this accessible to click handler outside this scope
             window.__submitModalFormDetalhes = async () => {
+                console.log('🚀 [DEBUG] __submitModalFormDetalhes CHAMADA!');
+                console.log('🚀 [DEBUG] modalForm:', modalForm);
+
                 const validation = validateFormFields();
+                console.log('🚀 [DEBUG] Validation result:', validation);
+
                 if (!validation.valid) {
+                    console.error('❌ [DEBUG] Validação falhou:', validation.message);
                     if (validation.field) {
                         validation.field.focus();
                         validation.field.reportValidity();
@@ -631,12 +637,15 @@
                     }
                     return false;
                 }
+
+                console.log('✅ [DEBUG] Validação OK, processando datas...');
                 processarDatas();
 
                 // CRITICAL FIX: Remove readonly from all fields before submission
                 // Readonly fields are NOT submitted in FormData
                 const readonlyFields = modalForm.querySelectorAll('[readonly]');
                 const readonlyFieldsList = Array.from(readonlyFields);
+                console.log('🚀 [DEBUG] Readonly fields encontrados:', readonlyFieldsList.length);
                 readonlyFieldsList.forEach(field => {
                     field.removeAttribute('readonly');
                     field.dataset._wasReadonly = 'true';
@@ -929,13 +938,21 @@
 
             document.addEventListener('click', function (e) {
                 const submitBtn = e.target.closest('#modalDetalhesEmpresa .btn-salvar-detalhes');
+                console.log('🖱️ [DEBUG] Click detectado. submitBtn:', submitBtn);
+
                 if (submitBtn && modalForm) {
+                    console.log('✅ [DEBUG] Botão Salvar clicado! Chamando __submitModalFormDetalhes...');
                     e.preventDefault();
                     e.stopPropagation();
                     // Call the globally accessible function
                     if (window.__submitModalFormDetalhes) {
+                        console.log('✅ [DEBUG] window.__submitModalFormDetalhes existe, chamando...');
                         window.__submitModalFormDetalhes();
+                    } else {
+                        console.error('❌ [DEBUG] window.__submitModalFormDetalhes NÃO EXISTE!');
                     }
+                } else {
+                    if (!submitBtn) console.log('ℹ️ [DEBUG] Não é o botão salvar');
                 }
             });
 
