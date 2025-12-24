@@ -175,7 +175,13 @@
         if (!selectElement) return;
 
         if (tomSelectInstances[selector]) {
-            tomSelectInstances[selector].destroy();
+            try { tomSelectInstances[selector].destroy(); } catch (_) { }
+            delete tomSelectInstances[selector];
+        }
+
+        // Also check if element already has TomSelect attached directly
+        if (selectElement.tomselect) {
+            try { selectElement.tomselect.destroy(); } catch (_) { }
         }
 
         const values = (typeof dataValue === 'string' && dataValue)
@@ -212,7 +218,13 @@
         if (!selectElement) return;
 
         if (tomSelectInstances[selector]) {
-            tomSelectInstances[selector].destroy();
+            try { tomSelectInstances[selector].destroy(); } catch (_) { }
+            delete tomSelectInstances[selector];
+        }
+
+        // Also check if element already has TomSelect attached directly
+        if (selectElement.tomselect) {
+            try { selectElement.tomselect.destroy(); } catch (_) { }
         }
 
         const tomSelect = new TomSelect(selectElement, {
