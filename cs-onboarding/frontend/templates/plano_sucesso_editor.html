@@ -368,6 +368,78 @@
     .btn-remove-item:hover {
         background: #bb2d3b;
     }
+
+    /* DARK MODE OVERRIDES */
+    body.dark-mode .checklist-items-editor {
+        background: var(--table-header-bg);
+    }
+
+    body.dark-mode .checklist-item-editor {
+        background: var(--card-bg);
+        border-color: var(--table-border-color);
+    }
+
+    body.dark-mode .editor-sidebar {
+        background: var(--card-bg);
+    }
+
+    body.dark-mode .editor-main {
+        background: var(--card-bg);
+    }
+
+    body.dark-mode .form-section {
+        border-color: var(--table-border-color);
+    }
+
+    body.dark-mode .form-section-title {
+        color: var(--body-color);
+    }
+
+    body.dark-mode .fase-accordion .accordion-item {
+        border-color: var(--table-border-color);
+    }
+
+    body.dark-mode .fase-accordion .accordion-button {
+        background: var(--table-header-bg);
+        color: var(--body-color);
+    }
+
+    body.dark-mode .grupo-card {
+        background: var(--table-header-bg);
+        border-color: var(--table-border-color);
+    }
+
+    body.dark-mode .grupo-title {
+        color: var(--body-color);
+    }
+
+    body.dark-mode .tarefa-item {
+        background: var(--card-bg);
+        border-color: var(--table-border-color);
+    }
+
+    body.dark-mode .readonly-badge {
+        background: #854d0e;
+        color: #fef3c7;
+    }
+
+    body.dark-mode .toggle-children {
+        color: #94a3b8;
+    }
+
+    body.dark-mode .toggle-children:hover {
+        color: var(--body-color);
+    }
+
+    body.dark-mode #emptyState {
+        color: var(--body-color);
+    }
+
+    body.dark-mode .editor-sidebar h5,
+    body.dark-mode .editor-sidebar h6,
+    body.dark-mode .editor-sidebar strong {
+        color: var(--body-color);
+    }
 </style>
 {% endblock %}
 
@@ -375,7 +447,8 @@
 <div class="container-fluid p-0">
     <header class="header-bg p-3 d-flex align-items-center position-relative rounded-3">
         <h1 class="main-title mb-0 fs-4 w-100 text-center">
-            CS ONBOARDING {% if modo == 'criar' %}Criar Novo Plano{% else %}{{ plano.nome if plano else 'Editar Plano' }}{% endif %}
+            CS ONBOARDING {% if modo == 'criar' %}Criar Novo Plano{% else %}{{ plano.nome if plano else 'Editar Plano'
+            }}{% endif %}
         </h1>
         <div class="d-flex align-items-center position-absolute end-0 top-50 translate-middle-y">
             <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm btn-outline-secondary me-2">
@@ -388,180 +461,187 @@
     </header>
     <main class="p-4" style="padding-top: 20px !important;">
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-    {% for category, message in messages %}
-    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show"
-        role="alert">
-        {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-    {% endfor %}
-    {% endif %}
-    {% endwith %}
-
-    {% if modo == 'visualizar' or not pode_editar %}
-    <div class="readonly-badge">
-        <i class="bi bi-eye me-2"></i>Modo Somente Leitura
-    </div>
-    {% endif %}
-
-    <div class="editor-container">
-        <div class="editor-sidebar">
-            <h5 class="mb-3">
-                <i class="bi bi-info-circle me-2"></i>Informações
-            </h5>
-
-            <div class="mb-3">
-                <strong>Status:</strong>
-                <div class="mt-1">
-                    {% if plano and plano.ativo %}
-                    <span class="badge bg-success">Ativo</span>
-                    {% elif plano %}
-                    <span class="badge bg-secondary">Inativo</span>
-                    {% else %}
-                    <span class="badge bg-info">Novo</span>
-                    {% endif %}
-                </div>
-            </div>
-
-            {% if plano %}
-            <div class="mb-3">
-                <strong>Criado por:</strong>
-                <div class="mt-1 text-muted">{{ plano.criado_por or 'Sistema' }}</div>
-            </div>
-
-            <div class="mb-3">
-                <strong>Data de criação:</strong>
-                <div class="mt-1 text-muted">{{ plano.data_criacao|format_date_br if plano.data_criacao else 'N/A' }}
-                </div>
-            </div>
-
-            <div class="mb-3">
-                <strong>Última atualização:</strong>
-                <div class="mt-1 text-muted">{{ plano.data_atualizacao|format_date_br if plano.data_atualizacao else
-                    'N/A' }}</div>
-            </div>
-            {% endif %}
-
-            <hr class="my-3">
-
-            <h6 class="mb-2">
-                <i class="bi bi-lightbulb me-2"></i>Dicas
-            </h6>
-            <ul class="small text-muted ps-3">
-                <li>Organize em fases lógicas</li>
-                <li>Agrupe tarefas relacionadas</li>
-                <li>Adicione múltiplas tarefas por ação</li>
-                <li>Marque tarefas obrigatórias</li>
-            </ul>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show"
+            role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
 
-        <div class="editor-main">
-            <form id="formPlano" method="POST" action="{{ url_for('planos.criar_plano') if modo == 'criar' else url_for('planos.atualizar_plano', plano_id=plano.id) }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                {% if modo != 'criar' %}
-                <input type="hidden" name="_method" value="PUT">
+        {% if modo == 'visualizar' or not pode_editar %}
+        <div class="readonly-badge">
+            <i class="bi bi-eye me-2"></i>Modo Somente Leitura
+        </div>
+        {% endif %}
+
+        <div class="editor-container">
+            <div class="editor-sidebar">
+                <h5 class="mb-3">
+                    <i class="bi bi-info-circle me-2"></i>Informações
+                </h5>
+
+                <div class="mb-3">
+                    <strong>Status:</strong>
+                    <div class="mt-1">
+                        {% if plano and plano.ativo %}
+                        <span class="badge bg-success">Ativo</span>
+                        {% elif plano %}
+                        <span class="badge bg-secondary">Inativo</span>
+                        {% else %}
+                        <span class="badge bg-info">Novo</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if plano %}
+                <div class="mb-3">
+                    <strong>Criado por:</strong>
+                    <div class="mt-1 text-muted">{{ plano.criado_por or 'Sistema' }}</div>
+                </div>
+
+                <div class="mb-3">
+                    <strong>Data de criação:</strong>
+                    <div class="mt-1 text-muted">{{ plano.data_criacao|format_date_br if plano.data_criacao else 'N/A'
+                        }}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <strong>Última atualização:</strong>
+                    <div class="mt-1 text-muted">{{ plano.data_atualizacao|format_date_br if plano.data_atualizacao else
+                        'N/A' }}</div>
+                </div>
                 {% endif %}
 
-                <div class="form-section">
-                    <h3 class="form-section-title">
-                        <i class="bi bi-card-text"></i>Informações Básicas
-                    </h3>
+                <hr class="my-3">
 
-                    <div class="mb-3">
-                        <label for="nome" class="form-label fw-bold">
-                            Nome do Plano <span class="text-danger">*</span>
-                        </label>
-                        <input type="text" class="form-control" id="nome" name="nome" required
-                            placeholder="Ex: Plano Academia Completo" value="{{ plano.nome if plano else '' }}">
-                    </div>
+                <h6 class="mb-2">
+                    <i class="bi bi-lightbulb me-2"></i>Dicas
+                </h6>
+                <ul class="small text-muted ps-3">
+                    <li>Organize em fases lógicas</li>
+                    <li>Agrupe tarefas relacionadas</li>
+                    <li>Adicione múltiplas tarefas por ação</li>
+                    <li>Marque tarefas obrigatórias</li>
+                </ul>
+            </div>
 
-                    <div class="mb-3">
-                        <label for="descricao" class="form-label fw-bold">Descrição</label>
-                        <textarea class="form-control" id="descricao" name="descricao" rows="3"
-                            placeholder="Descreva o objetivo e aplicação deste plano...">{{ plano.descricao if plano else '' }}</textarea>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="dias_duracao" class="form-label fw-bold">
-                            <i class="bi bi-calendar-range me-1"></i>Dias de Duração <span class="text-danger">*</span>
-                        </label>
-                        <div class="input-group" style="max-width: 200px;">
-                            <input type="number" class="form-control" id="dias_duracao" name="dias_duracao" 
-                                min="1" max="365" required
-                                placeholder="Ex: 30"
-                                value="{{ plano.dias_duracao if plano and plano.dias_duracao else '' }}">
-                            <span class="input-group-text">dias</span>
-                        </div>
-                        <small class="text-muted">Define o prazo esperado para completar todas as tarefas do plano</small>
-                    </div>
-
-                    {% if plano %}
-                    <div class="form-check form-switch">
-                        <input type="hidden" name="ativo" value="false">
-                        <input class="form-check-input" type="checkbox" id="ativo" name="ativo" value="true" {% if plano.ativo %}checked{% endif %}>
-                        <label class="form-check-label" for="ativo">
-                            Plano Ativo
-                        </label>
-                    </div>
+            <div class="editor-main">
+                <form id="formPlano" method="POST"
+                    action="{{ url_for('planos.criar_plano') if modo == 'criar' else url_for('planos.atualizar_plano', plano_id=plano.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    {% if modo != 'criar' %}
+                    <input type="hidden" name="_method" value="PUT">
                     {% endif %}
-                </div>
 
-                <div class="form-section">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h3 class="form-section-title mb-0">
-                            <i class="bi bi-layers"></i>Estrutura do Plano
+                    <div class="form-section">
+                        <h3 class="form-section-title">
+                            <i class="bi bi-card-text"></i>Informações Básicas
                         </h3>
-                        <button type="button" class="btn btn-add" id="btnAdicionarItem">
-                            <i class="bi bi-plus-circle me-1"></i>Adicionar Item
+
+                        <div class="mb-3">
+                            <label for="nome" class="form-label fw-bold">
+                                Nome do Plano <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="nome" name="nome" required
+                                placeholder="Ex: Plano Academia Completo" value="{{ plano.nome if plano else '' }}">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="descricao" class="form-label fw-bold">Descrição</label>
+                            <textarea class="form-control" id="descricao" name="descricao" rows="3"
+                                placeholder="Descreva o objetivo e aplicação deste plano...">{{ plano.descricao if plano else '' }}</textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="dias_duracao" class="form-label fw-bold">
+                                <i class="bi bi-calendar-range me-1"></i>Dias de Duração <span
+                                    class="text-danger">*</span>
+                            </label>
+                            <div class="input-group" style="max-width: 200px;">
+                                <input type="number" class="form-control" id="dias_duracao" name="dias_duracao" min="1"
+                                    max="365" required placeholder="Ex: 30"
+                                    value="{{ plano.dias_duracao if plano and plano.dias_duracao else '' }}">
+                                <span class="input-group-text">dias</span>
+                            </div>
+                            <small class="text-muted">Define o prazo esperado para completar todas as tarefas do
+                                plano</small>
+                        </div>
+
+                        {% if plano %}
+                        <div class="form-check form-switch">
+                            <input type="hidden" name="ativo" value="false">
+                            <input class="form-check-input" type="checkbox" id="ativo" name="ativo" value="true" {% if
+                                plano.ativo %}checked{% endif %}>
+                            <label class="form-check-label" for="ativo">
+                                Plano Ativo
+                            </label>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-section">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h3 class="form-section-title mb-0">
+                                <i class="bi bi-layers"></i>Estrutura do Plano
+                            </h3>
+                            <button type="button" class="btn btn-add" id="btnAdicionarItem">
+                                <i class="bi bi-plus-circle me-1"></i>Adicionar Item
+                            </button>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>Hierarquia Infinita:</strong> Você pode adicionar filhos em qualquer nível para
+                            criar uma estrutura hierárquica ilimitada.
+                        </div>
+
+                        <div id="itemsContainer" class="checklist-items-editor">
+                            <!-- Itens serão adicionados aqui dinamicamente -->
+                        </div>
+
+                        <div id="emptyState" class="text-center py-5" style="display: none;">
+                            <i class="bi bi-inbox" style="font-size: 4rem; color: #cbd5e0;"></i>
+                            <p class="text-muted mt-3">Nenhum item adicionado ainda</p>
+                            <button type="button" class="btn btn-add"
+                                onclick="document.getElementById('btnAdicionarItem').click()">
+                                <i class="bi bi-plus-circle me-1"></i>Adicionar Primeiro Item
+                            </button>
+                        </div>
+                    </div>
+
+                    {% if modo != 'visualizar' and pode_editar %}
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn-save-plano">
+                            <i class="bi bi-save me-2"></i>
+                            {% if modo == 'criar' %}Criar Plano{% else %}Salvar Alterações{% endif %}
                         </button>
                     </div>
-
-                    <div class="alert alert-info">
-                        <i class="bi bi-info-circle me-2"></i>
-                        <strong>Hierarquia Infinita:</strong> Você pode adicionar filhos em qualquer nível para criar uma estrutura hierárquica ilimitada.
-                    </div>
-
-                    <div id="itemsContainer" class="checklist-items-editor">
-                        <!-- Itens serão adicionados aqui dinamicamente -->
-                    </div>
-
-                    <div id="emptyState" class="text-center py-5" style="display: none;">
-                        <i class="bi bi-inbox" style="font-size: 4rem; color: #cbd5e0;"></i>
-                        <p class="text-muted mt-3">Nenhum item adicionado ainda</p>
-                        <button type="button" class="btn btn-add" onclick="document.getElementById('btnAdicionarItem').click()">
-                            <i class="bi bi-plus-circle me-1"></i>Adicionar Primeiro Item
-                        </button>
-                    </div>
-                </div>
-
-                {% if modo != 'visualizar' and pode_editar %}
-                <div class="d-grid gap-2">
-                    <button type="submit" class="btn-save-plano">
-                        <i class="bi bi-save me-2"></i>
-                        {% if modo == 'criar' %}Criar Plano{% else %}Salvar Alterações{% endif %}
-                    </button>
-                </div>
-                {% endif %}
-            </form>
+                    {% endif %}
+                </form>
+            </div>
         </div>
-    </div>
 </div>
 
 <script src="{{ url_for('static', filename='js/planos_editor.js') }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         {% if plano %}
-        const planoData = {{ plano | tojson | safe }};
-        if (planoData.items || planoData.fases) {
-            window.PlanoEditor.carregarPlano(planoData);
-        } else {
-            document.getElementById('emptyState').style.display = 'block';
-        }
-        {% else %}
+        const planoData = {{ plano | tojson | safe
+    }};
+    if (planoData.items || planoData.fases) {
+        window.PlanoEditor.carregarPlano(planoData);
+    } else {
         document.getElementById('emptyState').style.display = 'block';
-        {% endif %}
+    }
+    {% else %}
+    document.getElementById('emptyState').style.display = 'block';
+    {% endif %}
     });
 </script>
 {% endblock %}

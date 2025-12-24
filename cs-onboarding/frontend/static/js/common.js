@@ -4,7 +4,7 @@
  * Moved from base.html for better maintainability and caching.
  */
 
-(function() {
+(function () {
     'use strict';
 
     // --- Flatpickr Localization ---
@@ -36,7 +36,7 @@
 
     // --- Date Validation & Masking ---
 
-    window.validateDateInput = function(input) {
+    window.validateDateInput = function (input) {
         var value = input.value.trim();
         input.classList.remove('is-invalid', 'is-valid');
 
@@ -74,7 +74,7 @@
         return true;
     };
 
-    window.applyDateMask = function(input) {
+    window.applyDateMask = function (input) {
         if (!input || input.dataset.maskApplied) return;
 
         input.dataset.maskApplied = 'true';
@@ -82,7 +82,7 @@
         input.setAttribute('inputmode', 'numeric');
 
         // Apply mask while typing
-        input.addEventListener('input', function(e) {
+        input.addEventListener('input', function (e) {
             var oldValue = this.dataset.oldValue || '';
             var cursorPos = this.selectionStart;
             var value = this.value.replace(/\D/g, ''); // Remove non-digits
@@ -130,7 +130,7 @@
                 }
 
                 if (typeof this.setSelectionRange === 'function' && (this.type || '').toLowerCase() !== 'hidden' && document.activeElement === this) {
-                    try { this.setSelectionRange(newCursorPos, newCursorPos); } catch (_) {}
+                    try { this.setSelectionRange(newCursorPos, newCursorPos); } catch (_) { }
                 }
             }
 
@@ -143,12 +143,12 @@
         });
 
         // Validate on blur
-        input.addEventListener('blur', function() {
+        input.addEventListener('blur', function () {
             window.validateDateInput(this);
         });
 
         // Prevent non-numeric input
-        input.addEventListener('keypress', function(e) {
+        input.addEventListener('keypress', function (e) {
             if (e.ctrlKey || e.metaKey || e.altKey) return true;
             var char = String.fromCharCode(e.which || e.keyCode);
             if (!/[0-9]/.test(char)) {
@@ -158,7 +158,7 @@
         });
 
         // Allow navigation keys
-        input.addEventListener('keydown', function(e) {
+        input.addEventListener('keydown', function (e) {
             if ([8, 9, 27, 13, 46, 35, 36, 37, 38, 39, 40].indexOf(e.keyCode) !== -1) return true;
             if ((e.keyCode === 65 || e.keyCode === 67 || e.keyCode === 86 || e.keyCode === 88) && (e.ctrlKey || e.metaKey)) {
                 return true;
@@ -166,8 +166,8 @@
         });
     };
 
-    window.initDateFields = function() {
-        document.querySelectorAll('input[type="text"]').forEach(function(input) {
+    window.initDateFields = function () {
+        document.querySelectorAll('input[type="text"]').forEach(function (input) {
             if (input.disabled || input.readOnly || input.classList.contains('no-datepicker')) {
                 return;
             }
@@ -204,7 +204,7 @@
                             allowInput: false,
                             clickOpens: true,
                             locale: flatpickr.l10ns.default || flatpickr.l10ns.pt, // Use configured locale
-                            parseDate: function(datestr, format) {
+                            parseDate: function (datestr, format) {
                                 var regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
                                 var match = datestr.match(regex);
                                 if (!match) return null;
@@ -215,39 +215,39 @@
                                 if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) return null;
                                 return date;
                             }
-        };
-        
-        var fp = window.flatpickr(input, dateConfig);
-        
+                        };
+
+                        var fp = window.flatpickr(input, dateConfig);
+
                         if (fp && fp.altInput) {
                             fp.altInput.removeAttribute('data-mask-applied');
                             window.applyDateMask(fp.altInput);
 
-                            fp.config.onChange.push(function(selectedDates, dateStr, instance) {
+                            fp.config.onChange.push(function (selectedDates, dateStr, instance) {
                                 if (instance.altInput) {
                                     window.validateDateInput(instance.altInput);
                                 }
                             });
 
                             var originalSetDate = fp.setDate;
-                            fp.setDate = function(date, triggerChange) {
+                            fp.setDate = function (date, triggerChange) {
                                 var result = originalSetDate.call(this, date, triggerChange);
                                 if (this.altInput) {
-                                    setTimeout(function() {
+                                    setTimeout(function () {
                                         window.validateDateInput(fp.altInput);
                                     }, 10);
                                 }
                                 return result;
                             };
                         }
-                    } catch (e) {}
+                    } catch (e) { }
                 }
             }
         });
     };
 
     // --- Utils Centralizados ---
-    window.escapeHtml = function(text) {
+    window.escapeHtml = function (text) {
         if (!text) return '';
         return String(text)
             .replace(/&/g, "&amp;")
@@ -258,7 +258,7 @@
             .replace(/\n/g, '<br>');
     };
 
-    window.formatDate = function(dateStr, includeTime) {
+    window.formatDate = function (dateStr, includeTime) {
         if (!dateStr) return '';
         var d = new Date(dateStr);
         if (isNaN(d.getTime())) return String(dateStr);
@@ -274,7 +274,7 @@
         return out;
     };
 
-    window.updateProgressBar = function(percent) {
+    window.updateProgressBar = function (percent) {
         var p = Math.max(0, Math.min(100, Number(percent) || 0));
         var labelEl = document.querySelector('#checklist-global-progress-percent');
         var barEl = document.querySelector('#checklist-global-progress-bar');
@@ -506,15 +506,13 @@
         const mainContent = document.querySelector('.main-content');
 
         if (sidebarToggle && sidebar) {
-            function updateTogglePosition() {
+            function updateMainContent() {
                 if (sidebar.classList.contains('collapsed')) {
-                    sidebarToggle.style.left = '60px';
                     if (mainContent) {
                         mainContent.style.marginLeft = '60px';
                         mainContent.style.width = 'calc(100% - 60px)';
                     }
                 } else {
-                    sidebarToggle.style.left = '280px';
                     if (mainContent) {
                         mainContent.style.marginLeft = '280px';
                         mainContent.style.width = 'calc(100% - 280px)';
@@ -526,28 +524,68 @@
             if (isCollapsed) {
                 sidebar.classList.add('collapsed');
             }
-            updateTogglePosition();
+            updateMainContent();
 
             const icon = sidebarToggle.querySelector('i');
             if (icon) {
                 icon.style.transform = isCollapsed ? 'rotate(180deg)' : 'rotate(0deg)';
             }
 
-            sidebarToggle.addEventListener('click', function() {
+            sidebarToggle.addEventListener('click', function () {
                 sidebar.classList.toggle('collapsed');
                 const icon = sidebarToggle.querySelector('i');
                 if (icon) {
                     icon.style.transform = sidebar.classList.contains('collapsed') ? 'rotate(180deg)' : 'rotate(0deg)';
                 }
-                updateTogglePosition();
+                updateMainContent();
                 localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+            });
+        }
+
+        // Theme Toggle (Dark Mode)
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = document.getElementById('themeIcon');
+        const themeText = document.getElementById('themeText');
+
+        function applyTheme(isDark) {
+            if (isDark) {
+                document.documentElement.setAttribute('data-bs-theme', 'dark');
+                document.body.classList.add('dark-mode');
+                if (themeIcon) {
+                    themeIcon.classList.remove('bi-moon-stars');
+                    themeIcon.classList.add('bi-sun-fill');
+                }
+                if (themeText) themeText.textContent = 'Tema Claro';
+            } else {
+                document.documentElement.removeAttribute('data-bs-theme');
+                document.body.classList.remove('dark-mode');
+                if (themeIcon) {
+                    themeIcon.classList.remove('bi-sun-fill');
+                    themeIcon.classList.add('bi-moon-stars');
+                }
+                if (themeText) themeText.textContent = 'Tema Escuro';
+            }
+        }
+
+        // Carregar tema salvo
+        const savedTheme = localStorage.getItem('darkMode');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const isDarkMode = savedTheme === 'true' || (savedTheme === null && prefersDark);
+        applyTheme(isDarkMode);
+
+        if (themeToggle) {
+            themeToggle.addEventListener('click', function (e) {
+                e.preventDefault();
+                const isDark = document.body.classList.contains('dark-mode');
+                applyTheme(!isDark);
+                localStorage.setItem('darkMode', !isDark);
             });
         }
     }
 
     // --- Utility Functions ---
 
-    window.formatarTelefone = function(input) {
+    window.formatarTelefone = function (input) {
         // Remove tudo que não é número
         let v = input.value.replace(/\D/g, '').substring(0, 11);
 
@@ -590,13 +628,13 @@
         }
     };
 
-    window.validarTelefone = function(telefone) {
+    window.validarTelefone = function (telefone) {
         if (!telefone) return true; // Campo opcional
         const numeros = telefone.replace(/\D/g, '');
         return numeros.length >= 10 && numeros.length <= 11;
     };
 
-    window.validarTelefoneCompleto = function(input) {
+    window.validarTelefoneCompleto = function (input) {
         const telefone = input.value.trim();
         const telefoneInput = input;
 
@@ -623,7 +661,7 @@
         }
     };
 
-    window.setMultipleSelect = function(selectElement, dataValue) {
+    window.setMultipleSelect = function (selectElement, dataValue) {
         if (!selectElement) return;
         Array.from(selectElement.options).forEach(opt => opt.selected = false);
         const values = (typeof dataValue === 'string' && dataValue)
@@ -669,7 +707,7 @@
 
     // --- Initialization ---
 
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         configureFlatpickrLocale();
         initDateFields();
         setupHTMXFallback();
@@ -677,8 +715,8 @@
     });
 
     // Re-initialize when modals are opened
-    document.addEventListener('shown.bs.modal', function() {
-        setTimeout(function() {
+    document.addEventListener('shown.bs.modal', function () {
+        setTimeout(function () {
             if (window.initDateFields) window.initDateFields();
         }, 100);
     });
@@ -686,30 +724,30 @@
     // ========================================
     // SISTEMA DE TOASTS
     // ========================================
-    window.showToast = function(message, type = 'info', duration = 5000) {
-      const toastContainer = document.getElementById('toastContainer');
-      if (!toastContainer) {
-        return;
-      }
+    window.showToast = function (message, type = 'info', duration = 5000) {
+        const toastContainer = document.getElementById('toastContainer');
+        if (!toastContainer) {
+            return;
+        }
 
-      const toastId = 'toast-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-      const bgClass = {
-        'success': 'bg-success',
-        'error': 'bg-danger',
-        'warning': 'bg-warning',
-        'info': 'bg-info',
-        'primary': 'bg-primary'
-      }[type] || 'bg-info';
+        const toastId = 'toast-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        const bgClass = {
+            'success': 'bg-success',
+            'error': 'bg-danger',
+            'warning': 'bg-warning',
+            'info': 'bg-info',
+            'primary': 'bg-primary'
+        }[type] || 'bg-info';
 
-      const icon = {
-        'success': 'bi-check-circle-fill',
-        'error': 'bi-x-circle-fill',
-        'warning': 'bi-exclamation-triangle-fill',
-        'info': 'bi-info-circle-fill',
-        'primary': 'bi-bell-fill'
-      }[type] || 'bi-info-circle-fill';
+        const icon = {
+            'success': 'bi-check-circle-fill',
+            'error': 'bi-x-circle-fill',
+            'warning': 'bi-exclamation-triangle-fill',
+            'info': 'bi-info-circle-fill',
+            'primary': 'bi-bell-fill'
+        }[type] || 'bi-info-circle-fill';
 
-      const toastHTML = `
+        const toastHTML = `
         <div id="${toastId}" class="toast align-items-center text-white ${bgClass} border-0" role="alert" aria-live="assertive" aria-atomic="true">
           <div class="d-flex">
             <div class="toast-body d-flex align-items-center">
@@ -721,35 +759,35 @@
         </div>
       `;
 
-      toastContainer.insertAdjacentHTML('beforeend', toastHTML);
-      const toastElement = document.getElementById(toastId);
-      const toast = new bootstrap.Toast(toastElement, {
-        autohide: true,
-        delay: duration
-      });
-      toast.show();
+        toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+        const toastElement = document.getElementById(toastId);
+        const toast = new bootstrap.Toast(toastElement, {
+            autohide: true,
+            delay: duration
+        });
+        toast.show();
 
-      toastElement.addEventListener('hidden.bs.toast', function() {
-        toastElement.remove();
-      });
+        toastElement.addEventListener('hidden.bs.toast', function () {
+            toastElement.remove();
+        });
     };
 
     // ========================================
     // SISTEMA DE CONFIRMAÇÕES INTELIGENTES
     // ========================================
-    window.showConfirm = function(options) {
-      return new Promise((resolve) => {
-        const {
-          title = 'Confirmar ação',
-          message = 'Tem certeza que deseja continuar?',
-          confirmText = 'Confirmar',
-          cancelText = 'Cancelar',
-          type = 'warning',
-          icon = 'bi-exclamation-triangle-fill'
-        } = options;
+    window.showConfirm = function (options) {
+        return new Promise((resolve) => {
+            const {
+                title = 'Confirmar ação',
+                message = 'Tem certeza que deseja continuar?',
+                confirmText = 'Confirmar',
+                cancelText = 'Cancelar',
+                type = 'warning',
+                icon = 'bi-exclamation-triangle-fill'
+            } = options;
 
-        const modalId = 'confirmModal-' + Date.now();
-        const modalHTML = `
+            const modalId = 'confirmModal-' + Date.now();
+            const modalHTML = `
           <div class="modal fade" id="${modalId}" tabindex="-1" aria-labelledby="${modalId}Label" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
               <div class="modal-content">
@@ -771,32 +809,32 @@
           </div>
         `;
 
-        document.body.insertAdjacentHTML('beforeend', modalHTML);
-        const modalElement = document.getElementById(modalId);
-        const modal = new bootstrap.Modal(modalElement);
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            const modalElement = document.getElementById(modalId);
+            const modal = new bootstrap.Modal(modalElement);
 
-        document.getElementById(modalId + 'Confirm').addEventListener('click', () => {
-          modal.hide();
-          resolve(true);
-          modalElement.addEventListener('hidden.bs.modal', () => modalElement.remove(), { once: true });
+            document.getElementById(modalId + 'Confirm').addEventListener('click', () => {
+                modal.hide();
+                resolve(true);
+                modalElement.addEventListener('hidden.bs.modal', () => modalElement.remove(), { once: true });
+            });
+
+            modalElement.addEventListener('hidden.bs.modal', () => {
+                resolve(false);
+                modalElement.remove();
+            }, { once: true });
+
+            modal.show();
         });
-
-        modalElement.addEventListener('hidden.bs.modal', () => {
-          resolve(false);
-          modalElement.remove();
-        }, { once: true });
-
-        modal.show();
-      });
     };
 
     // ========================================
     // LOADING STATES - Skeleton Screen Helper
     // ========================================
-    window.showSkeleton = function(container, count = 3) {
-      if (!container) return;
-      
-      const skeletonHTML = `
+    window.showSkeleton = function (container, count = 3) {
+        if (!container) return;
+
+        const skeletonHTML = `
         <div class="skeleton-item mb-3">
           <div class="skeleton-line" style="height: 20px; width: 60%; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s ease-in-out infinite; border-radius: 4px; margin-bottom: 10px;"></div>
           <div class="skeleton-line" style="height: 16px; width: 100%; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s ease-in-out infinite; border-radius: 4px; margin-bottom: 8px;"></div>
@@ -804,14 +842,14 @@
         </div>
       `;
 
-      container.innerHTML = skeletonHTML.repeat(count);
+        container.innerHTML = skeletonHTML.repeat(count);
     };
 
     // Adicionar animação CSS para skeleton
     if (!document.getElementById('skeleton-styles')) {
-      const style = document.createElement('style');
-      style.id = 'skeleton-styles';
-      style.textContent = `
+        const style = document.createElement('style');
+        style.id = 'skeleton-styles';
+        style.textContent = `
         @keyframes skeleton-loading {
           0% { background-position: 200% 0; }
           100% { background-position: -200% 0; }
@@ -823,110 +861,110 @@
           border: 1px solid #e9ecef;
         }
       `;
-      document.head.appendChild(style);
+        document.head.appendChild(style);
     }
 
     // --- Global Modals Initialization ---
     function initGlobalModals() {
-      // Modal Gerenciar Usuários
-      const modalGerenciarUsuarios = document.getElementById('modalGerenciarUsuarios');
-      if (modalGerenciarUsuarios) {
-        const urlParams = new URLSearchParams(window.location.search);
-        const shouldOpenModal = urlParams.get('open_users_modal') === 'true';
-        const loadManagementContent = () => {
-          const contentDiv = document.getElementById('users-management-content'); 
-          const spinnerHTML = `<div class="text-center py-5" id="users-loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div><p class="mt-2">Carregando lista de usuários...</p></div>`; 
-          contentDiv.innerHTML = spinnerHTML;
-          const url = modalGerenciarUsuarios.dataset.url || '/management/users/modal';
-          fetch(url)
-            .then(response => { if (!response.ok) { return response.text().then(text => { throw new Error(text || `Erro ${response.status} ao carregar usuários.`); }); } return response.text(); })
-            .then(html => { contentDiv.innerHTML = html; })
-            .catch(error => { console.error('Erro ao carregar gerenciamento de usuários:', error); contentDiv.innerHTML = `<div class="alert alert-danger">Falha ao carregar a lista de usuários. Detalhes: ${error.message}</div>`; });
-        };
-        modalGerenciarUsuarios.addEventListener('shown.bs.modal', loadManagementContent);
-        if (shouldOpenModal) { setTimeout(() => { const bsModal = bootstrap.Modal.getOrCreateInstance(modalGerenciarUsuarios); if (bsModal) { bsModal.show(); const currentUrl = new URL(window.location); currentUrl.searchParams.delete('open_users_modal'); history.replaceState(null, '', currentUrl.toString()); } }, 100); }
-      }
-
-      // Modal Perfil
-      const modalPerfil = document.getElementById('modalPerfil');
-      if (modalPerfil) {
-        const urlParams = new URLSearchParams(window.location.search);
-        const shouldOpenProfileModal = urlParams.get('open_profile_modal') === 'true';
-        const loadProfileContent = () => {
-          const contentDiv = document.getElementById('profile-content');
-          const spinnerHTML = `<div class="text-center py-5" id="profile-loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div><p class="mt-2">Carregando perfil...</p></div>`;
-          contentDiv.innerHTML = spinnerHTML;
-          const url = modalPerfil.dataset.url || '/profile/modal';
-          fetch(url)
-            .then(response => { if (!response.ok) { return response.text().then(text => { throw new Error(text || `Erro ${response.status} ao carregar perfil.`); }); } return response.text(); })
-            .then(html => { 
-              contentDiv.innerHTML = html; 
-              
-              // Adicionar preview de foto
-              const fotoInput = document.getElementById('foto');
-              if (fotoInput) {
-                fotoInput.addEventListener('change', function(e) {
-                  const file = e.target.files[0];
-                  if (file && file.type.startsWith('image/')) {
-                    const reader = new FileReader();
-                    reader.onload = function(event) {
-                      const previewContainer = document.getElementById('profile-photo-preview');
-                      if (previewContainer) {
-                        // Se for uma div (placeholder), substituir por img
-                        if (previewContainer.tagName === 'DIV') {
-                          const img = document.createElement('img');
-                          img.id = 'profile-photo-preview';
-                          img.alt = 'Foto de Perfil';
-                          img.className = 'rounded-circle border';
-                          img.style.cssText = 'width: 96px; height: 96px; object-fit: cover;';
-                          img.src = event.target.result;
-                          previewContainer.parentNode.replaceChild(img, previewContainer);
-                        } else {
-                          // Se já for img, apenas atualizar o src
-                          previewContainer.src = event.target.result;
-                        }
-                      }
-                    };
-                    reader.readAsDataURL(file);
-                  }
-                });
-              }
-            })
-            .catch(error => { console.error('Erro ao carregar perfil:', error); contentDiv.innerHTML = `<div class="alert alert-danger">Falha ao carregar o perfil. Detalhes: ${error.message}</div>`; });
-        };
-        modalPerfil.addEventListener('shown.bs.modal', loadProfileContent);
-        modalPerfil.addEventListener('submit', function (ev) {
-          const form = ev.target;
-          if (!form || !modalPerfil.contains(form)) return;
-          ev.preventDefault();
-          try {
-            const contentDiv = document.getElementById('profile-content');
-            const postUrl = form.getAttribute('hx-post') || form.getAttribute('action');
-            if (!postUrl) { form.submit(); return; }
-            const fd = new FormData(form);
-            fetch(postUrl, { method: 'POST', body: fd, headers: { 'HX-Request': 'true' } })
-              .then(function (r) { return r.text(); })
-              .then(function (html) { contentDiv.innerHTML = html; })
-              .catch(function (err) { console.error('Falha ao salvar perfil no modal:', err); });
-          } catch (e) { console.error('Erro ao interceptar submit no modal Perfil:', e); }
-        }, true);
-        if (shouldOpenProfileModal) {
-          setTimeout(() => {
-            const bsModal = bootstrap.Modal.getOrCreateInstance(modalPerfil);
-            if (bsModal) {
-              bsModal.show();
-              const currentUrl = new URL(window.location);
-              currentUrl.searchParams.delete('open_profile_modal');
-              history.replaceState(null, '', currentUrl.toString());
-            }
-          }, 100);
+        // Modal Gerenciar Usuários
+        const modalGerenciarUsuarios = document.getElementById('modalGerenciarUsuarios');
+        if (modalGerenciarUsuarios) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const shouldOpenModal = urlParams.get('open_users_modal') === 'true';
+            const loadManagementContent = () => {
+                const contentDiv = document.getElementById('users-management-content');
+                const spinnerHTML = `<div class="text-center py-5" id="users-loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div><p class="mt-2">Carregando lista de usuários...</p></div>`;
+                contentDiv.innerHTML = spinnerHTML;
+                const url = modalGerenciarUsuarios.dataset.url || '/management/users/modal';
+                fetch(url)
+                    .then(response => { if (!response.ok) { return response.text().then(text => { throw new Error(text || `Erro ${response.status} ao carregar usuários.`); }); } return response.text(); })
+                    .then(html => { contentDiv.innerHTML = html; })
+                    .catch(error => { console.error('Erro ao carregar gerenciamento de usuários:', error); contentDiv.innerHTML = `<div class="alert alert-danger">Falha ao carregar a lista de usuários. Detalhes: ${error.message}</div>`; });
+            };
+            modalGerenciarUsuarios.addEventListener('shown.bs.modal', loadManagementContent);
+            if (shouldOpenModal) { setTimeout(() => { const bsModal = bootstrap.Modal.getOrCreateInstance(modalGerenciarUsuarios); if (bsModal) { bsModal.show(); const currentUrl = new URL(window.location); currentUrl.searchParams.delete('open_users_modal'); history.replaceState(null, '', currentUrl.toString()); } }, 100); }
         }
-      }
+
+        // Modal Perfil
+        const modalPerfil = document.getElementById('modalPerfil');
+        if (modalPerfil) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const shouldOpenProfileModal = urlParams.get('open_profile_modal') === 'true';
+            const loadProfileContent = () => {
+                const contentDiv = document.getElementById('profile-content');
+                const spinnerHTML = `<div class="text-center py-5" id="profile-loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div><p class="mt-2">Carregando perfil...</p></div>`;
+                contentDiv.innerHTML = spinnerHTML;
+                const url = modalPerfil.dataset.url || '/profile/modal';
+                fetch(url)
+                    .then(response => { if (!response.ok) { return response.text().then(text => { throw new Error(text || `Erro ${response.status} ao carregar perfil.`); }); } return response.text(); })
+                    .then(html => {
+                        contentDiv.innerHTML = html;
+
+                        // Adicionar preview de foto
+                        const fotoInput = document.getElementById('foto');
+                        if (fotoInput) {
+                            fotoInput.addEventListener('change', function (e) {
+                                const file = e.target.files[0];
+                                if (file && file.type.startsWith('image/')) {
+                                    const reader = new FileReader();
+                                    reader.onload = function (event) {
+                                        const previewContainer = document.getElementById('profile-photo-preview');
+                                        if (previewContainer) {
+                                            // Se for uma div (placeholder), substituir por img
+                                            if (previewContainer.tagName === 'DIV') {
+                                                const img = document.createElement('img');
+                                                img.id = 'profile-photo-preview';
+                                                img.alt = 'Foto de Perfil';
+                                                img.className = 'rounded-circle border';
+                                                img.style.cssText = 'width: 96px; height: 96px; object-fit: cover;';
+                                                img.src = event.target.result;
+                                                previewContainer.parentNode.replaceChild(img, previewContainer);
+                                            } else {
+                                                // Se já for img, apenas atualizar o src
+                                                previewContainer.src = event.target.result;
+                                            }
+                                        }
+                                    };
+                                    reader.readAsDataURL(file);
+                                }
+                            });
+                        }
+                    })
+                    .catch(error => { console.error('Erro ao carregar perfil:', error); contentDiv.innerHTML = `<div class="alert alert-danger">Falha ao carregar o perfil. Detalhes: ${error.message}</div>`; });
+            };
+            modalPerfil.addEventListener('shown.bs.modal', loadProfileContent);
+            modalPerfil.addEventListener('submit', function (ev) {
+                const form = ev.target;
+                if (!form || !modalPerfil.contains(form)) return;
+                ev.preventDefault();
+                try {
+                    const contentDiv = document.getElementById('profile-content');
+                    const postUrl = form.getAttribute('hx-post') || form.getAttribute('action');
+                    if (!postUrl) { form.submit(); return; }
+                    const fd = new FormData(form);
+                    fetch(postUrl, { method: 'POST', body: fd, headers: { 'HX-Request': 'true' } })
+                        .then(function (r) { return r.text(); })
+                        .then(function (html) { contentDiv.innerHTML = html; })
+                        .catch(function (err) { console.error('Falha ao salvar perfil no modal:', err); });
+                } catch (e) { console.error('Erro ao interceptar submit no modal Perfil:', e); }
+            }, true);
+            if (shouldOpenProfileModal) {
+                setTimeout(() => {
+                    const bsModal = bootstrap.Modal.getOrCreateInstance(modalPerfil);
+                    if (bsModal) {
+                        bsModal.show();
+                        const currentUrl = new URL(window.location);
+                        currentUrl.searchParams.delete('open_profile_modal');
+                        history.replaceState(null, '', currentUrl.toString());
+                    }
+                }, 100);
+            }
+        }
     }
-    
+
     // Call initGlobalModals on load
-    document.addEventListener('DOMContentLoaded', function() {
-      initGlobalModals();
+    document.addEventListener('DOMContentLoaded', function () {
+        initGlobalModals();
     });
 
 })();

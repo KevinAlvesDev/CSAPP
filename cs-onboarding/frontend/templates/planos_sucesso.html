@@ -4,7 +4,6 @@
 
 {% block head_extra %}
 <style>
-
   .search-filter-bar {
     background: white;
     padding: 1.5rem;
@@ -205,6 +204,78 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     color: #667eea;
   }
+
+  /* Dark Mode Overrides */
+  body.dark-mode .search-filter-bar {
+    background: var(--card-bg);
+  }
+
+  body.dark-mode .plano-card {
+    background: var(--card-bg);
+    border-color: var(--table-border-color);
+  }
+
+  body.dark-mode .plano-card:hover {
+    border-color: #667eea;
+  }
+
+  body.dark-mode .plano-card.inactive {
+    background: var(--table-header-bg);
+  }
+
+  body.dark-mode .plano-card-title {
+    color: var(--body-color);
+  }
+
+  body.dark-mode .plano-description {
+    color: #94a3b8;
+  }
+
+  body.dark-mode .plano-meta {
+    border-top-color: var(--table-border-color);
+  }
+
+  body.dark-mode .plano-meta-item {
+    color: #94a3b8;
+  }
+
+  body.dark-mode .btn-plano-secondary {
+    background: var(--table-border-color);
+    color: var(--body-color);
+  }
+
+  body.dark-mode .btn-plano-secondary:hover {
+    background: var(--table-hover-bg);
+  }
+
+  body.dark-mode .empty-state {
+    background: var(--card-bg);
+  }
+
+  body.dark-mode .empty-state h3 {
+    color: var(--body-color);
+  }
+
+  body.dark-mode .empty-state p {
+    color: #94a3b8;
+  }
+
+  body.dark-mode .empty-state i {
+    color: var(--table-border-color);
+  }
+
+  body.dark-mode .filter-toggle {
+    background: var(--table-header-bg);
+  }
+
+  body.dark-mode .filter-toggle button {
+    color: var(--body-color);
+  }
+
+  body.dark-mode .filter-toggle button.active {
+    background: var(--card-bg);
+    color: #667eea;
+  }
 </style>
 {% endblock %}
 
@@ -226,72 +297,62 @@
   <main class="p-4" style="padding-top: 20px !important;">
 
 
-  <div class="search-filter-bar">
-    <form method="GET" action="{{ url_for('planos.listar_planos') }}" class="row g-3 align-items-end">
-      <div class="col-md-6">
-        <label for="busca" class="form-label fw-bold">
-          <i class="bi bi-search me-1"></i>Buscar Planos
-        </label>
-        <input type="text" class="form-control" id="busca" name="busca" placeholder="Digite o nome ou descrição..."
-          value="{{ busca or '' }}">
-      </div>
-      <div class="col-md-4">
-        <label class="form-label fw-bold">
-          <i class="bi bi-funnel me-1"></i>Status
-        </label>
-        <div class="filter-toggle">
-          <button type="submit" name="ativo" value="true" class="{% if ativo_apenas %}active{% endif %}">
-            <i class="bi bi-check-circle me-1"></i>Ativos
-          </button>
-          <button type="submit" name="ativo" value="false" class="{% if not ativo_apenas %}active{% endif %}">
-            <i class="bi bi-archive me-1"></i>Todos
+    <div class="search-filter-bar">
+      <form method="GET" action="{{ url_for('planos.listar_planos') }}" class="row g-3 align-items-end">
+        <div class="col-md-6">
+          <label for="busca" class="form-label fw-bold">
+            <i class="bi bi-search me-1"></i>Buscar Planos
+          </label>
+          <input type="text" class="form-control" id="busca" name="busca" placeholder="Digite o nome ou descrição..."
+            value="{{ busca or '' }}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-bold">
+            <i class="bi bi-funnel me-1"></i>Status
+          </label>
+          <div class="filter-toggle">
+            <button type="submit" name="ativo" value="true" class="{% if ativo_apenas %}active{% endif %}">
+              <i class="bi bi-check-circle me-1"></i>Ativos
+            </button>
+            <button type="submit" name="ativo" value="false" class="{% if not ativo_apenas %}active{% endif %}">
+              <i class="bi bi-archive me-1"></i>Todos
+            </button>
+          </div>
+        </div>
+        <div class="col-md-2">
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="bi bi-search me-1"></i>Buscar
           </button>
         </div>
-      </div>
-      <div class="col-md-2">
-        <button type="submit" class="btn btn-primary w-100">
-          <i class="bi bi-search me-1"></i>Buscar
-        </button>
-      </div>
-    </form>
-  </div>
+      </form>
+    </div>
 
-  {% with messages = get_flashed_messages(with_categories=true) %}
-  {% if messages %}
-  {% for category, message in messages %}
-  <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show"
-    role="alert">
-    {{ message }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-  </div>
-  {% endfor %}
-  {% endif %}
-  {% endwith %}
+    <!-- Flash messages agora são exibidos como toasts flutuantes automaticamente -->
 
-  {% if planos %}
-  <div class="planos-grid">
-    {% for plano in planos %}
-    {% include 'partials/_plano_card.html' %}
-    {% endfor %}
-  </div>
-  {% else %}
-  <div class="empty-state">
-    <i class="bi bi-inbox"></i>
-    <h3>Nenhum plano encontrado</h3>
-    <p>
-      {% if busca %}
-      Não encontramos planos com os critérios de busca informados.
-      {% else %}
-      Comece criando seu primeiro plano de sucesso personalizado.
+    {% if planos %}
+    <div class="planos-grid">
+      {% for plano in planos %}
+      {% include 'partials/_plano_card.html' %}
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <i class="bi bi-inbox"></i>
+      <h3>Nenhum plano encontrado</h3>
+      <p>
+        {% if busca %}
+        Não encontramos planos com os critérios de busca informados.
+        {% else %}
+        Comece criando seu primeiro plano de sucesso personalizado.
+        {% endif %}
+      </p>
+      {% if pode_editar and not busca %}
+      <a href="{{ url_for('planos.novo_plano') }}" class="btn btn-plano btn-plano-primary">
+        <i class="bi bi-plus-circle"></i>Criar Primeiro Plano
+      </a>
       {% endif %}
-    </p>
-    {% if pode_editar and not busca %}
-    <a href="{{ url_for('planos.novo_plano') }}" class="btn btn-plano btn-plano-primary">
-      <i class="bi bi-plus-circle"></i>Criar Primeiro Plano
-    </a>
+    </div>
     {% endif %}
-  </div>
-  {% endif %}
 </div>
 
 <div class="modal fade" id="modalExcluirPlano" tabindex="-1">
@@ -322,7 +383,7 @@
 </div>
 
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  </main>
+</main>
 </div>
 {% endblock %}
 

@@ -21,18 +21,7 @@
         </div>
     </header>
 
-    <!-- Flash Messages -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-    {% for category, message in messages %}
-    <div class="alert alert-{{ category }} alert-dismissible fade show mb-3 shadow-sm" role="alert">
-        {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-    {% endfor %}
-    {% endif %}
-    {% endwith %}
-
+    <!-- Flash messages agora são exibidos como toasts flutuantes automaticamente -->
 
     <div class="row g-3">
         <!-- Sidebar (Coluna Esquerda) -->

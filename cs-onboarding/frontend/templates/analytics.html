@@ -33,17 +33,7 @@
     </header>
 
     <main class="p-4" id="main-content">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-        {% for category, message in messages %}
-        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show"
-            role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-        {% endfor %}
-        {% endif %}
-        {% endwith %}
+        <!-- Flash messages agora são exibidos como toasts flutuantes automaticamente -->
 
         <div class="card metric-card mb-4">
             <div class="card-header">

@@ -1683,9 +1683,9 @@
                 radix: ',',
                 mapToRadix: ['.'],
                 min: 0,
-                max: 9999999.99,
-                normalizeZeros: true,
-                padFractionalZeros: true
+                max: 999999999.99,  // Increased limit to ~1 billion
+                normalizeZeros: false,  // Allow typing 0
+                padFractionalZeros: false  // Don't force decimal places
               }
             }
           });

@@ -129,6 +129,41 @@
         opacity: 0.5;
         cursor: not-allowed;
     }
+
+    /* DARK MODE OVERRIDES */
+    body.dark-mode .plano-select-card {
+        background: var(--card-bg);
+        border-color: var(--table-border-color);
+    }
+
+    body.dark-mode .plano-select-card:hover {
+        border-color: #667eea;
+    }
+
+    body.dark-mode .plano-select-title {
+        color: var(--body-color);
+    }
+
+    body.dark-mode .plano-select-description {
+        color: #94a3b8;
+    }
+
+    body.dark-mode .plano-select-stat {
+        color: #94a3b8;
+    }
+
+    body.dark-mode .plano-select-actions {
+        border-top-color: var(--table-border-color);
+    }
+
+    body.dark-mode .btn-preview-plano {
+        background: var(--table-border-color);
+        color: var(--body-color);
+    }
+
+    body.dark-mode .btn-preview-plano:hover {
+        background: var(--table-hover-bg);
+    }
 </style>
 
 <script src="{{ url_for('static', filename='js/modal_selecionar_plano.js') }}"></script>

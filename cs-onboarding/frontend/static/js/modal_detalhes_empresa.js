@@ -620,12 +620,31 @@
                     return false;
                 }
                 processarDatas();
+
+                // CRITICAL FIX: Remove readonly from all fields before submission
+                // Readonly fields are NOT submitted in FormData
+                const readonlyFields = modalForm.querySelectorAll('[readonly]');
+                const readonlyFieldsList = Array.from(readonlyFields);
+                readonlyFieldsList.forEach(field => {
+                    field.removeAttribute('readonly');
+                    field.dataset._wasReadonly = 'true';
+                });
+
                 try {
                     const redir = modalForm.querySelector('#modal-redirect_to');
                     if (redir) redir.value = 'modal';
                 } catch (_) { }
                 const actionUrl = modalForm.getAttribute('action') || (typeof modalForm.action === 'string' ? modalForm.action : '/actions/atualizar_detalhes_empresa');
                 const formData = new FormData(modalForm);
+
+                // Restore readonly attribute after FormData creation
+                readonlyFieldsList.forEach(field => {
+                    if (field.dataset._wasReadonly === 'true') {
+                        field.setAttribute('readonly', 'readonly');
+                        delete field.dataset._wasReadonly;
+                    }
+                });
+
                 const saveBtn = document.querySelector('#modalDetalhesEmpresa .btn-salvar-detalhes');
 
                 // Save original state

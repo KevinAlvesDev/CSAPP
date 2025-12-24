@@ -67,17 +67,7 @@
             }}
         </div>
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-        {% for category, message in messages %}
-        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show"
-            role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-        {% endfor %}
-        {% endif %}
-        {% endwith %}
+        <!-- Flash messages agora são exibidos como toasts flutuantes automaticamente -->
 
         <div class="card">
             <div class="card-header">
@@ -133,7 +123,7 @@
                                 <tbody>
                                     {% for impl in implantacoes_novas %}
                                     <tr>
-                                        <td class="text-truncate" style="max-width: 200px;">
+                                        <td class="text-truncate" style="max-width: 350px;">
                                             <a href="#" class="btn-edit-empresa fw-bold text-decoration-none"
                                                 data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa"
                                                 data-id="{{ impl.id }}" data-nome="{{ impl.nome_empresa }}"
@@ -263,7 +253,7 @@
                                 </thead>
                                 <tbody>
                                     {% for impl in implantacoes_sem_previsao %} <tr>
-                                        <td class="text-truncate" style="max-width: 200px;">
+                                        <td class="text-truncate" style="max-width: 350px;">
                                             <a href="#" class="btn-edit-empresa fw-bold text-decoration-none"
                                                 data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa"
                                                 data-id="{{ impl.id }}" data-nome="{{ impl.nome_empresa }}"
@@ -352,7 +342,7 @@
                                     {% if impl.tipo == 'modulo' %}
                                     {% set ns.has_modulos = true %}
                                     <tr>
-                                        <td class="text-truncate" style="max-width: 200px;">
+                                        <td class="text-truncate" style="max-width: 350px;">
                                             <a href="#" class="btn-edit-empresa fw-bold text-decoration-none"
                                                 data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa"
                                                 data-id="{{ impl.id }}" data-nome="{{ impl.nome_empresa }}"
@@ -457,7 +447,7 @@
                                 </thead>
                                 <tbody id="andamento-tbody">
                                     {% for impl in implantacoes_andamento %} <tr>
-                                        <td class="text-truncate" style="max-width: 200px;">
+                                        <td class="text-truncate" style="max-width: 350px;">
                                             <a href="#" class="btn-edit-empresa fw-bold text-decoration-none"
                                                 data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa"
                                                 data-id="{{ impl.id }}" data-nome="{{ impl.nome_empresa }}"
@@ -544,7 +534,7 @@
                                 </thead>
                                 <tbody>
                                     {% for impl in implantacoes_futuras %} <tr>
-                                        <td class="text-truncate" style="max-width: 200px;">
+                                        <td class="text-truncate" style="max-width: 350px;">
                                             <a href="#" class="btn-edit-empresa fw-bold text-decoration-none"
                                                 data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa"
                                                 data-id="{{ impl.id }}" data-nome="{{ impl.nome_empresa }}"
@@ -644,7 +634,7 @@
                                 </thead>
                                 <tbody>
                                     {% for impl in implantacoes_finalizadas %} <tr>
-                                        <td class="text-truncate" style="max-width: 200px;">
+                                        <td class="text-truncate" style="max-width: 350px;">
                                             <a href="#" class="btn-edit-empresa fw-bold text-decoration-none"
                                                 data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa"
                                                 data-id="{{ impl.id }}" data-nome="{{ impl.nome_empresa }}"
@@ -731,7 +721,7 @@
                                 </thead>
                                 <tbody>
                                     {% for impl in implantacoes_paradas %} <tr>
-                                        <td class="text-truncate" style="max-width: 200px;">
+                                        <td class="text-truncate" style="max-width: 350px;">
                                             <a href="#" class="btn-edit-empresa fw-bold text-decoration-none"
                                                 data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa"
                                                 data-id="{{ impl.id }}" data-nome="{{ impl.nome_empresa }}"
@@ -822,7 +812,7 @@
                                 </thead>
                                 <tbody>
                                     {% for impl in implantacoes_canceladas %} <tr>
-                                        <td class="text-truncate" style="max-width: 200px;">{{ impl.nome_empresa }}</td>
+                                        <td class="text-truncate" style="max-width: 350px;">{{ impl.nome_empresa }}</td>
                                         <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or
                                             impl.usuario_cs }}</td>
                                         <td><span class="badge bg-info text-dark">{{ 'Módulo' if impl.tipo == 'modulo'
