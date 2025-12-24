@@ -463,33 +463,22 @@ def atualizar_detalhes_empresa():
 
         valor_raw = get_form_value('valor_monetario')
         if valor_raw is not None:
-            v = valor_raw.replace('R$', '').strip()
-            try:
-                # Tenta formato BR primeiro (1.234,56 ou 1234,56)
-                # Se tem vírgula, é formato BR
-                if ',' in v:
-                    v_br = v.replace('.', '').replace(',', '.')
-                    v_float = float(v_br)
-                    valor_raw = f"{v_float:.2f}"
-                # Se tem ponto mas não tem vírgula, pode ser milhar BR (1.000) ou decimal US (1.23)
-                elif '.' in v:
-                    # Se tem mais de 2 dígitos depois do ponto, é milhar BR
-                    partes = v.split('.')
-                    if len(partes[-1]) > 2:
-                        # É milhar BR: 1.000 = mil
-                        v_br = v.replace('.', '')
-                        v_float = float(v_br)
-                        valor_raw = f"{v_float:.2f}"
-                    else:
-                        # É decimal US: 1.5 = um e meio
-                        v_float = float(v)
-                        valor_raw = f"{v_float:.2f}"
-                else:
-                    # Sem ponto nem vírgula, é número simples
+            v = valor_raw.replace('R$', '').replace(' ', '').strip()
+            if v:
+                try:
+                    # Se tem vírgula, é formato BR: 1.234,56
+                    if ',' in v:
+                        v = v.replace('.', '').replace(',', '.')  # 1.234,56 -> 1234.56
+                    # Se não tem vírgula mas tem ponto, remove pontos (são separadores de milhar BR)
+                    elif '.' in v:
+                        v = v.replace('.', '')  # 1.000 -> 1000
+                    # Agora converte
                     v_float = float(v)
                     valor_raw = f"{v_float:.2f}"
-            except ValueError:
-                pass
+                except (ValueError, AttributeError):
+                    valor_raw = None
+            else:
+                valor_raw = None
 
         data_inicio_producao = normalize_date_str(get_form_value('data_inicio_producao'))
         data_final_implantacao = normalize_date_str(get_form_value('data_final_implantacao'))
