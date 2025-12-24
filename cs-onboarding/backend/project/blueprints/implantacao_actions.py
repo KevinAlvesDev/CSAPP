@@ -465,17 +465,31 @@ def atualizar_detalhes_empresa():
         if valor_raw is not None:
             v = valor_raw.replace('R$', '').strip()
             try:
-                # Tenta converter direto (formato padrão do input type="number": 1234.56)
-                v_float = float(v)
-                valor_raw = f"{v_float:.2f}"
-            except ValueError:
-                # Fallback para formato BR (1.234,56) caso venha como texto
-                try:
+                # Tenta formato BR primeiro (1.234,56 ou 1234,56)
+                # Se tem vírgula, é formato BR
+                if ',' in v:
                     v_br = v.replace('.', '').replace(',', '.')
                     v_float = float(v_br)
                     valor_raw = f"{v_float:.2f}"
-                except ValueError:
-                    pass
+                # Se tem ponto mas não tem vírgula, pode ser milhar BR (1.000) ou decimal US (1.23)
+                elif '.' in v:
+                    # Se tem mais de 2 dígitos depois do ponto, é milhar BR
+                    partes = v.split('.')
+                    if len(partes[-1]) > 2:
+                        # É milhar BR: 1.000 = mil
+                        v_br = v.replace('.', '')
+                        v_float = float(v_br)
+                        valor_raw = f"{v_float:.2f}"
+                    else:
+                        # É decimal US: 1.5 = um e meio
+                        v_float = float(v)
+                        valor_raw = f"{v_float:.2f}"
+                else:
+                    # Sem ponto nem vírgula, é número simples
+                    v_float = float(v)
+                    valor_raw = f"{v_float:.2f}"
+            except ValueError:
+                pass
 
         data_inicio_producao = normalize_date_str(get_form_value('data_inicio_producao'))
         data_final_implantacao = normalize_date_str(get_form_value('data_final_implantacao'))
