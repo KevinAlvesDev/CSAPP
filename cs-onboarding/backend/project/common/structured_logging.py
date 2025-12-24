@@ -4,7 +4,7 @@ Sistema de logging estruturado para melhor rastreabilidade e debugging
 
 import logging
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import g, request, has_request_context
 from functools import wraps
 
@@ -18,7 +18,7 @@ class StructuredLogger:
     def _get_context(self):
         """Extrai contexto da requisição atual"""
         context = {
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(timezone.utc).isoformat(),
         }
         
         if has_request_context():
@@ -113,12 +113,12 @@ def log_database_query(query_type: str = "SELECT"):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             logger = StructuredLogger('database')
-            start_time = datetime.utcnow()
+            start_time = datetime.now(timezone.utc)
             
             try:
                 result = f(*args, **kwargs)
                 
-                duration = (datetime.utcnow() - start_time).total_seconds()
+                duration = (datetime.now(timezone.utc) - start_time).total_seconds()
                 
                 # Log query bem-sucedida
                 logger.info(
@@ -140,7 +140,7 @@ def log_database_query(query_type: str = "SELECT"):
                 return result
                 
             except Exception as e:
-                duration = (datetime.utcnow() - start_time).total_seconds()
+                duration = (datetime.now(timezone.utc) - start_time).total_seconds()
                 
                 logger.error(
                     f"Database {query_type} failed: {str(e)}",
@@ -165,7 +165,7 @@ def log_external_api_call(api_name: str):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             logger = StructuredLogger('external_api')
-            start_time = datetime.utcnow()
+            start_time = datetime.now(timezone.utc)
             
             logger.info(
                 f"Calling external API: {api_name}",
@@ -176,7 +176,7 @@ def log_external_api_call(api_name: str):
             try:
                 result = f(*args, **kwargs)
                 
-                duration = (datetime.utcnow() - start_time).total_seconds()
+                duration = (datetime.now(timezone.utc) - start_time).total_seconds()
                 
                 logger.info(
                     f"External API call successful: {api_name}",
@@ -188,7 +188,7 @@ def log_external_api_call(api_name: str):
                 return result
                 
             except Exception as e:
-                duration = (datetime.utcnow() - start_time).total_seconds()
+                duration = (datetime.now(timezone.utc) - start_time).total_seconds()
                 
                 logger.error(
                     f"External API call failed: {api_name} - {str(e)}",

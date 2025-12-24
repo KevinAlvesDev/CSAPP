@@ -4,7 +4,7 @@ Implementa lógica de propagação de status (cascata e bolha) usando CTEs recur
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from flask import current_app, g
 
@@ -924,7 +924,7 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, include_progress=
                     pass
                 
                 ref_dt = item_dict['nova_previsao'] or item_dict['previsao_original']
-                item_dict['atrasada'] = bool(ref_dt and not item_dict['completed'] and ref_dt < _format_datetime(datetime.utcnow()))
+                item_dict['atrasada'] = bool(ref_dt and not item_dict['completed'] and ref_dt < _format_datetime(datetime.now(timezone.utc)))
 
                 if include_progress:
                     # reusing internal logic

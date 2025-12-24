@@ -1,16 +1,17 @@
-
 <div class="list-group-item list-group-item-action py-1 px-2">
     <div class="d-flex w-100 justify-content-between align-items-center mb-1">
         <div class="d-flex align-items-center gap-2">
-            <strong class="mb-0 small text-danger"><i class="bi bi-exclamation-triangle me-1"></i> Erro ao adicionar comentário</strong>
+            <strong class="mb-0 small text-danger"><i class="bi bi-exclamation-triangle me-1"></i> Erro ao adicionar
+                comentário</strong>
         </div>
         <div class="d-flex align-items-center gap-2">
-            <small class="text-secondary">{{ (datetime.utcnow() | string) if false else '' }}</small>
-            <button type="button" class="btn btn-sm btn-link text-danger p-0 small" aria-label="Excluir notificação" onclick="try{this.closest('.list-group-item').remove();}catch(e){}">Excluir</button>
+            <small class="text-secondary"></small>
+            <button type="button" class="btn btn-sm btn-link text-danger p-0 small" aria-label="Excluir notificação"
+                onclick="try{this.closest('.list-group-item').remove();}catch(e){}">Excluir</button>
         </div>
     </div>
     <div class="comment-content-wrapper">
         <p class="mb-1 small text-danger">{{ message }}</p>
     </div>
-    
+
 </div>

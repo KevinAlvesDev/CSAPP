@@ -7,3 +7,12 @@ ignore = ["E501"]
 [tool.ruff.isort]
 known-first-party = ["backend"]
 combine-as-imports = true
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore::DeprecationWarning:sqlite3.*:",
+    "ignore:The default datetime adapter is deprecated:DeprecationWarning",
+    "ignore:datetime.datetime.utcnow:DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+
