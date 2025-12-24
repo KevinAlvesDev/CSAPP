@@ -346,27 +346,57 @@ body.dark-mode .border-top {
   border-color: var(--table-border-color) !important;
 }
 
-/* Dark mode - Cards warning/danger para azul */
-body.dark-mode .card-warning,
-body.dark-mode .card.bg-warning,
-body.dark-mode .card.border-warning {
+/* Dark mode - Cards de métricas com gradiente azul */
+body.dark-mode .metrics-grid .card,
+body.dark-mode .metrics-grid .card.card-stats,
+body.dark-mode .card.card-stats.card-primary,
+body.dark-mode .card.card-stats.card-secondary,
+body.dark-mode .card.card-stats.card-success,
+body.dark-mode .card.card-stats.card-danger,
+body.dark-mode .card.card-stats.card-warning,
+body.dark-mode .card.card-stats.card-info,
+body.dark-mode .card.card-stats.card-dark {
   background: linear-gradient(135deg, #1e3a5f 0%, #1e293b 100%) !important;
-  border-color: #3b82f6 !important;
+  border: 1px solid #334155 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
 }
 
-body.dark-mode .card-danger,
-body.dark-mode .card.bg-danger,
-body.dark-mode .card.border-danger {
-  background: linear-gradient(135deg, #1e3a5f 0%, #1e293b 100%) !important;
-  border-color: #60a5fa !important;
+/* Cards stats - texto interno */
+body.dark-mode .card.card-stats h6,
+body.dark-mode .card.card-stats .text-secondary,
+body.dark-mode .metrics-grid .card h6 {
+  color: #94a3b8 !important;
+}
+
+body.dark-mode .card.card-stats h4,
+body.dark-mode .metrics-grid .card h4 {
+  color: var(--body-color) !important;
+}
+
+body.dark-mode .card.card-stats .text-muted,
+body.dark-mode .metrics-grid .card .text-muted {
+  color: #64748b !important;
 }
 
 body.dark-mode .text-warning {
-  color: #60a5fa !important;
+  color: #fbbf24 !important;
 }
 
 body.dark-mode .text-danger {
   color: #f87171 !important;
+}
+
+body.dark-mode .text-success {
+  color: #4ade80 !important;
+}
+
+body.dark-mode .text-info {
+  color: #22d3ee !important;
+}
+
+body.dark-mode .text-primary {
+  color: #60a5fa !important;
 }
 
 body.dark-mode .bg-warning {

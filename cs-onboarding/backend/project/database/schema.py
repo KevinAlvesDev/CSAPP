@@ -554,7 +554,16 @@ def ensure_implantacoes_status_constraint():
         check_cols = {
             'status_implantacao_oamd': 'VARCHAR(255)',
             'nivel_atendimento': 'VARCHAR(255)',
-            'data_cadastro': 'TIMESTAMP'
+            'data_cadastro': 'TIMESTAMP',
+            'chave_oamd': 'TEXT',
+            'tela_apoio_link': 'TEXT',
+            'informacao_infra': 'TEXT',
+            'cnpj': 'VARCHAR(20)',
+            'modelo_catraca': 'TEXT',
+            'modelo_facial': 'TEXT',
+            'wellhub': 'VARCHAR(10)',
+            'totalpass': 'VARCHAR(10)',
+            'valor_monetario': 'TEXT',
         }
         for col_name, col_type in check_cols.items():
             try:
