@@ -362,6 +362,18 @@
                     safeSet('#modal-chave_oamd', impl.chave_oamd || '', modal);
                     safeSet('#modal-tela_apoio_link', impl.tela_apoio_link || '', modal);
                     safeSet('#modal-valor_atribuido', (impl.valor_atribuido != null ? String(impl.valor_atribuido) : ''), modal);
+                    // Formatar valor_monetario para exibição: 1000.00 -> R$ 1.000,00
+                    if (impl.valor_monetario != null && impl.valor_monetario !== '') {
+                        let val = parseFloat(impl.valor_monetario);
+                        if (!isNaN(val)) {
+                            let formatted = 'R$ ' + val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                            safeSet('#modal-valor_monetario', formatted, modal);
+                        } else {
+                            safeSet('#modal-valor_monetario', impl.valor_monetario, modal);
+                        }
+                    } else {
+                        safeSet('#modal-valor_monetario', '', modal);
+                    }
                     safeSet('#modal-status_implantacao', impl.status_implantacao_oamd || '', modal);
                     safeSet('#modal-nivel_atendimento', impl.nivel_atendimento || '', modal);
                     safeSet('#modal-catraca', impl.catraca || '', modal);

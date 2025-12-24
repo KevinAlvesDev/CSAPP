@@ -462,20 +462,28 @@ def atualizar_detalhes_empresa():
                 return None
 
         valor_raw = get_form_value('valor_monetario')
+        app_logger.info(f"[DEBUG] valor_monetario RECEBIDO: '{valor_raw}' (tipo: {type(valor_raw)})")
+        
         if valor_raw is not None:
             v = valor_raw.replace('R$', '').replace(' ', '').strip()
+            app_logger.info(f"[DEBUG] Após limpar R$ e espaços: '{v}'")
+            
             if v:
                 try:
                     # Se tem vírgula, é formato BR: 1.234,56
                     if ',' in v:
                         v = v.replace('.', '').replace(',', '.')  # 1.234,56 -> 1234.56
+                        app_logger.info(f"[DEBUG] Tem vírgula, convertido para: '{v}'")
                     # Se não tem vírgula mas tem ponto, remove pontos (são separadores de milhar BR)
                     elif '.' in v:
                         v = v.replace('.', '')  # 1.000 -> 1000
+                        app_logger.info(f"[DEBUG] Tem ponto, removido: '{v}'")
                     # Agora converte
                     v_float = float(v)
                     valor_raw = f"{v_float:.2f}"
-                except (ValueError, AttributeError):
+                    app_logger.info(f"[DEBUG] Valor FINAL salvo: '{valor_raw}'")
+                except (ValueError, AttributeError) as e:
+                    app_logger.error(f"[DEBUG] ERRO ao converter: {e}")
                     valor_raw = None
             else:
                 valor_raw = None

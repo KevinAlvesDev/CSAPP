@@ -109,6 +109,9 @@ def get_implantacao(impl_id):
         if not data:
             return jsonify({'ok': False, 'error': 'Implantação não encontrada'}), 404
 
+        # DEBUG: Log valor_monetario
+        api_logger.info(f"[DEBUG API] valor_monetario retornado: '{data.get('valor_monetario')}'")
+
         return jsonify({
             'ok': True,
             'data': data
