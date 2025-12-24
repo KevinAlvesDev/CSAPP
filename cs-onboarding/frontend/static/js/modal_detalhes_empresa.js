@@ -15,7 +15,7 @@
     // DATA CONSISTENCY CHECKER - Automated Validation System
     // =========================================================================
     const DataConsistencyChecker = {
-        enabled: true, // Set to false in production
+        enabled: false, // Disabled to prevent interference with form data
         serverData: null,
         displayedData: null,
 
