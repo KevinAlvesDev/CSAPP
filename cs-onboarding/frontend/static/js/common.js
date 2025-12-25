@@ -580,7 +580,10 @@
                 e.preventDefault();
                 const isDark = document.body.classList.contains('dark-mode');
                 applyTheme(!isDark);
-                localStorage.setItem('theme', !isDark ? 'dark' : 'light');
+                const newTheme = !isDark ? 'dark' : 'light';
+                localStorage.setItem('theme', newTheme);
+                // Set cookie for server-side rendering
+                document.cookie = 'theme=' + newTheme + ';path=/;max-age=31536000';
             });
         }
     }
