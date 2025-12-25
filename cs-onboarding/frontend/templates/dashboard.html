@@ -167,8 +167,8 @@
                                         <td><span class="badge bg-info text-dark">{{ 'Módulo' if impl.tipo == 'modulo'
                                                 else 'Completa' }}</span></td>
                                         <td><span class="badge bg-dark">Nova</span></td>
-                                        <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_atribuido|float) if
-                                            impl.valor_atribuido else 'N/A' }}</td>
+                                        <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_monetario|float) if
+                                            impl.valor_monetario else 'N/A' }}</td>
                                         <td class="text-nowrap">
                                             {% if impl.usuario_cs == g.user_email %}
                                             <button type="button" class="btn btn-sm btn-success" title="Iniciar Agora"
@@ -298,8 +298,8 @@
                                                 else 'Completa' }}</span></td>
                                         <td><span class="badge bg-info text-dark">Sem previsão</span></td>
                                         <td><span class="text-muted small">Sem previsão</span></td>
-                                        <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_atribuido|float) if
-                                            impl.valor_atribuido else 'N/A' }}</td>
+                                        <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_monetario|float) if
+                                            impl.valor_monetario else 'N/A' }}</td>
                                         <td class="text-nowrap">
                                             {% if impl.usuario_cs == g.user_email %}
                                             <form method="POST" action="{{ url_for('actions.iniciar_implantacao') }}"
@@ -503,8 +503,8 @@
                                                     aria-valuenow="{{ impl.progresso }}">{{ impl.progresso }}%</div>
                                             </div>
                                         </td>
-                                        <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_atribuido|float) if
-                                            impl.valor_atribuido else 'N/A' }}</td>
+                                        <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_monetario|float) if
+                                            impl.valor_monetario else 'N/A' }}</td>
                                         <td> <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}"
                                                 class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver
                                                 Detalhes</a> </td>
@@ -592,8 +592,8 @@
                                             <span class="text-muted small">N/A</span>
                                             {% endif %}
                                         </td>
-                                        <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_atribuido|float) if
-                                            impl.valor_atribuido else 'N/A' }}</td>
+                                        <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_monetario|float) if
+                                            impl.valor_monetario else 'N/A' }}</td>
                                         <td class="text-nowrap">
                                             {% if impl.usuario_cs == g.user_email %}
                                             <form method="POST" action="{{ url_for('actions.iniciar_implantacao') }}"
@@ -678,8 +678,8 @@
                                         <td><span class="badge bg-info text-dark">{{ 'Módulo' if impl.tipo == 'modulo'
                                                 else 'Completa' }}</span></td>
                                         <td> <span class="badge bg-success">100% Concluída</span> </td>
-                                        <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_atribuido|float) if
-                                            impl.valor_atribuido else 'N/A' }}</td>
+                                        <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_monetario|float) if
+                                            impl.valor_monetario else 'N/A' }}</td>
                                         <td class="text-nowrap">
                                             <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}"
                                                 class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver
@@ -769,8 +769,8 @@
                                                 data-status="parada">{{ impl.dias_parada | int }} dias</span></td>
                                         <td class="text-truncate" style="max-width: 200px;">{{ impl.motivo_parada |
                                             default('N/A') }}</td>
-                                        <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_atribuido|float) if
-                                            impl.valor_atribuido else 'N/A' }}</td>
+                                        <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_monetario|float) if
+                                            impl.valor_monetario else 'N/A' }}</td>
                                         <td class="text-nowrap">
                                             <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}"
                                                 class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver
@@ -822,8 +822,8 @@
                                             default('N/A') }}</td>
                                         <td>{{ impl.data_cancelamento_fmt if impl.data_cancelamento_fmt else 'N/A' }}
                                         </td>
-                                        <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_atribuido|float) if
-                                            impl.valor_atribuido else 'N/A' }}</td>
+                                        <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_monetario|float) if
+                                            impl.valor_monetario else 'N/A' }}</td>
                                         <td class="text-nowrap">
                                             <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}"
                                                 class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver

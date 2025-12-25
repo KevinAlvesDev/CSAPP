@@ -151,7 +151,7 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
             if impl.get('tipo') == 'modulo' and status in ['nova', 'andamento', 'parada', 'futura', 'sem_previsao']:
                 metrics['modulos_total'] += 1
                 try:
-                    modulo_valor = float(impl.get('valor_atribuido', 0.0))
+                    modulo_valor = float(impl.get('valor_monetario', 0.0) or 0.0)
                 except (ValueError, TypeError):
                     modulo_valor = 0.0
                 metrics['total_valor_modulos'] += modulo_valor
@@ -172,10 +172,10 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
         impl['progresso'] = prog_percent
 
         try:
-            impl_valor = float(impl.get('valor_atribuido', 0.0))
+            impl_valor = float(impl.get('valor_monetario', 0.0) or 0.0)
         except (ValueError, TypeError):
             impl_valor = 0.0
-        impl['valor_atribuido'] = impl_valor
+        impl['valor_monetario_float'] = impl_valor
 
         try:
             dias_passados = calculate_days_passed(impl_id)
