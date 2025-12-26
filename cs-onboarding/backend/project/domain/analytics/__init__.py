@@ -1,9 +1,8 @@
 """
-Analytics Service - Módulo de Compatibilidade
-Este arquivo re-exporta todas as funções do novo pacote domain/analytics/
-para manter compatibilidade com código existente.
+Módulo de Analytics - Pacote SOLID
+Re-exporta todas as funções para manter compatibilidade com código existente.
 
-REFATORAÇÃO SOLID: As funções foram movidas para módulos especializados:
+Estrutura:
 - dashboard.py      -> Dados do dashboard gerencial
 - charts.py         -> Gráficos de implantações e funil
 - gamification.py   -> Ranking de gamificação
@@ -11,25 +10,36 @@ REFATORAÇÃO SOLID: As funções foram movidas para módulos especializados:
 - utils.py          -> Funções auxiliares de data
 """
 
-# Re-exportar todas as funções do novo pacote para compatibilidade
-from .analytics import (
-    # Dashboard
+# Importações de dashboard.py
+from .dashboard import (
     get_analytics_data,
-    # Charts
+)
+
+# Importações de charts.py
+from .charts import (
     get_implants_by_day,
     get_funnel_counts,
-    # Gamification
+)
+
+# Importações de gamification.py
+from .gamification import (
     get_gamification_rank,
-    # Cancelamentos
+)
+
+# Importações de cancelamentos.py
+from .cancelamentos import (
     get_cancelamentos_data,
-    # Utils
+)
+
+# Importações de utils.py
+from .utils import (
     calculate_time_in_status,
     _format_date_for_query,
     date_col_expr,
     date_param_expr,
 )
 
-# Manter __all__ para compatibilidade com imports *
+# Exports públicos
 __all__ = [
     # Dashboard
     'get_analytics_data',

@@ -1,4 +1,4 @@
-import os
+﻿import os
 import re
 import time
 from datetime import date, datetime
@@ -47,7 +47,7 @@ def criar_implantacao():
         from ..domain.implantacao_service import criar_implantacao_service
         implantacao_id = criar_implantacao_service(nome_empresa, usuario_atribuido, usuario_criador, id_favorecido)
 
-        flash(f'Implantação "{nome_empresa}" criada com sucesso. Aplique um plano de sucesso para criar as tarefas.', 'success')
+        flash(f'ImplantaÃ§Ã£o "{nome_empresa}" criada com sucesso. Aplique um plano de sucesso para criar as tarefas.', 'success')
 
         try:
             clear_user_cache(usuario_criador)
@@ -62,8 +62,8 @@ def criar_implantacao():
         flash(str(e), 'error')
         return redirect(url_for('main.dashboard'))
     except Exception as e:
-        app_logger.error(f"ERRO ao criar implantação por {usuario_criador}: {e}")
-        flash(f'Erro ao criar implantação: {e}.', 'error')
+        app_logger.error(f"ERRO ao criar implantaÃ§Ã£o por {usuario_criador}: {e}")
+        flash(f'Erro ao criar implantaÃ§Ã£o: {e}.', 'error')
         return redirect(url_for('main.dashboard'))
 
 
@@ -100,15 +100,15 @@ def criar_implantacao_modulo():
         except Exception:
             pass
 
-        flash(f'Implantação de Módulo "{nome_empresa}" criada e atribuída a {usuario_atribuido}.', 'success')
+        flash(f'ImplantaÃ§Ã£o de MÃ³dulo "{nome_empresa}" criada e atribuÃ­da a {usuario_atribuido}.', 'success')
         return redirect(url_for('main.dashboard'))
 
     except ValueError as e:
         flash(str(e), 'error')
         return redirect(url_for('main.dashboard'))
     except Exception as e:
-        app_logger.error(f"ERRO ao criar implantação de módulo por {usuario_criador}: {e}")
-        flash(f'Erro ao criar implantação de módulo: {e}.', 'error')
+        app_logger.error(f"ERRO ao criar implantaÃ§Ã£o de mÃ³dulo por {usuario_criador}: {e}")
+        flash(f'Erro ao criar implantaÃ§Ã£o de mÃ³dulo: {e}.', 'error')
         return redirect(url_for('main.dashboard'))
 
 
@@ -121,7 +121,7 @@ def iniciar_implantacao():
     try:
         implantacao_id = validate_integer(request.form.get('implantacao_id'), min_value=1)
     except ValidationError as e:
-        flash(f'ID de implantação inválido: {str(e)}', 'error')
+        flash(f'ID de implantaÃ§Ã£o invÃ¡lido: {str(e)}', 'error')
         return redirect(url_for('main.dashboard'))
 
     redirect_to_fallback = request.form.get('redirect_to', 'dashboard')
@@ -133,7 +133,7 @@ def iniciar_implantacao():
         from ..domain.implantacao_service import iniciar_implantacao_service
         iniciar_implantacao_service(implantacao_id, usuario_cs_email)
 
-        flash('Implantação iniciada com sucesso!', 'success')
+        flash('ImplantaÃ§Ã£o iniciada com sucesso!', 'success')
         try:
             clear_user_cache(usuario_cs_email)
             clear_implantacao_cache(implantacao_id)
@@ -146,8 +146,8 @@ def iniciar_implantacao():
         flash(str(e), 'error')
         return redirect(request.referrer or dest_url_fallback)
     except Exception as e:
-        app_logger.error(f"Erro ao iniciar implantação ID {implantacao_id}: {e}")
-        flash('Erro ao iniciar implantação.', 'error')
+        app_logger.error(f"Erro ao iniciar implantaÃ§Ã£o ID {implantacao_id}: {e}")
+        flash('Erro ao iniciar implantaÃ§Ã£o.', 'error')
         return redirect(url_for('main.dashboard'))
 
 
@@ -160,19 +160,19 @@ def agendar_implantacao():
     data_prevista = request.form.get('data_inicio_previsto')
 
     if not data_prevista:
-        flash('A data de início previsto é obrigatória.', 'error')
+        flash('A data de inÃ­cio previsto Ã© obrigatÃ³ria.', 'error')
         return redirect(url_for('main.dashboard'))
     try:
         data_prevista_iso = validate_date(data_prevista)
     except ValidationError:
-        flash('Data de início inválida. Formatos aceitos: DD/MM/AAAA, MM/DD/AAAA, AAAA-MM-DD.', 'error')
+        flash('Data de inÃ­cio invÃ¡lida. Formatos aceitos: DD/MM/AAAA, MM/DD/AAAA, AAAA-MM-DD.', 'error')
         return redirect(url_for('main.dashboard'))
 
     try:
         from ..domain.implantacao_service import agendar_implantacao_service
         nome_empresa = agendar_implantacao_service(implantacao_id, usuario_cs_email, data_prevista_iso)
 
-        flash(f'Implantação "{nome_empresa}" movida para "Futuras" com início em {data_prevista}.', 'success')
+        flash(f'ImplantaÃ§Ã£o "{nome_empresa}" movida para "Futuras" com inÃ­cio em {data_prevista}.', 'success')
         try:
             clear_user_cache(usuario_cs_email)
             clear_implantacao_cache(implantacao_id)
@@ -182,8 +182,8 @@ def agendar_implantacao():
     except ValueError as e:
         flash(str(e), 'error')
     except Exception as e:
-        app_logger.error(f"Erro ao agendar implantação ID {implantacao_id}: {e}")
-        flash(f'Erro ao agendar implantação: {e}', 'error')
+        app_logger.error(f"Erro ao agendar implantaÃ§Ã£o ID {implantacao_id}: {e}")
+        flash(f'Erro ao agendar implantaÃ§Ã£o: {e}', 'error')
 
     return redirect(url_for('main.dashboard', refresh='1'))
 
@@ -197,14 +197,14 @@ def marcar_sem_previsao():
     try:
         implantacao_id = validate_integer(int(implantacao_id_raw), min_value=1)
     except Exception:
-        flash('ID da implantação inválido.', 'error')
+        flash('ID da implantaÃ§Ã£o invÃ¡lido.', 'error')
         return redirect(url_for('main.dashboard', refresh='1'))
 
     try:
         from ..domain.implantacao_service import marcar_sem_previsao_service
         nome_empresa = marcar_sem_previsao_service(implantacao_id, usuario_cs_email)
 
-        flash(f'Implantação "{nome_empresa}" marcada como "Sem previsão".', 'success')
+        flash(f'ImplantaÃ§Ã£o "{nome_empresa}" marcada como "Sem previsÃ£o".', 'success')
         try:
             clear_user_cache(usuario_cs_email)
             clear_implantacao_cache(implantacao_id)
@@ -213,8 +213,8 @@ def marcar_sem_previsao():
     except ValueError as e:
         flash(str(e), 'error')
     except Exception as e:
-        app_logger.error(f"Erro ao marcar sem previsão implantação ID {implantacao_id}: {e}")
-        flash(f'Erro ao marcar sem previsão: {e}', 'error')
+        app_logger.error(f"Erro ao marcar sem previsÃ£o implantaÃ§Ã£o ID {implantacao_id}: {e}")
+        flash(f'Erro ao marcar sem previsÃ£o: {e}', 'error')
 
     return redirect(url_for('main.dashboard', refresh='1'))
 
@@ -233,18 +233,18 @@ def finalizar_implantacao():
     try:
         data_finalizacao = request.form.get('data_finalizacao')
         if not data_finalizacao:
-            flash('A data da finalização é obrigatória.', 'error')
+            flash('A data da finalizaÃ§Ã£o Ã© obrigatÃ³ria.', 'error')
             return redirect(dest_url)
         try:
             data_final_iso = validate_date(data_finalizacao)
         except ValidationError:
-            flash('Data da finalização inválida. Formatos aceitos: DD/MM/AAAA, MM/DD/AAAA, AAAA-MM-DD.', 'error')
+            flash('Data da finalizaÃ§Ã£o invÃ¡lida. Formatos aceitos: DD/MM/AAAA, MM/DD/AAAA, AAAA-MM-DD.', 'error')
             return redirect(dest_url)
 
         from ..domain.implantacao_service import finalizar_implantacao_service
         finalizar_implantacao_service(implantacao_id, usuario_cs_email, data_final_iso)
 
-        flash('Implantação finalizada com sucesso!', 'success')
+        flash('ImplantaÃ§Ã£o finalizada com sucesso!', 'success')
         try:
             clear_user_cache(usuario_cs_email)
             clear_implantacao_cache(implantacao_id)
@@ -254,8 +254,8 @@ def finalizar_implantacao():
     except ValueError as e:
         flash(str(e), 'error')
     except Exception as e:
-        app_logger.error(f"Erro ao finalizar implantação id={implantacao_id} user={usuario_cs_email}: {e}")
-        flash('Erro ao finalizar implantação.', 'error')
+        app_logger.error(f"Erro ao finalizar implantaÃ§Ã£o id={implantacao_id} user={usuario_cs_email}: {e}")
+        flash('Erro ao finalizar implantaÃ§Ã£o.', 'error')
 
     return redirect(dest_url)
 
@@ -271,15 +271,15 @@ def parar_implantacao():
     dest_url = url_for('main.ver_implantacao', impl_id=implantacao_id)
 
     if not motivo:
-        flash('O motivo da parada é obrigatório.', 'error')
+        flash('O motivo da parada Ã© obrigatÃ³rio.', 'error')
         return redirect(dest_url)
     if not data_parada:
-        flash('A data da parada é obrigatória.', 'error')
+        flash('A data da parada Ã© obrigatÃ³ria.', 'error')
         return redirect(dest_url)
     try:
         data_parada_iso = validate_date(data_parada)
     except ValidationError:
-        flash('Data da parada inválida. Formatos aceitos: DD/MM/AAAA, MM/DD/AAAA, AAAA-MM-DD.', 'error')
+        flash('Data da parada invÃ¡lida. Formatos aceitos: DD/MM/AAAA, MM/DD/AAAA, AAAA-MM-DD.', 'error')
         return redirect(dest_url)
 
     try:
@@ -288,7 +288,7 @@ def parar_implantacao():
         from ..domain.implantacao_service import parar_implantacao_service
         parar_implantacao_service(implantacao_id, usuario_cs_email, user_perfil_acesso, data_parada_iso, motivo)
 
-        flash('Implantação marcada como "Parada" com data retroativa.', 'success')
+        flash('ImplantaÃ§Ã£o marcada como "Parada" com data retroativa.', 'success')
         try:
             clear_user_cache(usuario_cs_email)
             clear_implantacao_cache(implantacao_id)
@@ -298,8 +298,8 @@ def parar_implantacao():
     except ValueError as e:
         flash(str(e), 'error')
     except Exception as e:
-        app_logger.error(f"Erro ao parar implantação ID {implantacao_id}: {e}")
-        flash(f'Erro ao parar implantação: {e}', 'error')
+        app_logger.error(f"Erro ao parar implantaÃ§Ã£o ID {implantacao_id}: {e}")
+        flash(f'Erro ao parar implantaÃ§Ã£o: {e}', 'error')
 
     return redirect(dest_url)
 
@@ -321,7 +321,7 @@ def retomar_implantacao():
         from ..domain.implantacao_service import retomar_implantacao_service
         retomar_implantacao_service(implantacao_id, usuario_cs_email, user_perfil_acesso)
 
-        flash('Implantação retomada e movida para "Em Andamento".', 'success')
+        flash('ImplantaÃ§Ã£o retomada e movida para "Em Andamento".', 'success')
         try:
             clear_user_cache(usuario_cs_email)
             clear_implantacao_cache(implantacao_id)
@@ -332,8 +332,8 @@ def retomar_implantacao():
         flash(str(e), 'error')
         return redirect(request.referrer or dest_url)
     except Exception as e:
-        app_logger.error(f"Erro ao retomar implantação ID {implantacao_id}: {e}")
-        flash(f'Erro ao retomar implantação: {e}', 'error')
+        app_logger.error(f"Erro ao retomar implantaÃ§Ã£o ID {implantacao_id}: {e}")
+        flash(f'Erro ao retomar implantaÃ§Ã£o: {e}', 'error')
 
     return redirect(dest_url)
 
@@ -353,7 +353,7 @@ def reabrir_implantacao():
         from ..domain.implantacao_service import reabrir_implantacao_service
         reabrir_implantacao_service(implantacao_id, usuario_cs_email)
 
-        flash('Implantação reaberta com sucesso e movida para "Em Andamento".', 'success')
+        flash('ImplantaÃ§Ã£o reaberta com sucesso e movida para "Em Andamento".', 'success')
         try:
             clear_user_cache(usuario_cs_email)
             clear_implantacao_cache(implantacao_id)
@@ -364,8 +364,8 @@ def reabrir_implantacao():
         flash(str(e), 'error')
         return redirect(request.referrer or url_for('main.dashboard'))
     except Exception as e:
-        app_logger.error(f"Erro ao reabrir implantação ID {implantacao_id}: {e}")
-        flash(f'Erro ao reabrir implantação: {e}', 'error')
+        app_logger.error(f"Erro ao reabrir implantaÃ§Ã£o ID {implantacao_id}: {e}")
+        flash(f'Erro ao reabrir implantaÃ§Ã£o: {e}', 'error')
 
     return redirect(dest_url)
 
@@ -374,6 +374,12 @@ def reabrir_implantacao():
 @login_required
 @limiter.limit("100 per minute", key_func=lambda: g.user_email or get_remote_address())
 def atualizar_detalhes_empresa():
+    """
+    Atualiza os detalhes da empresa/cliente de uma implantaÃ§Ã£o.
+    Refatorado: Usa helpers.build_detalhes_campos para processamento de formulÃ¡rio.
+    """
+    from .helpers import build_detalhes_campos
+    
     usuario_cs_email = g.user_email
     implantacao_id = request.form.get('implantacao_id')
     redirect_to = request.form.get('redirect_to', 'dashboard')
@@ -383,202 +389,13 @@ def atualizar_detalhes_empresa():
     if redirect_to == 'detalhes':
         dest_url = url_for('main.ver_implantacao', impl_id=implantacao_id)
 
-
-    def get_form_value(key):
-        value = request.form.get(key, '').strip()
-        if value == "":
-            return None
-        return value
-
-    def get_boolean_value(key):
-        value = request.form.get(key, NAO_DEFINIDO_BOOL).strip()
-        if value == NAO_DEFINIDO_BOOL or value == "":
-            return None
-        return value
-
     try:
-        alunos_ativos_str = request.form.get('alunos_ativos', '0').strip()
-        alunos_ativos = int(alunos_ativos_str) if alunos_ativos_str else 0
-    except (ValueError, TypeError):
-        alunos_ativos = 0
-
-    def get_multiple_value(key):
-        """Retorna valores de seleção múltipla como string separada por vírgula."""
-        values = request.form.getlist(key)
-        # Remover valores vazios e "Selecione..."
-        values = [v.strip() for v in values if v and v.strip() and v.strip() != "Selecione..."]
-        return ','.join(values) if values else None
-
-    seguimento_val = get_multiple_value('seguimento')
-    tipos_planos_val = get_multiple_value('tipos_planos')
-    modalidades_val = get_multiple_value('modalidades')
-    horarios_val = get_multiple_value('horarios_func')
-    formas_pagamento_val = get_multiple_value('formas_pagamento')
-
-    cargo_responsavel_val = get_form_value('cargo_responsavel')
-    nivel_receita_val = get_form_value('nivel_receita')
-    sistema_anterior_val = get_form_value('sistema_anterior')
-    recorrencia_usa_val = get_form_value('recorrencia_usa')
-
-    try:
-        def normalize_date_str(s):
-            """Converte DD/MM/AAAA para YYYY-MM-DD ou retorna None"""
-            try:
-                if not s:
-                    return None
-
-                s = str(s).strip()
-                if not s or s == '':
-                    return None
-
-                if len(s) == 10 and s[4] == '-' and s[7] == '-':
-                    try:
-                        datetime.strptime(s, "%Y-%m-%d")
-                        return s
-                    except Exception as e:
-                        app_logger.debug(f"Falha no parse de data YYYY-MM-DD: {e}")
-                        pass
-
-                if '/' in s:
-                    parts = s.split('/')
-                    if len(parts) == 3:
-                        day = parts[0].strip().zfill(2)
-                        month = parts[1].strip().zfill(2)
-                        year = parts[2].strip()
-
-                        result = f"{year}-{month}-{day}"
-
-                        try:
-                            datetime.strptime(result, "%Y-%m-%d")
-                            return result
-                        except Exception as e:
-                            app_logger.debug(f"Falha no parse de data DD/MM/YYYY: {e}")
-                            return None
-
-                return None
-
-            except Exception as e:
-                app_logger.error(f"ERRO ao normalizar data '{s}': {e}")
-                return None
-
-        valor_raw = get_form_value('valor_monetario')
-        app_logger.info(f"[DEBUG] valor_monetario RECEBIDO: '{valor_raw}' (tipo: {type(valor_raw)})")
+        # Usar helper para construir campos do formulÃ¡rio
+        final_campos, error = build_detalhes_campos()
         
-        if valor_raw is not None:
-            v = valor_raw.replace('R$', '').replace(' ', '').strip()
-            app_logger.info(f"[DEBUG] Após limpar R$ e espaços: '{v}'")
-            
-            if v:
-                try:
-                    # Se tem vírgula, é formato BR: 1.234,56
-                    if ',' in v:
-                        v = v.replace('.', '').replace(',', '.')  # 1.234,56 -> 1234.56
-                        app_logger.info(f"[DEBUG] Tem vírgula, convertido para: '{v}'")
-                    # Se não tem vírgula mas tem ponto, remove pontos (são separadores de milhar BR)
-                    elif '.' in v:
-                        v = v.replace('.', '')  # 1.000 -> 1000
-                        app_logger.info(f"[DEBUG] Tem ponto, removido: '{v}'")
-                    # Agora converte
-                    v_float = float(v)
-                    valor_raw = f"{v_float:.2f}"
-                    app_logger.info(f"[DEBUG] Valor FINAL salvo: '{valor_raw}'")
-                except (ValueError, AttributeError) as e:
-                    app_logger.error(f"[DEBUG] ERRO ao converter: {e}")
-                    valor_raw = None
-            else:
-                valor_raw = None
-
-        data_inicio_producao = normalize_date_str(get_form_value('data_inicio_producao'))
-        data_final_implantacao = normalize_date_str(get_form_value('data_final_implantacao'))
-        data_inicio_efetivo = normalize_date_str(get_form_value('data_inicio_efetivo'))
-
-        data_inicio_efetivo_iso = data_inicio_efetivo or None
-
-        telefone_raw = get_form_value('telefone_responsavel')
-        telefone_validado = None
-        if telefone_raw:
-            # Remove caracteres não numéricos
-            telefone_numeros = ''.join(filter(str.isdigit, telefone_raw))
-            # Valida: deve ter 10 ou 11 dígitos
-            if len(telefone_numeros) >= 10 and len(telefone_numeros) <= 11:
-                # Formata: (XX) XXXXX-XXXX ou (XX) XXXX-XXXX
-                if len(telefone_numeros) == 11:
-                    telefone_validado = f"({telefone_numeros[:2]}) {telefone_numeros[2:7]}-{telefone_numeros[7:]}"
-                else:
-                    telefone_validado = f"({telefone_numeros[:2]}) {telefone_numeros[2:6]}-{telefone_numeros[6:]}"
-            else:
-                flash('Telefone inválido. Use o formato (XX) XXXXX-XXXX ou (XX) XXXX-XXXX', 'warning')
-                return redirect(dest_url)
-
-        campos = {
-            'responsavel_cliente': get_form_value('responsavel_cliente'),
-            'cargo_responsavel': cargo_responsavel_val,
-            'telefone_responsavel': telefone_validado,
-            'email_responsavel': get_form_value('email_responsavel'),
-            'data_inicio_producao': data_inicio_producao,
-            'data_final_implantacao': data_final_implantacao,
-            'data_inicio_efetivo': data_inicio_efetivo_iso,
-            'id_favorecido': get_form_value('id_favorecido'),
-            'nivel_receita': nivel_receita_val,
-            'chave_oamd': get_form_value('chave_oamd'),
-            'tela_apoio_link': get_form_value('tela_apoio_link'),
-            'informacao_infra': get_form_value('informacao_infra'),
-            'seguimento': seguimento_val,
-            'tipos_planos': tipos_planos_val,
-            'modalidades': modalidades_val,
-            'horarios_func': horarios_val,
-            'formas_pagamento': formas_pagamento_val,
-            'diaria': get_boolean_value('diaria'),
-            'freepass': get_boolean_value('freepass'),
-            'alunos_ativos': alunos_ativos,
-            'sistema_anterior': sistema_anterior_val,
-            'importacao': get_boolean_value('importacao'),
-            'recorrencia_usa': recorrencia_usa_val,
-            'boleto': get_boolean_value('boleto'),
-            'nota_fiscal': get_boolean_value('nota_fiscal'),
-            'catraca': get_boolean_value('catraca'),
-            'modelo_catraca': get_form_value('modelo_catraca') if get_boolean_value('catraca') == 'Sim' else None,
-            'facial': get_boolean_value('facial'),
-            'modelo_facial': get_form_value('modelo_facial') if get_boolean_value('facial') == 'Sim' else None,
-            'wellhub': get_boolean_value('wellhub'),
-            'totalpass': get_boolean_value('totalpass'),
-            'cnpj': get_form_value('cnpj'),
-            'status_implantacao_oamd': get_form_value('status_implantacao_oamd'),
-            'nivel_atendimento': get_form_value('nivel_atendimento'),
-            'valor_monetario': valor_raw,
-            'resp_estrategico_nome': get_form_value('resp_estrategico_nome'),
-            'resp_onb_nome': get_form_value('resp_onb_nome'),
-            'resp_estrategico_obs': get_form_value('resp_estrategico_obs'),
-            'contatos': get_form_value('contatos'),
-        }
-        
-        
-        # Chave OAMD pode ser: hash MD5, formato ZW_123, ou número puro
-        # Não fazemos validação restritiva aqui, apenas limpeza básica
-        try:
-            co = campos.get('chave_oamd')
-            if co and isinstance(co, str):
-                # Remove espaços em branco
-                campos['chave_oamd'] = co.strip() if co.strip() else None
-        except Exception as e:
-            app_logger.warning(f"Erro ao processar chave OAMD: {e}")
-            pass
-
-
-        # Prepare fields for service
-        final_campos = {}
-        for k, v in campos.items():
-            if v is None:
-                final_campos[k] = None
-            elif isinstance(v, str):
-                final_campos[k] = v
-            elif isinstance(v, (datetime, date)):
-                try:
-                    final_campos[k] = v.strftime('%Y-%m-%d')
-                except Exception:
-                    final_campos[k] = str(v)
-            else:
-                final_campos[k] = v
+        if error:
+            flash(error, 'warning')
+            return redirect(dest_url)
 
         from ..domain.implantacao_service import atualizar_detalhes_empresa_service
         atualizar_detalhes_empresa_service(implantacao_id, usuario_cs_email, user_perfil_acesso, final_campos)
@@ -589,14 +406,12 @@ def atualizar_detalhes_empresa():
             app_logger.error(f"ERRO NO logar_timeline: {e}")
             pass
 
-        flash('Detalhes da implantação atualizados com sucesso!', 'success')
+        flash('Detalhes da implantaÃ§Ã£o atualizados com sucesso!', 'success')
         
-        # Force cache clear - call twice to ensure it's cleared
+        # Force cache clear
         try:
             clear_implantacao_cache(implantacao_id)
             clear_user_cache(usuario_cs_email)
-            # Clear again to be absolutely sure
-            clear_implantacao_cache(implantacao_id)
         except Exception as ex:
             app_logger.error(f"Erro ao limpar cache: {ex}")
             pass
@@ -604,33 +419,30 @@ def atualizar_detalhes_empresa():
     except AttributeError as e:
         if 'isoformat' in str(e):
             app_logger.error(f"ERRO: Tentativa de chamar .isoformat() em string: {e}")
-            flash('❌ Erro ao processar data. Verifique o formato (DD/MM/AAAA).', 'error')
+            flash('âŒ Erro ao processar data. Verifique o formato (DD/MM/AAAA).', 'error')
         else:
             app_logger.error(f"ERRO AttributeError: {e}")
-            flash('❌ Erro ao processar dados. Tente novamente.', 'error')
+            flash('âŒ Erro ao processar dados. Tente novamente.', 'error')
     except ValueError as e:
-        # ValueError is used for validation errors - show specific message
         error_msg = str(e)
         app_logger.warning(f"Validation error: {error_msg}")
-        flash(error_msg if error_msg else '❌ Dados inválidos. Verifique os campos.', 'error')
+        flash(error_msg if error_msg else 'âŒ Dados invÃ¡lidos. Verifique os campos.', 'error')
     except PermissionError as e:
         app_logger.warning(f"Permission denied: {e}")
-        flash('❌ Você não tem permissão para realizar esta ação.', 'error')
+        flash('âŒ VocÃª nÃ£o tem permissÃ£o para realizar esta aÃ§Ã£o.', 'error')
     except TimeoutError as e:
         app_logger.error(f"Timeout error: {e}")
-        flash('❌ Operação demorou muito tempo. Verifique sua conexão e tente novamente.', 'error')
+        flash('âŒ OperaÃ§Ã£o demorou muito tempo. Verifique sua conexÃ£o e tente novamente.', 'error')
     except Exception as e:
-        # Log full error for debugging
         app_logger.error(f"ERRO COMPLETO ao atualizar detalhes (Impl. ID {implantacao_id}): {e}", exc_info=True)
         
-        # Check if it's a database error
         error_str = str(e).lower()
         if 'database' in error_str or 'connection' in error_str:
-            flash('❌ Erro de conexão com o banco de dados. Tente novamente em alguns segundos.', 'error')
+            flash('âŒ Erro de conexÃ£o com o banco de dados. Tente novamente em alguns segundos.', 'error')
         elif 'timeout' in error_str:
-            flash('❌ Tempo de espera esgotado. Tente novamente.', 'error')
+            flash('âŒ Tempo de espera esgotado. Tente novamente.', 'error')
         else:
-            flash('❌ Erro inesperado ao atualizar detalhes. Nossa equipe foi notificada.', 'error')
+            flash('âŒ Erro inesperado ao atualizar detalhes. Nossa equipe foi notificada.', 'error')
 
     try:
         wants_json = 'application/json' in (request.headers.get('Accept') or '')
@@ -647,7 +459,7 @@ def atualizar_detalhes_empresa():
 @login_required
 @limiter.limit("30 per minute", key_func=lambda: g.user_email or get_remote_address())
 def remover_plano_implantacao():
-    """Remove o plano de sucesso de uma implantação, limpando todas as fases/ações/tarefas associadas."""
+    """Remove o plano de sucesso de uma implantaÃ§Ã£o, limpando todas as fases/aÃ§Ãµes/tarefas associadas."""
     usuario_cs_email = g.user_email
     implantacao_id = request.form.get('implantacao_id')
     user_perfil_acesso = g.perfil.get('perfil_acesso') if g.perfil else None
@@ -662,13 +474,13 @@ def remover_plano_implantacao():
         try:
             clear_implantacao_cache(implantacao_id)
         except Exception as e:
-            app_logger.warning(f"Erro ao limpar cache após remover plano: {e}")
+            app_logger.warning(f"Erro ao limpar cache apÃ³s remover plano: {e}")
             pass
 
     except ValueError as e:
         flash(str(e), 'error')
     except Exception as e:
-        app_logger.error(f"Erro ao remover plano da implantação ID {implantacao_id}: {e}")
+        app_logger.error(f"Erro ao remover plano da implantaÃ§Ã£o ID {implantacao_id}: {e}")
         flash(f'Erro ao remover plano: {e}', 'error')
 
     return redirect(dest_url)
@@ -688,15 +500,15 @@ def transferir_implantacao():
         from ..domain.implantacao_service import transferir_implantacao_service
         antigo_usuario_cs = transferir_implantacao_service(implantacao_id, usuario_cs_email, novo_usuario_cs)
         
-        flash(f'Implantação transferida para {novo_usuario_cs} com sucesso!', 'success')
+        flash(f'ImplantaÃ§Ã£o transferida para {novo_usuario_cs} com sucesso!', 'success')
         if antigo_usuario_cs == usuario_cs_email:
             return redirect(url_for('main.dashboard'))
             
     except ValueError as e:
         flash(str(e), 'error')
     except Exception as e:
-        app_logger.error(f"Erro ao transferir implantação ID {implantacao_id}: {e}")
-        flash(f'Erro ao transferir implantação: {e}', 'error')
+        app_logger.error(f"Erro ao transferir implantaÃ§Ã£o ID {implantacao_id}: {e}")
+        flash(f'Erro ao transferir implantaÃ§Ã£o: {e}', 'error')
         
     return redirect(dest_url)
 
@@ -713,7 +525,7 @@ def excluir_implantacao():
         from ..domain.implantacao_service import excluir_implantacao_service
         excluir_implantacao_service(implantacao_id, usuario_cs_email, user_perfil_acesso)
         
-        flash('Implantação e todos os dados associados foram excluídos com sucesso.', 'success')
+        flash('ImplantaÃ§Ã£o e todos os dados associados foram excluÃ­dos com sucesso.', 'success')
         try:
             clear_user_cache(usuario_cs_email)
             clear_implantacao_cache(implantacao_id)
@@ -722,8 +534,8 @@ def excluir_implantacao():
     except ValueError as e:
         flash(str(e), 'error')
     except Exception as e:
-        app_logger.error(f"Erro ao excluir implantação ID {implantacao_id}: {e}")
-        flash('Erro ao excluir implantação.', 'error')
+        app_logger.error(f"Erro ao excluir implantaÃ§Ã£o ID {implantacao_id}: {e}")
+        flash('Erro ao excluir implantaÃ§Ã£o.', 'error')
         
     return redirect(url_for('main.dashboard'))
 
@@ -741,22 +553,22 @@ def cancelar_implantacao():
     user_perfil_acesso = g.perfil.get('perfil_acesso') if g.perfil else None
 
     if not r2_client:
-        flash('Erro: Serviço de armazenamento R2 não configurado. Não é possível fazer upload do comprovante obrigatório.', 'error')
+        flash('Erro: ServiÃ§o de armazenamento R2 nÃ£o configurado. NÃ£o Ã© possÃ­vel fazer upload do comprovante obrigatÃ³rio.', 'error')
         return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
 
     if not all([implantacao_id, data_cancelamento, motivo]):
-        flash('Todos os campos (Data, Motivo Resumo) são obrigatórios para cancelar.', 'error')
+        flash('Todos os campos (Data, Motivo Resumo) sÃ£o obrigatÃ³rios para cancelar.', 'error')
         return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
 
     try:
         data_cancel_iso = validate_date(data_cancelamento)
     except ValidationError:
-        flash('Data do cancelamento inválida. Formatos aceitos: DD/MM/AAAA, MM/DD/AAAA, AAAA-MM-DD.', 'error')
+        flash('Data do cancelamento invÃ¡lida. Formatos aceitos: DD/MM/AAAA, MM/DD/AAAA, AAAA-MM-DD.', 'error')
         return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
 
     file = request.files.get('comprovante_cancelamento')
     if not file or file.filename == '':
-        flash('O upload do print do e-mail de cancelamento é obrigatório.', 'error')
+        flash('O upload do print do e-mail de cancelamento Ã© obrigatÃ³rio.', 'error')
         return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
 
     try:
@@ -792,19 +604,19 @@ def cancelar_implantacao():
                     f_out.write(file.stream.read())
                 comprovante_url = url_for('main.serve_upload', filename=f'comprovantes_cancelamento/{nome_unico}')
         else:
-            flash('Tipo de arquivo inválido para o comprovante.', 'error')
+            flash('Tipo de arquivo invÃ¡lido para o comprovante.', 'error')
             return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
 
         from ..domain.implantacao_service import cancelar_implantacao_service
         cancelar_implantacao_service(implantacao_id, usuario_cs_email, user_perfil_acesso, data_cancel_iso, motivo, comprovante_url)
 
-        flash('Implantação cancelada com sucesso.', 'success')
+        flash('ImplantaÃ§Ã£o cancelada com sucesso.', 'success')
         return redirect(url_for('main.dashboard'))
 
     except ValueError as e:
         flash(str(e), 'error')
         return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
     except Exception as e:
-        app_logger.error(f"Erro ao cancelar implantação ID {implantacao_id}: {e}")
-        flash(f'Erro ao cancelar implantação: {e}', 'error')
+        app_logger.error(f"Erro ao cancelar implantaÃ§Ã£o ID {implantacao_id}: {e}")
+        flash(f'Erro ao cancelar implantaÃ§Ã£o: {e}', 'error')
         return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))

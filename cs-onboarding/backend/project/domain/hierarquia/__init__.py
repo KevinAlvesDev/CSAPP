@@ -1,27 +1,31 @@
 """
-Hierarquia Service - Módulo de Compatibilidade
-Este arquivo re-exporta todas as funções do novo pacote domain/hierarquia/
-para manter compatibilidade com código existente.
+Módulo de Hierarquia - Pacote SOLID
+Re-exporta todas as funções para manter compatibilidade com código existente.
 
-REFATORAÇÃO SOLID: As funções foram movidas para módulos especializados:
+Estrutura:
 - tree.py       -> Estrutura hierárquica da implantação
 - tasks.py      -> Operações em tarefas/subtarefas
 - comments.py   -> Comentários em tarefas
 """
 
-# Re-exportar todas as funções do novo pacote para compatibilidade
-from .hierarquia import (
-    # Tree
+# Importações de tree.py
+from .tree import (
     get_hierarquia_implantacao,
-    # Tasks
+)
+
+# Importações de tasks.py
+from .tasks import (
     toggle_subtarefa,
     calcular_progresso_implantacao,
-    # Comments
+)
+
+# Importações de comments.py
+from .comments import (
     adicionar_comentario_tarefa,
     get_comentarios_tarefa,
 )
 
-# Manter __all__ para compatibilidade com imports *
+# Exports públicos
 __all__ = [
     'get_hierarquia_implantacao',
     'toggle_subtarefa',

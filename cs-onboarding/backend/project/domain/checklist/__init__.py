@@ -1,9 +1,8 @@
 """
-Checklist Service - Módulo de Compatibilidade
-Este arquivo re-exporta todas as funções do novo pacote domain/checklist/
-para manter compatibilidade com código existente.
+Módulo de Checklist - Pacote SOLID
+Re-exporta todas as funções para manter compatibilidade com código existente.
 
-REFATORAÇÃO SOLID: As funções foram movidas para módulos especializados:
+Estrutura:
 - items.py      -> Operações em itens (toggle, delete, responsável, prazo)
 - comments.py   -> Gerenciamento de comentários
 - tree.py       -> Árvore e progresso
@@ -11,34 +10,45 @@ REFATORAÇÃO SOLID: As funções foram movidas para módulos especializados:
 - utils.py      -> Funções auxiliares
 """
 
-# Re-exportar todas as funções do novo pacote para compatibilidade
-from .checklist import (
-    # Items
+# Importações de items.py
+from .items import (
     toggle_item_status,
     delete_checklist_item,
     update_item_responsavel,
     atualizar_prazo_item,
-    # Comments
+)
+
+# Importações de comments.py
+from .comments import (
     add_comment_to_item,
     listar_comentarios_implantacao,
     listar_comentarios_item,
     obter_comentario_para_email,
     excluir_comentario_service,
-    # Tree
+)
+
+# Importações de tree.py
+from .tree import (
     get_checklist_tree,
     build_nested_tree,
     get_item_progress_stats,
     obter_progresso_global_service,
-    # History
+)
+
+# Importações de history.py
+from .history import (
     obter_historico_responsavel,
     obter_historico_prazos,
-    # Utils
+)
+
+# Importações de utils.py
+from .utils import (
     _invalidar_cache_progresso_local,
     _format_datetime,
     listar_usuarios_cs,
 )
 
-# Manter __all__ para compatibilidade com imports *
+# Exports públicos
 __all__ = [
     # Items
     'toggle_item_status',

@@ -1,6 +1,6 @@
 import logging
 import os
-from logging.handlers import TimedRotatingFileHandler
+from logging.handlers import RotatingFileHandler
 
 from flask import g
 
@@ -47,20 +47,30 @@ def setup_logging(app):
     formatter = logging.Formatter(log_format, date_format)
 
     rotation_enabled = bool(app.config.get('LOG_ROTATION_ENABLED', True))
-    retention_days = int(app.config.get('LOG_RETENTION_DAYS', 14))
+    # Max 5MB por arquivo, mantém 10 backups (total ~55MB)
+    max_bytes = int(app.config.get('LOG_MAX_BYTES', 5 * 1024 * 1024))
+    backup_count = int(app.config.get('LOG_BACKUP_COUNT', 10))
 
     if rotation_enabled:
-        file_handler = TimedRotatingFileHandler(
-            os.path.join(log_dir, 'app.log'), when='midnight', backupCount=retention_days, encoding='utf-8'
+        # RotatingFileHandler é mais confiável no Windows que TimedRotatingFileHandler
+        file_handler = RotatingFileHandler(
+            os.path.join(log_dir, 'app.log'), 
+            maxBytes=max_bytes, 
+            backupCount=backup_count, 
+            encoding='utf-8'
         )
-        error_handler = TimedRotatingFileHandler(
-            os.path.join(log_dir, 'errors.log'), when='midnight', backupCount=retention_days, encoding='utf-8'
+        error_handler = RotatingFileHandler(
+            os.path.join(log_dir, 'errors.log'), 
+            maxBytes=max_bytes, 
+            backupCount=backup_count, 
+            encoding='utf-8'
         )
         error_handler.setLevel(logging.ERROR)
     else:
         file_handler = logging.FileHandler(os.path.join(log_dir, 'app.log'), encoding='utf-8')
         error_handler = logging.FileHandler(os.path.join(log_dir, 'errors.log'), encoding='utf-8')
         error_handler.setLevel(logging.ERROR)
+
 
     file_handler.setFormatter(formatter)
     file_handler.addFilter(ContextFilter())
