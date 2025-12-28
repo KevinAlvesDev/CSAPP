@@ -17,8 +17,8 @@ document.addEventListener('DOMContentLoaded', function () {
             // Ignorar colunas que não devem ter ordenação duplicada
             const headerText = header.textContent.trim();
 
-            // Pular: Ações (não faz sentido), Dias (já tem ordenação própria), vazias
-            if (headerText === 'Ações' || headerText.includes('Dias') || headerText === '') {
+            // Pular: Ações (não faz sentido ordenar por botão), vazias
+            if (headerText === 'Ações' || headerText === '') {
                 return;
             }
 

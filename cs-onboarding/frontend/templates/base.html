@@ -52,8 +52,7 @@
         <div class="d-flex align-items-center">
           <div class="user-profile-btn-sidebar me-2">
             {% if g.perfil and g.perfil.foto_url %}
-            <img src="{{ g.perfil.foto_url }}?v={{ range(1, 10000) | random }}" alt="Foto"
-              style="width:40px;height:40px;object-fit:cover;border-radius:50%;">
+            <img src="{{ g.perfil.foto_url }}?v={{ range(1, 10000) | random }}" alt="Foto">
             {% else %}
             <i class="bi bi-person-fill" style="font-size: 1.5rem;"></i>
             {% endif %}
