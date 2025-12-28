@@ -37,9 +37,9 @@
         </a>
         {% endif %}
 
-        <button type="button" class="btn btn-plano btn-plano-secondary" data-bs-toggle="modal"
-            data-bs-target="#modalPreviewPlano{{ plano.id }}" title="Preview da estrutura">
-            <i class="bi bi-list-nested"></i>Preview
+        <button type="button" class="btn btn-plano btn-plano-secondary btn-clonar-plano" data-plano-id="{{ plano.id }}"
+            data-plano-nome="{{ plano.nome }}" title="Clonar plano">
+            <i class="bi bi-files"></i>Clonar
         </button>
 
         {% if pode_excluir %}
@@ -51,56 +51,3 @@
         {% endif %}
     </div>
 </div>
-
-<div class="modal fade" id="modalPreviewPlano{{ plano.id }}" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header"
-                style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-                <h5 class="modal-title">
-                    <i class="bi bi-diagram-3 me-2"></i>{{ plano.nome }}
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="previewContent{{ plano.id }}">
-                <div class="text-center py-4">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Carregando...</span>
-                    </div>
-                    <p class="mt-2 text-muted">Carregando preview...</p>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                <a href="{{ url_for('planos.obter_plano', plano_id=plano.id) }}" class="btn btn-primary">
-                    <i class="bi bi-eye me-1"></i>Ver Detalhes Completos
-                </a>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const modal{{ plano.id }} = document.getElementById('modalPreviewPlano{{ plano.id }}');
-        if (modal{{ plano.id }}) {
-            modal{{ plano.id }}.addEventListener('show.bs.modal', function () {
-                const previewContent = document.getElementById('previewContent{{ plano.id }}');
-
-                fetch('/planos/{{ plano.id }}/preview')
-                    .then(response => response.text())
-                    .then(html => {
-                        previewContent.innerHTML = html;
-                    })
-                    .catch(error => {
-                        previewContent.innerHTML = `
-                            <div class="alert alert-danger">
-                                <i class="bi bi-exclamation-triangle me-2"></i>
-                                Erro ao carregar preview: ${error.message}
-                            </div>
-                        `;
-                    });
-            });
-        }
-    });
-</script>

@@ -1,0 +1,267 @@
+/**
+ * CS-Onboarding - Design System Variables
+ * ========================================
+ * Arquivo centralizado com todas as variáveis CSS do projeto.
+ * Esta é a ÚNICA fonte de verdade para cores, espaçamentos, etc.
+ * 
+ * Organização:
+ * 1. Cores Base
+ * 2. Cores Semânticas
+ * 3. Espaçamentos
+ * 4. Tipografia
+ * 5. Bordas e Sombras
+ * 6. Layout
+ * 7. Transições
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root {
+    /* ========================================
+       1. CORES BASE
+       ======================================== */
+    --color-white: #ffffff;
+    --color-black: #000000;
+
+    /* Azuis */
+    --color-blue-50: #eff6ff;
+    --color-blue-100: #dbeafe;
+    --color-blue-200: #bfdbfe;
+    --color-blue-300: #93c5fd;
+    --color-blue-400: #60a5fa;
+    --color-blue-500: #3b82f6;
+    --color-blue-600: #2563eb;
+    --color-blue-700: #1d4ed8;
+
+    /* Cinzas */
+    --color-gray-50: #f9fafb;
+    --color-gray-100: #f3f4f6;
+    --color-gray-200: #e5e7eb;
+    --color-gray-300: #d1d5db;
+    --color-gray-400: #9ca3af;
+    --color-gray-500: #6b7280;
+    --color-gray-600: #4b5563;
+    --color-gray-700: #374151;
+    --color-gray-800: #1f2937;
+    --color-gray-900: #111827;
+
+    /* Slates (para dark mode) */
+    --color-slate-50: #f8fafc;
+    --color-slate-100: #f1f5f9;
+    --color-slate-200: #e2e8f0;
+    --color-slate-300: #cbd5e1;
+    --color-slate-400: #94a3b8;
+    --color-slate-500: #64748b;
+    --color-slate-600: #475569;
+    --color-slate-700: #334155;
+    --color-slate-800: #1e293b;
+    --color-slate-900: #0f172a;
+
+    /* Verdes */
+    --color-green-50: #f0fdf4;
+    --color-green-100: #dcfce7;
+    --color-green-400: #4ade80;
+    --color-green-500: #22c55e;
+    --color-green-600: #16a34a;
+
+    /* Vermelhos */
+    --color-red-50: #fef2f2;
+    --color-red-100: #fee2e2;
+    --color-red-400: #f87171;
+    --color-red-500: #ef4444;
+    --color-red-600: #dc2626;
+
+    /* Amarelos */
+    --color-yellow-50: #fefce8;
+    --color-yellow-100: #fef9c3;
+    --color-yellow-400: #facc15;
+    --color-yellow-500: #eab308;
+
+    /* Roxos */
+    --color-purple-400: #a855f7;
+    --color-purple-500: #8b5cf6;
+    --color-purple-600: #7c3aed;
+
+    /* Accent (Amarelo Pacto) */
+    --color-accent: #f4c430;
+    --color-accent-hover: #d4a520;
+    --color-accent-rgb: 244, 196, 48;
+
+    /* ========================================
+       2. CORES SEMÂNTICAS (Light Mode)
+       ======================================== */
+    --body-bg: #e6e8eb;
+    --body-color: #1f2937;
+    --bs-body-color: #212529;
+    --bs-heading-color: #212529;
+
+    --container-bg: var(--color-white);
+    --card-bg: var(--color-white);
+    --header-bg: var(--color-white);
+    --sidebar-bg: var(--color-white);
+
+    --accent-color: var(--color-accent);
+    --accent-color-hover: var(--color-accent-hover);
+    --accent-color-rgb: var(--color-accent-rgb);
+
+    --input-bg: var(--color-white);
+    --input-color: var(--color-gray-800);
+    --input-border: var(--color-gray-300);
+    --input-focus-border: var(--color-blue-500);
+
+    --table-bg: var(--color-white);
+    --table-header-bg: var(--color-gray-50);
+    --table-border-color: var(--color-gray-200);
+    --table-hover-bg: var(--color-gray-50);
+
+    --bs-link-color: #0d6efd;
+    --bs-card-color: #212529;
+
+    /* ========================================
+       3. ESPAÇAMENTOS
+       ======================================== */
+    --space-0: 0;
+    --space-1: 0.25rem;
+    /* 4px */
+    --space-2: 0.5rem;
+    /* 8px */
+    --space-3: 0.75rem;
+    /* 12px */
+    --space-4: 1rem;
+    /* 16px */
+    --space-5: 1.25rem;
+    /* 20px */
+    --space-6: 1.5rem;
+    /* 24px */
+    --space-8: 2rem;
+    /* 32px */
+    --space-10: 2.5rem;
+    /* 40px */
+    --space-12: 3rem;
+    /* 48px */
+
+    /* ========================================
+       4. TIPOGRAFIA
+       ======================================== */
+    --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-serif: "Bodoni 72", "Bodoni MT", Georgia, serif;
+    --bs-font-sans-serif: var(--font-sans);
+    --font-serif-display: var(--font-serif);
+
+    --font-size-xs: 0.75rem;
+    /* 12px */
+    --font-size-sm: 0.875rem;
+    /* 14px */
+    --font-size-base: 1rem;
+    /* 16px */
+    --font-size-lg: 1.125rem;
+    /* 18px */
+    --font-size-xl: 1.25rem;
+    /* 20px */
+    --font-size-2xl: 1.5rem;
+    /* 24px */
+    --font-size-3xl: 1.875rem;
+    /* 30px */
+
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+    --font-weight-extrabold: 800;
+
+    --line-height-tight: 1.25;
+    --line-height-normal: 1.5;
+    --line-height-relaxed: 1.7;
+
+    /* ========================================
+       5. BORDAS E SOMBRAS
+       ======================================== */
+    --radius-sm: 0.25rem;
+    /* 4px */
+    --radius-md: 0.5rem;
+    /* 8px */
+    --radius-lg: 0.75rem;
+    /* 12px */
+    --radius-xl: 1rem;
+    /* 16px */
+    --radius-full: 9999px;
+
+    /* Aliases para compatibilidade */
+    --border-radius-sm: var(--radius-sm);
+    --border-radius-md: var(--radius-md);
+    --border-radius-lg: var(--radius-lg);
+
+    --elevation-1: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --elevation-2: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+    --elevation-3: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+    --elevation-4: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    --elevation-5: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+
+    /* Aliases */
+    --shadow: var(--elevation-2);
+    --shadow-sm: var(--elevation-1);
+    --shadow-md: var(--elevation-2);
+    --shadow-lg: var(--elevation-4);
+
+    /* ========================================
+       6. LAYOUT
+       ======================================== */
+    --sidebar-width: 280px;
+    --sidebar-width-collapsed: 60px;
+    --header-height: 60px;
+    --container-max-width: 1400px;
+
+    /* User sidebar específico */
+    --user-sidebar-bg: var(--container-bg);
+    --user-sidebar-width: 280px;
+    --user-sidebar-width-minimized: 60px;
+    --user-sidebar-link-hover: #eef2f7;
+    --user-sidebar-border: #e5e7eb;
+
+    /* ========================================
+       7. TRANSIÇÕES
+       ======================================== */
+    --transition-fast: 0.1s ease;
+    --transition-base: 0.2s ease;
+    --transition-slow: 0.3s ease;
+    --transition-colors: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+/* ========================================
+   DARK MODE VARIABLES
+   ======================================== */
+html.dark-mode,
+body.dark-mode {
+    --body-bg: var(--color-slate-900);
+    --body-color: var(--color-slate-100);
+    --bs-body-color: var(--color-slate-200);
+    --bs-heading-color: var(--color-white);
+
+    --container-bg: var(--color-slate-800);
+    --card-bg: var(--color-slate-800);
+    --header-bg: var(--color-slate-800);
+    --sidebar-bg: var(--color-slate-800);
+
+    --input-bg: var(--color-slate-700);
+    --input-color: var(--color-slate-100);
+    --input-border: var(--color-slate-600);
+    --input-focus-border: var(--color-blue-400);
+
+    --table-bg: var(--color-slate-800);
+    --table-header-bg: var(--color-slate-700);
+    --table-border-color: var(--color-slate-600);
+    --table-hover-bg: var(--color-slate-700);
+
+    --user-sidebar-bg: var(--color-slate-800);
+    --user-sidebar-link-hover: var(--color-slate-700);
+    --user-sidebar-border: var(--color-slate-600);
+}
+
+/* Prevent flash of unstyled content */
+html:not(.dark-mode) {
+    background-color: #e6e8eb;
+}
+
+html.dark-mode {
+    background-color: #0f172a;
+}

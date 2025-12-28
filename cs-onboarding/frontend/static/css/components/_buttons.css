@@ -1,0 +1,179 @@
+/**
+ * CS-Onboarding - Button Styles
+ * ==============================
+ * Estilos para todos os botões do sistema
+ */
+
+.btn {
+    border-radius: var(--radius-md);
+    transition: transform 0.06s ease, box-shadow var(--transition-base), background-color var(--transition-base);
+    font-weight: var(--font-weight-semibold);
+    padding: var(--space-2) var(--space-4);
+    box-shadow: var(--elevation-1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--elevation-2);
+}
+
+.btn:active {
+    transform: translateY(1px);
+    box-shadow: var(--elevation-1);
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Primary Button */
+.btn-primary {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+    color: var(--color-black) !important;
+}
+
+.btn-primary:hover {
+    background-color: var(--accent-color-hover);
+    border-color: var(--accent-color-hover);
+    color: var(--color-black) !important;
+}
+
+/* Secondary Button */
+.btn-secondary {
+    background-color: var(--color-gray-500);
+    border-color: var(--color-gray-500);
+    color: var(--color-white) !important;
+}
+
+/* Outline variants */
+.btn-outline-primary {
+    color: var(--color-blue-600) !important;
+    border-color: var(--color-blue-600);
+    background: transparent;
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--color-blue-600);
+    color: var(--color-white) !important;
+}
+
+.btn-outline-secondary {
+    color: var(--color-gray-600) !important;
+    border-color: var(--color-gray-400);
+    background: transparent;
+}
+
+.btn-outline-secondary:hover {
+    background-color: var(--color-gray-600);
+    color: var(--color-white) !important;
+}
+
+.btn-outline-success {
+    color: var(--color-green-600) !important;
+    border-color: var(--color-green-600);
+    background: transparent;
+}
+
+.btn-outline-danger {
+    color: var(--color-red-600) !important;
+    border-color: var(--color-red-600);
+    background: transparent;
+}
+
+/* Success, Danger, Warning, Info buttons - ensure black text */
+.btn-success,
+.btn-danger,
+.btn-warning,
+.btn-info {
+    color: var(--color-black) !important;
+}
+
+/* Light button */
+.btn-light {
+    background-color: var(--color-gray-100);
+    border-color: var(--color-gray-200);
+    color: var(--color-gray-800) !important;
+}
+
+.btn-light:hover {
+    background-color: var(--color-gray-200);
+}
+
+/* Icon buttons */
+.btn-icon {
+    background: none;
+    border: none;
+    padding: var(--space-1);
+    color: var(--color-gray-500);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-base);
+}
+
+.btn-icon:hover {
+    background-color: var(--color-gray-100);
+    color: var(--color-blue-600);
+    transform: scale(1.1);
+}
+
+.btn-icon:focus {
+    outline: 2px solid var(--color-blue-600);
+    outline-offset: 2px;
+}
+
+/* Close button */
+.btn-close {
+    opacity: 0.7;
+}
+
+body.dark-mode .btn-close {
+    filter: invert(1);
+}
+
+/* Dark mode adjustments */
+body.dark-mode .btn-outline-primary {
+    color: var(--color-blue-400) !important;
+    border-color: var(--color-blue-400) !important;
+}
+
+body.dark-mode .btn-outline-secondary {
+    color: var(--color-slate-400) !important;
+    border-color: var(--color-slate-500) !important;
+}
+
+body.dark-mode .btn-outline-success {
+    color: var(--color-green-400) !important;
+    border-color: var(--color-green-400) !important;
+}
+
+body.dark-mode .btn-outline-danger {
+    color: var(--color-red-400) !important;
+    border-color: var(--color-red-400) !important;
+}
+
+body.dark-mode .btn-light {
+    background-color: var(--color-slate-700);
+    border-color: var(--color-slate-600);
+    color: var(--body-color) !important;
+}
+
+body.dark-mode .btn-icon {
+    color: var(--color-slate-400);
+}
+
+body.dark-mode .btn-icon:hover {
+    background-color: var(--color-slate-700);
+    color: var(--color-blue-400);
+}

@@ -268,6 +268,11 @@
                         // Logic for checkbox/radio if needed, currently safeSet seems used for values
                     }
                     el.value = value;
+
+                    // For select elements, if value wasn't found, select first option
+                    if (el.tagName === 'SELECT' && el.selectedIndex === -1 && el.options.length > 0) {
+                        el.selectedIndex = 0;
+                    }
                 } catch (_) { }
             };
 
@@ -329,21 +334,18 @@
                 try {
                     // Cache-busting: add timestamp to force fresh data
                     const timestamp = new Date().getTime();
-                    const response = await fetch(`/api/v1/implantacoes/${implId}?_t=${timestamp}`, {
+
+                    // Use apiFetch centralizado
+                    const j = await window.apiFetch(`/api/v1/implantacoes/${implId}?_t=${timestamp}`, {
                         headers: {
                             'Cache-Control': 'no-cache, no-store, must-revalidate',
                             'Pragma': 'no-cache'
-                        }
+                        },
+                        showErrorToast: true // Mostra toast se falhar (ex: 500), mas catch abaixo faz fallback
                     });
 
-                    if (!response.ok) {
-                        throw new Error('Falha ao carregar implantação');
-                    }
-
-                    const j = await response.json();
-
                     if (!j || !j.ok || !j.data || !j.data.implantacao) {
-                        throw new Error('Dados inválidos retornados');
+                        throw new Error('Dados inválidos retornados ou estrutura inesperada');
                     }
 
                     const impl = j.data.implantacao;
@@ -376,20 +378,20 @@
                     }
                     safeSet('#modal-status_implantacao', impl.status_implantacao_oamd || '', modal);
                     safeSet('#modal-nivel_atendimento', impl.nivel_atendimento || '', modal);
-                    safeSet('#modal-catraca', impl.catraca || '', modal);
+                    safeSet('#modal-catraca', (impl.catraca && impl.catraca.trim()) ? impl.catraca : 'Não definido', modal);
                     safeSet('#modal-modelo_catraca', impl.modelo_catraca || '', modal);
-                    safeSet('#modal-facial', impl.facial || '', modal);
+                    safeSet('#modal-facial', (impl.facial && impl.facial.trim()) ? impl.facial : 'Não definido', modal);
                     safeSet('#modal-modelo_facial', impl.modelo_facial || '', modal);
-                    safeSet('#modal-wellhub', impl.wellhub || '', modal);
-                    safeSet('#modal-totalpass', impl.totalpass || '', modal);
+                    safeSet('#modal-wellhub', (impl.wellhub && impl.wellhub.trim()) ? impl.wellhub : 'Não definido', modal);
+                    safeSet('#modal-totalpass', (impl.totalpass && impl.totalpass.trim()) ? impl.totalpass : 'Não definido', modal);
                     safeSet('#modal-cnpj', impl.cnpj || '', modal);
                     safeSet('#modal-sistema_anterior', impl.sistema_anterior || '', modal);
                     safeSet('#modal-recorrencia_usa', impl.recorrencia_usa || '', modal);
-                    safeSet('#modal-importacao', impl.importacao || '', modal);
-                    safeSet('#modal-boleto', impl.boleto || '', modal);
-                    safeSet('#modal-nota_fiscal', impl.nota_fiscal || '', modal);
-                    safeSet('#modal-diaria', impl.diaria || '', modal);
-                    safeSet('#modal-freepass', impl.freepass || '', modal);
+                    safeSet('#modal-importacao', (impl.importacao && impl.importacao.trim()) ? impl.importacao : 'Não definido', modal);
+                    safeSet('#modal-boleto', (impl.boleto && impl.boleto.trim()) ? impl.boleto : 'Não definido', modal);
+                    safeSet('#modal-nota_fiscal', (impl.nota_fiscal && impl.nota_fiscal.trim()) ? impl.nota_fiscal : 'Não definido', modal);
+                    safeSet('#modal-diaria', (impl.diaria && impl.diaria.trim()) ? impl.diaria : 'Não definido', modal);
+                    safeSet('#modal-freepass', (impl.freepass && impl.freepass.trim()) ? impl.freepass : 'Não definido', modal);
                     safeSet('#modal-alunos_ativos', (impl.alunos_ativos != null ? String(impl.alunos_ativos) : ''), modal);
                     safeSet('#modal-informacao_infra', impl.informacao_infra || '', modal);
                     safeSet('#modal-resp_estrategico_nome', impl.resp_estrategico_nome || '', modal);
@@ -501,8 +503,10 @@
                     safeSet('#modal-importacao', getData('importacao', 'Não definido'), modal);
                     safeSet('#modal-boleto', getData('boleto', 'Não definido'), modal);
                     safeSet('#modal-nota_fiscal', getData('nota-fiscal', 'Não definido'), modal);
-                    safeSet('#modal-catraca', getData('catraca', 'Não preenchido'), modal);
-                    safeSet('#modal-facial', getData('facial', 'Não preenchido'), modal);
+                    safeSet('#modal-catraca', getData('catraca', 'Não definido'), modal);
+                    safeSet('#modal-facial', getData('facial', 'Não definido'), modal);
+                    safeSet('#modal-wellhub', getData('wellhub', 'Não definido'), modal);
+                    safeSet('#modal-totalpass', getData('totalpass', 'Não definido'), modal);
                     safeSet('#modal-modelo_catraca', getData('modelo-catraca'), modal);
                     safeSet('#modal-modelo_facial', getData('modelo-facial'), modal);
 
@@ -688,18 +692,14 @@
                 }
 
                 try {
-                    const res = await fetch(actionUrl, {
+                    const data = await window.apiFetch(actionUrl, {
                         method: 'POST',
-                        headers: { 'Accept': 'application/json' },
-                        body: formData,
-                        credentials: 'same-origin'
+                        body: formData
+                        // Content-Type será automático (FormData) -> browser define boundary
                     });
 
-                    let ok = res.ok;
-                    let j = null;
-                    try { j = await res.json(); ok = ok && j && j.ok; } catch (_) { }
-
-                    if (ok) {
+                    // Verifica sucesso lógico (apiFetch já garante HTTP 200 via throw)
+                    if (data && data.ok) {
                         formHasChanges = false;
                         justSaved = true;
                         saveFormInitialValues();
@@ -872,8 +872,6 @@
                             type: 'warning',
                             icon: 'bi-exclamation-triangle-fill'
                         });
-                    } else {
-                        confirmed = confirm('Você fez alterações no formulário. Deseja descartar as alterações e fechar o modal?');
                     }
 
                     if (!confirmed) {
@@ -1071,19 +1069,21 @@
                     try {
                         // Só tentar aplicar se a implantação existir no banco
                         if (implId && implId !== '0' && parseInt(implId) > 0) {
-                            const csrfEl = modalForm.querySelector('input[name="csrf_token"]');
-                            const csrf = csrfEl ? csrfEl.value : '';
-                            await fetch(`/api/v1/oamd/implantacoes/${implId}/aplicar`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
-                                body: JSON.stringify({})
-                            }).then(r => r.json()).then(ap => {
+                            // apiFetch injeta CSRF auto
+                            try {
+                                const ap = await window.apiFetch(`/api/v1/oamd/implantacoes/${implId}/aplicar`, {
+                                    method: 'POST',
+                                    body: JSON.stringify({})
+                                });
+
                                 if (ap && ap.ok) {
-                                    if (window.showToast) showToast('Dados do OAMD aplicados', 'success');
+                                    if (window.showToast) showToast('Dados do OAMD aplicados com sucesso', 'success');
                                 } else {
                                     if (window.showToast) showToast((ap && ap.error) || 'Falha ao aplicar dados', 'error');
                                 }
-                            }).catch(() => { });
+                            } catch (e) {
+                                // Erro de rede/servidor já mostra toast via apiFetch
+                            }
                         } else {
                             // Implantação não existe ainda, apenas mostrar sucesso da consulta
                             if (window.showToast) showToast('Dados consultados com sucesso. Salve os detalhes para persistir.', 'success');

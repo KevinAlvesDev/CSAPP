@@ -223,6 +223,7 @@ def create_app(test_config=None):
     from .blueprints.planos_bp import planos_bp
     from .blueprints.profile import profile_bp
     from .blueprints.debug import debug_bp
+    from .blueprints.perfis_bp import perfis_bp
 
     try:
 
@@ -250,6 +251,7 @@ def create_app(test_config=None):
 
     app.register_blueprint(checklist_bp)
     app.register_blueprint(debug_bp)
+    app.register_blueprint(perfis_bp)
 
 
     try:

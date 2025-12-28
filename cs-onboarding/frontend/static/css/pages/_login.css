@@ -1,0 +1,79 @@
+/**
+ * CS-Onboarding - Login Page Styles
+ * ===================================
+ * Estilos específicos da página de login
+ */
+
+.login-page {
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-color: #f5f7fb;
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.login-page::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: none;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.login-box {
+    position: relative;
+    text-align: center;
+    padding: var(--space-10);
+    background-color: rgba(255, 255, 255, 0.9);
+    border-radius: var(--radius-md);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    max-width: 400px;
+    width: 90%;
+    z-index: 1;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.main-title {
+    color: var(--color-gray-900);
+    font-weight: var(--font-weight-extrabold);
+    font-size: 2.2rem;
+    margin-bottom: var(--space-1) !important;
+}
+
+.login-subtitle {
+    color: var(--color-gray-500);
+    font-size: var(--font-size-base);
+    margin-bottom: var(--space-5) !important;
+}
+
+.btn-login {
+    background-color: var(--color-blue-500);
+    border-color: var(--color-blue-500);
+    color: var(--color-black) !important;
+    font-weight: var(--font-weight-semibold);
+    padding: var(--space-3) var(--space-8);
+    font-size: 1.1rem;
+    transition: all var(--transition-base);
+    border-radius: var(--radius-md);
+}
+
+.btn-login.btn-sm {
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--font-size-sm);
+}
+
+.btn-login:hover {
+    background-color: var(--color-blue-700);
+    border-color: var(--color-blue-700);
+    color: var(--color-black) !important;
+    transform: translateY(-3px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}

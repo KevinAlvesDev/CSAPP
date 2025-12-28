@@ -1,0 +1,65 @@
+/**
+ * CS-Onboarding - Dashboard Page Styles
+ * ======================================
+ * Estilos específicos do dashboard
+ */
+
+/* Agenda date header */
+.agenda-date-header {
+    font-size: 0.95rem;
+    letter-spacing: 0.1px;
+}
+
+/* Progress bars */
+.progress {
+    background-color: var(--color-gray-200);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    height: 8px;
+}
+
+.progress-bar {
+    transition: width var(--transition-slow);
+}
+
+/* Dashboard cards specific */
+.dashboard-card {
+    transition: transform var(--transition-base), box-shadow var(--transition-base);
+}
+
+.dashboard-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--elevation-4);
+}
+
+/* Quick actions */
+.quick-actions {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+}
+
+/* Status indicators */
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-full);
+    display: inline-block;
+}
+
+.status-dot.status-concluido {
+    background-color: var(--color-green-500);
+}
+
+.status-dot.status-pendente {
+    background-color: var(--color-yellow-500);
+}
+
+.status-dot.status-atrasado {
+    background-color: var(--color-red-500);
+}
+
+/* Dark mode */
+body.dark-mode .progress {
+    background-color: var(--color-slate-700);
+}

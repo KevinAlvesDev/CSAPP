@@ -1,0 +1,153 @@
+/**
+ * CS-Onboarding - Main Layout
+ * ============================
+ * Estilos para o layout principal da aplicação
+ */
+
+/* Header */
+.header-bg {
+    background-color: var(--header-bg);
+    border-bottom: 1px solid var(--table-border-color);
+    padding: var(--space-3) var(--space-4);
+}
+
+/* Main content area */
+.main-content {
+    margin-left: var(--sidebar-width);
+    flex: 1;
+    transition: margin-left var(--transition-slow);
+    min-height: 100vh;
+    width: calc(100% - var(--sidebar-width));
+}
+
+.main-content.sidebar-collapsed {
+    margin-left: var(--sidebar-width-collapsed);
+    width: calc(100% - var(--sidebar-width-collapsed));
+}
+
+/* Container */
+.container-fluid {
+    padding: var(--space-4);
+}
+
+/* Page header */
+.page-header {
+    margin-bottom: var(--space-6);
+}
+
+.page-title {
+    font-size: var(--font-size-2xl);
+    font-weight: var(--font-weight-bold);
+    margin: 0;
+}
+
+/* Metrics grid */
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: var(--space-4);
+}
+
+@media (max-width: 1400px) {
+    .metrics-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .metrics-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .metrics-grid .card {
+        min-height: 100px;
+    }
+}
+
+@media (max-width: 480px) {
+    .metrics-grid {
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+    }
+
+    .metrics-grid .card {
+        min-height: 90px;
+    }
+}
+
+/* Menu toggle */
+.menu-toggle i {
+    color: var(--body-color);
+}
+
+/* Nav tabs */
+.nav-tabs {
+    border-color: var(--table-border-color);
+}
+
+.nav-tabs .nav-link {
+    color: var(--body-color);
+    border: 1px solid transparent;
+}
+
+.nav-tabs .nav-link:hover {
+    border-color: var(--table-border-color);
+}
+
+.nav-tabs .nav-link.active {
+    background-color: var(--card-bg);
+    color: var(--accent-color);
+    border-color: var(--table-border-color);
+    border-bottom-color: var(--card-bg);
+}
+
+/* Nav pills */
+.nav-pills .nav-link {
+    color: var(--body-color);
+    border-radius: var(--radius-md);
+}
+
+.nav-pills .nav-link.active {
+    background-color: var(--accent-color);
+    color: var(--color-black);
+}
+
+/* Dropdown */
+.dropdown-menu {
+    background-color: var(--card-bg);
+    border: 1px solid var(--table-border-color);
+    border-radius: var(--radius-md);
+    box-shadow: var(--elevation-4);
+}
+
+.dropdown-item {
+    color: var(--body-color);
+    padding: var(--space-2) var(--space-4);
+}
+
+.dropdown-item:hover {
+    background-color: var(--table-hover-bg);
+    color: var(--body-color);
+}
+
+.dropdown-divider {
+    border-color: var(--table-border-color);
+}
+
+/* Dark mode */
+body.dark-mode .dropdown-menu {
+    background-color: var(--card-bg);
+    border-color: var(--table-border-color);
+}
+
+body.dark-mode .dropdown-item {
+    color: var(--body-color);
+}
+
+body.dark-mode .dropdown-item:hover {
+    background-color: var(--table-hover-bg);
+}
+
+body.dark-mode .nav-tabs .nav-link.active {
+    background-color: var(--card-bg);
+    color: var(--accent-color);
+}

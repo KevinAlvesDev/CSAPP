@@ -236,63 +236,81 @@
                     <h6 class="text-primary mb-3 border-bottom pb-1 mt-4">Recursos</h6>
                     <div class="row">
                         <div class="col-md-2 mb-3"><label for="modal-diaria" class="form-label">Diária?</label><select
-                                class="form-select" id="modal-diaria" name="diaria"> {% if SIM_NAO_OPTIONS %}{% for op
-                                in SIM_NAO_OPTIONS %}<option value="{{ op }}" {% if implantacao.diaria==op %}selected{%
-                                    endif %}>{{ op }}</option>{% endfor %}{% endif %} </select></div>
+                                class="form-select" id="modal-diaria" name="diaria">
+                                {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}" {% if
+                                    implantacao.diaria==op %}selected{% endif %}>{{ op }}</option>{% endfor %}{% endif
+                                %}
+                            </select></div>
                         <div class="col-md-2 mb-3"><label for="modal-freepass"
                                 class="form-label">Freepass?</label><select class="form-select" id="modal-freepass"
-                                name="freepass"> {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option
-                                    value="{{ op }}" {% if implantacao.freepass==op %}selected{% endif %}>{{ op }}
-                                </option>{% endfor %}{% endif %} </select></div>
+                                name="freepass">
+                                {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}" {% if
+                                    implantacao.freepass==op %}selected{% endif %}>{{ op }}</option>{% endfor %}{% endif
+                                %}
+                            </select></div>
                         <div class="col-md-2 mb-3"><label for="modal-importacao"
                                 class="form-label">Importação?</label><select class="form-select" id="modal-importacao"
-                                name="importacao"> {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option
-                                    value="{{ op }}" {% if implantacao.importacao==op %}selected{% endif %}>{{ op }}
-                                </option>{% endfor %}{% endif %} </select></div>
+                                name="importacao">
+                                {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}" {% if
+                                    implantacao.importacao==op %}selected{% endif %}>{{ op }}</option>{% endfor %}{%
+                                endif %}
+                            </select></div>
                         <div class="col-md-2 mb-3"><label for="modal-boleto" class="form-label">Boleto?</label><select
-                                class="form-select" id="modal-boleto" name="boleto"> {% if SIM_NAO_OPTIONS %}{% for op
-                                in SIM_NAO_OPTIONS %}<option value="{{ op }}" {% if implantacao.boleto==op %}selected{%
-                                    endif %}>{{ op }}</option>{% endfor %}{% endif %} </select></div>
+                                class="form-select" id="modal-boleto" name="boleto">
+                                {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}" {% if
+                                    implantacao.boleto==op %}selected{% endif %}>{{ op }}</option>{% endfor %}{% endif
+                                %}
+                            </select></div>
                         <div class="col-md-2 mb-3"><label for="modal-nota_fiscal" class="form-label">Nota
-                                Fiscal?</label><select class="form-select" id="modal-nota_fiscal" name="nota_fiscal"> {%
-                                if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}" {% if
+                                Fiscal?</label><select class="form-select" id="modal-nota_fiscal" name="nota_fiscal">
+                                {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}" {% if
                                     implantacao.nota_fiscal==op %}selected{% endif %}>{{ op }}</option>{% endfor %}{%
-                                endif %} </select></div>
+                                endif %}
+                            </select></div>
                         <div class="col-md-2 mb-3"><label for="modal-alunos_ativos" class="form-label">Alunos
                                 Ativos</label><input type="number" class="form-control" id="modal-alunos_ativos"
                                 name="alunos_ativos" min="0" step="1" inputmode="numeric" pattern="[0-9]*"
-                                title="Digite apenas números inteiros" value="{{ implantacao.alunos_ativos or '' }}">
+                                placeholder="Não definido" title="Digite apenas números inteiros"
+                                value="{{ implantacao.alunos_ativos or '' }}">
                         </div>
 
                     </div>
                     <div class="row">
                         <div class="col-md-2 mb-3"><label for="modal-catraca" class="form-label">Catraca?</label><select
-                                class="form-select" id="modal-catraca" name="catraca"> {% if SIM_NAO_OPTIONS %}{% for op
-                                in SIM_NAO_OPTIONS %}<option value="{{ op }}" {% if implantacao.catraca==op %}selected{%
-                                    endif %}>{{ op }}</option>{% endfor %}{% endif %} </select></div>
+                                class="form-select" id="modal-catraca" name="catraca">
+                                {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}" {% if
+                                    implantacao.catraca==op %}selected{% endif %}>{{ op }}</option>{% endfor %}{% endif
+                                %}
+                            </select></div>
                         <div class="col-md-2 mb-3" id="row-catraca-modelo" style="display: none;"><label
                                 for="modal-modelo_catraca" class="form-label">Modelo da Catraca</label><input
                                 type="text" class="form-control" id="modal-modelo_catraca" name="modelo_catraca"
-                                placeholder="Informe o modelo" maxlength="100" title="Modelo da catraca"
+                                placeholder="Não definido" maxlength="100" title="Modelo da catraca"
                                 value="{{ implantacao.modelo_catraca or '' }}"></div>
                         <div class="col-md-2 mb-3"><label for="modal-facial" class="form-label">Facial?</label><select
-                                class="form-select" id="modal-facial" name="facial"> {% if SIM_NAO_OPTIONS %}{% for op
-                                in SIM_NAO_OPTIONS %}<option value="{{ op }}" {% if implantacao.facial==op %}selected{%
-                                    endif %}>{{ op }}</option>{% endfor %}{% endif %} </select></div>
+                                class="form-select" id="modal-facial" name="facial">
+                                {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}" {% if
+                                    implantacao.facial==op %}selected{% endif %}>{{ op }}</option>{% endfor %}{% endif
+                                %}
+                            </select></div>
                         <div class="col-md-2 mb-3" id="row-facial-modelo" style="display: none;"><label
                                 for="modal-modelo_facial" class="form-label">Modelo Facial</label><input type="text"
                                 class="form-control" id="modal-modelo_facial" name="modelo_facial"
-                                placeholder="Informe o modelo" maxlength="100" title="Modelo facial"
+                                placeholder="Não definido" maxlength="100" title="Modelo facial"
                                 value="{{ implantacao.modelo_facial or '' }}"></div>
                         <div class="col-md-2 mb-3"><label for="modal-wellhub" class="form-label">WellHub?</label><select
-                                class="form-select" id="modal-wellhub" name="wellhub"> {% if SIM_NAO_OPTIONS %}{% for op
-                                in SIM_NAO_OPTIONS %}<option value="{{ op }}" {% if implantacao.wellhub==op %}selected{%
-                                    endif %}>{{ op }}</option>{% endfor %}{% endif %} </select></div>
+                                class="form-select" id="modal-wellhub" name="wellhub">
+                                {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}" {% if
+                                    implantacao.wellhub==op %}selected{% endif %}>{{ op }}</option>{% endfor %}{% endif
+                                %}
+                            </select></div>
                         <div class="col-md-2 mb-3"><label for="modal-totalpass"
                                 class="form-label">TotalPass?</label><select class="form-select" id="modal-totalpass"
-                                name="totalpass"> {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option
-                                    value="{{ op }}" {% if implantacao.totalpass==op %}selected{% endif %}>{{ op }}
-                                </option>{% endfor %}{% endif %} </select></div>
+                                name="totalpass">
+                                {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}" {% if
+                                    implantacao.totalpass==op %}selected{% endif %}>{{ op }}</option>{% endfor %}{%
+                                endif %}
+                            </select></div>
                     </div>
                 </div>
                 <div class="modal-footer header-bg">
@@ -311,3 +329,25 @@
         </div>
     </div>
 </div>
+
+<script>
+    // FALLBACK DE SEGURANÇA: Garante que os campos de recursos mostrem "Não definido" quando vazios
+    // A lógica principal está em modal_detalhes_empresa.js - este script é apenas uma garantia extra
+    document.addEventListener('DOMContentLoaded', function () {
+        const modal = document.getElementById('modalDetalhesEmpresa');
+        if (!modal) return;
+
+        modal.addEventListener('shown.bs.modal', function () {
+            // Executa após outros scripts para garantir valores default
+            setTimeout(function () {
+                const campos = ['modal-catraca', 'modal-facial', 'modal-wellhub', 'modal-totalpass'];
+                campos.forEach(function (id) {
+                    const select = document.getElementById(id);
+                    if (select && (!select.value || select.value.trim() === '')) {
+                        select.value = 'Não definido';
+                    }
+                });
+            }, 100);
+        });
+    });
+</script>

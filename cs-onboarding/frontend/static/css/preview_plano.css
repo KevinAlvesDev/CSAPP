@@ -1,0 +1,151 @@
+/* CSS para o Preview de Plano de Sucesso */
+
+/* Modal Header */
+.preview-modal-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+/* Container do Preview */
+.preview-container {
+    padding: 1rem;
+}
+
+/* Cabeçalho do Plano (dentro do preview) */
+.preview-plan-header {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    border: 1px solid #e2e8f0;
+}
+
+.preview-plan-title {
+    margin: 0 0 0.5rem 0;
+    color: #2d3748;
+    font-weight: 700;
+    font-size: 1.25rem;
+}
+
+.preview-plan-desc {
+    margin: 0;
+    color: #4a5568;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+/* Lista de Itens */
+.items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+/* Item Individual */
+.preview-item {
+    position: relative;
+    /* Margem esquerda controlada via inline style no JS baseado no nível, 
+       mas poderíamos usar classes se nível for fixo. 
+       Manteremos margem inline para flexibilidade infinita de níveis. */
+}
+
+/* Cabeçalho do Item */
+.preview-item-header {
+    background-color: #f7fafc;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    border: 1px solid transparent;
+}
+
+.preview-item-header:hover {
+    border-color: #e2e8f0;
+}
+
+/* Header Interativo (com filhos) */
+.preview-item-header.clickable-header {
+    cursor: pointer;
+    user-select: none;
+}
+
+.preview-item-header.clickable-header:hover {
+    background-color: #edf2f7;
+}
+
+/* Nível Raiz (Fase) */
+.preview-item-header.root-level {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+    border-bottom: 2px solid rgba(102, 126, 234, 0.1);
+}
+
+.preview-item-header.root-level .item-title {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #2d3748;
+}
+
+/* Título e Comentário */
+.item-title {
+    flex: 1;
+    color: #4a5568;
+    font-weight: 500;
+}
+
+.item-count {
+    font-weight: normal;
+    font-size: 0.8rem;
+    color: #718096;
+    margin-left: 0.5rem;
+    background: rgba(0, 0, 0, 0.05);
+    padding: 2px 6px;
+    border-radius: 10px;
+}
+
+.item-comment {
+    color: #718096;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+    padding-left: 3.5rem;
+    /* Alinhado com o texto */
+    font-style: italic;
+}
+
+/* Toggle Icon */
+.toggle-icon {
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    color: #a0aec0;
+    font-size: 0.8rem;
+}
+
+/* Ícones de Tipo */
+.type-icon {
+    font-size: 1.1rem;
+}
+
+/* Empty State */
+.preview-empty-state {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: #a0aec0;
+}
+
+.preview-empty-icon {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.preview-empty-text {
+    font-style: italic;
+}
+
+/* Loading State */
+.preview-loading {
+    text-align: center !important;
+    /* Force center */
+    padding: 3rem 0;
+}

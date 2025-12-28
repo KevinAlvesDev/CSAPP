@@ -1,0 +1,170 @@
+/**
+ * CS-Onboarding - Form Styles
+ * ============================
+ * Estilos para inputs, selects e outros elementos de formulário
+ */
+
+.form-control,
+.form-select {
+    background-color: var(--input-bg);
+    color: var(--input-color);
+    border: 1px solid var(--input-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-3) var(--space-4);
+    transition: border-color var(--transition-base), box-shadow var(--transition-base);
+}
+
+.form-control:focus,
+.form-select:focus {
+    background-color: var(--input-bg);
+    color: var(--input-color);
+    border-color: var(--input-focus-border);
+    box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.25);
+    outline: none;
+}
+
+.form-control::placeholder {
+    color: var(--color-gray-400);
+}
+
+/* Disabled states */
+.form-control:disabled,
+.form-select:disabled,
+input:read-only:disabled,
+.form-control[readonly] {
+    background-color: var(--color-gray-100);
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+/* Labels */
+.form-label {
+    font-weight: var(--font-weight-medium);
+    margin-bottom: var(--space-2);
+    color: var(--body-color);
+}
+
+/* Form check (checkboxes & radios) */
+.form-check-input {
+    cursor: pointer;
+    accent-color: var(--color-blue-600);
+}
+
+.form-check-input:checked {
+    background-color: var(--color-blue-600);
+    border-color: var(--color-blue-600);
+}
+
+.form-check-label {
+    cursor: pointer;
+}
+
+/* File upload */
+input[type="file"] {
+    color: var(--body-color);
+}
+
+input[type="file"]::-webkit-file-upload-button {
+    background-color: var(--card-bg);
+    color: var(--body-color);
+    border: 1px solid var(--input-border);
+    border-radius: var(--radius-sm);
+    padding: var(--space-2) var(--space-3);
+    cursor: pointer;
+    transition: background-color var(--transition-base);
+}
+
+input[type="file"]::-webkit-file-upload-button:hover {
+    background-color: var(--user-sidebar-link-hover);
+    color: var(--body-color);
+}
+
+/* Input groups */
+.input-group {
+    position: relative;
+}
+
+.input-group .form-control {
+    border-radius: var(--radius-md);
+}
+
+.input-group-text {
+    background-color: var(--color-gray-100);
+    border: 1px solid var(--input-border);
+    color: var(--color-gray-600);
+}
+
+/* Validation states */
+.form-control.is-invalid {
+    border-color: var(--color-red-500);
+}
+
+.form-control.is-valid {
+    border-color: var(--color-green-500);
+}
+
+.invalid-feedback {
+    color: var(--color-red-500);
+    font-size: var(--font-size-sm);
+}
+
+.valid-feedback {
+    color: var(--color-green-500);
+    font-size: var(--font-size-sm);
+}
+
+/* Tom Select customization */
+.ts-wrapper .ts-control {
+    background-color: var(--input-bg);
+    border-color: var(--input-border);
+    border-radius: var(--radius-md);
+}
+
+.ts-wrapper.focus .ts-control {
+    border-color: var(--input-focus-border);
+    box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.25);
+}
+
+/* Dark mode */
+body.dark-mode .form-control,
+body.dark-mode .form-select {
+    background-color: var(--input-bg);
+    color: var(--body-color);
+    border-color: var(--input-border);
+}
+
+body.dark-mode .form-control:focus,
+body.dark-mode .form-select:focus {
+    background-color: var(--input-bg);
+    border-color: var(--input-focus-border);
+}
+
+body.dark-mode .form-control::placeholder {
+    color: var(--color-slate-500);
+}
+
+body.dark-mode .form-control:disabled,
+body.dark-mode .form-control[readonly],
+body.dark-mode .form-select:disabled {
+    background-color: var(--table-header-bg);
+    color: var(--color-slate-400);
+    border-color: var(--input-border);
+}
+
+body.dark-mode .input-group-text {
+    background-color: var(--table-header-bg);
+    border-color: var(--input-border);
+    color: var(--body-color);
+}
+
+body.dark-mode input[type="file"]::-webkit-file-upload-button {
+    background-color: var(--card-bg);
+    color: var(--body-color);
+    border-color: var(--input-border);
+}
+
+body.dark-mode .ts-wrapper .ts-control {
+    background-color: var(--input-bg);
+    border-color: var(--input-border);
+    color: var(--body-color);
+}

@@ -1,0 +1,451 @@
+{% extends "base.html" %}
+
+{% block title %}Perfis de Acesso{% endblock %}
+
+{% block head_extra %}
+<style>
+    .perfis-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+
+    .perfis-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .perfil-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
+        border-left: 4px solid var(--perfil-cor, #667eea);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .perfil-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    }
+
+    .perfil-card-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .perfil-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+        background: var(--perfil-cor, #667eea);
+    }
+
+    .perfil-info h3 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #2d3748;
+    }
+
+    .perfil-badge {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.5rem;
+        border-radius: 20px;
+        background: #e2e8f0;
+        color: #4a5568;
+        margin-top: 0.25rem;
+        display: inline-block;
+    }
+
+    .perfil-badge.sistema {
+        background: #fed7d7;
+        color: #c53030;
+    }
+
+    .perfil-descricao {
+        color: #718096;
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+        min-height: 40px;
+    }
+
+    .perfil-stats {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        padding: 0.75rem;
+        background: #f7fafc;
+        border-radius: 8px;
+    }
+
+    .stat-item {
+        flex: 1;
+        text-align: center;
+    }
+
+    .stat-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #2d3748;
+    }
+
+    .stat-label {
+        font-size: 0.75rem;
+        color: #718096;
+    }
+
+    .perfil-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .btn-perfil {
+        flex: 1;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        text-decoration: none;
+    }
+
+    .btn-perfil-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .btn-perfil-primary:hover {
+        transform: scale(1.02);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+
+    .btn-perfil-danger {
+        background: #fc8181;
+        color: white;
+    }
+
+    .btn-perfil-danger:hover {
+        background: #f56565;
+    }
+
+    .btn-perfil-danger:disabled {
+        background: #e2e8f0;
+        color: #a0aec0;
+        cursor: not-allowed;
+    }
+
+    .new-perfil-card {
+        background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+        border: 2px dashed #cbd5e0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 250px;
+        cursor: pointer;
+        text-decoration: none;
+        color: #4a5568;
+    }
+
+    .new-perfil-card:hover {
+        border-color: #667eea;
+        background: linear-gradient(135deg, #ebf4ff 0%, #e2e8f0 100%);
+        color: #667eea;
+    }
+
+    .new-perfil-card i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+
+    .new-perfil-card h3 {
+        margin: 0;
+        font-weight: 600;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        color: #cbd5e0;
+        margin-bottom: 1rem;
+    }
+
+    /* Dark Mode */
+    body.dark-mode .perfil-card {
+        background: var(--card-bg);
+    }
+
+    body.dark-mode .perfil-info h3 {
+        color: var(--body-color);
+    }
+
+    body.dark-mode .perfil-stats {
+        background: var(--table-header-bg);
+    }
+
+    body.dark-mode .stat-value {
+        color: var(--body-color);
+    }
+
+    body.dark-mode .new-perfil-card {
+        background: var(--card-bg);
+        border-color: var(--table-border-color);
+        color: var(--body-color);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <header class="header-bg p-3 d-flex align-items-center position-relative rounded-3">
+        <h1 class="main-title mb-0 fs-4 w-100 text-center">Perfis de Acesso</h1>
+        <div class="d-flex align-items-center position-absolute end-0 top-50 translate-middle-y gap-2 me-3">
+            <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-house me-1"></i> Dashboard
+            </a>
+        </div>
+    </header>
+
+    <main class="p-4" style="padding-top: 20px !important;">
+        <div class="perfis-grid">
+            <!-- Card para criar novo perfil -->
+            <a href="{{ url_for('perfis.novo_perfil') }}" class="perfil-card new-perfil-card">
+                <i class="bi bi-plus-circle"></i>
+                <h3>Novo Perfil</h3>
+                <p class="text-muted mt-2 mb-0">Criar novo perfil de acesso</p>
+            </a>
+
+            {% for perfil in perfis %}
+            <div class="perfil-card" style="--perfil-cor: {{ perfil.cor or '#667eea' }}">
+                <div class="perfil-card-header">
+                    <div class="perfil-icon" style="background: {{ perfil.cor or '#667eea' }}">
+                        <i class="{{ perfil.icone or 'bi-person-badge' }}"></i>
+                    </div>
+                    <div class="perfil-info">
+                        <h3>{{ perfil.nome }}</h3>
+                        {% if perfil.sistema %}
+                        <span class="perfil-badge sistema">
+                            <i class="bi bi-lock-fill me-1"></i>Sistema
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <p class="perfil-descricao">
+                    {{ perfil.descricao or 'Sem descrição' }}
+                </p>
+
+                <div class="perfil-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">{{ perfil.total_permissoes or 0 }}/{{ perfil.total_recursos or 0 }}
+                        </div>
+                        <div class="stat-label">Permissões</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">{{ perfil.total_usuarios or 0 }}</div>
+                        <div class="stat-label">Usuários</div>
+                    </div>
+                </div>
+
+                <div class="perfil-actions">
+                    <a href="{{ url_for('perfis.editar_perfil', perfil_id=perfil.id) }}"
+                        class="btn-perfil btn-perfil-primary">
+                        <i class="bi bi-pencil"></i> Editar
+                    </a>
+
+                    <button type="button" class="btn-perfil btn-clonar-perfil"
+                        style="background: #38b2ac; color: white;" data-perfil-id="{{ perfil.id }}"
+                        data-perfil-nome="{{ perfil.nome }}">
+                        <i class="bi bi-copy"></i> Clonar
+                    </button>
+
+                    <button type="button" class="btn-perfil btn-perfil-danger btn-excluir-perfil"
+                        data-perfil-id="{{ perfil.id }}" data-perfil-nome="{{ perfil.nome }}" {% if
+                        perfil.total_usuarios> 0 %}disabled title="Perfil em uso por {{ perfil.total_usuarios }}
+                        usuário(s)"{% endif %}>
+                        <i class="bi bi-trash"></i> Excluir
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </main>
+</div>
+
+<!-- Modal Excluir Perfil -->
+<div class="modal fade" id="modalExcluirPerfil" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Excluir Perfil
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja excluir o perfil <strong id="perfilNomeExcluir"></strong>?</p>
+                <p class="text-danger small mb-0">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Esta ação não pode ser desfeita.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmarExclusao">
+                    <i class="bi bi-trash me-1"></i>Excluir
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Clonar Perfil -->
+<div class="modal fade" id="modalClonarPerfil" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-copy me-2"></i>Clonar Perfil
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Criar uma cópia do perfil <strong id="perfilNomeClonar"></strong>?</p>
+                <div class="mb-3">
+                    <label for="novoNomePerfil" class="form-label fw-bold">Nome do Novo Perfil *</label>
+                    <input type="text" class="form-control" id="novoNomePerfil"
+                        placeholder="Ex: Cópia de Administrador">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-info text-white" id="btnConfirmarClonagem">
+                    <i class="bi bi-copy me-1"></i>Clonar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // ===== EXCLUIR =====
+        let perfilIdExcluir = null;
+        const modalExcluir = new bootstrap.Modal(document.getElementById('modalExcluirPerfil'));
+
+        document.querySelectorAll('.btn-excluir-perfil').forEach(btn => {
+            btn.addEventListener('click', function () {
+                if (this.disabled) return;
+                perfilIdExcluir = this.dataset.perfilId;
+                document.getElementById('perfilNomeExcluir').textContent = this.dataset.perfilNome;
+                modalExcluir.show();
+            });
+        });
+
+        document.getElementById('btnConfirmarExclusao').addEventListener('click', async function () {
+            if (!perfilIdExcluir) return;
+
+            const btn = this;
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Excluindo...';
+
+            try {
+                const response = await window.apiFetch(`/perfis/${perfilIdExcluir}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    if (window.showToast) window.showToast('Perfil excluído com sucesso!', 'success');
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    throw new Error(response.error || 'Erro ao excluir');
+                }
+            } catch (error) {
+                if (window.showToast) window.showToast(error.message || 'Erro ao excluir', 'error');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        });
+
+        // ===== CLONAR =====
+        let perfilIdClonar = null;
+        let perfilNomeClonar = null;
+        const modalClonar = new bootstrap.Modal(document.getElementById('modalClonarPerfil'));
+
+        document.querySelectorAll('.btn-clonar-perfil').forEach(btn => {
+            btn.addEventListener('click', function () {
+                perfilIdClonar = this.dataset.perfilId;
+                perfilNomeClonar = this.dataset.perfilNome;
+                document.getElementById('perfilNomeClonar').textContent = perfilNomeClonar;
+                document.getElementById('novoNomePerfil').value = `Cópia de ${perfilNomeClonar}`;
+                modalClonar.show();
+            });
+        });
+
+        document.getElementById('btnConfirmarClonagem').addEventListener('click', async function () {
+            if (!perfilIdClonar) return;
+
+            const novoNome = document.getElementById('novoNomePerfil').value.trim();
+            if (!novoNome) {
+                if (window.showToast) window.showToast('Digite um nome para o novo perfil', 'warning');
+                document.getElementById('novoNomePerfil').focus();
+                return;
+            }
+
+            const btn = this;
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Clonando...';
+
+            try {
+                const response = await window.apiFetch(`/perfis/${perfilIdClonar}/clonar`, {
+                    method: 'POST',
+                    body: JSON.stringify({ nome: novoNome })
+                });
+
+                if (response.ok) {
+                    if (window.showToast) window.showToast('Perfil clonado com sucesso!', 'success');
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    throw new Error(response.error || 'Erro ao clonar');
+                }
+            } catch (error) {
+                if (window.showToast) window.showToast(error.message || 'Erro ao clonar', 'error');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        });
+    });
+</script>
+{% endblock %}

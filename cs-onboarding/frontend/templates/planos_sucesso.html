@@ -355,6 +355,51 @@
     {% endif %}
 </div>
 
+<!-- Modal Clonar Plano -->
+<div class="modal fade" id="modalClonarPlano" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+        <h5 class="modal-title">
+          <i class="bi bi-files me-2"></i>Clonar Plano de Sucesso
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted mb-3">
+          <i class="bi bi-info-circle me-1"></i>
+          Você está clonando o plano: <strong id="planoNomeClonar"></strong>
+        </p>
+        <form id="formClonarPlano">
+          <div class="mb-3">
+            <label for="novoNomePlano" class="form-label fw-bold">
+              Nome do Novo Plano <span class="text-danger">*</span>
+            </label>
+            <input type="text" class="form-control" id="novoNomePlano" name="nome"
+              placeholder="Ex: Onboarding Completo - Cópia" required maxlength="255">
+            <div class="form-text">Escolha um nome único para identificar o novo plano</div>
+          </div>
+          <div class="mb-3">
+            <label for="novaDescricaoPlano" class="form-label fw-bold">
+              Descrição (Opcional)
+            </label>
+            <textarea class="form-control" id="novaDescricaoPlano" name="descricao" rows="3"
+              placeholder="Descreva o objetivo deste plano..."></textarea>
+            <div class="form-text">Se deixar em branco, será preenchido automaticamente</div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btnConfirmarClonagem">
+          <i class="bi bi-files me-1"></i>Clonar Plano
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Excluir Plano -->
 <div class="modal fade" id="modalExcluirPlano" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">

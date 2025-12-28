@@ -3,13 +3,13 @@
  * Handles fetching, filtering, and applying success plans.
  */
 
-(function() {
+(function () {
     'use strict';
 
     let planosDisponiveis = [];
     let planoSelecionado = null;
 
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         const modalElement = document.getElementById('modalSelecionarPlano');
         if (!modalElement) return;
 
@@ -19,7 +19,16 @@
         // --- Event Listeners ---
 
         // Load plans when modal opens
-        modalElement.addEventListener('show.bs.modal', function() {
+        modalElement.addEventListener('show.bs.modal', function () {
+            // Injetar CSS do Preview dinamicamente
+            if (!document.getElementById('preview-plano-css')) {
+                const link = document.createElement('link');
+                link.id = 'preview-plano-css';
+                link.rel = 'stylesheet';
+                link.href = '/static/css/preview_plano.css';
+                document.head.appendChild(link);
+            }
+
             carregarPlanos();
             // Reset search
             if (buscaInput) buscaInput.value = '';
@@ -27,16 +36,16 @@
 
         // Filter plans on input
         if (buscaInput) {
-            buscaInput.addEventListener('input', function(e) {
+            buscaInput.addEventListener('input', function (e) {
                 filtrarPlanos(e.target.value);
             });
         }
 
         // Event Delegation for dynamically created buttons
         if (container) {
-            container.addEventListener('click', function(e) {
+            container.addEventListener('click', function (e) {
                 const target = e.target;
-                
+
                 // Handle "Preview" button
                 const previewBtn = target.closest('.btn-preview-plano');
                 if (previewBtn) {
@@ -64,11 +73,31 @@
             });
         }
 
+        // Listener para toggle de itens no preview (Expandir/Retrair)
+        document.addEventListener('click', function (e) {
+            const header = e.target.closest('.preview-item-header.clickable-header');
+            if (header && document.getElementById('modalPreviewPlanoGlobal')?.contains(header)) {
+                const targetId = header.dataset.target;
+                const container = document.getElementById(targetId);
+                const icon = header.querySelector('.toggle-icon');
+
+                if (container) {
+                    if (container.style.display === 'none') {
+                        container.style.display = 'block';
+                        if (icon) icon.style.transform = 'rotate(0deg)';
+                    } else {
+                        container.style.display = 'none';
+                        if (icon) icon.style.transform = 'rotate(-90deg)';
+                    }
+                }
+            }
+        });
+
         // --- Functions ---
 
         function carregarPlanos() {
             if (!container) return;
-            
+
             // Show loading state
             container.innerHTML = `
                 <div class="col-12 text-center py-4">
@@ -78,27 +107,14 @@
                 </div>
             `;
 
-            fetch('/planos/?ativo=true', {
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => {
-                const contentType = response.headers.get('content-type');
-                if (!contentType || !contentType.includes('application/json')) {
-                    return response.text().then(text => {
-                        throw new Error('Resposta não é JSON. Servidor retornou: ' + text.substring(0, 100));
-                    });
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success && data.planos) {
-                    planosDisponiveis = data.planos;
-                    renderizarPlanos(planosDisponiveis);
-                } else {
-                    container.innerHTML = `
+            window.apiFetch('/planos/?ativo=true')
+                .then(data => {
+                    if (data.success && data.planos) {
+                        planosDisponiveis = data.planos;
+                        renderizarPlanos(planosDisponiveis);
+                    } else {
+                        // Se success for false mas não der exception, mostra aviso
+                        container.innerHTML = `
                         <div class="col-12">
                             <div class="alert alert-warning">
                                 <i class="bi bi-exclamation-triangle me-2"></i>
@@ -106,19 +122,19 @@
                             </div>
                         </div>
                     `;
-                }
-            })
-            .catch(error => {
-                console.error('Erro ao carregar planos:', error);
-                container.innerHTML = `
+                    }
+                })
+                .catch(error => {
+                    // O apiFetch já mostra Toast de erro, aqui só atualizamos a UI
+                    container.innerHTML = `
                     <div class="col-12">
                         <div class="alert alert-danger">
                             <i class="bi bi-x-circle me-2"></i>
-                            Erro ao carregar planos: ${error.message}
+                            Erro ao carregar planos. Tente recarregar a página.
                         </div>
                     </div>
                 `;
-            });
+                });
         }
 
         function renderizarPlanos(planos) {
@@ -188,13 +204,165 @@
 
         function formatarData(dataStr) { return window.formatDate(dataStr, false) || 'N/A'; }
 
+        // --- Preview Logic (Refatorado para Enterprise Level) ---
+
+        function renderItem(item, level) {
+            const title = item.title || item.nome || '';
+            const comment = item.comment || item.descricao || '';
+            const children = item.children || [];
+            const hasChildren = children.length > 0;
+            const uniqueId = 'item-' + Math.random().toString(36).substr(2, 9);
+
+            // Ícones e cores baseados no nível (lógica de apresentação dinâmica)
+            const icons = ['bi-layers-fill', 'bi-collection', 'bi-list-check', 'bi-circle'];
+            const colors = ['#667eea', '#4299e1', '#48bb78', '#a0aec0'];
+            const iconClass = icons[Math.min(level, 3)];
+            const colorStyle = colors[Math.min(level, 3)];
+
+            const rootClass = level === 0 ? 'root-level' : '';
+
+            let html = `
+                <div class="preview-item" style="margin-left: ${level * 1.0}rem;">
+                    <div 
+                        class="preview-item-header ${hasChildren ? 'clickable-header' : ''} ${rootClass}" 
+                        data-target="${uniqueId}"
+                    >
+                        <!-- Seta de Toggle -->
+                        <div style="width: 1rem; text-align: center;">
+                            ${hasChildren ?
+                    `<i class="bi bi-chevron-down toggle-icon"></i>` :
+                    ``
+                }
+                        </div>
+
+                        <i class="bi ${iconClass} type-icon" style="color: ${colorStyle};"></i>
+                        
+                        <div class="item-title">
+                            ${escapeHtml(title)}
+                            ${hasChildren ? `<span class="item-count">${children.length}</span>` : ''}
+                        </div>
+                    </div>
+            `;
+
+            if (comment) {
+                html += `<div class="item-comment">${escapeHtml(comment)}</div>`;
+            }
+
+            if (hasChildren) {
+                html += `<div id="${uniqueId}" class="children-container">`;
+                children.forEach(child => {
+                    html += renderItem(child, level + 1);
+                });
+                html += '</div>';
+            }
+
+            html += '</div>';
+            return html;
+        }
+
         function visualizarPreviewPlano(planoId) {
-            window.open(`/planos/${planoId}`, '_blank');
+            let modalPreview = document.getElementById('modalPreviewPlanoGlobal');
+
+            if (!modalPreview) {
+                const modalHTML = `
+                    <div class="modal fade" id="modalPreviewPlanoGlobal" tabindex="-1">
+                        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                            <div class="modal-content">
+                                <div class="modal-header preview-modal-header">
+                                    <h5 class="modal-title">
+                                        <span id="previewPlanoTitulo">Preview do Plano</span>
+                                    </h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body" id="previewPlanoConteudo">
+                                    <div class="preview-loading">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Carregando...</span>
+                                        </div>
+                                        <p class="mt-2 text-muted">Carregando preview...</p>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.body.insertAdjacentHTML('beforeend', modalHTML);
+                modalPreview = document.getElementById('modalPreviewPlanoGlobal');
+            }
+
+            const previewConteudo = document.getElementById('previewPlanoConteudo');
+            const previewTitulo = document.getElementById('previewPlanoTitulo');
+
+            // Reset loading state
+            previewConteudo.innerHTML = `
+                <div class="preview-loading">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Carregando preview...</p>
+                </div>
+            `;
+
+            // apiFetch simplificado (tratamento de erro automático)
+            window.apiFetch(`/planos/${planoId}/preview`)
+                .then(data => {
+                    if (!data.success || !data.plano) {
+                        throw new Error(data.error || 'Plano não encontrado');
+                    }
+
+                    const plano = data.plano;
+                    previewTitulo.textContent = plano.nome;
+
+                    let html = `
+                        <div class="preview-container">
+                            <div class="preview-plan-header">
+                                <h4 class="preview-plan-title">${escapeHtml(plano.nome)}</h4>
+                                ${plano.descricao ? `<p class="preview-plan-desc">${escapeHtml(plano.descricao)}</p>` : ''}
+                            </div>
+                    `;
+
+                    if (plano.items && plano.items.length > 0) {
+                        html += '<div class="items-list">';
+                        plano.items.forEach(item => {
+                            html += renderItem(item, 0);
+                        });
+                        html += '</div>';
+                    } else {
+                        html += `
+                            <div class="preview-empty-state">
+                                <i class="bi bi-inbox preview-empty-icon"></i>
+                                <span class="preview-empty-text">Este plano ainda não possui estrutura definida</span>
+                            </div>
+                        `;
+                    }
+
+                    html += '</div>';
+                    previewConteudo.innerHTML = html;
+                })
+                .catch(error => {
+                    // apiFetch já mostra Toast, aqui apenas atualizamos o modal para não ficar em loading eterno
+                    previewConteudo.innerHTML = `
+                        <div class="alert alert-danger m-3">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            Não foi possível carregar o preview.
+                        </div>
+                    `;
+                });
+
+            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                const bsModal = new bootstrap.Modal(modalPreview);
+                bsModal.show();
+            } else if (typeof $ !== 'undefined' && $.fn.modal) {
+                $(modalPreview).modal('show');
+            }
         }
 
         async function aplicarPlano(planoId, planoNome, btnElement) {
             let confirmed = false;
-            
+
             if (window.showConfirm) {
                 confirmed = await window.showConfirm({
                     title: 'Aplicar Plano',
@@ -202,8 +370,6 @@
                     confirmText: 'Sim, aplicar plano',
                     type: 'warning'
                 });
-            } else {
-                confirmed = confirm(`Tem certeza que deseja aplicar o plano "${planoNome}"?\n\nA estrutura atual será substituída.`);
             }
 
             if (!confirmed) return;
@@ -211,7 +377,6 @@
             const implantacaoId = document.querySelector('#main-content')?.dataset?.implantacaoId;
             if (!implantacaoId) {
                 if (window.showToast) window.showToast('Erro: ID da implantação não encontrado.', 'error');
-                else alert('Erro: ID da implantação não encontrado.');
                 return;
             }
 
@@ -219,39 +384,26 @@
             btnElement.disabled = true;
             btnElement.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Aplicando...';
 
-            fetch(`/planos/implantacao/${implantacaoId}/aplicar`, {
+            window.apiFetch(`/planos/implantacao/${implantacaoId}/aplicar`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('input[name="csrf_token"]')?.value || ''
-                },
                 body: JSON.stringify({ plano_id: planoId })
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    if (window.showToast) window.showToast('Plano aplicado com sucesso!', 'success');
-                    else alert('Plano aplicado com sucesso!');
-                    
-                    window.location.reload();
-                } else {
-                    const msg = 'Erro ao aplicar plano: ' + (data.error || 'Erro desconhecido');
-                    if (window.showToast) window.showToast(msg, 'error');
-                    else alert(msg);
-                    
+                .then(data => {
+                    if (data.success) {
+                        if (window.showToast) window.showToast('Plano aplicado com sucesso!', 'success');
+                        else alert('Plano aplicado com sucesso!'); // Fallback caso showToast falhe (raro)
+
+                        window.location.reload();
+                    } else {
+                        // Erro de lógica (ex: validação) - apiFetch lança exceção para http errors, mas success=false pode ser 200 OK
+                        throw new Error(data.error || 'Erro desconhecido ao aplicar plano');
+                    }
+                })
+                .catch(error => {
+                    // apiFetch já exibe toast de erro
                     btnElement.disabled = false;
                     btnElement.innerHTML = originalText;
-                }
-            })
-            .catch(error => {
-                console.error('Erro:', error);
-                const msg = 'Erro ao aplicar plano: ' + error.message;
-                if (window.showToast) window.showToast(msg, 'error');
-                else alert(msg);
-                
-                btnElement.disabled = false;
-                btnElement.innerHTML = originalText;
-            });
+                });
         }
 
         function escapeHtml(text) { return window.escapeHtml(text); }

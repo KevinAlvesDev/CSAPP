@@ -1,0 +1,168 @@
+/**
+ * CS-Onboarding - Card Styles
+ * ============================
+ * Estilos para cards e containers
+ */
+
+.card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--elevation-2);
+    transition: var(--transition-colors);
+}
+
+.card:hover {
+    box-shadow: var(--elevation-3);
+}
+
+.card-header {
+    background-color: var(--header-bg);
+    border-bottom: 1px solid var(--color-gray-200);
+    padding: var(--space-4);
+    font-weight: var(--font-weight-semibold);
+}
+
+.card-body {
+    padding: var(--space-4);
+}
+
+.card-footer {
+    background-color: var(--color-gray-50);
+    border-top: 1px solid var(--color-gray-200);
+    padding: var(--space-4);
+}
+
+/* Card title */
+.card-title {
+    margin: 0 0 var(--space-2) 0;
+    font-weight: var(--font-weight-bold);
+    color: var(--bs-heading-color);
+}
+
+/* Stats cards */
+.card.card-stats,
+.card.text-center {
+    border: none;
+    box-shadow: var(--elevation-2);
+}
+
+.card.card-stats h4,
+.card.text-center h4 {
+    font-weight: var(--font-weight-extrabold);
+    letter-spacing: 0.2px;
+}
+
+.card.text-center h6 {
+    font-weight: var(--font-weight-semibold);
+    opacity: 0.9;
+}
+
+/* Card accent border */
+.card-accent {
+    border-color: rgba(var(--accent-color-rgb), 0.6);
+    box-shadow: var(--elevation-3);
+}
+
+/* Custom card (usado em implantacao_detalhes) */
+.custom-card {
+    background: var(--card-bg);
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--elevation-2);
+}
+
+.custom-card-header {
+    background: var(--color-white);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.custom-card-title {
+    font-size: 0.95rem;
+    font-weight: var(--font-weight-bold);
+    color: var(--color-gray-800);
+    margin: 0;
+}
+
+.custom-card-body {
+    padding: var(--space-4);
+}
+
+/* Card header pills (tabs) */
+.card-header-pills {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.card-header-pills .nav-item {
+    flex: 1 1 0;
+    min-width: 0;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.card-header-pills .nav-link {
+    width: 100%;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: var(--space-2) var(--space-1);
+    margin: 0;
+}
+
+@media (max-width: 1200px) {
+    .card-header-pills {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+    }
+}
+
+/* Dark mode */
+body.dark-mode .card {
+    background-color: var(--card-bg);
+    border-color: var(--table-border-color);
+}
+
+body.dark-mode .card-header {
+    background-color: var(--header-bg);
+    border-color: var(--table-border-color);
+}
+
+body.dark-mode .card-footer {
+    background-color: var(--table-header-bg);
+    border-color: var(--table-border-color);
+}
+
+body.dark-mode .card.card-stats h4,
+body.dark-mode .metrics-grid .card h4 {
+    color: var(--body-color) !important;
+}
+
+body.dark-mode .card.card-stats .text-muted,
+body.dark-mode .metrics-grid .card .text-muted {
+    color: var(--color-slate-500) !important;
+}
+
+body.dark-mode .custom-card {
+    background: var(--card-bg);
+    border-color: var(--table-border-color);
+}
+
+body.dark-mode .custom-card-header {
+    background: var(--table-header-bg);
+    border-color: var(--table-border-color);
+}
+
+body.dark-mode .custom-card-title {
+    color: var(--body-color);
+}

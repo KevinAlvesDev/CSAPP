@@ -1,0 +1,556 @@
+{% extends "base.html" %}
+
+{% block title %}{% if modo == 'criar' %}Novo Perfil{% else %}Editar {{ perfil.nome }}{% endif %}{% endblock %}
+
+{% block head_extra %}
+<style>
+    .editor-container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .editor-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .editor-title {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .editor-title h2 {
+        margin: 0;
+        font-weight: 700;
+    }
+
+    .perfil-form-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    }
+
+    .form-section-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        margin-bottom: 1rem;
+        color: #2d3748;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .cor-picker {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .cor-option {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        border: 3px solid transparent;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .cor-option:hover {
+        transform: scale(1.1);
+    }
+
+    .cor-option.selected {
+        border-color: #2d3748;
+        box-shadow: 0 0 0 2px white, 0 0 0 4px currentColor;
+    }
+
+    .permissoes-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .permissoes-counter {
+        font-size: 0.9rem;
+        color: #718096;
+    }
+
+    .permissoes-counter strong {
+        color: #667eea;
+        font-size: 1.1rem;
+    }
+
+    .permissoes-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .categoria-card {
+        background: white;
+        border-radius: 12px;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+    }
+
+    .categoria-header {
+        padding: 1rem 1.25rem;
+        background: #f7fafc;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .categoria-header:hover {
+        background: #edf2f7;
+    }
+
+    .categoria-title {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-weight: 600;
+        color: #2d3748;
+    }
+
+    .categoria-title i {
+        font-size: 1.2rem;
+        color: #667eea;
+    }
+
+    .categoria-counter {
+        font-size: 0.85rem;
+        padding: 0.25rem 0.75rem;
+        background: #e2e8f0;
+        border-radius: 20px;
+        color: #4a5568;
+    }
+
+    .categoria-counter.all-selected {
+        background: #c6f6d5;
+        color: #22543d;
+    }
+
+    .categoria-body {
+        padding: 1rem 1.25rem;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 0.75rem;
+    }
+
+    .permissao-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 0.75rem;
+        background: #f7fafc;
+        border-radius: 8px;
+        transition: all 0.2s;
+    }
+
+    .permissao-item:hover {
+        background: #edf2f7;
+    }
+
+    .permissao-item input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        margin-top: 2px;
+        cursor: pointer;
+        accent-color: #667eea;
+    }
+
+    .permissao-info {
+        flex: 1;
+    }
+
+    .permissao-nome {
+        font-weight: 500;
+        color: #2d3748;
+        font-size: 0.95rem;
+    }
+
+    .permissao-desc {
+        font-size: 0.8rem;
+        color: #718096;
+        margin-top: 2px;
+    }
+
+    .footer-actions {
+        position: sticky;
+        bottom: 0;
+        background: white;
+        padding: 1rem 1.5rem;
+        border-top: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+        z-index: 100;
+    }
+
+    .sistema-warning {
+        background: #fef3cd;
+        border: 1px solid #ffc107;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        color: #856404;
+    }
+
+    /* Dark Mode */
+    body.dark-mode .perfil-form-card,
+    body.dark-mode .categoria-card {
+        background: var(--card-bg);
+    }
+
+    body.dark-mode .categoria-header {
+        background: var(--table-header-bg);
+    }
+
+    body.dark-mode .categoria-header:hover {
+        background: var(--table-hover-bg);
+    }
+
+    body.dark-mode .categoria-title,
+    body.dark-mode .permissao-nome,
+    body.dark-mode .form-section-title {
+        color: var(--body-color);
+    }
+
+    body.dark-mode .permissao-item {
+        background: var(--table-header-bg);
+    }
+
+    body.dark-mode .permissao-item:hover {
+        background: var(--table-hover-bg);
+    }
+
+    body.dark-mode .footer-actions {
+        background: var(--card-bg);
+        border-color: var(--table-border-color);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <header class="header-bg p-3 d-flex align-items-center position-relative rounded-3">
+        <a href="{{ url_for('perfis.listar_perfis') }}" class="btn btn-sm btn-outline-light me-3">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <h1 class="main-title mb-0 fs-4">
+            {% if modo == 'criar' %}
+            <i class="bi bi-plus-circle me-2"></i>Novo Perfil de Acesso
+            {% else %}
+            <i class="bi bi-sliders me-2"></i>{{ perfil.nome }}
+            {% endif %}
+        </h1>
+    </header>
+
+    <main class="p-4 editor-container">
+        {% if perfil and perfil.sistema %}
+        <div class="sistema-warning">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>Perfil do Sistema:</strong> Este perfil é gerenciado pelo sistema e possui todas as permissões. Não
+            pode ser modificado.
+        </div>
+        {% endif %}
+
+        <form id="formPerfil" method="POST">
+            <!-- Dados do Perfil -->
+            <div class="perfil-form-card">
+                <h3 class="form-section-title">
+                    <i class="bi bi-person-badge"></i> Dados do Perfil
+                </h3>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="nome" class="form-label fw-bold">Nome do Perfil *</label>
+                        <input type="text" class="form-control" id="nome" name="nome"
+                            value="{{ perfil.nome if perfil else '' }}" required maxlength="100">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="descricao" class="form-label fw-bold">Descrição</label>
+                        <input type="text" class="form-control" id="descricao" name="descricao"
+                            value="{{ perfil.descricao if perfil else '' }}" placeholder="Breve descrição do perfil">
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label fw-bold">Cor de Identificação</label>
+                        <div class="cor-picker">
+                            {% set cores = ['#dc3545', '#fd7e14', '#ffc107', '#28a745', '#20c997', '#17a2b8', '#0d6efd',
+                            '#667eea', '#6f42c1', '#e83e8c', '#6c757d', '#343a40'] %}
+                            {% set cor_atual = perfil.cor if perfil else '#667eea' %}
+                            {% for cor in cores %}
+                            <div class="cor-option {% if cor == cor_atual %}selected{% endif %}"
+                                style="background-color: {{ cor }}" data-cor="{{ cor }}" {% if perfil and perfil.sistema
+                                %}style="pointer-events: none; opacity: 0.5;" {% endif %}>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <input type="hidden" id="cor" name="cor" value="{{ cor_atual }}">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Permissões -->
+            <div class="perfil-form-card">
+                <div class="permissoes-header">
+                    <h3 class="form-section-title mb-0">
+                        <i class="bi bi-shield-check"></i> Permissões
+                    </h3>
+
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="permissoes-counter">
+                            <strong id="countSelecionadas">0</strong> de <span id="countTotal">0</span> selecionadas
+                        </span>
+
+                        {% if not (perfil and perfil.sistema) %}
+                        <div class="permissoes-actions">
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="btnMarcarTodas">
+                                <i class="bi bi-check-all me-1"></i>Marcar Todas
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="btnDesmarcarTodas">
+                                <i class="bi bi-x-lg me-1"></i>Limpar
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div id="permissoesContainer">
+                    {% if perfil and perfil.categorias %}
+                    {% for categoria in perfil.categorias %}
+                    {% set cat_index = loop.index %}
+                    <div class="categoria-card">
+                        <div class="categoria-header" data-bs-toggle="collapse" data-bs-target="#cat-{{ cat_index }}">
+                            <div class="categoria-title">
+                                <i class="bi bi-folder"></i>
+                                <span>{{ categoria.nome }}</span>
+                            </div>
+                            <span
+                                class="categoria-counter {% if categoria.concedidas == categoria.total %}all-selected{% endif %}"
+                                id="counter-{{ cat_index }}">
+                                {{ categoria.concedidas }}/{{ categoria.total }}
+                            </span>
+                        </div>
+                        <div class="collapse" id="cat-{{ cat_index }}">
+                            <div class="categoria-body">
+                                {% for recurso in categoria.recursos %}
+                                <div class="permissao-item">
+                                    <input type="checkbox" name="permissoes" value="{{ recurso.id }}"
+                                        id="perm-{{ recurso.id }}" data-categoria="{{ cat_index }}" {% if
+                                        recurso.tem_permissao %}checked{% endif %}>
+                                    <label for="perm-{{ recurso.id }}" class="permissao-info">
+                                        <div class="permissao-nome">{{ recurso.nome }}</div>
+                                        {% if recurso.descricao %}
+                                        <div class="permissao-desc">{{ recurso.descricao }}</div>
+                                        {% endif %}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% elif recursos_agrupados %}
+                    {% for categoria, recursos in recursos_agrupados.items() %}
+                    {% set cat_index = loop.index %}
+                    <div class="categoria-card">
+                        <div class="categoria-header" data-bs-toggle="collapse" data-bs-target="#cat-{{ cat_index }}">
+                            <div class="categoria-title">
+                                <i class="bi bi-folder"></i>
+                                <span>{{ categoria }}</span>
+                            </div>
+                            <span class="categoria-counter" id="counter-{{ cat_index }}">
+                                0/{{ recursos|length }}
+                            </span>
+                        </div>
+                        <div class="collapse" id="cat-{{ cat_index }}">
+                            <div class="categoria-body">
+                                {% for recurso in recursos %}
+                                <div class="permissao-item">
+                                    <input type="checkbox" name="permissoes" value="{{ recurso.id }}"
+                                        id="perm-{{ recurso.id }}" data-categoria="{{ cat_index }}">
+                                    <label for="perm-{{ recurso.id }}" class="permissao-info">
+                                        <div class="permissao-nome">{{ recurso.nome }}</div>
+                                        {% if recurso.descricao %}
+                                        <div class="permissao-desc">{{ recurso.descricao }}</div>
+                                        {% endif %}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-inbox fs-1"></i>
+                        <p class="mt-2">Nenhum recurso disponível</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <input type="hidden" id="perfil_id" value="{{ perfil.id if perfil else '' }}">
+        </form>
+    </main>
+
+    <div class="footer-actions">
+        <a href="{{ url_for('perfis.listar_perfis') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-x-lg me-1"></i>Cancelar
+        </a>
+        <button type="button" class="btn btn-primary" id="btnSalvar">
+            <i class="bi bi-check-lg me-1"></i>
+            {% if modo == 'criar' %}Criar Perfil{% else %}Salvar Alterações{% endif %}
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const modo = '{{ modo }}';
+        const perfilId = '{{ perfil.id if perfil else "" }}';
+        const isSistema = {% if perfil and perfil.sistema %}true{% else %}false{% endif %};
+
+    // Seletor de cor
+    document.querySelectorAll('.cor-option').forEach(el => {
+        el.addEventListener('click', function () {
+            if (isSistema) return;
+            document.querySelectorAll('.cor-option').forEach(c => c.classList.remove('selected'));
+            this.classList.add('selected');
+            document.getElementById('cor').value = this.dataset.cor;
+        });
+    });
+
+    // Atualizar contadores
+    function atualizarContadores() {
+        const checkboxes = document.querySelectorAll('input[name="permissoes"]');
+        const selecionadas = document.querySelectorAll('input[name="permissoes"]:checked');
+
+        document.getElementById('countSelecionadas').textContent = selecionadas.length;
+        document.getElementById('countTotal').textContent = checkboxes.length;
+
+        // Atualizar contadores por categoria
+        document.querySelectorAll('.categoria-card').forEach((card, index) => {
+            const catCheckboxes = card.querySelectorAll('input[name="permissoes"]');
+            const catSelecionadas = card.querySelectorAll('input[name="permissoes"]:checked');
+            const counter = card.querySelector('.categoria-counter');
+
+            if (counter) {
+                counter.textContent = `${catSelecionadas.length}/${catCheckboxes.length}`;
+                counter.classList.toggle('all-selected', catSelecionadas.length === catCheckboxes.length);
+            }
+        });
+    }
+
+    // Event listeners para checkboxes
+    document.querySelectorAll('input[name="permissoes"]').forEach(cb => {
+        cb.addEventListener('change', atualizarContadores);
+    });
+
+    // Marcar todas
+    const btnMarcar = document.getElementById('btnMarcarTodas');
+    if (btnMarcar) {
+        btnMarcar.addEventListener('click', function () {
+            document.querySelectorAll('input[name="permissoes"]').forEach(cb => cb.checked = true);
+            atualizarContadores();
+        });
+    }
+
+    // Desmarcar todas
+    const btnDesmarcar = document.getElementById('btnDesmarcarTodas');
+    if (btnDesmarcar) {
+        btnDesmarcar.addEventListener('click', function () {
+            document.querySelectorAll('input[name="permissoes"]').forEach(cb => cb.checked = false);
+            atualizarContadores();
+        });
+    }
+
+    // Salvar
+    const btnSalvar = document.getElementById('btnSalvar');
+    if (btnSalvar) {
+        btnSalvar.addEventListener('click', async function () {
+            const nome = document.getElementById('nome').value.trim();
+
+            if (!nome) {
+                if (window.showToast) window.showToast('Nome do perfil é obrigatório', 'warning');
+                document.getElementById('nome').focus();
+                return;
+            }
+
+            const btn = this;
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...';
+
+            try {
+                const permissoes = Array.from(document.querySelectorAll('input[name="permissoes"]:checked'))
+                    .map(cb => cb.value);
+
+                const dados = {
+                    nome: nome,
+                    descricao: document.getElementById('descricao').value.trim(),
+                    cor: document.getElementById('cor').value,
+                    permissoes: permissoes
+                };
+
+                let url, method;
+
+                if (modo === 'criar') {
+                    url = '/perfis';
+                    method = 'POST';
+                } else {
+                    // Atualizar dados do perfil
+                    await window.apiFetch(`/perfis/${perfilId}`, {
+                        method: 'PUT',
+                        body: JSON.stringify(dados)
+                    });
+
+                    // Atualizar permissões separadamente
+                    url = `/perfis/${perfilId}/permissoes`;
+                    method = 'POST';
+                }
+
+                const response = await window.apiFetch(url, {
+                    method: method,
+                    body: JSON.stringify(dados)
+                });
+
+                if (response.ok) {
+                    if (window.showToast) window.showToast(response.message || 'Salvo com sucesso!', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/perfis';
+                    }, 1000);
+                } else {
+                    throw new Error(response.error || 'Erro ao salvar');
+                }
+            } catch (error) {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        });
+    }
+
+    // Inicializar contadores
+    atualizarContadores();
+});
+</script>
+{% endblock %}

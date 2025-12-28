@@ -1,0 +1,153 @@
+{#
+Macros para Links e elementos do Dashboard
+Uso: {% from 'macros/dashboard.html' import empresa_link, status_badge, tipo_badge %}
+#}
+
+{#
+Macro para gerar link de empresa com todos os data-attributes necessários para o modal
+Uso: {{ empresa_link(impl) }}
+#}
+{% macro empresa_link(impl, show_name=true) %}
+<a href="#" class="btn-edit-empresa fw-bold text-decoration-none" data-bs-toggle="modal"
+    data-bs-target="#modalDetalhesEmpresa" data-id="{{ impl.id }}" data-nome="{{ impl.nome_empresa }}"
+    data-responsavel="{{ impl.responsavel_cliente | default('') }}"
+    data-cargo="{{ impl.cargo_responsavel | default('') }}"
+    data-telefone="{{ impl.telefone_responsavel | default('') }}"
+    data-email="{{ impl.email_responsavel | default('') }}"
+    data-inicio-implantacao="{{ impl.data_criacao_iso | default('') }}"
+    data-inicio-efetivo-iso="{{ impl.data_inicio_efetivo_iso | default('') }}"
+    data-inicio-producao="{{ impl.data_inicio_producao_iso | default('') }}"
+    data-final-implantacao="{{ impl.data_final_implantacao_iso | default('') }}"
+    data-chave-oamd="{{ impl.chave_oamd | default('') }}" data-catraca="{{ impl.catraca | default('') }}"
+    data-facial="{{ impl.facial | default('') }}" data-nivel-receita="{{ impl.nivel_receita | default('') }}"
+    data-valor-atribuido="{{ impl.valor_atribuido | default('') }}"
+    data-id-favorecido="{{ impl.id_favorecido | default('') }}"
+    data-tela-apoio-link="{{ impl.tela_apoio_link | default('') }}"
+    data-resp-estrategico-nome="{{ impl.resp_estrategico_nome | default('') }}"
+    data-resp-onb-nome="{{ impl.resp_onb_nome | default('') }}"
+    data-resp-estrategico-obs="{{ impl.resp_estrategico_obs | default('') }}"
+    data-contatos="{{ impl.contatos | default('') }}" data-seguimento="{{ impl.seguimento | default('') }}"
+    data-tipos-planos="{{ impl.tipos_planos | default('') }}" data-modalidades="{{ impl.modalidades | default('') }}"
+    data-horarios-func="{{ impl.horarios_func | default('') }}"
+    data-formas-pagamento="{{ impl.formas_pagamento | default('') }}" data-diaria="{{ impl.diaria | default('') }}"
+    data-freepass="{{ impl.freepass | default('') }}" data-alunos-ativos="{{ impl.alunos_ativos | default(0) }}"
+    data-sistema-anterior="{{ impl.sistema_anterior | default('') }}"
+    data-importacao="{{ impl.importacao | default('') }}"
+    data-recorrencia-usa="{{ impl.recorrencia_usa | default('') }}" data-boleto="{{ impl.boleto | default('') }}"
+    data-nota-fiscal="{{ impl.nota_fiscal | default('') }}" data-wellhub="{{ impl.wellhub | default('') }}"
+    data-totalpass="{{ impl.totalpass | default('') }}" data-modelo-catraca="{{ impl.modelo_catraca | default('') }}"
+    data-modelo-facial="{{ impl.modelo_facial | default('') }}" data-cnpj="{{ impl.cnpj | default('') }}"
+    data-informacao-infra="{{ impl.informacao_infra | default('') }}"
+    data-data-cadastro="{{ impl.data_cadastro_iso | default('') }}"
+    data-status-implantacao="{{ impl.status_implantacao | default('') }}"
+    data-nivel-atendimento="{{ impl.nivel_atendimento | default('') }}"
+    data-valor-monetario="{{ impl.valor_monetario | default('') }}">{% if show_name %}{{ impl.nome_empresa }}{% endif
+    %}</a>
+{% endmacro %}
+
+{#
+Macro para badge de status da implantação
+Uso: {{ status_badge(impl.status) }}
+#}
+{% macro status_badge(status) %}
+{% if status == 'nova' %}
+<span class="badge bg-dark">Nova</span>
+{% elif status == 'andamento' %}
+<span class="badge bg-warning text-dark">Em Andamento</span>
+{% elif status == 'parada' %}
+<span class="badge bg-danger">Parada</span>
+{% elif status == 'futura' %}
+<span class="badge bg-info text-dark">Futura</span>
+{% elif status == 'sem_previsao' %}
+<span class="badge bg-info text-dark">Sem previsão</span>
+{% elif status == 'finalizada' or status == 'concluida' %}
+<span class="badge bg-success">Concluída</span>
+{% elif status == 'cancelada' %}
+<span class="badge bg-secondary">Cancelada</span>
+{% else %}
+<span class="badge bg-secondary">{{ status | default('N/A') }}</span>
+{% endif %}
+{% endmacro %}
+
+{#
+Macro para badge de tipo (Módulo ou Completa)
+Uso: {{ tipo_badge(impl.tipo) }}
+#}
+{% macro tipo_badge(tipo) %}
+<span class="badge bg-info text-dark">{{ 'Módulo' if tipo == 'modulo' else 'Completa' }}</span>
+{% endmacro %}
+
+{#
+Macro para célula de última atividade
+Uso: {{ ultima_atividade_cell(impl) }}
+#}
+{% macro ultima_atividade_cell(impl) %}
+<td class="text-nowrap">
+    {% if impl.ultima_atividade_status == 'green' %}
+    <span class="badge bg-success"><i class="bi bi-circle-fill me-1"></i>{{ impl.ultima_atividade_text }}</span>
+    {% elif impl.ultima_atividade_status == 'yellow' %}
+    <span class="badge bg-warning text-dark"><i class="bi bi-circle-fill me-1"></i>{{ impl.ultima_atividade_text
+        }}</span>
+    {% elif impl.ultima_atividade_status == 'red' %}
+    <span class="badge bg-danger"><i class="bi bi-circle-fill me-1"></i>{{ impl.ultima_atividade_text }}</span>
+    {% else %}
+    <span class="badge bg-secondary"><i class="bi bi-circle-fill me-1"></i>{{ impl.ultima_atividade_text or 'Sem
+        atividade' }}</span>
+    {% endif %}
+</td>
+{% endmacro %}
+
+{#
+Macro para célula de valor monetário
+Uso: {{ valor_cell(impl.valor_monetario) }}
+#}
+{% macro valor_cell(valor) %}
+<td class="text-nowrap">R$ {{ "%.2f"|format(valor|float) if valor else 'N/A' }}</td>
+{% endmacro %}
+
+{#
+Macro para célula de dias
+Uso: {{ dias_cell(impl) }}
+#}
+{% macro dias_cell(impl, show_badge=true) %}
+<td class="text-nowrap">
+    {% if show_badge %}
+    <span class="badge bg-info text-dark js-dias-badge" data-impl-id="{{ impl.id }}"
+        data-start-iso="{{ impl.data_inicio_efetivo_iso }}" data-status="{{ impl.status }}">{{ impl.dias_passados | int
+        }} dias</span>
+    {% else %}
+    {{ impl.dias_passados | int }} dias
+    {% endif %}
+</td>
+{% endmacro %}
+
+{#
+Macro para barra de progresso
+Uso: {{ progress_bar(impl) }}
+#}
+{% macro progress_bar(impl) %}
+{% set progress_color = 'bg-danger' if impl.progresso < 40 else ('bg-warning text-dark' if impl.progresso < 80
+    else 'bg-success' ) %} <div class="progress" style="height: 20px;">
+    <div class="progress-bar progress-bar-striped {{ progress_color }} js-progress-bar" data-impl-id="{{ impl.id }}"
+        data-progress-url="{{ url_for('api.progresso_implantacao', impl_id=impl.id) }}" role="progressbar"
+        style="width: {{ impl.progresso }}%;" aria-valuenow="{{ impl.progresso }}">{{ impl.progresso }}%</div>
+    </div>
+    {% endmacro %}
+
+    {#
+    Macro para coluna de empresa (célula completa)
+    Uso: {{ empresa_cell(impl) }}
+    #}
+    {% macro empresa_cell(impl, max_width='350px') %}
+    <td class="text-truncate" style="max-width: {{ max_width }};">
+        {{ empresa_link(impl) }}
+    </td>
+    {% endmacro %}
+
+    {#
+    Macro para coluna de implantador
+    Uso: {{ implantador_cell(impl) }}
+    #}
+    {% macro implantador_cell(impl, max_width='150px') %}
+    <td class="text-truncate" style="max-width: {{ max_width }};">{{ impl.cs_nome or impl.usuario_cs }}</td>
+    {% endmacro %}

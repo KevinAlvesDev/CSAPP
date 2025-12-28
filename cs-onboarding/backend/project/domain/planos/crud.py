@@ -450,3 +450,100 @@ def _plano_usa_checklist_items(plano_id: int) -> bool:
     )
 
     return count and count.get('count', 0) > 0
+
+
+def clonar_plano_sucesso(plano_id: int, novo_nome: str, criado_por: str, nova_descricao: str = None) -> int:
+    """
+    Clona um plano de sucesso existente com todas as suas tarefas.
+    
+    Args:
+        plano_id: ID do plano a ser clonado
+        novo_nome: Nome do novo plano
+        criado_por: Usuário que está clonando
+        nova_descricao: Descrição opcional (se None, usa "Baseado em: [nome original]")
+    
+    Returns:
+        ID do novo plano criado
+    
+    Raises:
+        ValidationError: Se o plano original não existir ou dados inválidos
+        DatabaseError: Se houver erro ao clonar
+    """
+    if not plano_id:
+        raise ValidationError("ID do plano original é obrigatório")
+    
+    if not novo_nome or not novo_nome.strip():
+        raise ValidationError("Nome do novo plano é obrigatório")
+    
+    if not criado_por:
+        raise ValidationError("Usuário criador é obrigatório")
+    
+    # Buscar plano original
+    plano_original = query_db("SELECT * FROM planos_sucesso WHERE id = %s", (plano_id,), one=True)
+    
+    if not plano_original:
+        raise ValidationError(f"Plano com ID {plano_id} não encontrado")
+    
+    # Verificar se usa checklist_items
+    usa_checklist = _plano_usa_checklist_items(plano_id)
+    
+    if usa_checklist:
+        # Buscar estrutura do plano original
+        items = query_db(
+            """
+            SELECT id, parent_id, title, comment, level, ordem, tipo_item, descricao, obrigatoria, tag
+            FROM checklist_items
+            WHERE plano_id = %s
+            ORDER BY ordem, id
+            """,
+            (plano_id,)
+        )
+        
+        if not items:
+            raise ValidationError("Plano original não possui estrutura para clonar")
+        
+        # Construir estrutura hierárquica
+        from ..checklist_service import build_nested_tree
+        
+        flat_items = []
+        for item in items:
+            flat_items.append({
+                'id': item['id'],
+                'parent_id': item['parent_id'],
+                'title': item['title'],
+                'comment': item.get('comment', '') or item.get('descricao', ''),
+                'level': item.get('level', 0),
+                'ordem': item.get('ordem', 0),
+                'tipo_item': item.get('tipo_item'),
+                'obrigatoria': item.get('obrigatoria', False),
+                'tag': item.get('tag')
+            })
+        
+        nested_items = build_nested_tree(flat_items)
+        estrutura = {'items': nested_items}
+        
+        # Definir descrição
+        if nova_descricao is None:
+            nova_descricao = f"Baseado em: {plano_original['nome']}"
+        
+        # Criar novo plano
+        novo_plano_id = criar_plano_sucesso_checklist(
+            nome=novo_nome.strip(),
+            descricao=nova_descricao,
+            criado_por=criado_por,
+            estrutura=estrutura,
+            dias_duracao=plano_original.get('dias_duracao')
+        )
+        
+        current_app.logger.info(
+            f"Plano '{plano_original['nome']}' (ID {plano_id}) clonado como '{novo_nome}' (ID {novo_plano_id}) por {criado_por}"
+        )
+        
+        return novo_plano_id
+    
+    else:
+        # Plano usa estrutura antiga (fases/grupos/tarefas)
+        raise ValidationError(
+            "Este plano usa estrutura antiga. Por favor, recrie o plano usando o editor moderno antes de clonar."
+        )
+

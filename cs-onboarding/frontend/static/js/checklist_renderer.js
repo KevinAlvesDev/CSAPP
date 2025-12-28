@@ -17,8 +17,19 @@ class ChecklistRenderer {
         this.expandedItems = new Set();
         this.flatData = {};
         this.isLoading = false;
-        this.csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
         this.previsaoTermino = this.container?.dataset?.previsaoTermino || '';
+        this._toggleThrottle = new Map();
+
+        // Dependency Injection - Usa Service Container
+        if (window.appContainer && window.appContainer.has('checklistService')) {
+            this.service = window.appContainer.resolve('checklistService');
+        } else {
+            // Fallback para compatibilidade (se container não estiver disponível)
+            this.service = window.$checklistService || null;
+        }
+
+        // CSRF ainda necessário para código legado (será removido gradualmente)
+        this.csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
         if (!this.csrfToken) {
             const meta = document.querySelector('meta[name="csrf-token"]');
             if (meta) this.csrfToken = meta.getAttribute('content') || '';
@@ -29,7 +40,6 @@ class ChecklistRenderer {
                 } catch (e) { }
             }
         }
-        this._toggleThrottle = new Map();
 
         if (!this.container) {
             return;
@@ -120,8 +130,10 @@ class ChecklistRenderer {
 
         const indentPx = Math.max(0, (item.level || 0) * 14);
 
+        // UX: Adiciona animação de entrada
+        // Adicionamos um delay leve baseado no índice se possível, mas aqui usamos genérico
         return `
-            <div id="checklist-item-${item.id}" class="checklist-item" data-item-id="${item.id}" data-level="${item.level || 0}">
+            <div id="checklist-item-${item.id}" class="checklist-item animate-fade-in" data-item-id="${item.id}" data-level="${item.level || 0}" style="animation-duration: 0.3s;">
                 <div class="checklist-item-header position-relative level-${item.level || 0}" style="padding-left: 0;">
                     ${hasChildren ? `
                         <div class="position-absolute bottom-0 left-0 h-1 progress-bar-item" 
@@ -503,6 +515,7 @@ class ChecklistRenderer {
         // Marcar como loading mas NÃO desabilitar o checkbox para UX mais fluida
         this.isLoading = true;
 
+        // Atualiza UI otimisticamente
         if (this.flatData[itemId]) {
             this.flatData[itemId].completed = completed;
             this.flatData[itemId].data_conclusao = completed ? new Date().toISOString() : null;
@@ -513,32 +526,29 @@ class ChecklistRenderer {
         this.updateAllItemsUI();
         this.updateProgressFromLocalData();
 
-        try {
-            const response = await fetch(`/api/checklist/toggle/${itemId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': this.csrfToken
-                },
-                body: JSON.stringify({ completed })
-            });
+        // Delega para o service
+        const result = await this.service.toggleItem(itemId, completed);
 
-            const data = await response.json();
+        if (result.success) {
+            // Atualiza progresso do servidor
+            const serverProgress = Math.round(result.progress || 0);
+            this.updateProgressDisplay(serverProgress);
 
-            if (data.ok) {
-                const serverProgress = Math.round(data.progress || 0);
-                this.updateProgressDisplay(serverProgress);
-
-                if (window.updateProgressBar && typeof window.updateProgressBar === 'function') {
-                    window.updateProgressBar(serverProgress);
-                }
-                try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) { }
-                try { if (typeof window.appendTimelineEvent === 'function') window.appendTimelineEvent('tarefa_alterada', `Status: ${completed ? 'Concluída' : 'Pendente'} — ${(this.flatData[itemId] && this.flatData[itemId].title) || ''}`); } catch (_) { }
-            } else {
-                throw new Error(data.error || 'Erro ao alterar status');
+            if (window.updateProgressBar && typeof window.updateProgressBar === 'function') {
+                window.updateProgressBar(serverProgress);
             }
-        } catch (error) {
 
+            // Atualiza timeline
+            try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) { }
+            try {
+                if (typeof window.appendTimelineEvent === 'function') {
+                    const status = completed ? 'Concluída' : 'Pendente';
+                    const title = (this.flatData[itemId] && this.flatData[itemId].title) || '';
+                    window.appendTimelineEvent('tarefa_alterada', `Status: ${status} — ${title}`);
+                }
+            } catch (_) { }
+        } else {
+            // Reverte UI em caso de erro
             if (this.flatData[itemId]) {
                 this.flatData[itemId].completed = !completed;
             }
@@ -546,11 +556,9 @@ class ChecklistRenderer {
             this.propagateUp(itemId);
             this.updateAllItemsUI();
             this.updateProgressFromLocalData();
-
-            if (typeof this.showToast === 'function') this.showToast(`Erro: ${error.message}`, 'error'); else alert(`Erro: ${error.message}`);
-        } finally {
-            this.isLoading = false;
         }
+
+        this.isLoading = false;
     }
 
     updateAllItemsUI() {
@@ -797,17 +805,13 @@ class ChecklistRenderer {
         const historyContainer = this.container.querySelector(`#comments-history-${itemId}`);
         if (!historyContainer) return;
 
-        try {
-            const response = await fetch(`/api/checklist/comments/${itemId}`);
-            const data = await response.json();
+        // Delega para o service
+        const result = await this.service.loadComments(itemId);
 
-            if (data.ok) {
-                this.renderCommentsHistory(itemId, data.comentarios, data.email_responsavel);
-            } else {
-                historyContainer.innerHTML = `<div class="text-danger small">${data.error || 'Erro ao carregar comentários'}</div>`;
-            }
-        } catch (error) {
-            historyContainer.innerHTML = '<div class="text-danger small">Erro ao carregar comentários</div>';
+        if (result.success) {
+            this.renderCommentsHistory(itemId, result.comentarios, result.emailResponsavel);
+        } else {
+            historyContainer.innerHTML = `<div class="text-danger small">${result.error || 'Erro ao carregar comentários'}</div>`;
         }
     }
 
@@ -852,27 +856,22 @@ class ChecklistRenderer {
         saveBtn.onclick = async () => {
             const novo = input.value.trim();
             if (!novo) return;
-            const csrf = this.csrfToken;
-            try {
-                const res = await fetch(`/api/checklist/item/${itemId}/responsavel`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
-                    body: JSON.stringify({ responsavel: novo })
-                });
-                const data = await res.json();
-                if (data.ok) {
-                    if (this.flatData[itemId]) this.flatData[itemId].responsavel = data.responsavel;
-                    this.updateItemUI(itemId);
-                    const m = bootstrap.Modal.getInstance(modal) || new bootstrap.Modal(modal);
-                    m.hide();
-                    if (typeof this.showToast === 'function') this.showToast('Responsável atualizado', 'success');
-                    try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) { }
-                    try { if (typeof window.appendTimelineEvent === 'function') window.appendTimelineEvent('responsavel_alterado', `Responsável: ${(current || '')} → ${data.responsavel} — ${(this.flatData[itemId] && this.flatData[itemId].title) || ''}`); } catch (_) { }
-                } else {
-                    if (typeof this.showToast === 'function') this.showToast(data.error || 'Erro ao atualizar responsável', 'error'); else alert(data.error || 'Erro ao atualizar responsável');
-                }
-            } catch (e) {
-                if (typeof this.showToast === 'function') this.showToast('Erro ao atualizar responsável', 'error'); else alert('Erro ao atualizar responsável');
+
+            // Delega para o service
+            const result = await this.service.updateResponsavel(itemId, novo);
+
+            if (result.success) {
+                if (this.flatData[itemId]) this.flatData[itemId].responsavel = novo;
+                this.updateItemUI(itemId);
+                const m = bootstrap.Modal.getInstance(modal) || new bootstrap.Modal(modal);
+                m.hide();
+                try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) { }
+                try {
+                    if (typeof window.appendTimelineEvent === 'function') {
+                        const title = (this.flatData[itemId] && this.flatData[itemId].title) || '';
+                        window.appendTimelineEvent('responsavel_alterado', `Responsável: ${current || ''} → ${novo} — ${title}`);
+                    }
+                } catch (_) { }
             }
         };
         const m = new bootstrap.Modal(modal);
@@ -924,48 +923,45 @@ class ChecklistRenderer {
         saveBtn.onclick = async () => {
             const novo = input.value.trim();
             if (!novo) return;
-            const csrf = this.csrfToken;
-            const prevOld = this.flatData[itemId]?.nova_previsao || null;
-            this.flatData[itemId] = this.flatData[itemId] || {};
-            this.flatData[itemId].nova_previsao = novo;
-            this.updateItemUI(itemId);
+
+            const prevOld = this.flatData[itemId]?.nova_previsao || '';
+            const isCompleted = this.flatData[itemId]?.completed || false;
+
+            // Show loading
             const originalText = saveBtn.innerHTML;
             saveBtn.disabled = true;
             saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...';
-            try {
-                const res = await fetch(`/api/checklist/item/${itemId}/prazos`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
-                    body: JSON.stringify({ nova_previsao: novo })
-                });
-                const data = await res.json();
-                if (data.ok) {
-                    if (this.flatData[itemId]) {
-                        this.flatData[itemId].nova_previsao = data.nova_previsao;
-                        this.flatData[itemId].previsao_original = data.previsao_original || this.flatData[itemId].previsao_original;
-                    }
-                    this.updateItemUI(itemId);
-                    const m = bootstrap.Modal.getInstance(modal) || new bootstrap.Modal(modal);
-                    m.hide();
-                    saveBtn.disabled = false;
-                    saveBtn.innerHTML = originalText;
-                    if (typeof this.showToast === 'function') this.showToast('Prazo atualizado', 'success');
-                    try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) { }
-                    try { if (typeof window.appendTimelineEvent === 'function') window.appendTimelineEvent('prazo_alterado', `Nova previsão: ${data.nova_previsao} — ${(this.flatData[itemId] && this.flatData[itemId].title) || ''}`); } catch (_) { }
-                } else {
-                    this.flatData[itemId].nova_previsao = prevOld;
-                    this.updateItemUI(itemId);
-                    saveBtn.disabled = false;
-                    saveBtn.innerHTML = originalText;
-                    if (typeof this.showToast === 'function') this.showToast(data.error || 'Erro ao atualizar prazo', 'error'); else alert(data.error || 'Erro ao atualizar prazo');
+
+            // Optimistic UI update
+            this.flatData[itemId] = this.flatData[itemId] || {};
+            this.flatData[itemId].nova_previsao = novo;
+            this.updateItemUI(itemId);
+
+            // Delega para o service
+            const result = await this.service.updatePrevisao(itemId, novo, isCompleted);
+
+            if (result.success) {
+                if (this.flatData[itemId]) {
+                    this.flatData[itemId].nova_previsao = novo;
                 }
-            } catch (e) {
+                this.updateItemUI(itemId);
+                const m = bootstrap.Modal.getInstance(modal) || new bootstrap.Modal(modal);
+                m.hide();
+                try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) { }
+                try {
+                    if (typeof window.appendTimelineEvent === 'function') {
+                        const title = (this.flatData[itemId] && this.flatData[itemId].title) || '';
+                        window.appendTimelineEvent('prazo_alterado', `Nova previsão: ${novo} — ${title}`);
+                    }
+                } catch (_) { }
+            } else {
+                // Rollback UI
                 this.flatData[itemId].nova_previsao = prevOld;
                 this.updateItemUI(itemId);
-                saveBtn.disabled = false;
-                saveBtn.innerHTML = originalText;
-                if (typeof this.showToast === 'function') this.showToast('Erro ao atualizar prazo', 'error'); else alert('Erro ao atualizar prazo');
             }
+
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalText;
         };
         const m = new bootstrap.Modal(modal);
         m.show();
@@ -1021,44 +1017,33 @@ class ChecklistRenderer {
         const saveBtn = modal.querySelector('#tag-edit-save');
         saveBtn.onclick = async () => {
             const novo = (select.value || '').trim();
-            const csrf = this.csrfToken;
-            const prev = this.flatData[itemId]?.tag || '';
-            this.flatData[itemId] = this.flatData[itemId] || {};
-            this.flatData[itemId].tag = novo;
-            this.updateItemUI(itemId);
+            const prev = this.flatData[itemId]?.tag || ''; // Keep prev for rollback and timeline event
+
+            // Show loading state
             const originalText = saveBtn.innerHTML;
             saveBtn.disabled = true;
             saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...';
-            try {
-                const res = await fetch(`/api/checklist/item/${itemId}/tag`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
-                    body: JSON.stringify({ tag: novo })
-                });
-                const data = await res.json();
-                if (data.ok) {
-                    if (this.flatData[itemId]) this.flatData[itemId].tag = data.tag;
-                    this.updateItemUI(itemId);
-                    const m = bootstrap.Modal.getInstance(modal) || new bootstrap.Modal(modal);
-                    m.hide();
-                    saveBtn.disabled = false;
-                    saveBtn.innerHTML = originalText;
-                    if (typeof this.showToast === 'function') this.showToast('Tag atualizada', 'success');
-                    try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) { }
-                    try { if (typeof window.appendTimelineEvent === 'function') window.appendTimelineEvent('tag_alterada', `Tag: ${(prev || '')} → ${novo} — ${(this.flatData[itemId] && this.flatData[itemId].title) || ''}`); } catch (_) { }
-                } else {
-                    this.flatData[itemId].tag = prev;
-                    this.updateItemUI(itemId);
-                    saveBtn.disabled = false;
-                    saveBtn.innerHTML = originalText;
-                    if (typeof this.showToast === 'function') this.showToast(data.error || 'Erro ao atualizar tag', 'error'); else alert(data.error || 'Erro ao atualizar tag');
-                }
-            } catch (e) {
+
+            // Optimistic UI update
+            this.flatData[itemId] = this.flatData[itemId] || {};
+            this.flatData[itemId].tag = novo;
+            this.updateItemUI(itemId);
+
+            // Delega para o service
+            const result = await this.service.updateTag(itemId, novo);
+
+            if (result.success) {
+                if (this.flatData[itemId]) this.flatData[itemId].tag = result.tag;
+                this.updateItemUI(itemId);
+                const m = bootstrap.Modal.getInstance(modal) || new bootstrap.Modal(modal);
+                m.hide();
+                if (typeof this.showToast === 'function') this.showToast('Tag atualizada', 'success');
+                try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) { }
+                try { if (typeof window.appendTimelineEvent === 'function') window.appendTimelineEvent('tag_alterada', `Tag: ${(prev || '')} → ${novo} — ${(this.flatData[itemId] && this.flatData[itemId].title) || ''}`); } catch (_) { }
+            } else {
+                // Rollback UI
                 this.flatData[itemId].tag = prev;
                 this.updateItemUI(itemId);
-                saveBtn.disabled = false;
-                saveBtn.innerHTML = originalText;
-                if (typeof this.showToast === 'function') this.showToast('Erro ao atualizar tag', 'error'); else alert('Erro ao atualizar tag');
             }
         };
         const m = new bootstrap.Modal(modal);
@@ -1124,11 +1109,10 @@ class ChecklistRenderer {
         const textarea = this.container.querySelector(`#comment-input-${itemId}`);
         const commentsSection = this.container.querySelector(`#comments-${itemId}`);
 
-        // Find the active visibility tag (interno or externo)
+        // Coleta dados do formulário
         const activeVisibilityTag = commentsSection?.querySelector('.comentario-tipo-tag.interno.active, .comentario-tipo-tag.externo.active');
         const visibilidade = activeVisibilityTag?.classList.contains('externo') ? 'externo' : 'interno';
 
-        // Find the active tag option (Ação interna, Reunião, or No Show)
         const activeTagOption = commentsSection?.querySelector('.comentario-tipo-tag.tag-option.active');
         const tag = activeTagOption ? activeTagOption.dataset.tag : null;
         const noshow = tag === 'No Show';
@@ -1137,190 +1121,123 @@ class ChecklistRenderer {
 
         const texto = textarea.value.trim();
 
-        if (!texto) {
-            if (typeof this.showToast === 'function') this.showToast('O texto do comentário é obrigatório', 'warning'); else alert('O texto do comentário é obrigatório');
-            return;
-        }
+        // Delega para o service (validação + API call)
+        const result = await this.service.saveComment(itemId, { texto, visibilidade, noshow, tag });
 
-        try {
-            const response = await fetch(`/api/checklist/comment/${itemId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': this.csrfToken
-                },
-                body: JSON.stringify({ texto, visibilidade, noshow, tag })
-            });
+        if (result.success) {
+            // Limpa formulário
+            textarea.value = '';
 
-            const data = await response.json();
+            // Reset visibility tags - set Interno as active
+            if (commentsSection) {
+                commentsSection.querySelectorAll('.comentario-tipo-tag.interno, .comentario-tipo-tag.externo').forEach(t => t.classList.remove('active'));
+                const internoTag = commentsSection.querySelector('.comentario-tipo-tag.interno');
+                if (internoTag) internoTag.classList.add('active');
+            }
 
-            if (data.ok) {
-                textarea.value = '';
-                // Reset visibility tags - set Interno as active
-                if (commentsSection) {
-                    commentsSection.querySelectorAll('.comentario-tipo-tag.interno, .comentario-tipo-tag.externo').forEach(t => t.classList.remove('active'));
-                    const internoTag = commentsSection.querySelector('.comentario-tipo-tag.interno');
-                    if (internoTag) internoTag.classList.add('active');
-                }
-                // Reset all tag options (Ação interna, Reunião, No Show)
-                if (commentsSection) {
-                    commentsSection.querySelectorAll('.comentario-tipo-tag.tag-option').forEach(t => t.classList.remove('active'));
-                }
+            // Reset all tag options
+            if (commentsSection) {
+                commentsSection.querySelectorAll('.comentario-tipo-tag.tag-option').forEach(t => t.classList.remove('active'));
+            }
 
-                const commentButton = this.container.querySelector(`.btn-comment-toggle[data-item-id="${itemId}"]`);
-                if (commentButton) {
-                    const icon = commentButton.querySelector('i');
-                    if (icon) {
-                        icon.className = 'bi bi-chat-left-text text-primary position-relative';
-                        if (!icon.querySelector('.position-absolute')) {
-                            icon.innerHTML += '<span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle" style="font-size: 0.4rem;"></span>';
-                        }
+            // Atualiza ícone de comentário
+            const commentButton = this.container.querySelector(`.btn-comment-toggle[data-item-id="${itemId}"]`);
+            if (commentButton) {
+                const icon = commentButton.querySelector('i');
+                if (icon) {
+                    icon.className = 'bi bi-chat-left-text text-primary position-relative';
+                    if (!icon.querySelector('.position-absolute')) {
+                        icon.innerHTML += '<span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle" style="font-size: 0.4rem;"></span>';
                     }
                 }
-
-                await this.loadComments(itemId);
-                try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) { }
-                try { if (typeof window.appendTimelineEvent === 'function') window.appendTimelineEvent('novo_comentario', `Comentário criado — ${(this.flatData[itemId] && this.flatData[itemId].title) || ''}`); } catch (_) { }
-
-            } else {
-                throw new Error(data.error || 'Erro ao salvar comentário');
             }
-        } catch (error) {
-            if (typeof this.showToast === 'function') this.showToast(`Erro: ${error.message}`, 'error'); else alert(`Erro: ${error.message}`);
+
+            // Recarrega comentários e timeline
+            await this.loadComments(itemId);
+            try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) { }
+            try { if (typeof window.appendTimelineEvent === 'function') window.appendTimelineEvent('comentario_adicionado', `Comentário adicionado`); } catch (_) { }
         }
     }
 
     async sendCommentEmail(comentarioId) {
-        const proceed = window.confirmWithModal ? await window.confirmWithModal('Deseja enviar este comentário por e-mail ao responsável?') : confirm('Deseja enviar este comentário por e-mail ao responsável?');
-        if (!proceed) {
-            return;
-        }
-
-        try {
-            const response = await fetch(`/api/checklist/comment/${comentarioId}/email`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': this.csrfToken
-                }
-            });
-
-            const data = await response.json();
-
-            if (data.ok) {
-                if (typeof this.showToast === 'function') this.showToast('Email enviado com sucesso!', 'success'); else alert('Email enviado com sucesso!');
-            } else {
-                throw new Error(data.error || 'Erro ao enviar email');
-            }
-        } catch (error) {
-            if (typeof this.showToast === 'function') this.showToast(`Erro: ${error.message}`, 'error'); else alert(`Erro: ${error.message}`);
-        }
+        // Delega para o service (confirmação + API call + notificação)
+        await this.service.sendCommentEmail(comentarioId);
     }
 
     async deleteComment(comentarioId, itemId) {
-        const proceedDel = window.confirmWithModal ? await window.confirmWithModal('Deseja excluir este comentário?') : confirm('Deseja excluir este comentário?');
-        if (!proceedDel) {
-            return;
-        }
+        // Delega para o service (confirmação + API call)
+        const result = await this.service.deleteComment(comentarioId);
 
-        try {
-            const response = await fetch(`/api/checklist/comment/${comentarioId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': this.csrfToken
-                }
-            });
-
-            const data = await response.json();
-
-            if (data.ok) {
-                await this.loadComments(itemId);
-                try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) { }
-                try { if (typeof window.appendTimelineEvent === 'function') window.appendTimelineEvent('comentario_excluido', `Comentário excluído — ${(this.flatData[itemId] && this.flatData[itemId].title) || ''}`); } catch (_) { }
-            } else {
-                throw new Error(data.error || 'Erro ao excluir comentário');
-            }
-        } catch (error) {
-            if (typeof this.showToast === 'function') this.showToast(`Erro: ${error.message}`, 'error'); else alert(`Erro: ${error.message}`);
+        if (result.success) {
+            // Recarrega comentários e atualiza timeline
+            await this.loadComments(itemId);
+            try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) { }
+            try { if (typeof window.appendTimelineEvent === 'function') window.appendTimelineEvent('comentario_excluido', `Comentário excluído`); } catch (_) { }
         }
     }
 
     async deleteItem(itemId) {
-        let confirmed = false;
-        if (window.confirmWithModal) {
-            confirmed = await window.confirmWithModal('Tem certeza que deseja excluir esta tarefa e todos os seus subitens? Esta ação não pode ser desfeita.');
-        } else {
-            confirmed = confirm('Tem certeza que deseja excluir esta tarefa e todos os seus subitens? Esta ação não pode ser desfeita.');
-        }
+        // Obtém título para confirmação
+        const itemTitle = this.flatData[itemId]?.title || 'este item';
 
-        if (!confirmed) return;
-
-        // Mostrar loading ou desabilitar botão?
+        // Mostra loading
         const itemEl = this.container.querySelector(`.checklist-item[data-item-id="${itemId}"]`);
         if (itemEl) {
             itemEl.style.opacity = '0.5';
             itemEl.style.pointerEvents = 'none';
         }
 
-        try {
-            const response = await fetch(`/api/checklist/delete/${itemId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': this.csrfToken
-                }
-            });
+        // Delega para o service (confirmação + API call)
+        const result = await this.service.deleteItem(itemId, itemTitle);
 
-            const data = await response.json();
+        if (result.success) {
+            // Remove da DOM
+            if (itemEl) {
+                itemEl.remove();
+            }
 
-            if (data.ok) {
-                // Remover o item da DOM
-                if (itemEl) {
-                    itemEl.remove();
-                }
+            // Remove do flatData
+            if (this.flatData[itemId]) {
+                const parentId = this.flatData[itemId].parentId;
+                delete this.flatData[itemId];
 
-                // Remover do flatData
-                if (this.flatData[itemId]) {
-                    const parentId = this.flatData[itemId].parentId;
-                    delete this.flatData[itemId];
+                // Atualiza lista de filhos do pai
+                if (parentId && this.flatData[parentId]) {
+                    this.flatData[parentId].childrenIds = this.flatData[parentId].childrenIds.filter(id => id !== itemId);
 
-                    // Atualizar lista de filhos do pai
-                    if (parentId && this.flatData[parentId]) {
-                        this.flatData[parentId].childrenIds = this.flatData[parentId].childrenIds.filter(id => id !== itemId);
+                    // Se o pai ficou sem filhos, remove botão de expandir
+                    if (this.flatData[parentId].childrenIds.length === 0) {
+                        const parentEl = this.container.querySelector(`.checklist-item[data-item-id="${parentId}"]`);
+                        if (parentEl) {
+                            const expandBtn = parentEl.querySelector('.btn-expand');
+                            if (expandBtn) expandBtn.remove();
 
-                        // Se o pai ficou sem filhos, atualizar UI do pai (remover ícone de expandir)
-                        if (this.flatData[parentId].childrenIds.length === 0) {
-                            const parentEl = this.container.querySelector(`.checklist-item[data-item-id="${parentId}"]`);
-                            if (parentEl) {
-                                // Forçar re-render do pai ou atualizar classes manualmente
-                                // Simplificando: Recarregar checklist se estrutura mudou muito
-                                // Mas vamos tentar atualizar manualmente primeiro
-                                const expandBtn = parentEl.querySelector('.btn-expand');
-                                if (expandBtn) expandBtn.remove(); // Remove botão expandir
-
-                                const childrenContainer = parentEl.querySelector('.checklist-item-children');
-                                if (childrenContainer) childrenContainer.remove();
-                            }
+                            const childrenContainer = parentEl.querySelector('.checklist-item-children');
+                            if (childrenContainer) childrenContainer.remove();
                         }
                     }
                 }
-
-                // Atualizar progresso
-                if (data.progress !== undefined) {
-                    this.updateProgressDisplay(data.progress);
-                } else {
-                    this.updateProgressFromLocalData();
-                }
-
-                try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) { }
-                try { if (typeof window.appendTimelineEvent === 'function') window.appendTimelineEvent('tarefa_excluida', `Tarefa excluída — ${(this.flatData[itemId] && this.flatData[itemId].title) || ''}`); } catch (_) { }
-
-            } else {
-                throw new Error(data.error || 'Erro ao excluir tarefa');
             }
-        } catch (error) {
-            if (typeof this.showToast === 'function') this.showToast(`Erro: ${error.message}`, 'error'); else alert(`Erro: ${error.message}`);
+
+            // Atualiza progresso
+            if (result.progress !== undefined) {
+                this.updateProgressDisplay(result.progress);
+            } else {
+                this.updateProgressFromLocalData();
+            }
+
+            // Atualiza timeline
+            try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) { }
+            try { if (typeof window.appendTimelineEvent === 'function') window.appendTimelineEvent('tarefa_excluida', `Tarefa excluída — ${itemTitle}`); } catch (_) { }
+
+        } else if (!result.cancelled) {
+            // Reverte UI se houve erro (não se foi cancelado)
+            if (itemEl) {
+                itemEl.style.opacity = '1';
+                itemEl.style.pointerEvents = 'auto';
+            }
+        } else {
+            // Cancelado - apenas reverte UI
             if (itemEl) {
                 itemEl.style.opacity = '1';
                 itemEl.style.pointerEvents = 'auto';

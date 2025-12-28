@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Runner - SOLID Architecture</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: #f5f5f5;
+        }
+
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 0.5rem;
+        }
+
+        .test-output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1.5rem;
+            border-radius: 8px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .success {
+            color: #4CAF50;
+        }
+
+        .error {
+            color: #f44336;
+        }
+
+        .info {
+            color: #2196F3;
+        }
+
+        .warning {
+            color: #FF9800;
+        }
+
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 1rem 0;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-card h3 {
+            margin: 0 0 0.5rem 0;
+            color: #666;
+            font-size: 14px;
+            text-transform: uppercase;
+        }
+
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .stat-card.success .value {
+            color: #4CAF50;
+        }
+
+        .stat-card.error .value {
+            color: #f44336;
+        }
+
+        .stat-card.info .value {
+            color: #2196F3;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🧪 Test Runner - SOLID Architecture</h1>
+
+    <div class="stats" id="stats" style="display: none;">
+        <div class="stat-card info">
+            <h3>Total Tests</h3>
+            <div class="value" id="total-tests">0</div>
+        </div>
+        <div class="stat-card success">
+            <h3>Passed</h3>
+            <div class="value" id="passed-tests">0</div>
+        </div>
+        <div class="stat-card error">
+            <h3>Failed</h3>
+            <div class="value" id="failed-tests">0</div>
+        </div>
+        <div class="stat-card">
+            <h3>Coverage</h3>
+            <div class="value" id="coverage">0%</div>
+        </div>
+    </div>
+
+    <button id="run-tests" onclick="runTests()">▶️ Run All Tests</button>
+
+    <div class="test-output" id="output">
+        <span class="info">Click "Run All Tests" to start...</span>
+    </div>
+
+    <!-- Load dependencies -->
+    <script src="../core/service-container.js"></script>
+    <script src="../services/api-service.js"></script>
+    <script src="../services/notification-service.js"></script>
+    <script src="../services/checklist-api.js"></script>
+    <script src="../services/checklist-service.js"></script>
+
+    <!-- Load test framework -->
+    <script src="test-framework.js"></script>
+
+    <script>
+        // Intercepta console.log para mostrar no HTML
+        const originalLog = console.log;
+        const originalError = console.error;
+        const output = document.getElementById('output');
+
+        function formatLog(message, type = 'log') {
+            const className = type === 'error' ? 'error' :
+                message.includes('✅') ? 'success' :
+                    message.includes('❌') ? 'error' :
+                        message.includes('📦') ? 'info' :
+                            message.includes('📊') ? 'warning' : '';
+
+            return `<span class="${className}">${message}</span>`;
+        }
+
+        console.log = function (...args) {
+            originalLog.apply(console, args);
+            output.innerHTML += formatLog(args.join(' ')) + '\n';
+        };
+
+        console.error = function (...args) {
+            originalError.apply(console, args);
+            output.innerHTML += formatLog(args.join(' '), 'error') + '\n';
+        };
+
+        async function runTests() {
+            const button = document.getElementById('run-tests');
+            button.disabled = true;
+            button.textContent = '⏳ Running tests...';
+            output.innerHTML = '';
+
+            // Aguarda um pouco para garantir que todos os scripts carregaram
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            // Carrega e executa os testes
+            const script = document.createElement('script');
+            script.src = 'checklist-service.test.js';
+            script.onload = () => {
+                button.disabled = false;
+                button.textContent = '🔄 Run Again';
+
+                // Atualiza estatísticas
+                updateStats();
+            };
+            document.body.appendChild(script);
+        }
+
+        function updateStats() {
+            // Extrai estatísticas do output
+            const outputText = output.textContent;
+            const totalMatch = outputText.match(/Total: (\d+)/);
+            const passedMatch = outputText.match(/Passed: (\d+)/);
+            const failedMatch = outputText.match(/Failed: (\d+)/);
+            const coverageMatch = outputText.match(/Coverage: (\d+)%/);
+
+            if (totalMatch) {
+                document.getElementById('stats').style.display = 'grid';
+                document.getElementById('total-tests').textContent = totalMatch[1];
+                document.getElementById('passed-tests').textContent = passedMatch[1];
+                document.getElementById('failed-tests').textContent = failedMatch[1];
+                document.getElementById('coverage').textContent = coverageMatch[1] + '%';
+            }
+        }
+    </script>
+</body>
+
+</html>

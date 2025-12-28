@@ -1,0 +1,92 @@
+/**
+ * CS-Onboarding - Table Styles
+ * =============================
+ * Estilos para tabelas
+ */
+
+.table {
+    color: var(--body-color);
+    background-color: var(--table-bg);
+    border-color: var(--table-border-color);
+}
+
+.table thead th {
+    font-weight: var(--font-weight-semibold);
+    color: var(--body-color);
+    background-color: var(--table-header-bg);
+    border-bottom: 2px solid var(--table-border-color);
+    padding: var(--space-3);
+    white-space: nowrap;
+}
+
+.table tbody td {
+    padding: var(--space-3);
+    vertical-align: middle;
+    border-color: var(--table-border-color);
+}
+
+.table tbody tr:hover {
+    background-color: var(--table-hover-bg);
+}
+
+.table-hover>tbody>tr:hover {
+    background-color: var(--table-hover-bg) !important;
+}
+
+.table-hover>tbody>tr:hover>* {
+    background-color: var(--table-hover-bg) !important;
+    color: var(--body-color) !important;
+}
+
+/* Striped tables */
+.table-striped>tbody>tr:nth-of-type(odd) {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* Bordered tables */
+.table-bordered {
+    border: 1px solid var(--table-border-color);
+}
+
+.table-bordered th,
+.table-bordered td {
+    border: 1px solid var(--table-border-color);
+}
+
+/* Responsive table wrapper */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Sortable columns */
+.table th[data-sortable] {
+    cursor: pointer;
+    user-select: none;
+}
+
+.table th[data-sortable]:hover {
+    background-color: var(--table-hover-bg);
+}
+
+/* Dark mode */
+body.dark-mode .table {
+    color: var(--body-color);
+}
+
+body.dark-mode .table th,
+body.dark-mode .table td {
+    color: var(--body-color) !important;
+    border-color: var(--table-border-color) !important;
+}
+
+body.dark-mode .table-light,
+body.dark-mode .table-light th,
+body.dark-mode .table-light td {
+    background-color: var(--table-header-bg) !important;
+    color: var(--body-color) !important;
+}
+
+body.dark-mode .table-striped>tbody>tr:nth-of-type(odd) {
+    background-color: rgba(255, 255, 255, 0.02);
+}

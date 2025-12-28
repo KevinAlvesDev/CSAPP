@@ -1466,11 +1466,7 @@
               idFavorecido = inputIdFav.value;
             }
           }
-
-          const wellhubSelect = document.getElementById('modal-wellhub');
-          const totalpassSelect = document.getElementById('modal-totalpass');
-          if (wellhubSelect && wellhub) wellhubSelect.value = wellhub;
-          if (totalpassSelect && totalpass) totalpassSelect.value = totalpass;
+          // Nota: valores de wellhub/totalpass são definidos por modal_detalhes_empresa.js
         }
 
         const cargoSelect = document.getElementById('modal-cargo_responsavel');
@@ -1535,27 +1531,26 @@
           }
         }
 
+        // Nota: valores de catraca/facial são definidos por modal_detalhes_empresa.js
+        // Aqui mantemos apenas a lógica de UI condicional (mostrar/esconder modelo)
         if (catracaSelect) {
-          if (catraca) catracaSelect.value = catraca;
           catracaSelect.addEventListener('change', atualizarCamposCondicionais);
-          if (modeloCatracaInput && catraca === 'Sim' && modeloCatraca) {
+          if (modeloCatracaInput && catracaSelect.value === 'Sim' && modeloCatraca) {
             modeloCatracaInput.value = modeloCatraca;
           }
-          // Disparar evento para atualizar UI
-          catracaSelect.dispatchEvent(new Event('change'));
         }
 
         if (facialSelect) {
-          if (facial) facialSelect.value = facial;
           facialSelect.addEventListener('change', atualizarCamposCondicionais);
-          if (modeloFacialInput && facial === 'Sim' && modeloFacial) {
+          if (modeloFacialInput && facialSelect.value === 'Sim' && modeloFacial) {
             modeloFacialInput.value = modeloFacial;
           }
-          // Disparar evento para atualizar UI
-          facialSelect.dispatchEvent(new Event('change'));
         }
 
-        atualizarCamposCondicionais();
+        // Dispara a atualização após modal_detalhes_empresa.js ter definido os valores
+        setTimeout(function () {
+          atualizarCamposCondicionais();
+        }, 150);
 
         // Antiga Lógica do botão Consultar OAMD (Removida em favor do listener global)
         // Mantendo apenas inicialização de cache visual

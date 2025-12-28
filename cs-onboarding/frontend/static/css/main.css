@@ -1,0 +1,50 @@
+/**
+ * CS-Onboarding - Main CSS Entry Point
+ * =====================================
+ * Este arquivo importa todos os estilos do design system.
+ * 
+ * ORDEM DE IMPORTAÇÃO:
+ * 1. Base (variáveis, reset, tipografia)
+ * 2. Componentes
+ * 3. Layouts
+ * 4. Páginas específicas
+ * 
+ * NÃO adicione estilos diretamente neste arquivo!
+ * Crie/edite os arquivos parciais correspondentes.
+ */
+
+/* ===========================================
+   1. BASE
+   =========================================== */
+@import url('base/_variables.css');
+@import url('base/_reset.css');
+@import url('base/_typography.css');
+
+/* ===========================================
+   2. COMPONENTS
+   =========================================== */
+@import url('components/_buttons.css');
+@import url('components/_cards.css');
+@import url('components/_forms.css');
+@import url('components/_modals.css');
+@import url('components/_tables.css');
+@import url('components/_sidebar.css');
+@import url('components/_badges.css');
+
+/* ===========================================
+   3. LAYOUTS
+   =========================================== */
+@import url('layouts/_main-layout.css');
+
+/* ===========================================
+   4. PAGES (estilos específicos de páginas)
+   =========================================== */
+@import url('pages/_login.css');
+@import url('pages/_dashboard.css');
+
+/* ===========================================
+   5. LEGACY (arquivos antigos - manter por compatibilidade)
+   A medida que refatoramos, estes serão removidos.
+   =========================================== */
+/* @import url('implantacao_detalhes.css'); */
+/* @import url('preview_plano.css'); */

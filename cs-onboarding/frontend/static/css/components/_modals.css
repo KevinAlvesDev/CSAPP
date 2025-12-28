@@ -1,0 +1,72 @@
+/**
+ * CS-Onboarding - Modal Styles
+ * =============================
+ * Estilos para modais
+ */
+
+.modal-content {
+    background-color: var(--container-bg);
+    color: var(--body-color);
+    border: none;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--elevation-5);
+}
+
+.modal-header {
+    border-bottom: 1px solid var(--input-border);
+    background-color: var(--header-bg);
+    padding: var(--space-3) var(--space-4);
+    border-top-left-radius: var(--radius-lg);
+    border-top-right-radius: var(--radius-lg);
+}
+
+.modal-title {
+    font-weight: var(--font-weight-bold);
+    color: var(--bs-heading-color);
+}
+
+.modal-body {
+    padding: var(--space-4);
+}
+
+.modal-footer {
+    border-top: 1px solid var(--input-border);
+    background-color: var(--header-bg);
+    padding: var(--space-3) var(--space-4);
+    border-bottom-left-radius: var(--radius-lg);
+    border-bottom-right-radius: var(--radius-lg);
+}
+
+/* Large modals with scrollable body */
+#modalDetalhesEmpresa .modal-body,
+#modalGerenciarUsuarios .modal-body,
+#modalGamificacao .modal-body {
+    max-height: calc(95vh - 120px);
+    overflow-y: auto;
+}
+
+/* Modal backdrop */
+.modal-backdrop {
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+/* Dark mode */
+body.dark-mode .modal-content {
+    background-color: var(--container-bg);
+    color: var(--body-color);
+    border-color: var(--table-border-color);
+}
+
+body.dark-mode .modal-header {
+    background-color: var(--header-bg);
+    border-color: var(--table-border-color);
+}
+
+body.dark-mode .modal-footer {
+    background-color: var(--header-bg);
+    border-color: var(--table-border-color);
+}
+
+body.dark-mode .modal-title {
+    color: var(--body-color);
+}

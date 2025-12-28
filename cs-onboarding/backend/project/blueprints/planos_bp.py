@@ -303,28 +303,89 @@ def excluir_plano(plano_id):
         return redirect(url_for('planos.listar_planos'))
 
 
+@planos_bp.route('/<int:plano_id>/clonar', methods=['POST'])
+@login_required
+@csrf.exempt
+def clonar_plano(plano_id):
+    """
+    Clona um plano de sucesso existente.
+    Espera JSON: { "nome": "Novo Nome", "descricao": "Descrição opcional" }
+    """
+    try:
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Usuário não autenticado'}), 401
+        
+        criado_por = user.get('nome', 'Sistema')
+        
+        # Obter dados do request
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Dados não fornecidos'}), 400
+        
+        novo_nome = data.get('nome', '').strip()
+        nova_descricao = data.get('descricao', '').strip() or None
+        
+        if not novo_nome:
+            return jsonify({'error': 'Nome do novo plano é obrigatório'}), 400
+        
+        # Clonar plano
+        novo_plano_id = planos_sucesso_service.clonar_plano_sucesso(
+            plano_id=plano_id,
+            novo_nome=novo_nome,
+            criado_por=criado_por,
+            nova_descricao=nova_descricao
+        )
+        
+        planos_logger.info(f"Plano {plano_id} clonado como '{novo_nome}' (ID {novo_plano_id}) por {criado_por}")
+        
+        return jsonify({
+            'ok': True,
+            'success': True,
+            'message': f'Plano clonado com sucesso!',
+            'plano_id': novo_plano_id,
+            'redirect_url': url_for('planos.obter_plano', plano_id=novo_plano_id)
+        }), 201
+    
+    except ValidationError as e:
+        planos_logger.warning(f"Erro de validação ao clonar plano {plano_id}: {e}")
+        return jsonify({'error': str(e)}), 400
+    
+    except Exception as e:
+        planos_logger.error(f"Erro ao clonar plano {plano_id}: {e}", exc_info=True)
+        return jsonify({'error': f'Erro ao clonar plano: {str(e)}'}), 500
+
+
 @planos_bp.route('/<int:plano_id>/preview', methods=['GET'])
 @login_required
 def preview_plano(plano_id):
+    """Retorna preview do plano em JSON para renderização no frontend."""
     try:
         plano = planos_sucesso_service.obter_plano_completo(plano_id)
-        wants_json = request.is_json or request.headers.get('Accept', '').startswith('application/json')
-
+        
         if not plano:
-            if wants_json:
-                return jsonify({'error': 'Plano não encontrado'}), 404
-            return render_template('partials/_plano_preview.html', plano=None)
+            return jsonify({'error': 'Plano não encontrado'}), 404
+        
+        # Garante que items é uma lista
+        items = plano.get('items', [])
+        if not isinstance(items, list):
+            items = []
 
-        if wants_json:
-            return jsonify({'success': True, 'plano': plano}), 200
-
-        return render_template('partials/_plano_preview.html', plano=plano)
-
+        return jsonify({
+            'success': True,
+            'plano': {
+                'id': plano.get('id'),
+                'nome': plano.get('nome'),
+                'descricao': plano.get('descricao', ''),
+                'items': items
+            }
+        }), 200
+        
     except Exception as e:
-        wants_json = request.is_json or request.headers.get('Accept', '').startswith('application/json')
-        if wants_json:
-            return jsonify({'error': str(e)}), 500
-        return render_template('partials/_plano_preview.html', plano=None, erro=str(e))
+        # Import traceback para log completo se necessário, mas logging.exception já faz isso
+        planos_logger.error(f"Erro ao buscar preview do plano {plano_id}: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
 
 
 @planos_bp.route('/implantacao/<int:implantacao_id>/aplicar', methods=['POST'])

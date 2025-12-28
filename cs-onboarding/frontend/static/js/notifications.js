@@ -80,32 +80,24 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // Carregar notificações da API
+    // Carregar notificações da API
     async function loadNotifications() {
         showLoading();
 
         try {
-            const response = await fetch('/api/notifications', {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
+            const data = await window.apiFetch('/api/notifications');
 
-            if (!response.ok) {
-                throw new Error('Erro na requisição');
-            }
-
-            const data = await response.json();
+            // apiFetch já verifica response.ok
 
             if (!data.ok) {
+                // Se a API retornar JSON mas com campo ok: false
                 throw new Error(data.error || 'Erro desconhecido');
             }
 
             renderNotifications(data.notifications || []);
 
         } catch (error) {
-            console.error('Erro ao carregar notificações:', error);
+            // Toast já foi mostrado pelo apiFetch, mas atualizamos a UI do dropdown também
             notificationDropdown.innerHTML = `
                 <div style="padding: 40px 20px; text-align: center; color: var(--text-muted);">
                     <i class="bi bi-exclamation-triangle fs-1 text-warning"></i>
@@ -174,30 +166,23 @@ document.addEventListener('DOMContentLoaded', function () {
     // Buscar contagem de notificações novas
     async function fetchNotificationCount() {
         try {
-            const response = await fetch('/api/notifications', {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
+            // Background poll: suppress error toasts
+            const data = await window.apiFetch('/api/notifications', { showErrorToast: false });
 
-            if (response.ok) {
-                const data = await response.json();
-                if (data.ok) {
-                    const lastViewed = getLastViewed();
-                    const apiTimestamp = data.timestamp ? new Date(data.timestamp) : new Date();
+            if (data.ok) {
+                const lastViewed = getLastViewed();
+                const apiTimestamp = data.timestamp ? new Date(data.timestamp) : new Date();
 
-                    // Se nunca visualizou OU se há notificações novas desde a última visualização
-                    if (!lastViewed || apiTimestamp > lastViewed) {
-                        updateBadge(data.total || 0);
-                    } else {
-                        updateBadge(0);
-                    }
+                // Se nunca visualizou OU se há notificações novas desde a última visualização
+                if (!lastViewed || apiTimestamp > lastViewed) {
+                    updateBadge(data.total || 0);
+                } else {
+                    updateBadge(0);
                 }
             }
         } catch (error) {
-            console.error('Erro ao buscar contagem de notificações:', error);
+            // Silently fail for background polling
+            console.warn('Background notification check failed:', error.message);
         }
     }
 

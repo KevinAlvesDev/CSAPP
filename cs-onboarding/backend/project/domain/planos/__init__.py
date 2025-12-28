@@ -20,6 +20,7 @@ from .crud import (
     obter_plano_completo_checklist,
     obter_plano_da_implantacao,
     _plano_usa_checklist_items,
+    clonar_plano_sucesso,
 )
 
 # Importações de estrutura.py
@@ -61,6 +62,7 @@ __all__ = [
     'obter_plano_completo_checklist',
     'obter_plano_da_implantacao',
     '_plano_usa_checklist_items',
+    'clonar_plano_sucesso',
     # Estrutura
     'atualizar_estrutura_plano',
     '_criar_estrutura_plano',

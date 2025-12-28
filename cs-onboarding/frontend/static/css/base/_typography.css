@@ -1,0 +1,110 @@
+/**
+ * CS-Onboarding - Typography Base
+ * ================================
+ * Estilos base de tipografia
+ */
+
+body {
+    font-family: var(--bs-font-sans-serif);
+    line-height: var(--line-height-relaxed);
+    color: var(--body-color);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-weight: var(--font-weight-bold);
+    color: var(--bs-heading-color);
+    line-height: var(--line-height-tight);
+}
+
+h1 {
+    font-size: var(--font-size-3xl);
+}
+
+h2 {
+    font-size: var(--font-size-2xl);
+}
+
+h3 {
+    font-size: var(--font-size-xl);
+}
+
+h4 {
+    font-size: var(--font-size-lg);
+}
+
+h5 {
+    font-size: var(--font-size-base);
+}
+
+h6 {
+    font-size: var(--font-size-sm);
+}
+
+a {
+    color: var(--bs-link-color);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+}
+
+a:hover {
+    color: var(--color-blue-700);
+}
+
+.text-muted {
+    color: var(--color-gray-500) !important;
+}
+
+body.dark-mode .text-muted {
+    color: var(--color-slate-400) !important;
+}
+
+/* Font weights utilities */
+.fw-normal {
+    font-weight: var(--font-weight-normal);
+}
+
+.fw-medium {
+    font-weight: var(--font-weight-medium);
+}
+
+.fw-semibold {
+    font-weight: var(--font-weight-semibold);
+}
+
+.fw-bold {
+    font-weight: var(--font-weight-bold);
+}
+
+.fw-extrabold {
+    font-weight: var(--font-weight-extrabold);
+}
+
+/* Text colors for dark mode */
+body.dark-mode .text-dark {
+    color: var(--body-color) !important;
+}
+
+body.dark-mode .text-warning {
+    color: #fbbf24 !important;
+}
+
+body.dark-mode .text-danger {
+    color: #f87171 !important;
+}
+
+body.dark-mode .text-success {
+    color: #4ade80 !important;
+}
+
+body.dark-mode .text-info {
+    color: #22d3ee !important;
+}
+
+body.dark-mode .text-primary {
+    color: #60a5fa !important;
+}

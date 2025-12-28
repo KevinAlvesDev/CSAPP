@@ -203,11 +203,22 @@
       const isObrigatoria = obrigatoriaInput && obrigatoriaInput.checked;
 
       if (isObrigatoria) {
-        alert('Não é possível excluir uma tarefa obrigatória. Desmarque a opção "Tarefa obrigatória" antes de excluir.');
+        if (window.showToast) window.showToast('Não é possível excluir uma tarefa obrigatória. Desmarque a opção "Tarefa obrigatória" antes de excluir.', 'warning');
         return;
       }
 
-      if (confirm('Tem certeza que deseja remover este item e todos os seus filhos?')) {
+      if (window.showConfirm) {
+        window.showConfirm({
+          message: 'Tem certeza que deseja remover este item e todos os seus filhos?',
+          title: 'Confirmar exclusão',
+          type: 'danger'
+        }).then(confirmed => {
+          if (confirmed) {
+            element.remove();
+            this.checkEmptyState();
+          }
+        });
+      } else {
         element.remove();
         this.checkEmptyState();
       }
@@ -275,13 +286,13 @@
 
     validarDados(estrutura) {
       if (!estrutura.items || estrutura.items.length === 0) {
-        alert('Adicione pelo menos um item ao plano.');
+        if (window.showToast) window.showToast('Adicione pelo menos um item ao plano.', 'warning');
         return false;
       }
 
       const validarItem = (item) => {
         if (!item.title || !item.title.trim()) {
-          alert('Todos os itens devem ter um título.');
+          if (window.showToast) window.showToast('Todos os itens devem ter um título.', 'warning');
           return false;
         }
 
@@ -389,13 +400,13 @@
       const diasDuracao = form.querySelector('#dias_duracao');
 
       if (!nome || !nome.value.trim()) {
-        alert('O nome do plano é obrigatório.');
+        if (window.showToast) window.showToast('O nome do plano é obrigatório.', 'warning');
         if (nome) nome.focus();
         return;
       }
 
       if (!diasDuracao || !diasDuracao.value || parseInt(diasDuracao.value) < 1) {
-        alert('Informe os dias de duração (mínimo 1 dia).');
+        if (window.showToast) window.showToast('Informe os dias de duração (mínimo 1 dia).', 'warning');
         if (diasDuracao) diasDuracao.focus();
         return;
       }

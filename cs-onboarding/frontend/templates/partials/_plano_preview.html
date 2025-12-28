@@ -152,24 +152,24 @@
         {% endif %}
     </div>
 
-    {% set items = plano.items if plano.items else (plano.estrutura.items if plano.estrutura and plano.estrutura.items else []) %}
-    
+    {% set items = plano.get('items', []) or [] %}
+
     {% if items and items|length > 0 %}
     {# FORMATO NOVO: checklist_items (hierarquia infinita) #}
-    
+
     {# Calcular total de itens recursivamente #}
     {% set calcular_total = namespace(count=0) %}
     {% macro contar_itens(item) %}
-        {% set calcular_total.count = calcular_total.count + 1 %}
-        {% if item.children and item.children|length > 0 %}
-            {% for child in item.children %}
-                {{ contar_itens(child) }}
-            {% endfor %}
-        {% endif %}
+    {% set calcular_total.count = calcular_total.count + 1 %}
+    {% if item.get('children') %}
+    {% for child in item.get('children', []) %}
+    {{ contar_itens(child) }}
+    {% endfor %}
+    {% endif %}
     {% endmacro %}
-    
+
     {% for item in items %}
-        {{ contar_itens(item) }}
+    {{ contar_itens(item) }}
     {% endfor %}
     {% set total_items = calcular_total.count %}
 
@@ -186,27 +186,27 @@
     <hr class="my-4">
 
     {% macro renderizar_item(item, level=0) %}
-        <div class="checklist-preview-item" data-level="{{ level }}">
-            <div class="checklist-preview-item-header">
-                <i class="bi {% if level == 0 %}bi-layers-fill{% elif level == 1 %}bi-collection{% elif level == 2 %}bi-list-check{% else %}bi-circle{% endif %}" 
-                   style="color: {% if level == 0 %}#667eea{% elif level == 1 %}#4299e1{% elif level == 2 %}#48bb78{% else %}#a0aec0{% endif %};"></i>
-                <div class="checklist-preview-item-title">{{ item.title or item.nome or '' }}</div>
-            </div>
-            {% if item.comment or item.descricao %}
-            <div class="checklist-preview-item-comment">{{ item.comment or item.descricao }}</div>
-            {% endif %}
-            {% if item.children and item.children|length > 0 %}
-            <div class="checklist-preview-children">
-                {% for child in item.children %}
-                    {{ renderizar_item(child, level + 1) }}
-                {% endfor %}
-            </div>
-            {% endif %}
+    <div class="checklist-preview-item" data-level="{{ level }}">
+        <div class="checklist-preview-item-header">
+            <i class="bi {% if level == 0 %}bi-layers-fill{% elif level == 1 %}bi-collection{% elif level == 2 %}bi-list-check{% else %}bi-circle{% endif %}"
+                style="color: {% if level == 0 %}#667eea{% elif level == 1 %}#4299e1{% elif level == 2 %}#48bb78{% else %}#a0aec0{% endif %};"></i>
+            <div class="checklist-preview-item-title">{{ item.get('title', '') or item.get('nome', '') }}</div>
         </div>
+        {% if item.get('comment') or item.get('descricao') %}
+        <div class="checklist-preview-item-comment">{{ item.get('comment', '') or item.get('descricao', '') }}</div>
+        {% endif %}
+        {% if item.get('children') %}
+        <div class="checklist-preview-children">
+            {% for child in item.get('children', []) %}
+            {{ renderizar_item(child, level + 1) }}
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
     {% endmacro %}
 
     {% for item in items %}
-        {{ renderizar_item(item, 0) }}
+    {{ renderizar_item(item, 0) }}
     {% endfor %}
 
     {% else %}

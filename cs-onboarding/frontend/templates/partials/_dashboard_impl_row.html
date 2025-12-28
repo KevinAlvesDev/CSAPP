@@ -1,0 +1,91 @@
+{#
+Partial para linha de implantação nas tabelas do dashboard
+Uso: {% include 'partials/_dashboard_impl_row.html' %}
+Variáveis necessárias: impl, g, csrf_token, metrics (opcional)
+#}
+{% from 'macros/dashboard.html' import empresa_link, implantador_cell, status_badge, tipo_badge, ultima_atividade_cell,
+valor_cell, dias_cell, progress_bar %}
+
+<tr data-impl-id="{{ impl.id }}">
+    {# Coluna Empresa #}
+    <td class="text-truncate" style="max-width: 350px;">
+        {{ empresa_link(impl) }}
+    </td>
+
+    {# Coluna Implantador #}
+    <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or impl.usuario_cs }}</td>
+
+    {# Coluna Tipo #}
+    <td>{{ tipo_badge(impl.tipo) }}</td>
+
+    {# Coluna Status (se solicitado) #}
+    {% if show_status is defined and show_status %}
+    <td>{{ status_badge(impl.status) }}</td>
+    {% endif %}
+
+    {# Coluna Dias (se solicitado) #}
+    {% if show_dias is defined and show_dias %}
+    <td class="text-nowrap">
+        <span class="badge bg-info text-dark js-dias-badge" data-impl-id="{{ impl.id }}"
+            data-start-iso="{{ impl.data_inicio_efetivo_iso }}" data-status="{{ impl.status }}">{{ impl.dias_passados |
+            int }} dias</span>
+    </td>
+    {% endif %}
+
+    {# Coluna Progresso (se solicitado) #}
+    {% if show_progresso is defined and show_progresso %}
+    <td>{{ progress_bar(impl) }}</td>
+    {% endif %}
+
+    {# Coluna Início Previsto (se solicitado) #}
+    {% if show_inicio_previsto is defined and show_inicio_previsto %}
+    <td>
+        {% if impl.data_inicio_previsto_fmt_d %}
+        <span class="badge {% if impl.atrasada_para_iniciar %}bg-danger{% else %}bg-secondary{% endif %}">
+            {{ impl.data_inicio_previsto_fmt_d }}
+        </span>
+        {% if impl.atrasada_para_iniciar %}
+        <span class="badge bg-danger ms-1" title="Início atrasado!"><i
+                class="bi bi-exclamation-triangle-fill"></i></span>
+        {% endif %}
+        {% else %}
+        <span class="text-muted small">N/A</span>
+        {% endif %}
+    </td>
+    {% endif %}
+
+    {# Coluna Motivo (para paradas) #}
+    {% if show_motivo is defined and show_motivo %}
+    <td class="text-truncate" style="max-width: 200px;" title="{{ impl.motivo_parada | default('') }}">
+        {{ impl.motivo_parada | default('Não informado') | truncate(30) }}
+    </td>
+    {% endif %}
+
+    {# Coluna Valor #}
+    {% if show_valor is defined and show_valor %}
+    <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_monetario|float) if impl.valor_monetario else 'N/A' }}</td>
+    {% endif %}
+
+    {# Coluna Módulo (para aba Módulos) #}
+    {% if show_modulo is defined and show_modulo %}
+    <td>
+        <span class="badge bg-info text-dark">{{ impl.modulo_tipo or impl.modulo_nome or 'Módulo' }}</span>
+    </td>
+    {% endif %}
+
+    {# Coluna Ações #}
+    {% if show_acoes is defined and show_acoes %}
+    <td class="text-nowrap">
+        {% block acoes %}
+        <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}" class="btn btn-sm btn-primary">
+            <i class="bi bi-eye me-1"></i> Ver Detalhes
+        </a>
+        {% endblock %}
+    </td>
+    {% endif %}
+
+    {# Coluna Última Atividade #}
+    {% if show_ultima_atividade is defined and show_ultima_atividade %}
+    {{ ultima_atividade_cell(impl) }}
+    {% endif %}
+</tr>

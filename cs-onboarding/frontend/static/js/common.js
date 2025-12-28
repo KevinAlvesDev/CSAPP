@@ -7,6 +7,82 @@
 (function () {
     'use strict';
 
+    // ========================================
+    // SERVICE CONTAINER INITIALIZATION (SOLID 10/10)
+    // ========================================
+    // Nota: Os arquivos core/service-container.js, services/api-service.js e 
+    // services/notification-service.js devem ser carregados ANTES deste arquivo
+
+    // Cria container global (Dependency Injection)
+    window.appContainer = window.ServiceContainer ? new window.ServiceContainer() : null;
+
+    // Função para inicializar serviços (será chamada após carregar dependências)
+    window.initializeServices = function () {
+        if (!window.appContainer) return;
+
+        // Registra NProgress (será criado mais abaixo neste arquivo)
+        window.appContainer.registerValue('progress', window.NProgress);
+
+        // Registra funções base (showToast, showConfirm)
+        window.appContainer.registerValue('showToast', window.showToast);
+        window.appContainer.registerValue('showConfirm', window.showConfirm);
+        window.appContainer.registerValue('apiFetch', window.apiFetch);
+
+        // Registra NotificationService
+        if (window.NotificationService) {
+            window.appContainer.register('notifier', (container) => {
+                return new window.NotificationService({
+                    toast: container.resolve('showToast'),
+                    confirm: container.resolve('showConfirm')
+                });
+            });
+        }
+
+        // Registra ApiService
+        if (window.ApiService) {
+            window.appContainer.register('api', (container) => {
+                return new window.ApiService(
+                    container.resolve('apiFetch'),
+                    container.resolve('progress'),
+                    container.resolve('notifier')
+                );
+            });
+        }
+
+        // Expõe serviços globalmente para backward compatibility
+        if (window.appContainer.has('api')) {
+            window.$api = window.appContainer.resolve('api');
+        }
+        if (window.appContainer.has('notifier')) {
+            window.$notifier = window.appContainer.resolve('notifier');
+        }
+
+        // Registra ChecklistAPI
+        if (window.ChecklistAPI) {
+            window.appContainer.register('checklistAPI', (container) => {
+                return new window.ChecklistAPI(container.resolve('api'));
+            });
+        }
+
+        // Registra ChecklistService
+        if (window.ChecklistService) {
+            window.appContainer.register('checklistService', (container) => {
+                return new window.ChecklistService(
+                    container.resolve('checklistAPI'),
+                    container.resolve('notifier')
+                );
+            });
+        }
+
+        // Expõe ChecklistService globalmente
+        if (window.appContainer.has('checklistService')) {
+            window.$checklistService = window.appContainer.resolve('checklistService');
+        }
+
+        console.log('✅ Service Container initialized with SOLID architecture');
+    };
+
+
     // --- Flatpickr Localization ---
     function configureFlatpickrLocale() {
         if (window.flatpickr) {
@@ -727,12 +803,18 @@
     });
 
     // ========================================
-    // SISTEMA DE TOASTS
+    // SISTEMA DE TOASTS (Enterprise Grade)
     // ========================================
     window.showToast = function (message, type = 'info', duration = 5000) {
-        const toastContainer = document.getElementById('toastContainer');
+        let toastContainer = document.getElementById('toastContainer');
+
+        // Auto-healing: Create container if missing
         if (!toastContainer) {
-            return;
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'toastContainer';
+            toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+            toastContainer.style.zIndex = '1090';
+            document.body.appendChild(toastContainer);
         }
 
         const toastId = 'toast-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
@@ -753,28 +835,44 @@
         }[type] || 'bi-info-circle-fill';
 
         const toastHTML = `
-        <div id="${toastId}" class="toast align-items-center text-white ${bgClass} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div id="${toastId}" class="toast align-items-center text-white ${bgClass} border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true">
           <div class="d-flex">
-            <div class="toast-body d-flex align-items-center">
-              <i class="bi ${icon} me-2"></i>
-              <span>${message}</span>
+            <div class="toast-body d-flex align-items-center py-3">
+              <i class="bi ${icon} fs-5 me-3"></i>
+              <span class="fw-medium">${message}</span>
             </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            <button type="button" class="btn-close btn-close-white me-3 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+          </div>
+          <!-- Progress Bar Animation (Optional Polish) -->
+          <div style="height: 3px; background: rgba(255,255,255,0.3); width: 100%; position: absolute; bottom: 0; left: 0;">
+             <div style="height: 100%; background: rgba(255,255,255,0.7); width: 0%; animation: toastProgress ${duration}ms linear forwards;"></div>
           </div>
         </div>
+        <style>
+            @keyframes toastProgress { to { width: 100%; } }
+        </style>
       `;
 
         toastContainer.insertAdjacentHTML('beforeend', toastHTML);
         const toastElement = document.getElementById(toastId);
-        const toast = new bootstrap.Toast(toastElement, {
-            autohide: true,
-            delay: duration
-        });
-        toast.show();
 
-        toastElement.addEventListener('hidden.bs.toast', function () {
-            toastElement.remove();
-        });
+        if (typeof bootstrap !== 'undefined' && bootstrap.Toast) {
+            const toast = new bootstrap.Toast(toastElement, {
+                autohide: true,
+                delay: duration
+            });
+            toast.show();
+            toastElement.addEventListener('hidden.bs.toast', function () {
+                toastElement.remove();
+            });
+        } else {
+            // Fallback sem bootstrap JS (apenas CSS fade out)
+            toastElement.classList.add('show');
+            setTimeout(() => {
+                toastElement.classList.remove('show');
+                setTimeout(() => toastElement.remove(), 300);
+            }, duration);
+        }
     };
 
     // ========================================
@@ -967,9 +1065,274 @@
         }
     }
 
+    // ========================================
+    // GLOBAL PROGRESS BAR (Minimal NProgress)
+    // ========================================
+    const NProgress = {
+        activeRequests: 0,
+        timer: null,
+
+        get element() {
+            let el = document.getElementById('nprogress-bar');
+            if (!el) {
+                const container = document.createElement('div');
+                container.id = 'nprogress-container';
+                container.innerHTML = '<div id="nprogress-bar"></div>';
+                document.body.appendChild(container);
+                el = container.firstChild;
+            }
+            return el;
+        },
+
+        start() {
+            if (this.activeRequests === 0) {
+                const el = this.element;
+                el.style.transition = 'none';
+                el.style.opacity = '1';
+                el.style.width = '0%';
+
+                // Force reflow
+                void el.offsetWidth;
+
+                el.style.transition = 'width 0.2s ease-out, opacity 0.3s ease';
+                el.style.width = '15%';
+                this.simulateProgress();
+            }
+            this.activeRequests++;
+        },
+
+        simulateProgress() {
+            if (this.timer) clearInterval(this.timer);
+            this.timer = setInterval(() => {
+                const currentWidth = parseFloat(this.element.style.width) || 0;
+                if (currentWidth < 90) {
+                    const inc = Math.random() * 5;
+                    this.element.style.width = (currentWidth + inc) + '%';
+                }
+            }, 300);
+        },
+
+        done() {
+            this.activeRequests--;
+            if (this.activeRequests <= 0) {
+                this.activeRequests = 0;
+                if (this.timer) clearInterval(this.timer);
+
+                this.element.style.width = '100%';
+
+                setTimeout(() => {
+                    this.element.style.opacity = '0';
+                    setTimeout(() => {
+                        this.element.style.width = '0%';
+                    }, 300);
+                }, 200);
+            }
+        }
+    };
+    window.NProgress = NProgress;
+
+    // ========================================
+    // API CLIENT WRAPPER (Enterprise Grade)
+    // ========================================
+    window.apiFetch = async function (url, options = {}) {
+        // Start Progress Bar (unless suppressed)
+        if (options.showProgress !== false) {
+            NProgress.start();
+        }
+
+        const defaultHeaders = {
+            'X-Requested-With': 'XMLHttpRequest'
+        };
+
+        // Only set Content-Type to JSON if body is NOT FormData
+        // If it IS FormData, let the browser set Content-Type with boundary
+        if (!(options.body instanceof FormData)) {
+            defaultHeaders['Content-Type'] = 'application/json';
+        }
+
+        // Auto-inject CSRF Token from input or meta tag
+        const csrfToken = document.querySelector('input[name="csrf_token"]')?.value ||
+            document.querySelector('meta[name="csrf-token"]')?.content;
+
+        if (csrfToken) {
+            defaultHeaders['X-CSRFToken'] = csrfToken;
+        }
+
+        const config = {
+            ...options,
+            headers: {
+                ...defaultHeaders,
+                ...options.headers
+            }
+        };
+
+        try {
+            const response = await fetch(url, config);
+
+            // Handle 401 Unauthorized (Redirect to login)
+            if (response.status === 401) {
+                window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+                return;
+            }
+
+            // Handle non-2xx responses
+            if (!response.ok) {
+                let errorMessage = `Erro na requisição (${response.status})`;
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.error || errorData.message || errorMessage;
+                } catch (e) {
+                    // Tentar ler texto se não for JSON
+                    try {
+                        const text = await response.text();
+                        if (text && text.length < 200) errorMessage = text;
+                    } catch (e2) { }
+                }
+                throw new Error(errorMessage);
+            }
+
+            // Return JSON by default, unless configured otherwise
+            if (options.parseJson === false) return response;
+            return await response.json();
+
+        } catch (error) {
+            console.error('API Error:', error);
+            if (options.showErrorToast !== false) {
+                window.showToast(error.message, 'error');
+            }
+            throw error;
+        } finally {
+            if (options.showProgress !== false) {
+                NProgress.done();
+            }
+        }
+    };
+
     // Call initGlobalModals on load
     document.addEventListener('DOMContentLoaded', function () {
         initGlobalModals();
+
+        // ===========================================
+        // UX ENHANCEMENTS INITIALIZATION
+        // ===========================================
+
+        // 1. Entrance Animations for Cards
+        const cards = document.querySelectorAll('.card, .metric-card, .list-group-item');
+        cards.forEach((card, index) => {
+            // Apply staggered animation
+            // Limit to first 20 items to avoid performance hit on large lists
+            if (index < 20) {
+                card.classList.add('animate-fade-in-up');
+                card.style.animationDelay = `${index * 50}ms`; // 50ms stagger
+            } else {
+                card.classList.add('animate-fade-in'); // Faster fade for rest
+            }
+        });
+
+        // 2. Ripple Effect for Buttons
+        document.body.addEventListener('click', function (e) {
+            const btn = e.target.closest('.btn');
+            if (btn && !btn.disabled) {
+                const rect = btn.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                const ripple = document.createElement('span');
+                ripple.classList.add('ripple');
+                ripple.style.left = `${x}px`;
+                ripple.style.top = `${y}px`;
+
+                // Remove existing ripples to clean up
+                const existing = btn.querySelector('.ripple');
+                if (existing) existing.remove();
+
+                btn.appendChild(ripple);
+
+                setTimeout(() => ripple.remove(), 600);
+            }
+        });
+
+        // 3. Initialize Bootstrap Tooltips (Global)
+        if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        }
+
+        // 4. Real-time Form Validation
+        const emailInputs = document.querySelectorAll('input[type="email"]');
+        emailInputs.forEach(input => {
+            input.addEventListener('blur', function () {
+                validateEmail(this);
+            });
+            input.addEventListener('input', function () {
+                if (this.classList.contains('is-invalid')) {
+                    validateEmail(this);
+                }
+            });
+        });
+
+        const requiredInputs = document.querySelectorAll('input[required], textarea[required], select[required]');
+        requiredInputs.forEach(input => {
+            input.addEventListener('blur', function () {
+                validateRequired(this);
+            });
+        });
+
+        function validateEmail(input) {
+            const value = input.value.trim();
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+            if (value && !emailRegex.test(value)) {
+                input.classList.add('is-invalid');
+                input.classList.remove('is-valid');
+                showFieldError(input, 'Email inválido');
+            } else if (value) {
+                input.classList.remove('is-invalid');
+                input.classList.add('is-valid');
+                removeFieldError(input);
+            } else {
+                input.classList.remove('is-invalid', 'is-valid');
+                removeFieldError(input);
+            }
+        }
+
+        function validateRequired(input) {
+            const value = input.value.trim();
+
+            if (!value) {
+                input.classList.add('is-invalid');
+                input.classList.remove('is-valid');
+                showFieldError(input, 'Campo obrigatório');
+            } else {
+                input.classList.remove('is-invalid');
+                input.classList.add('is-valid');
+                removeFieldError(input);
+            }
+        }
+
+        function showFieldError(input, message) {
+            removeFieldError(input);
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'invalid-feedback d-block';
+            errorDiv.textContent = message;
+            errorDiv.dataset.validationError = 'true';
+            input.parentNode.appendChild(errorDiv);
+        }
+
+        function removeFieldError(input) {
+            const existing = input.parentNode.querySelector('[data-validation-error]');
+            if (existing) existing.remove();
+        }
     });
+
+    // ========================================
+    // INITIALIZE SERVICE CONTAINER
+    // ========================================
+    // Chama após todos os serviços base estarem definidos
+    if (typeof window.initializeServices === 'function') {
+        window.initializeServices();
+    }
 
 })();

@@ -1,0 +1,60 @@
+/**
+ * CS-Onboarding - Reset/Base
+ * ===========================
+ * Estilos base e reset do documento
+ */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    background-color: var(--body-bg);
+    color: var(--body-color);
+    min-height: 100vh;
+    overflow-x: hidden;
+    transition: background-color var(--transition-slow), color var(--transition-slow);
+    margin: 0;
+    padding: 0;
+}
+
+/* Focus visible for accessibility */
+:focus-visible {
+    outline: 2px solid var(--color-blue-500);
+    outline-offset: 2px;
+}
+
+/* Remove default button styles */
+button {
+    cursor: pointer;
+    font-family: inherit;
+}
+
+/* Images */
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Lists */
+ul,
+ol {
+    padding-left: var(--space-6);
+}
+
+/* Selection */
+::selection {
+    background-color: var(--color-blue-200);
+    color: var(--color-gray-900);
+}
+
+body.dark-mode ::selection {
+    background-color: var(--color-blue-600);
+    color: var(--color-white);
+}

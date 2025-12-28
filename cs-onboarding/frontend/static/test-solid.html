@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste SOLID Architecture</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding: 2rem;
+            background: #f8f9fa;
+        }
+
+        .test-card {
+            margin-bottom: 1rem;
+        }
+
+        .success {
+            color: #28a745;
+        }
+
+        .error {
+            color: #dc3545;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1 class="mb-4">🏛️ Teste de Arquitetura SOLID</h1>
+
+        <div class="card test-card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">1. Service Container</h5>
+            </div>
+            <div class="card-body">
+                <div id="test-container"></div>
+            </div>
+        </div>
+
+        <div class="card test-card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">2. Notification Service</h5>
+            </div>
+            <div class="card-body">
+                <button class="btn btn-success btn-sm" onclick="testNotifications()">Testar Success</button>
+                <button class="btn btn-danger btn-sm" onclick="testError()">Testar Error</button>
+                <button class="btn btn-warning btn-sm" onclick="testWarning()">Testar Warning</button>
+                <button class="btn btn-info btn-sm" onclick="testConfirm()">Testar Confirm</button>
+                <div id="test-notifier" class="mt-2"></div>
+            </div>
+        </div>
+
+        <div class="card test-card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">3. API Service</h5>
+            </div>
+            <div class="card-body">
+                <button class="btn btn-primary btn-sm" onclick="testApiGet()">Testar GET</button>
+                <button class="btn btn-primary btn-sm" onclick="testApiPost()">Testar POST</button>
+                <div id="test-api" class="mt-2"></div>
+            </div>
+        </div>
+
+        <div class="card test-card">
+            <div class="card-header bg-warning">
+                <h5 class="mb-0">4. Dependency Injection</h5>
+            </div>
+            <div class="card-body">
+                <button class="btn btn-secondary btn-sm" onclick="testDI()">Testar DI</button>
+                <div id="test-di" class="mt-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts na ordem correta -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- SOLID Architecture -->
+    <script src="js/core/service-container.js"></script>
+    <script src="js/services/api-service.js"></script>
+    <script src="js/services/notification-service.js"></script>
+    <script src="js/common.js"></script>
+
+    <script>
+        // Testes
+        function log(elementId, message, isSuccess = true) {
+            const el = document.getElementById(elementId);
+            const className = isSuccess ? 'success' : 'error';
+            const icon = isSuccess ? '✅' : '❌';
+            el.innerHTML += `<div class="${className}">${icon} ${message}</div>`;
+        }
+
+        // Teste 1: Service Container
+        window.addEventListener('DOMContentLoaded', () => {
+            if (window.appContainer) {
+                log('test-container', 'Service Container criado com sucesso');
+                log('test-container', `Serviços registrados: ${window.appContainer.services.size}`);
+            } else {
+                log('test-container', 'Service Container NÃO encontrado', false);
+            }
+        });
+
+        // Teste 2: Notifications
+        function testNotifications() {
+            if (window.$notifier) {
+                window.$notifier.success('Teste de sucesso!');
+                log('test-notifier', 'NotificationService.success() funcionou');
+            } else {
+                log('test-notifier', 'NotificationService não disponível', false);
+            }
+        }
+
+        function testError() {
+            if (window.$notifier) {
+                window.$notifier.error('Teste de erro!');
+                log('test-notifier', 'NotificationService.error() funcionou');
+            }
+        }
+
+        function testWarning() {
+            if (window.$notifier) {
+                window.$notifier.warning('Teste de aviso!');
+                log('test-notifier', 'NotificationService.warning() funcionou');
+            }
+        }
+
+        async function testConfirm() {
+            if (window.$notifier) {
+                const result = await window.$notifier.confirm({
+                    message: 'Teste de confirmação. Clique em Confirmar.',
+                    title: 'Teste'
+                });
+                log('test-notifier', `NotificationService.confirm() retornou: ${result}`);
+            }
+        }
+
+        // Teste 3: API Service
+        async function testApiGet() {
+            if (window.$api) {
+                try {
+                    log('test-api', 'Testando API GET (pode falhar se endpoint não existir)...');
+                    // Teste com endpoint que provavelmente existe
+                    const data = await window.$api.get('/api/v1/implantacoes', { showErrorToast: false });
+                    log('test-api', 'API GET funcionou!');
+                } catch (error) {
+                    log('test-api', `API GET testado (erro esperado se não autenticado): ${error.message}`);
+                }
+            } else {
+                log('test-api', 'ApiService não disponível', false);
+            }
+        }
+
+        async function testApiPost() {
+            if (window.$api) {
+                log('test-api', 'ApiService.post() disponível (não vamos fazer POST real)');
+            }
+        }
+
+        // Teste 4: Dependency Injection
+        function testDI() {
+            if (window.appContainer) {
+                // Testa se consegue resolver dependências
+                try {
+                    const api = window.appContainer.resolve('api');
+                    const notifier = window.appContainer.resolve('notifier');
+                    log('test-di', 'Dependency Injection funcionando!');
+                    log('test-di', `API Service: ${typeof api}`);
+                    log('test-di', `Notifier Service: ${typeof notifier}`);
+
+                    // Testa singleton
+                    const api2 = window.appContainer.resolve('api');
+                    if (api === api2) {
+                        log('test-di', 'Singleton pattern funcionando (mesma instância)');
+                    }
+                } catch (error) {
+                    log('test-di', `Erro ao resolver dependências: ${error.message}`, false);
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>

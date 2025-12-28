@@ -15,13 +15,13 @@ def init_security_headers(app):
             "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
             "img-src 'self' data: https: blob:",
             "connect-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com",
-            "frame-ancestors 'none'",
+            "frame-ancestors 'self'",  # Permite iframes do mesmo domínio
             "base-uri 'self'",
             "form-action 'self'"
         ]
         response.headers['Content-Security-Policy'] = "; ".join(csp_directives)
         response.headers['X-Content-Type-Options'] = 'nosniff'
-        response.headers['X-Frame-Options'] = 'DENY'
+        response.headers['X-Frame-Options'] = 'SAMEORIGIN'  # Permite iframes do mesmo domínio
         response.headers['X-XSS-Protection'] = '1; mode=block'
         response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
 

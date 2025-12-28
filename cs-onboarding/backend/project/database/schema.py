@@ -326,6 +326,55 @@ def _criar_tabelas_basicas_sqlite(cursor):
         )
     """)
 
+    # ========================================
+    # SISTEMA DE PERFIS E PERMISSÕES (RBAC)
+    # ========================================
+    
+    # Tabela de Perfis de Acesso
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS perfis_acesso (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome VARCHAR(100) UNIQUE NOT NULL,
+            descricao TEXT,
+            sistema BOOLEAN DEFAULT 0,
+            ativo BOOLEAN DEFAULT 1,
+            cor VARCHAR(20) DEFAULT '#667eea',
+            icone VARCHAR(50) DEFAULT 'bi-person-badge',
+            criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+            atualizado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+            criado_por VARCHAR(100)
+        )
+    """)
+    
+    # Tabela de Recursos/Funcionalidades
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS recursos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            codigo VARCHAR(100) UNIQUE NOT NULL,
+            nome VARCHAR(255) NOT NULL,
+            descricao TEXT,
+            categoria VARCHAR(100) NOT NULL,
+            tipo VARCHAR(50) DEFAULT 'acao',
+            ordem INTEGER DEFAULT 0,
+            ativo BOOLEAN DEFAULT 1
+        )
+    """)
+    
+    # Tabela de Permissões
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS permissoes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            perfil_id INTEGER REFERENCES perfis_acesso(id) ON DELETE CASCADE,
+            recurso_id INTEGER REFERENCES recursos(id) ON DELETE CASCADE,
+            concedida BOOLEAN DEFAULT 1,
+            criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(perfil_id, recurso_id)
+        )
+    """)
+    
+    # Inserir dados iniciais de perfis e recursos
+    _popular_dados_iniciais_perfis(cursor)
+
     # Criar TODOS os índices necessários
     indices = [
         "CREATE INDEX IF NOT EXISTS idx_checklist_parent_id ON checklist_items(parent_id)",
@@ -348,6 +397,97 @@ def _criar_tabelas_basicas_sqlite(cursor):
             cursor.execute(idx_sql)
         except Exception:
             pass
+
+
+def _popular_dados_iniciais_perfis(cursor):
+    """Insere dados iniciais para perfis e recursos."""
+    try:
+        # Verificar se já existem perfis
+        cursor.execute("SELECT COUNT(*) FROM perfis_acesso")
+        if cursor.fetchone()[0] > 0:
+            return  # Dados já existem
+        
+        # Inserir perfis padrão
+        perfis = [
+            ('Administrador', 'Acesso total ao sistema', 1, '#dc3545', 'bi-shield-check', 'Sistema'),
+            ('Implantador', 'Gerencia implantações e checklists', 1, '#0d6efd', 'bi-person-workspace', 'Sistema'),
+            ('Visualizador', 'Apenas visualização, sem edição', 1, '#6c757d', 'bi-eye', 'Sistema'),
+        ]
+        
+        for perfil in perfis:
+            cursor.execute("""
+                INSERT OR IGNORE INTO perfis_acesso (nome, descricao, sistema, cor, icone, criado_por)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, perfil)
+        
+        # Inserir recursos
+        recursos = [
+            ('dashboard.view', 'Visualizar Dashboard', 'Acessar página principal', 'Dashboard', 'pagina', 1),
+            ('dashboard.export', 'Exportar Relatórios', 'Exportar dados', 'Dashboard', 'acao', 2),
+            ('implantacoes.list', 'Listar Implantações', 'Ver lista', 'Implantações', 'pagina', 10),
+            ('implantacoes.view', 'Visualizar Detalhes', 'Ver detalhes', 'Implantações', 'acao', 11),
+            ('implantacoes.create', 'Criar Implantação', 'Criar nova', 'Implantações', 'acao', 12),
+            ('implantacoes.edit', 'Editar Implantação', 'Modificar dados', 'Implantações', 'acao', 13),
+            ('implantacoes.delete', 'Excluir Implantação', 'Remover do sistema', 'Implantações', 'acao', 14),
+            ('implantacoes.finalize', 'Finalizar Implantação', 'Marcar como concluída', 'Implantações', 'acao', 15),
+            ('checklist.view', 'Visualizar Checklist', 'Ver checklist', 'Checklist', 'pagina', 20),
+            ('checklist.check', 'Marcar Tarefas', 'Marcar/desmarcar', 'Checklist', 'acao', 21),
+            ('checklist.comment', 'Adicionar Comentários', 'Comentar', 'Checklist', 'acao', 22),
+            ('checklist.edit', 'Editar Tarefas', 'Modificar tarefas', 'Checklist', 'acao', 23),
+            ('checklist.delete', 'Excluir Tarefas', 'Remover tarefas', 'Checklist', 'acao', 24),
+            ('planos.list', 'Listar Planos', 'Ver lista', 'Planos de Sucesso', 'pagina', 30),
+            ('planos.view', 'Visualizar Plano', 'Ver detalhes', 'Planos de Sucesso', 'acao', 31),
+            ('planos.create', 'Criar Plano', 'Criar novo', 'Planos de Sucesso', 'acao', 32),
+            ('planos.edit', 'Editar Plano', 'Modificar plano', 'Planos de Sucesso', 'acao', 33),
+            ('planos.clone', 'Clonar Plano', 'Duplicar plano', 'Planos de Sucesso', 'acao', 34),
+            ('planos.delete', 'Excluir Plano', 'Remover plano', 'Planos de Sucesso', 'acao', 35),
+            ('planos.apply', 'Aplicar Plano', 'Aplicar a implantação', 'Planos de Sucesso', 'acao', 36),
+            ('usuarios.list', 'Listar Usuários', 'Ver lista', 'Usuários', 'pagina', 40),
+            ('usuarios.view', 'Visualizar Usuário', 'Ver detalhes', 'Usuários', 'acao', 41),
+            ('usuarios.create', 'Criar Usuário', 'Adicionar novo', 'Usuários', 'acao', 42),
+            ('usuarios.edit', 'Editar Usuário', 'Modificar dados', 'Usuários', 'acao', 43),
+            ('usuarios.delete', 'Excluir Usuário', 'Remover do sistema', 'Usuários', 'acao', 44),
+            ('perfis.list', 'Listar Perfis', 'Ver lista', 'Perfis de Acesso', 'pagina', 50),
+            ('perfis.view', 'Visualizar Perfil', 'Ver detalhes', 'Perfis de Acesso', 'acao', 51),
+            ('perfis.create', 'Criar Perfil', 'Criar novo', 'Perfis de Acesso', 'acao', 52),
+            ('perfis.edit', 'Editar Perfil', 'Modificar perfil', 'Perfis de Acesso', 'acao', 53),
+            ('perfis.delete', 'Excluir Perfil', 'Remover do sistema', 'Perfis de Acesso', 'acao', 54),
+            ('perfis.permissions', 'Gerenciar Permissões', 'Definir permissões', 'Perfis de Acesso', 'acao', 55),
+        ]
+        
+        for recurso in recursos:
+            cursor.execute("""
+                INSERT OR IGNORE INTO recursos (codigo, nome, descricao, categoria, tipo, ordem)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, recurso)
+        
+        # Conceder todas as permissões ao Administrador
+        cursor.execute("""
+            INSERT OR IGNORE INTO permissoes (perfil_id, recurso_id, concedida)
+            SELECT p.id, r.id, 1
+            FROM perfis_acesso p, recursos r
+            WHERE p.nome = 'Administrador'
+        """)
+        
+        # Conceder permissões ao Implantador (sem Usuários e Perfis)
+        cursor.execute("""
+            INSERT OR IGNORE INTO permissoes (perfil_id, recurso_id, concedida)
+            SELECT p.id, r.id, 1
+            FROM perfis_acesso p, recursos r
+            WHERE p.nome = 'Implantador' AND r.categoria NOT IN ('Usuários', 'Perfis de Acesso')
+        """)
+        
+        # Conceder apenas visualização ao Visualizador
+        cursor.execute("""
+            INSERT OR IGNORE INTO permissoes (perfil_id, recurso_id, concedida)
+            SELECT p.id, r.id, 1
+            FROM perfis_acesso p, recursos r
+            WHERE p.nome = 'Visualizador' AND (r.codigo LIKE '%.view' OR r.codigo LIKE '%.list')
+        """)
+        
+    except Exception as e:
+        # Silenciar erros - dados podem já existir
+        pass
 
 
 def _migrar_coluna_timeline_detalhes(cursor):
