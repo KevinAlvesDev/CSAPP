@@ -1058,6 +1058,20 @@
     window.CHECKLIST_DATA = {{ checklist_tree | tojson if checklist_tree else '[]' }};
     window.IMPLANTACAO_ID = {{ implantacao.id }};
 </script>
+
+<!-- Service Layer Scripts (SOLID architecture) -->
+<script src="{{ url_for('static', filename='js/core/service-container.js') }}"></script>
+<script src="{{ url_for('static', filename='js/services/api-service.js') }}"></script>
+<script src="{{ url_for('static', filename='js/services/notification-service.js') }}"></script>
+<script src="{{ url_for('static', filename='js/services/checklist-api.js') }}"></script>
+<script src="{{ url_for('static', filename='js/services/checklist-service.js') }}"></script>
+<script>
+    // Inicializa serviços após carregamento
+    if (window.initializeServices) {
+        window.initializeServices();
+    }
+</script>
+
 <script src="{{ url_for('static', filename='js/checklist_renderer.js') }}"></script>
 
 <script src="{{ url_for('static', filename='js/implantacao_detalhes_ui.js') }}"></script>

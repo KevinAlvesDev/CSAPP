@@ -78,7 +78,7 @@ Uso: {{ tipo_badge(impl.tipo) }}
 {% endmacro %}
 
 {#
-Macro para célula de última atividade
+Macro para célula de último comentário
 Uso: {{ ultima_atividade_cell(impl) }}
 #}
 {% macro ultima_atividade_cell(impl) %}
@@ -92,7 +92,7 @@ Uso: {{ ultima_atividade_cell(impl) }}
     <span class="badge bg-danger"><i class="bi bi-circle-fill me-1"></i>{{ impl.ultima_atividade_text }}</span>
     {% else %}
     <span class="badge bg-secondary"><i class="bi bi-circle-fill me-1"></i>{{ impl.ultima_atividade_text or 'Sem
-        atividade' }}</span>
+        comentários' }}</span>
     {% endif %}
 </td>
 {% endmacro %}

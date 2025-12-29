@@ -28,6 +28,11 @@ class ChecklistRenderer {
             this.service = window.$checklistService || null;
         }
 
+        // Log warning se service não estiver disponível
+        if (!this.service) {
+            console.warn('[ChecklistRenderer] ChecklistService não disponível. Funcionalidades de comentários e edição estarão limitadas.');
+        }
+
         // CSRF ainda necessário para código legado (será removido gradualmente)
         this.csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
         if (!this.csrfToken) {
@@ -46,6 +51,13 @@ class ChecklistRenderer {
         }
 
         this.init();
+    }
+
+    /**
+     * Verifica se o service está disponível para operações
+     */
+    hasService() {
+        return this.service && typeof this.service.loadComments === 'function';
     }
 
     init() {
@@ -527,6 +539,11 @@ class ChecklistRenderer {
         this.updateProgressFromLocalData();
 
         // Delega para o service
+        if (!this.hasService()) {
+            console.warn('[ChecklistRenderer] Service não disponível para toggleItem');
+            this.isLoading = false;
+            return;
+        }
         const result = await this.service.toggleItem(itemId, completed);
 
         if (result.success) {
@@ -804,6 +821,13 @@ class ChecklistRenderer {
     async loadComments(itemId) {
         const historyContainer = this.container.querySelector(`#comments-history-${itemId}`);
         if (!historyContainer) return;
+
+        // Verifica se service está disponível
+        if (!this.service || typeof this.service.loadComments !== 'function') {
+            console.warn('[ChecklistRenderer] Service não disponível para loadComments');
+            historyContainer.innerHTML = `<div class="text-muted small">Serviço de comentários não disponível.</div>`;
+            return;
+        }
 
         // Delega para o service
         const result = await this.service.loadComments(itemId);
@@ -1120,6 +1144,13 @@ class ChecklistRenderer {
         if (!textarea) return;
 
         const texto = textarea.value.trim();
+
+        // Verifica se service está disponível
+        if (!this.hasService()) {
+            console.warn('[ChecklistRenderer] Service não disponível para saveComment');
+            if (window.showToast) window.showToast('Serviço de comentários não disponível', 'error');
+            return;
+        }
 
         // Delega para o service (validação + API call)
         const result = await this.service.saveComment(itemId, { texto, visibilidade, noshow, tag });

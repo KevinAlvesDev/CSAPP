@@ -67,10 +67,12 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
         ) t_counts ON t_counts.implantacao_id = i.id
         LEFT JOIN (
             SELECT
-                implantacao_id,
-                MAX(data_criacao) as ultima_atividade
-            FROM timeline_log
-            GROUP BY implantacao_id
+                ci.implantacao_id,
+                MAX(ch.data_criacao) as ultima_atividade
+            FROM comentarios_h ch
+            INNER JOIN checklist_items ci ON ch.checklist_item_id = ci.id
+            WHERE ch.deleted_at IS NULL
+            GROUP BY ci.implantacao_id
         ) last_activity ON last_activity.implantacao_id = i.id
     """
     args = []
@@ -202,50 +204,30 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
             current_app.logger.error(f"Unexpected error calculating dias_passados for impl {impl_id}")
             dias_passados = 0
 
-        # Processar última atividade com robustez contra erros
+        # Processar última atividade (baseada no último comentário)
         try:
             ultima_atividade_raw = impl.get('ultima_atividade')
             
-            # Se não tem atividade registrada, criar uma entrada inicial
-            if not ultima_atividade_raw:
-                try:
-                    from ...db import logar_timeline
-                    data_criacao = impl.get('data_criacao')
-                    if data_criacao and impl_id:
-                        logar_timeline(
-                            impl_id,
-                            impl.get('usuario_cs', 'sistema'),
-                            'implantacao_criada',
-                            f'Implantação "{impl.get("nome_empresa", "N/A")}" registrada no sistema'
-                        )
-                        # Buscar novamente após criar
-                        ultima_atividade_result = query_db(
-                            "SELECT MAX(data_criacao) as ultima FROM timeline_log WHERE implantacao_id = %s",
-                            (impl_id,),
-                            one=True
-                        )
-                        if ultima_atividade_result and isinstance(ultima_atividade_result, dict):
-                            ultima_atividade_raw = ultima_atividade_result.get('ultima')
-                except Exception as e:
-                    current_app.logger.warning(f"Erro ao criar timeline inicial para impl {impl_id}: {e}")
-                    ultima_atividade_raw = None
-            
             # Formatar tempo relativo com fallback seguro
-            try:
-                ultima_atividade_text, ultima_atividade_dias, ultima_atividade_status = format_relative_time(ultima_atividade_raw)
-            except Exception as e:
-                current_app.logger.warning(f"Erro ao formatar tempo relativo para impl {impl_id}: {e}")
-                ultima_atividade_text, ultima_atividade_dias, ultima_atividade_status = 'Sem atividade', None, 'gray'
+            if ultima_atividade_raw:
+                try:
+                    ultima_atividade_text, ultima_atividade_dias, ultima_atividade_status = format_relative_time(ultima_atividade_raw)
+                except Exception as e:
+                    current_app.logger.warning(f"Erro ao formatar tempo relativo para impl {impl_id}: {e}")
+                    ultima_atividade_text, ultima_atividade_dias, ultima_atividade_status = 'Sem comentários', None, 'gray'
+            else:
+                # Não há comentários registrados
+                ultima_atividade_text, ultima_atividade_dias, ultima_atividade_status = 'Sem comentários', None, 'gray'
             
             # Garantir valores seguros
-            impl['ultima_atividade_text'] = ultima_atividade_text or 'Sem atividade'
+            impl['ultima_atividade_text'] = ultima_atividade_text or 'Sem comentários'
             impl['ultima_atividade_dias'] = ultima_atividade_dias if ultima_atividade_dias is not None else 0
             impl['ultima_atividade_status'] = ultima_atividade_status or 'gray'
             
         except Exception as e:
             # Fallback completo em caso de erro crítico
             current_app.logger.error(f"Erro crítico ao processar ultima_atividade para impl {impl_id}: {e}")
-            impl['ultima_atividade_text'] = 'Sem atividade'
+            impl['ultima_atividade_text'] = 'Sem comentários'
             impl['ultima_atividade_dias'] = 0
             impl['ultima_atividade_status'] = 'gray'
 

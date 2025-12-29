@@ -356,6 +356,7 @@
                     }
 
                     // Populate ALL fields from server (definitive source of truth)
+                    safeSet('#modal-nome_empresa', impl.nome_empresa || '', modal);
                     safeSet('#modal-responsavel_cliente', impl.responsavel_cliente || '', modal);
                     safeSet('#modal-cargo_responsavel', impl.cargo_responsavel || '', modal);
                     safeSet('#modal-telefone_responsavel', impl.telefone_responsavel || '', modal);
