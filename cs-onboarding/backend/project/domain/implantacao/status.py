@@ -58,8 +58,8 @@ def agendar_implantacao_service(implantacao_id, usuario_cs_email, data_prevista_
     if impl.get('usuario_cs') != usuario_cs_email:
         raise ValueError('Operação negada. Implantação não pertence a você.')
 
-    if impl.get('status') not in ['nova', 'sem_previsao']:
-        raise ValueError('Apenas implantações "Novas" ou "Sem previsão" podem ser agendadas.')
+    if impl.get('status') not in ['nova', 'sem_previsao', 'futura']:
+        raise ValueError('Apenas implantações "Novas", "Sem previsão" ou "Futuras" podem ser agendadas.')
 
     # Validar que a data é futura
     try:
