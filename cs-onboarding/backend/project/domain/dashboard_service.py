@@ -12,6 +12,7 @@ REFATORAÇÃO SOLID: As funções foram movidas para módulos especializados:
 from .dashboard import (
     # Data
     get_dashboard_data,
+    get_tags_metrics,
     # Utils
     format_relative_time,
 )
@@ -19,5 +20,6 @@ from .dashboard import (
 # Manter __all__ para compatibilidade com imports *
 __all__ = [
     'get_dashboard_data',
+    'get_tags_metrics',
     'format_relative_time',
 ]

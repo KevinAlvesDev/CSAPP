@@ -254,6 +254,19 @@ def excluir_comentario_service(comentario_id, usuario_email, is_manager):
 
     execute_db("DELETE FROM comentarios_h WHERE id = %s", (comentario_id,))
 
+    # Verificar se ainda há comentários para este item e atualizar campo legado
+    if item_info and item_info.get('item_id'):
+        remaining = query_db(
+            "SELECT COUNT(*) as cnt FROM comentarios_h WHERE checklist_item_id = %s",
+            (item_info['item_id'],), one=True
+        )
+        if remaining and remaining.get('cnt', 0) == 0:
+            # Limpa o campo legado 'comment' pois não há mais comentários
+            execute_db(
+                "UPDATE checklist_items SET comment = NULL WHERE id = %s",
+                (item_info['item_id'],)
+            )
+
     if item_info:
         try:
             detalhe = f"Comentário em '{item_info.get('item_title', '')}' excluído."

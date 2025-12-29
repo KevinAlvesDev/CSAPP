@@ -10,6 +10,7 @@ Estrutura:
 # Importações de data.py
 from .data import (
     get_dashboard_data,
+    get_tags_metrics,
 )
 
 # Importações de utils.py
@@ -20,5 +21,6 @@ from .utils import (
 # Exports públicos
 __all__ = [
     'get_dashboard_data',
+    'get_tags_metrics',
     'format_relative_time',
 ]

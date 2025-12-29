@@ -330,3 +330,77 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
         cache.set(cache_key, result, timeout=300)
 
     return result
+
+
+def get_tags_metrics(start_date=None, end_date=None, user_email=None):
+    """
+    Busca métricas de tags de comentários (Interno/Externo e Tipos).
+    """
+    query_sql = """
+        SELECT 
+            ch.usuario_cs,
+            p.nome as user_name,
+            ch.visibilidade,
+            ch.tag,
+            COUNT(*) as qtd
+        FROM comentarios_h ch
+        LEFT JOIN perfil_usuario p ON ch.usuario_cs = p.usuario
+        WHERE 1=1
+    """
+    args = []
+
+    if start_date:
+        query_sql += " AND date(ch.data_criacao) >= %s"
+        args.append(start_date)
+    
+    if end_date:
+        query_sql += " AND date(ch.data_criacao) <= %s"
+        args.append(end_date)
+        
+    if user_email:
+        query_sql += " AND ch.usuario_cs = %s"
+        args.append(user_email)
+
+    query_sql += " GROUP BY ch.usuario_cs, ch.visibilidade, ch.tag ORDER BY p.nome"
+
+    rows = query_db(query_sql, tuple(args))
+    if not rows:
+        return {}
+        
+    report = {}
+    
+    for row in rows:
+        email = row['usuario_cs']
+        nome = row['user_name'] or email
+        vis = row['visibilidade'] or 'interno'
+        tag = row['tag'] or 'Sem tag'
+        qtd = row['qtd']
+        
+        if email not in report:
+            report[email] = {
+                'nome': nome,
+                'total_interno': 0,
+                'total_externo': 0,
+                'total_geral': 0,
+                'tags_count': {
+                    'Ação interna': 0,
+                    'Reunião': 0,
+                    'No Show': 0,
+                    'Sem tag': 0
+                }
+            }
+            
+        report[email]['total_geral'] += qtd
+            
+        if vis == 'interno':
+            report[email]['total_interno'] += qtd
+        elif vis == 'externo':
+            report[email]['total_externo'] += qtd
+            
+        # Normalizar tag key
+        if tag in report[email]['tags_count']:
+             report[email]['tags_count'][tag] += qtd
+        else:
+             report[email]['tags_count'][tag] = qtd
+            
+    return report

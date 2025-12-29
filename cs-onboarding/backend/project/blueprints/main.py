@@ -30,7 +30,7 @@ from ..constants import (
     TIPOS_PLANOS,
 )
 from ..db import query_db
-from ..domain.dashboard_service import get_dashboard_data
+from ..domain.dashboard_service import get_dashboard_data, get_tags_metrics
 from ..domain.implantacao_service import get_implantacao_details
 
 main_bp = Blueprint('main', __name__)
@@ -105,6 +105,23 @@ def dashboard():
         current_cs_filter = None
         sort_days = None
 
+    # Filtros de data para relatório de tags
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+
+    # Buscar métricas de tags
+    tags_report_email = current_cs_filter if is_manager else user_email
+    # Se for gestor e não filtrou, mostra todos (tags_report_email = None)
+    # Se for gestor e filtrou, mostra só do filtro
+    # Se for implantador, user_email é o dele, então mostra só dele
+    # Mas espere, se is_manager for True e current_cs_filter for None, tags_report_email é None -> Busca Todos. OK.
+
+    tags_report = {}
+    try:
+        tags_report = get_tags_metrics(start_date, end_date, tags_report_email)
+    except Exception as e:
+        current_app.logger.error(f"Erro ao buscar tags metrics: {e}")
+
     try:
         dashboard_data, metrics = get_dashboard_data(
             user_email,
@@ -141,6 +158,9 @@ def dashboard():
             'dashboard.html',
             user_info=user_info,
             metrics=final_metrics,
+            tags_report=tags_report,
+            current_start_date=start_date,
+            current_end_date=end_date,
             implantacoes_andamento=dashboard_data.get('andamento', []),
             implantacoes_novas=dashboard_data.get('novas', []),
             implantacoes_futuras=dashboard_data.get('futuras', []),

@@ -1204,8 +1204,45 @@ class ChecklistRenderer {
         if (result.success) {
             // Recarrega comentários e atualiza timeline
             await this.loadComments(itemId);
+
+            // Atualiza o indicador visual do botão de comentários
+            this.updateCommentIndicator(itemId);
+
             try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) { }
             try { if (typeof window.appendTimelineEvent === 'function') window.appendTimelineEvent('comentario_excluido', `Comentário excluído`); } catch (_) { }
+        }
+    }
+
+    updateCommentIndicator(itemId) {
+        // Verifica se ainda há comentários no histórico
+        const historyContainer = this.container.querySelector(`#comments-history-${itemId}`);
+        const hasComments = historyContainer &&
+            historyContainer.querySelectorAll('.comment-item').length > 0;
+
+        // Atualiza o ícone do botão
+        const button = this.container.querySelector(`.btn-comment-toggle[data-item-id="${itemId}"]`);
+        if (button) {
+            const icon = button.querySelector('i');
+            if (icon) {
+                // Atualiza classe de cor
+                icon.classList.remove('text-primary', 'text-muted');
+                icon.classList.add(hasComments ? 'text-primary' : 'text-muted');
+
+                // Atualiza/remove indicador vermelho
+                const indicator = icon.querySelector('.bg-danger');
+                if (hasComments && !indicator) {
+                    // Adiciona indicador
+                    icon.innerHTML += '<span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle" style="font-size: 0.4rem;"></span>';
+                } else if (!hasComments && indicator) {
+                    // Remove indicador
+                    indicator.remove();
+                }
+            }
+        }
+
+        // Atualiza também o flatData para manter consistência
+        if (this.flatData[itemId]) {
+            this.flatData[itemId].comment = hasComments ? 'has_comment' : '';
         }
     }
 
