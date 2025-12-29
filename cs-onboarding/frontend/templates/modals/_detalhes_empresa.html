@@ -1,12 +1,16 @@
 {% set implantacao = implantacao if implantacao is defined else {} %}
 <div class="modal fade" id="modalDetalhesEmpresa" tabindex="-1" aria-labelledby="modalDetalhesEmpresaLabel"
     aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content" style="background-color: var(--container-bg); color: var(--body-color);">
             <div class="modal-header header-bg">
-                <h5 class="modal-title" id="modalDetalhesEmpresaLabel" style="color: var(--body-color);">
-                    <i class="bi bi-building me-2"></i>Resumo da Empresa
-                </h5>
+                <h5 class="modal-title" id="modalDetalhesEmpresaLabel" style="color: var(--body-color);">Detalhes da
+                    Empresa</h5>
+                <div class="ms-auto me-3 d-flex align-items-center">
+                    <small class="text-muted me-2" id="oamd-last-update"
+                        style="display:none; font-size: 0.8em;">Atualizado: <span
+                            id="oamd-last-update-time"></span></small>
+                </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form action="{{ url_for('actions.atualizar_detalhes_empresa') }}" method="POST">
@@ -15,113 +19,336 @@
                     <input type="hidden" id="modal-implantacao_id" name="implantacao_id" value="">
                     <input type="hidden" name="redirect_to" id="modal-redirect_to" value="dashboard">
 
-                    <!-- Empresa (Nome) - Readonly, apenas para exibição -->
-                    <div class="mb-3">
-                        <label for="modal-nome_empresa" class="form-label fw-bold">
-                            <i class="bi bi-building text-primary me-1"></i>Empresa
-                        </label>
-                        <input type="text" class="form-control-plaintext fw-bold fs-5" id="modal-nome_empresa" readonly
-                            value="">
+                    <h6 class="text-primary mb-3 border-bottom pb-1 mt-3">Contatos e Responsáveis</h6>
+                    <div class="row">
+                        <div class="col-md-4 mb-3"><label for="modal-responsavel_cliente" class="form-label">Resp.
+                                Cliente (Nome)</label><input type="text" class="form-control"
+                                id="modal-responsavel_cliente" name="responsavel_cliente" maxlength="255"
+                                title="Nome do responsável pelo cliente"
+                                value="{{ implantacao.responsavel_cliente or '' }}"></div>
+                        <div class="col-md-4 mb-3"> <label for="modal-cargo_responsavel" class="form-label">Cargo
+                                Resp.</label> <select class="form-select tom-select-single" id="modal-cargo_responsavel"
+                                name="cargo_responsavel">
+                                <option value="">Selecione...</option> {% if cargos_responsavel %} {% for cargo in
+                                cargos_responsavel %} <option value="{{ cargo }}" {% if
+                                    implantacao.cargo_responsavel==cargo %}selected{% endif %}>{{ cargo }}</option> {%
+                                endfor %} {% endif %}
+                            </select> </div>
+                        <div class="col-md-4 mb-3"><label for="modal-email_responsavel" class="form-label">E-mail
+                                Resp.</label><input type="email" class="form-control" id="modal-email_responsavel"
+                                name="email_responsavel" pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+                                title="Digite um email válido (exemplo: nome@dominio.com)"
+                                value="{{ implantacao.email_responsavel or '' }}"></div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="modal-telefone_responsavel" class="form-label">Telefone Resp.</label>
+                            <input type="tel" class="form-control" id="modal-telefone_responsavel"
+                                name="telefone_responsavel" placeholder="(XX) XXXXX-XXXX" maxlength="15"
+                                pattern="^\(\d{2}\)\s\d{4,5}-\d{4}$"
+                                value="{{ implantacao.telefone_responsavel or '' }}">
+                            <div class="invalid-feedback">Telefone inválido. Use o formato (XX) XXXXX-XXXX ou (XX)
+                                XXXX-XXXX</div>
+                        </div>
+                        <div class="col-md-4 mb-3 d-none"><input type="hidden" id="modal-resp_estrategico_nome"
+                                name="resp_estrategico_nome"></div>
+                        <div class="col-md-4 mb-3 d-none"><input type="hidden" id="modal-resp_onb_nome"
+                                name="resp_onb_nome"></div>
+                    </div>
+                    <div class="mb-3 d-none"><textarea class="form-control d-none" id="modal-contatos" name="contatos"
+                            rows="1"></textarea></div>
+                    <div class="mb-3 d-none"><textarea class="form-control d-none" id="modal-resp_estrategico_obs"
+                            name="resp_estrategico_obs" rows="1"></textarea></div>
+                    <input type="hidden" id="modal-informacao_infra" name="informacao_infra"
+                        value="{{ implantacao.informacao_infra or '' }}">
+
+                    <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-1 mt-4">
+                        <h6 class="text-primary mb-0">Datas e Atributos de Sistema</h6>
                     </div>
 
-                    <!-- Status -->
-                    <div class="mb-3">
-                        <label for="modal-status_implantacao" class="form-label fw-bold">
-                            <i class="bi bi-flag text-primary me-1"></i>Status
-                        </label>
-                        <input type="text" class="form-control" id="modal-status_implantacao"
-                            name="status_implantacao_oamd" value="{{ implantacao.status_implantacao_oamd or '' }}">
-                    </div>
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label for="modal-data_cadastro" class="form-label">Data Cadastro</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control date-mask custom-datepicker no-datepicker"
+                                    id="modal-data_cadastro" name="data_cadastro" placeholder="DD/MM/AAAA"
+                                    value="{% if implantacao and implantacao.data_cadastro is defined and implantacao.data_cadastro %}{{ implantacao.data_cadastro.strftime('%Y-%m-%d') }}{% endif %}">
+                                <button class="btn btn-outline-secondary" type="button" id="btn-cal-data_cadastro"><i
+                                        class="bi bi-calendar3"></i></button>
+                            </div>
+                        </div>
 
-                    <!-- Data de Início -->
-                    <div class="mb-3">
-                        <label for="modal-inicio_efetivo" class="form-label fw-bold">
-                            <i class="bi bi-calendar-event text-primary me-1"></i>Data de Início
-                        </label>
-                        <div class="input-group">
-                            <input type="text" class="form-control date-mask custom-datepicker no-datepicker"
-                                id="modal-inicio_efetivo" name="data_inicio_efetivo" placeholder="DD/MM/AAAA"
-                                value="{{ implantacao.data_inicio_efetivo or '' }}">
-                            <button class="btn btn-outline-secondary" type="button" id="btn-cal-inicio_efetivo"
-                                aria-label="Abrir calendário"><i class="bi bi-calendar3"></i></button>
+                        <div class="col-md-3 mb-3">
+                            <label for="modal-inicio_efetivo" class="form-label" data-bs-toggle="tooltip"
+                                title="Data de início da implantação">Início Implantação</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control date-mask custom-datepicker no-datepicker"
+                                    id="modal-inicio_efetivo" name="data_inicio_efetivo" placeholder="__/__/____"
+                                    value="{{ implantacao.data_inicio_efetivo or '' }}">
+                                <button class="btn btn-outline-secondary" type="button" id="btn-cal-inicio_efetivo"
+                                    aria-label="Abrir calendário"><i class="bi bi-calendar3"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3 mb-3">
+                            <label for="modal-data_inicio_producao" class="form-label" data-bs-toggle="tooltip"
+                                title="Data de início de produção">Início Produção</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control date-mask custom-datepicker no-datepicker"
+                                    id="modal-data_inicio_producao" name="data_inicio_producao" placeholder="__/__/____"
+                                    value="{{ implantacao.data_inicio_producao or '' }}">
+                                <button class="btn btn-outline-secondary" type="button"
+                                    id="btn-cal-data_inicio_producao" aria-label="Abrir calendário"><i
+                                        class="bi bi-calendar3"></i></button>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="modal-data_final_implantacao" class="form-label" data-bs-toggle="tooltip"
+                                title="Data final da implantação">Fim da Implantação</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control date-mask custom-datepicker no-datepicker"
+                                    id="modal-data_final_implantacao" name="data_final_implantacao"
+                                    placeholder="__/__/____" value="{{ implantacao.data_final_implantacao or '' }}">
+                                <button class="btn btn-outline-secondary" type="button"
+                                    id="btn-cal-data_final_implantacao" aria-label="Abrir calendário"><i
+                                        class="bi bi-calendar3"></i></button>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- ID Favorecido -->
-                    <div class="mb-3">
-                        <label for="modal-id_favorecido" class="form-label fw-bold">
-                            <i class="bi bi-hash text-primary me-1"></i>ID Favorecido
-                        </label>
-                        <input type="text" class="form-control" id="modal-id_favorecido" name="id_favorecido"
-                            pattern="[0-9]*" title="Digite apenas números"
-                            value="{{ implantacao.id_favorecido or '' }}">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="modal-status_implantacao" class="form-label">Status da Implantação</label>
+                            <input type="text" class="form-control" id="modal-status_implantacao"
+                                name="status_implantacao_oamd" data-bs-toggle="tooltip"
+                                title="Status atual do processo de implantação"
+                                value="{{ implantacao.status_implantacao_oamd or '' }}">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="modal-nivel_atendimento" class="form-label">Nível Atendimento</label>
+                            <input type="text" class="form-control" id="modal-nivel_atendimento"
+                                name="nivel_atendimento" data-bs-toggle="tooltip"
+                                title="Classificação de atendimento do cliente"
+                                value="{{ implantacao.nivel_atendimento or '' }}">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="modal-valor_monetario" class="form-label">Valor Atribuído (R$)</label>
+                            <input type="text" class="form-control money-mask" id="modal-valor_monetario"
+                                name="valor_monetario" placeholder="R$ 0,00"
+                                title="Valor em reais atribuído à implantação"
+                                value="{{ implantacao.valor_monetario or '' }}">
+                        </div>
                     </div>
 
-                    <!-- Responsável -->
-                    <div class="mb-3">
-                        <label for="modal-responsavel_cliente" class="form-label fw-bold">
-                            <i class="bi bi-person text-primary me-1"></i>Responsável
-                        </label>
-                        <input type="text" class="form-control" id="modal-responsavel_cliente"
-                            name="responsavel_cliente" maxlength="255"
-                            value="{{ implantacao.responsavel_cliente or '' }}">
+                    <div class="row">
+                        <div class="col-md-6 mb-3"><label for="modal-valor_atribuido" class="form-label">Nível de
+                                Receita (MRR)</label><input type="text" class="form-control" id="modal-valor_atribuido"
+                                name="valor_atribuido" placeholder="Ex: Gold, Platina, etc"
+                                value="{{ implantacao.valor_atribuido or '' }}"></div>
+                        <div class="col-md-3 mb-3"><label for="modal-id_favorecido" class="form-label">ID
+                                Favorecido</label><input type="text" class="form-control" id="modal-id_favorecido"
+                                name="id_favorecido" pattern="[0-9]*" title="Digite apenas números"
+                                value="{{ implantacao.id_favorecido or '' }}"></div>
+                        <div class="col-md-3 mb-3">
+                            <label for="modal-cnpj" class="form-label">CNPJ</label>
+                            <input type="text" class="form-control cnpj-mask" id="modal-cnpj" name="cnpj"
+                                placeholder="XX.XXX.XXX/XXXX-XX" value="{{ implantacao.cnpj or '' }}">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-3 mb-3"><label for="modal-chave_oamd" class="form-label">Chave
+                                ZW</label><input type="text" class="form-control" id="modal-chave_oamd"
+                                name="chave_oamd" maxlength="255" title="Chave ZW"
+                                value="{{ implantacao.chave_oamd or '' }}"></div>
+                        <div class="col-md-9 mb-3">
+                            <label for="modal-tela_apoio_link" class="form-label">Tela de Apoio (Link)</label>
+                            <div class="input-group">
+                                <input type="url" class="form-control" id="modal-tela_apoio_link" name="tela_apoio_link"
+                                    placeholder="https://exemplo.com"
+                                    title="Digite uma URL válida (exemplo: https://exemplo.com)"
+                                    value="{{ implantacao.tela_apoio_link or '' }}">
+                                <a href="#" id="btn-abrir-tela-apoio" class="btn btn-outline-primary" target="_blank"
+                                    title="Abrir em nova aba" style="display: none;">
+                                    <i class="bi bi-box-arrow-up-right"></i>
+                                </a>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- Contato (Telefone) -->
-                    <div class="mb-3">
-                        <label for="modal-telefone_responsavel" class="form-label fw-bold">
-                            <i class="bi bi-telephone text-primary me-1"></i>Contato
-                        </label>
-                        <input type="tel" class="form-control" id="modal-telefone_responsavel"
-                            name="telefone_responsavel" placeholder="(XX) XXXXX-XXXX" maxlength="15"
-                            value="{{ implantacao.telefone_responsavel or '' }}">
+
+                    <h6 class="text-primary mb-3 border-bottom pb-1 mt-4">Configurações e Detalhes Operacionais</h6>
+                    <div class="row">
+                        <div class="col-md-4 mb-3"><label for="modal-seguimento"
+                                class="form-label">Segmento</label><select class="form-select tom-select-multi"
+                                id="modal-seguimento" name="seguimento" multiple>
+                                <option value="">Selecione...</option>{% if SEGUIMENTOS_LIST %}{% for s in
+                                SEGUIMENTOS_LIST %}<option value="{{ s }}" {% if s in (implantacao.seguimento or ''
+                                    ).split(',') %}selected{% endif %}>{{ s }}</option>{% endfor %}{% endif %}
+                            </select></div>
+                        <div class="col-md-4 mb-3"><label for="modal-tipos_planos" class="form-label">Tipos de
+                                Planos</label><select class="form-select tom-select-multi" id="modal-tipos_planos"
+                                name="tipos_planos" multiple>
+                                <option value="">Selecione...</option>{% if TIPOS_PLANOS %}{% for tp in TIPOS_PLANOS %}
+                                <option value="{{ tp }}" {% if tp in (implantacao.tipos_planos or '' ).split(',')
+                                    %}selected{% endif %}>{{ tp }}</option>{% endfor %}{% endif %}
+                            </select></div>
+                        <div class="col-md-4 mb-3"><label for="modal-modalidades"
+                                class="form-label">Modalidades</label><select class="form-select tom-select-multi"
+                                id="modal-modalidades" name="modalidades" multiple>
+                                <option value="">Selecione...</option>{% if MODALIDADES_LIST %}{% for m in
+                                MODALIDADES_LIST %}<option value="{{ m }}" {% if m in (implantacao.modalidades or ''
+                                    ).split(',') %}selected{% endif %}>{{ m }}</option>{% endfor %}{% endif %}
+                            </select></div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3"><label for="modal-horarios_func"
+                                class="form-label">Horários</label><select class="form-select tom-select-multi"
+                                id="modal-horarios_func" name="horarios_func" multiple>
+                                <option value="">Selecione...</option>{% if HORARIOS_FUNCIONAMENTO %}{% for hf in
+                                HORARIOS_FUNCIONAMENTO %}<option value="{{ hf }}" {% if hf in (implantacao.horarios_func
+                                    or '' ).split(',') %}selected{% endif %}>{{ hf }}</option>{% endfor %}{% endif %}
+                            </select></div>
+                        <div class="col-md-6 mb-3"><label for="modal-formas_pagamento"
+                                class="form-label">Pagamento</label><select class="form-select tom-select-multi"
+                                id="modal-formas_pagamento" name="formas_pagamento" multiple>
+                                <option value="">Selecione...</option>{% if FORMAS_PAGAMENTO %}{% for fp in
+                                FORMAS_PAGAMENTO %}<option value="{{ fp }}" {% if fp in (implantacao.formas_pagamento
+                                    or '' ).split(',') %}selected{% endif %}>{{ fp }}</option>{% endfor %}{% endif %}
+                            </select></div>
+                    </div>
+                    <h6 class="text-primary mb-3 border-bottom pb-1 mt-4">Sistemas e Integrações</h6>
+                    <div class="row">
+                        <div class="col-md-6 mb-3"><label for="modal-sistema_anterior" class="form-label">Sistema
+                                Anterior</label><select class="form-select tom-select-single"
+                                id="modal-sistema_anterior" name="sistema_anterior">
+                                <option value="">Selecione...</option>{% if SISTEMAS_ANTERIORES %}{% for sa in
+                                SISTEMAS_ANTERIORES %}<option value="{{ sa }}" {% if implantacao.sistema_anterior==sa
+                                    %}selected{% endif %}>{{ sa }}</option>{% endfor %}{% endif %}
+                            </select></div>
+                        <div class="col-md-6 mb-3"><label for="modal-recorrencia_usa"
+                                class="form-label">Recorrência</label><select class="form-select tom-select-single"
+                                id="modal-recorrencia_usa" name="recorrencia_usa">
+                                <option value="">Selecione...</option>{% if RECORRENCIA_USADA %}{% for ru in
+                                RECORRENCIA_USADA %}<option value="{{ ru }}" {% if implantacao.recorrencia_usa==ru
+                                    %}selected{% endif %}>{{ ru }}</option>{% endfor %}{% endif %}
+                            </select></div>
                     </div>
 
-                    <!-- Campos ocultos necessários para o backend -->
-                    <input type="hidden" id="modal-cargo_responsavel" name="cargo_responsavel" value="">
-                    <input type="hidden" id="modal-email_responsavel" name="email_responsavel" value="">
-                    <input type="hidden" id="modal-resp_estrategico_nome" name="resp_estrategico_nome" value="">
-                    <input type="hidden" id="modal-resp_onb_nome" name="resp_onb_nome" value="">
-                    <input type="hidden" id="modal-contatos" name="contatos" value="">
-                    <input type="hidden" id="modal-resp_estrategico_obs" name="resp_estrategico_obs" value="">
-                    <input type="hidden" id="modal-informacao_infra" name="informacao_infra" value="">
-                    <input type="hidden" id="modal-data_cadastro" name="data_cadastro" value="">
-                    <input type="hidden" id="modal-data_inicio_producao" name="data_inicio_producao" value="">
-                    <input type="hidden" id="modal-data_final_implantacao" name="data_final_implantacao" value="">
-                    <input type="hidden" id="modal-nivel_atendimento" name="nivel_atendimento" value="">
-                    <input type="hidden" id="modal-valor_monetario" name="valor_monetario" value="">
-                    <input type="hidden" id="modal-valor_atribuido" name="valor_atribuido" value="">
-                    <input type="hidden" id="modal-cnpj" name="cnpj" value="">
-                    <input type="hidden" id="modal-chave_oamd" name="chave_oamd" value="">
-                    <input type="hidden" id="modal-tela_apoio_link" name="tela_apoio_link" value="">
-                    <input type="hidden" id="modal-seguimento" name="seguimento" value="">
-                    <input type="hidden" id="modal-tipos_planos" name="tipos_planos" value="">
-                    <input type="hidden" id="modal-modalidades" name="modalidades" value="">
-                    <input type="hidden" id="modal-horarios_func" name="horarios_func" value="">
-                    <input type="hidden" id="modal-formas_pagamento" name="formas_pagamento" value="">
-                    <input type="hidden" id="modal-sistema_anterior" name="sistema_anterior" value="">
-                    <input type="hidden" id="modal-recorrencia_usa" name="recorrencia_usa" value="">
-                    <input type="hidden" id="modal-diaria" name="diaria" value="">
-                    <input type="hidden" id="modal-freepass" name="freepass" value="">
-                    <input type="hidden" id="modal-importacao" name="importacao" value="">
-                    <input type="hidden" id="modal-boleto" name="boleto" value="">
-                    <input type="hidden" id="modal-nota_fiscal" name="nota_fiscal" value="">
-                    <input type="hidden" id="modal-alunos_ativos" name="alunos_ativos" value="">
-                    <input type="hidden" id="modal-catraca" name="catraca" value="">
-                    <input type="hidden" id="modal-modelo_catraca" name="modelo_catraca" value="">
-                    <input type="hidden" id="modal-facial" name="facial" value="">
-                    <input type="hidden" id="modal-modelo_facial" name="modelo_facial" value="">
-                    <input type="hidden" id="modal-wellhub" name="wellhub" value="">
-                    <input type="hidden" id="modal-totalpass" name="totalpass" value="">
+                    <h6 class="text-primary mb-3 border-bottom pb-1 mt-4">Recursos</h6>
+                    <div class="row">
+                        <div class="col-md-2 mb-3"><label for="modal-diaria" class="form-label">Diária?</label><select
+                                class="form-select" id="modal-diaria" name="diaria">
+                                {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}" {% if
+                                    implantacao.diaria==op %}selected{% endif %}>{{ op }}</option>{% endfor %}{% endif
+                                %}
+                            </select></div>
+                        <div class="col-md-2 mb-3"><label for="modal-freepass"
+                                class="form-label">Freepass?</label><select class="form-select" id="modal-freepass"
+                                name="freepass">
+                                {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}" {% if
+                                    implantacao.freepass==op %}selected{% endif %}>{{ op }}</option>{% endfor %}{% endif
+                                %}
+                            </select></div>
+                        <div class="col-md-2 mb-3"><label for="modal-importacao"
+                                class="form-label">Importação?</label><select class="form-select" id="modal-importacao"
+                                name="importacao">
+                                {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}" {% if
+                                    implantacao.importacao==op %}selected{% endif %}>{{ op }}</option>{% endfor %}{%
+                                endif %}
+                            </select></div>
+                        <div class="col-md-2 mb-3"><label for="modal-boleto" class="form-label">Boleto?</label><select
+                                class="form-select" id="modal-boleto" name="boleto">
+                                {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}" {% if
+                                    implantacao.boleto==op %}selected{% endif %}>{{ op }}</option>{% endfor %}{% endif
+                                %}
+                            </select></div>
+                        <div class="col-md-2 mb-3"><label for="modal-nota_fiscal" class="form-label">Nota
+                                Fiscal?</label><select class="form-select" id="modal-nota_fiscal" name="nota_fiscal">
+                                {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}" {% if
+                                    implantacao.nota_fiscal==op %}selected{% endif %}>{{ op }}</option>{% endfor %}{%
+                                endif %}
+                            </select></div>
+                        <div class="col-md-2 mb-3"><label for="modal-alunos_ativos" class="form-label">Alunos
+                                Ativos</label><input type="number" class="form-control" id="modal-alunos_ativos"
+                                name="alunos_ativos" min="0" step="1" inputmode="numeric" pattern="[0-9]*"
+                                placeholder="Não definido" title="Digite apenas números inteiros"
+                                value="{{ implantacao.alunos_ativos or '' }}">
+                        </div>
+
+                    </div>
+                    <div class="row">
+                        <div class="col-md-2 mb-3"><label for="modal-catraca" class="form-label">Catraca?</label><select
+                                class="form-select" id="modal-catraca" name="catraca">
+                                {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}" {% if
+                                    implantacao.catraca==op %}selected{% endif %}>{{ op }}</option>{% endfor %}{% endif
+                                %}
+                            </select></div>
+                        <div class="col-md-2 mb-3" id="row-catraca-modelo" style="display: none;"><label
+                                for="modal-modelo_catraca" class="form-label">Modelo da Catraca</label><input
+                                type="text" class="form-control" id="modal-modelo_catraca" name="modelo_catraca"
+                                placeholder="Não definido" maxlength="100" title="Modelo da catraca"
+                                value="{{ implantacao.modelo_catraca or '' }}"></div>
+                        <div class="col-md-2 mb-3"><label for="modal-facial" class="form-label">Facial?</label><select
+                                class="form-select" id="modal-facial" name="facial">
+                                {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}" {% if
+                                    implantacao.facial==op %}selected{% endif %}>{{ op }}</option>{% endfor %}{% endif
+                                %}
+                            </select></div>
+                        <div class="col-md-2 mb-3" id="row-facial-modelo" style="display: none;"><label
+                                for="modal-modelo_facial" class="form-label">Modelo Facial</label><input type="text"
+                                class="form-control" id="modal-modelo_facial" name="modelo_facial"
+                                placeholder="Não definido" maxlength="100" title="Modelo facial"
+                                value="{{ implantacao.modelo_facial or '' }}"></div>
+                        <div class="col-md-2 mb-3"><label for="modal-wellhub" class="form-label">WellHub?</label><select
+                                class="form-select" id="modal-wellhub" name="wellhub">
+                                {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}" {% if
+                                    implantacao.wellhub==op %}selected{% endif %}>{{ op }}</option>{% endfor %}{% endif
+                                %}
+                            </select></div>
+                        <div class="col-md-2 mb-3"><label for="modal-totalpass"
+                                class="form-label">TotalPass?</label><select class="form-select" id="modal-totalpass"
+                                name="totalpass">
+                                {% if SIM_NAO_OPTIONS %}{% for op in SIM_NAO_OPTIONS %}<option value="{{ op }}" {% if
+                                    implantacao.totalpass==op %}selected{% endif %}>{{ op }}</option>{% endfor %}{%
+                                endif %}
+                            </select></div>
+                    </div>
                 </div>
                 <div class="modal-footer header-bg">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                    <button type="button" class="btn btn-primary btn-salvar-detalhes"
-                        style="background-color: var(--accent-color); border-color: var(--accent-color);">
-                        <i class="bi bi-check-lg me-1"></i>Salvar
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-outline-primary" id="btn-consultar-oamd"
+                        title="Consultar dados no OAMD">
+                        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"
+                            id="btn-consultar-oamd-loader"></span>
+                        <i class="bi bi-cloud-download" id="btn-consultar-oamd-icon"></i> Consultar
                     </button>
+                    <button type="button" class="btn btn-primary btn-salvar-detalhes"
+                        style="background-color: var(--accent-color); border-color: var(--accent-color);">Salvar
+                        Alterações</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
+<script>
+    // FALLBACK DE SEGURANÇA: Garante que os campos de recursos mostrem "Não definido" quando vazios
+    // A lógica principal está em modal_detalhes_empresa.js - este script é apenas uma garantia extra
+    document.addEventListener('DOMContentLoaded', function () {
+        const modal = document.getElementById('modalDetalhesEmpresa');
+        if (!modal) return;
+
+        modal.addEventListener('shown.bs.modal', function () {
+            // Executa após outros scripts para garantir valores default
+            setTimeout(function () {
+                const campos = ['modal-catraca', 'modal-facial', 'modal-wellhub', 'modal-totalpass'];
+                campos.forEach(function (id) {
+                    const select = document.getElementById(id);
+                    if (select && (!select.value || select.value.trim() === '')) {
+                        select.value = 'Não definido';
+                    }
+                });
+            }, 100);
+        });
+    });
+</script>

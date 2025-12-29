@@ -4,7 +4,7 @@ Adicionar, listar e excluir comentários.
 Princípio SOLID: Single Responsibility
 """
 import logging
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 from flask import g
 
@@ -80,7 +80,9 @@ def add_comment_to_item(item_id, text, visibilidade='interno', usuario_email=Non
                 pass
 
         # 3. Inserir no histórico (comentarios_h)
-        now = datetime.now()
+        # Usar timezone de Brasília (UTC-3)
+        tz_brasilia = timezone(timedelta(hours=-3))
+        now = datetime.now(tz_brasilia).replace(tzinfo=None)  # Remove tzinfo para compatibilidade com DB
         noshow_val = noshow if db_type == 'postgres' else (1 if noshow else 0)
         insert_sql = """
             INSERT INTO comentarios_h (checklist_item_id, usuario_cs, texto, data_criacao, visibilidade, noshow, tag)
@@ -143,7 +145,7 @@ def listar_comentarios_implantacao(impl_id, page=1, per_page=20):
         JOIN checklist_items ci ON c.checklist_item_id = ci.id
         LEFT JOIN perfil_usuario p ON c.usuario_cs = p.usuario
         WHERE ci.implantacao_id = %s
-        ORDER BY c.data_criacao ASC
+        ORDER BY c.data_criacao DESC
         LIMIT %s OFFSET %s
     """
     comments = query_db(comments_query, (impl_id, per_page, offset))
