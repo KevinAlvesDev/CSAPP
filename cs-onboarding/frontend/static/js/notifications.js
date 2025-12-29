@@ -32,7 +32,29 @@ document.addEventListener('DOMContentLoaded', function () {
     notificationBtn.parentElement.appendChild(notificationDropdown);
 
     // LocalStorage para rastrear visualizações
-    const STORAGE_KEY = 'cs_notifications_last_viewed';
+    const STORAGE_KEY = 'cs_notifications_hash';
+
+    function getStoredHash() {
+        return localStorage.getItem(STORAGE_KEY) || '';
+    }
+
+    function setStoredHash(hash) {
+        localStorage.setItem(STORAGE_KEY, hash);
+    }
+
+    // Gerar hash simples das notificações
+    function generateHash(notifications) {
+        if (!notifications || notifications.length === 0) return 'empty';
+        // Usa os títulos para gerar um hash simples
+        const titles = notifications.map(n => n.title || '').join('|');
+        let hash = 0;
+        for (let i = 0; i < titles.length; i++) {
+            const char = titles.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32bit integer
+        }
+        return hash.toString();
+    }
 
     function getLastViewed() {
         const stored = localStorage.getItem(STORAGE_KEY);
@@ -52,11 +74,7 @@ document.addEventListener('DOMContentLoaded', function () {
             notificationDropdown.style.display = 'none';
         } else {
             notificationDropdown.style.display = 'block';
-            loadNotifications();
-            // Marca como visualizado ao abrir
-            setLastViewed();
-            // Zera o badge imediatamente
-            updateBadge(0);
+            loadNotifications(true); // true = marcar como visto
         }
     });
 
@@ -81,7 +99,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Carregar notificações da API
     // Carregar notificações da API
-    async function loadNotifications() {
+    async function loadNotifications(markAsViewed = false) {
         showLoading();
 
         try {
@@ -94,7 +112,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 throw new Error(data.error || 'Erro desconhecido');
             }
 
-            renderNotifications(data.notifications || []);
+            const notifications = data.notifications || [];
+            renderNotifications(notifications);
+
+            // Se abriu o dropdown, marcar como visualizado
+            if (markAsViewed && notifications.length > 0) {
+                const currentHash = generateHash(notifications);
+                setStoredHash(currentHash);
+                updateBadge(0);
+            }
 
         } catch (error) {
             // Toast já foi mostrado pelo apiFetch, mas atualizamos a UI do dropdown também
@@ -170,12 +196,13 @@ document.addEventListener('DOMContentLoaded', function () {
             const data = await window.apiFetch('/api/notifications', { showErrorToast: false });
 
             if (data.ok) {
-                const lastViewed = getLastViewed();
-                const apiTimestamp = data.timestamp ? new Date(data.timestamp) : new Date();
+                const notifications = data.notifications || [];
+                const currentHash = generateHash(notifications);
+                const storedHash = getStoredHash();
 
-                // Se nunca visualizou OU se há notificações novas desde a última visualização
-                if (!lastViewed || apiTimestamp > lastViewed) {
-                    updateBadge(data.total || 0);
+                // Só mostra badge se o conteúdo das notificações mudou
+                if (notifications.length > 0 && currentHash !== storedHash) {
+                    updateBadge(notifications.length);
                 } else {
                     updateBadge(0);
                 }

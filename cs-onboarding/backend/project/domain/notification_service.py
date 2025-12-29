@@ -345,7 +345,7 @@ def _get_new_waiting(user_email):
         notifications.append({
             'type': 'info',
             'priority': 7,
-            'title': f"📋 {total_novas} implantação{'ões' if total_novas > 1 else ''} aguardando início",
+            'title': f"📋 {total_novas} {'implantações' if total_novas > 1 else 'implantação'} aguardando início",
             'message': "Na aba 'Novas' do dashboard"
         })
     
@@ -379,7 +379,7 @@ def _get_weekly_summary(user_email, hoje):
                     'type': 'info',
                     'priority': 8,
                     'title': f"📊 Resumo da semana",
-                    'message': f"{total_tarefas} tarefas pendentes em {total_impl} implantação{'ões' if total_impl > 1 else ''}"
+                    'message': f"{total_tarefas} tarefas pendentes em {total_impl} {'implantações' if total_impl > 1 else 'implantação'}"
                 })
     
     return notifications
@@ -403,7 +403,7 @@ def _get_completed_this_week(user_email, inicio_semana):
         notifications.append({
             'type': 'success',
             'priority': 9,
-            'title': f"✅ {total_concluidas} implantação{'ões' if total_concluidas > 1 else ''} concluída{'s' if total_concluidas > 1 else ''} esta semana",
+            'title': f"✅ {total_concluidas} {'implantações concluídas' if total_concluidas > 1 else 'implantação concluída'} esta semana",
             'message': "Parabéns pelo progresso! 🎉"
         })
     
