@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Política de Privacidade - CS Implantação{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-body p-5">
+                    <h1 class="h2 mb-4 text-center">
+                        <i class="bi bi-shield-lock me-2"></i>Política de Privacidade
+                    </h1>
+
+                    <p class="text-muted text-center mb-4">
+                        Última atualização: {{ now().strftime('%d/%m/%Y') if now is defined else '29/12/2024' }}
+                    </p>
+
+                    <hr class="my-4">
+
+                    <h2 class="h5 mt-4">1. Introdução</h2>
+                    <p>
+                        O CS Implantação ("Sistema") é uma aplicação interna da Pacto Soluções destinada ao
+                        gerenciamento de implantações de clientes. Esta Política de Privacidade descreve como
+                        coletamos, usamos e protegemos as informações dos usuários.
+                    </p>
+
+                    <h2 class="h5 mt-4">2. Dados Coletados</h2>
+                    <p>Coletamos os seguintes dados através do login com Google:</p>
+                    <ul>
+                        <li><strong>E-mail corporativo</strong> (@pactosolucoes.com.br)</li>
+                        <li><strong>Nome do usuário</strong> (conforme cadastro no Google)</li>
+                        <li><strong>Identificador único do Google</strong> (sub)</li>
+                    </ul>
+                    <p>
+                        Também coletamos dados de uso do sistema, como ações realizadas em implantações,
+                        comentários e registros de atividade para fins de auditoria e histórico.
+                    </p>
+
+                    <h2 class="h5 mt-4">3. Uso dos Dados</h2>
+                    <p>Os dados coletados são utilizados exclusivamente para:</p>
+                    <ul>
+                        <li>Autenticação e controle de acesso ao sistema</li>
+                        <li>Identificação do usuário responsável por ações no sistema</li>
+                        <li>Registro de histórico e auditoria de atividades</li>
+                        <li>Comunicação interna relacionada às implantações</li>
+                    </ul>
+
+                    <h2 class="h5 mt-4">4. Compartilhamento de Dados</h2>
+                    <p>
+                        Os dados <strong>não são compartilhados</strong> com terceiros externos à Pacto Soluções.
+                        O acesso é restrito a funcionários autorizados da empresa.
+                    </p>
+
+                    <h2 class="h5 mt-4">5. Segurança</h2>
+                    <p>
+                        Implementamos medidas de segurança técnicas e organizacionais para proteger os dados,
+                        incluindo:
+                    </p>
+                    <ul>
+                        <li>Conexões criptografadas (HTTPS)</li>
+                        <li>Autenticação segura via Google OAuth 2.0</li>
+                        <li>Controle de acesso baseado em perfis</li>
+                        <li>Logs de auditoria</li>
+                    </ul>
+
+                    <h2 class="h5 mt-4">6. Retenção de Dados</h2>
+                    <p>
+                        Os dados são mantidos enquanto o usuário estiver ativo na empresa ou conforme
+                        necessário para fins de auditoria e compliance.
+                    </p>
+
+                    <h2 class="h5 mt-4">7. Direitos do Usuário</h2>
+                    <p>
+                        Os usuários podem solicitar informações sobre seus dados ou exclusão dos mesmos
+                        entrando em contato com o administrador do sistema.
+                    </p>
+
+                    <h2 class="h5 mt-4">8. Contato</h2>
+                    <p>
+                        Para dúvidas sobre esta política, entre em contato através do e-mail:
+                        <a href="mailto:suporte@pactosolucoes.com.br">suporte@pactosolucoes.com.br</a>
+                    </p>
+
+                    <hr class="my-4">
+
+                    <div class="text-center">
+                        <a href="{{ url_for('auth.login') }}" class="btn btn-primary">
+                            <i class="bi bi-arrow-left me-2"></i>Voltar ao Login
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

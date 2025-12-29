@@ -21,11 +21,13 @@ def criar_implantacao_service(nome_empresa, usuario_atribuido, usuario_criador, 
     if not usuario_atribuido:
         raise ValueError('Usuário a ser atribuído é obrigatório.')
 
+    # Verifica se já existe um SISTEMA ativo para esta empresa (permite Sistema + Módulo simultaneamente)
     existente = query_db(
         """
         SELECT id, status
         FROM implantacoes
         WHERE LOWER(nome_empresa) = LOWER(%s)
+          AND tipo = 'completa'
           AND status IN ('nova','futura','andamento','parada')
         LIMIT 1
         """,
@@ -33,7 +35,7 @@ def criar_implantacao_service(nome_empresa, usuario_atribuido, usuario_criador, 
     )
     if existente:
         status_existente = existente.get('status')
-        raise ValueError(f'Já existe uma implantação ativa para "{nome_empresa}" (status: {status_existente}).')
+        raise ValueError(f'Já existe uma implantação de sistema ativa para "{nome_empresa}" (status: {status_existente}).')
 
     tipo = 'completa'
     status = 'nova'
@@ -72,11 +74,13 @@ def criar_implantacao_modulo_service(nome_empresa, usuario_atribuido, usuario_cr
     if modulo_tipo not in modulo_opcoes:
         raise ValueError('Módulo inválido.')
 
+    # Verifica se já existe um MÓDULO ativo para esta empresa (permite Sistema + Módulo simultaneamente)
     existente = query_db(
         """
         SELECT id, status
         FROM implantacoes
         WHERE LOWER(nome_empresa) = LOWER(%s)
+          AND tipo = 'modulo'
           AND status IN ('nova','futura','andamento','parada')
         LIMIT 1
         """,
@@ -84,7 +88,7 @@ def criar_implantacao_modulo_service(nome_empresa, usuario_atribuido, usuario_cr
     )
     if existente:
         status_existente = existente.get('status')
-        raise ValueError(f'Já existe uma implantação ativa para "{nome_empresa}" (status: {status_existente}).')
+        raise ValueError(f'Já existe uma implantação de módulo ativa para "{nome_empresa}" (status: {status_existente}).')
 
     tipo = 'modulo'
     status = 'nova'

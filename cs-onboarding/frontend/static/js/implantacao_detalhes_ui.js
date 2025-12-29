@@ -63,15 +63,9 @@
     const commentsTabBtn = document.getElementById('comments-tab');
     if (commentsTabBtn) {
       commentsTabBtn.addEventListener('shown.bs.tab', function (e) {
-        // Load comments only if list is empty or specifically requested
-        // But to keep it simple and fresh, we can reload or check if empty
-        const container = document.getElementById('comments-list-container');
-        // If container is effectively empty (only loading/empty placeholders), load
-        // We check if we have already loaded comments by checking for .comentario-item
-        if (container && container.querySelectorAll('.comentario-item').length === 0) {
-          resetGlobalComments();
-          carregarComentariosGerais();
-        }
+        // Sempre recarrega os comentários quando a aba é exibida
+        resetGlobalComments();
+        carregarComentariosGerais();
       });
     }
 

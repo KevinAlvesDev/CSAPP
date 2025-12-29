@@ -58,6 +58,18 @@ def home():
     )
 
 
+@main_bp.route('/privacy')
+def privacy():
+    """Página de Política de Privacidade (pública - necessária para verificação Google OAuth)."""
+    return render_template('legal/privacy.html')
+
+
+@main_bp.route('/terms')
+def terms():
+    """Página de Termos de Serviço (pública - necessária para verificação Google OAuth)."""
+    return render_template('legal/terms.html')
+
+
 @main_bp.route('/uploads/<path:filename>')
 @login_required
 def serve_upload(filename):
