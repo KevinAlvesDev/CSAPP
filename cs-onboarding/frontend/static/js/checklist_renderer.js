@@ -225,7 +225,7 @@ class ChecklistRenderer {
                         </span>
                         
                         <span class="col-comment">
-                        ${item.level === 0 || hasChildren ? `
+                        ${item.level === 0 ? `
                         <button class="btn-icon btn-comment-toggle p-1 border-0 bg-transparent" 
                                 data-item-id="${item.id}" 
                                 title="Comentários">
