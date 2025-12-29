@@ -71,7 +71,6 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
                 MAX(ch.data_criacao) as ultima_atividade
             FROM comentarios_h ch
             INNER JOIN checklist_items ci ON ch.checklist_item_id = ci.id
-            WHERE ch.deleted_at IS NULL
             GROUP BY ci.implantacao_id
         ) last_activity ON last_activity.implantacao_id = i.id
     """
@@ -204,7 +203,7 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
             current_app.logger.error(f"Unexpected error calculating dias_passados for impl {impl_id}")
             dias_passados = 0
 
-        # Processar última atividade (baseada no último comentário)
+        # Processar último comentário com robustez contra erros
         try:
             ultima_atividade_raw = impl.get('ultima_atividade')
             
