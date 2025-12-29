@@ -1,3 +1,4 @@
+{% set implantacao = implantacao if implantacao is defined else {} %}
 <div class="modal fade" id="modalDetalhesEmpresa" tabindex="-1" aria-labelledby="modalDetalhesEmpresaLabel"
     aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
@@ -71,7 +72,7 @@
                             <div class="input-group">
                                 <input type="text" class="form-control date-mask custom-datepicker no-datepicker"
                                     id="modal-data_cadastro" name="data_cadastro" placeholder="DD/MM/AAAA"
-                                    value="{{ implantacao.data_cadastro.strftime('%Y-%m-%d') if implantacao.data_cadastro else '' }}">
+                                    value="{% if implantacao and implantacao.data_cadastro is defined and implantacao.data_cadastro %}{{ implantacao.data_cadastro.strftime('%Y-%m-%d') }}{% endif %}">
                                 <button class="btn btn-outline-secondary" type="button" id="btn-cal-data_cadastro"><i
                                         class="bi bi-calendar3"></i></button>
                             </div>
