@@ -151,48 +151,11 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                                             impl.valor_monetario else 'N/A' }}</td>
                                         <td class="text-nowrap">
                                             {% if impl.usuario_cs == g.user_email %}
-                                            <button type="button" class="btn btn-sm btn-success" title="Iniciar Agora"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#modalIniciarImplantacao-{{ impl.id }}">
+                                            <button type="button" class="btn btn-sm btn-success btn-iniciar-implantacao"
+                                                title="Iniciar Agora" data-impl-id="{{ impl.id }}"
+                                                data-impl-nome="{{ impl.nome_empresa }}">
                                                 <i class="bi bi-play-circle me-1"></i> Iniciar
                                             </button>
-
-                                            <div class="modal fade" id="modalIniciarImplantacao-{{ impl.id }}"
-                                                tabindex="-1"
-                                                aria-labelledby="modalIniciarImplantacaoLabel-{{ impl.id }}"
-                                                aria-hidden="true">
-                                                <div class="modal-dialog modal-lg">
-                                                    <div class="modal-content">
-                                                        <div class="modal-header header-bg">
-                                                            <h5 class="modal-title"
-                                                                id="modalIniciarImplantacaoLabel-{{ impl.id }}">Iniciar
-                                                                Implantação</h5>
-                                                            <button type="button" class="btn-close"
-                                                                data-bs-dismiss="modal" aria-label="Close"></button>
-                                                        </div>
-                                                        <form method="POST"
-                                                            action="{{ url_for('actions.iniciar_implantacao') }}">
-                                                            <input type="hidden" name="csrf_token"
-                                                                value="{{ csrf_token() }}">
-                                                            <div class="modal-body">
-                                                                <p class="text-break">Tem certeza que deseja iniciar a
-                                                                    implantação de <strong class="text-break">{{
-                                                                        impl.nome_empresa }}</strong> agora?</p>
-                                                                <input type="hidden" name="implantacao_id"
-                                                                    value="{{ impl.id }}">
-                                                                <input type="hidden" name="redirect_to"
-                                                                    value="dashboard">
-                                                            </div>
-                                                            <div class="modal-footer header-bg">
-                                                                <button type="button" class="btn btn-secondary"
-                                                                    data-bs-dismiss="modal">Cancelar</button>
-                                                                <button type="submit"
-                                                                    class="btn btn-success">Iniciar</button>
-                                                            </div>
-                                                        </form>
-                                                    </div>
-                                                </div>
-                                            </div>
 
                                             <button type="button" class="btn btn-sm btn-info ms-1 btn-agendar-futuro"
                                                 data-bs-toggle="modal" data-bs-target="#agendarInicioModal"
@@ -742,6 +705,32 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
     </div>
 </div>
 
+<!-- Modal único para Iniciar Implantação (fora das tabelas) -->
+<div class="modal fade" id="modalIniciarImplantacao" tabindex="-1" aria-labelledby="modalIniciarImplantacaoLabel"
+    aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title" id="modalIniciarImplantacaoLabel">Iniciar Implantação</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('actions.iniciar_implantacao') }}" id="formIniciarImplantacao">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <p class="text-break">Tem certeza que deseja iniciar a implantação de <strong class="text-break"
+                            id="iniciarNomeEmpresa"></strong> agora?</p>
+                    <input type="hidden" name="implantacao_id" id="iniciarImplId" value="">
+                    <input type="hidden" name="redirect_to" value="dashboard">
+                </div>
+                <div class="modal-footer header-bg">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Iniciar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 
 {% endblock %}
 
@@ -837,6 +826,31 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                     });
                 }
             }
+        }
+
+        // Handler para o modal único de Iniciar Implantação
+        var iniciarModal = document.getElementById('modalIniciarImplantacao');
+        if (iniciarModal) {
+            document.querySelectorAll('.btn-iniciar-implantacao').forEach(function (btn) {
+                btn.addEventListener('click', function (e) {
+                    var implId = this.getAttribute('data-impl-id');
+                    var implNome = this.getAttribute('data-impl-nome');
+
+                    var modalNomeEl = iniciarModal.querySelector('#iniciarNomeEmpresa');
+                    var modalImplIdInput = iniciarModal.querySelector('#iniciarImplId');
+
+                    if (modalNomeEl) {
+                        modalNomeEl.textContent = implNome;
+                    }
+                    if (modalImplIdInput) {
+                        modalImplIdInput.value = implId;
+                    }
+
+                    // Abrir o modal
+                    var bsModal = new bootstrap.Modal(iniciarModal);
+                    bsModal.show();
+                });
+            });
         }
     });
 </script>

@@ -1,4 +1,5 @@
-﻿
+﻿# -*- coding: utf-8 -*-
+
 import json
 
 from flask import Blueprint, g, jsonify, make_response, render_template, request
@@ -6,7 +7,7 @@ from decimal import Decimal
 
 from ..blueprints.auth import login_required
 
-# Importar cache para invalidaÃ§Ã£o
+# Importar cache para invalidação
 try:
     from ..config.cache_config import cache
 except ImportError:
@@ -40,12 +41,12 @@ def progresso_implantacao(impl_id):
     try:
         impl_id = validate_integer(impl_id, min_value=1)
     except ValidationError as e:
-        return jsonify({'ok': False, 'error': f'ID invÃ¡lido: {str(e)}'}), 400
+        return jsonify({'ok': False, 'error': f'ID inválido: {str(e)}'}), 400
     try:
         pct, total, done = _get_progress(impl_id)
         return jsonify({'ok': True, 'progresso': pct, 'total': total, 'concluidas': done})
     except Exception as e:
-        api_logger.error(f"Erro ao obter progresso da implantaÃ§Ã£o {impl_id}: {e}", exc_info=True)
+        api_logger.error(f"Erro ao obter progresso da implantação {impl_id}: {e}", exc_info=True)
         return jsonify({'ok': False, 'error': 'Erro interno'}), 500
 
 
@@ -59,7 +60,7 @@ def get_timeline(impl_id):
     try:
         impl_id = validate_integer(impl_id, min_value=1)
     except ValidationError as e:
-        return jsonify({'ok': False, 'error': f'ID invÃ¡lido: {str(e)}'}), 400
+        return jsonify({'ok': False, 'error': f'ID inválido: {str(e)}'}), 400
 
     page = request.args.get('page', type=int) or 1
     per_page = request.args.get('per_page', type=int) or 50
@@ -109,7 +110,7 @@ def get_timeline(impl_id):
             items.append(d)
         return jsonify({'ok': True, 'logs': items, 'pagination': {'page': page, 'per_page': per_page}})
     except Exception as e:
-        api_logger.error(f"Erro ao buscar timeline da implantaÃ§Ã£o {impl_id}: {e}", exc_info=True)
+        api_logger.error(f"Erro ao buscar timeline da implantação {impl_id}: {e}", exc_info=True)
         return jsonify({'ok': False, 'error': 'Erro interno ao buscar timeline'}), 500
 
 
@@ -121,7 +122,7 @@ def export_timeline(impl_id):
     try:
         impl_id = validate_integer(impl_id, min_value=1)
     except ValidationError as e:
-        return jsonify({'ok': False, 'error': f'ID invÃ¡lido: {str(e)}'}), 400
+        return jsonify({'ok': False, 'error': f'ID inválido: {str(e)}'}), 400
 
     types_param = request.args.get('types', '')
     q = request.args.get('q', '')
@@ -167,7 +168,7 @@ def export_timeline(impl_id):
         resp.headers['Content-Disposition'] = f'attachment; filename="timeline_implantacao_{impl_id}.csv"'
         return resp
     except Exception as e:
-        api_logger.error(f"Erro ao exportar timeline da implantaÃ§Ã£o {impl_id}: {e}", exc_info=True)
+        api_logger.error(f"Erro ao exportar timeline da implantação {impl_id}: {e}", exc_info=True)
         return jsonify({'ok': False, 'error': 'Erro interno ao exportar timeline'}), 500
 
 
@@ -207,8 +208,8 @@ def consultar_empresa():
 @limiter.limit("60 per minute", key_func=lambda: g.user_email or get_remote_address())
 def get_notifications():
     """
-    Sistema completo de notificaÃ§Ãµes para o implantador.
-    Refatorado: Usa notification_service para a lÃ³gica de negÃ³cio.
+    Sistema completo de notificações para o implantador.
+    Refatorado: Usa notification_service para a lógica de negócio.
     """
     from ..domain.notification_service import get_user_notifications
     
@@ -226,57 +227,57 @@ def get_notifications():
 @validate_api_origin
 def test_notifications():
     """
-    Endpoint de teste para visualizar todos os tipos de notificaÃ§Ãµes.
+    Endpoint de teste para visualizar todos os tipos de notificações.
     Acesse: /api/notifications/test
     """
     from datetime import datetime
     
-    # Simula todos os 9 tipos de notificaÃ§Ãµes
+    # Simula todos os 9 tipos de notificações
     test_notifications = [
         {
             'type': 'danger',
-            'title': 'ðŸ”¥ Academia XYZ - 5 tarefas crÃ­ticas',
+            'title': '🔥 Academia XYZ - 5 tarefas críticas',
             'message': '3 atrasadas, 2 vencem hoje'
         },
         {
             'type': 'danger',
-            'title': 'â¸ï¸ Gym ABC parada hÃ¡ 14 dias',
-            'message': 'Motivo: Aguardando documentaÃ§Ã£o do cliente'
+            'title': '⏸️ Gym ABC parada há 14 dias',
+            'message': 'Motivo: Aguardando documentação do cliente'
         },
         {
             'type': 'warning',
-            'title': 'â° Studio Fit - 3 tarefas urgentes',
+            'title': '⏰ Studio Fit - 3 tarefas urgentes',
             'message': 'Vence em 1-2 dias'
         },
         {
             'type': 'warning',
-            'title': 'ðŸ“… Crossfit Pro inicia em 7 dias',
-            'message': 'Prepare-se para o inÃ­cio!'
+            'title': '📅 Crossfit Pro inicia em 7 dias',
+            'message': 'Prepare-se para o início!'
         },
         {
             'type': 'warning',
-            'title': 'â³ Pilates Center hÃ¡ 37 dias sem previsÃ£o',
-            'message': 'Defina uma data de inÃ­cio'
+            'title': '⏳ Pilates Center há 37 dias sem previsão',
+            'message': 'Defina uma data de início'
         },
         {
             'type': 'info',
-            'title': 'âš ï¸ Yoga Studio - 2 tarefas prÃ³ximas',
+            'title': '⚠️ Yoga Studio - 2 tarefas próximas',
             'message': 'Vence em 3-7 dias'
         },
         {
             'type': 'info',
-            'title': 'ðŸ“‹ 3 implantaÃ§Ãµes aguardando inÃ­cio',
+            'title': '📋 3 implantações aguardando início',
             'message': "Na aba 'Novas' do dashboard"
         },
         {
             'type': 'info',
-            'title': 'ðŸ“Š Resumo da semana',
-            'message': '23 tarefas pendentes em 4 implantaÃ§Ãµes'
+            'title': '📊 Resumo da semana',
+            'message': '23 tarefas pendentes em 4 implantações'
         },
         {
             'type': 'success',
-            'title': 'âœ… 2 implantaÃ§Ãµes concluÃ­das esta semana',
-            'message': 'ParabÃ©ns pelo progresso! ðŸŽ‰'
+            'title': '✅ 2 implantações concluídas esta semana',
+            'message': 'Parabéns pelo progresso! 🎉'
         }
     ]
     
