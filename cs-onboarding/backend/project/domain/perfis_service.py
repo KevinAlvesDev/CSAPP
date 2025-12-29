@@ -25,14 +25,14 @@ def listar_perfis(incluir_inativos: bool = False) -> List[Dict]:
             p.sistema,
             p.ativo,
             COUNT(DISTINCT perm.recurso_id) as total_permissoes,
-            (SELECT COUNT(*) FROM recursos WHERE ativo = 1) as total_recursos,
+            (SELECT COUNT(*) FROM recursos WHERE ativo = TRUE) as total_recursos,
             0 as total_usuarios
         FROM perfis_acesso p
-        LEFT JOIN permissoes perm ON perm.perfil_id = p.id AND perm.concedida = 1
+        LEFT JOIN permissoes perm ON perm.perfil_id = p.id AND perm.concedida = TRUE
     """
     
     if not incluir_inativos:
-        sql += " WHERE p.ativo = 1"
+        sql += " WHERE p.ativo = TRUE"
     
     sql += " GROUP BY p.id, p.nome, p.descricao, p.cor, p.icone, p.sistema, p.ativo ORDER BY p.nome"
     
