@@ -816,7 +816,16 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
             }
 
             if (window.flatpickr) {
-                var fpPrevisto = window.flatpickr('#data_inicio_previsto', { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true });
+                var fpPrevisto = window.flatpickr('#data_inicio_previsto', {
+                    dateFormat: 'Y-m-d',
+                    altInput: true,
+                    altFormat: 'd/m/Y',
+                    allowInput: true,
+                    appendTo: agendarModal.querySelector('.modal-body'),
+                    static: false,
+                    position: 'auto',
+                    minDate: 'today'
+                });
                 var btnPrevisto = document.getElementById('btn-cal-data_inicio_previsto');
                 if (btnPrevisto && fpPrevisto) btnPrevisto.addEventListener('click', function () { fpPrevisto.open(); });
                 var alt = fpPrevisto && fpPrevisto._input ? fpPrevisto._input : null;
