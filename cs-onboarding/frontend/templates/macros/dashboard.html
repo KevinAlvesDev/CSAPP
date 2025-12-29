@@ -70,11 +70,11 @@ Uso: {{ status_badge(impl.status) }}
 {% endmacro %}
 
 {#
-Macro para badge de tipo (Módulo ou Completa)
+Macro para badge de tipo (Módulo ou Sistema)
 Uso: {{ tipo_badge(impl.tipo) }}
 #}
 {% macro tipo_badge(tipo) %}
-<span class="badge bg-info text-dark">{{ 'Módulo' if tipo == 'modulo' else 'Completa' }}</span>
+<span class="badge bg-info text-dark">{{ 'Módulo' if tipo == 'modulo' else 'Sistema' }}</span>
 {% endmacro %}
 
 {#
