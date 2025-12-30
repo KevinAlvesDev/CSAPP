@@ -43,6 +43,36 @@ def iniciar_implantacao_service(implantacao_id, usuario_cs_email):
     return True
 
 
+def desfazer_inicio_implantacao_service(implantacao_id, usuario_cs_email):
+    """
+    Reverte o início de uma implantação (volta status para 'nova').
+    Útil caso o usuário tenha clicado em Iniciar por engano.
+    """
+    impl = query_db(
+        "SELECT usuario_cs, nome_empresa, status FROM implantacoes WHERE id = %s",
+        (implantacao_id,), one=True
+    )
+
+    if not impl:
+        raise ValueError('Implantação não encontrada.')
+    
+    if impl.get('usuario_cs') != usuario_cs_email:
+        raise ValueError('Operação negada. Implantação não pertence a você.')
+
+    if impl.get('status') != 'andamento':
+        raise ValueError(f'Apenas implantações "Em Andamento" podem ter o início desfeito. Status atual: {impl.get("status")}')
+
+    # Volta para 'nova', limpa a data de início efetivo, mas mantém o tipo
+    execute_db(
+        "UPDATE implantacoes SET status = 'nova', data_inicio_efetivo = NULL WHERE id = %s",
+        (implantacao_id,)
+    )
+    
+    logar_timeline(implantacao_id, usuario_cs_email, 'status_alterado', f'Início da implantação "{impl.get("nome_empresa", "N/A")}" desfeito (cancelar início).')
+    
+    return True
+
+
 def agendar_implantacao_service(implantacao_id, usuario_cs_email, data_prevista_iso):
     """
     Agenda uma implantação (muda status para 'futura').

@@ -516,6 +516,42 @@
           }
         });
       }
+
+      const btnConfirmarDesfazerInicio = document.getElementById('btn-confirmar-desfazer-inicio');
+      if (btnConfirmarDesfazerInicio) {
+        btnConfirmarDesfazerInicio.addEventListener('click', function (e) {
+          e.preventDefault();
+
+          // Close modal
+          const modal = document.getElementById('modalDesfazerInicio');
+          if (modal && window.bootstrap) {
+            const bsModal = bootstrap.Modal.getInstance(modal);
+            if (bsModal) bsModal.hide();
+          }
+
+          fetch('/desfazer_inicio_implantacao', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': CONFIG.csrfToken
+            },
+            body: JSON.stringify({ implantacao_id: CONFIG.implantacaoId })
+          })
+            .then(response => response.json())
+            .then(data => {
+              if (data.error) {
+                showToast(data.error, 'error');
+              } else {
+                showToast(data.message || 'Início desfeito com sucesso!', 'success');
+                setTimeout(() => location.reload(), 1000);
+              }
+            })
+            .catch(err => {
+              console.error(err);
+              showToast('Erro ao desfazer início.', 'error');
+            });
+        });
+      }
     }
 
 

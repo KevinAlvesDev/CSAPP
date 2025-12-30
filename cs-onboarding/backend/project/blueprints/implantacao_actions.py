@@ -5,7 +5,7 @@ import time
 from datetime import date, datetime
 
 from botocore.exceptions import ClientError
-from flask import Blueprint, current_app, flash, g, redirect, request, url_for
+from flask import Blueprint, current_app, flash, g, redirect, request, url_for, jsonify
 from flask_limiter.util import get_remote_address
 from werkzeug.utils import secure_filename
 
@@ -150,6 +150,39 @@ def iniciar_implantacao():
         app_logger.error(f"Erro ao iniciar implantação ID {implantacao_id}: {e}")
         flash('Erro ao iniciar implantação.', 'error')
         return redirect(url_for('main.dashboard'))
+
+
+@implantacao_actions_bp.route('/desfazer_inicio_implantacao', methods=['POST'])
+@login_required
+def desfazer_inicio_implantacao():
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Dados inválidos'}), 400
+        
+    implantacao_id = data.get('implantacao_id')
+    usuario_cs_email = g.user_email
+    
+    if not implantacao_id:
+        return jsonify({'error': 'ID da implantação é obrigatório'}), 400
+        
+    try:
+        from ..domain.implantacao.status import desfazer_inicio_implantacao_service
+        desfazer_inicio_implantacao_service(implantacao_id, usuario_cs_email)
+        
+        try:
+            clear_implantacao_cache(implantacao_id)
+            clear_user_cache(usuario_cs_email)
+        except Exception:
+            pass
+        
+        return jsonify({'message': 'Início da implantação desfeito com sucesso!'}), 200
+        
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Erro interno ao desfazer início.'}), 500
 
 
 @implantacao_actions_bp.route('/agendar_implantacao', methods=['POST'])

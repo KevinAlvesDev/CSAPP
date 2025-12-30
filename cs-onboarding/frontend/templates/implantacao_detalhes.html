@@ -128,6 +128,15 @@
                             <h6 class="mb-0 fw-bold text-dark">Parar Implantação</h6>
                         </div>
                     </button>
+                    <button class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-3"
+                        data-bs-toggle="modal" data-bs-target="#modalDesfazerInicio">
+                        <div class="bg-secondary bg-opacity-10 p-2 rounded text-secondary"><i
+                                class="bi bi-arrow-counterclockwise"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 fw-bold text-dark">Cancelar início</h6>
+                        </div>
+                    </button>
                     {% elif implantacao.status == 'parada' %}
                     <button class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-3"
                         data-bs-toggle="modal" data-bs-target="#modalRetomar">
@@ -785,6 +794,29 @@
                     <button type="submit" class="btn btn-primary">Retomar</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Desfazer Início -->
+<div class="modal fade" id="modalDesfazerInicio" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-secondary text-white">
+                <h5 class="modal-title"><i class="bi bi-arrow-counterclockwise me-2"></i>Cancelar Início</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja cancelar o início da implantação?</p>
+                <p class="text-muted small mb-0">
+                    <i class="bi bi-info-circle me-1"></i>
+                    O status voltará para "Nova" e a data de início será removida.
+                </p>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btn-confirmar-desfazer-inicio">Confirmar</button>
+            </div>
         </div>
     </div>
 </div>
