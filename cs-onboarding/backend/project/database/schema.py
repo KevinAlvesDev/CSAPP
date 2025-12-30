@@ -95,16 +95,27 @@ def init_db():
              except Exception:
                  pass
 
-        # Criar índices básicos para performance
+        # Criar índices para performance
         try:
-            if db_type == 'postgres':
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_items_implantacao_id ON checklist_items (implantacao_id)")
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_items_parent_id ON checklist_items (parent_id)")
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_comentarios_h_checklist_item_id ON comentarios_h (checklist_item_id)")
-            else:
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_items_implantacao_id ON checklist_items (implantacao_id)")
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_items_parent_id ON checklist_items (parent_id)")
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_comentarios_h_checklist_item_id ON comentarios_h (checklist_item_id)")
+            # Índices básicos
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_items_implantacao_id ON checklist_items (implantacao_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_items_parent_id ON checklist_items (parent_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_comentarios_h_checklist_item_id ON comentarios_h (checklist_item_id)")
+            
+            # Índices de performance adicionais
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_implantacoes_status ON implantacoes (status)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_implantacoes_usuario_cs ON implantacoes (usuario_cs)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_implantacoes_data_criacao ON implantacoes (data_criacao)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_implantacoes_tipo ON implantacoes (tipo)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_timeline_log_implantacao_id ON timeline_log (implantacao_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_comentarios_h_data_criacao ON comentarios_h (data_criacao)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_comentarios_h_usuario_cs ON comentarios_h (usuario_cs)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_items_completed ON checklist_items (completed)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_perfil_usuario_perfil_acesso ON perfil_usuario (perfil_acesso)")
+            
+            # Índices compostos
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_implantacoes_status_usuario ON implantacoes (status, usuario_cs)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_comentarios_h_item_data ON comentarios_h (checklist_item_id, data_criacao)")
         except Exception as idx_err:
             try:
                 current_app.logger.warning(f"Falha ao criar índices: {idx_err}")
