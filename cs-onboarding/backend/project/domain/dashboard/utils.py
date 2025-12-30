@@ -49,10 +49,11 @@ def format_relative_time(dt):
         
         diff = now - dt
         
-        # Calcular dias de diferença
+        # Calcular total de horas e minutos (não apenas do dia atual)
+        total_seconds = int(diff.total_seconds())
         days = diff.days
-        hours = diff.seconds // 3600
-        minutes = (diff.seconds % 3600) // 60
+        hours = (total_seconds % 86400) // 3600  # 86400 = segundos em um dia
+        minutes = (total_seconds % 3600) // 60
         
         # Formatar texto
         if days == 0:

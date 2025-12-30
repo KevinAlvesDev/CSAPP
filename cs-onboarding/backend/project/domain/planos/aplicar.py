@@ -60,6 +60,18 @@ def aplicar_plano_a_implantacao(implantacao_id: int, plano_id: int, usuario: str
         cursor = conn.cursor()
 
         try:
+            # Deletar comentários primeiro para evitar violação de foreign key
+            sql_limpar_comentarios = """
+                DELETE FROM comentarios_h 
+                WHERE checklist_item_id IN (
+                    SELECT id FROM checklist_items WHERE implantacao_id = %s
+                )
+            """
+            if db_type == 'sqlite':
+                sql_limpar_comentarios = sql_limpar_comentarios.replace('%s', '?')
+            cursor.execute(sql_limpar_comentarios, (implantacao_id,))
+            
+            # Agora deletar os itens do checklist
             sql_limpar = "DELETE FROM checklist_items WHERE implantacao_id = %s"
             if db_type == 'sqlite':
                 sql_limpar = sql_limpar.replace('%s', '?')
@@ -130,6 +142,18 @@ def aplicar_plano_a_implantacao_checklist(implantacao_id: int, plano_id: int, us
         cursor = conn.cursor()
 
         try:
+            # Deletar comentários primeiro para evitar violação de foreign key
+            sql_limpar_comentarios = """
+                DELETE FROM comentarios_h 
+                WHERE checklist_item_id IN (
+                    SELECT id FROM checklist_items WHERE implantacao_id = %s
+                )
+            """
+            if db_type == 'sqlite':
+                sql_limpar_comentarios = sql_limpar_comentarios.replace('%s', '?')
+            cursor.execute(sql_limpar_comentarios, (implantacao_id,))
+            
+            # Agora deletar os itens do checklist
             sql_limpar = "DELETE FROM checklist_items WHERE implantacao_id = %s"
             if db_type == 'sqlite':
                 sql_limpar = sql_limpar.replace('%s', '?')
