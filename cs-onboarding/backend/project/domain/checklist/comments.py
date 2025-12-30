@@ -80,9 +80,8 @@ def add_comment_to_item(item_id, text, visibilidade='interno', usuario_email=Non
                 pass
 
         # 3. Inserir no histórico (comentarios_h)
-        # Usar timezone de Brasília (UTC-3)
-        tz_brasilia = timezone(timedelta(hours=-3))
-        now = datetime.now(tz_brasilia).replace(tzinfo=None)  # Remove tzinfo para compatibilidade com DB
+        # Usar UTC para consistência (PostgreSQL vai converter automaticamente)
+        now = datetime.now(timezone.utc)
         noshow_val = noshow if db_type == 'postgres' else (1 if noshow else 0)
         insert_sql = """
             INSERT INTO comentarios_h (checklist_item_id, usuario_cs, texto, data_criacao, visibilidade, noshow, tag)
