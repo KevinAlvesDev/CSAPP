@@ -568,6 +568,11 @@ def remover_plano_implantacao_service(implantacao_id, usuario_cs_email, user_per
         'plano_removido',
         detalhe
     )
+    
+    # Limpar cache relacionado à implantação
+    from ..config.cache_config import clear_implantacao_cache, clear_user_cache
+    clear_implantacao_cache(implantacao_id)
+    clear_user_cache(usuario_cs_email)
 
 
 

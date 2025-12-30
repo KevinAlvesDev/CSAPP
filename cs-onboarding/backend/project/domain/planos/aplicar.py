@@ -207,6 +207,14 @@ def aplicar_plano_a_implantacao_checklist(implantacao_id: int, plano_id: int, us
                 logar_timeline(implantacao_id, usuario, 'plano_aplicado', detalhe)
             except Exception:
                 pass
+            
+            # Limpar cache relacionado à implantação
+            try:
+                from ...config.cache_config import clear_implantacao_cache, clear_user_cache
+                clear_implantacao_cache(implantacao_id)
+                clear_user_cache(usuario)
+            except Exception:
+                pass
 
             return True
 
