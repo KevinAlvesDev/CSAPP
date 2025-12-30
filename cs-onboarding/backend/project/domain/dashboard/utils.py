@@ -41,7 +41,12 @@ def format_relative_time(dt):
         if isinstance(dt, date) and not isinstance(dt, datetime):
             dt = datetime.combine(dt, datetime.min.time())
         
-        now = datetime.now()
+        # Usar UTC para comparação se o datetime tiver timezone
+        if dt.tzinfo is not None:
+            from datetime import timezone
+            now = datetime.now(timezone.utc)
+        else:
+            now = datetime.now()
         
         # Validar que a data não é futura
         if dt > now:
