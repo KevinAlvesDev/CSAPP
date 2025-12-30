@@ -49,6 +49,11 @@ def format_relative_time(dt):
         
         diff = now - dt
         
+        # DEBUG: Log para investigar
+        from flask import current_app
+        if current_app:
+            current_app.logger.debug(f"format_relative_time: dt={dt}, now={now}, diff={diff}, diff.days={diff.days}, diff.total_seconds={diff.total_seconds()}")
+        
         # Calcular total de horas e minutos (não apenas do dia atual)
         total_seconds = int(diff.total_seconds())
         days = diff.days

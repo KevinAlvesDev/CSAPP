@@ -99,3 +99,89 @@ def schema_oamd():
             'error': str(e),
             'traceback': traceback.format_exc()
         }), 500
+
+
+@debug_bp.route('/last-comment/<int:impl_id>', methods=['GET'])
+@login_required
+def check_last_comment(impl_id):
+    """
+    Debug endpoint para verificar o último comentário de uma implantação
+    """
+    from ..db import query_db
+    from datetime import datetime
+    
+    try:
+        # Buscar último comentário
+        result = query_db("""
+            SELECT 
+                ci.implantacao_id,
+                MAX(ch.data_criacao) as ultima_atividade,
+                COUNT(ch.id) as total_comentarios
+            FROM comentarios_h ch
+            INNER JOIN checklist_items ci ON ch.checklist_item_id = ci.id
+            WHERE ci.implantacao_id = %s
+            GROUP BY ci.implantacao_id
+        """, (impl_id,), one=True)
+        
+        # Buscar todos os comentários recentes
+        all_comments = query_db("""
+            SELECT 
+                ch.id,
+                ch.data_criacao,
+                ch.texto,
+                ch.usuario_cs,
+                ci.nome as tarefa_nome
+            FROM comentarios_h ch
+            INNER JOIN checklist_items ci ON ch.checklist_item_id = ci.id
+            WHERE ci.implantacao_id = %s
+            ORDER BY ch.data_criacao DESC
+            LIMIT 10
+        """, (impl_id,))
+        
+        now = datetime.now()
+        
+        return jsonify({
+            'ok': True,
+            'impl_id': impl_id,
+            'current_time': now.isoformat(),
+            'last_activity_query': {
+                'ultima_atividade': str(result.get('ultima_atividade')) if result else None,
+                'total_comentarios': result.get('total_comentarios') if result else 0
+            },
+            'recent_comments': [
+                {
+                    'id': c['id'],
+                    'data_criacao': str(c['data_criacao']),
+                    'texto': c['texto'][:50] + '...' if len(c['texto']) > 50 else c['texto'],
+                    'usuario': c['usuario_cs'],
+                    'tarefa': c['tarefa_nome']
+                }
+                for c in (all_comments or [])
+            ]
+        })
+        
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'ok': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
+
+@debug_bp.route('/clear-cache', methods=['POST'])
+@login_required
+def clear_cache():
+    """
+    Limpa o cache do dashboard
+    """
+    try:
+        from ..config.cache_config import cache
+        if cache:
+            cache.clear()
+            return jsonify({'ok': True, 'message': 'Cache limpo com sucesso'})
+        else:
+            return jsonify({'ok': False, 'message': 'Cache não configurado'})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
