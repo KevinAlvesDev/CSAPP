@@ -551,6 +551,7 @@ def remover_plano_implantacao_service(implantacao_id, usuario_cs_email, user_per
     except Exception:
         total_removed = None
 
+    # Deletar checklist_items (comentários serão deletados automaticamente via CASCADE)
     execute_db("DELETE FROM checklist_items WHERE implantacao_id = %s", (implantacao_id,))
 
     execute_db(
