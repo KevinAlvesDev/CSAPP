@@ -5,7 +5,7 @@
 {% block content %}
 <div class="container py-5">
     <div class="row justify-content-center">
-        <div class="col-lg-8">
+        <div class="col-lg-9">
             <div class="card shadow-sm">
                 <div class="card-body p-5">
                     <h1 class="h2 mb-4 text-center">
@@ -13,74 +13,153 @@
                     </h1>
 
                     <p class="text-muted text-center mb-4">
-                        Última atualização: {{ now().strftime('%d/%m/%Y') if now is defined else '29/12/2024' }}
+                        Última atualização: 30 de dezembro de 2024
                     </p>
 
                     <hr class="my-4">
 
                     <h2 class="h5 mt-4">1. Introdução</h2>
                     <p>
-                        O CS Implantação ("Sistema") é uma aplicação interna da Pacto Soluções destinada ao
-                        gerenciamento de implantações de clientes. Esta Política de Privacidade descreve como
-                        coletamos, usamos e protegemos as informações dos usuários.
+                        O <strong>CS Implantação</strong> ("Sistema" ou "Aplicação") é uma plataforma interna da
+                        <strong>Pacto Soluções</strong> destinada ao gerenciamento de implantações de clientes.
+                        Esta Política de Privacidade descreve de forma clara e transparente como coletamos, usamos,
+                        armazenamos e protegemos as informações dos usuários, especialmente dados obtidos através
+                        do Google OAuth 2.0.
                     </p>
 
-                    <h2 class="h5 mt-4">2. Dados Coletados</h2>
-                    <p>Coletamos os seguintes dados através do login com Google:</p>
+                    <h2 class="h5 mt-4">2. Dados Acessados do Google (Google User Data)</h2>
+                    <p>Nossa aplicação acessa os seguintes dados através da API do Google:</p>
                     <ul>
-                        <li><strong>E-mail corporativo</strong> (@pactosolucoes.com.br)</li>
-                        <li><strong>Nome do usuário</strong> (conforme cadastro no Google)</li>
-                        <li><strong>Identificador único do Google</strong> (sub)</li>
+                        <li><strong>E-mail do usuário</strong> (scope: <code>email</code>) - Usado para autenticação e
+                            identificação única do usuário</li>
+                        <li><strong>Perfil básico</strong> (scope: <code>profile</code>) - Inclui nome completo e foto
+                            de perfil</li>
+                        <li><strong>Identificador único do Google</strong> (sub) - Usado para vincular a conta Google ao
+                            perfil interno</li>
+                    </ul>
+                    <p class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Importante:</strong> Nosso acesso é restrito exclusivamente a contas corporativas
+                        <code>@pactosolucoes.com.br</code>. Não acessamos dados de contas pessoais do Google.
+                    </p>
+
+                    <h2 class="h5 mt-4">3. Como Usamos os Dados do Google</h2>
+                    <p>Os dados obtidos do Google são utilizados exclusivamente para:</p>
+                    <ul>
+                        <li><strong>Autenticação segura</strong> - Verificar a identidade do usuário sem necessidade de
+                            senha adicional</li>
+                        <li><strong>Identificação do usuário</strong> - Exibir nome e foto no sistema para facilitar a
+                            comunicação entre equipes</li>
+                        <li><strong>Controle de acesso</strong> - Garantir que apenas funcionários autorizados da Pacto
+                            Soluções acessem o sistema</li>
+                        <li><strong>Registro de atividades</strong> - Associar ações no sistema (comentários,
+                            atualizações de status) ao usuário responsável</li>
+                    </ul>
+                    <p class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>Não utilizamos dados do Google para:</strong> Marketing, publicidade, treinamento de
+                        IA/ML,
+                        ou qualquer finalidade não relacionada à operação interna do sistema.
+                    </p>
+
+                    <h2 class="h5 mt-4">4. Dados Adicionais Coletados pelo Sistema</h2>
+                    <p>Além dos dados do Google, coletamos e armazenamos:</p>
+                    <ul>
+                        <li><strong>Dados de implantações</strong> - Informações sobre clientes e projetos gerenciados
+                        </li>
+                        <li><strong>Comentários e notas</strong> - Registros de comunicação interna sobre implantações
+                        </li>
+                        <li><strong>Logs de atividade</strong> - Histórico de ações realizadas no sistema (auditoria)
+                        </li>
+                        <li><strong>Preferências do usuário</strong> - Configurações de interface e notificações</li>
+                    </ul>
+
+                    <h2 class="h5 mt-4">5. Compartilhamento de Dados</h2>
+                    <p>
+                        <strong>Não compartilhamos dados do Google ou dados do sistema com terceiros externos.</strong>
+                    </p>
+                    <p>O acesso aos dados é restrito a:</p>
+                    <ul>
+                        <li>Funcionários autorizados da Pacto Soluções com perfil de acesso apropriado</li>
+                        <li>Administradores do sistema para manutenção e suporte técnico</li>
                     </ul>
                     <p>
-                        Também coletamos dados de uso do sistema, como ações realizadas em implantações,
-                        comentários e registros de atividade para fins de auditoria e histórico.
+                        Dados podem ser compartilhados apenas se exigido por lei ou ordem judicial.
                     </p>
 
-                    <h2 class="h5 mt-4">3. Uso dos Dados</h2>
-                    <p>Os dados coletados são utilizados exclusivamente para:</p>
+                    <h2 class="h5 mt-4">6. Armazenamento e Proteção de Dados</h2>
+                    <p>Implementamos as seguintes medidas de segurança:</p>
                     <ul>
-                        <li>Autenticação e controle de acesso ao sistema</li>
-                        <li>Identificação do usuário responsável por ações no sistema</li>
-                        <li>Registro de histórico e auditoria de atividades</li>
-                        <li>Comunicação interna relacionada às implantações</li>
+                        <li><strong>Criptografia em trânsito</strong> - Todas as conexões usam HTTPS/TLS</li>
+                        <li><strong>Criptografia em repouso</strong> - Dados sensíveis são criptografados no banco de
+                            dados</li>
+                        <li><strong>Autenticação OAuth 2.0</strong> - Protocolo seguro do Google para login</li>
+                        <li><strong>Controle de acesso baseado em perfis</strong> - Usuários só acessam dados
+                            necessários para sua função</li>
+                        <li><strong>Logs de auditoria</strong> - Registro de todas as ações críticas no sistema</li>
+                        <li><strong>Backups regulares</strong> - Proteção contra perda de dados</li>
+                        <li><strong>Infraestrutura segura</strong> - Hospedagem em provedores certificados (Railway)
+                        </li>
                     </ul>
 
-                    <h2 class="h5 mt-4">4. Compartilhamento de Dados</h2>
-                    <p>
-                        Os dados <strong>não são compartilhados</strong> com terceiros externos à Pacto Soluções.
-                        O acesso é restrito a funcionários autorizados da empresa.
-                    </p>
-
-                    <h2 class="h5 mt-4">5. Segurança</h2>
-                    <p>
-                        Implementamos medidas de segurança técnicas e organizacionais para proteger os dados,
-                        incluindo:
-                    </p>
+                    <h2 class="h5 mt-4">7. Retenção e Exclusão de Dados</h2>
+                    <p><strong>Período de retenção:</strong></p>
                     <ul>
-                        <li>Conexões criptografadas (HTTPS)</li>
-                        <li>Autenticação segura via Google OAuth 2.0</li>
-                        <li>Controle de acesso baseado em perfis</li>
-                        <li>Logs de auditoria</li>
+                        <li>Dados de usuários ativos são mantidos enquanto a conta estiver ativa</li>
+                        <li>Dados de ex-funcionários são mantidos por até 5 anos para fins de auditoria e compliance
+                        </li>
+                        <li>Logs de atividade são mantidos por 2 anos</li>
                     </ul>
-
-                    <h2 class="h5 mt-4">6. Retenção de Dados</h2>
+                    <p><strong>Solicitação de exclusão:</strong></p>
                     <p>
-                        Os dados são mantidos enquanto o usuário estiver ativo na empresa ou conforme
-                        necessário para fins de auditoria e compliance.
+                        Usuários podem solicitar a exclusão de seus dados pessoais a qualquer momento entrando em
+                        contato com <a href="mailto:suporte@pactosolucoes.com.br">suporte@pactosolucoes.com.br</a>.
+                        Processaremos a solicitação em até 30 dias, exceto dados que devem ser mantidos por obrigação
+                        legal.
                     </p>
 
-                    <h2 class="h5 mt-4">7. Direitos do Usuário</h2>
+                    <h2 class="h5 mt-4">8. Direitos do Usuário (LGPD)</h2>
+                    <p>De acordo com a Lei Geral de Proteção de Dados (LGPD), você tem direito a:</p>
+                    <ul>
+                        <li><strong>Acesso</strong> - Solicitar cópia dos seus dados pessoais</li>
+                        <li><strong>Correção</strong> - Atualizar dados incorretos ou desatualizados</li>
+                        <li><strong>Exclusão</strong> - Solicitar remoção dos seus dados (sujeito a obrigações legais)
+                        </li>
+                        <li><strong>Portabilidade</strong> - Receber seus dados em formato estruturado</li>
+                        <li><strong>Revogação de consentimento</strong> - Revogar autorização de uso de dados</li>
+                    </ul>
                     <p>
-                        Os usuários podem solicitar informações sobre seus dados ou exclusão dos mesmos
-                        entrando em contato com o administrador do sistema.
-                    </p>
-
-                    <h2 class="h5 mt-4">8. Contato</h2>
-                    <p>
-                        Para dúvidas sobre esta política, entre em contato através do e-mail:
+                        Para exercer esses direitos, entre em contato através do e-mail:
                         <a href="mailto:suporte@pactosolucoes.com.br">suporte@pactosolucoes.com.br</a>
                     </p>
+
+                    <h2 class="h5 mt-4">9. Conformidade com Políticas do Google</h2>
+                    <p>Esta aplicação está em conformidade com:</p>
+                    <ul>
+                        <li><a href="https://developers.google.com/terms/api-services-user-data-policy"
+                                target="_blank">Google API Services User Data Policy</a></li>
+                        <li><a href="https://developers.google.com/terms" target="_blank">Google APIs Terms of
+                                Service</a></li>
+                    </ul>
+                    <p>
+                        Nosso uso de dados do Google é limitado, transparente e segue o princípio de "acesso mínimo
+                        necessário".
+                    </p>
+
+                    <h2 class="h5 mt-4">10. Alterações nesta Política</h2>
+                    <p>
+                        Podemos atualizar esta Política de Privacidade periodicamente. Notificaremos os usuários sobre
+                        mudanças significativas através do sistema. A data da última atualização está indicada no topo
+                        desta página.
+                    </p>
+
+                    <h2 class="h5 mt-4">11. Contato e Encarregado de Dados (DPO)</h2>
+                    <p>Para questões sobre privacidade e proteção de dados:</p>
+                    <ul>
+                        <li><strong>E-mail:</strong> <a
+                                href="mailto:suporte@pactosolucoes.com.br">suporte@pactosolucoes.com.br</a></li>
+                        <li><strong>Empresa:</strong> Pacto Soluções</li>
+                    </ul>
 
                     <hr class="my-4">
 
