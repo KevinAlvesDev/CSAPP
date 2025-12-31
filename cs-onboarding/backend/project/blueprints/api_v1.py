@@ -30,6 +30,16 @@ from ..domain.implantacao_service import (
 from ..config.cache_config import clear_implantacao_cache
 from ..security.api_security import validate_api_origin
 
+def _adapt_query(query, db_type):
+    """
+    Adapta placeholders SQL para o tipo de banco.
+    SQLite usa '?' e PostgreSQL usa '%s'.
+    """
+    if db_type == 'sqlite':
+        return query.replace('%s', '?')
+    return query
+
+
 api_v1_bp = Blueprint('api_v1', __name__, url_prefix='/api/v1')
 
 
@@ -199,3 +209,478 @@ def aplicar_oamd_implantacao(impl_id):
     except Exception as e:
         api_logger.error(f"Erro ao aplicar dados OAMD na implantação {impl_id}: {e}", exc_info=True)
         return jsonify({'ok': False, 'error': 'Erro interno ao aplicar dados'}), 500
+
+
+@api_v1_bp.route('/implantacoes/<int:impl_id>/carteira', methods=['GET'])
+@login_required
+@limiter.limit("100 per minute", key_func=lambda: g.user_email or get_remote_address())
+def get_carteira_content(impl_id):
+    """
+    Retorna o conteúdo da definição de carteira de uma implantação.
+    
+    Args:
+        impl_id: ID da implantação
+    
+    Returns:
+        JSON com o conteúdo da carteira
+    """
+    try:
+        from ..db import get_db_connection
+        
+        user_email = g.user_email
+        is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
+        
+        conn, db_type = get_db_connection()
+        cur = conn.cursor()
+        
+        # Verificar se o usuário tem acesso à implantação
+        if is_manager:
+            cur.execute(
+                _adapt_query("SELECT definicao_carteira FROM implantacoes WHERE id = %s", db_type),
+                (impl_id,)
+            )
+        else:
+            cur.execute(
+                _adapt_query("SELECT definicao_carteira FROM implantacoes WHERE id = %s AND usuario_cs = %s", db_type),
+                (impl_id, user_email)
+            )
+        
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        
+        if not row:
+            return jsonify({'ok': False, 'error': 'Implantação não encontrada'}), 404
+        
+        content = row[0] or ''
+        
+        return jsonify({
+            'ok': True,
+            'content': content
+        })
+    
+    except Exception as e:
+        api_logger.error(f"Erro ao buscar definição de carteira {impl_id}: {e}", exc_info=True)
+        return jsonify({'ok': False, 'error': 'Erro ao buscar definição de carteira'}), 500
+
+
+@api_v1_bp.route('/implantacoes/<int:impl_id>/carteira', methods=['POST'])
+@login_required
+@limiter.limit("60 per minute", key_func=lambda: g.user_email or get_remote_address())
+def save_carteira_content(impl_id):
+    """
+    Salva o conteúdo da definição de carteira de uma implantação.
+    
+    Args:
+        impl_id: ID da implantação
+    
+    Body:
+        {"content": "texto da definição de carteira"}
+    
+    Returns:
+        JSON com status da operação
+    """
+    try:
+        from ..db import get_db_connection
+        
+        user_email = g.user_email
+        is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
+        
+        data = request.get_json()
+        if not data or 'content' not in data:
+            return jsonify({'ok': False, 'error': 'Conteúdo não fornecido'}), 400
+        
+        content = data['content']
+        
+        conn, db_type = get_db_connection()
+        cur = conn.cursor()
+        
+        # Verificar se o usuário tem acesso à implantação
+        if is_manager:
+            cur.execute(
+                _adapt_query("SELECT id FROM implantacoes WHERE id = %s", db_type),
+                (impl_id,)
+            )
+        else:
+            cur.execute(
+                _adapt_query("SELECT id FROM implantacoes WHERE id = %s AND usuario_cs = %s", db_type),
+                (impl_id, user_email)
+            )
+        
+        if not cur.fetchone():
+            cur.close()
+            conn.close()
+            return jsonify({'ok': False, 'error': 'Implantação não encontrada'}), 404
+        
+        # Atualizar definição de carteira
+        cur.execute(
+            _adapt_query("UPDATE implantacoes SET definicao_carteira = %s WHERE id = %s", db_type),
+            (content, impl_id)
+        )
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        # Limpar cache
+        try:
+            clear_implantacao_cache(impl_id)
+        except Exception as e:
+            api_logger.warning(f"Erro ao limpar cache após salvar carteira: {e}")
+        
+        return jsonify({
+            'ok': True,
+            'message': 'Definição de carteira salva com sucesso'
+        })
+    
+    except Exception as e:
+        api_logger.error(f"Erro ao salvar definição de carteira {impl_id}: {e}", exc_info=True)
+        return jsonify({'ok': False, 'error': 'Erro ao salvar definição de carteira'}), 500
+
+
+# ============================================================================
+# AVISOS PERSONALIZADOS
+# ============================================================================
+
+@api_v1_bp.route('/implantacoes/<int:impl_id>/avisos', methods=['GET'])
+@login_required
+@limiter.limit("100 per minute", key_func=lambda: g.user_email or get_remote_address())
+def list_avisos(impl_id):
+    """
+    Lista todos os avisos personalizados de uma implantação.
+    """
+    try:
+        from ..db import get_db_connection
+        
+        user_email = g.user_email
+        is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
+        
+        conn, db_type = get_db_connection()
+        cur = conn.cursor()
+        
+        # Verificar acesso
+        if is_manager:
+            cur.execute(_adapt_query("SELECT id FROM implantacoes WHERE id = %s", db_type), (impl_id,))
+        else:
+            cur.execute(
+                _adapt_query("SELECT id FROM implantacoes WHERE id = %s AND usuario_cs = %s", db_type),
+                (impl_id, user_email)
+            )
+        
+        if not cur.fetchone():
+            cur.close()
+            conn.close()
+            return jsonify({'ok': False, 'error': 'Implantação não encontrada'}), 404
+        
+        # Buscar avisos
+        cur.execute(_adapt_query("""
+            SELECT id, tipo, titulo, mensagem, criado_por, data_criacao
+            FROM avisos_implantacao
+            WHERE implantacao_id = %s
+            ORDER BY data_criacao DESC
+        """, db_type), (impl_id,))
+        
+        avisos = []
+        for row in cur.fetchall():
+            # Tratar data_criacao (SQLite retorna string, PostgreSQL retorna datetime)
+            data_criacao = row[5]
+            if data_criacao:
+                if isinstance(data_criacao, str):
+                    # SQLite retorna string, manter como está
+                    data_criacao_iso = data_criacao
+                else:
+                    # PostgreSQL retorna datetime, converter para ISO
+                    data_criacao_iso = data_criacao.isoformat()
+            else:
+                data_criacao_iso = None
+            
+            avisos.append({
+                'id': row[0],
+                'tipo': row[1],
+                'titulo': row[2],
+                'mensagem': row[3],
+                'criado_por': row[4],
+                'data_criacao': data_criacao_iso
+            })
+        
+        cur.close()
+        conn.close()
+        
+        return jsonify({'ok': True, 'avisos': avisos})
+    
+    except Exception as e:
+        api_logger.error(f"Erro ao listar avisos {impl_id}: {e}", exc_info=True)
+        return jsonify({'ok': False, 'error': 'Erro ao listar avisos'}), 500
+
+
+@api_v1_bp.route('/implantacoes/<int:impl_id>/avisos/<int:aviso_id>', methods=['GET'])
+@login_required
+@limiter.limit("100 per minute", key_func=lambda: g.user_email or get_remote_address())
+def get_aviso(impl_id, aviso_id):
+    """
+    Obtém um aviso específico.
+    """
+    try:
+        from ..db import get_db_connection
+        
+        user_email = g.user_email
+        is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
+        
+        conn, db_type = get_db_connection()
+        cur = conn.cursor()
+        
+        # Verificar acesso
+        if is_manager:
+            cur.execute(
+                _adapt_query("SELECT id FROM implantacoes WHERE id = %s", db_type),
+                (impl_id,)
+            )
+        else:
+            cur.execute(
+                _adapt_query("SELECT id FROM implantacoes WHERE id = %s AND usuario_cs = %s", db_type),
+                (impl_id, user_email)
+            )
+        
+        if not cur.fetchone():
+            cur.close()
+            conn.close()
+            return jsonify({'ok': False, 'error': 'Implantação não encontrada'}), 404
+        
+        # Buscar aviso
+        cur.execute(_adapt_query("""
+            SELECT id, tipo, titulo, mensagem, criado_por, data_criacao
+            FROM avisos_implantacao
+            WHERE id = %s AND implantacao_id = %s
+        """, db_type), (aviso_id, impl_id))
+        
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        
+        if not row:
+            return jsonify({'ok': False, 'error': 'Aviso não encontrado'}), 404
+        
+        # Tratar data_criacao (SQLite retorna string, PostgreSQL retorna datetime)
+        data_criacao = row[5]
+        if data_criacao:
+            if isinstance(data_criacao, str):
+                data_criacao_iso = data_criacao
+            else:
+                data_criacao_iso = data_criacao.isoformat()
+        else:
+            data_criacao_iso = None
+        
+        aviso = {
+            'id': row[0],
+            'tipo': row[1],
+            'titulo': row[2],
+            'mensagem': row[3],
+            'criado_por': row[4],
+            'data_criacao': data_criacao_iso
+        }
+        
+        return jsonify({'ok': True, 'aviso': aviso})
+    
+    except Exception as e:
+        api_logger.error(f"Erro ao buscar aviso {aviso_id}: {e}", exc_info=True)
+        return jsonify({'ok': False, 'error': 'Erro ao buscar aviso'}), 500
+
+
+@api_v1_bp.route('/implantacoes/<int:impl_id>/avisos', methods=['POST'])
+@login_required
+@limiter.limit("60 per minute", key_func=lambda: g.user_email or get_remote_address())
+def create_aviso(impl_id):
+    """
+    Cria um novo aviso personalizado.
+    """
+    try:
+        from ..db import get_db_connection
+        
+        user_email = g.user_email
+        is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({'ok': False, 'error': 'Dados não fornecidos'}), 400
+        
+        tipo = data.get('tipo', 'info')
+        titulo = data.get('titulo', '').strip()
+        mensagem = data.get('mensagem', '').strip()
+        
+        if not titulo or not mensagem:
+            return jsonify({'ok': False, 'error': 'Título e mensagem são obrigatórios'}), 400
+        
+        if tipo not in ['info', 'warning', 'danger', 'success']:
+            tipo = 'info'
+        
+        conn, db_type = get_db_connection()
+        cur = conn.cursor()
+        
+        # Verificar acesso
+        if is_manager:
+            cur.execute(_adapt_query("SELECT id FROM implantacoes WHERE id = %s", db_type), (impl_id,))
+        else:
+            cur.execute(
+                _adapt_query("SELECT id FROM implantacoes WHERE id = %s AND usuario_cs = %s", db_type),
+                (impl_id, user_email)
+            )
+        
+        if not cur.fetchone():
+            cur.close()
+            conn.close()
+            return jsonify({'ok': False, 'error': 'Implantação não encontrada'}), 404
+        
+        # Criar aviso
+        if db_type == 'sqlite':
+            cur.execute(_adapt_query("""
+                INSERT INTO avisos_implantacao 
+                (implantacao_id, tipo, titulo, mensagem, criado_por, data_criacao)
+                VALUES (%s, %s, %s, %s, %s, datetime('now'))
+            """, db_type), (impl_id, tipo, titulo, mensagem, user_email))
+            aviso_id = cur.lastrowid
+        else:
+            cur.execute(_adapt_query("""
+                INSERT INTO avisos_implantacao 
+                (implantacao_id, tipo, titulo, mensagem, criado_por, data_criacao)
+                VALUES (%s, %s, %s, %s, %s, NOW())
+                RETURNING id
+            """, db_type), (impl_id, tipo, titulo, mensagem, user_email))
+            aviso_id = cur.fetchone()[0]
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            'ok': True,
+            'message': 'Aviso criado com sucesso',
+            'aviso_id': aviso_id
+        }), 201
+    
+    except Exception as e:
+        api_logger.error(f"Erro ao criar aviso {impl_id}: {e}", exc_info=True)
+        return jsonify({'ok': False, 'error': 'Erro ao criar aviso'}), 500
+
+
+@api_v1_bp.route('/implantacoes/<int:impl_id>/avisos/<int:aviso_id>', methods=['PUT'])
+@login_required
+@limiter.limit("60 per minute", key_func=lambda: g.user_email or get_remote_address())
+def update_aviso(impl_id, aviso_id):
+    """
+    Atualiza um aviso existente.
+    """
+    try:
+        from ..db import get_db_connection
+        
+        user_email = g.user_email
+        is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({'ok': False, 'error': 'Dados não fornecidos'}), 400
+        
+        tipo = data.get('tipo', 'info')
+        titulo = data.get('titulo', '').strip()
+        mensagem = data.get('mensagem', '').strip()
+        
+        if not titulo or not mensagem:
+            return jsonify({'ok': False, 'error': 'Título e mensagem são obrigatórios'}), 400
+        
+        if tipo not in ['info', 'warning', 'danger', 'success']:
+            tipo = 'info'
+        
+        conn, db_type = get_db_connection()
+        cur = conn.cursor()
+        
+        # Verificar acesso e propriedade do aviso
+        if is_manager:
+            cur.execute(_adapt_query("""
+                SELECT a.id FROM avisos_implantacao a
+                JOIN implantacoes i ON a.implantacao_id = i.id
+                WHERE a.id = %s AND a.implantacao_id = %s
+            """, db_type), (aviso_id, impl_id))
+        else:
+            cur.execute(_adapt_query("""
+                SELECT a.id FROM avisos_implantacao a
+                JOIN implantacoes i ON a.implantacao_id = i.id
+                WHERE a.id = %s AND a.implantacao_id = %s 
+                AND (a.criado_por = %s OR i.usuario_cs = %s)
+            """, db_type), (aviso_id, impl_id, user_email, user_email))
+        
+        if not cur.fetchone():
+            cur.close()
+            conn.close()
+            return jsonify({'ok': False, 'error': 'Aviso não encontrado'}), 404
+        
+        # Atualizar aviso
+        cur.execute(_adapt_query("""
+            UPDATE avisos_implantacao
+            SET tipo = %s, titulo = %s, mensagem = %s
+            WHERE id = %s
+        """, db_type), (tipo, titulo, mensagem, aviso_id))
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            'ok': True,
+            'message': 'Aviso atualizado com sucesso'
+        })
+    
+    except Exception as e:
+        api_logger.error(f"Erro ao atualizar aviso {aviso_id}: {e}", exc_info=True)
+        return jsonify({'ok': False, 'error': 'Erro ao atualizar aviso'}), 500
+
+
+@api_v1_bp.route('/implantacoes/<int:impl_id>/avisos/<int:aviso_id>', methods=['DELETE'])
+@login_required
+@limiter.limit("60 per minute", key_func=lambda: g.user_email or get_remote_address())
+def delete_aviso(impl_id, aviso_id):
+    """
+    Exclui um aviso.
+    """
+    try:
+        from ..db import get_db_connection
+        
+        user_email = g.user_email
+        is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
+        
+        conn, db_type = get_db_connection()
+        cur = conn.cursor()
+        
+        # Verificar acesso e propriedade
+        if is_manager:
+            cur.execute(_adapt_query("""
+                SELECT a.id FROM avisos_implantacao a
+                JOIN implantacoes i ON a.implantacao_id = i.id
+                WHERE a.id = %s AND a.implantacao_id = %s
+            """, db_type), (aviso_id, impl_id))
+        else:
+            cur.execute(_adapt_query("""
+                SELECT a.id FROM avisos_implantacao a
+                JOIN implantacoes i ON a.implantacao_id = i.id
+                WHERE a.id = %s AND a.implantacao_id = %s 
+                AND (a.criado_por = %s OR i.usuario_cs = %s)
+            """, db_type), (aviso_id, impl_id, user_email, user_email))
+        
+        if not cur.fetchone():
+            cur.close()
+            conn.close()
+            return jsonify({'ok': False, 'error': 'Aviso não encontrado'}), 404
+        
+        # Excluir aviso
+        cur.execute(_adapt_query("DELETE FROM avisos_implantacao WHERE id = %s", db_type), (aviso_id,))
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            'ok': True,
+            'message': 'Aviso excluído com sucesso'
+        })
+    
+    except Exception as e:
+        api_logger.error(f"Erro ao excluir aviso {aviso_id}: {e}", exc_info=True)
+        return jsonify({'ok': False, 'error': 'Erro ao excluir aviso'}), 500

@@ -325,6 +325,18 @@
                                 <i class="bi bi-chat-square-text me-1"></i>Comentários
                             </button>
                         </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="carteira-tab" data-bs-toggle="tab"
+                                data-bs-target="#carteira-content" type="button" role="tab">
+                                <i class="bi bi-briefcase me-1"></i>Definição de Carteira
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="avisos-tab" data-bs-toggle="tab"
+                                data-bs-target="#avisos-content" type="button" role="tab">
+                                <i class="bi bi-exclamation-triangle me-1"></i>Avisos
+                            </button>
+                        </li>
                     </ul>
                 </div>
 
@@ -634,11 +646,255 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Tab: Definição de Carteira -->
+                    <div class="tab-pane fade d-none" id="carteira-content" role="tabpanel">
+                        <div class="custom-card-body">
+                            <div class="alert alert-info mb-4">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <strong>Definição de Carteira</strong>
+                                <p class="mb-0 mt-2 small">Adicione informações importantes sobre esta implantação:
+                                    contatos, grupos de WhatsApp, requisitos técnicos, etc.</p>
+                            </div>
+
+                            <!-- Modo de Edição / Visualização -->
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="mb-0">
+                                    <i class="bi bi-file-text me-2"></i>Informações da Carteira
+                                </h6>
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" id="btn-edit-carteira">
+                                        <i class="bi bi-pencil me-1"></i>Editar
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-success d-none" id="btn-save-carteira">
+                                        <i class="bi bi-check-lg me-1"></i>Salvar
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-secondary d-none"
+                                        id="btn-cancel-carteira">
+                                        <i class="bi bi-x-lg me-1"></i>Cancelar
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Área de Visualização -->
+                            <div id="carteira-view-mode">
+                                <div class="card">
+                                    <div class="card-body" id="carteira-content-display"
+                                        style="white-space: pre-wrap; font-family: 'Courier New', monospace; font-size: 0.9rem; line-height: 1.6;">
+                                        <div class="text-muted text-center py-5">
+                                            <i class="bi bi-file-earmark-text fs-1"></i>
+                                            <p class="mt-3">Nenhuma informação adicionada ainda.</p>
+                                            <p class="small">Clique em "Editar" para adicionar informações sobre esta
+                                                implantação.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Área de Edição -->
+                            <div id="carteira-edit-mode" class="d-none">
+                                <div class="mb-3">
+                                    <label for="carteira-textarea" class="form-label fw-bold">
+                                        Conteúdo
+                                        <span class="text-muted small">(Links serão automaticamente clicáveis na
+                                            visualização)</span>
+                                    </label>
+                                    <textarea class="form-control font-monospace" id="carteira-textarea" rows="20"
+                                        placeholder="Exemplo:
+
+1- Grupo de WhatsApp
+https://chat.whatsapp.com/exemplo
+
+2- Contato do responsável
+Nome: João Silva
+Telefone: (11) 99999-9999
+Email: joao@exemplo.com
+
+3- Cliente referência
+Sim - Academia XYZ
+
+4- Observações importantes
+..."></textarea>
+                                    <div class="form-text">
+                                        <i class="bi bi-lightbulb me-1"></i>
+                                        Dica: Você pode usar formatação livre. Links HTTP/HTTPS serão automaticamente
+                                        convertidos em links clicáveis.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Indicador de salvamento -->
+                            <div id="carteira-save-status" class="mt-2 small text-muted d-none">
+                                <i class="bi bi-clock-history me-1"></i>
+                                <span id="carteira-save-text">Salvando...</span>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <!-- Tab: Avisos -->
+                    <div class="tab-pane fade d-none" id="avisos-content" role="tabpanel">
+                        <div class="custom-card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <div>
+                                    <h6 class="mb-1">
+                                        <i class="bi bi-exclamation-triangle me-2"></i>Central de Avisos
+                                    </h6>
+                                    <p class="text-muted small mb-0">Alertas automáticos e avisos personalizados</p>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-primary" id="btn-add-aviso">
+                                    <i class="bi bi-plus-circle me-1"></i>Adicionar Aviso
+                                </button>
+                            </div>
+
+                            <!-- Avisos Automáticos do Sistema -->
+                            <div class="mb-4">
+                                <h6 class="fw-bold mb-3 text-muted small">
+                                    <i class="bi bi-robot me-1"></i>AVISOS AUTOMÁTICOS DO SISTEMA
+                                </h6>
+                                <div id="avisos-sistema">
+                                    {% if implantacao.status == 'parada' %}
+                                    <div class="alert alert-danger d-flex align-items-start" role="alert">
+                                        <i class="bi bi-exclamation-octagon-fill fs-4 me-3 flex-shrink-0"></i>
+                                        <div>
+                                            <h6 class="alert-heading mb-2">Implantação Parada</h6>
+                                            <p class="mb-1">Esta implantação está parada desde {{
+                                                implantacao.data_parada_fmt if implantacao.data_parada_fmt else 'data
+                                                não disponível' }}.</p>
+                                            {% if implantacao.motivo_parada %}
+                                            <p class="mb-0"><strong>Motivo:</strong> {{ implantacao.motivo_parada }}</p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% endif %}
+
+                                    {% if not plano_sucesso %}
+                                    <div class="alert alert-warning d-flex align-items-start" role="alert">
+                                        <i class="bi bi-exclamation-triangle-fill fs-4 me-3 flex-shrink-0"></i>
+                                        <div>
+                                            <h6 class="alert-heading mb-2">Plano de Sucesso Não Definido</h6>
+                                            <p class="mb-0">Esta implantação ainda não possui um plano de sucesso
+                                                vinculado. Selecione um plano para gerar as tarefas.</p>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+
+                                    {% if implantacao.progresso and implantacao.progresso < 20 and
+                                        implantacao.dias_passados and implantacao.dias_passados> 15 %}
+                                        <div class="alert alert-warning d-flex align-items-start" role="alert">
+                                            <i class="bi bi-clock-fill fs-4 me-3 flex-shrink-0"></i>
+                                            <div>
+                                                <h6 class="alert-heading mb-2">Progresso Baixo</h6>
+                                                <p class="mb-0">Esta implantação está há {{ implantacao.dias_passados }}
+                                                    dias em andamento com apenas {{ implantacao.progresso }}% de
+                                                    progresso.</p>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+
+                                        {% if implantacao.data_previsao_termino and implantacao.atrasada %}
+                                        <div class="alert alert-danger d-flex align-items-start" role="alert">
+                                            <i class="bi bi-calendar-x-fill fs-4 me-3 flex-shrink-0"></i>
+                                            <div>
+                                                <h6 class="alert-heading mb-2">Prazo Vencido</h6>
+                                                <p class="mb-0">A previsão de término era {{
+                                                    implantacao.data_previsao_termino_fmt_d }}. Esta implantação está
+                                                    atrasada.</p>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+
+                                        {% if implantacao.status != 'parada' and plano_sucesso and (not
+                                        implantacao.progresso or implantacao.progresso >= 20 or not
+                                        implantacao.dias_passados or implantacao.dias_passados <= 15) and (not
+                                            implantacao.atrasada) %} <div
+                                            class="alert alert-success d-flex align-items-start" role="alert">
+                                            <i class="bi bi-check-circle-fill fs-4 me-3 flex-shrink-0"></i>
+                                            <div>
+                                                <h6 class="alert-heading mb-2">Tudo em Ordem</h6>
+                                                <p class="mb-0">Não há avisos ou alertas críticos para esta implantação
+                                                    no momento.</p>
+                                            </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Avisos Personalizados -->
+                        <div>
+                            <h6 class="fw-bold mb-3 text-muted small">
+                                <i class="bi bi-person-fill me-1"></i>AVISOS PERSONALIZADOS
+                            </h6>
+                            <div id="avisos-personalizados-list">
+                                <!-- Avisos serão carregados aqui via JavaScript -->
+                                <div class="text-center py-4 text-muted" id="avisos-loading">
+                                    <div class="spinner-border spinner-border-sm" role="status">
+                                        <span class="visually-hidden">Carregando...</span>
+                                    </div>
+                                    <p class="mt-2 small">Carregando avisos...</p>
+                                </div>
+                                <div class="alert alert-info d-none" id="avisos-empty">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    Nenhum aviso personalizado adicionado. Clique em "Adicionar Aviso" para criar um.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div> <!-- Fecha main-column -->
+    </div>
+</div>
+</div>
+</div> <!-- Fecha main-column -->
 </div> <!-- Fecha row g-3 -->
+
+<!-- Modal Adicionar/Editar Aviso -->
+<div class="modal fade" id="modalAviso" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title" id="modalAvisoLabel">Adicionar Aviso</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formAviso">
+                    <input type="hidden" id="aviso-id" value="">
+
+                    <div class="mb-3">
+                        <label for="aviso-tipo" class="form-label">Tipo de Aviso</label>
+                        <select class="form-select" id="aviso-tipo" required>
+                            <option value="info">Informação (Azul)</option>
+                            <option value="warning">Atenção (Amarelo)</option>
+                            <option value="danger">Urgente (Vermelho)</option>
+                            <option value="success">Sucesso (Verde)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="aviso-titulo" class="form-label">Título</label>
+                        <input type="text" class="form-control" id="aviso-titulo" placeholder="Ex: Reunião agendada"
+                            maxlength="100" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="aviso-mensagem" class="form-label">Mensagem</label>
+                        <textarea class="form-control" id="aviso-mensagem" rows="4" placeholder="Descreva o aviso..."
+                            maxlength="500" required></textarea>
+                        <div class="form-text">
+                            <span id="aviso-char-count">0</span>/500 caracteres
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer header-bg">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btn-save-aviso">Salvar Aviso</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <!-- Offcanvas Mobile Sidebar (Menu de Ações) -->
 <div class="offcanvas offcanvas-end" tabindex="-1" id="mobileSidebar">
@@ -1029,5 +1285,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script src="{{ url_for('static', filename='js/carteira_editor.js') }}"></script>
+<script src="{{ url_for('static', filename='js/avisos_manager.js') }}"></script>
 {% endblock %}
 /* cabeçalho e linhas continuam com flex; larguras são controladas pelos wrappers de coluna */
