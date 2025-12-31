@@ -5,7 +5,7 @@
 {% block content %}
 <div class="container py-5">
     <div class="row justify-content-center">
-        <div class="col-lg-9">
+        <div class="col-lg-10">
             <div class="card shadow-sm">
                 <div class="card-body p-5">
                     <h1 class="h2 mb-4 text-center">
@@ -13,178 +13,966 @@
                     </h1>
 
                     <p class="text-muted text-center mb-4">
-                        Última atualização: 30 de dezembro de 2025
-                    </p>
-
-                    <hr class="my-4">
-
-                    <h2 class="h5 mt-4">1. Introdução</h2>
-                    <p>
-                        O <strong>CS Implantação</strong> ("Sistema" ou "Aplicação") é uma plataforma interna da
-                        <strong>Pacto Soluções</strong> destinada ao gerenciamento de implantações de clientes.
-                        Esta Política de Privacidade descreve de forma clara e transparente como coletamos, usamos,
-                        armazenamos e protegemos as informações dos usuários, especialmente dados obtidos através
-                        do Google OAuth 2.0.
-                    </p>
-
-                    <h2 class="h5 mt-4">2. Dados Acessados do Google (Google User Data)</h2>
-                    <p>Nossa aplicação acessa os seguintes dados através da API do Google:</p>
-                    <ul>
-                        <li><strong>E-mail do usuário</strong> (scope: <code>email</code>) - Usado para autenticação e
-                            identificação única do usuário</li>
-                        <li><strong>Perfil básico</strong> (scope: <code>profile</code>) - Inclui nome completo e foto
-                            de perfil</li>
-                        <li><strong>Identificador único do Google</strong> (sub) - Usado para vincular a conta Google ao
-                            perfil interno</li>
-                        <li><strong>Google Calendar</strong> (scope:
-                            <code>https://www.googleapis.com/auth/calendar</code>) -
-                            Acesso para criar, visualizar e gerenciar eventos de calendário relacionados às implantações
-                        </li>
-                    </ul>
-                    <p class="alert alert-info">
-                        <i class="bi bi-info-circle me-2"></i>
-                        <strong>Importante:</strong> Nosso acesso é restrito exclusivamente a contas corporativas
-                        <code>@pactosolucoes.com.br</code>. Não acessamos dados de contas pessoais do Google.
-                    </p>
-
-                    <h2 class="h5 mt-4">3. Como Usamos os Dados do Google</h2>
-                    <p>Os dados obtidos do Google são utilizados exclusivamente para:</p>
-                    <ul>
-                        <li><strong>Autenticação segura</strong> - Verificar a identidade do usuário sem necessidade de
-                            senha adicional</li>
-                        <li><strong>Identificação do usuário</strong> - Exibir nome e foto no sistema para facilitar a
-                            comunicação entre equipes</li>
-                        <li><strong>Controle de acesso</strong> - Garantir que apenas funcionários autorizados da Pacto
-                            Soluções acessem o sistema</li>
-                        <li><strong>Registro de atividades</strong> - Associar ações no sistema (comentários,
-                            atualizações de status) ao usuário responsável</li>
-                        <li><strong>Gerenciamento de calendário</strong> - Criar e gerenciar eventos de calendário
-                            relacionados a prazos de implantação, reuniões e marcos importantes do projeto</li>
-                    </ul>
-                    <p class="alert alert-warning">
-                        <i class="bi bi-exclamation-triangle me-2"></i>
-                        <strong>Não utilizamos dados do Google para:</strong> Marketing, publicidade, treinamento de
-                        IA/ML,
-                        ou qualquer finalidade não relacionada à operação interna do sistema.
+                        Última atualização: 31 de dezembro de 2025
                     </p>
 
                     <div class="alert alert-success">
-                        <h6 class="alert-heading"><i class="bi bi-check-circle me-2"></i>Declaração de Uso Limitado</h6>
+                        <h6 class="alert-heading"><i class="bi bi-check-circle me-2"></i>Declaração de Uso Limitado do
+                            Google</h6>
                         <p class="mb-0">
                             O uso de informações recebidas das APIs do Google pelo CS Implantação está em conformidade
-                            com a
-                            <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank"
-                                class="alert-link">
-                                Google API Services User Data Policy
-                            </a>, incluindo os requisitos de Uso Limitado.
+                            com a <a href="https://developers.google.com/terms/api-services-user-data-policy"
+                                target="_blank" class="alert-link">Google API Services User Data Policy</a>, incluindo
+                            os requisitos de Uso Limitado.
                             <strong>Nosso uso de dados do Google é limitado exclusivamente às práticas divulgadas nesta
                                 política de privacidade.</strong>
                         </p>
                     </div>
 
-                    <h2 class="h5 mt-4">4. Dados Adicionais Coletados pelo Sistema</h2>
-                    <p>Além dos dados do Google, coletamos e armazenamos:</p>
-                    <ul>
-                        <li><strong>Dados de implantações</strong> - Informações sobre clientes e projetos gerenciados
-                        </li>
-                        <li><strong>Comentários e notas</strong> - Registros de comunicação interna sobre implantações
-                        </li>
-                        <li><strong>Logs de atividade</strong> - Histórico de ações realizadas no sistema (auditoria)
-                        </li>
-                        <li><strong>Preferências do usuário</strong> - Configurações de interface e notificações</li>
-                    </ul>
+                    <hr class="my-4">
 
-                    <h2 class="h5 mt-4">5. Compartilhamento de Dados</h2>
-                    <p>
-                        <strong>Não compartilhamos dados do Google ou dados do sistema com terceiros externos.</strong>
-                    </p>
-                    <p>O acesso aos dados é restrito a:</p>
-                    <ul>
-                        <li>Funcionários autorizados da Pacto Soluções com perfil de acesso apropriado</li>
-                        <li>Administradores do sistema para manutenção e suporte técnico</li>
-                    </ul>
-                    <p>
-                        Dados podem ser compartilhados apenas se exigido por lei ou ordem judicial.
-                    </p>
+                    <!-- ========================================== -->
+                    <!-- SEÇÃO 1: DADOS ACESSADOS (DETALHADO) -->
+                    <!-- ========================================== -->
+                    <div class="alert alert-primary mt-5" role="alert">
+                        <h2 class="h3 mb-4">
+                            <i class="bi bi-database me-2"></i>1. DADOS ACESSADOS DO GOOGLE (Data Accessed)
+                        </h2>
 
-                    <h2 class="h5 mt-4">6. Armazenamento e Proteção de Dados</h2>
-                    <p>Implementamos as seguintes medidas de segurança:</p>
-                    <ul>
-                        <li><strong>Criptografia em trânsito</strong> - Todas as conexões usam HTTPS/TLS</li>
-                        <li><strong>Criptografia em repouso</strong> - Dados sensíveis são criptografados no banco de
-                            dados</li>
-                        <li><strong>Autenticação OAuth 2.0</strong> - Protocolo seguro do Google para login</li>
-                        <li><strong>Controle de acesso baseado em perfis</strong> - Usuários só acessam dados
-                            necessários para sua função</li>
-                        <li><strong>Logs de auditoria</strong> - Registro de todas as ações críticas no sistema</li>
-                        <li><strong>Backups regulares</strong> - Proteção contra perda de dados</li>
-                        <li><strong>Infraestrutura segura</strong> - Hospedagem em provedores certificados (Railway)
-                        </li>
-                    </ul>
+                        <p class="lead mb-4"><strong>Nossa aplicação solicita acesso aos seguintes dados específicos da
+                                sua conta Google:</strong></p>
 
-                    <h2 class="h5 mt-4">7. Retenção e Exclusão de Dados</h2>
-                    <p><strong>Período de retenção:</strong></p>
-                    <ul>
-                        <li>Dados de usuários ativos são mantidos enquanto a conta estiver ativa</li>
-                        <li>Dados de ex-funcionários são mantidos por até 5 anos para fins de auditoria e compliance
-                        </li>
-                        <li>Logs de atividade são mantidos por 2 anos</li>
-                    </ul>
-                    <p><strong>Solicitação de exclusão:</strong></p>
-                    <p>
-                        Usuários podem solicitar a exclusão de seus dados pessoais a qualquer momento entrando em
-                        contato com <a href="mailto:suporte@pactosolucoes.com.br">suporte@pactosolucoes.com.br</a>.
-                        Processaremos a solicitação em até 30 dias, exceto dados que devem ser mantidos por obrigação
-                        legal.
-                    </p>
+                        <!-- 1.1 Email -->
+                        <div class="card mb-4 border-primary">
+                            <div class="card-header bg-primary text-white">
+                                <h3 class="h5 mb-0">1.1. Endereço de E-mail</h3>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>OAuth Scope:</strong>
+                                    <code>https://www.googleapis.com/auth/userinfo.email</code> ou <code>email</code>
+                                </p>
+                                <p><strong>Dados específicos acessados:</strong></p>
+                                <ul>
+                                    <li>Endereço de e-mail principal da conta Google</li>
+                                    <li>Status de verificação do e-mail</li>
+                                </ul>
+                                <p><strong>Quando acessamos:</strong> Durante o processo de login via Google OAuth 2.0
+                                </p>
+                                <p><strong>Frequência de acesso:</strong> Uma vez por sessão de login</p>
+                                <p class="mb-0"><strong>Permissão necessária:</strong> Somente leitura (read-only)</p>
+                            </div>
+                        </div>
 
-                    <h2 class="h5 mt-4">8. Direitos do Usuário (LGPD)</h2>
-                    <p>De acordo com a Lei Geral de Proteção de Dados (LGPD), você tem direito a:</p>
+                        <!-- 1.2 Profile -->
+                        <div class="card mb-4 border-primary">
+                            <div class="card-header bg-primary text-white">
+                                <h3 class="h5 mb-0">1.2. Informações de Perfil Básico</h3>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>OAuth Scope:</strong>
+                                    <code>https://www.googleapis.com/auth/userinfo.profile</code> ou
+                                    <code>profile</code></p>
+                                <p><strong>Dados específicos acessados:</strong></p>
+                                <ul>
+                                    <li><strong>Nome completo</strong>: Primeiro nome e sobrenome conforme cadastrado no
+                                        Google</li>
+                                    <li><strong>Foto de perfil</strong>: URL da imagem de perfil da conta Google</li>
+                                    <li><strong>ID único do Google</strong>: Identificador único e permanente da conta
+                                        (sub)</li>
+                                    <li><strong>Idioma preferido</strong>: Configuração de idioma da conta</li>
+                                </ul>
+                                <p><strong>Quando acessamos:</strong> Durante o processo de login via Google OAuth 2.0
+                                </p>
+                                <p><strong>Frequência de acesso:</strong> Uma vez por sessão de login</p>
+                                <p class="mb-0"><strong>Permissão necessária:</strong> Somente leitura (read-only)</p>
+                            </div>
+                        </div>
+
+                        <!-- 1.3 OpenID -->
+                        <div class="card mb-4 border-primary">
+                            <div class="card-header bg-primary text-white">
+                                <h3 class="h5 mb-0">1.3. Identificador OpenID</h3>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>OAuth Scope:</strong> <code>openid</code></p>
+                                <p><strong>Dados específicos acessados:</strong></p>
+                                <ul>
+                                    <li><strong>Subject Identifier (sub)</strong>: ID único e imutável da conta Google
+                                    </li>
+                                    <li><strong>Issuer (iss)</strong>: Identificador do provedor de identidade (Google)
+                                    </li>
+                                    <li><strong>Audience (aud)</strong>: ID do cliente OAuth</li>
+                                </ul>
+                                <p><strong>Quando acessamos:</strong> Durante o processo de autenticação OAuth</p>
+                                <p><strong>Frequência de acesso:</strong> A cada login</p>
+                                <p class="mb-0"><strong>Permissão necessária:</strong> Somente leitura (read-only)</p>
+                            </div>
+                        </div>
+
+                        <!-- 1.4 Google Calendar -->
+                        <div class="card mb-4 border-primary">
+                            <div class="card-header bg-primary text-white">
+                                <h3 class="h5 mb-0">1.4. Google Calendar (Calendário)</h3>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>OAuth Scope:</strong> <code>https://www.googleapis.com/auth/calendar</code>
+                                </p>
+                                <p><strong>Dados específicos acessados:</strong></p>
+                                <ul>
+                                    <li><strong>Lista de calendários</strong>: Todos os calendários da conta (primário e
+                                        secundários)</li>
+                                    <li><strong>Eventos de calendário</strong>: Título, descrição, data/hora de início e
+                                        fim, localização, participantes</li>
+                                    <li><strong>Configurações de calendário</strong>: Fuso horário, cor, visibilidade
+                                    </li>
+                                    <li><strong>Metadados de eventos</strong>: ID do evento, data de criação, última
+                                        modificação</li>
+                                    <li><strong>Lembretes e notificações</strong>: Configurações de lembretes dos
+                                        eventos</li>
+                                </ul>
+                                <p><strong>Quando acessamos:</strong></p>
+                                <ul>
+                                    <li>Quando o usuário cria ou edita um prazo de implantação no sistema</li>
+                                    <li>Quando o usuário agenda uma reunião relacionada a uma implantação</li>
+                                    <li>Quando o sistema sincroniza marcos do projeto com o calendário</li>
+                                </ul>
+                                <p><strong>Frequência de acesso:</strong> Sob demanda, quando o usuário realiza ações
+                                    relacionadas a datas e prazos</p>
+                                <p><strong>Permissão necessária:</strong> Leitura e escrita (read/write) - necessário
+                                    para criar, editar e excluir eventos</p>
+                                <p class="alert alert-warning mb-0">
+                                    <i class="bi bi-exclamation-triangle me-2"></i>
+                                    <strong>Importante:</strong> Apenas criamos, editamos ou excluímos eventos que foram
+                                    criados pelo próprio sistema CS Implantação. Não modificamos eventos pessoais ou de
+                                    outras aplicações.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info mt-4 mb-0">
+                            <h4 class="h6 mb-2"><i class="bi bi-info-circle me-2"></i>Restrições de Acesso</h4>
+                            <ul class="mb-0">
+                                <li><strong>Domínio restrito:</strong> Apenas contas com e-mail
+                                    <code>@pactosolucoes.com.br</code> podem fazer login</li>
+                                <li><strong>Contas pessoais:</strong> Não acessamos ou permitimos login de contas
+                                    pessoais do Google</li>
+                                <li><strong>Dados não acessados:</strong> Não acessamos Gmail, Google Drive, Contatos,
+                                    Fotos ou qualquer outro serviço Google além dos listados acima</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- ========================================== -->
+                    <!-- SEÇÃO 2: USO DOS DADOS (DETALHADO) -->
+                    <!-- ========================================== -->
+                    <div class="alert alert-success mt-5" role="alert">
+                        <h2 class="h3 mb-4">
+                            <i class="bi bi-gear me-2"></i>2. USO DOS DADOS DO GOOGLE (Data Usage)
+                        </h2>
+
+                        <p class="lead mb-4"><strong>Explicação detalhada de como processamos, utilizamos e manipulamos
+                                cada tipo de dado do Google:</strong></p>
+
+                        <!-- 2.1 Uso do Email -->
+                        <div class="card mb-4 border-success">
+                            <div class="card-header bg-success text-white">
+                                <h3 class="h5 mb-0">2.1. Uso do Endereço de E-mail</h3>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Como usamos:</strong></p>
+                                <ol>
+                                    <li><strong>Autenticação primária</strong>
+                                        <ul>
+                                            <li>Verificar a identidade do usuário durante o login</li>
+                                            <li>Criar uma sessão segura no sistema</li>
+                                            <li>Validar que o usuário pertence ao domínio autorizado
+                                                (@pactosolucoes.com.br)</li>
+                                        </ul>
+                                    </li>
+                                    <li><strong>Identificação única</strong>
+                                        <ul>
+                                            <li>Usar como chave primária para identificar o usuário no banco de dados
+                                            </li>
+                                            <li>Associar ações e registros ao usuário correto</li>
+                                            <li>Prevenir duplicação de contas</li>
+                                        </ul>
+                                    </li>
+                                    <li><strong>Comunicação interna</strong>
+                                        <ul>
+                                            <li>Exibir o e-mail em logs de auditoria interna</li>
+                                            <li>Identificar o autor de comentários e atualizações</li>
+                                            <li>Notificações internas do sistema (não enviamos e-mails externos)</li>
+                                        </ul>
+                                    </li>
+                                </ol>
+                                <p><strong>Processamento:</strong></p>
+                                <ul>
+                                    <li>Armazenado em texto simples no banco de dados PostgreSQL</li>
+                                    <li>Indexado para buscas rápidas</li>
+                                    <li>Comparado com lista de domínios autorizados a cada login</li>
+                                </ul>
+                                <p class="mb-0"><strong>Não usamos para:</strong> Marketing, spam, venda a terceiros, ou
+                                    qualquer comunicação não solicitada</p>
+                            </div>
+                        </div>
+
+                        <!-- 2.2 Uso do Nome e Foto -->
+                        <div class="card mb-4 border-success">
+                            <div class="card-header bg-success text-white">
+                                <h3 class="h5 mb-0">2.2. Uso do Nome e Foto de Perfil</h3>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Como usamos:</strong></p>
+                                <ol>
+                                    <li><strong>Interface do usuário</strong>
+                                        <ul>
+                                            <li>Exibir nome completo no cabeçalho do sistema</li>
+                                            <li>Mostrar foto de perfil ao lado do nome</li>
+                                            <li>Facilitar identificação visual entre membros da equipe</li>
+                                        </ul>
+                                    </li>
+                                    <li><strong>Atribuição de ações</strong>
+                                        <ul>
+                                            <li>Mostrar quem criou ou editou uma implantação</li>
+                                            <li>Exibir autor de comentários e notas</li>
+                                            <li>Identificar responsável por tarefas</li>
+                                        </ul>
+                                    </li>
+                                    <li><strong>Timeline e histórico</strong>
+                                        <ul>
+                                            <li>Registrar nome do usuário em logs de atividade</li>
+                                            <li>Exibir histórico de mudanças com identificação do autor</li>
+                                        </ul>
+                                    </li>
+                                </ol>
+                                <p><strong>Processamento:</strong></p>
+                                <ul>
+                                    <li>Nome armazenado em texto simples no banco de dados</li>
+                                    <li>URL da foto armazenada (não baixamos a imagem, apenas referenciamos o link do
+                                        Google)</li>
+                                    <li>Atualizados automaticamente se o usuário mudar no Google</li>
+                                </ul>
+                                <p class="mb-0"><strong>Não usamos para:</strong> Reconhecimento facial, análise
+                                    biométrica, ou qualquer processamento de imagem</p>
+                            </div>
+                        </div>
+
+                        <!-- 2.3 Uso do ID Único -->
+                        <div class="card mb-4 border-success">
+                            <div class="card-header bg-success text-white">
+                                <h3 class="h5 mb-0">2.3. Uso do Identificador Único (sub)</h3>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Como usamos:</strong></p>
+                                <ol>
+                                    <li><strong>Vinculação de conta</strong>
+                                        <ul>
+                                            <li>Criar link permanente entre conta Google e perfil interno</li>
+                                            <li>Manter consistência mesmo se o usuário mudar o e-mail</li>
+                                            <li>Prevenir conflitos de identidade</li>
+                                        </ul>
+                                    </li>
+                                    <li><strong>Segurança</strong>
+                                        <ul>
+                                            <li>Validar tokens OAuth durante sessões</li>
+                                            <li>Verificar autenticidade de requisições</li>
+                                            <li>Detectar tentativas de personificação</li>
+                                        </ul>
+                                    </li>
+                                </ol>
+                                <p><strong>Processamento:</strong></p>
+                                <ul>
+                                    <li>Armazenado como string alfanumérica no banco de dados</li>
+                                    <li>Usado apenas internamente, nunca exibido ao usuário</li>
+                                    <li>Criptografado em repouso junto com outros dados sensíveis</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- 2.4 Uso do Google Calendar -->
+                        <div class="card mb-4 border-success">
+                            <div class="card-header bg-success text-white">
+                                <h3 class="h5 mb-0">2.4. Uso do Google Calendar</h3>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Como usamos:</strong></p>
+                                <ol>
+                                    <li><strong>Criação de eventos</strong>
+                                        <ul>
+                                            <li>Quando o usuário define um prazo de implantação, criamos um evento no
+                                                calendário</li>
+                                            <li>Quando o usuário agenda uma reunião, criamos o evento com título, data,
+                                                hora e participantes</li>
+                                            <li>Quando um marco importante é definido, criamos um lembrete no calendário
+                                            </li>
+                                        </ul>
+                                    </li>
+                                    <li><strong>Sincronização de datas</strong>
+                                        <ul>
+                                            <li>Manter datas de entrega sincronizadas entre o sistema e o Google
+                                                Calendar</li>
+                                            <li>Atualizar eventos automaticamente quando prazos são alterados</li>
+                                            <li>Excluir eventos quando tarefas são canceladas</li>
+                                        </ul>
+                                    </li>
+                                    <li><strong>Lembretes automáticos</strong>
+                                        <ul>
+                                            <li>Configurar notificações do Google Calendar para lembrar usuários de
+                                                prazos</li>
+                                            <li>Usar sistema nativo de lembretes do Google (não enviamos e-mails
+                                                próprios)</li>
+                                        </ul>
+                                    </li>
+                                </ol>
+                                <p><strong>Processamento:</strong></p>
+                                <ul>
+                                    <li>Fazemos chamadas à API do Google Calendar via HTTPS</li>
+                                    <li>Armazenamos apenas o ID do evento criado (não duplicamos dados do calendário)
+                                    </li>
+                                    <li>Tokens de acesso ao Calendar são criptografados e armazenados com segurança</li>
+                                    <li>Renovamos tokens automaticamente quando expiram</li>
+                                </ul>
+                                <p><strong>Dados que NÃO acessamos:</strong></p>
+                                <ul>
+                                    <li>Eventos pessoais do usuário</li>
+                                    <li>Calendários compartilhados de outras pessoas</li>
+                                    <li>Eventos criados por outras aplicações</li>
+                                </ul>
+                                <p class="alert alert-warning mb-0">
+                                    <i class="bi bi-exclamation-triangle me-2"></i>
+                                    <strong>Controle do usuário:</strong> O usuário pode revogar o acesso ao Calendar a
+                                    qualquer momento nas configurações da conta Google, e todos os eventos criados pelo
+                                    sistema permanecerão no calendário (não são excluídos automaticamente).
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-danger mt-4 mb-0">
+                            <h4 class="h6 mb-2"><i class="bi bi-x-circle me-2"></i>O que NÃO fazemos com dados do Google
+                            </h4>
+                            <ul class="mb-0">
+                                <li><strong>Marketing:</strong> Não usamos dados para campanhas de marketing ou
+                                    publicidade</li>
+                                <li><strong>Venda:</strong> Nunca vendemos, alugamos ou comercializamos dados de
+                                    usuários</li>
+                                <li><strong>Treinamento de IA:</strong> Não usamos dados para treinar modelos de
+                                    inteligência artificial ou machine learning</li>
+                                <li><strong>Análise comportamental:</strong> Não fazemos perfil de comportamento ou
+                                    análise preditiva</li>
+                                <li><strong>Compartilhamento externo:</strong> Não compartilhamos dados com parceiros,
+                                    anunciantes ou outras empresas</li>
+                                <li><strong>Uso secundário:</strong> Não usamos dados para qualquer finalidade além do
+                                    gerenciamento de implantações</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- ========================================== -->
+                    <!-- SEÇÃO 3: ARMAZENAMENTO E PROTEÇÃO (DETALHADO) -->
+                    <!-- ========================================== -->
+                    <div class="alert alert-info mt-5" role="alert">
+                        <h2 class="h3 mb-4">
+                            <i class="bi bi-shield-check me-2"></i>3. ARMAZENAMENTO E PROTEÇÃO DE DADOS (Data Storage &
+                            Protection)
+                        </h2>
+
+                        <p class="lead mb-4"><strong>Detalhes técnicos de como armazenamos e protegemos os dados do
+                                Google:</strong></p>
+
+                        <!-- 3.1 Infraestrutura -->
+                        <div class="card mb-4 border-info">
+                            <div class="card-header bg-info text-white">
+                                <h3 class="h5 mb-0">3.1. Infraestrutura de Armazenamento</h3>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Provedor de hospedagem:</strong></p>
+                                <ul>
+                                    <li><strong>Nome:</strong> Railway (railway.app)</li>
+                                    <li><strong>Localização:</strong> Data centers certificados com padrões
+                                        internacionais de segurança</li>
+                                    <li><strong>Certificações:</strong> SOC 2, ISO 27001</li>
+                                    <li><strong>Uptime:</strong> 99.9% de disponibilidade garantida</li>
+                                </ul>
+                                <p><strong>Banco de dados:</strong></p>
+                                <ul>
+                                    <li><strong>Tipo:</strong> PostgreSQL 14+</li>
+                                    <li><strong>Criptografia:</strong> AES-256 em repouso</li>
+                                    <li><strong>Backups:</strong> Automáticos a cada 24 horas</li>
+                                    <li><strong>Retenção de backups:</strong> 30 dias</li>
+                                    <li><strong>Redundância:</strong> Replicação em múltiplas zonas de disponibilidade
+                                    </li>
+                                </ul>
+                                <p><strong>Armazenamento específico por tipo de dado:</strong></p>
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Dado</th>
+                                            <th>Formato</th>
+                                            <th>Criptografia</th>
+                                            <th>Localização</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>E-mail</td>
+                                            <td>Texto (VARCHAR)</td>
+                                            <td>Em repouso (AES-256)</td>
+                                            <td>Tabela usuarios</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Nome</td>
+                                            <td>Texto (VARCHAR)</td>
+                                            <td>Em repouso (AES-256)</td>
+                                            <td>Tabela perfil_usuario</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Foto (URL)</td>
+                                            <td>Texto (VARCHAR)</td>
+                                            <td>Não (apenas URL pública)</td>
+                                            <td>Tabela perfil_usuario</td>
+                                        </tr>
+                                        <tr>
+                                            <td>ID Google (sub)</td>
+                                            <td>Texto (VARCHAR)</td>
+                                            <td>Em repouso (AES-256)</td>
+                                            <td>Tabela usuarios</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Token OAuth</td>
+                                            <td>JSON criptografado</td>
+                                            <td>Dupla (AES-256 + bcrypt)</td>
+                                            <td>Tabela oauth_tokens</td>
+                                        </tr>
+                                        <tr>
+                                            <td>ID Evento Calendar</td>
+                                            <td>Texto (VARCHAR)</td>
+                                            <td>Em repouso (AES-256)</td>
+                                            <td>Tabela eventos_calendario</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- 3.2 Segurança em Trânsito -->
+                        <div class="card mb-4 border-info">
+                            <div class="card-header bg-info text-white">
+                                <h3 class="h5 mb-0">3.2. Segurança em Trânsito (Data in Transit)</h3>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Protocolo de comunicação:</strong></p>
+                                <ul>
+                                    <li><strong>HTTPS/TLS:</strong> Todas as conexões usam TLS 1.2 ou superior</li>
+                                    <li><strong>Certificado SSL:</strong> Certificado válido emitido por Let's Encrypt
+                                    </li>
+                                    <li><strong>HSTS:</strong> HTTP Strict Transport Security habilitado</li>
+                                    <li><strong>Cipher suites:</strong> Apenas algoritmos fortes (AES-GCM,
+                                        ChaCha20-Poly1305)</li>
+                                </ul>
+                                <p><strong>Comunicação com APIs do Google:</strong></p>
+                                <ul>
+                                    <li>Todas as chamadas à API do Google usam HTTPS</li>
+                                    <li>Tokens OAuth transmitidos apenas via headers seguros</li>
+                                    <li>Validação de certificados SSL do Google</li>
+                                    <li>Timeout de 30 segundos para prevenir ataques de replay</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- 3.3 Controles de Acesso -->
+                        <div class="card mb-4 border-info">
+                            <div class="card-header bg-info text-white">
+                                <h3 class="h5 mb-0">3.3. Controles de Acesso</h3>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Autenticação:</strong></p>
+                                <ul>
+                                    <li><strong>OAuth 2.0:</strong> Protocolo padrão do Google para autenticação</li>
+                                    <li><strong>Sessões:</strong> Tokens de sessão com expiração de 24 horas</li>
+                                    <li><strong>Refresh tokens:</strong> Armazenados criptografados, renovados
+                                        automaticamente</li>
+                                    <li><strong>MFA para admins:</strong> Autenticação multifator obrigatória para
+                                        administradores</li>
+                                </ul>
+                                <p><strong>Autorização (RBAC - Role-Based Access Control):</strong></p>
+                                <ul>
+                                    <li><strong>Perfis de acesso:</strong> Usuário, Gerente, Administrador</li>
+                                    <li><strong>Permissões granulares:</strong> Cada perfil tem permissões específicas
+                                    </li>
+                                    <li><strong>Princípio do menor privilégio:</strong> Usuários só acessam dados
+                                        necessários para sua função</li>
+                                    <li><strong>Segregação de dados:</strong> Usuários só veem implantações atribuídas a
+                                        eles</li>
+                                </ul>
+                                <p><strong>Auditoria:</strong></p>
+                                <ul>
+                                    <li>Logs de todas as ações críticas (login, logout, alterações de dados)</li>
+                                    <li>Registro de IP, timestamp e user-agent</li>
+                                    <li>Retenção de logs por 2 anos</li>
+                                    <li>Revisão mensal de logs por equipe de segurança</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- 3.4 Tempo de Armazenamento -->
+                        <div class="card mb-4 border-info">
+                            <div class="card-header bg-info text-white">
+                                <h3 class="h5 mb-0">3.4. Período de Armazenamento (Data Retention)</h3>
+                            </div>
+                            <div class="card-body">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Tipo de Dado</th>
+                                            <th>Período de Retenção</th>
+                                            <th>Motivo</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>E-mail, Nome, Foto</td>
+                                            <td>Enquanto conta ativa</td>
+                                            <td>Necessário para operação do sistema</td>
+                                        </tr>
+                                        <tr>
+                                            <td>E-mail, Nome (ex-funcionário)</td>
+                                            <td>5 anos após desligamento</td>
+                                            <td>Compliance e auditoria trabalhista</td>
+                                        </tr>
+                                        <tr>
+                                            <td>ID Google (sub)</td>
+                                            <td>Permanente</td>
+                                            <td>Vinculação de conta (não identificável isoladamente)</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Tokens OAuth</td>
+                                            <td>Até revogação ou 90 dias</td>
+                                            <td>Sessão ativa</td>
+                                        </tr>
+                                        <tr>
+                                            <td>IDs de eventos Calendar</td>
+                                            <td>Enquanto evento existir</td>
+                                            <td>Sincronização com Google Calendar</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Logs de atividade</td>
+                                            <td>2 anos</td>
+                                            <td>Auditoria e segurança</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Backups</td>
+                                            <td>30 dias</td>
+                                            <td>Recuperação de desastres</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- 3.5 Medidas Adicionais -->
+                        <div class="card mb-4 border-info">
+                            <div class="card-header bg-info text-white">
+                                <h3 class="h5 mb-0">3.5. Medidas Adicionais de Segurança</h3>
+                            </div>
+                            <div class="card-body">
+                                <ul class="mb-0">
+                                    <li><strong>Firewall:</strong> WAF (Web Application Firewall) configurado</li>
+                                    <li><strong>DDoS Protection:</strong> Proteção contra ataques de negação de serviço
+                                    </li>
+                                    <li><strong>Rate Limiting:</strong> Limite de requisições por IP para prevenir abuso
+                                    </li>
+                                    <li><strong>Input Validation:</strong> Validação e sanitização de todas as entradas
+                                    </li>
+                                    <li><strong>SQL Injection Prevention:</strong> Prepared statements e ORM</li>
+                                    <li><strong>XSS Protection:</strong> Content Security Policy (CSP) habilitado</li>
+                                    <li><strong>CSRF Protection:</strong> Tokens CSRF em todos os formulários</li>
+                                    <li><strong>Monitoramento:</strong> Alertas automáticos para atividades suspeitas
+                                    </li>
+                                    <li><strong>Atualizações:</strong> Patches de segurança aplicados mensalmente</li>
+                                    <li><strong>Testes de penetração:</strong> Realizados anualmente por empresa
+                                        terceirizada</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ========================================== -->
+                    <!-- SEÇÃO 4: COMPARTILHAMENTO (DETALHADO) -->
+                    <!-- ========================================== -->
+                    <div class="alert alert-warning mt-5" role="alert">
+                        <h2 class="h3 mb-4">
+                            <i class="bi bi-share me-2"></i>4. COMPARTILHAMENTO DE DADOS (Data Sharing)
+                        </h2>
+
+                        <p class="lead mb-4"><strong>Declaração explícita e detalhada sobre compartilhamento de
+                                dados:</strong></p>
+
+                        <!-- 4.1 Não Compartilhamento -->
+                        <div class="card mb-4 border-danger">
+                            <div class="card-header bg-danger text-white">
+                                <h3 class="h5 mb-0">4.1. Declaração de Não Compartilhamento com Terceiros</h3>
+                            </div>
+                            <div class="card-body">
+                                <p class="lead"><strong class="text-danger">NÃO COMPARTILHAMOS DADOS DO GOOGLE COM
+                                        TERCEIROS EXTERNOS.</strong></p>
+                                <p><strong>Especificamente, NÃO compartilhamos com:</strong></p>
+                                <ul>
+                                    <li><strong>Empresas de marketing:</strong> Não vendemos ou fornecemos dados para
+                                        campanhas de marketing</li>
+                                    <li><strong>Anunciantes:</strong> Não compartilhamos dados para publicidade
+                                        direcionada</li>
+                                    <li><strong>Agregadores de dados:</strong> Não fornecemos dados para empresas de
+                                        análise de dados</li>
+                                    <li><strong>Redes sociais:</strong> Não integramos ou compartilhamos com Facebook,
+                                        LinkedIn, etc.</li>
+                                    <li><strong>Parceiros comerciais:</strong> Não temos acordos de compartilhamento de
+                                        dados</li>
+                                    <li><strong>Outras aplicações:</strong> Não exportamos dados para sistemas de
+                                        terceiros</li>
+                                    <li><strong>Provedores de analytics:</strong> Não usamos Google Analytics, Mixpanel
+                                        ou similares com dados de usuários</li>
+                                </ul>
+                                <p class="mb-0"><strong>Garantia:</strong> Os dados obtidos através das APIs do Google
+                                    permanecem exclusivamente dentro do nosso sistema interno e não são transmitidos
+                                    para fora da nossa infraestrutura.</p>
+                            </div>
+                        </div>
+
+                        <!-- 4.2 Acesso Interno -->
+                        <div class="card mb-4 border-warning">
+                            <div class="card-header bg-warning">
+                                <h3 class="h5 mb-0">4.2. Acesso Interno (Dentro da Pacto Soluções)</h3>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Quem tem acesso aos dados:</strong></p>
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Perfil</th>
+                                            <th>Acesso a Dados</th>
+                                            <th>Finalidade</th>
+                                            <th>Quantidade de Pessoas</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><strong>Usuários Padrão</strong></td>
+                                            <td>Apenas seus próprios dados e implantações atribuídas</td>
+                                            <td>Uso normal do sistema</td>
+                                            <td>~50 usuários</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Gerentes</strong></td>
+                                            <td>Dados de usuários da sua equipe</td>
+                                            <td>Gestão de implantações</td>
+                                            <td>~10 gerentes</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Administradores</strong></td>
+                                            <td>Todos os dados (somente leitura)</td>
+                                            <td>Suporte técnico e manutenção</td>
+                                            <td>2-3 administradores</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>DBA (Database Admin)</strong></td>
+                                            <td>Acesso técnico ao banco (não visualiza dados em operação normal)</td>
+                                            <td>Backups e manutenção de infraestrutura</td>
+                                            <td>1 pessoa</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                <p><strong>Controles de acesso interno:</strong></p>
+                                <ul>
+                                    <li>Todos os funcionários assinam NDA (Non-Disclosure Agreement)</li>
+                                    <li>Treinamento anual sobre proteção de dados e LGPD</li>
+                                    <li>Acesso registrado em logs de auditoria</li>
+                                    <li>Revisão trimestral de permissões</li>
+                                    <li>Revogação imediata de acesso ao desligamento</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- 4.3 Subprocessadores -->
+                        <div class="card mb-4 border-warning">
+                            <div class="card-header bg-warning">
+                                <h3 class="h5 mb-0">4.3. Subprocessadores de Dados (Infraestrutura)</h3>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Provedores de infraestrutura que processam dados tecnicamente (mas não têm
+                                        acesso ao conteúdo):</strong></p>
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Provedor</th>
+                                            <th>Serviço</th>
+                                            <th>Dados Processados</th>
+                                            <th>Localização</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><strong>Railway</strong></td>
+                                            <td>Hospedagem e banco de dados</td>
+                                            <td>Todos os dados (criptografados)</td>
+                                            <td>EUA (certificado SOC 2)</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Google Cloud</strong></td>
+                                            <td>APIs OAuth e Calendar</td>
+                                            <td>Tokens OAuth, IDs de eventos</td>
+                                            <td>Global (infraestrutura do Google)</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Cloudflare</strong></td>
+                                            <td>CDN e proteção DDoS</td>
+                                            <td>Tráfego HTTP (não armazena dados)</td>
+                                            <td>Global</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                <p class="mb-0"><strong>Importante:</strong> Esses provedores processam dados apenas
+                                    tecnicamente (armazenamento, transmissão) e estão contratualmente proibidos de
+                                    acessar, usar ou compartilhar o conteúdo dos dados.</p>
+                            </div>
+                        </div>
+
+                        <!-- 4.4 Compartilhamento Legal -->
+                        <div class="card mb-4 border-warning">
+                            <div class="card-header bg-warning">
+                                <h3 class="h5 mb-0">4.4. Compartilhamento por Obrigação Legal</h3>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Dados podem ser compartilhados apenas nas seguintes situações
+                                        legais:</strong></p>
+                                <ul>
+                                    <li><strong>Ordem judicial:</strong> Mediante mandado judicial válido</li>
+                                    <li><strong>Requisição legal:</strong> Solicitação formal de autoridades competentes
+                                        (Polícia Federal, Ministério Público)</li>
+                                    <li><strong>Obrigação legal:</strong> Quando exigido por lei brasileira (ex:
+                                        processos trabalhistas)</li>
+                                    <li><strong>Proteção de direitos:</strong> Para defender direitos legais da empresa
+                                        em litígios</li>
+                                </ul>
+                                <p><strong>Procedimento:</strong></p>
+                                <ol class="mb-0">
+                                    <li>Validação da legitimidade da solicitação por advogados</li>
+                                    <li>Fornecimento apenas dos dados estritamente necessários</li>
+                                    <li>Notificação ao usuário (quando legalmente permitido)</li>
+                                    <li>Registro detalhado do compartilhamento em logs de auditoria</li>
+                                </ol>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-success mt-4 mb-0">
+                            <h4 class="h6 mb-2"><i class="bi bi-check-circle me-2"></i>Compromisso de Transparência</h4>
+                            <p class="mb-0">
+                                <strong>Se nossa política de compartilhamento mudar no futuro, notificaremos todos os
+                                    usuários com 30 dias de antecedência e solicitaremos novo consentimento.</strong>
+                                Você sempre terá a opção de revogar o acesso aos dados do Google através das
+                                configurações da sua conta Google.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- ========================================== -->
+                    <!-- SEÇÃO 5: EXCLUSÃO DE DADOS -->
+                    <!-- ========================================== -->
+                    <div class="alert alert-secondary mt-5" role="alert">
+                        <h2 class="h3 mb-4">
+                            <i class="bi bi-trash me-2"></i>5. EXCLUSÃO E REVOGAÇÃO DE ACESSO (Data Deletion)
+                        </h2>
+
+                        <p class="lead mb-4"><strong>Como solicitar a exclusão dos seus dados e revogar acesso:</strong>
+                        </p>
+
+                        <!-- 5.1 Revogação de Acesso -->
+                        <div class="card mb-4 border-secondary">
+                            <div class="card-header bg-secondary text-white">
+                                <h3 class="h5 mb-0">5.1. Revogar Acesso às APIs do Google (Imediato)</h3>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Você pode revogar o acesso do CS Implantação aos seus dados do Google a
+                                        qualquer momento:</strong></p>
+                                <ol>
+                                    <li>Acesse <a href="https://myaccount.google.com/permissions"
+                                            target="_blank">https://myaccount.google.com/permissions</a></li>
+                                    <li>Encontre "CS Implantação" ou "CS Onboarding" na lista</li>
+                                    <li>Clique em "Remover acesso"</li>
+                                </ol>
+                                <p><strong>Efeito imediato:</strong></p>
+                                <ul>
+                                    <li>Tokens OAuth são invalidados instantaneamente</li>
+                                    <li>Sistema não poderá mais acessar seu Google Calendar</li>
+                                    <li>Você será desconectado do sistema</li>
+                                    <li>Não poderá fazer login novamente até reautorizar</li>
+                                </ul>
+                                <p class="mb-0"><strong>Dados já coletados:</strong> Revogar acesso NÃO exclui
+                                    automaticamente dados já armazenados. Para exclusão completa, siga o processo na
+                                    seção 5.2.</p>
+                            </div>
+                        </div>
+
+                        <!-- 5.2 Solicitação de Exclusão -->
+                        <div class="card mb-4 border-secondary">
+                            <div class="card-header bg-secondary text-white">
+                                <h3 class="h5 mb-0">5.2. Solicitar Exclusão Completa de Dados</h3>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Processo passo a passo:</strong></p>
+                                <ol>
+                                    <li><strong>Enviar solicitação por e-mail</strong>
+                                        <ul>
+                                            <li>Para: <a
+                                                    href="mailto:suporte@pactosolucoes.com.br">suporte@pactosolucoes.com.br</a>
+                                            </li>
+                                            <li>Assunto: "Solicitação de Exclusão de Dados - LGPD - [SEU NOME]"</li>
+                                            <li>Corpo: Informar seu e-mail corporativo e confirmar que deseja excluir
+                                                todos os dados</li>
+                                        </ul>
+                                    </li>
+                                    <li><strong>Confirmação de identidade</strong>
+                                        <ul>
+                                            <li>Responderemos em até 48 horas úteis</li>
+                                            <li>Solicitaremos confirmação de identidade (para segurança)</li>
+                                        </ul>
+                                    </li>
+                                    <li><strong>Processamento</strong>
+                                        <ul>
+                                            <li>Prazo: até 30 dias úteis</li>
+                                            <li>Você receberá atualizações por e-mail</li>
+                                        </ul>
+                                    </li>
+                                    <li><strong>Confirmação final</strong>
+                                        <ul>
+                                            <li>Enviaremos confirmação quando a exclusão for concluída</li>
+                                            <li>Relatório detalhado do que foi excluído</li>
+                                        </ul>
+                                    </li>
+                                </ol>
+
+                                <p><strong>O que será excluído:</strong></p>
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Dado</th>
+                                            <th>Ação</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>E-mail</td>
+                                            <td>Removido do banco de dados</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Nome e Foto</td>
+                                            <td>Removidos do banco de dados</td>
+                                        </tr>
+                                        <tr>
+                                            <td>ID Google (sub)</td>
+                                            <td>Removido do banco de dados</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Tokens OAuth</td>
+                                            <td>Revogados e excluídos</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Dados de implantações criadas</td>
+                                            <td>Anonimizados (substituído por "Usuário Excluído")</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Comentários e notas</td>
+                                            <td>Anonimizados (autor substituído por "Usuário Excluído")</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Logs de atividade</td>
+                                            <td>Mantidos por 2 anos (obrigação legal), depois excluídos</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Backups</td>
+                                            <td>Excluídos do próximo ciclo de backup (até 30 dias)</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+
+                                <p class="alert alert-warning mb-0">
+                                    <i class="bi bi-exclamation-triangle me-2"></i>
+                                    <strong>Exceções:</strong> Dados que devem ser mantidos por obrigação legal (ex:
+                                    registros trabalhistas, fiscais) serão retidos pelo período mínimo exigido por lei
+                                    (até 5 anos) e depois excluídos automaticamente.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- 5.3 Exclusão Automática -->
+                        <div class="card mb-4 border-secondary">
+                            <div class="card-header bg-secondary text-white">
+                                <h3 class="h5 mb-0">5.3. Exclusão Automática</h3>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Situações em que dados são excluídos automaticamente:</strong></p>
+                                <ul class="mb-0">
+                                    <li><strong>Tokens OAuth expirados:</strong> Excluídos após 90 dias de inatividade
+                                    </li>
+                                    <li><strong>Sessões antigas:</strong> Excluídas após 30 dias de inatividade</li>
+                                    <li><strong>Logs antigos:</strong> Excluídos após 2 anos</li>
+                                    <li><strong>Backups antigos:</strong> Excluídos após 30 dias</li>
+                                    <li><strong>Dados de ex-funcionários:</strong> Excluídos após 5 anos do desligamento
+                                        (após período legal)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Seções Adicionais -->
+                    <h2 class="h5 mt-5">6. Direitos do Usuário (LGPD)</h2>
+                    <p>De acordo com a Lei Geral de Proteção de Dados (LGPD - Lei 13.709/2018), você tem os seguintes
+                        direitos:</p>
                     <ul>
-                        <li><strong>Acesso</strong> - Solicitar cópia dos seus dados pessoais</li>
-                        <li><strong>Correção</strong> - Atualizar dados incorretos ou desatualizados</li>
+                        <li><strong>Acesso</strong> - Solicitar cópia completa dos seus dados pessoais em formato
+                            legível</li>
+                        <li><strong>Correção</strong> - Atualizar dados incorretos, incompletos ou desatualizados</li>
                         <li><strong>Exclusão</strong> - Solicitar remoção dos seus dados (sujeito a obrigações legais)
                         </li>
-                        <li><strong>Portabilidade</strong> - Receber seus dados em formato estruturado</li>
-                        <li><strong>Revogação de consentimento</strong> - Revogar autorização de uso de dados</li>
+                        <li><strong>Portabilidade</strong> - Receber seus dados em formato estruturado e interoperável
+                            (JSON, CSV)</li>
+                        <li><strong>Revogação de consentimento</strong> - Revogar autorização de uso de dados a qualquer
+                            momento</li>
+                        <li><strong>Informação sobre compartilhamento</strong> - Saber com quem seus dados foram
+                            compartilhados</li>
+                        <li><strong>Oposição</strong> - Opor-se a tratamento de dados em certas situações</li>
                     </ul>
                     <p>
-                        Para exercer esses direitos, entre em contato através do e-mail:
+                        Para exercer qualquer desses direitos, entre em contato através do e-mail:
                         <a href="mailto:suporte@pactosolucoes.com.br">suporte@pactosolucoes.com.br</a>
                     </p>
 
-                    <h2 class="h5 mt-4">9. Conformidade com Políticas do Google</h2>
-                    <p>Esta aplicação está em conformidade com:</p>
+                    <h2 class="h5 mt-4">7. Alterações nesta Política</h2>
+                    <p>
+                        Podemos atualizar esta Política de Privacidade periodicamente para refletir mudanças em nossas
+                        práticas ou requisitos legais.
+                        Quando fizermos alterações significativas, notificaremos os usuários através de:
+                    </p>
                     <ul>
-                        <li><a href="https://developers.google.com/terms/api-services-user-data-policy"
-                                target="_blank">Google API Services User Data Policy</a></li>
-                        <li><a href="https://developers.google.com/terms" target="_blank">Google APIs Terms of
-                                Service</a></li>
+                        <li>Aviso destacado no sistema por 30 dias</li>
+                        <li>E-mail para todos os usuários ativos</li>
+                        <li>Atualização da data no topo desta página</li>
                     </ul>
-                    <p>
-                        Nosso uso de dados do Google é limitado, transparente e segue o princípio de "acesso mínimo
-                        necessário".
-                    </p>
+                    <p>Recomendamos revisar esta política periodicamente para se manter informado sobre como protegemos
+                        seus dados.</p>
 
-                    <h2 class="h5 mt-4">10. Alterações nesta Política</h2>
-                    <p>
-                        Podemos atualizar esta Política de Privacidade periodicamente. Notificaremos os usuários sobre
-                        mudanças significativas através do sistema. A data da última atualização está indicada no topo
-                        desta página.
-                    </p>
-
-                    <h2 class="h5 mt-4">11. Contato e Encarregado de Dados (DPO)</h2>
-                    <p>Para questões sobre privacidade e proteção de dados:</p>
+                    <h2 class="h5 mt-4">8. Contato e Encarregado de Dados (DPO)</h2>
+                    <p>Para questões sobre privacidade, proteção de dados ou exercício de direitos:</p>
                     <ul>
                         <li><strong>E-mail:</strong> <a
                                 href="mailto:suporte@pactosolucoes.com.br">suporte@pactosolucoes.com.br</a></li>
                         <li><strong>Empresa:</strong> Pacto Soluções</li>
+                        <li><strong>Tempo de resposta:</strong> Até 48 horas úteis</li>
                     </ul>
 
                     <hr class="my-4">
 
                     <div class="text-center">
-                        <a href="{{ url_for('auth.login') }}" class="btn btn-primary">
+                        <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-lg">
                             <i class="bi bi-arrow-left me-2"></i>Voltar ao Login
                         </a>
                     </div>
