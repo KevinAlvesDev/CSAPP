@@ -242,8 +242,17 @@ document.addEventListener('DOMContentLoaded', function () {
     };
 
     // Função para excluir aviso (exposta globalmente)
-    window.deleteAviso = function (avisoId) {
-        if (!confirm('Tem certeza que deseja excluir este aviso?')) {
+    window.deleteAviso = async function (avisoId) {
+        const confirmed = await window.showConfirm({
+            title: 'Excluir Aviso',
+            message: 'Tem certeza que deseja excluir este aviso? Esta ação não pode ser desfeita.',
+            confirmText: 'Excluir',
+            cancelText: 'Cancelar',
+            type: 'danger',
+            icon: 'bi-trash-fill'
+        });
+
+        if (!confirmed) {
             return;
         }
 
