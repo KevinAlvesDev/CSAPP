@@ -63,9 +63,8 @@ document.addEventListener('DOMContentLoaded', function () {
     function showEmptyState() {
         contentDisplay.innerHTML = `
             <div class="text-muted text-center py-5">
-                <i class="bi bi-file-earmark-text fs-1"></i>
-                <p class="mt-3">Nenhuma informação adicionada ainda.</p>
-                <p class="small">Clique em "Editar" para adicionar informações sobre esta implantação.</p>
+                <p class="mb-2">Nenhuma informação adicionada ainda.</p>
+                <p class="small mb-0">Clique em "Editar" para adicionar informações sobre esta implantação.</p>
             </div>
         `;
     }
