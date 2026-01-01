@@ -110,6 +110,7 @@ class ChecklistAPI {
      * @param {string} commentData.visibilidade - 'interno' ou 'externo'
      * @param {boolean} commentData.noshow - Se é no-show
      * @param {string} commentData.tag - Tag do comentário
+     * @param {string} commentData.imagem_url - URL da imagem anexada (opcional)
      * @returns {Promise<Object>}
      */
     async saveComment(itemId, commentData) {

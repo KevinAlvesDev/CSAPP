@@ -152,6 +152,7 @@ def add_comment(item_id):
     visibilidade = data.get('visibilidade', 'interno')
     noshow = data.get('noshow', False)
     tag = data.get('tag')  # Ação interna, Reunião, or No Show
+    imagem_url = data.get('imagem_url')  # URL da imagem anexada
 
     if not texto or not texto.strip():
         return jsonify({'ok': False, 'error': 'O texto do comentário é obrigatório'}), 400
@@ -167,7 +168,7 @@ def add_comment(item_id):
     usuario_email = g.user_email if hasattr(g, 'user_email') else None
 
     try:
-        result = add_comment_to_item(item_id, texto, visibilidade, usuario_email, noshow, tag)
+        result = add_comment_to_item(item_id, texto, visibilidade, usuario_email, noshow, tag, imagem_url)
         return jsonify(result)
     except ValueError as e:
         api_logger.error(f"Erro de validação ao adicionar comentário ao item {item_id}: {e}")

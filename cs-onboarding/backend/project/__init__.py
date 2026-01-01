@@ -224,12 +224,14 @@ def create_app(test_config=None):
     from .blueprints.profile import profile_bp
     from .blueprints.debug import debug_bp
     from .blueprints.perfis_bp import perfis_bp
+    from .blueprints.upload import upload_bp
 
     try:
 
         csrf.exempt(api_v1_bp)
         csrf.exempt(health_bp)
         csrf.exempt(api_docs_bp)
+        csrf.exempt(upload_bp)
 
         # checklist_bp deixa de ser isento para proteger mutações
     except Exception:
@@ -252,6 +254,7 @@ def create_app(test_config=None):
     app.register_blueprint(checklist_bp)
     app.register_blueprint(debug_bp)
     app.register_blueprint(perfis_bp)
+    app.register_blueprint(upload_bp)
 
 
     try:

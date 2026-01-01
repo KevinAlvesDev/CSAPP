@@ -15,13 +15,14 @@ from .utils import _format_datetime
 logger = logging.getLogger(__name__)
 
 
-def add_comment_to_item(item_id, text, visibilidade='interno', usuario_email=None, noshow=False, tag=None):
+def add_comment_to_item(item_id, text, visibilidade='interno', usuario_email=None, noshow=False, tag=None, imagem_url=None):
     """
     Adiciona um comentário ao histórico e atualiza o campo legado 'comment' no item.
     Centraliza a lógica de comentários.
     
     Args:
         tag: Tag do comentário (Ação interna, Reunião, No Show)
+        imagem_url: URL da imagem anexada ao comentário (opcional)
     """
     try:
         item_id = int(item_id)
@@ -85,11 +86,11 @@ def add_comment_to_item(item_id, text, visibilidade='interno', usuario_email=Non
         now = datetime.now(tz_brasilia)
         noshow_val = noshow if db_type == 'postgres' else (1 if noshow else 0)
         insert_sql = """
-            INSERT INTO comentarios_h (checklist_item_id, usuario_cs, texto, data_criacao, visibilidade, noshow, tag)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO comentarios_h (checklist_item_id, usuario_cs, texto, data_criacao, visibilidade, noshow, tag, imagem_url)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """
         if db_type == 'sqlite': insert_sql = insert_sql.replace('%s', '?')
-        cursor.execute(insert_sql, (item_id, usuario_email, text, now, visibilidade, noshow_val, tag))
+        cursor.execute(insert_sql, (item_id, usuario_email, text, now, visibilidade, noshow_val, tag, imagem_url))
         
         # 4. Atualizar campo legado 'comment' no checklist_items
         update_legacy_sql = "UPDATE checklist_items SET comment = %s, updated_at = %s WHERE id = %s"
