@@ -530,21 +530,25 @@ def create_aviso(impl_id):
             conn.close()
             return jsonify({'ok': False, 'error': 'Implantação não encontrada'}), 404
         
-        # Criar aviso
+        # Criar aviso com horário de Brasília (UTC-3)
+        from datetime import datetime, timezone, timedelta
+        tz_brasilia = timezone(timedelta(hours=-3))
+        now_brasilia = datetime.now(tz_brasilia)
+        
         if db_type == 'sqlite':
             cur.execute(_adapt_query("""
                 INSERT INTO avisos_implantacao 
                 (implantacao_id, tipo, titulo, mensagem, criado_por, data_criacao)
-                VALUES (%s, %s, %s, %s, %s, datetime('now'))
-            """, db_type), (impl_id, tipo, titulo, mensagem, user_email))
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, db_type), (impl_id, tipo, titulo, mensagem, user_email, now_brasilia))
             aviso_id = cur.lastrowid
         else:
             cur.execute(_adapt_query("""
                 INSERT INTO avisos_implantacao 
                 (implantacao_id, tipo, titulo, mensagem, criado_por, data_criacao)
-                VALUES (%s, %s, %s, %s, %s, NOW())
+                VALUES (%s, %s, %s, %s, %s, %s)
                 RETURNING id
-            """, db_type), (impl_id, tipo, titulo, mensagem, user_email))
+            """, db_type), (impl_id, tipo, titulo, mensagem, user_email, now_brasilia))
             aviso_id = cur.fetchone()[0]
         
         conn.commit()
