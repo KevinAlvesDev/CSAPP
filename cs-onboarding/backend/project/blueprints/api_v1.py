@@ -389,8 +389,18 @@ def list_avisos(impl_id):
                     # SQLite retorna string, manter como está
                     data_criacao_iso = data_criacao
                 else:
-                    # PostgreSQL retorna datetime, converter para ISO
-                    data_criacao_iso = data_criacao.isoformat()
+                    # PostgreSQL retorna datetime em UTC, converter para Brasília
+                    from datetime import timezone, timedelta
+                    tz_brasilia = timezone(timedelta(hours=-3))
+                    
+                    # Se o datetime não tem timezone, assumir que é UTC
+                    if data_criacao.tzinfo is None:
+                        from datetime import timezone as tz
+                        data_criacao = data_criacao.replace(tzinfo=tz.utc)
+                    
+                    # Converter para Brasília
+                    data_brasilia = data_criacao.astimezone(tz_brasilia)
+                    data_criacao_iso = data_brasilia.isoformat()
             else:
                 data_criacao_iso = None
             
@@ -466,7 +476,18 @@ def get_aviso(impl_id, aviso_id):
             if isinstance(data_criacao, str):
                 data_criacao_iso = data_criacao
             else:
-                data_criacao_iso = data_criacao.isoformat()
+                # PostgreSQL retorna datetime em UTC, converter para Brasília
+                from datetime import timezone, timedelta
+                tz_brasilia = timezone(timedelta(hours=-3))
+                
+                # Se o datetime não tem timezone, assumir que é UTC
+                if data_criacao.tzinfo is None:
+                    from datetime import timezone as tz
+                    data_criacao = data_criacao.replace(tzinfo=tz.utc)
+                
+                # Converter para Brasília
+                data_brasilia = data_criacao.astimezone(tz_brasilia)
+                data_criacao_iso = data_brasilia.isoformat()
         else:
             data_criacao_iso = None
         
