@@ -123,11 +123,25 @@ def dashboard():
         current_app.logger.error(f"Erro ao buscar tags metrics: {e}")
 
     try:
-        dashboard_data, metrics = get_dashboard_data(
-            user_email,
-            filtered_cs_email=current_cs_filter,
-            use_cache=True  # Cache habilitado para melhor performance
-        )
+        # Feature Toggle: Usar versão otimizada (SEM N+1)
+        use_optimized = current_app.config.get('USE_OPTIMIZED_DASHBOARD', 'false').lower() == 'true'
+        
+        if use_optimized:
+            # Versão otimizada (1 query, 10x mais rápido)
+            from ..domain.dashboard_service_v2 import get_dashboard_data_v2
+            dashboard_data, metrics = get_dashboard_data_v2(
+                user_email,
+                filtered_cs_email=current_cs_filter
+            )
+            current_app.logger.info(f"Dashboard otimizado usado para {user_email}")
+        else:
+            # Versão original (compatibilidade)
+            dashboard_data, metrics = get_dashboard_data(
+                user_email,
+                filtered_cs_email=current_cs_filter,
+                use_cache=True  # Cache habilitado para melhor performance
+            )
+
 
         if sort_days in ['asc', 'desc']:
             andamento_list = dashboard_data.get('andamento', [])

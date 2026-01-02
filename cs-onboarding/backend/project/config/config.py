@@ -108,6 +108,11 @@ class Config:
         'GOOGLE_OAUTH_SCOPES',
         GOOGLE_OAUTH_SCOPES_BASIC  # Apenas escopos básicos no login inicial
     )
+    
+    # ============================================
+    # Feature Toggles (Otimizações)
+    # ============================================
+    USE_OPTIMIZED_DASHBOARD = os.environ.get('USE_OPTIMIZED_DASHBOARD', 'false')
 
     EMAIL_DRIVER = os.environ.get('EMAIL_DRIVER', 'smtp').lower()
 
