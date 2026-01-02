@@ -227,6 +227,7 @@ def create_app(test_config=None):
     from .blueprints.debug import debug_bp
     from .blueprints.perfis_bp import perfis_bp
     from .blueprints.upload import upload_bp
+    from .blueprints.risc_bp import risc_bp  # RISC (Proteção entre Contas)
 
     try:
 
@@ -234,6 +235,7 @@ def create_app(test_config=None):
         csrf.exempt(health_bp)
         csrf.exempt(api_docs_bp)
         csrf.exempt(upload_bp)
+        csrf.exempt(risc_bp)  # RISC precisa receber eventos do Google sem CSRF
 
         # checklist_bp deixa de ser isento para proteger mutações
     except Exception:
@@ -257,6 +259,7 @@ def create_app(test_config=None):
     app.register_blueprint(debug_bp)
     app.register_blueprint(perfis_bp)
     app.register_blueprint(upload_bp)
+    app.register_blueprint(risc_bp)  # RISC (Proteção entre Contas)
 
 
     try:

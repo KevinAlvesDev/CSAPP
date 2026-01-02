@@ -24,6 +24,8 @@ python-dotenv==1.1.1
 Authlib==1.6.5
 requests==2.32.5
 requests-oauthlib==2.0.0
+PyJWT==2.8.0  # Para validação de tokens RISC
+cryptography==42.0.5  # Necessário para PyJWT com RS256
 
 # Upload de Arquivos (Cloudflare R2)
 boto3==1.40.57
