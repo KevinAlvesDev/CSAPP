@@ -134,6 +134,10 @@ def create_app(test_config=None):
     from .config.cache_config import init_cache
     init_cache(app)
 
+    # Monitoramento de performance
+    from .monitoring.performance_middleware import init_performance_monitoring
+    init_performance_monitoring(app)
+
     try:
         if app.config.get('USE_SQLITE_LOCALLY', False):
             with app.app_context():
@@ -330,7 +334,16 @@ def create_app(test_config=None):
         g.perfil = None
         if g.user_email:
             try:
-                g.perfil = query_db("SELECT * FROM perfil_usuario WHERE usuario = %s", (g.user_email,), one=True)
+                # Cachear perfil do usuário para evitar query em toda requisição
+                from .config.cache_config import cache
+                cache_key = f'user_profile_{g.user_email}'
+                g.perfil = cache.get(cache_key) if cache else None
+                
+                if not g.perfil:
+                    g.perfil = query_db("SELECT * FROM perfil_usuario WHERE usuario = %s", (g.user_email,), one=True)
+                    # Cachear por 5 minutos
+                    if cache and g.perfil:
+                        cache.set(cache_key, g.perfil, timeout=300)
             except Exception as e:
                 # Se a tabela não existir ainda, criar perfil básico
                 app.logger.warning(f"Falha ao buscar perfil para {g.user_email}: {e}")
@@ -380,15 +393,8 @@ def create_app(test_config=None):
 
 
 
-        # Carregar regras de gamificação
-        try:
-            if hasattr(current_app, 'gamification_rules'):
-                g.gamification_rules = current_app.gamification_rules
-            else:
-                g.gamification_rules = {}
-        except Exception as e:
-            app.logger.warning(f"Falha ao carregar regras de gamificação: {e}")
-            g.gamification_rules = {}
+        # Carregar regras de gamificação (otimizado)
+        g.gamification_rules = getattr(current_app, 'gamification_rules', {})
 
     @app.errorhandler(404)
     def page_not_found(e):

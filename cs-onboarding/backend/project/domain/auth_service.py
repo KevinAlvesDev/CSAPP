@@ -60,6 +60,9 @@ def get_user_profile_service(user_email):
 
 def update_user_role_service(user_email, role):
     execute_db("UPDATE perfil_usuario SET perfil_acesso = %s WHERE usuario = %s", (role, user_email))
+    # Invalidar cache do perfil
+    from ..config.cache_config import clear_user_cache
+    clear_user_cache(user_email)
 
 def find_cs_user_external_service(email):
     if not current_app.config.get('EXTERNAL_DB_URL'):
@@ -110,6 +113,10 @@ def atualizar_dados_perfil_service(usuario_email, nome, cargo, foto_url):
         "UPDATE perfil_usuario SET nome = %s, cargo = %s, foto_url = %s WHERE usuario = %s",
         (nome, cargo, foto_url, usuario_email)
     )
+    
+    # Invalidar cache do perfil
+    from ..config.cache_config import clear_user_cache
+    clear_user_cache(usuario_email)
 
     # Sincronizar responsáveis nos itens do checklist:
     # - Se responsável for exatamente o nome antigo, substituir pelo novo nome

@@ -48,9 +48,9 @@ def clear_user_cache(user_email):
     Útil quando dados do usuário são atualizados.
     """
     if cache:
+        cache.delete(f'user_profile_{user_email}')  # Cache de perfil
         cache.delete(f'dashboard_data_{user_email}')
         cache.delete(f'dashboard_data_{user_email}_all_pNone_ppNone')
-        cache.delete(f'user_profile_{user_email}')
         cache.delete(f'user_implantacoes_{user_email}')
 
 

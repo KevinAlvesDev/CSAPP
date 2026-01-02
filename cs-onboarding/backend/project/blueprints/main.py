@@ -126,7 +126,7 @@ def dashboard():
         dashboard_data, metrics = get_dashboard_data(
             user_email,
             filtered_cs_email=current_cs_filter,
-            use_cache=False
+            use_cache=True  # Cache habilitado para melhor performance
         )
 
         if sort_days in ['asc', 'desc']:
