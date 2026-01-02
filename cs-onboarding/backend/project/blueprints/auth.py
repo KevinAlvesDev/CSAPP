@@ -397,8 +397,24 @@ def google_callback():
 
         session.permanent = True
 
-        # Opcional: Armazenar token se precisar acessar APIs do Google depois
-        # session['google_token'] = token
+        # Salvar token do Google no banco de dados para autorização incremental
+        try:
+            from ..domain.google_oauth_service import save_user_google_token
+            from datetime import datetime, timedelta
+            
+            # Preparar token para salvar
+            token_to_save = {
+                'access_token': token.get('access_token'),
+                'refresh_token': token.get('refresh_token'),
+                'token_type': token.get('token_type', 'Bearer'),
+                'expires_at': datetime.utcnow() + timedelta(seconds=token.get('expires_in', 3600)),
+                'scope': token.get('scope', 'openid email profile')
+            }
+            
+            save_user_google_token(email, token_to_save)
+            auth_logger.info(f"Token do Google salvo no banco para {email}")
+        except Exception as token_err:
+            auth_logger.warning(f"Falha ao salvar token do Google: {token_err}")
 
         auth_logger.info(f'User logged in via Google: {email}')
         return redirect(url_for('main.dashboard'))

@@ -95,9 +95,18 @@ class Config:
     GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI')
     GOOGLE_OAUTH_ENABLED = all([GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI])
 
+    # Escopos básicos para login (sempre solicitados)
+    GOOGLE_OAUTH_SCOPES_BASIC = 'openid email profile'
+    
+    # Escopos adicionais disponíveis (solicitados incrementalmente)
+    GOOGLE_OAUTH_SCOPES_CALENDAR = 'https://www.googleapis.com/auth/calendar'
+    GOOGLE_OAUTH_SCOPES_DRIVE_FILE = 'https://www.googleapis.com/auth/drive.file'
+    GOOGLE_OAUTH_SCOPES_DRIVE_READONLY = 'https://www.googleapis.com/auth/drive.readonly'
+    
+    # Escopos padrão (para compatibilidade com código existente)
     GOOGLE_OAUTH_SCOPES = os.environ.get(
         'GOOGLE_OAUTH_SCOPES',
-        'openid email profile https://www.googleapis.com/auth/calendar'
+        GOOGLE_OAUTH_SCOPES_BASIC  # Apenas escopos básicos no login inicial
     )
 
     EMAIL_DRIVER = os.environ.get('EMAIL_DRIVER', 'smtp').lower()

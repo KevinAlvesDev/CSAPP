@@ -36,11 +36,19 @@ def agenda_home():
         flash('Integração com Google Agenda não está configurada. Defina GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET e GOOGLE_REDIRECT_URI no .env.', 'warning')
         return render_template('agenda.html', events=[], google_connected=False)
 
-    token = session.get('google_token')
+    # Usar token do banco com refresh automático
     try:
-        agenda_logger.debug(f"Token na sessão: {bool(token)}; chaves={list(token.keys()) if token else None}")
+        from ..domain.google_oauth_service import get_valid_token
+        token = get_valid_token(g.user_email)
+    except Exception as e:
+        agenda_logger.error(f"Erro ao obter token válido: {e}")
+        token = None
+    
+    try:
+        agenda_logger.debug(f"Token válido obtido: {bool(token)}")
     except Exception:
         pass
+    
     if not token:
         return render_template('agenda.html', events=[], google_connected=False)
 
@@ -126,13 +134,47 @@ def agenda_home():
 @agenda_bp.route('/agenda/connect')
 @login_required
 def agenda_connect():
-
+    """
+    Conecta com Google Calendar usando autorização incremental.
+    Solicita apenas o escopo de calendar, mantendo os escopos básicos já concedidos.
+    """
     if not _google_oauth_configured():
         flash('Integração com Google Agenda não está configurada.', 'warning')
         return redirect(url_for('agenda.agenda_home'))
 
-    redirect_uri = current_app.config['GOOGLE_REDIRECT_URI']
-    return oauth.google.authorize_redirect(redirect_uri)
+    try:
+        from ..domain.google_oauth_service import user_has_scope, SCOPE_CALENDAR
+        from flask import url_for
+        
+        # Verificar se usuário já tem o escopo de calendar
+        if user_has_scope(g.user_email, SCOPE_CALENDAR):
+            agenda_logger.info(f"Usuário {g.user_email} já possui escopo de calendar")
+            flash('Você já está conectado ao Google Calendar!', 'info')
+            return redirect(url_for('agenda.agenda_home'))
+        
+        # Solicitar escopo de calendar incrementalmente
+        agenda_logger.info(f"Solicitando escopo de calendar para {g.user_email}")
+        
+        redirect_uri = url_for('agenda.agenda_callback', _external=True)
+        
+        # Forçar HTTPS em produção
+        is_local = current_app.config.get('USE_SQLITE_LOCALLY', False) or current_app.config.get('DEBUG', False)
+        if not is_local and redirect_uri.startswith('http://'):
+            redirect_uri = redirect_uri.replace('http://', 'https://', 1)
+        
+        # Usar autorização incremental
+        return oauth.google.authorize_redirect(
+            redirect_uri,
+            scope=SCOPE_CALENDAR,  # Apenas calendar
+            access_type='offline',
+            prompt='consent',
+            include_granted_scopes='true'  # AUTORIZAÇÃO INCREMENTAL
+        )
+        
+    except Exception as e:
+        agenda_logger.error(f"Erro ao iniciar conexão com Google Calendar: {e}", exc_info=True)
+        flash('Erro ao conectar com Google Calendar.', 'error')
+        return redirect(url_for('agenda.agenda_home'))
 
 
 @agenda_bp.route('/agenda/calendars')
@@ -173,12 +215,33 @@ def agenda_list_calendars():
 
 @agenda_bp.route('/agenda/callback')
 def agenda_callback():
+    """
+    Callback do OAuth para Google Calendar.
+    Salva o token com escopos combinados (básicos + calendar).
+    """
     if not _google_oauth_configured():
         flash('Integração com Google Agenda não está configurada.', 'warning')
         return redirect(url_for('agenda.agenda_home'))
 
     try:
         token = oauth.google.authorize_access_token()
+        
+        # Salvar token no banco de dados
+        from ..domain.google_oauth_service import save_user_google_token
+        from datetime import datetime, timedelta
+        
+        # Preparar token para salvar
+        token_to_save = {
+            'access_token': token.get('access_token'),
+            'refresh_token': token.get('refresh_token'),
+            'token_type': token.get('token_type', 'Bearer'),
+            'expires_at': datetime.utcnow() + timedelta(seconds=token.get('expires_in', 3600)),
+            'scope': token.get('scope', '')
+        }
+        
+        save_user_google_token(g.user_email, token_to_save)
+        
+        # Também salvar na sessão para compatibilidade
         session['google_token'] = {
             'access_token': token.get('access_token'),
             'refresh_token': token.get('refresh_token'),
@@ -186,7 +249,10 @@ def agenda_callback():
             'token_type': token.get('token_type'),
         }
         session.permanent = True
+        
+        agenda_logger.info(f"Token do Google Calendar salvo para {g.user_email}")
         flash('Conexão com Google concluída com sucesso!', 'success')
+        
     except Exception as e:
         agenda_logger.error(f"Erro no callback OAuth Google: {e}", exc_info=True)
         flash('Falha na conexão com Google.', 'error')

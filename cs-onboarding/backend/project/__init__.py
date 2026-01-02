@@ -198,9 +198,11 @@ def create_app(test_config=None):
                 access_token_url='https://oauth2.googleapis.com/token',
                 server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
                 client_kwargs={
-                    'scope': app.config.get('GOOGLE_OAUTH_SCOPES', 'openid email profile https://www.googleapis.com/auth/calendar'),
-                    'prompt': 'consent',
-                    'access_type': 'offline',
+                    # Apenas escopos básicos no login inicial
+                    'scope': app.config.get('GOOGLE_OAUTH_SCOPES_BASIC', 'openid email profile'),
+                    'prompt': 'select_account',  # Permitir escolha de conta
+                    'access_type': 'offline',  # Obter refresh_token
+                    'include_granted_scopes': 'true',  # AUTORIZAÇÃO INCREMENTAL
                 },
             )
         pass
