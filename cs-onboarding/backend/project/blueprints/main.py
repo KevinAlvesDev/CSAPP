@@ -169,7 +169,7 @@ def dashboard():
         all_cs_users = _get_all_cs_users()
 
         return render_template(
-            'dashboard.html',
+            'pages/dashboard.html',
             user_info=user_info,
             metrics=final_metrics,
             tags_report=tags_report,
@@ -208,7 +208,7 @@ def dashboard():
         if not is_manager_erro:
             current_cs_filter_erro = None
 
-        return render_template('dashboard.html', user_info=user_info, metrics={},
+        return render_template('pages/dashboard.html', user_info=user_info, metrics={},
                                implantacoes_andamento=[], implantacoes_novas=[],
                                implantacoes_futuras=[], implantacoes_sem_previsao=[], implantacoes_finalizadas=[],
                                implantacoes_paradas=[], implantacoes_canceladas=[],
@@ -244,7 +244,7 @@ def ver_implantacao(impl_id):
         logger.info(f"Dados da implantação {impl_id} obtidos com sucesso")
 
         return render_template(
-            'implantacao_detalhes.html',
+            'pages/implantacao_detalhes.html',
             **context_data
         )
 

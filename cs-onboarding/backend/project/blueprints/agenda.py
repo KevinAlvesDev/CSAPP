@@ -34,7 +34,7 @@ def agenda_home():
         pass
     if not _google_oauth_configured():
         flash('Integração com Google Agenda não está configurada. Defina GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET e GOOGLE_REDIRECT_URI no .env.', 'warning')
-        return render_template('agenda.html', events=[], google_connected=False)
+        return render_template('pages/agenda.html', events=[], google_connected=False)
 
     # Usar token do banco com refresh automático
     try:
@@ -50,7 +50,7 @@ def agenda_home():
         pass
     
     if not token:
-        return render_template('agenda.html', events=[], google_connected=False)
+        return render_template('pages/agenda.html', events=[], google_connected=False)
 
     access_token = token.get('access_token')
     try:
@@ -58,7 +58,7 @@ def agenda_home():
     except Exception:
         pass
     if not access_token:
-        return render_template('agenda.html', events=[], google_connected=False)
+        return render_template('pages/agenda.html', events=[], google_connected=False)
 
     view = request.args.get('view', 'semana')
     start_qs = request.args.get('start')
@@ -101,7 +101,7 @@ def agenda_home():
         if resp.status_code == 401:
 
             flash('Sessão do Google expirou. Conecte novamente a Agenda.', 'warning')
-            return render_template('agenda.html', events=[], google_connected=False)
+            return render_template('pages/agenda.html', events=[], google_connected=False)
         resp.raise_for_status()
         data = resp.json()
         events = data.get('items', [])
@@ -128,7 +128,7 @@ def agenda_home():
         except Exception:
             pass
         flash('Falha ao carregar eventos da Agenda do Google.', 'error')
-        return render_template('agenda.html', events=[], google_connected=False, view=view)
+        return render_template('pages/agenda.html', events=[], google_connected=False, view=view)
 
 
 @agenda_bp.route('/agenda/connect')

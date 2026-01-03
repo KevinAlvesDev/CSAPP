@@ -238,7 +238,7 @@ def manage_gamification_metrics():
             flash(f"Erro ao salvar métricas: {e}", "error")
 
     return render_template(
-        'gamification_metrics_form.html',
+        'pages/gamification_metrics_form.html',
         all_cs_users=all_cs_users,
         current_cs_email=target_cs_email,
         current_mes=target_mes,
@@ -292,7 +292,7 @@ def gamification_report():
         report_data_sorted = []
 
     return render_template(
-        'gamification_report.html',
+        'pages/gamification_report.html',
         report_data=report_data_sorted,
         all_cs_users=all_cs_users,
         current_cs_email=target_cs_email,

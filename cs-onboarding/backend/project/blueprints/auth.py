@@ -197,7 +197,7 @@ def login():
     except Exception:
         login_bg_file = 'imagens/teladelogin.jpg'
     google_enabled = current_app.config.get('GOOGLE_OAUTH_ENABLED', False)
-    return render_template('login.html', auth0_enabled=False, use_custom_auth=google_enabled, login_bg_file=login_bg_file)
+    return render_template('auth/login.html', auth0_enabled=False, use_custom_auth=google_enabled, login_bg_file=login_bg_file)
 
 
 
@@ -512,7 +512,7 @@ def dev_login_as():
             session.pop('_flashes', None)
         except Exception:
             pass
-        return render_template('dev_login.html', auth0_enabled=False)
+        return render_template('auth/dev_login.html', auth0_enabled=False)
 
     email = (request.form.get('email') or '').strip()
     name = (request.form.get('name') or email).strip()

@@ -20,7 +20,7 @@ def listar_perfis():
     """Lista todos os perfis de acesso"""
     try:
         perfis = perfis_service.listar_perfis()
-        return render_template('perfis_lista.html', perfis=perfis)
+        return render_template('pages/perfis_lista.html', perfis=perfis)
     except Exception as e:
         logger.error(f"Erro ao listar perfis: {e}", exc_info=True)
         flash(f'Erro ao carregar perfis: {str(e)}', 'error')
@@ -44,7 +44,7 @@ def novo_perfil():
             recursos_agrupados[cat].append(recurso)
         
         return render_template(
-            'perfis_editor.html',
+            'pages/perfis_editor.html',
             perfil=None,
             categorias=categorias,
             recursos_agrupados=recursos_agrupados,
@@ -69,7 +69,7 @@ def editar_perfil(perfil_id):
         categorias = perfis_service.obter_categorias()
         
         return render_template(
-            'perfis_editor.html',
+            'pages/perfis_editor.html',
             perfil=perfil,
             categorias=categorias,
             modo='editar'

@@ -133,7 +133,7 @@ def analytics_dashboard():
         current_task_end_date = task_end_date or analytics_data.get('default_task_end_date')
 
         return render_template(
-            'analytics.html',
+            'pages/analytics.html',
             kpi_cards=analytics_data.get('kpi_cards', {}),
             implantacoes_lista_detalhada=analytics_data.get('implantacoes_lista_detalhada', []),
             modules_implantacao_lista=analytics_data.get('modules_implantacao_lista', []),
@@ -219,7 +219,7 @@ def cancelamentos_dashboard():
             cs_email = g.user_email
 
         payload = get_cancelamentos_data(cs_email=cs_email, start_date=start_date, end_date=end_date)
-        return render_template('cancelamentos.html', **payload,
+        return render_template('pages/cancelamentos.html', **payload,
                                current_cs_email=cs_email,
                                current_start_date=start_date,
                                current_end_date=end_date,

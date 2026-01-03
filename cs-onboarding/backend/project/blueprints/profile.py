@@ -23,7 +23,7 @@ def before_request():
 @profile_bp.route('/')
 def profile():
     """Exibe a página de perfil do usuário."""
-    return render_template('perfil.html', r2_configurado=g.R2_CONFIGURED)
+    return render_template('pages/perfil.html', r2_configurado=g.R2_CONFIGURED)
 
 
 @profile_bp.route('/modal')

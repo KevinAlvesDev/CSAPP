@@ -39,7 +39,7 @@ def manage_users():
         perfis_disponiveis = obter_perfis_disponiveis()
 
         return render_template(
-            'manage_users.html',
+            'pages/manage_users.html',
             users=users_data,
             perfis_list=perfis_disponiveis
         )

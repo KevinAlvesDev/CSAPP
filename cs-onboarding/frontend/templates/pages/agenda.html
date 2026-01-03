@@ -1,0 +1,363 @@
+{% extends 'base.html' %}
+
+{% block title %}Agenda{% endblock %}
+
+{% block head_extra %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<style>
+  /* Agenda Semana (grid inspirado no Google Calendar) */
+  .agenda-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .agenda-timezone {
+    color: #6c757d;
+    font-size: 0.8rem;
+  }
+
+  .agenda-week-header {
+    display: grid;
+    grid-template-columns: 60px repeat(7, 1fr);
+    align-items: center;
+    border-bottom: 1px solid var(--table-border-color);
+    background: var(--header-bg);
+  }
+
+  .agenda-week-header .dow {
+    padding: 0.75rem;
+    font-weight: 600;
+  }
+
+  .agenda-week-header .dow.today {
+    color: var(--accent-color);
+  }
+
+  .agenda-grid {
+    display: grid;
+    grid-template-columns: 60px repeat(7, 1fr);
+  }
+
+  .hours-col {
+    background: var(--container-bg);
+    border-right: 1px solid var(--table-border-color);
+  }
+
+  .hours-col .hour {
+    height: 60px;
+    font-size: 0.75rem;
+    color: #888;
+    padding-right: 0.5rem;
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-start;
+  }
+
+  .day-col {
+    position: relative;
+    border-right: 1px solid var(--table-border-color);
+  }
+
+  .day-col:last-child {
+    border-right: none;
+  }
+
+  .allday-strip {
+    min-height: 32px;
+    border-bottom: 1px solid var(--table-border-color);
+    padding: 4px 6px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .events-area {
+    position: relative;
+    height: 1440px;
+    background-image: linear-gradient(to bottom, var(--table-border-color) 1.25px, transparent 1px);
+    background-size: 100% 60px;
+    background-repeat: repeat;
+  }
+
+  .event-card {
+    position: absolute;
+    left: 4px;
+    right: 4px;
+    border-radius: 6px;
+    padding: 6px 8px;
+    color: #000000;
+    font-size: 0.85rem;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+  }
+
+  .event-time {
+    font-weight: 700;
+    margin-right: 6px;
+  }
+
+  .event-title {
+    font-weight: 600;
+  }
+
+  .event-loc {
+    font-size: 0.75rem;
+    opacity: 0.9;
+  }
+
+  /* Cores aproximadas por colorId */
+  .bg-default {
+    background-color: var(--accent-color);
+  }
+
+  .bg-1 {
+    background-color: #7986cb;
+  }
+
+  .bg-2 {
+    background-color: #33b679;
+  }
+
+  .bg-3 {
+    background-color: #8e24aa;
+  }
+
+  .bg-4 {
+    background-color: #e67c73;
+  }
+
+  .bg-5 {
+    background-color: #f6c026;
+    color: #222;
+  }
+
+  .bg-6 {
+    background-color: #f5511d;
+  }
+
+  .bg-7 {
+    background-color: #039be5;
+  }
+
+  .bg-8 {
+    background-color: #616161;
+  }
+
+  .bg-9 {
+    background-color: #3f51b5;
+  }
+
+  .bg-10 {
+    background-color: #0b8043;
+  }
+
+  .bg-11 {
+    background-color: #d50000;
+  }
+
+  /* Altura com rolagem para evitar espaço vazio de madrugada */
+  .agenda-grid-scroll {
+    height: 720px;
+    overflow-y: auto;
+  }
+
+  .event-card.selected {
+    outline: 2px solid #000000;
+  }
+
+  .event-card .resize-handle {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 6px;
+    cursor: ns-resize;
+    background: rgba(0, 0, 0, 0.6);
+  }
+
+  .event-card.dragging {
+    opacity: 0.85;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+  <header class="header-bg p-3 d-flex align-items-center position-relative rounded-3">
+    <h1 class="main-title mb-0 fs-4 w-100 text-center">CS ONBOARDING Minha Agenda</h1>
+    <div class="d-flex align-items-center position-absolute end-0 top-50 translate-middle-y">
+      <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-house me-1"></i> Dashboard
+      </a>
+    </div>
+  </header>
+  <main class="container py-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div class="agenda-toolbar">
+        <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-primary btn-sm"><i
+            class="bi bi-arrow-left me-1"></i> Voltar ao dashboard</a>
+        {% if google_connected %}
+        <span class="agenda-timezone d-none d-md-inline"></span>
+        <a href="{{ url_for('agenda.agenda_disconnect') }}" class="btn btn-outline-danger btn-sm"><i
+            class="bi bi-x-circle me-1"></i> Desconectar</a>
+        {% else %}
+        <a href="{{ url_for('agenda.agenda_connect') }}" class="btn btn-primary btn-sm" target="_top" rel="noopener"><i
+            class="bi bi-google me-1"></i> Conectar Google</a>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if not google_connected %}
+    <div class="alert alert-info">Conecte sua conta Google para visualizar seus compromissos em um grid semanal.</div>
+    {% else %}
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-2">
+          <button class="btn btn-outline-secondary btn-sm" id="prevWeek"><i class="bi bi-chevron-left"></i></button>
+          <button class="btn btn-outline-secondary btn-sm" id="nextWeek"><i class="bi bi-chevron-right"></i></button>
+          <button class="btn btn-outline-primary btn-sm" id="goToday">Hoje</button>
+          <button class="btn btn-primary btn-sm" id="openCreateEvent"><i class="bi bi-plus-lg me-1"></i> Criar</button>
+          <select class="form-select form-select-sm" id="calendarSelector" style="width:auto;"></select>
+          <input type="text" id="agendaSearch" class="form-control form-control-sm" placeholder="Pesquisar..."
+            style="width:180px;">
+        </div>
+        <strong>Semana</strong>
+      </div>
+      <div class="card-body p-0">
+        {% if not events %}
+        <div class="alert alert-dark text-center small py-2 mb-0">Nenhum evento nesta semana.</div>
+        {% endif %}
+        <div class="agenda-week" data-week-start="{{ week_start }}" data-week-end="{{ week_end }}">
+          <div class="agenda-week-header">
+            <div></div>
+            {% for d in week_days %}
+            <div class="dow" data-iso="{{ d }}"></div>
+            {% endfor %}
+          </div>
+          <div class="agenda-grid-scroll">
+            <div class="agenda-grid">
+              <div class="hours-col">
+                {% for h in range(0,24) %}
+                <div class="hour">{{ '%02d:00' % h }}</div>
+                {% endfor %}
+              </div>
+              {% for d in week_days %}
+              <div class="day-col" data-iso="{{ d }}">
+                <div class="allday-strip"></div>
+                <div class="events-area"></div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </main>
+</div>
+
+<div class="modal fade" id="eventModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header header-bg">
+        <h5 class="modal-title" id="eventModalTitle">Novo Evento</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="eventForm">
+          <div class="mb-2">
+            <label class="form-label small">Título</label>
+            <input type="text" class="form-control" id="evSummary" placeholder="Ex.: Reunião">
+          </div>
+          <div class="d-flex justify-content-end mb-2">
+            <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse"
+              data-bs-target="#evAdvanced" aria-expanded="false" aria-controls="evAdvanced">
+              <i class="bi bi-three-dots"></i> Mais opções
+            </button>
+          </div>
+          <div class="row g-2">
+            <div class="col-6">
+              <label class="form-label small">Data</label>
+              <input type="date" class="form-control" id="evDate">
+            </div>
+            <div class="col-6 d-flex align-items-end">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="evAllDay">
+                <label class="form-check-label small" for="evAllDay">Dia inteiro</label>
+              </div>
+            </div>
+          </div>
+          <div class="row g-2" id="timeRow">
+            <div class="col-6">
+              <label class="form-label small">Início</label>
+              <input type="time" class="form-control" id="evStart">
+            </div>
+            <div class="col-6">
+              <label class="form-label small">Fim</label>
+              <input type="time" class="form-control" id="evEnd">
+            </div>
+          </div>
+          <div class="collapse" id="evAdvanced">
+            <div class="mb-2">
+              <label class="form-label small">Descrição</label>
+              <textarea class="form-control" id="evDescription" rows="2" placeholder="Opcional"></textarea>
+            </div>
+            <div class="mb-2">
+              <label class="form-label small">Local</label>
+              <input type="text" class="form-control" id="evLocation" placeholder="Opcional">
+            </div>
+            <div class="mb-2">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="evMeet">
+                <label class="form-check-label small" for="evMeet">Gerar link de reunião (Google Meet)</label>
+              </div>
+            </div>
+            <div class="row g-2">
+              <div class="col-6">
+                <label class="form-label small">Recorrência</label>
+                <select class="form-select" id="evRepeat">
+                  <option value="none">Nenhuma</option>
+                  <option value="daily">Diária</option>
+                  <option value="weekly">Semanal</option>
+                  <option value="monthly">Mensal</option>
+                </select>
+              </div>
+              <div class="col-6">
+                <label class="form-label small">Lembrete (minutos)</label>
+                <input type="number" min="0" class="form-control" id="evReminder" placeholder="Ex.: 10">
+              </div>
+            </div>
+            <div class="mt-2">
+              <label class="form-label small">Calendário</label>
+              <select class="form-select" id="evCalendar"></select>
+            </div>
+          </div>
+        </form>
+        <div class="alert alert-danger d-none" id="evError"></div>
+        <div class="alert alert-success d-none" id="evSuccess"></div>
+      </div>
+      <div class="modal-footer header-bg">
+        <button type="button" class="btn btn-outline-danger d-none" id="deleteEventBtn"><i class="bi bi-trash"></i>
+          Excluir</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="saveEventBtn">Salvar</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  window.agendaConfig = {
+    urls: {
+      listCalendars: "{{ url_for('agenda.agenda_list_calendars') }}",
+      createEvent: "{{ url_for('agenda.agenda_create_event') }}",
+      updateEvent: "{{ url_for('agenda.agenda_update_event', event_id='__ID__') }}",
+      deleteEvent: "{{ url_for('agenda.agenda_delete_event', event_id='__ID__') }}"
+    },
+    currentCalendarId: "{{ current_calendar or 'primary' }}"
+  };
+  window.agendaEvents = {{ events | tojson }};
+</script>
+<script src="{{ url_for('static', filename='js/pages/agenda_ui.js') }}"></script>
+{% endblock %}

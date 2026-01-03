@@ -68,7 +68,7 @@ def listar_planos():
             }), 200
 
         return render_template(
-            'planos_sucesso.html',
+            'pages/planos_sucesso.html',
             planos=planos,
             pode_editar=pode_editar,
             pode_excluir=pode_excluir,
@@ -109,7 +109,7 @@ def obter_plano(plano_id):
             modo_req = 'visualizar'
 
         return render_template(
-            'plano_sucesso_editor.html',
+            'pages/plano_sucesso_editor.html',
             plano=plano,
             modo=modo_req,
             pode_editar=pode_editar
@@ -127,7 +127,7 @@ def obter_plano(plano_id):
 @planos_bp.route('/novo', methods=['GET'])
 @login_required
 def novo_plano():
-    return render_template('plano_sucesso_editor.html', modo='criar', pode_editar=True)
+    return render_template('pages/plano_sucesso_editor.html', modo='criar', pode_editar=True)
 
 
 @planos_bp.route('/', methods=['POST'])
