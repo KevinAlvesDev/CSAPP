@@ -103,18 +103,28 @@ def analytics_dashboard():
         task_cs_email = g.user_email
 
     try:
-
-        analytics_data = get_analytics_data(
-            target_cs_email=cs_email,
-            target_status=status_filter,
-            start_date=start_date,
-            end_date=end_date,
-            target_tag=None,
-            task_cs_email=task_cs_email,
-            task_start_date=task_start_date,
-            task_end_date=task_end_date,
-            sort_impl_date=sort_impl_date
-        )
+        # CACHE: Gerar chave única baseada nos filtros
+        from ..config.cache_config import cache
+        cache_key = f"analytics_dash_{cs_email}_{status_filter}_{start_date}_{end_date}_{task_cs_email}_{task_start_date}_{task_end_date}_{sort_impl_date}"
+        
+        # Tentar buscar do cache (2 minutos)
+        analytics_data = cache.get(cache_key)
+        
+        if not analytics_data:
+            # Se não estiver no cache, buscar do banco
+            analytics_data = get_analytics_data(
+                target_cs_email=cs_email,
+                target_status=status_filter,
+                start_date=start_date,
+                end_date=end_date,
+                target_tag=None,
+                task_cs_email=task_cs_email,
+                task_start_date=task_start_date,
+                task_end_date=task_end_date,
+                sort_impl_date=sort_impl_date
+            )
+            # Salvar no cache por 2 minutos (120 segundos)
+            cache.set(cache_key, analytics_data, timeout=120)
 
         all_cs = listar_todos_cs_com_cache()
 

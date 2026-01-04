@@ -38,7 +38,6 @@ def calculate_all_days_batch(impl_ids: List[int], db_type: str = 'postgres') -> 
                 i.status,
                 i.data_inicio_efetivo,
                 i.data_criacao,
-                i.data_parada,
                 CASE 
                     WHEN i.status = 'andamento' AND i.data_inicio_efetivo IS NOT NULL THEN
                         EXTRACT(DAY FROM (CURRENT_TIMESTAMP - i.data_inicio_efetivo))::INTEGER
@@ -47,8 +46,8 @@ def calculate_all_days_batch(impl_ids: List[int], db_type: str = 'postgres') -> 
                     ELSE 0
                 END as dias_passados,
                 CASE 
-                    WHEN i.status = 'parada' AND i.data_parada IS NOT NULL THEN
-                        EXTRACT(DAY FROM (CURRENT_TIMESTAMP - i.data_parada))::INTEGER
+                    WHEN i.status = 'parada' AND i.data_criacao IS NOT NULL THEN
+                        EXTRACT(DAY FROM (CURRENT_TIMESTAMP - i.data_criacao))::INTEGER
                     ELSE 0
                 END as dias_parada
             FROM implantacoes i
@@ -63,7 +62,6 @@ def calculate_all_days_batch(impl_ids: List[int], db_type: str = 'postgres') -> 
                 i.status,
                 i.data_inicio_efetivo,
                 i.data_criacao,
-                i.data_parada,
                 CASE 
                     WHEN i.status = 'andamento' AND i.data_inicio_efetivo IS NOT NULL THEN
                         CAST((julianday('now') - julianday(i.data_inicio_efetivo)) AS INTEGER)
@@ -72,8 +70,8 @@ def calculate_all_days_batch(impl_ids: List[int], db_type: str = 'postgres') -> 
                     ELSE 0
                 END as dias_passados,
                 CASE 
-                    WHEN i.status = 'parada' AND i.data_parada IS NOT NULL THEN
-                        CAST((julianday('now') - julianday(i.data_parada)) AS INTEGER)
+                    WHEN i.status = 'parada' AND i.data_criacao IS NOT NULL THEN
+                        CAST((julianday('now') - julianday(i.data_criacao)) AS INTEGER)
                     ELSE 0
                 END as dias_parada
             FROM implantacoes i
@@ -308,6 +306,15 @@ def get_analytics_data_v2(target_cs_email=None, target_status=None, start_date=N
     dias_completas_map = calculate_all_days_batch(completas_ids, 'postgres' if not is_sqlite else 'sqlite')
 
     # Processar métricas SEM queries individuais
+    chart_data_ranking_colab = {}
+    chart_data_ranking_periodo = {}
+    chart_data_nivel_receita = {k: 0 for k in NIVEIS_RECEITA}
+
+    # Novas estruturas para os gráficos otimizados
+    gargalos_parada = {}  # {motivo: count}
+    velocidade_entrega = {'0-30': 0, '31-60': 0, '61-90': 0, '90+': 0}
+    previsao_receita = {} # {mes_ano: count}
+    
     total_impl_global = 0
     total_finalizadas = 0
     total_andamento_global = 0
@@ -379,6 +386,16 @@ def get_analytics_data_v2(target_cs_email=None, target_status=None, start_date=N
             total_finalizadas += 1
             if tma_dias is not None:
                 tma_dias_sum += tma_dias
+                
+                # Velocidade de Entrega
+                if tma_dias <= 30:
+                    velocidade_entrega['0-30'] += 1
+                elif tma_dias <= 60:
+                    velocidade_entrega['31-60'] += 1
+                elif tma_dias <= 90:
+                    velocidade_entrega['61-90'] += 1
+                else:
+                    velocidade_entrega['90+'] += 1
 
         elif status == 'parada':
             total_paradas += 1
@@ -394,6 +411,10 @@ def get_analytics_data_v2(target_cs_email=None, target_status=None, start_date=N
                 'dias_parada': parada_dias,
                 'cs_nome': cs_nome_impl
             })
+            
+            # Gargalos (Motivos de Parada)
+            motivo_key = motivo.strip()
+            gargalos_parada[motivo_key] = gargalos_parada.get(motivo_key, 0) + 1
 
         elif status == 'nova':
             total_novas_global += 1
@@ -412,6 +433,23 @@ def get_analytics_data_v2(target_cs_email=None, target_status=None, start_date=N
 
         elif status == 'andamento':
             total_andamento_global += 1
+            
+            # Previsão Financeira (usando 'data_previsao_termino' ou similar se existir)
+            # Como fallback, usamos data_criacao + 30 dias se nao tiver previsao explicita, 
+            # ou apenas marcamos como 'Sem Previsão'
+            data_prev = impl.get('data_previsao_termino')
+            if data_prev:
+                try:
+                    if isinstance(data_prev, str):
+                        dt_obj = datetime.strptime(data_prev, '%Y-%m-%d').date()
+                    else:
+                        dt_obj = data_prev
+                    mes_chave = dt_obj.strftime('%Y-%m')
+                    previsao_receita[mes_chave] = previsao_receita.get(mes_chave, 0) + 1
+                except:
+                    previsao_receita['Indefinido'] = previsao_receita.get('Indefinido', 0) + 1
+            else:
+                previsao_receita['Indefinido'] = previsao_receita.get('Indefinido', 0) + 1
 
     global_metrics = {
         'total_clientes': total_impl_global,
@@ -458,16 +496,30 @@ def get_analytics_data_v2(target_cs_email=None, target_status=None, start_date=N
         'ranking_periodo': {
             'labels': meses_nomes,
             'data': [chart_data_ranking_periodo.get(i, 0) for i in range(1, 13)]
+        },
+        'gargalos_parada': {
+            'labels': list(gargalos_parada.keys()),
+            'data': list(gargalos_parada.values())
+        },
+        'velocidade_entrega': {
+            'labels': list(velocidade_entrega.keys()),
+            'data': list(velocidade_entrega.values())
+        },
+        'previsao_receita': {
+            'labels': sorted(list(previsao_receita.keys())),
+            'data': [previsao_receita[k] for k in sorted(list(previsao_receita.keys()))]
         }
     }
 
+    # TEMPORARIAMENTE DESABILITADO - Erro ch.tag no SQLite
     # Get tags by user chart data
-    from ..tags_analytics import get_tags_by_user_chart_data
-    tags_chart_data = get_tags_by_user_chart_data(
-        cs_email=task_cs_email,
-        start_date=task_start_date_to_query,
-        end_date=task_end_date_to_query
-    )
+    # from ..tags_analytics import get_tags_by_user_chart_data
+    # tags_chart_data = get_tags_by_user_chart_data(
+    #     cs_email=task_cs_email,
+    #     start_date=task_start_date_to_query,
+    #     end_date=task_end_date_to_query
+    # )
+    tags_chart_data = {}  # Desabilitado temporariamente
 
     return {
         'kpi_cards': global_metrics,

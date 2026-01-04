@@ -10,9 +10,9 @@ Estrutura:
 - utils.py          -> Funções auxiliares de data
 """
 
-# Importações de dashboard.py
-from .dashboard import (
-    get_analytics_data,
+# Importações de dashboard.py (VERSÃO OTIMIZADA V2)
+from .dashboard_v2 import (
+    get_analytics_data_v2 as get_analytics_data,
 )
 
 # Importações de charts.py

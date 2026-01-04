@@ -8,29 +8,58 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
 
 {% block content %}
 <div class="container-fluid p-0">
-    <header class="header-bg p-3 d-flex align-items-center position-relative rounded-3" style="z-index: 1000;">
-        <h1 class="main-title mb-0 fs-4 w-100 text-center">CS ONBOARDING</h1>
-        <div class="d-flex align-items-center position-absolute end-0 top-50 translate-middle-y">
-            <!-- Ícone de Notificações -->
-            <div class="position-relative me-3" style="z-index: 9999;">
-                <button class="btn btn-sm btn-outline-light position-relative" id="notificationBtn" title="Notificações"
-                    style="overflow: visible;">
-                    <i class="bi bi-bell fs-5"></i>
-                    <span class="position-absolute badge rounded-pill bg-danger" id="notificationBadge"
-                        style="display: none; top: -8px; right: -8px; z-index: 9999; font-size: 0.7rem; padding: 0.25em 0.5em;">
-                        0
-                    </span>
-                </button>
+    <header class="header-bg py-2 px-3 rounded-3" style="z-index: 1000;">
+        <div class="d-flex align-items-center justify-content-between">
+            <!-- Seção Esquerda: Busca centralizada no espaço -->
+            <div class="d-flex align-items-center justify-content-center" style="flex: 1;">
+                <div style="width: 300px; position: relative;">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white border-end-0">
+                            <i class="bi bi-search text-muted"></i>
+                        </span>
+                        <input type="text" class="form-control border-start-0 ps-0" id="searchEmpresa"
+                            placeholder="Buscar empresa..." style="background-color: white;">
+                        <button class="btn btn-outline-secondary" type="button" id="clearSearch" style="display: none;">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                    <small class="text-white-50" id="searchCounter"
+                        style="display: none; position: absolute; top: 100%; left: 0; margin-top: 2px; white-space: nowrap;">
+                        <i class="bi bi-info-circle me-1"></i><span id="searchResults">0</span> resultado(s)
+                        encontrado(s)
+                    </small>
+                </div>
             </div>
 
-            {% if g.perfil and g.perfil.perfil_acesso in PERFIS_COM_CRIACAO %}
-            <button class="btn btn-sm btn-primary me-2" data-bs-toggle="modal" data-bs-target="#novaImplantacaoModal">
-                <i class="bi bi-plus-circle me-1"></i> Nova Implantação
-            </button>
-            <button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#implantarModuloModal">
-                <i class="bi bi-journal-plus me-1"></i> Implantar Módulo
-            </button>
-            {% endif %}
+            <!-- Título (Centro) -->
+            <div class="d-flex align-items-center justify-content-center" style="flex: 1;">
+                <h1 class="main-title mb-0 fs-4">CS ONBOARDING</h1>
+            </div>
+
+            <!-- Botões de Ação (Direita) -->
+            <div class="d-flex align-items-center justify-content-end" style="flex: 1;">
+                <!-- Ícone de Notificações -->
+                <div class="position-relative me-3" style="z-index: 9999;">
+                    <button class="btn btn-sm btn-outline-light position-relative" id="notificationBtn"
+                        title="Notificações" style="overflow: visible;">
+                        <i class="bi bi-bell fs-5"></i>
+                        <span class="position-absolute badge rounded-pill bg-danger" id="notificationBadge"
+                            style="display: none; top: -8px; right: -8px; z-index: 9999; font-size: 0.7rem; padding: 0.25em 0.5em;">
+                            0
+                        </span>
+                    </button>
+                </div>
+
+                {% if g.perfil and g.perfil.perfil_acesso in PERFIS_COM_CRIACAO %}
+                <button class="btn btn-sm btn-primary me-2" data-bs-toggle="modal"
+                    data-bs-target="#novaImplantacaoModal">
+                    <i class="bi bi-plus-circle me-1"></i> Nova Implantação
+                </button>
+                <button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#implantarModuloModal">
+                    <i class="bi bi-journal-plus me-1"></i> Implantar Módulo
+                </button>
+                {% endif %}
+            </div>
         </div>
     </header>
     <main class="p-4" id="main-content">
@@ -147,20 +176,16 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                                         <td class="text-nowrap">
                                             {% if impl.usuario_cs == g.user_email %}
                                             <button type="button" class="btn btn-sm btn-success btn-iniciar-implantacao"
-                                                title="Iniciar Agora" data-impl-id="{{ impl.id }}"
+                                                title="Iniciar Implantação" data-impl-id="{{ impl.id }}"
                                                 data-impl-nome="{{ impl.nome_empresa }}">
                                                 <i class="bi bi-play-circle me-1"></i> Iniciar
-                                            </button>
-
-                                            <button type="button" class="btn btn-sm btn-info ms-1 btn-agendar-futuro"
-                                                data-bs-toggle="modal" data-bs-target="#agendarInicioModal"
-                                                data-impl-id="{{ impl.id }}" data-impl-nome="{{ impl.nome_empresa }}"
-                                                title="Agendar Início Futuro">
-                                                <i class="bi bi-calendar-event me-1"></i> Início Futuro
                                             </button>
                                             {% else %}
                                             <span class="text-muted small">Aguardando</span>
                                             {% endif %}
+                                            <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}"
+                                                class="btn btn-sm btn-primary ms-1"><i class="bi bi-eye me-1"></i> Ver
+                                                Detalhes</a>
                                         </td>
                                         {{ ultima_atividade_cell(impl) }}
                                     </tr>
@@ -206,16 +231,9 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                                         <td class="text-nowrap">
                                             {% if impl.usuario_cs == g.user_email %}
                                             <button type="button" class="btn btn-sm btn-success btn-iniciar-implantacao"
-                                                title="Iniciar Agora" data-impl-id="{{ impl.id }}"
+                                                title="Iniciar Implantação" data-impl-id="{{ impl.id }}"
                                                 data-impl-nome="{{ impl.nome_empresa }}">
                                                 <i class="bi bi-play-circle me-1"></i> Iniciar
-                                            </button>
-
-                                            <button type="button" class="btn btn-sm btn-info ms-1 btn-agendar-futuro"
-                                                data-bs-toggle="modal" data-bs-target="#agendarInicioModal"
-                                                data-impl-id="{{ impl.id }}" data-impl-nome="{{ impl.nome_empresa }}"
-                                                title="Agendar Início Futuro">
-                                                <i class="bi bi-calendar-event me-1"></i> Início Futuro
                                             </button>
                                             {% else %}
                                             <span class="text-muted small">Aguardando</span>
@@ -669,19 +687,54 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                 <h5 class="modal-title" id="modalIniciarImplantacaoLabel">Iniciar Implantação</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="POST" action="{{ url_for('actions.iniciar_implantacao') }}" id="formIniciarImplantacao">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="modal-body">
-                    <p class="text-break">Tem certeza que deseja iniciar a implantação de <strong class="text-break"
-                            id="iniciarNomeEmpresa"></strong> agora?</p>
+            <div class="modal-body">
+                <p class="text-break mb-3">Escolha como deseja iniciar a implantação de <strong class="text-break"
+                        id="iniciarNomeEmpresa"></strong>:</p>
+
+                <!-- Opção 1: Iniciar Agora -->
+                <form method="POST" action="{{ url_for('actions.iniciar_implantacao') }}" id="formIniciarAgora"
+                    class="mb-3">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="implantacao_id" id="iniciarImplId" value="">
                     <input type="hidden" name="redirect_to" value="dashboard">
-                </div>
-                <div class="modal-footer header-bg">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-success">Iniciar</button>
-                </div>
-            </form>
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="bi bi-play-circle me-2"></i> Iniciar Agora
+                    </button>
+                </form>
+
+                <!-- Opção 2: Agendar Início Futuro -->
+                <form method="POST" action="{{ url_for('actions.agendar_implantacao') }}" id="formAgendarFuturo"
+                    class="mb-3">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="implantacao_id" id="agendarImplId2" value="">
+                    <div class="mb-2">
+                        <label for="data_inicio_previsto_modal" class="form-label small">Data de Início
+                            Previsto:</label>
+                        <div class="input-group input-group-sm">
+                            <input type="text" class="form-control flatpickr-date" id="data_inicio_previsto_modal"
+                                name="data_inicio_previsto" placeholder="DD/MM/AAAA" inputmode="numeric"
+                                pattern="\d{2}/\d{2}/\d{4}" required>
+                            <button class="btn btn-outline-secondary" type="button" id="btn-cal-modal"
+                                aria-label="Abrir calendário"><i class="bi bi-calendar3"></i></button>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-info w-100">
+                        <i class="bi bi-calendar-event me-2"></i> Agendar Início Futuro
+                    </button>
+                </form>
+
+                <!-- Opção 3: Sem Previsão -->
+                <form method="POST" action="{{ url_for('actions.marcar_sem_previsao') }}" id="formSemPrevisao">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="implantacao_id" id="semPrevisaoImplId" value="">
+                    <button type="submit" class="btn btn-warning w-100">
+                        <i class="bi bi-question-circle me-2"></i> Marcar como Sem Previsão
+                    </button>
+                </form>
+            </div>
+            <div class="modal-footer header-bg">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            </div>
         </div>
     </div>
 </div>
@@ -802,6 +855,8 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
 
                     var modalNomeEl = iniciarModal.querySelector('#iniciarNomeEmpresa');
                     var modalImplIdInput = iniciarModal.querySelector('#iniciarImplId');
+                    var agendarImplIdInput = iniciarModal.querySelector('#agendarImplId2');
+                    var semPrevisaoImplIdInput = iniciarModal.querySelector('#semPrevisaoImplId');
 
                     if (modalNomeEl) {
                         modalNomeEl.textContent = implNome;
@@ -809,12 +864,60 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                     if (modalImplIdInput) {
                         modalImplIdInput.value = implId;
                     }
+                    if (agendarImplIdInput) {
+                        agendarImplIdInput.value = implId;
+                    }
+                    if (semPrevisaoImplIdInput) {
+                        semPrevisaoImplIdInput.value = implId;
+                    }
 
                     // Abrir o modal
                     var bsModal = new bootstrap.Modal(iniciarModal);
                     bsModal.show();
                 });
             });
+
+            // Configurar flatpickr para o campo de data no modal
+            if (window.flatpickr) {
+                var fpModal = window.flatpickr('#data_inicio_previsto_modal', {
+                    dateFormat: 'd/m/Y',
+                    allowInput: true,
+                    minDate: 'today',
+                    locale: {
+                        firstDayOfWeek: 0,
+                        weekdays: {
+                            shorthand: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
+                            longhand: ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
+                        },
+                        months: {
+                            shorthand: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+                            longhand: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+                        }
+                    }
+                });
+                var btnModal = document.getElementById('btn-cal-modal');
+                if (btnModal && fpModal) {
+                    btnModal.addEventListener('click', function () {
+                        fpModal.open();
+                    });
+                }
+            }
+
+            // Converter data DD/MM/AAAA para YYYY-MM-DD antes de enviar
+            var formAgendarFuturo = iniciarModal.querySelector('#formAgendarFuturo');
+            if (formAgendarFuturo) {
+                formAgendarFuturo.addEventListener('submit', function (e) {
+                    var input = formAgendarFuturo.querySelector('#data_inicio_previsto_modal');
+                    if (!input) return;
+                    var v = (input.value || '').trim();
+                    var m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+                    if (m) {
+                        input.value = m[3] + '-' + m[2] + '-' + m[1];
+                    }
+                });
+            }
+
+            // Data agora será convertida antes do envio
         }
     });
 </script>
@@ -1055,6 +1158,75 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                     } catch (e) {
                         console.error("Erro ao buscar dados OAMD para detalhes:", e);
                     }
+                }
+            });
+        }
+
+        // ===== BUSCA RÁPIDA DE EMPRESA =====
+        const searchInput = document.getElementById('searchEmpresa');
+        const clearBtn = document.getElementById('clearSearch');
+        const searchCounter = document.getElementById('searchCounter');
+        const searchResults = document.getElementById('searchResults');
+
+        if (searchInput) {
+            searchInput.addEventListener('input', function () {
+                const searchTerm = this.value.toLowerCase().trim();
+
+                // Mostrar/ocultar botão de limpar
+                clearBtn.style.display = searchTerm ? 'block' : 'none';
+
+                // Buscar em todas as tabelas
+                const allTables = document.querySelectorAll('.tab-pane table tbody');
+                let totalFound = 0;
+
+                allTables.forEach(tbody => {
+                    const rows = tbody.querySelectorAll('tr');
+
+                    rows.forEach(row => {
+                        // Pegar o nome da empresa (primeira coluna)
+                        const empresaCell = row.querySelector('td:first-child');
+                        if (!empresaCell) return;
+
+                        const empresaNome = empresaCell.textContent.toLowerCase();
+                        const matches = empresaNome.includes(searchTerm);
+
+                        if (searchTerm === '') {
+                            // Sem busca: mostrar tudo, remover destaque
+                            row.style.display = '';
+                            row.classList.remove('table-warning');
+                        } else if (matches) {
+                            // Encontrado: mostrar e destacar
+                            row.style.display = '';
+                            row.classList.add('table-warning');
+                            totalFound++;
+                        } else {
+                            // Não encontrado: ocultar
+                            row.style.display = 'none';
+                            row.classList.remove('table-warning');
+                        }
+                    });
+                });
+
+                // Atualizar contador
+                if (searchTerm) {
+                    searchResults.textContent = totalFound;
+                    searchCounter.style.display = 'block';
+                } else {
+                    searchCounter.style.display = 'none';
+                }
+            });
+
+            // Botão de limpar
+            clearBtn.addEventListener('click', function () {
+                searchInput.value = '';
+                searchInput.dispatchEvent(new Event('input'));
+                searchInput.focus();
+            });
+
+            // Atalho: ESC para limpar busca
+            searchInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') {
+                    clearBtn.click();
                 }
             });
         }

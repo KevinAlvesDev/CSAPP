@@ -447,7 +447,7 @@
 <div class="container-fluid p-0">
     <header class="header-bg p-3 d-flex align-items-center position-relative rounded-3">
         <h1 class="main-title mb-0 fs-4 w-100 text-center">
-            CS ONBOARDING {% if modo == 'criar' %}Criar Novo Plano{% else %}{{ plano.nome if plano else 'Editar Plano'
+            {% if modo == 'criar' %}Criar Novo Plano{% else %}{{ plano.nome if plano else 'Editar Plano'
             }}{% endif %}
         </h1>
         <div class="d-flex align-items-center position-absolute end-0 top-50 translate-middle-y">

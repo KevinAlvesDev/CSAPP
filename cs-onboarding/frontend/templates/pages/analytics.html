@@ -14,6 +14,34 @@
         width: 100%;
     }
 
+    /* Loading Overlay para gráficos */
+    .chart-loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10;
+        border-radius: 0.375rem;
+    }
+
+    .chart-spinner {
+        width: 3rem;
+        height: 3rem;
+    }
+
+    /* Tabelas com scroll interno */
+    .limited-height-table {
+        max-height: 600px;
+        /* Aprox 15-20 linhas visíveis */
+        overflow-y: auto;
+        position: relative;
+    }
+
     /* Garante que o padding do card-body não afete os gráficos */
     .card-body-chart {
         padding: 1rem;
@@ -24,7 +52,7 @@
 {% block content %}
 <div class="container-fluid p-0">
     <header class="header-bg p-3 d-flex align-items-center position-relative rounded-3">
-        <h1 class="main-title mb-0 fs-4 w-100 text-center">CS ONBOARDING Dashboard Gerencial</h1>
+        <h1 class="main-title mb-0 fs-4 w-100 text-center">Dashboard Gerencial</h1>
         <div class="d-flex align-items-center position-absolute end-0 top-50 translate-middle-y">
             <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm btn-outline-primary">
                 <i class="bi bi-arrow-left me-1"></i> Voltar ao Dashboard
@@ -121,10 +149,19 @@
             <div class="col-lg-6">
                 <div class="card metric-card h-100">
                     <div class="card-header">
-                        <h5 class="mb-0">Nível Clientes em Implantação (MRR)</h5>
+                        <h5 class="mb-0">Nível Clientes em Implantação (MRR) <i
+                                class="bi bi-question-circle-fill text-muted" style="font-size: 0.9rem; cursor: help;"
+                                data-bs-toggle="tooltip" data-bs-placement="top"
+                                title="Distribuição dos clientes em implantação por faixa de MRR (Receita Recorrente Mensal). Ajuda a identificar o perfil de receita da carteira."></i>
+                        </h5>
                     </div>
                     <div class="card-body card-body-chart">
                         <div class="chart-container">
+                            <div class="chart-loading-overlay" id="loadingNivel">
+                                <div class="spinner-border text-primary chart-spinner" role="status">
+                                    <span class="visually-hidden">Carregando...</span>
+                                </div>
+                            </div>
                             <canvas id="chartNivelReceita"></canvas>
                         </div>
                     </div>
@@ -133,10 +170,19 @@
             <div class="col-lg-6">
                 <div class="card metric-card h-100">
                     <div class="card-header">
-                        <h5 class="mb-0">Status Clientes Implantação</h5>
+                        <h5 class="mb-0">Status Clientes Implantação <i class="bi bi-question-circle-fill text-muted"
+                                style="font-size: 0.9rem; cursor: help;" data-bs-toggle="tooltip"
+                                data-bs-placement="top"
+                                title="Quantidade de clientes por status: Novas, Em Andamento, Finalizadas, Paradas, Futuras e Canceladas. Visão geral do funil de implantação."></i>
+                        </h5>
                     </div>
                     <div class="card-body card-body-chart">
                         <div class="chart-container">
+                            <div class="chart-loading-overlay" id="loadingStatus">
+                                <div class="spinner-border text-primary chart-spinner" role="status">
+                                    <span class="visually-hidden">Carregando...</span>
+                                </div>
+                            </div>
                             <canvas id="chartStatusClientes"></canvas>
                         </div>
                     </div>
@@ -349,41 +395,63 @@
 
         <div class="card metric-card border border-danger mt-4">
             <div class="card-header">
-                <h5 class="mb-0 text-danger">Implantações Paradas</h5>
+                <h5 class="mb-0 text-danger">Implantações Paradas <i class="bi bi-question-circle-fill text-muted"
+                        style="font-size: 0.9rem; cursor: help;" data-bs-toggle="tooltip" data-bs-placement="top"
+                        title="Lista de implantações com status 'Parada' e o gráfico de rosca mostra a distribuição dos principais motivos de parada (gargalos)."></i>
+                </h5>
             </div>
             <div class="card-body">
                 {% if not implantacoes_paradas_lista %}
                 <div class="alert alert-light text-center small py-2 mb-0">Nenhuma implantação parada encontrada para os
                     filtros selecionados.</div>
                 {% else %}
-                <div class="table-responsive">
-                    <table class="table table-sm table-hover align-middle caption-top">
-                        <caption class="small text-muted">Listando {{ implantacoes_paradas_lista | length }}
-                            implantações paradas.</caption>
-                        <thead style="position: sticky; top: 0;">
-                            <tr>
-                                <th scope="col">Empresa</th>
-                                <th scope="col">Motivo da Parada</th>
-                                <th scope="col">Dias Parada</th>
-                                <th scope="col">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for impl in implantacoes_paradas_lista %}
-                            <tr>
-                                <td class="text-truncate" style="max-width: 250px;">{{ impl.nome_empresa |
-                                    default('N/A') }}</td>
-                                <td class="text-truncate" style="max-width: 300px;">{{ impl.motivo_parada |
-                                    default('N/A') }}</td>
-                                <td><span class="badge bg-danger">{{ impl.dias_parada | int }} dias</span></td>
-                                <td>
-                                    <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}"
-                                        class="btn btn-sm btn-outline-primary py-0 px-2">Ver</a>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                <div class="row">
+                    <div class="col-lg-8">
+                        <div class="table-responsive limited-height-table">
+                            <table class="table table-sm table-hover align-middle caption-top">
+                                <caption class="small text-muted">Listando {{ implantacoes_paradas_lista | length }}
+                                    implantações paradas.</caption>
+                                <thead style="position: sticky; top: 0;">
+                                    <tr>
+                                        <th scope="col">Empresa</th>
+                                        <th scope="col">Motivo da Parada</th>
+                                        <th scope="col">Dias Parada</th>
+                                        <th scope="col">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for impl in implantacoes_paradas_lista %}
+                                    <tr>
+                                        <td class="text-truncate" style="max-width: 250px;">{{ impl.nome_empresa |
+                                            default('N/A') }}</td>
+                                        <td class="text-truncate" style="max-width: 300px;">{{ impl.motivo_parada |
+                                            default('N/A') }}</td>
+                                        <td><span class="badge bg-danger">{{ impl.dias_parada | int }} dias</span></td>
+                                        <td>
+                                            <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}"
+                                                class="btn btn-sm btn-outline-primary py-0 px-2">Ver</a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="card h-100 border-0 bg-light">
+                            <div class="card-body p-3 d-flex flex-column align-items-center justify-content-center">
+                                <h6 class="card-title text-center text-muted mb-3">Principais Motivos (Gargalos)</h6>
+                                <div class="chart-container" style="height: 250px;">
+                                    <div class="chart-loading-overlay" id="loadingGargalos">
+                                        <div class="spinner-border text-danger chart-spinner" role="status">
+                                            <span class="visually-hidden">Carregando...</span>
+                                        </div>
+                                    </div>
+                                    <canvas id="chartGargalos"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 {% endif %}
             </div>
@@ -398,7 +466,7 @@
                 <div class="alert alert-dark text-center small py-2 mb-0">Nenhuma implantação cancelada encontrada para
                     os filtros selecionados.</div>
                 {% else %}
-                <div class="table-responsive">
+                <div class="table-responsive limited-height-table">
                     <table class="table table-sm table-hover align-middle caption-top">
                         <caption class="small text-muted">Listando {{ implantacoes_canceladas_lista | length }}
                             implantações canceladas.</caption>
@@ -441,7 +509,7 @@
                 <div class="alert alert-light text-center small py-2 mb-0">Nenhum módulo listado para os filtros
                     selecionados.</div>
                 {% else %}
-                <div class="table-responsive">
+                <div class="table-responsive limited-height-table">
                     <table class="table table-sm table-hover align-middle caption-top">
                         <thead class="table-light">
                             <tr>
@@ -493,26 +561,95 @@
 
         <div class="card metric-card mt-4">
             <div class="card-header">
-                <h5 class="mb-0">Ranking Implantação por Colaborador</h5>
+                <h5 class="mb-0">Ranking Implantação por Colaborador <i class="bi bi-question-circle-fill text-muted"
+                        style="font-size: 0.9rem; cursor: help;" data-bs-toggle="tooltip" data-bs-placement="top"
+                        title="Total de implantações atribuídas a cada colaborador CS, considerando os filtros aplicados. Útil para balanceamento de carga."></i>
+                </h5>
             </div>
             <div class="card-body card-body-chart">
                 <p class="small text-muted mb-3">Total de implantações (baseado nos filtros principais) por colaborador.
                 </p>
                 <div class="chart-container">
+                    <div class="chart-loading-overlay" id="loadingRankingColab">
+                        <div class="spinner-border text-primary chart-spinner" role="status">
+                            <span class="visually-hidden">Carregando...</span>
+                        </div>
+                    </div>
                     <canvas id="chartRankingColaborador"></canvas>
                 </div>
             </div>
         </div>
         <div class="card metric-card mt-4">
             <div class="card-header">
-                <h5 class="mb-0">Ranking Implantação por Período</h5>
+                <h5 class="mb-0">Ranking Implantação por Período <i class="bi bi-question-circle-fill text-muted"
+                        style="font-size: 0.9rem; cursor: help;" data-bs-toggle="tooltip" data-bs-placement="top"
+                        title="Total de implantações finalizadas no ano corrente, agrupadas por mês. Mostra a evolução mensal de entregas."></i>
+                </h5>
             </div>
             <div class="card-body card-body-chart">
                 <p class="small text-muted mb-3">Total de implantações <span
                         class="fw-bold text-success">finalizadas</span> no ano corrente, agrupadas por mês (respeita o
                     filtro principal de Colaborador).</p>
                 <div class="chart-container">
+                    <div class="chart-loading-overlay" id="loadingRankingPeriodo">
+                        <div class="spinner-border text-primary chart-spinner" role="status">
+                            <span class="visually-hidden">Carregando...</span>
+                        </div>
+                    </div>
                     <canvas id="chartRankingPeriodo"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bloco 9: Inteligência & Previsão -->
+        <div class="row g-4 mt-1">
+            <div class="col-12">
+                <h5 class="text-secondary border-bottom pb-2">Análise de Performance & Previsão</h5>
+            </div>
+            <div class="col-lg-6">
+                <div class="card metric-card h-100">
+                    <div class="card-header bg-white">
+                        <h6 class="mb-0 text-primary"><i class="bi bi-speedometer2 me-2"></i>Velocidade de Entrega <i
+                                class="bi bi-question-circle-fill text-muted" style="font-size: 0.8rem; cursor: help;"
+                                data-bs-toggle="tooltip" data-bs-placement="top"
+                                title="Histograma mostrando quantas implantações foram finalizadas em cada faixa de tempo: 0-30 dias (rápidas), 31-60, 61-90 e 90+ dias (lentas)."></i>
+                        </h6>
+                    </div>
+                    <div class="card-body card-body-chart">
+                        <p class="small text-muted mb-2">Quantos dias leva para finalizar uma implantação (Histograma).
+                        </p>
+                        <div class="chart-container">
+                            <div class="chart-loading-overlay" id="loadingVelocidade">
+                                <div class="spinner-border text-primary chart-spinner" role="status">
+                                    <span class="visually-hidden">Carregando...</span>
+                                </div>
+                            </div>
+                            <canvas id="chartVelocidade"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card metric-card h-100">
+                    <div class="card-header bg-white">
+                        <h6 class="mb-0 text-success"><i class="bi bi-cash-coin me-2"></i>Previsibilidade de Entregas <i
+                                class="bi bi-question-circle-fill text-muted" style="font-size: 0.8rem; cursor: help;"
+                                data-bs-toggle="tooltip" data-bs-placement="top"
+                                title="Previsão de término de implantações em andamento e futuras, agrupadas por mês. Baseado na data de previsão de término cadastrada."></i>
+                        </h6>
+                    </div>
+                    <div class="card-body card-body-chart">
+                        <p class="small text-muted mb-2">Previsão de término para implantações em andamento/futuras (Mês
+                            a Mês).</p>
+                        <div class="chart-container">
+                            <div class="chart-loading-overlay" id="loadingPrevisao">
+                                <div class="spinner-border text-success chart-spinner" role="status">
+                                    <span class="visually-hidden">Carregando...</span>
+                                </div>
+                            </div>
+                            <canvas id="chartPrevisao"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -523,12 +660,12 @@
 {% block scripts_extra %}
 <script>
     // Passa os dados do Flask (convertidos para JSON) para o JavaScript
-    const chartData = {{ chart_data | tojson | safe }};
+    const chartData = {{ (chart_data or { }) | tojson | safe }};
 
     document.addEventListener('DOMContentLoaded', function () {
 
-        // Registra o plugin de rótulos (datalabels)
-        Chart.register(ChartDataLabels);
+        // TEMPORARIAMENTE DESABILITADO - Plugin ChartDataLabels causa lag
+        // Chart.register(ChartDataLabels);
 
         // Opções de tooltip (popup)
         const tooltipOptions = {
@@ -562,6 +699,9 @@
         const ctxStatus = document.getElementById('chartStatusClientes');
         const ctxRankingColab = document.getElementById('chartRankingColaborador');
         const ctxRankingPeriodo = document.getElementById('chartRankingPeriodo');
+        const ctxGargalos = document.getElementById('chartGargalos');
+        const ctxVelocidade = document.getElementById('chartVelocidade');
+        const ctxPrevisao = document.getElementById('chartPrevisao');
 
         // Define a cor azul padrão
         const corAzul = 'rgba(54, 162, 235, 0.7)';
@@ -586,158 +726,247 @@
             'Canceladas': 'rgba(0, 0, 0, 0.6)' // Dark Gray/Blackish for Canceled
         };
 
-        // 1. Gráfico Nível Clientes (MRR)
-        if (ctxNivel && chartData.nivel_receita) {
-            new Chart(ctxNivel, {
-                type: 'bar',
-                data: {
-                    labels: chartData.nivel_receita.labels,
-                    datasets: [{
-                        label: 'Qtd. Clientes',
-                        data: chartData.nivel_receita.data,
-                        backgroundColor: corAzul,
-                        borderColor: corBordaAzul,
-                        borderWidth: 1,
-                        borderRadius: 6
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    indexAxis: 'y', // Gráfico na horizontal
-                    scales: {
-                        x: { beginAtZero: true },
-                        y: { beginAtZero: true }
-                    },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: tooltipOptions,
+        // OTIMIZAÇÃO MÁXIMA: Desabilitar TODAS as animações para evitar travamento
+        Chart.defaults.animation = false;
+        Chart.defaults.animations = false;
+        Chart.defaults.transitions = false;
 
-                        datalabels: {
-                            anchor: 'end',
-                            align: function (context) {
-                                const maxValue = context.chart.scales.x.max;
-                                const value = context.dataset.data[context.dataIndex];
-                                return (value > maxValue * 0.9 && maxValue > 1) ? 'left' : 'right';
-                            },
-                            offset: 8,
-                            color: barDatalabelOptions.color,
-                            font: {
-                                weight: 'bold'
-                            },
-                            formatter: (value) => {
-                                return value > 0 ? value : null;
-                            }
+        // SOLUÇÃO DEFINITIVA: Lazy Loading com Intersection Observer
+        // Gráficos só são renderizados quando ficam visíveis na tela
+
+        const chartConfigs = {
+            ctxNivel: {
+                element: ctxNivel,
+                data: chartData.nivel_receita,
+                loadingId: 'loadingNivel',
+                config: {
+                    type: 'bar',
+                    data: {
+                        labels: chartData.nivel_receita?.labels || [],
+                        datasets: [{
+                            label: 'Qtd. Clientes',
+                            data: chartData.nivel_receita?.data || [],
+                            backgroundColor: corAzul,
+                            borderColor: corBordaAzul,
+                            borderWidth: 1,
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: 'y',
+                        scales: { x: { beginAtZero: true }, y: { beginAtZero: true } },
+                        plugins: { legend: { display: false }, tooltip: tooltipOptions }
+                    }
+                }
+            },
+            ctxStatus: {
+                element: ctxStatus,
+                data: chartData.status_clientes,
+                loadingId: 'loadingStatus',
+                config: function () {
+                    const statusData = chartData.status_clientes;
+                    const backgroundColorsStatus = statusData.labels.map(label => statusColors[label] || 'rgba(100, 100, 100, 0.7)');
+                    const total = statusData.data.reduce((acc, value) => acc + value, 0);
+                    return {
+                        type: 'doughnut',
+                        data: {
+                            labels: statusData.labels,
+                            datasets: [{
+                                label: 'Qtd. Clientes',
+                                data: statusData.data,
+                                backgroundColor: backgroundColorsStatus,
+                                borderColor: backgroundColorsStatus.map(c => c.replace('0.7', '1')),
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: true, position: 'bottom' }, tooltip: tooltipOptions }
                         }
+                    };
+                }
+            },
+            ctxRankingColab: {
+                element: ctxRankingColab,
+                data: chartData.ranking_colaborador,
+                loadingId: 'loadingRankingColab',
+                config: {
+                    type: 'bar',
+                    data: {
+                        labels: chartData.ranking_colaborador?.labels || [],
+                        datasets: [{
+                            label: 'Total Implantações (Filtro)',
+                            data: chartData.ranking_colaborador?.data || [],
+                            backgroundColor: corAzul,
+                            borderColor: corBordaAzul,
+                            borderWidth: 1,
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { y: { beginAtZero: true } },
+                        plugins: { legend: { display: false }, tooltip: tooltipOptions }
                     }
                 }
-            });
-        }
-
-        // 2. Gráfico Status Clientes
-        if (ctxStatus && chartData.status_clientes) {
-            const statusData = chartData.status_clientes;
-            const backgroundColorsStatus = statusData.labels.map(label => statusColors[label] || 'rgba(100, 100, 100, 0.7)');
-            const total = statusData.data.reduce((acc, value) => acc + value, 0);
-
-            new Chart(ctxStatus, {
-                type: 'doughnut',
-                data: {
-                    labels: statusData.labels,
-                    datasets: [{
-                        label: 'Qtd. Clientes',
-                        data: statusData.data,
-                        backgroundColor: backgroundColorsStatus,
-                        borderColor: backgroundColorsStatus.map(c => c.replace('0.7', '1')),
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: true, position: 'bottom' },
-                        tooltip: tooltipOptions,
-
-                        datalabels: {
-                            color: '#000000',
-                            textAlign: 'center',
-                            font: {
-                                weight: 'bold',
-                                size: 14,
+            },
+            ctxRankingPeriodo: {
+                element: ctxRankingPeriodo,
+                data: chartData.ranking_periodo,
+                loadingId: 'loadingRankingPeriodo',
+                config: {
+                    type: 'bar',
+                    data: {
+                        labels: chartData.ranking_periodo?.labels || [],
+                        datasets: [{
+                            label: 'Impl. Finalizadas (Ano Corrente)',
+                            data: chartData.ranking_periodo?.data || [],
+                            backgroundColor: 'rgba(153, 102, 255, 0.7)',
+                            borderColor: 'rgba(153, 102, 255, 1)',
+                            borderWidth: 1,
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { y: { beginAtZero: true } },
+                        plugins: { legend: { display: false }, tooltip: tooltipOptions }
+                    }
+                }
+            },
+            ctxGargalos: {
+                element: ctxGargalos,
+                data: chartData.gargalos_parada,
+                loadingId: 'loadingGargalos',
+                config: {
+                    type: 'doughnut',
+                    data: {
+                        labels: chartData.gargalos_parada?.labels || [],
+                        datasets: [{
+                            data: chartData.gargalos_parada?.data || [],
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.8)',
+                                'rgba(255, 159, 64, 0.8)',
+                                'rgba(255, 205, 86, 0.8)',
+                                'rgba(54, 162, 235, 0.8)',
+                                'rgba(153, 102, 255, 0.8)',
+                                'rgba(201, 203, 207, 0.8)'
+                            ],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: { boxWidth: 10, font: { size: 10 } }
                             },
-                            formatter: (value, context) => {
-                                if (value <= 0 || total <= 0) {
-                                    return null;
-                                }
-                                const percentage = (value / total) * 100;
-                                return percentage.toFixed(0) + '%';
-                            }
+                            tooltip: tooltipOptions
+                        },
+                        layout: { padding: 10 }
+                    }
+                }
+            },
+            ctxVelocidade: {
+                element: ctxVelocidade,
+                data: chartData.velocidade_entrega,
+                loadingId: 'loadingVelocidade',
+                config: {
+                    type: 'bar',
+                    data: {
+                        labels: chartData.velocidade_entrega?.labels || [],
+                        datasets: [{
+                            label: 'Implantações',
+                            data: chartData.velocidade_entrega?.data || [],
+                            backgroundColor: corAzul,
+                            borderColor: corBordaAzul,
+                            borderWidth: 1,
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { y: { beginAtZero: true } },
+                        plugins: { legend: { display: false }, tooltip: tooltipOptions }
+                    }
+                }
+            },
+            ctxPrevisao: {
+                element: ctxPrevisao,
+                data: chartData.previsao_receita,
+                loadingId: 'loadingPrevisao',
+                config: {
+                    type: 'bar',
+                    data: {
+                        labels: chartData.previsao_receita?.labels || [],
+                        datasets: [{
+                            label: 'Previsão de Entrega (Qtd)',
+                            data: chartData.previsao_receita?.data || [],
+                            backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1,
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { y: { beginAtZero: true } },
+                        plugins: { legend: { display: false }, tooltip: tooltipOptions }
+                    }
+                }
+            }
+        };
+
+        // Intersection Observer para lazy loading
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && entry.target.dataset.chartKey) {
+                    const key = entry.target.dataset.chartKey;
+                    const chartConfig = chartConfigs[key];
+
+                    if (chartConfig && chartConfig.element && !entry.target.dataset.loaded) {
+                        // Remover spinner
+                        if (chartConfig.loadingId) {
+                            const spinner = document.getElementById(chartConfig.loadingId);
+                            if (spinner) spinner.style.display = 'none';
                         }
-                    }
-                }
-            });
-        }
 
-        // 3. Gráfico Ranking por Colaborador
-        if (ctxRankingColab && chartData.ranking_colaborador) {
-            new Chart(ctxRankingColab, {
-                type: 'bar',
-                data: {
-                    labels: chartData.ranking_colaborador.labels,
-                    datasets: [{
-                        label: 'Total Implantações (Filtro)',
-                        data: chartData.ranking_colaborador.data,
-                        backgroundColor: corAzul,
-                        borderColor: corBordaAzul,
-                        borderWidth: 1,
-                        borderRadius: 6
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { beginAtZero: true }
-                    },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: tooltipOptions,
-                        datalabels: barDatalabelOptions
-                    }
-                }
-            });
-        }
+                        // Renderizar gráfico
+                        if (chartConfig.config) {
+                            const config = typeof chartConfig.config === 'function' ? chartConfig.config() : chartConfig.config;
+                            new Chart(chartConfig.element, config);
+                        }
 
-        // 4. Gráfico Ranking por Período
-        if (ctxRankingPeriodo && chartData.ranking_periodo) {
-            new Chart(ctxRankingPeriodo, {
-                type: 'bar',
-                data: {
-                    labels: chartData.ranking_periodo.labels,
-                    datasets: [{
-                        label: 'Impl. Finalizadas (Ano Corrente)',
-                        data: chartData.ranking_periodo.data,
-                        backgroundColor: 'rgba(153, 102, 255, 0.7)',
-                        borderColor: 'rgba(153, 102, 255, 1)',
-                        borderWidth: 1,
-                        borderRadius: 6
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { beginAtZero: true }
-                    },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: tooltipOptions,
-                        datalabels: barDatalabelOptions
+                        entry.target.dataset.loaded = 'true';
+                        observer.unobserve(entry.target);
                     }
                 }
             });
-        }
+        }, { rootMargin: '0px' });
+
+        // Observar cada canvas
+        Object.keys(chartConfigs).forEach(key => {
+            const chartConfig = chartConfigs[key];
+            if (chartConfig.element) {
+                chartConfig.element.dataset.chartKey = key;
+                observer.observe(chartConfig.element);
+            }
+        });
+
+        // Inicializar tooltips do Bootstrap
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
 
 
         // 5. Tags por Usuário - NOW USING TABLE FORMAT (chart code disabled)
@@ -745,7 +974,7 @@
         const ctxTagsByUser = document.getElementById('chartTagsByUser');
         const tagsData = {{ tags_chart_data | tojson | safe
     }};
-
+     
     if (ctxTagsByUser && tagsData && tagsData.labels && tagsData.labels.length > 0) {
         new Chart(ctxTagsByUser, {
             type: 'bar',
