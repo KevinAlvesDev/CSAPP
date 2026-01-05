@@ -273,6 +273,7 @@ def _criar_tabelas_basicas_sqlite(cursor):
             imagem_url TEXT,
             visibilidade TEXT DEFAULT 'interno',
             noshow BOOLEAN DEFAULT 0,
+            tag TEXT,
             FOREIGN KEY (usuario_cs) REFERENCES usuarios(usuario),
             FOREIGN KEY (checklist_item_id) REFERENCES checklist_items(id)
         )

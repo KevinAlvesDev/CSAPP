@@ -5,6 +5,7 @@ Elimina duplicação de código em todo o projeto
 
 from typing import List, Dict, Optional, Any
 from datetime import datetime, date
+from flask import current_app
 from ..db import query_db
 
 
@@ -25,7 +26,32 @@ def get_implantacoes_with_progress(
         Lista de implantações com progresso já calculado
     """
     
-    query = """
+    # Detectar tipo de banco
+    use_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
+    
+    # Sintaxe de cast diferente para SQLite vs PostgreSQL
+    if use_sqlite:
+        progress_calc = """
+            CASE 
+                WHEN COALESCE(prog.total_tarefas, 0) > 0 
+                THEN ROUND((CAST(COALESCE(prog.tarefas_concluidas, 0) AS REAL) / CAST(prog.total_tarefas AS REAL)) * 100)
+                ELSE 100
+            END as progresso_percent
+        """
+        completed_check = "ci.completed = 1"
+        placeholder = "?"
+    else:
+        progress_calc = """
+            CASE 
+                WHEN COALESCE(prog.total_tarefas, 0) > 0 
+                THEN ROUND((COALESCE(prog.tarefas_concluidas, 0)::NUMERIC / prog.total_tarefas::NUMERIC) * 100)
+                ELSE 100
+            END as progresso_percent
+        """
+        completed_check = "ci.completed = TRUE"
+        placeholder = "%s"
+    
+    query = f"""
         SELECT
             i.*,
             p.nome as cs_nome,
@@ -33,11 +59,7 @@ def get_implantacoes_with_progress(
             -- Progresso calculado no SQL (evita N+1)
             COALESCE(prog.total_tarefas, 0) as total_tarefas,
             COALESCE(prog.tarefas_concluidas, 0) as tarefas_concluidas,
-            CASE 
-                WHEN COALESCE(prog.total_tarefas, 0) > 0 
-                THEN ROUND((COALESCE(prog.tarefas_concluidas, 0)::NUMERIC / prog.total_tarefas::NUMERIC) * 100)
-                ELSE 100
-            END as progresso_percent
+            {progress_calc}
             
         FROM implantacoes i
         LEFT JOIN perfil_usuario p ON i.usuario_cs = p.usuario
@@ -45,7 +67,7 @@ def get_implantacoes_with_progress(
             SELECT
                 ci.implantacao_id,
                 COUNT(DISTINCT CASE WHEN ci.tipo_item = 'subtarefa' THEN ci.id END) as total_tarefas,
-                COUNT(DISTINCT CASE WHEN ci.tipo_item = 'subtarefa' AND ci.completed = TRUE THEN ci.id END) as tarefas_concluidas
+                COUNT(DISTINCT CASE WHEN ci.tipo_item = 'subtarefa' AND {completed_check} THEN ci.id END) as tarefas_concluidas
             FROM checklist_items ci
             WHERE ci.tipo_item = 'subtarefa'
             GROUP BY ci.implantacao_id
@@ -56,17 +78,17 @@ def get_implantacoes_with_progress(
     args = []
     
     if usuario_cs:
-        query += " AND i.usuario_cs = %s"
+        query += f" AND i.usuario_cs = {placeholder}"
         args.append(usuario_cs)
     
     if status:
-        query += " AND i.status = %s"
+        query += f" AND i.status = {placeholder}"
         args.append(status)
     
     query += " ORDER BY i.data_criacao DESC"
     
     if limit:
-        query += " LIMIT %s"
+        query += f" LIMIT {placeholder}"
         args.append(limit)
     
     return query_db(query, tuple(args)) or []
