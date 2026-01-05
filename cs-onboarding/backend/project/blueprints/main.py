@@ -52,7 +52,7 @@ def home():
     except Exception:
         pass
     return render_template(
-        'login.html',
+        'auth/login.html',
         auth0_enabled=auth0_enabled,
         use_custom_auth=not auth0_enabled
     )
