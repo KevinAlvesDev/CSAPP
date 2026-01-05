@@ -843,6 +843,20 @@ class ChecklistRenderer {
 
     formatDate(dataStr) {
         if (!dataStr) return '';
+        // Se já for do tipo YYYY-MM-DD, faz split manual para evitar timezone
+        if (typeof dataStr === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dataStr)) {
+            // Pega apenas a parte da data (antes de T ou espaço)
+            const dateOnly = dataStr.split(/[T ]/)[0];
+            const parts = dateOnly.split('-');
+            if (parts.length === 3) {
+                const yyyy = parts[0];
+                const mm = parts[1];
+                const dd = parts[2];
+                return `${dd}/${mm}/${yyyy}`;
+            }
+        }
+
+        // Fallback para datas ISO com hora ou outros formatos
         const d = new Date(dataStr);
         if (isNaN(d.getTime())) return dataStr;
         const dd = String(d.getDate()).padStart(2, '0');

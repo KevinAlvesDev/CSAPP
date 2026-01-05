@@ -64,7 +64,7 @@ class ChecklistAPI {
      * @returns {Promise<Object>}
      */
     async updateResponsavel(itemId, responsavel) {
-        return this.api.post(`/api/checklist/responsavel/${itemId}`, { responsavel });
+        return this.api.patch(`/api/checklist/item/${itemId}/responsavel`, { responsavel });
     }
 
     /**
@@ -74,7 +74,7 @@ class ChecklistAPI {
      * @returns {Promise<Object>}
      */
     async updatePrevisao(itemId, previsao) {
-        return this.api.post(`/api/checklist/previsao/${itemId}`, { previsao });
+        return this.api.post(`/api/checklist/item/${itemId}/prazos`, { nova_previsao: previsao });
     }
 
     /**

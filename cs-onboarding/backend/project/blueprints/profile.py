@@ -125,6 +125,19 @@ def save_profile():
         session['user']['picture'] = foto_url
         session.modified = True
 
+        # Atualizar g.perfil para refletir mudanças no template imediatamente
+        if hasattr(g, 'perfil') and g.perfil:
+            # Se for dict (como parece ser pelo uso g.perfil.get)
+            if isinstance(g.perfil, dict):
+                g.perfil['nome'] = nome
+                g.perfil['cargo'] = cargo
+                g.perfil['foto_url'] = foto_url
+            # Se for objeto SQLAlchemy (pouco provável dado uso de .get, mas por segurança)
+            else:
+                g.perfil.nome = nome
+                g.perfil.cargo = cargo
+                g.perfil.foto_url = foto_url
+
         flash("Perfil atualizado com sucesso!", "success")
 
     except Exception as e:
@@ -132,5 +145,11 @@ def save_profile():
         flash("Erro ao salvar perfil no banco de dados.", "error")
 
     if request.headers.get('HX-Request') == 'true':
-        return render_template('modals/_perfil_content.html', r2_configurado=g.R2_CONFIGURED)
+        from flask import make_response
+        response = make_response(render_template('modals/_perfil_content.html', r2_configurado=g.R2_CONFIGURED))
+        response.headers['X-Updated-Photo-Url'] = foto_url or ''
+        response.headers['X-Updated-Name'] = nome or ''
+        response.headers['X-Updated-Cargo'] = cargo or ''
+        return response
+    
     return redirect(url_for('profile.profile'))

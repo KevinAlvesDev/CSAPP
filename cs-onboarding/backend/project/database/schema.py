@@ -213,9 +213,24 @@ def _criar_tabelas_basicas_sqlite(cursor):
             data_cancelamento DATETIME,
             motivo_cancelamento TEXT,
             comprovante_cancelamento_url TEXT,
+            definicao_carteira TEXT,
             FOREIGN KEY (usuario_cs) REFERENCES usuarios(usuario)
         )
         """)
+
+    # Tabela avisos_implantacao (NOVA)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS avisos_implantacao (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            implantacao_id INTEGER NOT NULL,
+            tipo VARCHAR(20) DEFAULT 'info',
+            titulo VARCHAR(255) NOT NULL,
+            mensagem TEXT NOT NULL,
+            criado_por VARCHAR(255) NOT NULL,
+            data_criacao DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (implantacao_id) REFERENCES implantacoes(id) ON DELETE CASCADE
+        )
+    """)
 
     # Tabela checklist_items (COMPLETA)
     cursor.execute("""

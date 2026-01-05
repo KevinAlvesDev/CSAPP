@@ -53,12 +53,14 @@
         <div class="d-flex align-items-center">
           <div class="user-profile-btn-sidebar me-2">
             {% if g.perfil and g.perfil.foto_url %}
-            <img src="{{ g.perfil.foto_url }}?v={{ range(1, 10000) | random }}" alt="Foto">
+            <img src="{{ g.perfil.foto_url }}?v={{ range(1, 10000) | random }}" alt="Foto" id="sidebar-user-photo"
+              class="user-photo-global">
             {% else %}
             <i class="bi bi-person-fill" style="font-size: 1.5rem;"></i>
             {% endif %}
           </div>
-          <strong class="nav-link-text">{{ g.perfil.nome or g.user_email }}</strong>
+          <strong class="nav-link-text user-name-global" id="sidebar-user-name">{{ g.perfil.nome or g.user_email
+            }}</strong>
         </div>
         <button id="sidebarToggle" class="sidebar-toggle-btn" title="Colapsar menu">
           <i class="bi bi-chevron-left"></i>
