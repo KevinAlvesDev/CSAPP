@@ -12,7 +12,9 @@ from ..db import query_db
 def get_implantacoes_with_progress(
     usuario_cs: Optional[str] = None,
     status: Optional[str] = None,
-    limit: Optional[int] = None
+    limit: Optional[int] = None,
+    offset: Optional[int] = None,
+    sort_by_status: bool = False
 ) -> List[Dict[str, Any]]:
     """
     Busca implantações com progresso calculado (SEM N+1).
@@ -21,6 +23,8 @@ def get_implantacoes_with_progress(
         usuario_cs: Filtrar por usuário CS
         status: Filtrar por status
         limit: Limitar resultados
+        offset: Pular resultados (paginação)
+        sort_by_status: Ordenar por status (ordem específica do dashboard)
         
     Returns:
         Lista de implantações com progresso já calculado
@@ -96,11 +100,28 @@ def get_implantacoes_with_progress(
         query += f" AND i.status = {placeholder}"
         args.append(status)
     
-    query += " ORDER BY i.data_criacao DESC"
+    if sort_by_status:
+        query += """
+         ORDER BY CASE i.status
+                     WHEN 'nova' THEN 1
+                     WHEN 'andamento' THEN 2
+                     WHEN 'parada' THEN 3
+                     WHEN 'futura' THEN 4
+                     WHEN 'finalizada' THEN 5
+                     WHEN 'cancelada' THEN 6
+                     ELSE 7
+                 END, i.data_criacao DESC
+        """
+    else:
+        query += " ORDER BY i.data_criacao DESC"
     
     if limit:
         query += f" LIMIT {placeholder}"
         args.append(limit)
+    
+    if offset is not None:
+        query += f" OFFSET {placeholder}"
+        args.append(offset)
     
     return query_db(query, tuple(args)) or []
 
@@ -183,3 +204,36 @@ def get_checklist_tree_optimized(implantacao_id: int) -> List[Dict[str, Any]]:
     """
     
     return query_db(query, (implantacao_id,)) or []
+
+
+def get_implantacoes_count(
+    usuario_cs: Optional[str] = None,
+    status: Optional[str] = None
+) -> int:
+    """
+    Conta total de implantações para paginação.
+    
+    Args:
+        usuario_cs: Filtrar por usuário CS
+        status: Filtrar por status
+        
+    Returns:
+        Total de registros
+    """
+    # Detectar tipo de banco
+    use_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
+    placeholder = "?" if use_sqlite else "%s"
+    
+    query = "SELECT COUNT(*) as total FROM implantacoes i WHERE 1=1"
+    args = []
+    
+    if usuario_cs:
+        query += f" AND i.usuario_cs = {placeholder}"
+        args.append(usuario_cs)
+        
+    if status:
+        query += f" AND i.status = {placeholder}"
+        args.append(status)
+        
+    res = query_db(query, tuple(args), one=True)
+    return res.get('total', 0) if res else 0

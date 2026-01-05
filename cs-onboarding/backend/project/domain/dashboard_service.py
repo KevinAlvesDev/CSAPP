@@ -13,7 +13,7 @@ from typing import Dict, List, Tuple
 from datetime import datetime
 from flask import current_app, g
 
-from ..common.query_helpers import get_implantacoes_with_progress
+from ..common.query_helpers import get_implantacoes_with_progress, get_implantacoes_count
 from ..common.date_helpers import calculate_days_between, format_relative_time_simple
 from ..constants import PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR
 
@@ -27,6 +27,7 @@ def get_dashboard_data(
 ) -> Tuple[Dict, Dict]:
     """
     Busca dados do dashboard de forma otimizada (SEM N+1).
+    Agora 100% compatível com original (Paginação + Sort por Status).
     
     Args:
         user_email: Email do usuário
@@ -36,7 +37,7 @@ def get_dashboard_data(
         use_cache: Se deve usar cache
         
     Returns:
-        (dashboard_data, metrics)
+        (dashboard_data, metrics) ou (dashboard_data, metrics, pagination)
     """
     
     # Configurar paginação
@@ -60,14 +61,32 @@ def get_dashboard_data(
     # Determinar usuário para filtro
     if not is_manager_view:
         usuario_filtro = user_email
+        count_usuario_filtro = user_email
     elif filtered_cs_email:
         usuario_filtro = filtered_cs_email
+        count_usuario_filtro = filtered_cs_email
     else:
         usuario_filtro = None
+        count_usuario_filtro = None
+    
+    # Lógica de Paginação Real
+    pagination = None
+    limit = None
+    offset = None
+    
+    if page is not None:
+        total = get_implantacoes_count(usuario_cs=count_usuario_filtro)
+        from ...database import Pagination
+        pagination = Pagination(page=page, per_page=per_page, total=total)
+        limit = pagination.limit
+        offset = pagination.offset
     
     # QUERY OTIMIZADA - Busca tudo de uma vez
     impl_list = get_implantacoes_with_progress(
-        usuario_cs=usuario_filtro
+        usuario_cs=usuario_filtro,
+        limit=limit,
+        offset=offset,
+        sort_by_status=True  # Paridade com original: ordenar por status
     )
     
     # Estruturas de dados
@@ -270,7 +289,11 @@ def get_dashboard_data(
             current_app.logger.error(f"Failed to update metrics for user {user_email}: {update_err}")
     
     # Salvar no cache
-    result = (dashboard_data, metrics)
+    if pagination:
+        result = (dashboard_data, metrics, pagination)
+    else:
+        result = (dashboard_data, metrics)
+        
     if cache and use_cache:
         try:
             cache.set(cache_key, result, timeout=300)  # 5 minutos
