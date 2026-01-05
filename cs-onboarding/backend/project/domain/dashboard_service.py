@@ -31,13 +31,27 @@ def get_dashboard_data(
     Args:
         user_email: Email do usuário
         filtered_cs_email: Email do CS para filtrar (gestores)
-        page: Número da página (não usado na versão otimizada)
-        per_page: Itens por página (não usado na versão otimizada)
-        use_cache: Se deve usar cache (não usado na versão otimizada)
+        page: Número da página (opcional)
+        per_page: Itens por página (opcional, padrão 100)
+        use_cache: Se deve usar cache
         
     Returns:
         (dashboard_data, metrics)
     """
+    
+    # Configurar paginação
+    if page is not None and per_page is None:
+        per_page = 100
+    
+    # Cache
+    cache_key = f'dashboard_data_{user_email}_{filtered_cs_email or "all"}_p{page}_pp{per_page}'
+    
+    from ..config.cache_config import cache
+    if cache and use_cache:
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            current_app.logger.info(f"Dashboard cache HIT para {user_email}")
+            return cached_data
     
     perfil_acesso = g.perfil.get('perfil_acesso') if g.get('perfil') else None
     manager_profiles = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
@@ -229,7 +243,42 @@ def get_dashboard_data(
             metrics['impl_andamento_total'] += 1
             metrics['total_valor_andamento'] += impl_valor
     
-    return dashboard_data, metrics
+    # Fallback: garantir que todos os itens tenham dias_passados
+    for bucket in dashboard_data.values():
+        for item in bucket:
+            if isinstance(item, dict) and 'dias_passados' not in item:
+                item['dias_passados'] = 0
+    
+    # Atualizar métricas no perfil do usuário (apenas para não-gestores)
+    if not is_manager_view and not filtered_cs_email and impl_list:
+        try:
+            from ..db import execute_db
+            execute_db(
+                """
+                UPDATE perfil_usuario
+                SET impl_andamento_total = %s,
+                    impl_finalizadas = %s, 
+                    impl_paradas = %s
+                WHERE usuario = %s
+                """,
+                (metrics['impl_andamento_total'],
+                 metrics['impl_finalizadas'], 
+                 metrics['impl_paradas'], 
+                 user_email)
+            )
+        except Exception as update_err:
+            current_app.logger.error(f"Failed to update metrics for user {user_email}: {update_err}")
+    
+    # Salvar no cache
+    result = (dashboard_data, metrics)
+    if cache and use_cache:
+        try:
+            cache.set(cache_key, result, timeout=300)  # 5 minutos
+            current_app.logger.info(f"Dashboard cache SAVED para {user_email}")
+        except Exception as e:
+            current_app.logger.warning(f"Erro ao salvar cache do dashboard: {e}")
+    
+    return result
 
 
 def get_tags_metrics(start_date=None, end_date=None, user_email=None):
