@@ -142,7 +142,7 @@ def _get_stopped_implementations(user_email, hoje):
             SELECT implantacao_id, MAX(data_criacao) as data_criacao
             FROM timeline_log
             WHERE tipo_evento = 'status_alterado'
-            AND detalhes LIKE '%parada%'
+            AND detalhes LIKE '%%parada%%'
             GROUP BY implantacao_id
         ) tl ON tl.implantacao_id = i.id
         WHERE i.usuario_cs = %s

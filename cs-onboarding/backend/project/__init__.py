@@ -139,6 +139,12 @@ def create_app(test_config=None):
     init_performance_monitoring(app)
 
     try:
+        # Log explícito do modo de banco de dados
+        if app.config.get('USE_SQLITE_LOCALLY', False):
+            app.logger.info("🗄️  DATABASE MODE: SQLite LOCAL")
+        else:
+            app.logger.info("🗄️  DATABASE MODE: PostgreSQL (Production)")
+        
         if app.config.get('USE_SQLITE_LOCALLY', False):
             with app.app_context():
                 # Garantir que o banco existe e está inicializado

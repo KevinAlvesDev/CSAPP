@@ -1046,7 +1046,28 @@
                     if (!postUrl) { form.submit(); return; }
                     const fd = new FormData(form);
                     fetch(postUrl, { method: 'POST', body: fd, headers: { 'HX-Request': 'true' } })
-                        .then(function (r) { return r.text(); })
+                        .then(function (r) {
+                            // Atualização global da UI baseada nos headers da resposta
+                            const updatedPhoto = r.headers.get('X-Updated-Photo-Url');
+                            const updatedName = r.headers.get('X-Updated-Name');
+
+                            if (updatedPhoto) {
+                                const els = document.querySelectorAll('.user-photo-global, #sidebar-user-photo');
+                                els.forEach(function (img) {
+                                    // Adicionar timestamp para evitar cache
+                                    img.src = updatedPhoto + '?v=' + new Date().getTime();
+                                });
+                            }
+
+                            if (updatedName) {
+                                const els = document.querySelectorAll('.user-name-global, #sidebar-user-name');
+                                els.forEach(function (el) {
+                                    el.textContent = updatedName;
+                                });
+                            }
+
+                            return r.text();
+                        })
                         .then(function (html) { contentDiv.innerHTML = html; })
                         .catch(function (err) { console.error('Falha ao salvar perfil no modal:', err); });
                 } catch (e) { console.error('Erro ao interceptar submit no modal Perfil:', e); }

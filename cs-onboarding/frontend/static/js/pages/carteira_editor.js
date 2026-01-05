@@ -56,11 +56,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Converter links em elementos clicáveis
         const formattedContent = linkify(content);
+
+        // Remover classes de centralização se existirem
+        contentDisplay.classList.remove('d-flex', 'align-items-center', 'justify-content-center');
+
         contentDisplay.innerHTML = formattedContent;
     }
 
     // Função para mostrar estado vazio
     function showEmptyState() {
+        // Adicionar classes de centralização
+        contentDisplay.classList.add('d-flex', 'align-items-center', 'justify-content-center');
+
         contentDisplay.innerHTML = `
             <div class="text-muted text-center py-5">
                 <p class="mb-2">Nenhuma informação adicionada ainda.</p>

@@ -109,6 +109,77 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, include_progress=
             result = []
             col_names = [d[0] for d in cursor.description]
             
+            # OTIMIZAÇÃO: Buscar todos os nomes de responsáveis de uma vez (evita N+1)
+            responsaveis_emails = set()
+            for row in rows:
+                item = row if isinstance(row, dict) else dict(zip(col_names, row))
+                resp = item.get('responsavel')
+                if resp and '@' in resp:
+                    responsaveis_emails.add(resp)
+            
+            # Buscar todos os nomes em uma única query
+            responsaveis_map = {}
+            if responsaveis_emails:
+                placeholder = ','.join(['%s'] * len(responsaveis_emails)) if db_type == 'postgres' else ','.join(['?'] * len(responsaveis_emails))
+                resp_query = f"SELECT usuario, nome FROM perfil_usuario WHERE usuario IN ({placeholder})"
+                cursor.execute(resp_query, tuple(responsaveis_emails))
+                for resp_row in cursor.fetchall():
+                    if isinstance(resp_row, dict):
+                        responsaveis_map[resp_row['usuario']] = resp_row['nome']
+                    else:
+                        responsaveis_map[resp_row[0]] = resp_row[1]
+            
+            # OTIMIZAÇÃO: Calcular progresso de todos os itens de uma vez (evita N+1)
+            progress_map = {}
+            if include_progress and rows:
+                # Coletar todos os IDs
+                all_ids = [row['id'] if isinstance(row, dict) else dict(zip(col_names, row))['id'] for row in rows]
+                
+                # Calcular progresso em batch
+                if db_type == 'postgres':
+                    progress_query = """
+                        WITH RECURSIVE all_children AS (
+                            SELECT parent_id, id, completed
+                            FROM checklist_items
+                            WHERE parent_id = ANY(%s)
+                            
+                            UNION ALL
+                            
+                            SELECT ci.parent_id, ci.id, ci.completed
+                            FROM checklist_items ci
+                            INNER JOIN all_children ac ON ci.parent_id = ac.id
+                        )
+                        SELECT 
+                            parent_id,
+                            COUNT(*) as total,
+                            COUNT(CASE WHEN completed = true THEN 1 END) as completed
+                        FROM all_children
+                        WHERE parent_id IS NOT NULL
+                        GROUP BY parent_id
+                    """
+                    cursor.execute(progress_query, (all_ids,))
+                else:
+                    # SQLite: processar em lote menor ou manter lógica original
+                    # Por simplicidade, vamos manter a lógica individual para SQLite
+                    pass
+                
+                if db_type == 'postgres':
+                    for prog_row in cursor.fetchall():
+                        if isinstance(prog_row, dict):
+                            item_id = prog_row['parent_id']
+                            progress_map[item_id] = {
+                                'total': prog_row['total'] or 0,
+                                'completed': prog_row['completed'] or 0,
+                                'has_children': (prog_row['total'] or 0) > 0
+                            }
+                        else:
+                            item_id = prog_row[0]
+                            progress_map[item_id] = {
+                                'total': prog_row[1] or 0,
+                                'completed': prog_row[2] or 0,
+                                'has_children': (prog_row[1] or 0) > 0
+                            }
+            
             for row in rows:
                 item = row if isinstance(row, dict) else dict(zip(col_names, row))
                 
@@ -131,21 +202,22 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, include_progress=
                     'updated_at': _format_datetime((item.get('updated_at') if isinstance(item, dict) else item.get('updated_at', None))),
                 }
                 
-                # Enrich responsavel name
-                try:
-                    resp = item_dict.get('responsavel')
-                    if resp and '@' in resp:
-                        r = query_db("SELECT nome FROM perfil_usuario WHERE usuario = %s", (resp,), one=True)
-                        if r and r.get('nome'):
-                            item_dict['responsavel'] = r.get('nome')
-                except Exception:
-                    pass
+                # Usar mapa de responsáveis (já carregado)
+                resp = item_dict.get('responsavel')
+                if resp and '@' in resp and resp in responsaveis_map:
+                    item_dict['responsavel'] = responsaveis_map[resp]
                 
                 ref_dt = item_dict['nova_previsao'] or item_dict['previsao_original']
                 item_dict['atrasada'] = bool(ref_dt and not item_dict['completed'] and ref_dt < _format_datetime(datetime.now(timezone.utc)))
 
                 if include_progress:
-                    stats = get_item_progress_stats(item_dict['id'], db_type, cursor)
+                    # Usar mapa de progresso (já calculado) ou calcular individualmente
+                    if item_dict['id'] in progress_map:
+                        stats = progress_map[item_dict['id']]
+                    else:
+                        # Fallback para SQLite ou itens sem filhos
+                        stats = get_item_progress_stats(item_dict['id'], db_type, cursor)
+                    
                     item_dict['progress'] = {
                         'total': stats['total'],
                         'completed': stats['completed'],
