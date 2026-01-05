@@ -1038,7 +1038,6 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                         feedbackEl.className = 'form-text text-danger';
                     }
                 } catch (error) {
-                    console.error('Erro:', error);
                     feedbackEl.textContent = 'Erro de conexão ao consultar empresa.';
                     feedbackEl.className = 'form-text text-danger';
                 } finally {
@@ -1110,7 +1109,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                 const modalIdFavorecidoInput = modalDetalhes.querySelector('#modal-id_favorecido');
 
                 if (modalIdFavorecidoInput && idFavorecido) {
-                    console.debug("ID Favorecido passed to modal:", idFavorecido);
+
                     modalIdFavorecidoInput.value = idFavorecido;
 
                     // Fetch from OAMD to auto-fill fields if they are empty
@@ -1119,7 +1118,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                         const data = await response.json();
 
                         if (data.ok && data.empresa) {
-                            console.debug("Dados OAMD encontrados:", data.empresa);
+
                             const emp = data.empresa;
 
                             const map = {
@@ -1156,7 +1155,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                             }
                         }
                     } catch (e) {
-                        console.error("Erro ao buscar dados OAMD para detalhes:", e);
+
                     }
                 }
             });

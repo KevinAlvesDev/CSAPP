@@ -337,6 +337,12 @@
                                 <i class="bi bi-exclamation-triangle me-1"></i>Avisos
                             </button>
                         </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="checklist-finalizacao-tab" data-bs-toggle="tab"
+                                data-bs-target="#checklist-finalizacao-content" type="button" role="tab">
+                                <i class="bi bi-check2-square me-1"></i>Checklist de Finalização
+                            </button>
+                        </li>
                     </ul>
                 </div>
 
@@ -841,6 +847,64 @@ Sim - Academia XYZ
                         </div>
                     </div>
                 </div>
+
+                <!-- Tab: Checklist de Finalização -->
+                <div class="tab-pane fade d-none" id="checklist-finalizacao-content" role="tabpanel">
+                    <div class="custom-card-body">
+                        <div class="alert alert-info mb-4">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>Checklist de Pré-Finalização</strong>
+                            <p class="mb-0 mt-2 small">Complete todos os itens obrigatórios antes de finalizar a
+                                implantação.
+                                Itens marcados como obrigatórios devem ser concluídos para permitir a finalização.</p>
+                        </div>
+
+                        <!-- Progresso do Checklist -->
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-muted small">Progresso do Checklist</span>
+                                <span id="checklist-finalizacao-progress-text" class="fw-bold text-primary">0/0 itens
+                                    concluídos</span>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div id="checklist-finalizacao-progress-bar" class="progress-bar" role="progressbar"
+                                    style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+
+                        <!-- Lista de Itens do Checklist -->
+                        <div id="checklist-finalizacao-list">
+                            <!-- Itens serão carregados aqui via JavaScript -->
+                            <div class="text-center py-5 text-muted" id="checklist-finalizacao-loading">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Carregando...</span>
+                                </div>
+                                <p class="mt-2 small">Carregando checklist...</p>
+                            </div>
+                            <div class="text-center py-5 text-muted d-none" id="checklist-finalizacao-empty">
+                                <i class="bi bi-clipboard-check text-secondary fs-1"></i>
+                                <p class="mt-2">Nenhum item no checklist de finalização.</p>
+                            </div>
+                        </div>
+
+                        <!-- Botão de Ação -->
+                        <div class="mt-4 pt-3 border-top">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="badge bg-warning text-dark" id="checklist-obrigatorios-pendentes">
+                                        <i class="bi bi-exclamation-triangle me-1"></i>
+                                        <span id="count-obrigatorios-pendentes">0</span> item(ns) obrigatório(s)
+                                        pendente(s)
+                                    </span>
+                                </div>
+                                <button class="btn btn-success" id="btn-validar-checklist-finalizacao" disabled>
+                                    <i class="bi bi-check-circle me-1"></i>
+                                    Validar Checklist
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -1289,5 +1353,6 @@ Sim - Academia XYZ
 <script src="{{ url_for('static', filename='js/avisos_manager.js') }}"></script>
 <script src="{{ url_for('static', filename='js/utils/comment_image_patch.js') }}"></script>
 <script src="{{ url_for('static', filename='js/utils/comment_image_upload.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages/checklist_finalizacao.js') }}"></script>
 {% endblock %}
 /* cabeçalho e linhas continuam com flex; larguras são controladas pelos wrappers de coluna */

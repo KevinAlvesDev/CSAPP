@@ -162,9 +162,6 @@ def atualizar_perfil(perfil_id: int, dados: Dict) -> bool:
     if not perfil:
         raise ValidationError(f"Perfil com ID {perfil_id} não encontrado")
     
-    # TEMPORARIAMENTE DESABILITADO PARA TESTES
-    # if perfil['sistema']:
-    #     raise ValidationError("Perfis do sistema não podem ser editados")
     
     campos = []
     valores = []
@@ -245,9 +242,6 @@ def atualizar_permissoes(perfil_id: int, permissoes: List[int]) -> bool:
     if not perfil:
         raise ValidationError(f"Perfil com ID {perfil_id} não encontrado")
     
-    # TEMPORARIAMENTE DESABILITADO PARA TESTES
-    # if perfil['sistema']:
-    #     raise ValidationError("Permissões de perfis do sistema não podem ser alteradas")
     
     with db_connection() as (conn, db_type):
         cursor = conn.cursor()

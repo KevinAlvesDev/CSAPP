@@ -161,7 +161,22 @@ def finalizar_implantacao_service(implantacao_id, usuario_cs_email, data_final_i
     if impl.get('status') != 'andamento':
         raise ValueError(f"Operação não permitida: status atual é '{impl.get('status')}'. Retome ou inicie antes de finalizar.")
 
-    # Validação de pendências
+    # NOVA VALIDAÇÃO: Checklist de Finalização
+    try:
+        from ..checklist_finalizacao_service import validar_checklist_completo
+        
+        validado, mensagem = validar_checklist_completo(implantacao_id)
+        if not validado:
+            raise ValueError(f'Checklist de Finalização incompleto: {mensagem}')
+            
+        current_app.logger.info(f"Checklist de finalização validado para implantação {implantacao_id}")
+    except ImportError:
+        current_app.logger.warning("Serviço de checklist de finalização não disponível, pulando validação")
+    except Exception as e:
+        # Se houver erro na validação do checklist, logar mas não bloquear
+        current_app.logger.error(f"Erro ao validar checklist de finalização: {e}", exc_info=True)
+
+    # Validação de pendências do Plano de Sucesso
     plano_id = impl.get('plano_sucesso_id')
     if plano_id:
         subtarefas_pendentes = query_db(

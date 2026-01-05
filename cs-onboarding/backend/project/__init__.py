@@ -232,6 +232,8 @@ def create_app(test_config=None):
     from .blueprints.perfis_bp import perfis_bp
     from .blueprints.upload import upload_bp
     from .blueprints.risc_bp import risc_bp  # RISC (Proteção entre Contas)
+    from .blueprints.checklist_finalizacao_bp import checklist_finalizacao_bp
+
 
     try:
 
@@ -240,6 +242,7 @@ def create_app(test_config=None):
         csrf.exempt(api_docs_bp)
         csrf.exempt(upload_bp)
         csrf.exempt(risc_bp)  # RISC precisa receber eventos do Google sem CSRF
+        csrf.exempt(checklist_finalizacao_bp)  # API REST de checklist de finalização
 
         # checklist_bp deixa de ser isento para proteger mutações
     except Exception:
@@ -264,6 +267,8 @@ def create_app(test_config=None):
     app.register_blueprint(perfis_bp)
     app.register_blueprint(upload_bp)
     app.register_blueprint(risc_bp)  # RISC (Proteção entre Contas)
+    app.register_blueprint(checklist_finalizacao_bp)
+
 
 
     try:

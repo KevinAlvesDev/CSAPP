@@ -53,6 +53,14 @@ def criar_implantacao_service(nome_empresa, usuario_atribuido, usuario_criador, 
 
     logar_timeline(implantacao_id, usuario_criador, 'implantacao_criada', f'Implantação "{nome_empresa}" ({tipo.capitalize()}) criada e atribuída a {usuario_atribuido}.')
     
+    # Criar checklist de finalização automaticamente
+    try:
+        from ..checklist_finalizacao_service import criar_checklist_para_implantacao
+        criar_checklist_para_implantacao(implantacao_id)
+        current_app.logger.info(f"Checklist de finalização criado automaticamente para implantação {implantacao_id}")
+    except Exception as e:
+        current_app.logger.warning(f"Não foi possível criar checklist de finalização para implantação {implantacao_id}: {e}")
+    
     return implantacao_id
 
 
@@ -106,6 +114,14 @@ def criar_implantacao_modulo_service(nome_empresa, usuario_atribuido, usuario_cr
 
     modulo_label = MODULO_OPCOES.get(modulo_tipo, modulo_tipo)
     logar_timeline(implantacao_id, usuario_criador, 'implantacao_criada', f'Implantação de Módulo "{nome_empresa}" (módulo: {modulo_label}) criada e atribuída a {usuario_atribuido}.')
+
+    # Criar checklist de finalização automaticamente
+    try:
+        from ..checklist_finalizacao_service import criar_checklist_para_implantacao
+        criar_checklist_para_implantacao(implantacao_id)
+        current_app.logger.info(f"Checklist de finalização criado automaticamente para implantação de módulo {implantacao_id}")
+    except Exception as e:
+        current_app.logger.warning(f"Não foi possível criar checklist de finalização para implantação de módulo {implantacao_id}: {e}")
 
     return implantacao_id
 

@@ -511,15 +511,15 @@ def get_analytics_data_v2(target_cs_email=None, target_status=None, start_date=N
         }
     }
 
-    # TEMPORARIAMENTE DESABILITADO - Erro ch.tag no SQLite
+
     # Get tags by user chart data
-    # from ..tags_analytics import get_tags_by_user_chart_data
-    # tags_chart_data = get_tags_by_user_chart_data(
-    #     cs_email=task_cs_email,
-    #     start_date=task_start_date_to_query,
-    #     end_date=task_end_date_to_query
-    # )
-    tags_chart_data = {}  # Desabilitado temporariamente
+    from ..tags_analytics import get_tags_by_user_chart_data
+    tags_chart_data = get_tags_by_user_chart_data(
+        cs_email=task_cs_email,
+        start_date=task_start_date_to_query,
+        end_date=task_end_date_to_query
+    )
+
 
     return {
         'kpi_cards': global_metrics,
