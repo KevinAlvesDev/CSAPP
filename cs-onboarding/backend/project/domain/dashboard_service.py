@@ -87,6 +87,8 @@ def get_dashboard_data(
     }
     
     # Processar implantações (SEM queries adicionais!)
+    agora = datetime.now()
+    
     for impl in impl_list:
         if not impl or not isinstance(impl, dict):
             continue
@@ -95,35 +97,25 @@ def get_dashboard_data(
         if impl_id is None:
             continue
         
-        # Status
-        status = (impl.get('status') or '').strip().lower()
+        # Status (com limpeza de caracteres especiais)
+        status_raw = impl.get('status')
+        if isinstance(status_raw, str):
+            status = status_raw.replace('\xa0', ' ').strip().lower()
+        else:
+            status = str(status_raw).strip().lower() if status_raw else ''
+        
         if not status:
             status = 'andamento'
         
+        # Formatar datas ISO (compatibilidade com frontend)
+        from ..common.utils import format_date_iso_for_json, format_date_br
+        impl['data_criacao_iso'] = format_date_iso_for_json(impl.get('data_criacao'), only_date=True)
+        impl['data_inicio_efetivo_iso'] = format_date_iso_for_json(impl.get('data_inicio_efetivo'), only_date=True)
+        impl['data_inicio_producao_iso'] = format_date_iso_for_json(impl.get('data_inicio_producao'), only_date=True)
+        impl['data_final_implantacao_iso'] = format_date_iso_for_json(impl.get('data_final_implantacao'), only_date=True)
+        
         # Progresso (já calculado no SQL!)
         impl['progresso'] = impl.get('progresso_percent', 0)
-        
-        # Dias passados (calcular com helper)
-        data_inicio = impl.get('data_inicio_efetivo') or impl.get('data_criacao')
-        impl['dias_passados'] = calculate_days_between(data_inicio)
-        
-        # Dias parada
-        if status == 'parada':
-            impl['dias_parada'] = calculate_days_between(impl.get('data_parada'))
-        else:
-            impl['dias_parada'] = 0
-        
-        # Última atividade (usar helper)
-        ultima_ativ = impl.get('ultima_atividade')
-        if ultima_ativ:
-            texto, dias, cor = format_relative_time_simple(ultima_ativ)
-            impl['ultima_atividade_text'] = texto
-            impl['ultima_atividade_dias'] = dias
-            impl['ultima_atividade_status'] = cor
-        else:
-            impl['ultima_atividade_text'] = 'Sem comentários'
-            impl['ultima_atividade_dias'] = 0
-            impl['ultima_atividade_status'] = 'gray'
         
         # Valor monetário
         try:
@@ -131,6 +123,34 @@ def get_dashboard_data(
         except (ValueError, TypeError):
             impl_valor = 0.0
         impl['valor_monetario_float'] = impl_valor
+        
+        # Dias passados (usar função original para compatibilidade)
+        from ..domain.time_calculator import calculate_days_passed, calculate_days_parada
+        try:
+            dias_passados = calculate_days_passed(impl_id)
+            if dias_passados is None:
+                dias_passados = 0
+        except Exception:
+            dias_passados = 0
+        impl['dias_passados'] = dias_passados
+        
+        # Última atividade (com tratamento robusto de erros)
+        ultima_ativ = impl.get('ultima_atividade')
+        if ultima_ativ:
+            try:
+                from ..domain.dashboard.utils import format_relative_time
+                texto, dias, cor = format_relative_time(ultima_ativ)
+                impl['ultima_atividade_text'] = texto or 'Sem comentários'
+                impl['ultima_atividade_dias'] = dias if dias is not None else 0
+                impl['ultima_atividade_status'] = cor or 'gray'
+            except Exception:
+                impl['ultima_atividade_text'] = 'Sem comentários'
+                impl['ultima_atividade_dias'] = 0
+                impl['ultima_atividade_status'] = 'gray'
+        else:
+            impl['ultima_atividade_text'] = 'Sem comentários'
+            impl['ultima_atividade_dias'] = 0
+            impl['ultima_atividade_status'] = 'gray'
         
         # Contabilizar módulos
         if impl.get('tipo') == 'modulo' and status in ['nova', 'andamento', 'parada', 'futura', 'sem_previsao']:
@@ -147,10 +167,37 @@ def get_dashboard_data(
             metrics['impl_canceladas'] += 1
             metrics['total_valor_canceladas'] += impl_valor
         elif status == 'parada':
+            # Calcular dias parada
+            try:
+                dias_parada = calculate_days_parada(impl_id)
+            except Exception:
+                dias_parada = 0
+            impl['dias_parada'] = dias_parada
+            
             dashboard_data['paradas'].append(impl)
             metrics['impl_paradas'] += 1
             metrics['total_valor_paradas'] += impl_valor
         elif status == 'futura':
+            # Processar data prevista
+            from datetime import date
+            data_prevista_str = impl.get('data_inicio_previsto')
+            data_prevista_obj = None
+            
+            if data_prevista_str and isinstance(data_prevista_str, str):
+                try:
+                    data_prevista_obj = datetime.strptime(data_prevista_str, '%Y-%m-%d').date()
+                except ValueError:
+                    pass
+            elif isinstance(data_prevista_str, date):
+                data_prevista_obj = data_prevista_str
+            
+            impl['data_inicio_previsto_fmt_d'] = format_date_br(data_prevista_obj or data_prevista_str, include_time=False)
+            
+            if data_prevista_obj and data_prevista_obj < agora.date():
+                impl['atrasada_para_iniciar'] = True
+            else:
+                impl['atrasada_para_iniciar'] = False
+            
             dashboard_data['futuras'].append(impl)
             metrics['implantacoes_futuras'] += 1
             metrics['total_valor_futuras'] += impl_valor
@@ -162,7 +209,22 @@ def get_dashboard_data(
             dashboard_data['sem_previsao'].append(impl)
             metrics['implantacoes_sem_previsao'] += 1
             metrics['total_valor_sem_previsao'] += impl_valor
-        else:  # andamento
+        elif status == 'andamento' or status == 'atrasada':
+            # Migrar status 'atrasada' para 'andamento'
+            if status == 'atrasada':
+                try:
+                    from ..db import execute_db
+                    execute_db("UPDATE implantacoes SET status = 'andamento' WHERE id = %s AND status = 'atrasada'", (impl_id,))
+                    status = 'andamento'
+                    impl['status'] = 'andamento'
+                except Exception:
+                    pass
+            
+            dashboard_data['andamento'].append(impl)
+            metrics['impl_andamento_total'] += 1
+            metrics['total_valor_andamento'] += impl_valor
+        else:
+            # Status desconhecido - categorizar como andamento
             dashboard_data['andamento'].append(impl)
             metrics['impl_andamento_total'] += 1
             metrics['total_valor_andamento'] += impl_valor

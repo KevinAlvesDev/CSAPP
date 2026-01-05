@@ -59,7 +59,10 @@ def get_implantacoes_with_progress(
             -- Progresso calculado no SQL (evita N+1)
             COALESCE(prog.total_tarefas, 0) as total_tarefas,
             COALESCE(prog.tarefas_concluidas, 0) as tarefas_concluidas,
-            {progress_calc}
+            {progress_calc},
+            
+            -- Última atividade (comentários)
+            last_activity.ultima_atividade as ultima_atividade
             
         FROM implantacoes i
         LEFT JOIN perfil_usuario p ON i.usuario_cs = p.usuario
@@ -72,6 +75,14 @@ def get_implantacoes_with_progress(
             WHERE ci.tipo_item = 'subtarefa'
             GROUP BY ci.implantacao_id
         ) prog ON prog.implantacao_id = i.id
+        LEFT JOIN (
+            SELECT
+                ci.implantacao_id,
+                MAX(ch.data_criacao) as ultima_atividade
+            FROM comentarios_h ch
+            INNER JOIN checklist_items ci ON ch.checklist_item_id = ci.id
+            GROUP BY ci.implantacao_id
+        ) last_activity ON last_activity.implantacao_id = i.id
         WHERE 1=1
     """
     
