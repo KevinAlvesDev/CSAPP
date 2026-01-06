@@ -11,6 +11,7 @@ from werkzeug.utils import secure_filename
 
 from ..blueprints.auth import login_required, permission_required
 from ..common import utils
+from ..common.audit_decorator import audit
 from ..common.validation import ValidationError, sanitize_string, validate_date, validate_integer
 from ..config.cache_config import clear_implantacao_cache, clear_user_cache
 from ..config.logging_config import app_logger
@@ -26,6 +27,7 @@ implantacao_actions_bp = Blueprint('actions', __name__)
 @login_required
 @permission_required(PERFIS_COM_CRIACAO)
 @limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
+@audit(action='CREATE_IMPLANTACAO', target_type='implantacao')
 def criar_implantacao():
     usuario_criador = g.user_email
 
@@ -72,6 +74,7 @@ def criar_implantacao():
 @login_required
 @permission_required(PERFIS_COM_CRIACAO)
 @limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
+@audit(action='CREATE_IMPLANTACAO_MODULO', target_type='implantacao')
 def criar_implantacao_modulo():
     usuario_criador = g.user_email
 
@@ -256,6 +259,7 @@ def marcar_sem_previsao():
 @implantacao_actions_bp.route('/finalizar_implantacao', methods=['POST'])
 @login_required
 @limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
+@audit(action='FINALIZE_IMPLANTACAO', target_type='implantacao')
 def finalizar_implantacao():
     usuario_cs_email = g.user_email
     implantacao_id = request.form.get('implantacao_id')
@@ -524,6 +528,7 @@ def remover_plano_implantacao():
 @login_required
 @permission_required(PERFIS_COM_GESTAO)
 @limiter.limit("30 per minute", key_func=lambda: g.user_email or get_remote_address())
+@audit(action='TRANSFER_IMPLANTACAO', target_type='implantacao')
 def transferir_implantacao():
     usuario_cs_email = g.user_email
     implantacao_id = request.form.get('implantacao_id')
@@ -550,6 +555,7 @@ def transferir_implantacao():
 @implantacao_actions_bp.route('/excluir_implantacao', methods=['POST'])
 @login_required
 @limiter.limit("100 per minute", key_func=lambda: g.user_email or get_remote_address())
+@audit(action='DELETE_IMPLANTACAO', target_type='implantacao')
 def excluir_implantacao():
     usuario_cs_email = g.user_email
     implantacao_id = request.form.get('implantacao_id')
@@ -578,6 +584,7 @@ def excluir_implantacao():
 
 @implantacao_actions_bp.route('/cancelar_implantacao', methods=['POST'])
 @login_required
+@audit(action='CANCEL_IMPLANTACAO', target_type='implantacao')
 def cancelar_implantacao():
     usuario_cs_email = g.user_email
     implantacao_id = request.form.get('implantacao_id')

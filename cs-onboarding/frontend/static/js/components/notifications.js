@@ -134,49 +134,79 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // Renderizar notificações
+    // Renderizar notificações (Versão Premium Interativa)
     function renderNotifications(notifications) {
         if (notifications.length === 0) {
             notificationDropdown.innerHTML = `
-                <div style="padding: 40px 20px; text-align: center; color: var(--text-muted);">
-                    <i class="bi bi-check-circle fs-1 text-success"></i>
-                    <p class="mb-0 mt-3 fw-semibold">Tudo em dia! 🎉</p>
-                    <small class="text-muted">Nenhuma pendência</small>
+                <div class="d-flex flex-column align-items-center justify-content-center" style="padding: 40px 20px; color: var(--text-muted); min-height: 200px;">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px; background: rgba(16, 185, 129, 0.1);">
+                        <i class="bi bi-check-lg fs-2 text-success"></i>
+                    </div>
+                    <p class="mb-1 fw-semibold fs-6">Tudo limpo por aqui!</p>
+                    <small class="text-muted">Você está em dia com suas tarefas.</small>
                 </div>
             `;
             return;
         }
 
         let html = `
-            <div style="padding: 15px 20px; border-bottom: 1px solid var(--border-color); background: var(--header-bg); border-radius: 12px 12px 0 0;">
+            <div class="d-flex align-items-center justify-content-between" style="padding: 16px 20px; border-bottom: 1px solid var(--border-color); background: var(--header-bg); border-radius: 12px 12px 0 0;">
                 <h6 class="mb-0 fw-bold">Notificações</h6>
-                <small class="text-muted">${notifications.length} aviso${notifications.length > 1 ? 's' : ''}</small>
+                <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary">${notifications.length} nova${notifications.length > 1 ? 's' : ''}</span>
             </div>
+            <div class="notification-list">
         `;
 
         notifications.forEach(notif => {
-            const iconMap = {
-                'danger': 'bi-exclamation-circle-fill text-danger',
-                'warning': 'bi-exclamation-triangle-fill text-warning',
-                'success': 'bi-check-circle-fill text-success',
-                'info': 'bi-info-circle-fill text-info'
-            };
-            const iconClass = iconMap[notif.type] || iconMap['info'];
+            const config = {
+                'danger': { icon: 'bi-exclamation-circle-fill', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.1)' },
+                'warning': { icon: 'bi-exclamation-triangle-fill', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)' },
+                'success': { icon: 'bi-check-circle-fill', color: '#10b981', bg: 'rgba(16, 185, 129, 0.1)' },
+                'info': { icon: 'bi-info-circle-fill', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.1)' }
+            }[notif.type] || { icon: 'bi-bell-fill', color: '#6366f1', bg: 'rgba(99, 102, 241, 0.1)' };
+
+            const actionUrl = notif.action_url || '#';
+            const isClickable = actionUrl !== '#';
 
             html += `
-                <div class="notification-item" style="padding: 14px 20px; border-bottom: 1px solid var(--border-color);">
-                    <div class="d-flex align-items-start">
-                        <i class="bi ${iconClass} fs-5 me-3 mt-1 flex-shrink-0"></i>
-                        <div class="flex-grow-1">
-                            <p class="mb-1 fw-semibold" style="font-size: 0.9rem; line-height: 1.4;">${notif.title}</p>
-                            <p class="mb-0 text-muted" style="font-size: 0.82rem;">${notif.message}</p>
-                        </div>
+                <a href="${actionUrl}" class="notification-item d-flex align-items-start text-decoration-none" 
+                   style="padding: 16px 20px; border-bottom: 1px solid var(--border-color); transition: background 0.2s; border-left: 3px solid ${config.color}; background: var(--card-bg);"
+                   onmouseover="this.style.backgroundColor = 'var(--hover-bg)'"
+                   onmouseout="this.style.backgroundColor = 'var(--card-bg)'">
+                   
+                    <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 me-3" 
+                         style="width: 36px; height: 36px; background: ${config.bg}; color: ${config.color};">
+                        <i class="bi ${config.icon} fs-6"></i>
                     </div>
-                </div>
+                    
+                    <div class="flex-grow-1" style="min-width: 0;">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <p class="mb-1 fw-semibold text-truncate" style="font-size: 0.9rem; color: var(--text-primary, #333); width: 100%; transition: color 0.2s;">
+                                ${notif.title}
+                            </p>
+                            ${isClickable ? '<i class="bi bi-chevron-right text-muted ms-2" style="font-size: 0.75rem;"></i>' : ''}
+                        </div>
+                        <p class="mb-0 text-muted" style="font-size: 0.85rem; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                            ${notif.message}
+                        </p>
+                    </div>
+                </a>
             `;
         });
 
+        html += `</div>`; // fecha notification-list
+
+        // Footer com ações (futuro)
+        html += `
+             <div class="text-center py-2 bg-light bg-opacity-25" style="border-top: 1px solid var(--border-color); border-radius: 0 0 12px 12px;">
+                <a href="/dashboard" class="text-decoration-none" style="font-size: 0.8rem; fw-medium;">Ver Dashboard Completo</a>
+             </div>
+        `;
+
         notificationDropdown.innerHTML = html;
+
+        // Ajustar cores se estiver em dark mode (via CSS vars ou style inline defensivo)
+        // Como o sistema usa classes, o ideal seria ter classes, mas style inline garante consistência imediata
     }
 
     // Atualizar badge

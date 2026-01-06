@@ -188,7 +188,28 @@ def marcar_item_checklist(item_id: int, concluido: bool, usuario: str,
             
             conn.commit()
         
-        current_app.logger.info(f"Item {item_id} do checklist marcado como {'concluído' if concluido else 'pendente'} por {usuario}")
+        # Registrar logs
+        status_texto = 'concluído' if concluido else 'pendente'
+        current_app.logger.info(f"Item {item_id} do checklist marcado como {status_texto} por {usuario}")
+        
+        # Adicionar à Linha do Tempo da Implantação
+        try:
+             # Buscar implantacao_id e titulo do item para o log
+            item = query_db(
+                "SELECT implantacao_id, titulo FROM checklist_finalizacao_items WHERE id = %s", 
+                (item_id,), one=True
+            )
+            if item:
+                from .implantacao.crud import logar_timeline
+                logar_timeline(
+                    item['implantacao_id'], 
+                    usuario, 
+                    'checklist_item', 
+                    f"Item do checklist '{item['titulo']}' marcado como {status_texto}."
+                )
+        except Exception as e:
+             current_app.logger.error(f"Erro ao logar timeline do checklist: {e}")
+
         return True
         
     except Exception as e:

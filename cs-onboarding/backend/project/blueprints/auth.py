@@ -1,10 +1,9 @@
 import secrets
 import os
 from functools import wraps
-from urllib.parse import urlencode
 
 from flask import Blueprint, abort, current_app, flash, g, redirect, render_template, request, session, url_for
-from itsdangerous import URLSafeTimedSerializer
+
 
 from ..config.logging_config import auth_logger, security_logger
 from ..constants import ADMIN_EMAIL, PERFIL_ADMIN, PERFIL_IMPLANTADOR, PERFIS_COM_GESTAO
@@ -18,10 +17,6 @@ from ..domain.auth_service import (
 
 auth_bp = Blueprint('auth', __name__)
 
-
-def _get_reset_serializer():
-    secret_key = current_app.config.get('SECRET_KEY') or current_app.secret_key
-    return URLSafeTimedSerializer(secret_key, salt='password-reset')
 
 
 def login_required(f):
@@ -125,34 +120,6 @@ def rate_limit(max_requests):
     return decorator
 
 
-@auth_bp.route('/change-password', methods=['GET', 'POST'])
-@login_required
-def change_password():
-    """Rota desativada: alteração de senha não permitida (login exclusivo via Google)."""
-    flash('Gerenciamento de credenciais é feito via Google.', 'info')
-    return redirect(url_for('main.dashboard'))
-
-
-@auth_bp.route('/forgot-password', methods=['GET', 'POST'])
-def forgot_password():
-    """Rota desativada: recuperação de senha não permitida (login exclusivo via Google)."""
-    flash('Login exclusivo via Google. Recupere sua senha no Google se necessário.', 'info')
-    return redirect(url_for('auth.login'))
-
-
-@auth_bp.route('/check-email', methods=['GET'])
-def check_email():
-    """Rota desativada."""
-    from flask import jsonify
-    return jsonify({'valid': False, 'exists': False, 'message': 'Endpoint desativado'})
-
-
-@auth_bp.route('/reset-password/<token>', methods=['GET', 'POST'])
-def reset_password(token):
-    """Rota desativada."""
-    flash('Login exclusivo via Google.', 'info')
-    return redirect(url_for('auth.login'))
-
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
@@ -242,48 +209,6 @@ def check_user_external():
         auth_logger.error(f"Erro na verificação externa via API: {e}")
         return {'status': 'error', 'message': 'Erro ao consultar banco externo'}, 500
 
-
-@auth_bp.route('/callback')
-@rate_limit("100 per minute")
-def callback():
-    """Manipula o retorno do Auth0 após o login."""
-
-    if not current_app.config.get('AUTH0_ENABLED', True):
-        flash('Auth0 desativado no ambiente de desenvolvimento. Use dev_login.', 'info')
-        return redirect(url_for('main.dashboard'))
-
-    from ..core.extensions import oauth
-
-    try:
-        auth0 = oauth.create_client('auth0')
-        token = auth0.authorize_access_token()
-        userinfo = token.get('userinfo')
-
-        if not userinfo or not userinfo.get('email'):
-            raise Exception("Informação do usuário inválida recebida do Auth0.")
-
-        session['user'] = userinfo
-        session.permanent = True
-
-        user_email = userinfo.get('email')
-        user_name = userinfo.get('name', user_email)
-        auth0_user_id = userinfo.get('sub')
-
-        sync_user_profile_service(user_email, user_name, auth0_user_id)
-
-        auth_logger.info(f'User logged in successfully: {user_email}')
-        return redirect(url_for('main.dashboard'))
-
-    except ValueError as ve:
-        auth_logger.error(f'Erro no callback (duplicação): {ve}')
-        flash(str(ve), "error")
-        session.clear()
-        return redirect(url_for('auth.login'))
-    except Exception as e:
-        auth_logger.error(f'Erro no callback do Auth0: {e}', exc_info=True)
-        flash("Erro durante a autenticação: Algo deu errado, por favor tente novamente.", "error")
-        session.clear()
-        return redirect(url_for('main.home'))
 
 
 @auth_bp.route('/login/google')
@@ -430,20 +355,8 @@ def logout():
     """Desloga o usuário da sessão local."""
     session.clear()
     flash('Você saiu do sistema.', 'info')
-    
-    # Se Auth0 estiver explicitamente habilitado, tentar redirecionar (legado)
-    if current_app.config.get('AUTH0_ENABLED', False):
-        try:
-            params = {
-                'returnTo': url_for('main.home', _external=True),
-                'client_id': current_app.config['AUTH0_CLIENT_ID']
-            }
-            logout_url = f"https://{current_app.config['AUTH0_DOMAIN']}/v2/logout?{urlencode(params)}"
-            return redirect(logout_url)
-        except Exception:
-            pass
-
     return redirect(url_for('auth.login'))
+
 
 
 @auth_bp.route('/dev-login', methods=['GET'])
@@ -550,8 +463,3 @@ def dev_login_as():
     return redirect(url_for('main.dashboard'))
 
 
-@auth_bp.route('/register', methods=['GET', 'POST'])
-def register():
-    """Rota desativada: registro não permitido (login exclusivo via Google)."""
-    flash('Novos cadastros devem ser feitos pelo administrador ou via Google Login.', 'info')
-    return redirect(url_for('auth.login'))

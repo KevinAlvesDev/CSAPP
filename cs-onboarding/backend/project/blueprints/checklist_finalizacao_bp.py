@@ -57,15 +57,6 @@ def get_checklist(impl_id):
 def toggle_item(item_id):
     """
     Marca/desmarca um item do checklist como concluído.
-    
-    Body (JSON):
-    {
-        "concluido": true/false,
-        "evidencia_tipo": "link",  // opcional
-        "evidencia_url": "https://...",  // opcional
-        "evidencia_conteudo": "texto",  // opcional
-        "observacoes": "texto"  // opcional
-    }
     """
     try:
         data = request.get_json() or {}
@@ -88,6 +79,19 @@ def toggle_item(item_id):
         )
         
         if success:
+            # AUDITORIA: Registrar a ação
+            try:
+                from ..domain.audit_service import log_action
+                log_action(
+                    action='CHECKLIST_TOGGLE',
+                    target_type='checklist_item',
+                    target_id=str(item_id),
+                    changes={'concluido': concluido},
+                    user_email=usuario
+                )
+            except Exception:
+                pass
+
             return jsonify({
                 'ok': True,
                 'message': f'Item marcado como {"concluído" if concluido else "pendente"}'

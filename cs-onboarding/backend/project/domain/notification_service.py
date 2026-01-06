@@ -41,34 +41,42 @@ def get_user_notifications(user_email):
         # 3. TAREFAS URGENTES (vence em 1-2 dias)
         notifications.extend(_get_urgent_tasks(user_email, hoje, fim_hoje))
         
-        # 4. FUTURAS PRÓXIMAS (faltando 7 dias para início)
+        # 4. Implantações futuras (7 dias)
         notifications.extend(_get_upcoming_future(user_email, hoje))
         
-        # 5. SEM PREVISÃO (30 dias sem previsão, depois a cada 7 dias)
+        # 5. Largada Falsa (NOVO)
+        notifications.extend(_get_false_start(user_email, hoje))
+        
+        # 6. Estagnação Silenciosa (NOVO)
+        notifications.extend(_get_silent_stagnation(user_email, hoje))
+        
+        # 7. Ritmo Lento (NOVO)
+        notifications.extend(_get_slow_pace(user_email, hoje))
+        
+        # 8. Sem previsão
         notifications.extend(_get_no_forecast(user_email, hoje))
         
-        # 6. TAREFAS PRÓXIMAS (vence em 3-7 dias)
+        # 9. Reta Final / Sprint (NOVO)
+        notifications.extend(_get_final_sprint(user_email))
+        
+        # 10. Tarefas próximas
         notifications.extend(_get_upcoming_tasks(user_email, hoje))
         
-        # 7. NOVAS AGUARDANDO
+        # 11. Novas aguardando
         notifications.extend(_get_new_waiting(user_email))
         
-        # 8. RESUMO SEMANAL (apenas segundas-feiras)
+        # 12. Resumo Semanal
         notifications.extend(_get_weekly_summary(user_email, hoje))
         
-        # 9. CONCLUÍDAS ESTA SEMANA
+        # 13. Concluídas na semana
         notifications.extend(_get_completed_this_week(user_email, inicio_semana))
         
-        # Ordenar por prioridade
-        notifications.sort(key=lambda x: x.get('priority', 99))
-        
-        # Remover campo priority antes de enviar
-        for notif in notifications:
-            notif.pop('priority', None)
+        # Ordenar por prioridade e limitar
+        notifications.sort(key=lambda x: x['priority'])
         
         return {
             'ok': True,
-            'notifications': notifications[:10],
+            'notifications': notifications[:20],  # Aumentei limite para 20
             'total': len(notifications),
             'timestamp': hoje.isoformat()
         }
@@ -76,6 +84,148 @@ def get_user_notifications(user_email):
     except Exception as e:
         api_logger.error(f"Erro ao buscar notificações: {e}", exc_info=True)
         return {'ok': False, 'error': 'Erro ao buscar notificações', 'notifications': []}
+
+
+def _get_false_start(user_email, hoje):
+    """
+    Largada Falsa: Implantação criada há mais de 5 dias, ainda 'nova' ou sem progresso.
+    Priority: 2 (Alto Risco)
+    """
+    notifications = []
+    limite_criacao = hoje - timedelta(days=5)
+    
+    sql = """
+        SELECT id, nome_empresa, data_criacao 
+        FROM implantacoes 
+        WHERE usuario_cs = %s 
+        AND status IN ('nova', 'andamento')
+        AND data_criacao < %s
+        AND (
+            SELECT COUNT(*) FROM checklist_items 
+            WHERE implantacao_id = implantacoes.id 
+            AND completed = TRUE
+        ) = 0
+    """
+    results = query_db(sql, (user_email, limite_criacao)) or []
+    
+    for row in results:
+        if isinstance(row, dict):
+            dias_criacao = (hoje - _parse_datetime(row['data_criacao'])).days
+            notifications.append({
+                'type': 'danger',
+                'priority': 2,
+                'title': f"🚦 {row['nome_empresa']}",
+                'message': f"Criada há {dias_criacao} dias e nenhuma tarefa concluída. Engajamento necessário!",
+                'action_url': f"/implantacao/{row['id']}"
+            })
+    return notifications
+
+
+def _get_silent_stagnation(user_email, hoje):
+    """
+    Estagnação Silenciosa: Em andamento, mas sem registros na timeline há 4+ dias.
+    Priority: 3 (Risco Médio)
+    """
+    notifications = []
+    limite = hoje - timedelta(days=4)
+    
+    sql = """
+        SELECT i.id, i.nome_empresa, MAX(tl.data_criacao) as ultima_interacao
+        FROM implantacoes i
+        LEFT JOIN timeline_log tl ON tl.implantacao_id = i.id
+        WHERE i.usuario_cs = %s
+        AND i.status = 'andamento'
+        GROUP BY i.id
+        HAVING MAX(tl.data_criacao) < %s OR MAX(tl.data_criacao) IS NULL
+    """
+    results = query_db(sql, (user_email, limite)) or []
+    
+    for row in results:
+        if isinstance(row, dict):
+            ultima_interacao = row.get('ultima_interacao')
+            if ultima_interacao:
+                dias = (hoje - _parse_datetime(ultima_interacao)).days
+            else:
+                dias = "vários"
+                
+            notifications.append({
+                'type': 'warning',
+                'priority': 3,
+                'title': f"👻 {row['nome_empresa']}",
+                'message': f"Sem nenhuma atividade registrada há {dias} dias. O cliente sumiu?",
+                'action_url': f"/implantacao/{row['id']}"
+            })
+    return notifications
+
+
+def _get_slow_pace(user_email, hoje):
+    """
+    Ritmo Lento: Implantação ativa onde a última tarefa concluída foi há mais de 15 dias.
+    Priority: 4
+    """
+    notifications = []
+    limite = hoje - timedelta(days=15)
+    
+    sql = """
+        SELECT i.id, i.nome_empresa, MAX(ci.data_conclusao) as ultima_conclusao
+        FROM implantacoes i
+        JOIN checklist_items ci ON ci.implantacao_id = i.id
+        WHERE i.usuario_cs = %s
+        AND i.status = 'andamento'
+        AND ci.completed = TRUE
+        GROUP BY i.id
+        HAVING MAX(ci.data_conclusao) < %s
+    """
+    results = query_db(sql, (user_email, limite)) or []
+    
+    for row in results:
+        if isinstance(row, dict):
+            ultima = _parse_datetime(row.get('ultima_conclusao'))
+            dias_sem_progresso = (hoje - ultima).days if ultima else 15
+            notifications.append({
+                'type': 'info',
+                'priority': 4,
+                'title': f"🐢 Ritmo Lento: {row['nome_empresa']}",
+                'message': f"Nenhuma tarefa concluída nos últimos {dias_sem_progresso} dias. Precisa de ajuda?",
+                'action_url': f"/implantacao/{row['id']}"
+            })
+    return notifications
+
+
+def _get_final_sprint(user_email):
+    """
+    Reta Final: Progresso > 80% mas ainda não finalizada.
+    Priority: 5 (Oportunidade)
+    """
+    notifications = []
+    
+    # Esta query depende de como calculamos progresso. 
+    # Vou fazer uma aproximação contando items.
+    # Garante que só notifica se progresso >= 80% (0.8)
+    sql = """
+        SELECT i.id, i.nome_empresa,
+               CAST(SUM(CASE WHEN ci.completed THEN 1 ELSE 0 END) AS FLOAT) / COUNT(*) * 100 as progresso
+        FROM implantacoes i
+        JOIN checklist_items ci ON ci.implantacao_id = i.id
+        WHERE i.usuario_cs = %s
+        AND i.status = 'andamento'
+        AND ci.tipo_item = 'subtarefa'
+        GROUP BY i.id
+        HAVING (CAST(SUM(CASE WHEN ci.completed THEN 1 ELSE 0 END) AS FLOAT) / COUNT(*)) >= 0.8
+    """
+    results = query_db(sql, (user_email,)) or []
+    
+    for row in results:
+        if isinstance(row, dict):
+            prog = int(row['progresso'])
+            notifications.append({
+                'type': 'success', # Verde para incentivar
+                'priority': 5,
+                'title': f"🏁 {row['nome_empresa']}",
+                'message': f"Progresso em {prog}%. Falta pouco para fechar essa implantação!",
+                'action_url': f"/implantacao/{row['id']}"
+            })
+    return notifications
 
 
 def _get_critical_tasks(user_email, hoje, fim_hoje):
@@ -109,6 +259,7 @@ def _get_critical_tasks(user_email, hoje, fim_hoje):
             vence_hoje = row.get('vence_hoje', 0) or 0
             total = atrasadas + vence_hoje
             nome = row.get('nome_empresa', 'Empresa')
+            impl_id = row.get('id')
             
             if total > 0:
                 partes = []
@@ -120,8 +271,9 @@ def _get_critical_tasks(user_email, hoje, fim_hoje):
                 notifications.append({
                     'type': 'danger',
                     'priority': 1,
-                    'title': f"🔥 {nome[:30]}{'...' if len(nome) > 30 else ''} - {total} tarefa{'s' if total > 1 else ''} crítica{'s' if total > 1 else ''}",
-                    'message': ', '.join(partes)
+                    'title': f"🔥 {nome[:30]}{'...' if len(nome) > 30 else ''}",
+                    'message': f"{total} tarefas críticas: {', '.join(partes)}",
+                    'action_url': f"/implantacao/{impl_id}"
                 })
     
     return notifications
@@ -155,6 +307,7 @@ def _get_stopped_implementations(user_email, hoje):
             nome = row.get('nome_empresa', 'Empresa')
             motivo = row.get('motivo_parada', 'Sem motivo informado')
             data_parada = row.get('data_parada')
+            impl_id = row.get('id')
             
             if data_parada:
                 data_parada = _parse_datetime(data_parada)
@@ -167,8 +320,9 @@ def _get_stopped_implementations(user_email, hoje):
                         notifications.append({
                             'type': 'danger',
                             'priority': 2,
-                            'title': f"⏸️ {nome[:30]}{'...' if len(nome) > 30 else ''} parada há {dias_parada} dias",
-                            'message': f"Motivo: {motivo[:50]}{'...' if len(motivo) > 50 else ''}"
+                            'title': f"⏸️ {nome[:30]}{'...' if len(nome) > 30 else ''}",
+                            'message': f"Parada há {dias_parada} dias. Motivo: {motivo[:40]}...",
+                            'action_url': f"/implantacao/{impl_id}"
                         })
     
     return notifications
@@ -204,12 +358,14 @@ def _get_urgent_tasks(user_email, hoje, fim_hoje):
         if isinstance(row, dict):
             total = row.get('total', 0)
             nome = row.get('nome_empresa', 'Empresa')
+            impl_id = row.get('id')
             
             notifications.append({
                 'type': 'warning',
                 'priority': 3,
-                'title': f"⏰ {nome[:30]}{'...' if len(nome) > 30 else ''} - {total} tarefa{'s' if total > 1 else ''} urgente{'s' if total > 1 else ''}",
-                'message': "Vence em 1-2 dias"
+                'title': f"⏰ {nome[:30]}{'...' if len(nome) > 30 else ''}",
+                'message': f"{total} tarefas vencem em breve (1-2 dias)",
+                'action_url': f"/implantacao/{impl_id}?tab=plano"
             })
     
     return notifications
@@ -236,12 +392,14 @@ def _get_upcoming_future(user_email, hoje):
     for row in futuras:
         if isinstance(row, dict):
             nome = row.get('nome_empresa', 'Empresa')
+            impl_id = row.get('id')
             
             notifications.append({
                 'type': 'warning',
                 'priority': 4,
-                'title': f"📅 {nome[:30]}{'...' if len(nome) > 30 else ''} inicia em 7 dias",
-                'message': "Prepare-se para o início!"
+                'title': f"📅 Previsão de Início",
+                'message': f"{nome} está agendada para iniciar em 7 dias",
+                'action_url': f"/implantacao/{impl_id}"
             })
     
     return notifications
@@ -267,6 +425,7 @@ def _get_no_forecast(user_email, hoje):
         if isinstance(row, dict):
             nome = row.get('nome_empresa', 'Empresa')
             data_criacao = row.get('data_criacao')
+            impl_id = row.get('id')
             
             if data_criacao:
                 data_criacao = _parse_datetime(data_criacao)
@@ -279,8 +438,9 @@ def _get_no_forecast(user_email, hoje):
                         notifications.append({
                             'type': 'warning',
                             'priority': 5,
-                            'title': f"⏳ {nome[:30]}{'...' if len(nome) > 30 else ''} há {dias_sem_previsao} dias sem previsão",
-                            'message': "Defina uma data de início"
+                            'title': f"⏳ Sem Previsão",
+                            'message': f"{nome} aguarda definição há {dias_sem_previsao} dias",
+                            'action_url': f"/implantacao/{impl_id}"
                         })
     
     return notifications
@@ -317,12 +477,14 @@ def _get_upcoming_tasks(user_email, hoje):
         if isinstance(row, dict):
             total = row.get('total', 0)
             nome = row.get('nome_empresa', 'Empresa')
+            impl_id = row.get('id')
             
             notifications.append({
                 'type': 'info',
                 'priority': 6,
-                'title': f"⚠️ {nome[:30]}{'...' if len(nome) > 30 else ''} - {total} tarefa{'s' if total > 1 else ''} próxima{'s' if total > 1 else ''}",
-                'message': "Vence em 3-7 dias"
+                'title': f"⚠️ Tarefas Próximas",
+                'message': f"{nome}: {total} tarefas vencem nesta semana",
+                'action_url': f"/implantacao/{impl_id}?tab=plano"
             })
     
     return notifications
@@ -345,8 +507,9 @@ def _get_new_waiting(user_email):
         notifications.append({
             'type': 'info',
             'priority': 7,
-            'title': f"📋 {total_novas} {'implantações' if total_novas > 1 else 'implantação'} aguardando início",
-            'message': "Na aba 'Novas' do dashboard"
+            'title': f"📋 Implantações Novas",
+            'message': f"Você tem {total_novas} nova(s) implantação(ões) aguardando.",
+            'action_url': "/dashboard"
         })
     
     return notifications
@@ -378,8 +541,9 @@ def _get_weekly_summary(user_email, hoje):
                 notifications.append({
                     'type': 'info',
                     'priority': 8,
-                    'title': f"📊 Resumo da semana",
-                    'message': f"{total_tarefas} tarefas pendentes em {total_impl} {'implantações' if total_impl > 1 else 'implantação'}"
+                    'title': f"📊 Resumo da Semana",
+                    'message': f"{total_tarefas} pendências em {total_impl} implantações ativas.",
+                    'action_url': "/dashboard"
                 })
     
     return notifications
@@ -403,8 +567,9 @@ def _get_completed_this_week(user_email, inicio_semana):
         notifications.append({
             'type': 'success',
             'priority': 9,
-            'title': f"✅ {total_concluidas} {'implantações concluídas' if total_concluidas > 1 else 'implantação concluída'} esta semana",
-            'message': "Parabéns pelo progresso! 🎉"
+            'title': f"✅ Sucesso da Semana",
+            'message': f"Incrível! {total_concluidas} implantação(ões) concluída(s).",
+            'action_url': "/dashboard"
         })
     
     return notifications
@@ -427,10 +592,10 @@ def get_test_notifications():
     return {
         'ok': True,
         'notifications': [
-            {'type': 'danger', 'title': '🔥 Teste Crítico', 'message': 'Tarefas atrasadas'},
-            {'type': 'warning', 'title': '⏰ Teste Urgente', 'message': 'Vence em breve'},
-            {'type': 'info', 'title': '📋 Teste Info', 'message': 'Informação geral'},
-            {'type': 'success', 'title': '✅ Teste Sucesso', 'message': 'Parabéns!'},
+            {'type': 'danger', 'title': '🔥 Crítico', 'message': 'Cliente X está muito descontente', 'action_url': '#'},
+            {'type': 'warning', 'title': '⏰ Prazo Vencendo', 'message': 'Treinamento Financeiro - Academia Y', 'action_url': '#'},
+            {'type': 'info', 'title': '📋 Novo Processo', 'message': 'Reunião de alinhamento agendada', 'action_url': '#'},
+            {'type': 'success', 'title': '✅ Concluído', 'message': 'Implantação da Academia Z finalizada', 'action_url': '#'},
         ],
         'total': 4,
         'test_mode': True

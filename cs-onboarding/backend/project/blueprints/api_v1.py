@@ -27,6 +27,8 @@ from ..domain.implantacao_service import (
     consultar_dados_oamd,
     aplicar_dados_oamd
 )
+from ..db import logar_timeline
+from ..common.audit_decorator import audit
 from ..config.cache_config import clear_implantacao_cache
 from ..security.api_security import validate_api_origin
 
@@ -510,6 +512,7 @@ def get_aviso(impl_id, aviso_id):
 @api_v1_bp.route('/implantacoes/<int:impl_id>/avisos', methods=['POST'])
 @login_required
 @limiter.limit("60 per minute", key_func=lambda: g.user_email or get_remote_address())
+@audit(action='CREATE_AVISO', target_type='implantacao')
 def create_aviso(impl_id):
     """
     Cria um novo aviso personalizado.
@@ -576,6 +579,12 @@ def create_aviso(impl_id):
         cur.close()
         conn.close()
         
+        # Registrar na Timeline
+        try:
+            logar_timeline(impl_id, user_email, 'aviso_criado', f'Aviso "{titulo}" foi criado.')
+        except Exception:
+            pass
+
         return jsonify({
             'ok': True,
             'message': 'Aviso criado com sucesso',
@@ -590,6 +599,7 @@ def create_aviso(impl_id):
 @api_v1_bp.route('/implantacoes/<int:impl_id>/avisos/<int:aviso_id>', methods=['PUT'])
 @login_required
 @limiter.limit("60 per minute", key_func=lambda: g.user_email or get_remote_address())
+@audit(action='UPDATE_AVISO', target_type='implantacao')
 def update_aviso(impl_id, aviso_id):
     """
     Atualiza um aviso existente.
@@ -648,6 +658,12 @@ def update_aviso(impl_id, aviso_id):
         cur.close()
         conn.close()
         
+        # Registrar na Timeline
+        try:
+            logar_timeline(impl_id, user_email, 'aviso_atualizado', f'Aviso "{titulo}" foi atualizado.')
+        except Exception:
+            pass
+
         return jsonify({
             'ok': True,
             'message': 'Aviso atualizado com sucesso'
@@ -661,6 +677,7 @@ def update_aviso(impl_id, aviso_id):
 @api_v1_bp.route('/implantacoes/<int:impl_id>/avisos/<int:aviso_id>', methods=['DELETE'])
 @login_required
 @limiter.limit("60 per minute", key_func=lambda: g.user_email or get_remote_address())
+@audit(action='DELETE_AVISO', target_type='implantacao')
 def delete_aviso(impl_id, aviso_id):
     """
     Exclui um aviso.
@@ -700,6 +717,12 @@ def delete_aviso(impl_id, aviso_id):
         conn.commit()
         cur.close()
         conn.close()
+        
+        # Registrar na Timeline
+        try:
+            logar_timeline(impl_id, user_email, 'aviso_excluido', f'Aviso foi excluído.')
+        except Exception:
+            pass
         
         return jsonify({
             'ok': True,

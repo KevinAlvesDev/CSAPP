@@ -259,3 +259,25 @@ def cleanup_orphan_implantacoes():
         management_logger.error(f"Erro ao remover implantações órfãs por {g.user_email}: {e}")
         flash(f"Erro ao remover implantações órfãs: {e}", 'error')
         return redirect(url_for('management.manage_users'))
+
+
+@management_bp.route('/cache/clear', methods=['POST'])
+@permission_required([PERFIL_ADMIN])
+def clear_cache():
+    """
+    Limpa o cache do sistema (Redis/Flask-Caching).
+    Útil para forçar atualização de dados cacheados.
+    Admin-only.
+    """
+    try:
+        from ..config.cache_config import cache
+        if cache:
+            cache.clear()
+            management_logger.info(f"Cache limpo por {g.user_email}")
+            return jsonify({'ok': True, 'message': 'Cache limpo com sucesso'})
+        else:
+            return jsonify({'ok': False, 'message': 'Cache não configurado'}), 503
+    except Exception as e:
+        management_logger.error(f"Erro ao limpar cache: {e}")
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
