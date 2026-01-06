@@ -46,6 +46,10 @@ def create_app(test_config=None):
 
     from .config import Config
     app.config.from_object(Config)
+    
+    # CSRF nunca expira (evita erro de token expirado em sessões longas)
+    app.config['WTF_CSRF_TIME_LIMIT'] = None
+
 
     if test_config is not None:
         app.config.from_mapping(test_config)
