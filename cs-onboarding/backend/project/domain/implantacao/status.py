@@ -23,7 +23,12 @@ def iniciar_implantacao_service(implantacao_id, usuario_cs_email):
     if not impl:
         raise ValueError('Implantação não encontrada.')
     
-    if impl.get('usuario_cs') != usuario_cs_email:
+    # Administradores podem iniciar qualquer implantação
+    from flask import g
+    user_perfil = getattr(g, 'user_perfil_acesso', None)
+    is_admin = user_perfil == 'Administrador'
+    
+    if not is_admin and impl.get('usuario_cs') != usuario_cs_email:
         raise ValueError('Operação negada. Implantação não pertence a você.')
 
     if impl.get('status') not in ['nova', 'futura', 'sem_previsao']:
@@ -53,10 +58,16 @@ def desfazer_inicio_implantacao_service(implantacao_id, usuario_cs_email):
         (implantacao_id,), one=True
     )
 
+
     if not impl:
         raise ValueError('Implantação não encontrada.')
     
-    if impl.get('usuario_cs') != usuario_cs_email:
+    # Administradores podem desfazer início de qualquer implantação
+    from flask import g
+    user_perfil = getattr(g, 'user_perfil_acesso', None)
+    is_admin = user_perfil == 'Administrador'
+    
+    if not is_admin and impl.get('usuario_cs') != usuario_cs_email:
         raise ValueError('Operação negada. Implantação não pertence a você.')
 
     if impl.get('status') != 'andamento':

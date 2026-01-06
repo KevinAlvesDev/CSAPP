@@ -544,6 +544,18 @@
     border-color: #e5576d;
 }
 
+/* Simples registro tag - Purple */
+.comentario-tipo-tag.simples-registro {
+    background: rgba(153, 102, 255, 0.1);
+    color: #9966ff;
+}
+
+.comentario-tipo-tag.simples-registro.active {
+    background: #9966ff;
+    color: white;
+    border-color: #7f52d9;
+}
+
 .comentario-tipo-tag:hover:not(.active) {
     background: #dee2e6;
 }
