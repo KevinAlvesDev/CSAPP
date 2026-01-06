@@ -105,6 +105,7 @@ def get_tags_by_user_chart_data(
                 'Ação interna': 0,
                 'Reunião': 0,
                 'No Show': 0,
+                'Simples registro': 0,
                 'Sem tag': 0
             }
         
@@ -123,7 +124,7 @@ def get_tags_by_user_chart_data(
     sorted_users = sorted(users_data.keys())
     
     # Define columns/tags to show
-    display_tags = ['Interno', 'Externo', 'Ação interna', 'Reunião', 'No Show']
+    display_tags = ['Interno', 'Externo', 'Ação interna', 'Reunião', 'No Show', 'Simples registro']
     
     # Define colors for each tag type
     tag_colors = {
@@ -132,6 +133,7 @@ def get_tags_by_user_chart_data(
         'Ação interna': 'rgba(54, 162, 235, 0.7)', # Blue
         'Reunião': 'rgba(40, 167, 69, 0.7)',        # Green
         'No Show': 'rgba(220, 53, 69, 0.7)',        # Red
+        'Simples registro': 'rgba(153, 102, 255, 0.7)',  # Purple
     }
     
     # Build datasets for Chart.js

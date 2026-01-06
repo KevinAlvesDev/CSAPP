@@ -9,7 +9,7 @@ from ...common.exceptions import ValidationError
 
 
 # Tags válidas para tarefas/subtarefas
-VALID_TAGS = {"Ação interna", "Reunião"}
+VALID_TAGS = {"Ação interna", "Reunião", "Simples registro"}
 
 
 def validar_estrutura_hierarquica(estrutura: Dict) -> bool:

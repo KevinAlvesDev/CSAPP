@@ -289,6 +289,11 @@ class ChecklistRenderer {
                                       data-tag="No Show">
                                     <i class="bi bi-calendar-x"></i> No show
                                 </span>
+                                <span class="comentario-tipo-tag tag-option simples-registro" 
+                                      data-item-id="${item.id}"
+                                      data-tag="Simples registro">
+                                    <i class="bi bi-pencil-square"></i> Simples registro
+                                </span>
                             </div>
                             <div class="d-flex gap-2">
                                 <button class="btn btn-sm btn-secondary btn-cancel-comment" data-item-id="${item.id}">
@@ -1114,6 +1119,7 @@ class ChecklistRenderer {
                             ${c.tag === 'Ação interna' ? '<span class="badge rounded-pill small bg-primary"><i class="bi bi-briefcase"></i> Ação interna</span>' : ''}
                             ${c.tag === 'Reunião' ? '<span class="badge rounded-pill small bg-danger"><i class="bi bi-calendar-event"></i> Reunião</span>' : ''}
                             ${(c.tag === 'No Show' || c.noshow) ? '<span class="badge rounded-pill small bg-warning text-dark"><i class="bi bi-calendar-x"></i> No show</span>' : ''}
+                            ${c.tag === 'Simples registro' ? '<span class="badge rounded-pill small bg-secondary"><i class="bi bi-pencil-square"></i> Simples registro</span>' : ''}
                         </div>
                         <small class="text-muted">${dataFormatada}</small>
                     </div>
