@@ -125,33 +125,49 @@
       const level = parseInt(parentElement.getAttribute('data-level')) + 1;
       const itemId = dados?.id || `item_${itemCounter}`;
 
-      const childrenContainer = parentElement.querySelector('.item-children');
+      // Usar :scope > para pegar apenas o container de filhos direto, não de descendentes
+      const itemBody = parentElement.querySelector(':scope > .item-body');
+      const childrenContainer = itemBody ? itemBody.querySelector(':scope > .item-children') : null;
+
+      if (!childrenContainer) {
+        console.error('Container de filhos não encontrado para:', parentId);
+        return;
+      }
+
       const itemElement = this.criarItemElement(itemId, dados, level, parentId);
       childrenContainer.insertAdjacentHTML('beforeend', itemElement);
 
-      const element = childrenContainer.querySelector(`[data-item-id="${itemId}"]`);
+      const element = childrenContainer.querySelector(`:scope > [data-item-id="${itemId}"]`);
       this.bindItemEvents(element);
 
       this.expandItem(parentElement);
     },
 
     expandItem(element) {
-      const body = element.querySelector('.item-body');
-      const icon = element.querySelector('.toggle-children i');
+      // Usar :scope > para pegar apenas elementos diretos
+      const body = element.querySelector(':scope > .item-body');
+      const header = element.querySelector(':scope > .checklist-item-header-editor');
+      const icon = header ? header.querySelector('.toggle-children i') : null;
 
-      body.classList.remove('d-none');
-      icon.classList.remove('bi-chevron-right');
-      icon.classList.add('bi-chevron-down', 'expanded');
+      if (body) body.classList.remove('d-none');
+      if (icon) {
+        icon.classList.remove('bi-chevron-right');
+        icon.classList.add('bi-chevron-down', 'expanded');
+      }
       element.setAttribute('data-expanded', 'true');
     },
 
     collapseItem(element) {
-      const body = element.querySelector('.item-body');
-      const icon = element.querySelector('.toggle-children i');
+      // Usar :scope > para pegar apenas elementos diretos
+      const body = element.querySelector(':scope > .item-body');
+      const header = element.querySelector(':scope > .checklist-item-header-editor');
+      const icon = header ? header.querySelector('.toggle-children i') : null;
 
-      body.classList.add('d-none');
-      icon.classList.remove('bi-chevron-down', 'expanded');
-      icon.classList.add('bi-chevron-right');
+      if (body) body.classList.add('d-none');
+      if (icon) {
+        icon.classList.remove('bi-chevron-down', 'expanded');
+        icon.classList.add('bi-chevron-right');
+      }
       element.setAttribute('data-expanded', 'false');
     },
 
@@ -165,10 +181,14 @@
     },
 
     bindItemEvents(element) {
-      const btnAddChild = element.querySelector('.btn-add-child');
-      const btnRemove = element.querySelector('.btn-remove-item');
-      const btnToggle = element.querySelector('.toggle-children');
-      const obrigatoriaInput = element.querySelector('.item-obrigatoria-input');
+      // Usar :scope > para pegar apenas elementos diretos do item atual
+      const header = element.querySelector(':scope > .checklist-item-header-editor');
+      const body = element.querySelector(':scope > .item-body');
+
+      const btnAddChild = header ? header.querySelector('.btn-add-child') : null;
+      const btnRemove = header ? header.querySelector('.btn-remove-item') : null;
+      const btnToggle = header ? header.querySelector('.toggle-children') : null;
+      const obrigatoriaInput = body ? body.querySelector(':scope > .mb-2 .item-obrigatoria-input') : null;
 
       if (btnAddChild) {
         btnAddChild.addEventListener('click', () => this.adicionarFilho(element));
@@ -250,13 +270,22 @@
     },
 
     coletarItemRecursivo(element) {
-      const title = element.querySelector('.item-title-input').value.trim();
-      const commentEl = element.querySelector('.item-comment-input');
+      // Usar :scope > para pegar apenas elementos diretos do item atual
+      const header = element.querySelector(':scope > .checklist-item-header-editor');
+      const body = element.querySelector(':scope > .item-body');
+
+      const titleInput = header ? header.querySelector('.item-title-input') : null;
+      const title = titleInput ? titleInput.value.trim() : '';
+
+      const commentEl = header ? header.querySelector('.item-comment-input') : null;
       const comment = commentEl ? commentEl.value.trim() : '';
-      const obrigatoriaInput = element.querySelector('.item-obrigatoria-input');
+
+      const obrigatoriaInput = body ? body.querySelector(':scope > .mb-2 .item-obrigatoria-input') : null;
       const obrigatoria = obrigatoriaInput ? obrigatoriaInput.checked : false;
-      const tagInput = element.querySelector('.item-tag-select');
+
+      const tagInput = header ? header.querySelector('.item-tag-select') : null;
       const tag = tagInput ? tagInput.value : '';
+
       const level = parseInt(element.getAttribute('data-level'));
 
       const item = {
@@ -269,9 +298,10 @@
         children: []
       };
 
-      const childrenContainer = element.querySelector('.item-children');
+      // Pegar container de filhos direto
+      const childrenContainer = body ? body.querySelector(':scope > .item-children') : null;
       if (childrenContainer) {
-        // Modificado para pegar apenas filhos diretos e evitar duplicação
+        // Pegar apenas filhos diretos do container
         const children = Array.from(childrenContainer.children).filter(el => el.hasAttribute('data-item-id'));
         children.forEach(childEl => {
           const child = this.coletarItemRecursivo(childEl);
@@ -375,9 +405,11 @@
       itemData.children.forEach(childData => {
         this.adicionarFilho(parentElement, childData);
 
-        const childrenContainer = parentElement.querySelector('.item-children');
+        // Usar :scope > para pegar apenas filhos diretos
+        const itemBody = parentElement.querySelector(':scope > .item-body');
+        const childrenContainer = itemBody ? itemBody.querySelector(':scope > .item-children') : null;
         if (childrenContainer) {
-          const lastChild = childrenContainer.querySelector('[data-item-id]:last-child');
+          const lastChild = childrenContainer.querySelector(':scope > [data-item-id]:last-child');
           if (lastChild && childData.children && childData.children.length > 0) {
             this.carregarFilhosRecursivo(childData, lastChild);
           }

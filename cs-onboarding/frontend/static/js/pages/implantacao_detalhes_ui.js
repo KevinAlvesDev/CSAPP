@@ -175,9 +175,13 @@
                         <span class="fw-bold text-dark">
                             <i class="bi bi-person-circle me-1 text-secondary"></i>${escapeHtml(c.usuario_nome || c.usuario_cs || 'Usuário')}
                         </span>
-                        <span class="badge ${c.visibilidade === 'externo' ? 'bg-warning text-dark' : 'bg-info text-white'} rounded-pill" style="font-size: 0.65rem;">
+                        <span class="badge ${c.visibilidade === 'externo' ? 'bg-warning text-dark' : 'bg-primary text-white'} rounded-pill" style="font-size: 0.65rem;">
                             ${c.visibilidade === 'externo' ? 'Externo' : 'Interno'}
                         </span>
+                        ${c.tag === 'Ação interna' ? '<span class="badge rounded-pill bg-primary text-white" style="font-size: 0.65rem;"><i class="bi bi-briefcase"></i> Ação interna</span>' : ''}
+                        ${c.tag === 'Reunião' ? '<span class="badge rounded-pill bg-danger" style="font-size: 0.65rem;"><i class="bi bi-calendar-event"></i> Reunião</span>' : ''}
+                        ${(c.tag === 'No Show' || c.noshow) ? '<span class="badge rounded-pill bg-warning text-dark" style="font-size: 0.65rem;"><i class="bi bi-calendar-x"></i> No show</span>' : ''}
+                        ${(c.tag === 'Simples registro' || c.tag === 'simples registro' || (c.tag && c.tag.toLowerCase() === 'simples registro')) ? '<span class="badge rounded-pill bg-secondary" style="font-size: 0.65rem;"><i class="bi bi-pencil-square"></i> Simples registro</span>' : ''}
                     </div>
                     <div class="text-muted small mt-1">
                        em ${taskLink}

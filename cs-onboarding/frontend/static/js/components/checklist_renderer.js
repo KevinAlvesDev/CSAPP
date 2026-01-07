@@ -304,6 +304,7 @@ class ChecklistRenderer {
                                     <i class="bi bi-calendar-x"></i> No show
                                 </span>
                                 <span class="comentario-tipo-tag tag-option simples-registro" 
+                                      id="comment-simples-registro-${item.id}"
                                       data-item-id="${item.id}"
                                       data-tag="Simples registro">
                                     <i class="bi bi-pencil-square"></i> Simples registro
@@ -450,10 +451,11 @@ class ChecklistRenderer {
                 visibilityTag.classList.add('active');
             }
 
-            // Handle tag options (Ação interna, Reunião, No Show) - mutually exclusive
+            // Handle tag options (Ação interna, Reunião, No Show, Simples registro) - mutually exclusive
             const tagOption = e.target.closest('.comentario-tipo-tag.tag-option');
             if (tagOption) {
                 const itemId = tagOption.dataset.itemId;
+                const tagName = tagOption.dataset.tag;
                 const container = tagOption.closest('.d-flex');
 
                 // Check if already active - if so, deselect it
@@ -1401,7 +1403,7 @@ class ChecklistRenderer {
 
     /**
      * Atualiza progresso global - usa dados locais para resposta imediata
-     * @param {boolean} fetchFromServer - Se true, busca do servidor (mais lento mas preciso)
+     * @param {boolean} fetchFromServer - Se true, busca do servidor (mais lento but preciso)
      */
     async updateGlobalProgress(fetchFromServer = false) {
         // Primeiro, atualiza imediatamente com dados locais
@@ -1463,7 +1465,7 @@ class ChecklistRenderer {
         const visibilityTag = document.querySelector(`.comentario-tipo-tag.interno.active[data-item-id="${itemId}"], .comentario-tipo-tag.externo.active[data-item-id="${itemId}"]`);
         const visibilidade = visibilityTag?.dataset?.tipo || 'interno';
 
-        // Pegar tag opcional (Ação interna, Reunião, etc)
+        // Pegar tag opcional (Ação interna, Reunião, No Show, Simples registro)
         const tagOption = document.querySelector(`.comentario-tipo-tag.tag-option.active[data-item-id="${itemId}"]`);
         const tag = tagOption?.dataset?.tag || null;
 
@@ -1648,6 +1650,22 @@ class ChecklistRenderer {
             `;
             document.body.insertAdjacentHTML('beforeend', modalHtml);
             modal = document.getElementById('imageModal');
+
+            // Adicionar event listener para limpar o modal quando fechado
+            modal.addEventListener('hidden.bs.modal', function () {
+                // Remover backdrop manualmente se ainda existir
+                const backdrops = document.querySelectorAll('.modal-backdrop');
+                backdrops.forEach(backdrop => backdrop.remove());
+
+                // Restaurar scroll do body
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = '';
+
+                // Limpar a imagem para liberar memória
+                const img = document.getElementById('modalImage');
+                if (img) img.src = '';
+            });
         }
 
         // Atualizar imagem
@@ -1710,13 +1728,13 @@ class ChecklistRenderer {
             if (target.id && target.id.startsWith('comment-input-')) {
                 const itemId = target.id.replace('comment-input-', '');
                 const items = e.clipboardData?.items;
-                
+
                 if (items) {
                     for (let i = 0; i < items.length; i++) {
                         if (items[i].type.indexOf('image') !== -1) {
                             e.preventDefault();
                             const blob = items[i].getAsFile();
-                            
+
                             // Criar um FileReader para ler a imagem
                             const reader = new FileReader();
                             reader.onload = (event) => {
@@ -1728,7 +1746,7 @@ class ChecklistRenderer {
                                         previewContainer.classList.remove('d-none');
                                     }
                                 }
-                                
+
                                 // Simular que o arquivo foi selecionado
                                 const fileInput = document.querySelector(`.comentario-imagem-input[data-item-id="${itemId}"]`);
                                 if (fileInput) {
@@ -1753,15 +1771,15 @@ class ChecklistRenderer {
                 if (itemId) {
                     this.loadComments(itemId);
 
-        // Abrir modal ao clicar em imagens de comentários
-        this.container.addEventListener('click', (e) => {
-            if (e.target.classList.contains('comment-image-thumbnail')) {
-                const imageUrl = e.target.getAttribute('src');
-                if (imageUrl) {
-                    this.openImageModal(imageUrl);
-                }
-            }
-        });
+                    // Abrir modal ao clicar em imagens de comentários
+                    this.container.addEventListener('click', (e) => {
+                        if (e.target.classList.contains('comment-image-thumbnail')) {
+                            const imageUrl = e.target.getAttribute('src');
+                            if (imageUrl) {
+                                this.openImageModal(imageUrl);
+                            }
+                        }
+                    });
                 }
             }
         });
