@@ -4,6 +4,7 @@ Funções auxiliares para cache, formatação e listagens.
 Princípio SOLID: Single Responsibility
 """
 import logging
+from datetime import datetime
 
 from flask import current_app
 
@@ -27,13 +28,25 @@ def _invalidar_cache_progresso_local(impl_id):
 
 
 def _format_datetime(dt_value):
-    """Formata datetime para string ISO, compatível com PostgreSQL e SQLite."""
+    """Formata datetime para string no formato brasileiro: dd/mm/yyyy às HH:MM"""
     if not dt_value:
         return None
+    
+    # Se já for string, tentar parsear
     if isinstance(dt_value, str):
-        return dt_value
-    if hasattr(dt_value, 'isoformat'):
-        return dt_value.isoformat()
+        try:
+            # Tentar parsear ISO format
+            if 'T' in dt_value or '+' in dt_value or (len(dt_value) > 6 and '-' in dt_value[-6:]):
+                dt_value = datetime.fromisoformat(dt_value.replace('Z', '+00:00'))
+            else:
+                return dt_value  # Retornar como está se não conseguir parsear
+        except:
+            return dt_value
+    
+    # Se for datetime, formatar
+    if hasattr(dt_value, 'strftime'):
+        return dt_value.strftime('%d/%m/%Y às %H:%M')
+    
     return str(dt_value)
 
 

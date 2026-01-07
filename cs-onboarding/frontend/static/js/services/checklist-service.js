@@ -275,17 +275,25 @@ class ChecklistService {
     }
 
     /**
-     * Salva comentário com validação
+     * Salva comentário com validação e suporte a imagem
      * @param {number} itemId - ID do item
      * @param {Object} commentData - Dados do comentário
+     * @param {File} imageFile - Arquivo de imagem (opcional)
      * @returns {Promise<{success: boolean, error?: string}>}
      */
-    async saveComment(itemId, commentData) {
+    async saveComment(itemId, commentData, imageFile = null) {
         if (!this.validateCommentText(commentData.texto)) {
             return { success: false, error: 'Validação falhou' };
         }
 
         try {
+            // Se houver imagem, converter para base64
+            if (imageFile) {
+                const base64 = await this.fileToBase64(imageFile);
+                commentData.imagem_base64 = base64;
+                commentData.imagem_nome = imageFile.name;
+            }
+
             const data = await this.api.saveComment(itemId, commentData);
 
             if (data && data.ok) {
@@ -300,6 +308,20 @@ class ChecklistService {
                 error: error.message
             };
         }
+    }
+
+    /**
+     * Converte arquivo para base64
+     * @param {File} file - Arquivo
+     * @returns {Promise<string>}
+     */
+    fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
     }
 
     /**

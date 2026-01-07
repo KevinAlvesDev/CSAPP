@@ -15,7 +15,7 @@ from .utils import _format_datetime
 logger = logging.getLogger(__name__)
 
 
-def add_comment_to_item(item_id, text, visibilidade='interno', usuario_email=None, noshow=False, tag=None, imagem_url=None):
+def add_comment_to_item(item_id, text, visibilidade='interno', usuario_email=None, noshow=False, tag=None, imagem_url=None, imagem_base64=None):
     """
     Adiciona um comentário ao histórico e atualiza o campo legado 'comment' no item.
     Centraliza a lógica de comentários.
@@ -23,7 +23,11 @@ def add_comment_to_item(item_id, text, visibilidade='interno', usuario_email=Non
     Args:
         tag: Tag do comentário (Ação interna, Reunião, No Show)
         imagem_url: URL da imagem anexada ao comentário (opcional)
+        imagem_base64: Imagem em base64 (opcional, será usada como imagem_url inline)
     """
+    # Se foi fornecida imagem em base64, usar ela como imagem_url inline
+    if imagem_base64 and not imagem_url:
+        imagem_url = imagem_base64
     try:
         item_id = int(item_id)
     except (ValueError, TypeError):
@@ -139,7 +143,7 @@ def listar_comentarios_implantacao(impl_id, page=1, per_page=20):
 
     comments_query = """
         SELECT 
-            c.id, c.texto, c.usuario_cs, c.data_criacao, c.visibilidade, c.noshow,
+            c.id, c.texto, c.usuario_cs, c.data_criacao, c.visibilidade, c.noshow, c.imagem_url, c.tag,
             ci.id as item_id, ci.title as item_title,
             COALESCE(p.nome, c.usuario_cs) as usuario_nome
         FROM comentarios_h c
@@ -171,7 +175,7 @@ def listar_comentarios_item(item_id):
     """
     comentarios = query_db(
         """
-        SELECT c.id, c.texto, c.usuario_cs, c.data_criacao, c.visibilidade, c.imagem_url, c.noshow,
+        SELECT c.id, c.texto, c.usuario_cs, c.data_criacao, c.visibilidade, c.imagem_url, c.noshow, c.tag,
                 COALESCE(p.nome, c.usuario_cs) as usuario_nome
         FROM comentarios_h c
         LEFT JOIN perfil_usuario p ON c.usuario_cs = p.usuario
@@ -198,6 +202,7 @@ def listar_comentarios_item(item_id):
         c_dict = dict(c)
         c_dict['data_criacao'] = _format_datetime(c_dict.get('data_criacao'))
         c_dict['email_responsavel'] = email_responsavel
+        c_dict['tarefa_id'] = item_id  # Adicionar item_id para permitir recarregar após exclusão
         comentarios_formatados.append(c_dict)
 
     return {

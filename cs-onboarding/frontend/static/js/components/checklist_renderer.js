@@ -70,6 +70,7 @@ class ChecklistRenderer {
 
         this.render();
         this.attachEventListeners();
+        this.setupImageUploadHandlers();
 
         // Render com todas as tarefas minimizadas por padrão (sem expandir nós inicialmente)
 
@@ -261,8 +262,21 @@ class ChecklistRenderer {
                                   id="comment-input-${item.id}" 
                                   rows="2"
                                   placeholder="Escreva um comentário para esta tarefa..."></textarea>
-                        <div class="d-flex align-items-center justify-content-between gap-2 mt-2">
+                        
+                        <!-- Preview de imagem -->
+                        <div class="image-preview-container d-none mt-2 p-2 bg-white border rounded" id="image-preview-${item.id}">
                             <div class="d-flex align-items-center gap-2">
+                                <img class="image-preview" style="max-height: 80px; max-width: 120px; border-radius: 4px; border: 1px solid #dee2e6;">
+                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                        onclick="window.checklistRenderer.removeImagePreview(${item.id})"
+                                        title="Remover imagem">
+                                    <i class="bi bi-trash"></i> Remover
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex align-items-center justify-content-between gap-2 mt-2">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
                                 <span class="comentario-tipo-tag interno active" 
                                       data-tipo="interno"
                                       data-item-id="${item.id}">
@@ -296,6 +310,13 @@ class ChecklistRenderer {
                                 </span>
                             </div>
                             <div class="d-flex gap-2">
+                                <label class="btn btn-sm btn-outline-secondary mb-0" title="Anexar imagem ou print">
+                                    <i class="bi bi-paperclip"></i>
+                                    <input type="file" 
+                                           class="d-none comentario-imagem-input" 
+                                           data-item-id="${item.id}"
+                                           accept="image/*">
+                                </label>
                                 <button class="btn btn-sm btn-secondary btn-cancel-comment" data-item-id="${item.id}">
                                     Cancelar
                                 </button>
@@ -1426,6 +1447,284 @@ class ChecklistRenderer {
         return div.innerHTML;
     }
 
+    /**
+     * Salva comentário com imagem (se houver)
+     */
+    async saveComment(itemId) {
+        const textarea = document.getElementById(`comment-input-${itemId}`);
+        const texto = textarea?.value?.trim();
+
+        if (!texto) {
+            this.notifier.warning('Digite um comentário');
+            return;
+        }
+
+        // Pegar visibilidade (interno/externo)
+        const visibilityTag = document.querySelector(`.comentario-tipo-tag.interno.active[data-item-id="${itemId}"], .comentario-tipo-tag.externo.active[data-item-id="${itemId}"]`);
+        const visibilidade = visibilityTag?.dataset?.tipo || 'interno';
+
+        // Pegar tag opcional (Ação interna, Reunião, etc)
+        const tagOption = document.querySelector(`.comentario-tipo-tag.tag-option.active[data-item-id="${itemId}"]`);
+        const tag = tagOption?.dataset?.tag || null;
+
+        // Pegar arquivo de imagem (se houver)
+        const fileInput = document.querySelector(`.comentario-imagem-input[data-item-id="${itemId}"]`);
+        const imageFile = fileInput?.files?.[0] || null;
+
+        const commentData = {
+            texto,
+            visibilidade,
+            tag,
+            noshow: tag === 'No Show'
+        };
+
+        // Salvar via service (que vai converter imagem para base64)
+        const result = await this.service.saveComment(itemId, commentData, imageFile);
+
+        if (result.success) {
+            // Limpar formulário
+            textarea.value = '';
+            this.removeImagePreview(itemId);
+
+            // Recarregar comentários
+            await this.loadComments(itemId);
+        }
+    }
+
+    /**
+     * Cancela edição de comentário
+     */
+    cancelComment(itemId) {
+        const textarea = document.getElementById(`comment-input-${itemId}`);
+        if (textarea) textarea.value = '';
+        this.removeImagePreview(itemId);
+    }
+
+    /**
+     * Carrega e exibe comentários de um item
+     */
+    async loadComments(itemId) {
+        const historyContainer = document.getElementById(`comments-history-${itemId}`);
+        if (!historyContainer) return;
+
+        // Mostrar loading
+        historyContainer.innerHTML = `
+            <div class="text-center py-2">
+                <div class="spinner-border spinner-border-sm text-secondary" role="status">
+                    <span class="visually-hidden">Carregando...</span>
+                </div>
+            </div>
+        `;
+
+        const result = await this.service.loadComments(itemId);
+
+        if (result.success) {
+            const comentarios = result.comentarios || [];
+
+            if (comentarios.length === 0) {
+                historyContainer.innerHTML = `
+                    <div class="text-center py-3 text-muted small">
+                        <i class="bi bi-chat-dots"></i> Nenhum comentário ainda
+                    </div>
+                `;
+                return;
+            }
+
+            // Renderizar comentários
+            historyContainer.innerHTML = comentarios.map(c => this.renderComment(c)).join('');
+        } else {
+            historyContainer.innerHTML = `
+                <div class="text-center py-2 text-danger small">
+                    Erro ao carregar comentários
+                </div>
+            `;
+        }
+    }
+
+    /**
+     * Renderiza um comentário
+     */
+    renderComment(c) {
+        const isInterno = c.visibilidade === 'interno';
+        const badgeClass = isInterno ? 'bg-primary' : 'bg-info';
+        const badgeIcon = isInterno ? 'lock-fill' : 'globe';
+        const badgeText = isInterno ? 'Interno' : 'Externo';
+
+        return `
+            <div class="comment-item border-start border-3 ${isInterno ? 'border-primary' : 'border-info'} ps-2 mb-2">
+                <div class="d-flex justify-content-between align-items-start mb-1">
+                    <div>
+                        <strong class="small">${this.escapeHtml(c.usuario_nome || 'Usuário')}</strong>
+                        <span class="badge rounded-pill small ${badgeClass} ms-1">
+                            <i class="bi bi-${badgeIcon}"></i> ${badgeText}
+                        </span>
+                        ${c.tag === 'Ação interna' ? '<span class="badge rounded-pill small bg-primary"><i class="bi bi-briefcase"></i> Ação interna</span>' : ''}
+                        ${c.tag === 'Reunião' ? '<span class="badge rounded-pill small bg-danger"><i class="bi bi-calendar-event"></i> Reunião</span>' : ''}
+                        ${(c.tag === 'No Show' || c.noshow) ? '<span class="badge rounded-pill small bg-warning text-dark"><i class="bi bi-calendar-x"></i> No show</span>' : ''}
+                        ${c.tag === 'Simples registro' ? '<span class="badge rounded-pill small bg-secondary"><i class="bi bi-pencil-square"></i> Simples registro</span>' : ''}
+                    </div>
+                    <small class="text-muted">${c.data_criacao || ''}</small>
+                </div>
+                <p class="mb-1 small">${this.escapeHtml(c.texto)}</p>
+                ${c.imagem_url ? `
+                    <div class="mt-2">
+                        <img src="${c.imagem_url}" 
+                             class="img-thumbnail comment-image-thumbnail" 
+                             style="max-width: 200px; max-height: 150px; cursor: pointer;"
+                             onclick="window.checklistRenderer.openImageModal(\'${c.imagem_url}\')"
+                             title="Clique para ampliar">
+                    </div>
+                ` : ''}
+                <div class="d-flex gap-2 mt-1">
+                    <button class="btn btn-sm btn-link text-danger p-0 btn-delete-comment" 
+                            data-comment-id="${c.id}" 
+                            data-item-id="${c.checklist_item_id || c.tarefa_id}">
+                        <i class="bi bi-trash"></i> Excluir
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Deleta comentário
+     */
+    async deleteComment(comentarioId, itemId) {
+        const result = await this.service.deleteComment(comentarioId);
+
+        if (result.success) {
+            // Recarregar comentários
+            await this.loadComments(itemId);
+        }
+    }
+
+    /**
+     * Envia comentário por email
+     */
+    async sendCommentEmail(comentarioId) {
+        await this.service.sendCommentEmail(comentarioId);
+    }
+
+    /**
+     * Deleta comentário e recarrega lista
+     */
+    async deleteComment(comentarioId, itemId) {
+        const result = await this.service.deleteComment(comentarioId);
+
+        if (result.success) {
+            // Recarregar comentários imediatamente
+            await this.loadComments(itemId);
+        }
+    }
+
+    /**
+     * Envia comentário por email
+     */
+    async sendCommentEmail(comentarioId) {
+        await this.service.sendCommentEmail(comentarioId);
+    }
+
+    /**
+     * Abre modal com imagem ampliada
+     */
+    openImageModal(imageUrl, caption = '') {
+        // Criar modal dinamicamente se não existir
+        let modal = document.getElementById('imageModal');
+        if (!modal) {
+            const modalHtml = `
+                <div class="modal fade" id="imageModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Imagem do Comentário</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body text-center">
+                                <img id="modalImage" src="" class="img-fluid" style="max-height: 70vh;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            modal = document.getElementById('imageModal');
+        }
+
+        // Atualizar imagem
+        const img = document.getElementById('modalImage');
+        if (img) img.src = imageUrl;
+
+        // Abrir modal
+        const bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
+    }
+
+    /**
+     * Remove preview de imagem
+     */
+    removeImagePreview(itemId) {
+        const previewContainer = document.getElementById(`image-preview-${itemId}`);
+        const fileInput = document.querySelector(`.comentario-imagem-input[data-item-id="${itemId}"]`);
+
+        if (previewContainer) {
+            previewContainer.classList.add('d-none');
+            const img = previewContainer.querySelector('.image-preview');
+            if (img) img.src = '';
+        }
+
+        if (fileInput) {
+            fileInput.value = '';
+        }
+    }
+
+    /**
+     * Configura handlers de upload de imagem
+     */
+    setupImageUploadHandlers() {
+        // Delegar evento para inputs de imagem
+        this.container.addEventListener('change', (e) => {
+            if (e.target.classList.contains('comentario-imagem-input')) {
+                const itemId = e.target.dataset.itemId;
+                const file = e.target.files[0];
+
+                if (file && file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const previewContainer = document.getElementById(`image-preview-${itemId}`);
+                        if (previewContainer) {
+                            const img = previewContainer.querySelector('.image-preview');
+                            if (img) {
+                                img.src = event.target.result;
+                                previewContainer.classList.remove('d-none');
+                            }
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+        });
+
+        // Carregar comentários quando a seção é aberta
+        this.container.addEventListener('shown.bs.collapse', (e) => {
+            if (e.target.id && e.target.id.startsWith('comments-')) {
+                const itemId = parseInt(e.target.id.replace('comments-', ''));
+                if (itemId) {
+                    this.loadComments(itemId);
+
+        // Abrir modal ao clicar em imagens de comentários
+        this.container.addEventListener('click', (e) => {
+            if (e.target.classList.contains('comment-image-thumbnail')) {
+                const imageUrl = e.target.getAttribute('src');
+                if (imageUrl) {
+                    this.openImageModal(imageUrl);
+                }
+            }
+        });
+                }
+            }
+        });
+    }
+
     abbrevResponsavel(str) {
         if (!str) return '';
         const s = String(str);
@@ -1446,3 +1745,6 @@ document.addEventListener('DOMContentLoaded', () => {
         window.checklistRenderer = new ChecklistRenderer('checklist-container', window.IMPLANTACAO_ID);
     }
 });
+
+
+
