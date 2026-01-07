@@ -1633,14 +1633,14 @@ class ChecklistRenderer {
         if (!modal) {
             const modalHtml = `
                 <div class="modal fade" id="imageModal" tabindex="-1">
-                    <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 90vw;">
                         <div class="modal-content">
                             <div class="modal-header">
                                 <h5 class="modal-title">Imagem do Comentário</h5>
                                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                             </div>
-                            <div class="modal-body text-center">
-                                <img id="modalImage" src="" class="img-fluid" style="max-height: 70vh;">
+                            <div class="modal-body text-center p-2">
+                                <img id="modalImage" src="" class="img-fluid" style="max-height: 85vh; width: auto;">
                             </div>
                         </div>
                     </div>
@@ -1700,6 +1700,48 @@ class ChecklistRenderer {
                         }
                     };
                     reader.readAsDataURL(file);
+                }
+            }
+        });
+
+        // Suporte para colar imagens (Ctrl+V)
+        this.container.addEventListener('paste', (e) => {
+            const target = e.target;
+            if (target.id && target.id.startsWith('comment-input-')) {
+                const itemId = target.id.replace('comment-input-', '');
+                const items = e.clipboardData?.items;
+                
+                if (items) {
+                    for (let i = 0; i < items.length; i++) {
+                        if (items[i].type.indexOf('image') !== -1) {
+                            e.preventDefault();
+                            const blob = items[i].getAsFile();
+                            
+                            // Criar um FileReader para ler a imagem
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                                const previewContainer = document.getElementById(`image-preview-${itemId}`);
+                                if (previewContainer) {
+                                    const img = previewContainer.querySelector('.image-preview');
+                                    if (img) {
+                                        img.src = event.target.result;
+                                        previewContainer.classList.remove('d-none');
+                                    }
+                                }
+                                
+                                // Simular que o arquivo foi selecionado
+                                const fileInput = document.querySelector(`.comentario-imagem-input[data-item-id="${itemId}"]`);
+                                if (fileInput) {
+                                    // Criar um DataTransfer para adicionar o arquivo ao input
+                                    const dataTransfer = new DataTransfer();
+                                    dataTransfer.items.add(blob);
+                                    fileInput.files = dataTransfer.files;
+                                }
+                            };
+                            reader.readAsDataURL(blob);
+                            break;
+                        }
+                    }
                 }
             }
         });
