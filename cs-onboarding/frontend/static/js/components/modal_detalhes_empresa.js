@@ -352,27 +352,25 @@
             };
 
             const setFpDate = (fp, s, inputSelector) => {
-                // Validação robusta
                 if (!s || s === 'null' || s === 'undefined' || s === 'None') return;
-
                 const iso = normalizeToISO(s);
                 if (!iso || iso.length < 10) return;
 
-                if (inputSelector) {
-                    const input = modal.querySelector(inputSelector);
-                    if (input) {
-                        // Popular diretamente com formato brasileiro DD/MM/YYYY
-                        const parts = iso.split('-');
-                        if (parts.length === 3) {
-                            const formattedDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
-                            input.value = formattedDate;
+                const input = modal.querySelector(inputSelector);
+                if (!input) return;
 
-                            // Se tem altInput (Flatpickr), atualizar também
-                            if (input._flatpickr && input._flatpickr.altInput) {
-                                input._flatpickr.altInput.value = formattedDate;
-                            }
-                        }
+                if (input._flatpickr) {
+                    try {
+                        // CRITICAL: Use setDate with format Y-m-d to ensuring correct parsing
+                        input._flatpickr.setDate(iso, true, 'Y-m-d');
+                    } catch (e) {
+                         console.warn('[setFpDate] Error:', e);
+                         const p = iso.split('-');
+                         if (p.length === 3) input.value = `${p[2]}/${p[1]}/${p[0]}`;
                     }
+                } else {
+                    const p = iso.split('-');
+                    if (p.length === 3) input.value = `${p[2]}/${p[1]}/${p[0]}`;
                 }
             };
 
