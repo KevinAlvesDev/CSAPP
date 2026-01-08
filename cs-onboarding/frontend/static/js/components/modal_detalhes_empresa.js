@@ -263,11 +263,8 @@
             dateInputs.forEach(input => {
                 if (!input._flatpickr) {
                     const fp = flatpickr(input, {
-                        dateFormat: "Y-m-d",
-                        altInput: true,
-                        altFormat: "d/m/Y",
-                        allowInput: true,
-                        locale: typeof flatpickr.l10ns !== 'undefined' ? flatpickr.l10ns.pt : 'default'
+                        dateFormat: "d/m/Y",
+                        allowInput: true
                     });
 
                     if (input.id === 'modal-inicio_efetivo') window.fpInicioEfetivo = fp;
@@ -328,11 +325,8 @@
                 dateInputs.forEach(input => {
                     if (!input._flatpickr) {
                         const fp = flatpickr(input, {
-                            dateFormat: "Y-m-d",
-                            altInput: true,
-                            altFormat: "d/m/Y",
-                            allowInput: true,
-                            locale: typeof flatpickr.l10ns !== 'undefined' && flatpickr.l10ns.pt ? flatpickr.l10ns.pt : 'default'
+                            dateFormat: "d/m/Y",
+                            allowInput: true
                         });
 
                         if (input.id === 'modal-inicio_efetivo') window.fpInicioEfetivo = fp;
