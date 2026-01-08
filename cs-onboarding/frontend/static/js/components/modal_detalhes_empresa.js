@@ -498,16 +498,21 @@
                     safeSet('#modal-resp_estrategico_obs', impl.resp_estrategico_obs || '', modal);
 
                     // Set dates
-                    setFpDate(window.fpInicioEfetivo, impl.data_inicio_efetivo, '#modal-inicio_efetivo');
-                    setFpDate(window.fpInicioProd, impl.data_inicio_producao, '#modal-data_inicio_producao');
-                    setFpDate(window.fpFinalImpl, impl.data_final_implantacao, '#modal-data_final_implantacao');
+                    setFpDate(window.fpInicioEfetivo, impl.data_inicio_efetivo_iso, '#modal-inicio_efetivo');
+                    setFpDate(window.fpInicioProd, impl.data_inicio_producao_iso, '#modal-data_inicio_producao');
+                    setFpDate(window.fpFinalImpl, impl.data_final_implantacao_iso, '#modal-data_final_implantacao');
 
                     // Data Cadastro
-                    if (impl.data_criacao) {
-                        const iso = impl.data_criacao;
-                        const p = iso.split('T')[0].split('-');
+                    if (impl.data_cadastro_iso) {
+                        const p = impl.data_cadastro_iso.split('-');
                         if (p.length === 3) {
-                            safeSet('#modal-data_cadastro', p[2].padStart(2, '0') + '/' + p[1].padStart(2, '0') + '/' + p[0], modal);
+                            safeSet('#modal-data_cadastro', `${p[2]}/${p[1]}/${p[0]}`, modal);
+                        }
+                    } else if (impl.data_criacao_iso) {
+                        // Fallback para data_criacao_iso
+                        const p = impl.data_criacao_iso.split('-');
+                        if (p.length === 3) {
+                            safeSet('#modal-data_cadastro', `${p[2]}/${p[1]}/${p[0]}`, modal);
                         }
                     }
 
