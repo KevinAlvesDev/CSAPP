@@ -247,6 +247,7 @@
         if (!modalDetalhesEmpresa) return;
 
         // Phone input event listeners (replacing inline handlers)
+        const telefoneInput = modalDetalhesEmpresa.querySelector('#modal-telefone_responsavel');
         if (telefoneInput) {
             telefoneInput.addEventListener('input', function () {
                 if (window.formatarTelefone) window.formatarTelefone(this);
