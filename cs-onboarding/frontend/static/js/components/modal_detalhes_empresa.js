@@ -319,14 +319,12 @@
             // Set implantacao ID immediately
             safeSet('#modal-implantacao_id', implId, modal);
 
-            // Verificar se estamos na página de detalhes (onde Flatpickr já está configurado)
-            const isDetailsPage = document.getElementById('checklist-area-treinamento');
-
-            // CRITICAL: Só inicializar Flatpickr no Dashboard (onde não existe)
-            if (typeof flatpickr !== 'undefined' && !isDetailsPage) {
+            // CRITICAL: Ensure Flatpickr is initialized safely
+            if (typeof flatpickr !== 'undefined') {
                 const dateInputs = modal.querySelectorAll('.datepicker, .custom-datepicker, [data-provider="flatpickr"]');
                 dateInputs.forEach(input => {
-                    if (!input._flatpickr) {
+                    // Check if already initialized (property or class)
+                    if (!input._flatpickr && !input.classList.contains('flatpickr-input')) {
                         const fp = flatpickr(input, {
                             dateFormat: "d/m/Y",
                             allowInput: true
@@ -339,7 +337,7 @@
                     }
                 });
 
-                // Aguardar um momento para Flatpickr estar totalmente pronto
+                // Small delay to ensure readiness
                 await new Promise(resolve => setTimeout(resolve, 50));
             }
 
@@ -378,7 +376,8 @@
                 }
             };
 
-            safeSet('#modal-redirect_to', isDetailsPage ? 'detalhes' : 'dashboard', modal);
+            const onDetails = window.location.pathname.includes('/implantacao/');
+            safeSet('#modal-redirect_to', onDetails ? 'detalhes' : 'dashboard', modal);
 
             // CRITICAL FIX: Always fetch fresh data from server first
             if (implId) {
@@ -493,6 +492,7 @@
 
                     // Data Cadastro (usar data_cadastro_iso ou fallback para data_criacao_iso)
                     const dataCadastroValue = impl.data_cadastro_iso || impl.data_criacao_iso;
+                    console.log('✅ [DEBUG] Data Cadastro:', dataCadastroValue);
                     setFpDate(null, dataCadastroValue, '#modal-data_cadastro');
 
                     // CRITICAL: Initialize TomSelect ONLY AFTER data is loaded
