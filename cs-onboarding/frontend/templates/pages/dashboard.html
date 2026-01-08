@@ -1097,69 +1097,9 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
             });
         }
 
-        // Logic to populate details modal from OAMD data
-        const modalDetalhes = document.getElementById('modalDetalhesEmpresa');
-        if (modalDetalhes) {
-            modalDetalhes.addEventListener('show.bs.modal', async function (event) {
-                const button = event.relatedTarget;
-                if (!button) return;
+        // NOTA: A consulta OAMD foi centralizada em modal_detalhes_empresa.js
+        // Não é mais necessário código duplicado aqui
 
-                // Ensure ID Favorecido is populated from the button data attribute
-                const idFavorecido = button.getAttribute('data-id-favorecido');
-                const modalIdFavorecidoInput = modalDetalhes.querySelector('#modal-id_favorecido');
-
-                if (modalIdFavorecidoInput && idFavorecido) {
-
-                    modalIdFavorecidoInput.value = idFavorecido;
-
-                    // Fetch from OAMD to auto-fill fields if they are empty
-                    try {
-                        const response = await fetch(`/api/consultar_empresa?id_favorecido=${idFavorecido}`);
-                        const data = await response.json();
-
-                        if (data.ok && data.empresa) {
-
-                            const emp = data.empresa;
-
-                            const map = {
-                                'modal-responsavel_cliente': emp.nomedono,
-                                'modal-email_responsavel': emp.email || emp.responsavelemail,
-                                'modal-telefone_responsavel': emp.telefone || emp.responsaveltelefone,
-                                'modal-nivel_receita': emp.nivelreceitamensal
-                            };
-
-                            for (const [id, value] of Object.entries(map)) {
-                                const input = modalDetalhes.querySelector('#' + id);
-                                if (input && !input.value && value) {
-                                    input.value = value;
-                                }
-                            }
-
-                            // Handle dates
-                            const dateMap = {
-                                'modal-data_inicio_producao': emp.inicioproducao,
-                                'modal-data_final_implantacao': emp.finalimplantacao,
-                                'modal-inicio_efetivo': emp.inicioimplantacao
-                            };
-
-                            for (const [id, value] of Object.entries(dateMap)) {
-                                if (!value) continue;
-                                const input = modalDetalhes.querySelector('#' + id);
-                                if (input && !input.value) {
-                                    const dateStr = value.split('T')[0];
-                                    input.value = dateStr;
-                                    if (input._flatpickr) {
-                                        input._flatpickr.setDate(dateStr, true);
-                                    }
-                                }
-                            }
-                        }
-                    } catch (e) {
-
-                    }
-                }
-            });
-        }
 
         // ===== BUSCA RÁPIDA DE EMPRESA =====
         const searchInput = document.getElementById('searchEmpresa');
