@@ -209,6 +209,21 @@ def atualizar_detalhes_empresa_service(implantacao_id, usuario_cs_email, user_pe
             
             # COMMIT only if both operations succeed
             conn.commit()
+            
+            # Cache Invalidation
+            try:
+                from ...config.cache_config import clear_user_cache, clear_implantacao_cache
+                clear_implantacao_cache(implantacao_id)
+                # Limpar cache do dono da implantação
+                clear_user_cache(usuario_cs_email) # Se for o dono, limpa o dele
+                if not is_owner:
+                    # Se quem editou foi um gestor, limpa o cache do dono original também
+                    impl_owner = impl.get('usuario_cs')
+                    if impl_owner and impl_owner != usuario_cs_email:
+                        clear_user_cache(impl_owner)
+            except Exception as cache_err:
+                current_app.logger.warning(f"Cache clearing failed: {cache_err}")
+
             current_app.logger.info(f"Transaction committed: updated implantacao {implantacao_id} + logged timeline")
             return True
             
