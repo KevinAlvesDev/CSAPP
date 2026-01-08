@@ -4,13 +4,16 @@ Funções auxiliares para cache, formatação e listagens.
 Princípio SOLID: Single Responsibility
 """
 import logging
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 from flask import current_app
 
 from ...db import query_db
 
 logger = logging.getLogger(__name__)
+
+# Timezone de Brasília (UTC-3)
+TZ_BRASILIA = timezone(timedelta(hours=-3))
 
 
 def _invalidar_cache_progresso_local(impl_id):
@@ -28,7 +31,10 @@ def _invalidar_cache_progresso_local(impl_id):
 
 
 def _format_datetime(dt_value):
-    """Formata datetime para string no formato brasileiro: dd/mm/yyyy às HH:MM"""
+    """Formata datetime para string no formato brasileiro: dd/mm/yyyy às HH:MM
+    
+    SEMPRE converte para horário de Brasília (UTC-3) para garantir consistência.
+    """
     if not dt_value:
         return None
     
@@ -43,9 +49,14 @@ def _format_datetime(dt_value):
         except:
             return dt_value
     
-    # Se for datetime, formatar
+    # Se for datetime, converter para Brasília e formatar
     if hasattr(dt_value, 'strftime'):
-        return dt_value.strftime('%d/%m/%Y às %H:%M')
+        # Se não tiver timezone (naive), assumir que está em UTC
+        if dt_value.tzinfo is None:
+            dt_value = dt_value.replace(tzinfo=timezone.utc)
+        # Converter para horário de Brasília
+        dt_brasilia = dt_value.astimezone(TZ_BRASILIA)
+        return dt_brasilia.strftime('%d/%m/%Y às %H:%M')
     
     return str(dt_value)
 
@@ -54,3 +65,4 @@ def listar_usuarios_cs():
     """Retorna lista simples de usuários para atribuição."""
     rows = query_db("SELECT usuario, COALESCE(nome, usuario) as nome FROM perfil_usuario ORDER BY nome ASC") or []
     return rows
+
