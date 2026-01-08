@@ -259,7 +259,7 @@
 
         // Initialize Flatpickr if missing (Dashboard compatibility)
         if (typeof flatpickr !== 'undefined') {
-            const dateInputs = modalDetalhesEmpresa.querySelectorAll('.datepicker, [data-provider="flatpickr"]');
+            const dateInputs = modalDetalhesEmpresa.querySelectorAll('.datepicker, .custom-datepicker, [data-provider="flatpickr"]');
             dateInputs.forEach(input => {
                 if (!input._flatpickr) {
                     const fp = flatpickr(input, {
@@ -324,7 +324,7 @@
 
             // CRITICAL: Ensure Flatpickr is initialized BEFORE trying to set dates
             if (typeof flatpickr !== 'undefined') {
-                const dateInputs = modal.querySelectorAll('.datepicker, [data-provider="flatpickr"]');
+                const dateInputs = modal.querySelectorAll('.datepicker, .custom-datepicker, [data-provider="flatpickr"]');
                 dateInputs.forEach(input => {
                     if (!input._flatpickr) {
                         const fp = flatpickr(input, {
