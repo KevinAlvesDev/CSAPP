@@ -1458,15 +1458,27 @@
               updateText('modal-email_responsavel', emailResp);
             }
 
-            // Telefone Responsável - pode vir com nome concatenado
+            // Telefone Responsável - pode vir com nome concatenado (ex: "NOME: TELEFONE;")
             let telResp = empresa.telefone || empresa.responsaveltelefone || '';
+
             if (telResp && telResp.includes(':')) {
-              // Formato "NOME: TELEFONE;" - extrair só o telefone
               const parts = telResp.split(':');
               if (parts.length >= 2) {
-                telResp = parts.slice(1).join(':').trim().replace(/;+$/, '').trim();
+                // Parte 1 é o Nome
+                const nomeDoTelefone = parts[0].trim();
+                // Parte 2 é o Telefone
+                const numeroDoTelefone = parts.slice(1).join(':').trim().replace(/;+$/, '').trim();
+
+                // Preencher o campo de Nome com o valor extraído
+                if (nomeDoTelefone) {
+                  updateText('modal-responsavel_cliente', nomeDoTelefone);
+                }
+
+                // Usar apenas o número para o campo de telefone
+                telResp = numeroDoTelefone;
               }
             }
+
             if (telResp) {
               updateText('modal-telefone_responsavel', telResp.replace(/;+$/, '').trim());
             }
