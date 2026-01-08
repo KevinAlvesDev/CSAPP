@@ -499,71 +499,7 @@
                     // Wait for TomSelect to fully initialize (100ms should be enough)
                     await new Promise(resolve => setTimeout(resolve, 100));
 
-                    // COMPLEMENTAR COM DADOS DO OAMD - busca informações adicionais
-                    const idFavorecido = impl.id_favorecido || modal.querySelector('#modal-id_favorecido')?.value;
-                    if (idFavorecido) {
-                        try {
-                            const oamdResponse = await window.apiFetch(`/api/consultar_empresa?id_favorecido=${idFavorecido}`, {
-                                showErrorToast: false // Não mostrar erro se OAMD falhar
-                            });
-
-                            if (oamdResponse && oamdResponse.ok && oamdResponse.empresa) {
-                                const emp = oamdResponse.empresa;
-
-                                // Preencher apenas campos que estão vazios
-                                const fillIfEmpty = (selector, value) => {
-                                    if (!value) return;
-                                    const input = modal.querySelector(selector);
-                                    if (input && !input.value) {
-                                        // Tratamento especial para telefone que pode vir com nome
-                                        if (selector === '#modal-telefone_responsavel' && value.includes(':')) {
-                                            const parts = value.split(':');
-                                            if (parts.length >= 2) {
-                                                const telPart = parts.slice(1).join(':').trim().replace(/;+$/, '').trim();
-                                                input.value = telPart;
-                                                // Se nome responsável estiver vazio, usar o nome do telefone
-                                                const nomeInput = modal.querySelector('#modal-responsavel_cliente');
-                                                if (nomeInput && !nomeInput.value) {
-                                                    nomeInput.value = parts[0].trim();
-                                                }
-                                                return;
-                                            }
-                                        }
-                                        input.value = value.replace(/;+$/, '').trim();
-                                    }
-                                };
-
-                                fillIfEmpty('#modal-responsavel_cliente', emp.nomedono);
-                                fillIfEmpty('#modal-email_responsavel', emp.email || emp.responsavelemail);
-                                fillIfEmpty('#modal-telefone_responsavel', emp.telefone || emp.responsaveltelefone);
-                                fillIfEmpty('#modal-nivel_receita', emp.nivelreceitamensal);
-
-                                // Preencher datas do OAMD se estiverem vazias
-                                const fillDateIfEmpty = (selector, value) => {
-                                    if (!value) return;
-                                    const input = modal.querySelector(selector);
-                                    if (input && !input.value) {
-                                        const dateStr = value.split('T')[0];
-                                        const parts = dateStr.split('-');
-                                        if (parts.length === 3) {
-                                            input.value = `${parts[2]}/${parts[1]}/${parts[0]}`;
-                                        }
-                                        if (input._flatpickr) {
-                                            input._flatpickr.setDate(dateStr, true);
-                                        }
-                                    }
-                                };
-
-                                fillDateIfEmpty('#modal-inicio_efetivo', emp.inicioimplantacao);
-                                fillDateIfEmpty('#modal-data_inicio_producao', emp.inicioproducao);
-                                fillDateIfEmpty('#modal-data_final_implantacao', emp.finalimplantacao);
-
-                                console.log('[Modal] Dados OAMD complementados com sucesso');
-                            }
-                        } catch (oamdError) {
-                            console.warn('[Modal] Erro ao consultar OAMD (não crítico):', oamdError);
-                        }
-                    }
+                    // NOTA: Consulta OAMD removida daqui - deve acontecer apenas ao clicar no botão "Consultar"
 
                     // CONSISTENCY CHECK: Capture displayed data
                     DataConsistencyChecker.captureDisplayedData(modal);

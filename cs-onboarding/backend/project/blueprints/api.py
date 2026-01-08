@@ -101,12 +101,14 @@ def get_timeline(impl_id):
     """
     params_with_pagination = params + [per_page, offset]
     try:
+        from ..common.utils import format_date_br
         rows = query_db(sql, tuple(params_with_pagination)) or []
         items = []
         for r in rows:
             d = dict(r)
             dt = d.get('data_criacao')
-            d['data_criacao'] = dt.isoformat() if hasattr(dt, 'isoformat') else str(dt)
+            # Formatar já convertendo para horário de Brasília
+            d['data_criacao'] = format_date_br(dt, include_time=True) if dt else ''
             items.append(d)
         return jsonify({'ok': True, 'logs': items, 'pagination': {'page': page, 'per_page': per_page}})
     except Exception as e:
