@@ -322,6 +322,27 @@
             // Set implantacao ID immediately
             safeSet('#modal-implantacao_id', implId, modal);
 
+            // CRITICAL: Ensure Flatpickr is initialized BEFORE trying to set dates
+            if (typeof flatpickr !== 'undefined') {
+                const dateInputs = modal.querySelectorAll('.datepicker, [data-provider="flatpickr"]');
+                dateInputs.forEach(input => {
+                    if (!input._flatpickr) {
+                        const fp = flatpickr(input, {
+                            dateFormat: "Y-m-d",
+                            altInput: true,
+                            altFormat: "d/m/Y",
+                            allowInput: true,
+                            locale: typeof flatpickr.l10ns !== 'undefined' && flatpickr.l10ns.pt ? flatpickr.l10ns.pt : 'default'
+                        });
+
+                        if (input.id === 'modal-inicio_efetivo') window.fpInicioEfetivo = fp;
+                        if (input.id === 'modal-data_inicio_producao') window.fpInicioProd = fp;
+                        if (input.id === 'modal-data_final_implantacao') window.fpFinalImpl = fp;
+                        if (input.id === 'modal-data_cadastro') window.fpDataCadastro = fp;
+                    }
+                });
+            }
+
             const normalizeToISO = (s) => {
                 if (!s) return '';
                 const t = String(s).trim();
