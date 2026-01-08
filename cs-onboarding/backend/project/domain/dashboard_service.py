@@ -335,7 +335,7 @@ def get_tags_metrics(start_date=None, end_date=None, user_email=None):
         query_sql += " AND ch.usuario_cs = %s"
         args.append(user_email)
 
-    query_sql += " GROUP BY ch.usuario_cs, ch.visibilidade, ch.tag ORDER BY p.nome"
+    query_sql += " GROUP BY ch.usuario_cs, p.nome, ch.visibilidade, ch.tag ORDER BY p.nome"
 
     rows = query_db(query_sql, tuple(args))
     if not rows:
