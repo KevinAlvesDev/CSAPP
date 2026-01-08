@@ -319,8 +319,11 @@
             // Set implantacao ID immediately
             safeSet('#modal-implantacao_id', implId, modal);
 
-            // CRITICAL: Ensure Flatpickr is initialized BEFORE trying to set dates
-            if (typeof flatpickr !== 'undefined') {
+            // Verificar se estamos na página de detalhes (onde Flatpickr já está configurado)
+            const isDetailsPage = document.getElementById('checklist-area-treinamento');
+
+            // CRITICAL: Só inicializar Flatpickr no Dashboard (onde não existe)
+            if (typeof flatpickr !== 'undefined' && !isDetailsPage) {
                 const dateInputs = modal.querySelectorAll('.datepicker, .custom-datepicker, [data-provider="flatpickr"]');
                 dateInputs.forEach(input => {
                     if (!input._flatpickr) {
@@ -375,7 +378,6 @@
                 }
             };
 
-            const isDetailsPage = document.getElementById('checklist-area-treinamento');
             safeSet('#modal-redirect_to', isDetailsPage ? 'detalhes' : 'dashboard', modal);
 
             // CRITICAL FIX: Always fetch fresh data from server first
@@ -489,19 +491,9 @@
                     setFpDate(window.fpInicioProd, impl.data_inicio_producao_iso, '#modal-data_inicio_producao');
                     setFpDate(window.fpFinalImpl, impl.data_final_implantacao_iso, '#modal-data_final_implantacao');
 
-                    // Data Cadastro
-                    if (impl.data_cadastro_iso) {
-                        const p = impl.data_cadastro_iso.split('-');
-                        if (p.length === 3) {
-                            safeSet('#modal-data_cadastro', `${p[2]}/${p[1]}/${p[0]}`, modal);
-                        }
-                    } else if (impl.data_criacao_iso) {
-                        // Fallback para data_criacao_iso
-                        const p = impl.data_criacao_iso.split('-');
-                        if (p.length === 3) {
-                            safeSet('#modal-data_cadastro', `${p[2]}/${p[1]}/${p[0]}`, modal);
-                        }
-                    }
+                    // Data Cadastro (usar data_cadastro_iso ou fallback para data_criacao_iso)
+                    const dataCadastroValue = impl.data_cadastro_iso || impl.data_criacao_iso;
+                    setFpDate(null, dataCadastroValue, '#modal-data_cadastro');
 
                     // CRITICAL: Initialize TomSelect ONLY AFTER data is loaded
                     initializeMultiTagInput('#modal-modalidades', impl.modalidades || '');
