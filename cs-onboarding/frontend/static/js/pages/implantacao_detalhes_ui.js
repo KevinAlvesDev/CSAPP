@@ -1443,6 +1443,34 @@
               }
             }
 
+            // Preencher campos de contato do responsável a partir dos dados brutos
+            const empresa = data.empresa || {};
+
+            // Responsável Cliente (Nome)
+            const nomeResp = empresa.nomedono || empresa.responsavelnome || '';
+            if (nomeResp) {
+              updateText('modal-responsavel_cliente', nomeResp);
+            }
+
+            // E-mail Responsável
+            const emailResp = empresa.email || empresa.responsavelemail || '';
+            if (emailResp) {
+              updateText('modal-email_responsavel', emailResp);
+            }
+
+            // Telefone Responsável - pode vir com nome concatenado
+            let telResp = empresa.telefone || empresa.responsaveltelefone || '';
+            if (telResp && telResp.includes(':')) {
+              // Formato "NOME: TELEFONE;" - extrair só o telefone
+              const parts = telResp.split(':');
+              if (parts.length >= 2) {
+                telResp = parts.slice(1).join(':').trim().replace(/;+$/, '').trim();
+              }
+            }
+            if (telResp) {
+              updateText('modal-telefone_responsavel', telResp.replace(/;+$/, '').trim());
+            }
+
             const now = new Date().getTime();
             const lastUpdateSpan = document.getElementById('oamd-last-update');
             const lastUpdateTimeSpan = document.getElementById('oamd-last-update-time');
