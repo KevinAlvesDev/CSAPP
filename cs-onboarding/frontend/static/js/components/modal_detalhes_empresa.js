@@ -361,14 +361,22 @@
 
                 if (input._flatpickr) {
                     try {
-                        // CRITICAL: Use setDate with format Y-m-d to ensuring correct parsing
+                        // Tentar atualizar instância Flatpickr
                         input._flatpickr.setDate(iso, true, 'Y-m-d');
                     } catch (e) {
-                         console.warn('[setFpDate] Error:', e);
-                         const p = iso.split('-');
-                         if (p.length === 3) input.value = `${p[2]}/${p[1]}/${p[0]}`;
+                        console.warn('[setFpDate] Error w/ setDate:', e);
+                    }
+
+                    // CRITICAL FIX: Se NÃO estiver usando altInput (Dashboard), forçar valor visual
+                    // Isso garante que a data apareça mesmo se o setDate não atualizar o input visual corretamente
+                    if (!input._flatpickr.config.altInput) {
+                        const p = iso.split('-');
+                        if (p.length === 3) {
+                            input.value = `${p[2]}/${p[1]}/${p[0]}`;
+                        }
                     }
                 } else {
+                    // Sem Flatpickr: texto simples
                     const p = iso.split('-');
                     if (p.length === 3) input.value = `${p[2]}/${p[1]}/${p[0]}`;
                 }
