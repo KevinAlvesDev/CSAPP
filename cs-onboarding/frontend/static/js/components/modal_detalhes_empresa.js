@@ -247,13 +247,33 @@
         if (!modalDetalhesEmpresa) return;
 
         // Phone input event listeners (replacing inline handlers)
-        const telefoneInput = modalDetalhesEmpresa.querySelector('#modal-telefone_responsavel');
         if (telefoneInput) {
             telefoneInput.addEventListener('input', function () {
                 if (window.formatarTelefone) window.formatarTelefone(this);
             });
             telefoneInput.addEventListener('blur', function () {
                 if (window.validarTelefoneCompleto) window.validarTelefoneCompleto(this);
+            });
+        }
+
+        // Initialize Flatpickr if missing (Dashboard compatibility)
+        if (typeof flatpickr !== 'undefined') {
+            const dateInputs = modalDetalhesEmpresa.querySelectorAll('.datepicker, [data-provider="flatpickr"]');
+            dateInputs.forEach(input => {
+                if (!input._flatpickr) {
+                    const fp = flatpickr(input, {
+                        dateFormat: "Y-m-d",
+                        altInput: true,
+                        altFormat: "d/m/Y",
+                        allowInput: true,
+                        locale: typeof flatpickr.l10ns !== 'undefined' ? flatpickr.l10ns.pt : 'default'
+                    });
+
+                    if (input.id === 'modal-inicio_efetivo') window.fpInicioEfetivo = fp;
+                    if (input.id === 'modal-data_inicio_producao') window.fpInicioProd = fp;
+                    if (input.id === 'modal-data_final_implantacao') window.fpFinalImpl = fp;
+                    if (input.id === 'modal-data_cadastro') window.fpDataCadastro = fp;
+                }
             });
         }
 
@@ -551,6 +571,29 @@
                     safeSet('#modal-totalpass', getData('totalpass', 'Não definido'), modal);
                     safeSet('#modal-modelo_catraca', getData('modelo-catraca'), modal);
                     safeSet('#modal-modelo_facial', getData('modelo-facial'), modal);
+
+                    // Fallback Dates
+                    setFpDate(window.fpInicioEfetivo, getData('inicio-efetivo-iso'), '#modal-inicio_efetivo');
+                    setFpDate(window.fpInicioProd, getData('inicio-producao'), '#modal-data_inicio_producao');
+                    setFpDate(window.fpFinalImpl, getData('final-implantacao'), '#modal-data_final_implantacao');
+
+                    // Data Cadastro (Fallback)
+                    const dataCadastroIso = getData('data-cadastro');
+                    if (dataCadastroIso) {
+                        const p = dataCadastroIso.split('T')[0].split('-');
+                        if (p.length === 3) {
+                            safeSet('#modal-data_cadastro', `${p[2]}/${p[1]}/${p[0]}`, modal);
+                        }
+                    } else {
+                        // Tentar inicio-implantacao como fallback se data-cadastro nulo
+                        const inicioImplIso = getData('inicio-implantacao');
+                        if (inicioImplIso) {
+                            const p = inicioImplIso.split('T')[0].split('-');
+                            if (p.length === 3) {
+                                safeSet('#modal-data_cadastro', `${p[2]}/${p[1]}/${p[0]}`, modal);
+                            }
+                        }
+                    }
 
                     if (window.formatarTelefone) {
                         formatarTelefone(modal.querySelector('#modal-telefone_responsavel'));
