@@ -341,6 +341,9 @@
                         if (input.id === 'modal-data_cadastro') window.fpDataCadastro = fp;
                     }
                 });
+
+                // Aguardar um momento para Flatpickr estar totalmente pronto
+                await new Promise(resolve => setTimeout(resolve, 50));
             }
 
             const normalizeToISO = (s) => {
@@ -357,13 +360,19 @@
                 const iso = normalizeToISO(s);
                 if (!iso) return;
 
-                // Tentar usar Flatpickr se disponível
-                if (fp && typeof fp.setDate === 'function') {
-                    fp.setDate(iso, true, 'Y-m-d');
-                } else if (inputSelector) {
-                    // Fallback: popular o input diretamente com formato brasileiro
+                // SEMPRE tentar buscar a instância do input primeiro
+                let fpInstance = fp;
+                if (inputSelector) {
                     const input = modal.querySelector(inputSelector);
-                    if (input) {
+                    if (input && input._flatpickr) {
+                        fpInstance = input._flatpickr;
+                    }
+
+                    // Tentar usar Flatpickr se disponível
+                    if (fpInstance && typeof fpInstance.setDate === 'function') {
+                        fpInstance.setDate(iso, true, 'Y-m-d');
+                    } else if (input) {
+                        // Fallback: popular o input diretamente com formato brasileiro
                         const parts = iso.split('-');
                         if (parts.length === 3) {
                             input.value = `${parts[2]}/${parts[1]}/${parts[0]}`;
