@@ -1,48 +1,69 @@
 {#
 Macros para Links e elementos do Dashboard
-Uso: {% from 'macros/dashboard.html' import empresa_link, status_badge, tipo_badge %}
+Uso: {% from 'macros/dashboard.html' import empresa_link, status_badge, tipo_badge, empresa_data_attrs %}
 #}
+
+{#
+Macro que retorna TODOS os data-attributes necessários para o modal de detalhes da empresa.
+Uso em qualquer elemento: <button {{ empresa_data_attrs(impl) }}>...</button>
+Esta é a FONTE ÚNICA de verdade para os atributos do modal.
+#}
+{% macro empresa_data_attrs(impl) %}
+data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa"
+data-id="{{ impl.id }}"
+data-nome="{{ impl.nome_empresa | default('') }}"
+data-responsavel="{{ impl.responsavel_cliente | default('') }}"
+data-cargo="{{ impl.cargo_responsavel | default('') }}"
+data-telefone="{{ impl.telefone_responsavel | default('') }}"
+data-email="{{ impl.email_responsavel | default('') }}"
+data-inicio-implantacao="{{ impl.data_criacao_iso | default('') }}"
+data-inicio-efetivo-iso="{{ impl.data_inicio_efetivo_iso | default('') }}"
+data-inicio-producao="{{ impl.data_inicio_producao_iso | default('') }}"
+data-final-implantacao="{{ impl.data_final_implantacao_iso | default('') }}"
+data-chave-oamd="{{ impl.chave_oamd | default('') }}"
+data-catraca="{{ impl.catraca | default('') }}"
+data-facial="{{ impl.facial | default('') }}"
+data-nivel-receita="{{ impl.nivel_receita | default('') }}"
+data-valor-atribuido="{{ impl.valor_atribuido | default('') }}"
+data-id-favorecido="{{ impl.id_favorecido | default('') }}"
+data-tela-apoio-link="{{ impl.tela_apoio_link | default('') }}"
+data-resp-estrategico-nome="{{ impl.resp_estrategico_nome | default('') }}"
+data-resp-onb-nome="{{ impl.resp_onb_nome | default('') }}"
+data-resp-estrategico-obs="{{ impl.resp_estrategico_obs | default('') }}"
+data-contatos="{{ impl.contatos | default('') }}"
+data-seguimento="{{ impl.seguimento | default('') }}"
+data-tipos-planos="{{ impl.tipos_planos | default('') }}"
+data-modalidades="{{ impl.modalidades | default('') }}"
+data-horarios-func="{{ impl.horarios_func | default('') }}"
+data-formas-pagamento="{{ impl.formas_pagamento | default('') }}"
+data-diaria="{{ impl.diaria | default('') }}"
+data-freepass="{{ impl.freepass | default('') }}"
+data-alunos-ativos="{{ impl.alunos_ativos | default(0) }}"
+data-sistema-anterior="{{ impl.sistema_anterior | default('') }}"
+data-importacao="{{ impl.importacao | default('') }}"
+data-recorrencia-usa="{{ impl.recorrencia_usa | default('') }}"
+data-boleto="{{ impl.boleto | default('') }}"
+data-nota-fiscal="{{ impl.nota_fiscal | default('') }}"
+data-wellhub="{{ impl.wellhub | default('') }}"
+data-totalpass="{{ impl.totalpass | default('') }}"
+data-modelo-catraca="{{ impl.modelo_catraca | default('') }}"
+data-modelo-facial="{{ impl.modelo_facial | default('') }}"
+data-cnpj="{{ impl.cnpj | default('') }}"
+data-informacao-infra="{{ impl.informacao_infra | default('') }}"
+data-data-cadastro="{{ impl.data_cadastro_iso | default('') }}"
+data-status-implantacao="{{ impl.status_implantacao | default('') }}"
+data-nivel-atendimento="{{ impl.nivel_atendimento | default('') }}"
+data-valor-monetario="{{ impl.valor_monetario | default('') }}"
+{% endmacro %}
 
 {#
 Macro para gerar link de empresa com todos os data-attributes necessários para o modal
 Uso: {{ empresa_link(impl) }}
+NOTA: Usa empresa_data_attrs internamente para evitar duplicação
 #}
 {% macro empresa_link(impl, show_name=true) %}
-<a href="#" class="btn-edit-empresa fw-bold text-decoration-none" data-bs-toggle="modal"
-    data-bs-target="#modalDetalhesEmpresa" data-id="{{ impl.id }}" data-nome="{{ impl.nome_empresa }}"
-    data-responsavel="{{ impl.responsavel_cliente | default('') }}"
-    data-cargo="{{ impl.cargo_responsavel | default('') }}"
-    data-telefone="{{ impl.telefone_responsavel | default('') }}"
-    data-email="{{ impl.email_responsavel | default('') }}"
-    data-inicio-implantacao="{{ impl.data_criacao_iso | default('') }}"
-    data-inicio-efetivo-iso="{{ impl.data_inicio_efetivo_iso | default('') }}"
-    data-inicio-producao="{{ impl.data_inicio_producao_iso | default('') }}"
-    data-final-implantacao="{{ impl.data_final_implantacao_iso | default('') }}"
-    data-chave-oamd="{{ impl.chave_oamd | default('') }}" data-catraca="{{ impl.catraca | default('') }}"
-    data-facial="{{ impl.facial | default('') }}" data-nivel-receita="{{ impl.nivel_receita | default('') }}"
-    data-valor-atribuido="{{ impl.valor_atribuido | default('') }}"
-    data-id-favorecido="{{ impl.id_favorecido | default('') }}"
-    data-tela-apoio-link="{{ impl.tela_apoio_link | default('') }}"
-    data-resp-estrategico-nome="{{ impl.resp_estrategico_nome | default('') }}"
-    data-resp-onb-nome="{{ impl.resp_onb_nome | default('') }}"
-    data-resp-estrategico-obs="{{ impl.resp_estrategico_obs | default('') }}"
-    data-contatos="{{ impl.contatos | default('') }}" data-seguimento="{{ impl.seguimento | default('') }}"
-    data-tipos-planos="{{ impl.tipos_planos | default('') }}" data-modalidades="{{ impl.modalidades | default('') }}"
-    data-horarios-func="{{ impl.horarios_func | default('') }}"
-    data-formas-pagamento="{{ impl.formas_pagamento | default('') }}" data-diaria="{{ impl.diaria | default('') }}"
-    data-freepass="{{ impl.freepass | default('') }}" data-alunos-ativos="{{ impl.alunos_ativos | default(0) }}"
-    data-sistema-anterior="{{ impl.sistema_anterior | default('') }}"
-    data-importacao="{{ impl.importacao | default('') }}"
-    data-recorrencia-usa="{{ impl.recorrencia_usa | default('') }}" data-boleto="{{ impl.boleto | default('') }}"
-    data-nota-fiscal="{{ impl.nota_fiscal | default('') }}" data-wellhub="{{ impl.wellhub | default('') }}"
-    data-totalpass="{{ impl.totalpass | default('') }}" data-modelo-catraca="{{ impl.modelo_catraca | default('') }}"
-    data-modelo-facial="{{ impl.modelo_facial | default('') }}" data-cnpj="{{ impl.cnpj | default('') }}"
-    data-informacao-infra="{{ impl.informacao_infra | default('') }}"
-    data-data-cadastro="{{ impl.data_cadastro_iso | default('') }}"
-    data-status-implantacao="{{ impl.status_implantacao | default('') }}"
-    data-nivel-atendimento="{{ impl.nivel_atendimento | default('') }}"
-    data-valor-monetario="{{ impl.valor_monetario | default('') }}">{% if show_name %}{{ impl.nome_empresa }}{% endif
-    %}</a>
+<a href="#" class="btn-edit-empresa fw-bold text-decoration-none" {{ empresa_data_attrs(impl) }}>{% if show_name %}{{
+    impl.nome_empresa }}{% endif %}</a>
 {% endmacro %}
 
 {#

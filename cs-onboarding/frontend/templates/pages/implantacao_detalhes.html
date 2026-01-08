@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from 'macros/dashboard.html' import empresa_data_attrs %}
 
 {% block title %}Detalhes da Implantação - {{ implantacao.nome_empresa }}{% endblock %}
 
@@ -90,21 +91,8 @@
                 </div>
                 <div class="list-group list-group-flush">
                     <!-- Removido: Adicionar Tarefa -->
-                    <button class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-3"
-                        data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa" data-id="{{ implantacao.id }}"
-                        data-id-favorecido="{{ implantacao.id_favorecido | default('') }}"
-                        data-cargo="{{ implantacao.cargo_responsavel | default('') }}"
-                        data-nivel-receita="{{ implantacao.nivel_receita | default('') }}"
-                        data-seguimento="{{ implantacao.seguimento | default('') }}"
-                        data-tipos-planos="{{ implantacao.tipos_planos | default('') }}"
-                        data-sistema-anterior="{{ implantacao.sistema_anterior | default('') }}"
-                        data-recorrencia-usa="{{ implantacao.recorrencia_usa | default('') }}"
-                        data-catraca="{{ implantacao.catraca | default('') }}"
-                        data-facial="{{ implantacao.facial | default('') }}"
-                        data-modelo-catraca="{{ implantacao.modelo_catraca | default('') }}"
-                        data-modelo-facial="{{ implantacao.modelo_facial | default('') }}"
-                        data-wellhub="{{ implantacao.wellhub | default('') }}"
-                        data-totalpass="{{ implantacao.totalpass | default('') }}">
+                    <button class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-3" {{
+                        empresa_data_attrs(implantacao) }}>
                         <div class="bg-light p-2 rounded text-info"><i class="bi bi-pencil-square"></i></div>
                         <div>
                             <h6 class="mb-0 fw-bold">Editar Detalhes</h6>
@@ -996,20 +984,7 @@ Sim - Academia XYZ
     </div>
     <div class="offcanvas-body">
         <div class="d-grid gap-2">
-            <button class="btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalDetalhesEmpresa"
-                data-id="{{ implantacao.id }}" data-id-favorecido="{{ implantacao.id_favorecido | default('') }}"
-                data-cargo="{{ implantacao.cargo_responsavel | default('') }}"
-                data-nivel-receita="{{ implantacao.nivel_receita | default('') }}"
-                data-seguimento="{{ implantacao.seguimento | default('') }}"
-                data-tipos-planos="{{ implantacao.tipos_planos | default('') }}"
-                data-sistema-anterior="{{ implantacao.sistema_anterior | default('') }}"
-                data-recorrencia-usa="{{ implantacao.recorrencia_usa | default('') }}"
-                data-catraca="{{ implantacao.catraca | default('') }}"
-                data-facial="{{ implantacao.facial | default('') }}"
-                data-modelo-catraca="{{ implantacao.modelo_catraca | default('') }}"
-                data-modelo-facial="{{ implantacao.modelo_facial | default('') }}"
-                data-wellhub="{{ implantacao.wellhub | default('') }}"
-                data-totalpass="{{ implantacao.totalpass | default('') }}">
+            <button class="btn btn-outline-dark" {{ empresa_data_attrs(implantacao) }}>
                 Editar Detalhes
             </button>
             <!-- Mais botões mobile aqui se necessário -->
