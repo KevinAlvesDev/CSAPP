@@ -1128,7 +1128,7 @@ class ChecklistRenderer {
         }
 
         const html = comentarios.map(c => {
-            const dataFormatada = c.data_criacao ? new Date(c.data_criacao).toLocaleString('pt-BR') : '';
+            const dataFormatada = c.data_criacao || '';
             const visibilidadeClass = c.visibilidade === 'interno' ? 'bg-secondary' : 'bg-info text-dark';
             const isExterno = c.visibilidade === 'externo';
             const temEmailResponsavel = emailResponsavel && emailResponsavel.trim() !== '';

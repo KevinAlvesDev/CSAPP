@@ -301,7 +301,13 @@
      */
     function formatarData(dataStr) {
         if (!dataStr) return '';
+        // Se já estiver no formato brasileiro (dd/mm/yyyy às HH:MM), retornar como está
+        var brFormatRegex = /^\d{2}\/\d{2}\/\d{4}(\s+às\s+\d{2}:\d{2})?$/;
+        if (brFormatRegex.test(String(dataStr).trim())) {
+            return String(dataStr);
+        }
         const data = new Date(dataStr);
+        if (isNaN(data.getTime())) return String(dataStr);
         return data.toLocaleString('pt-BR', {
             day: '2-digit',
             month: '2-digit',

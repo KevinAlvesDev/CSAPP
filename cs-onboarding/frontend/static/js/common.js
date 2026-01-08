@@ -336,6 +336,13 @@
 
     window.formatDate = function (dateStr, includeTime) {
         if (!dateStr) return '';
+
+        // Se já estiver no formato brasileiro (dd/mm/yyyy às HH:MM), retornar como está
+        var brFormatRegex = /^\d{2}\/\d{2}\/\d{4}(\s+às\s+\d{2}:\d{2})?$/;
+        if (brFormatRegex.test(String(dateStr).trim())) {
+            return String(dateStr);
+        }
+
         var d = new Date(dateStr);
         if (isNaN(d.getTime())) return String(dateStr);
         var day = String(d.getDate()).padStart(2, '0');

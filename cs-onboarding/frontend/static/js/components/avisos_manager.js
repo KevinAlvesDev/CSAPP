@@ -284,7 +284,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function formatDate(dateString) {
         if (!dateString) return '';
+        // Se já estiver no formato brasileiro (dd/mm/yyyy às HH:MM), retornar como está
+        var brFormatRegex = /^\d{2}\/\d{2}\/\d{4}(\s+às\s+\d{2}:\d{2})?$/;
+        if (brFormatRegex.test(String(dateString).trim())) {
+            return String(dateString);
+        }
         const date = new Date(dateString);
+        if (isNaN(date.getTime())) return String(dateString);
         return date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     }
 
