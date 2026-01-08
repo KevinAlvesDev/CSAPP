@@ -363,26 +363,19 @@
                 const iso = normalizeToISO(s);
                 if (!iso || iso.length < 10) return;
 
-                // SEMPRE tentar buscar a instância do input primeiro
-                let fpInstance = fp;
                 if (inputSelector) {
                     const input = modal.querySelector(inputSelector);
-                    if (input && input._flatpickr) {
-                        fpInstance = input._flatpickr;
-                    }
-
-                    // Tentar usar Flatpickr se disponível
-                    if (fpInstance && typeof fpInstance.setDate === 'function') {
-                        try {
-                            fpInstance.setDate(iso, true, 'Y-m-d');
-                        } catch (e) {
-                            console.warn('[setFpDate] Erro ao setar data no Flatpickr:', iso, e);
-                        }
-                    } else if (input) {
-                        // Fallback: popular o input diretamente com formato brasileiro
+                    if (input) {
+                        // Popular diretamente com formato brasileiro DD/MM/YYYY
                         const parts = iso.split('-');
                         if (parts.length === 3) {
-                            input.value = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                            const formattedDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                            input.value = formattedDate;
+
+                            // Se tem altInput (Flatpickr), atualizar também
+                            if (input._flatpickr && input._flatpickr.altInput) {
+                                input._flatpickr.altInput.value = formattedDate;
+                            }
                         }
                     }
                 }
