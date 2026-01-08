@@ -70,7 +70,7 @@
                         <div class="col-md-3 mb-3">
                             <label for="modal-data_cadastro" class="form-label">Data Cadastro</label>
                             <div class="input-group">
-                                <input type="text" class="form-control date-mask custom-datepicker no-datepicker"
+                                <input type="text" class="form-control date-mask custom-datepicker"
                                     id="modal-data_cadastro" name="data_cadastro" placeholder="DD/MM/AAAA"
                                     value="{% if implantacao and implantacao.data_cadastro is defined and implantacao.data_cadastro %}{{ implantacao.data_cadastro.strftime('%Y-%m-%d') }}{% endif %}">
                                 <button class="btn btn-outline-secondary" type="button" id="btn-cal-data_cadastro"><i
@@ -82,7 +82,7 @@
                             <label for="modal-inicio_efetivo" class="form-label" data-bs-toggle="tooltip"
                                 title="Data de início da implantação">Início Implantação</label>
                             <div class="input-group">
-                                <input type="text" class="form-control date-mask custom-datepicker no-datepicker"
+                                <input type="text" class="form-control date-mask custom-datepicker"
                                     id="modal-inicio_efetivo" name="data_inicio_efetivo" placeholder="__/__/____"
                                     value="{{ implantacao.data_inicio_efetivo or '' }}">
                                 <button class="btn btn-outline-secondary" type="button" id="btn-cal-inicio_efetivo"
@@ -94,7 +94,7 @@
                             <label for="modal-data_inicio_producao" class="form-label" data-bs-toggle="tooltip"
                                 title="Data de início de produção">Início Produção</label>
                             <div class="input-group">
-                                <input type="text" class="form-control date-mask custom-datepicker no-datepicker"
+                                <input type="text" class="form-control date-mask custom-datepicker"
                                     id="modal-data_inicio_producao" name="data_inicio_producao" placeholder="__/__/____"
                                     value="{{ implantacao.data_inicio_producao or '' }}">
                                 <button class="btn btn-outline-secondary" type="button"
@@ -106,7 +106,7 @@
                             <label for="modal-data_final_implantacao" class="form-label" data-bs-toggle="tooltip"
                                 title="Data final da implantação">Fim da Implantação</label>
                             <div class="input-group">
-                                <input type="text" class="form-control date-mask custom-datepicker no-datepicker"
+                                <input type="text" class="form-control date-mask custom-datepicker"
                                     id="modal-data_final_implantacao" name="data_final_implantacao"
                                     placeholder="__/__/____" value="{{ implantacao.data_final_implantacao or '' }}">
                                 <button class="btn btn-outline-secondary" type="button"
