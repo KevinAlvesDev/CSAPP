@@ -357,8 +357,11 @@
             };
 
             const setFpDate = (fp, s, inputSelector) => {
+                // Validação robusta
+                if (!s || s === 'null' || s === 'undefined' || s === 'None') return;
+
                 const iso = normalizeToISO(s);
-                if (!iso) return;
+                if (!iso || iso.length < 10) return;
 
                 // SEMPRE tentar buscar a instância do input primeiro
                 let fpInstance = fp;
@@ -370,7 +373,11 @@
 
                     // Tentar usar Flatpickr se disponível
                     if (fpInstance && typeof fpInstance.setDate === 'function') {
-                        fpInstance.setDate(iso, true, 'Y-m-d');
+                        try {
+                            fpInstance.setDate(iso, true, 'Y-m-d');
+                        } catch (e) {
+                            console.warn('[setFpDate] Erro ao setar data no Flatpickr:', iso, e);
+                        }
                     } else if (input) {
                         // Fallback: popular o input diretamente com formato brasileiro
                         const parts = iso.split('-');
