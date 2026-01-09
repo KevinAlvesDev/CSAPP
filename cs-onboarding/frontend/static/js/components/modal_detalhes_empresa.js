@@ -698,9 +698,9 @@
                 const dataInicioProd = modalForm.querySelector('#modal-data_inicio_producao') || modalForm.querySelector('[name="data_inicio_producao"]');
                 const dataFinalImpl = modalForm.querySelector('#modal-data_final_implantacao') || modalForm.querySelector('[name="data_final_implantacao"]');
 
-                if (inicioEfetivo && inicioEfetivo.value) inicioEfetivo.value = toIso(inicioEfetivo.value);
-                if (dataInicioProd && dataInicioProd.value) dataInicioProd.value = toIso(dataInicioProd.value);
-                if (dataFinalImpl && dataFinalImpl.value) dataFinalImpl.value = toIso(dataFinalImpl.value);
+                if (inicioEfetivo && inicioEfetivo.value && !inicioEfetivo._flatpickr) inicioEfetivo.value = toIso(inicioEfetivo.value);
+                if (dataInicioProd && dataInicioProd.value && !dataInicioProd._flatpickr) dataInicioProd.value = toIso(dataInicioProd.value);
+                if (dataFinalImpl && dataFinalImpl.value && !dataFinalImpl._flatpickr) dataFinalImpl.value = toIso(dataFinalImpl.value);
             }
             console.log('🔧 Criando window.__submitModalFormDetalhes...');
             // CRITICAL FIX: Make this accessible to click handler outside this scope
