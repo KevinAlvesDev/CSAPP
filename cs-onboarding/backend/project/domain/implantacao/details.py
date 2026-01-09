@@ -45,9 +45,15 @@ def _format_implantacao_dates(implantacao):
     implantacao['data_inicio_previsto_fmt_d'] = format_date_br(implantacao.get('data_inicio_previsto'), False)
     
     # Formatação de novos campos
+    # CRITICAL FIX: Sempre definir data_cadastro_iso, usando data_criacao como fallback
+    # Isso garante que o modal tenha sempre uma data para exibir
     if implantacao.get('data_cadastro'):
         implantacao['data_cadastro_fmt_d'] = format_date_br(implantacao.get('data_cadastro'), False)
         implantacao['data_cadastro_iso'] = format_date_iso_for_json(implantacao.get('data_cadastro'), only_date=True)
+    else:
+        # Fallback: usar data_criacao se data_cadastro estiver vazio
+        implantacao['data_cadastro_fmt_d'] = format_date_br(implantacao.get('data_criacao'), False)
+        implantacao['data_cadastro_iso'] = format_date_iso_for_json(implantacao.get('data_criacao'), only_date=True)
         
     return implantacao
 

@@ -744,8 +744,6 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
 
 
 {% block scripts_extra %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const tabSelector = '#myTab .nav-link';
@@ -1173,8 +1171,4 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
         }
     });
 </script>
-
-<!-- Modal Detalhes da Empresa -->
-{% include 'modals/_detalhes_empresa.html' %}
-
 {% endblock %}

@@ -257,24 +257,6 @@
             });
         }
 
-        // Initialize Flatpickr if missing (Dashboard compatibility)
-        if (typeof flatpickr !== 'undefined') {
-            const dateInputs = modalDetalhesEmpresa.querySelectorAll('.datepicker, .custom-datepicker, [data-provider="flatpickr"]');
-            dateInputs.forEach(input => {
-                if (!input._flatpickr) {
-                    const fp = flatpickr(input, {
-                        dateFormat: "d/m/Y",
-                        allowInput: true
-                    });
-
-                    if (input.id === 'modal-inicio_efetivo') window.fpInicioEfetivo = fp;
-                    if (input.id === 'modal-data_inicio_producao') window.fpInicioProd = fp;
-                    if (input.id === 'modal-data_final_implantacao') window.fpFinalImpl = fp;
-                    if (input.id === 'modal-data_cadastro') window.fpDataCadastro = fp;
-                }
-            });
-        }
-
         // Modal Show Event - REFACTORED FOR DEFINITIVE FIX
         modalDetalhesEmpresa.addEventListener('show.bs.modal', async function (event) {
             const safeSet = function (selOrEl, value, root) {
@@ -319,28 +301,6 @@
             // Set implantacao ID immediately
             safeSet('#modal-implantacao_id', implId, modal);
 
-            // CRITICAL: Ensure Flatpickr is initialized safely
-            if (typeof flatpickr !== 'undefined') {
-                const dateInputs = modal.querySelectorAll('.datepicker, .custom-datepicker, [data-provider="flatpickr"]');
-                dateInputs.forEach(input => {
-                    // Check if already initialized (property or class)
-                    if (!input._flatpickr && !input.classList.contains('flatpickr-input')) {
-                        const fp = flatpickr(input, {
-                            dateFormat: "d/m/Y",
-                            allowInput: true
-                        });
-
-                        if (input.id === 'modal-inicio_efetivo') window.fpInicioEfetivo = fp;
-                        if (input.id === 'modal-data_inicio_producao') window.fpInicioProd = fp;
-                        if (input.id === 'modal-data_final_implantacao') window.fpFinalImpl = fp;
-                        if (input.id === 'modal-data_cadastro') window.fpDataCadastro = fp;
-                    }
-                });
-
-                // Small delay to ensure readiness
-                await new Promise(resolve => setTimeout(resolve, 50));
-            }
-
             const normalizeToISO = (s) => {
                 if (!s) return '';
                 const t = String(s).trim();
@@ -352,38 +312,26 @@
             };
 
             const setFpDate = (fp, s, inputSelector) => {
-                if (!s || s === 'null' || s === 'undefined' || s === 'None') return;
                 const iso = normalizeToISO(s);
-                if (!iso || iso.length < 10) return;
+                if (!iso) return;
 
-                const input = modal.querySelector(inputSelector);
-                if (!input) return;
-
-                if (input._flatpickr) {
-                    try {
-                        // Tentar atualizar instância Flatpickr
-                        input._flatpickr.setDate(iso, true, 'Y-m-d');
-                    } catch (e) {
-                        console.warn('[setFpDate] Error w/ setDate:', e);
-                    }
-
-                    // CRITICAL FIX: Se NÃO estiver usando altInput (Dashboard), forçar valor visual
-                    // Isso garante que a data apareça mesmo se o setDate não atualizar o input visual corretamente
-                    if (!input._flatpickr.config.altInput) {
-                        const p = iso.split('-');
-                        if (p.length === 3) {
-                            input.value = `${p[2]}/${p[1]}/${p[0]}`;
+                // Tentar usar Flatpickr se disponível
+                if (fp && typeof fp.setDate === 'function') {
+                    fp.setDate(iso, true, 'Y-m-d');
+                } else if (inputSelector) {
+                    // Fallback: popular o input diretamente com formato brasileiro
+                    const input = modal.querySelector(inputSelector);
+                    if (input) {
+                        const parts = iso.split('-');
+                        if (parts.length === 3) {
+                            input.value = `${parts[2]}/${parts[1]}/${parts[0]}`;
                         }
                     }
-                } else {
-                    // Sem Flatpickr: texto simples
-                    const p = iso.split('-');
-                    if (p.length === 3) input.value = `${p[2]}/${p[1]}/${p[0]}`;
                 }
             };
 
-            const onDetails = window.location.pathname.includes('/implantacao/');
-            safeSet('#modal-redirect_to', onDetails ? 'detalhes' : 'dashboard', modal);
+            const isDetailsPage = document.getElementById('checklist-area-treinamento');
+            safeSet('#modal-redirect_to', isDetailsPage ? 'detalhes' : 'dashboard', modal);
 
             // CRITICAL FIX: Always fetch fresh data from server first
             if (implId) {
@@ -492,14 +440,18 @@
                     safeSet('#modal-resp_estrategico_obs', impl.resp_estrategico_obs || '', modal);
 
                     // Set dates
-                    setFpDate(window.fpInicioEfetivo, impl.data_inicio_efetivo_iso, '#modal-inicio_efetivo');
-                    setFpDate(window.fpInicioProd, impl.data_inicio_producao_iso, '#modal-data_inicio_producao');
-                    setFpDate(window.fpFinalImpl, impl.data_final_implantacao_iso, '#modal-data_final_implantacao');
+                    setFpDate(window.fpInicioEfetivo, impl.data_inicio_efetivo, '#modal-inicio_efetivo');
+                    setFpDate(window.fpInicioProd, impl.data_inicio_producao, '#modal-data_inicio_producao');
+                    setFpDate(window.fpFinalImpl, impl.data_final_implantacao, '#modal-data_final_implantacao');
 
-                    // Data Cadastro (usar data_cadastro_iso ou fallback para data_criacao_iso)
-                    const dataCadastroValue = impl.data_cadastro_iso || impl.data_criacao_iso;
-                    console.log('✅ [DEBUG] Data Cadastro:', dataCadastroValue);
-                    setFpDate(null, dataCadastroValue, '#modal-data_cadastro');
+                    // Data Cadastro
+                    if (impl.data_criacao) {
+                        const iso = impl.data_criacao;
+                        const p = iso.split('T')[0].split('-');
+                        if (p.length === 3) {
+                            safeSet('#modal-data_cadastro', p[2].padStart(2, '0') + '/' + p[1].padStart(2, '0') + '/' + p[0], modal);
+                        }
+                    }
 
                     // CRITICAL: Initialize TomSelect ONLY AFTER data is loaded
                     initializeMultiTagInput('#modal-modalidades', impl.modalidades || '');
@@ -599,29 +551,6 @@
                     safeSet('#modal-totalpass', getData('totalpass', 'Não definido'), modal);
                     safeSet('#modal-modelo_catraca', getData('modelo-catraca'), modal);
                     safeSet('#modal-modelo_facial', getData('modelo-facial'), modal);
-
-                    // Fallback Dates
-                    setFpDate(window.fpInicioEfetivo, getData('inicio-efetivo-iso'), '#modal-inicio_efetivo');
-                    setFpDate(window.fpInicioProd, getData('inicio-producao'), '#modal-data_inicio_producao');
-                    setFpDate(window.fpFinalImpl, getData('final-implantacao'), '#modal-data_final_implantacao');
-
-                    // Data Cadastro (Fallback)
-                    const dataCadastroIso = getData('data-cadastro');
-                    if (dataCadastroIso) {
-                        const p = dataCadastroIso.split('T')[0].split('-');
-                        if (p.length === 3) {
-                            safeSet('#modal-data_cadastro', `${p[2]}/${p[1]}/${p[0]}`, modal);
-                        }
-                    } else {
-                        // Tentar inicio-implantacao como fallback se data-cadastro nulo
-                        const inicioImplIso = getData('inicio-implantacao');
-                        if (inicioImplIso) {
-                            const p = inicioImplIso.split('T')[0].split('-');
-                            if (p.length === 3) {
-                                safeSet('#modal-data_cadastro', `${p[2]}/${p[1]}/${p[0]}`, modal);
-                            }
-                        }
-                    }
 
                     if (window.formatarTelefone) {
                         formatarTelefone(modal.querySelector('#modal-telefone_responsavel'));

@@ -146,7 +146,6 @@ def get_dashboard_data(
         impl['data_inicio_efetivo_iso'] = format_date_iso_for_json(impl.get('data_inicio_efetivo'), only_date=True)
         impl['data_inicio_producao_iso'] = format_date_iso_for_json(impl.get('data_inicio_producao'), only_date=True)
         impl['data_final_implantacao_iso'] = format_date_iso_for_json(impl.get('data_final_implantacao'), only_date=True)
-        impl['data_cadastro_iso'] = format_date_iso_for_json(impl.get('data_cadastro'), only_date=True)
         
         # Progresso (já calculado no SQL!)
         impl['progresso'] = impl.get('progresso_percent', 0)
