@@ -1912,6 +1912,7 @@ class ChecklistRenderer {
         if (y < headerHeight * 0.4) {
             this.dropPosition = 'before';
             // Posicionar indicador no topo do item
+            this.dropIndicator.className = 'drop-indicator type-before';
             this.dropIndicator.style.top = `${relativeTop - 2}px`;
             this.dropIndicator.style.left = `${relativeLeft}px`;
             this.dropIndicator.style.width = `${rect.width}px`;
@@ -1921,6 +1922,7 @@ class ChecklistRenderer {
         } else if (y > headerHeight * 0.6) {
             this.dropPosition = 'after';
             // Posicionar indicador na base do item
+            this.dropIndicator.className = 'drop-indicator type-after';
             this.dropIndicator.style.top = `${relativeTop + rect.height - 2}px`;
             this.dropIndicator.style.left = `${relativeLeft}px`;
             this.dropIndicator.style.width = `${rect.width}px`;

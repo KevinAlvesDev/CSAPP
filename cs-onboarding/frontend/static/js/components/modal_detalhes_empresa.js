@@ -446,8 +446,11 @@
 
                     // Data Cadastro
                     if (impl.data_criacao) {
-                        const iso = impl.data_criacao;
-                        const p = iso.split('T')[0].split('-');
+                        // Lidar com formatos: "2026-01-08T23:05:25" ou "2026-01-08 23:05:25"
+                        const iso = String(impl.data_criacao).trim();
+                        // Pegar apenas a parte da data (antes de T ou espaço)
+                        const datePart = iso.split('T')[0].split(' ')[0];
+                        const p = datePart.split('-');
                         if (p.length === 3) {
                             safeSet('#modal-data_cadastro', p[2].padStart(2, '0') + '/' + p[1].padStart(2, '0') + '/' + p[0], modal);
                         }
@@ -1172,9 +1175,10 @@
                 return window.flatpickr(el, makeConfig());
             };
 
-            window.fpInicioEfetivo = ensureInstance('#modal-inicio_efetivo');
-            window.fpInicioProd = ensureInstance('#modal-data_inicio_producao');
-            window.fpFinalImpl = ensureInstance('#modal-data_final_implantacao');
+            // CAMPOS DE DATA SOMENTE LEITURA - NÃO INICIALIZAR FLATPICKR
+            // window.fpInicioEfetivo = ensureInstance('#modal-inicio_efetivo');
+            // window.fpInicioProd = ensureInstance('#modal-data_inicio_producao');
+            // window.fpFinalImpl = ensureInstance('#modal-data_final_implantacao');
         })();
 
         // Controlar botão "Abrir Tela de Apoio"

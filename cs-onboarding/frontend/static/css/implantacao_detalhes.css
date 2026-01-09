@@ -747,8 +747,12 @@ body.dark-mode .checklist-item.dragging {
     background: var(--table-header-bg);
 }
 
+/* High Visibility Drag Styles */
+
 body.dark-mode .checklist-item.drag-over-inside {
-    background: rgba(13, 110, 253, 0.2) !important;
+    background: rgba(13, 110, 253, 0.25) !important;
+    outline: 2px dashed #0d6efd;
+    outline-offset: -2px;
 }
 
 /* Indicador Visual de Drop (Linha Azul) */
@@ -759,7 +763,7 @@ body.dark-mode .checklist-item.drag-over-inside {
     border-radius: 2px;
     pointer-events: none;
     z-index: 9999;
-    box-shadow: 0 0 8px rgba(13, 110, 253, 0.6);
+    box-shadow: 0 0 0 1px white, 0 0 10px rgba(13, 110, 253, 0.8);
     transition: top 0.05s ease, left 0.05s ease, width 0.05s ease;
     display: none;
 }
@@ -767,10 +771,11 @@ body.dark-mode .checklist-item.drag-over-inside {
 .drop-indicator::before {
     content: '';
     position: absolute;
-    left: -4px;
-    top: -3px;
-    width: 10px;
-    height: 10px;
+    left: -6px;
+    top: -4px;
+    width: 12px;
+    height: 12px;
     background-color: #0d6efd;
     border-radius: 50%;
+    box-shadow: 0 0 0 2px white;
 }

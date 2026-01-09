@@ -1118,89 +1118,10 @@
           }
         });
 
-        const inicioEfetivoInput = document.getElementById('modal-inicio_efetivo');
-        const btnCalInicioEfetivo = document.getElementById('btn-cal-inicio_efetivo');
-        if (inicioEfetivoInput) {
-          if (inicioEfetivoInput._flatpickr) {
-            inicioEfetivoInput._flatpickr.destroy();
-          }
-          const valorInicial = inicioEfetivoInput.value || '';
-          const fp1 = window.flatpickr(inicioEfetivoInput, Object.assign({}, configWithMask, {
-            defaultDate: valorInicial || null,
-            onChange: function (selectedDates, dateStr, instance) {
-              if (selectedDates.length > 0) {
-                inicioEfetivoInput.value = dateStr;
-              } else {
-                inicioEfetivoInput.value = '';
-              }
-            }
-          }));
-          if (valorInicial) {
-            fp1.setDate(valorInicial, false);
-          }
-          if (btnCalInicioEfetivo) {
-            btnCalInicioEfetivo.addEventListener('click', function (e) {
-              e.preventDefault();
-              fp1.open();
-            });
-          }
-        }
-
-        const inicioProducaoInput = document.getElementById('modal-data_inicio_producao');
-        const btnCalInicioProducao = document.getElementById('btn-cal-data_inicio_producao');
-        if (inicioProducaoInput) {
-          if (inicioProducaoInput._flatpickr) {
-            inicioProducaoInput._flatpickr.destroy();
-          }
-          const valorInicial = inicioProducaoInput.value || '';
-          const fp2 = window.flatpickr(inicioProducaoInput, Object.assign({}, configWithMask, {
-            defaultDate: valorInicial || null,
-            onChange: function (selectedDates, dateStr, instance) {
-              if (selectedDates.length > 0) {
-                inicioProducaoInput.value = dateStr;
-              } else {
-                inicioProducaoInput.value = '';
-              }
-            }
-          }));
-          if (valorInicial) {
-            fp2.setDate(valorInicial, false);
-          }
-          if (btnCalInicioProducao) {
-            btnCalInicioProducao.addEventListener('click', function (e) {
-              e.preventDefault();
-              fp2.open();
-            });
-          }
-        }
-
-        const finalImplantacaoInput = document.getElementById('modal-data_final_implantacao');
-        const btnCalFinalImplantacao = document.getElementById('btn-cal-data_final_implantacao');
-        if (finalImplantacaoInput) {
-          if (finalImplantacaoInput._flatpickr) {
-            finalImplantacaoInput._flatpickr.destroy();
-          }
-          const valorInicial = finalImplantacaoInput.value || '';
-          const fp3 = window.flatpickr(finalImplantacaoInput, Object.assign({}, configWithMask, {
-            defaultDate: valorInicial || null,
-            onChange: function (selectedDates, dateStr, instance) {
-              if (selectedDates.length > 0) {
-                finalImplantacaoInput.value = dateStr;
-              } else {
-                finalImplantacaoInput.value = '';
-              }
-            }
-          }));
-          if (valorInicial) {
-            fp3.setDate(valorInicial, false);
-          }
-          if (btnCalFinalImplantacao) {
-            btnCalFinalImplantacao.addEventListener('click', function (e) {
-              e.preventDefault();
-              fp3.open();
-            });
-          }
-        }
+        // CAMPOS DE DATA SOMENTE LEITURA - NÃO INICIALIZAR FLATPICKR
+        // Os campos modal-inicio_efetivo, modal-data_inicio_producao, modal-data_final_implantacao
+        // são somente leitura e não devem ter datepicker ativo
+        // (Removida inicialização do Flatpickr para esses campos)
 
         // Duplicate dataCadastro initialization removed
       });
@@ -1367,17 +1288,19 @@
             updateDate('modal-data_final_implantacao', m.data_final_implantacao);
             updateDate('modal-data_cadastro', m.data_cadastro);
 
-            const updateText = (inputId, val) => {
+            const updateText = (inputId, val, allowEdit = false) => {
               const input = document.getElementById(inputId);
               if (input && val) {
                 input.value = val;
                 input.classList.add('bg-success', 'bg-opacity-10');
                 setTimeout(() => input.classList.remove('bg-success', 'bg-opacity-10'), 2000);
 
-                // Make read-only
-                input.readOnly = true;
-                input.classList.add('bg-light');
-                input.style.cursor = 'not-allowed';
+                // Só torna readonly se NOT allowEdit
+                if (!allowEdit) {
+                  input.readOnly = true;
+                  input.classList.add('bg-light');
+                  input.style.cursor = 'not-allowed';
+                }
               }
             };
 
@@ -1449,13 +1372,13 @@
             // Responsável Cliente (Nome)
             const nomeResp = empresa.nomedono || empresa.responsavelnome || '';
             if (nomeResp) {
-              updateText('modal-responsavel_cliente', nomeResp);
+              updateText('modal-responsavel_cliente', nomeResp, true);
             }
 
             // E-mail Responsável
             const emailResp = empresa.email || empresa.responsavelemail || '';
             if (emailResp) {
-              updateText('modal-email_responsavel', emailResp);
+              updateText('modal-email_responsavel', emailResp, true);
             }
 
             // Telefone Responsável - pode vir com nome concatenado (ex: "NOME: TELEFONE;")
@@ -1471,7 +1394,7 @@
 
                 // Preencher o campo de Nome com o valor extraído
                 if (nomeDoTelefone) {
-                  updateText('modal-responsavel_cliente', nomeDoTelefone);
+                  updateText('modal-responsavel_cliente', nomeDoTelefone, true);
                 }
 
                 // Usar apenas o número para o campo de telefone
@@ -1480,7 +1403,7 @@
             }
 
             if (telResp) {
-              updateText('modal-telefone_responsavel', telResp.replace(/;+$/, '').trim());
+              updateText('modal-telefone_responsavel', telResp.replace(/;+$/, '').trim(), true);
             }
 
             const now = new Date().getTime();
