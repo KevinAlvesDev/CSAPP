@@ -314,7 +314,7 @@
 .checklist-grid,
 .checklist-item-grid {
     display: grid;
-    grid-template-columns: 24px 24px minmax(0, 1fr) 1fr 100px 70px 120px 100px 100px 110px 110px 28px 28px;
+    grid-template-columns: 24px 24px minmax(0, 1fr) 1fr 100px 70px 120px 100px 100px 110px 110px 28px 64px;
     column-gap: 2px;
     align-items: center;
 }
@@ -693,4 +693,84 @@ body.dark-mode .comentario-tipo-tag.noshow {
 
 body.dark-mode .comentario-tipo-tag:hover:not(.active) {
     background: var(--table-hover-bg);
+}
+
+/* ===========================================
+   DRAG AND DROP STYLES
+   =========================================== */
+
+.checklist-item[draggable="true"] {
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.checklist-item.dragging {
+    opacity: 0.5;
+    transform: scale(0.98);
+    background: #f8fafc;
+}
+
+
+/* Linha guia removida via classe, será controlada via JS (elemento .drop-indicator) */
+.checklist-item.drag-over-top,
+.checklist-item.drag-over-bottom {
+    box-shadow: none !important;
+}
+
+/* Apenas highlight para aninhamento */
+.checklist-item.drag-over-inside {
+    background: rgba(13, 110, 253, 0.1) !important;
+    outline: 2px dashed #0d6efd;
+    outline-offset: -2px;
+}
+
+.drag-handle {
+    cursor: grab;
+    opacity: 0.5;
+    transition: opacity 0.2s ease;
+}
+
+.drag-handle:hover {
+    opacity: 1;
+    cursor: grab;
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+.btn-move-item:hover i {
+    color: #0d6efd !important;
+}
+
+/* Dark mode drag-and-drop */
+body.dark-mode .checklist-item.dragging {
+    background: var(--table-header-bg);
+}
+
+body.dark-mode .checklist-item.drag-over-inside {
+    background: rgba(13, 110, 253, 0.2) !important;
+}
+
+/* Indicador Visual de Drop (Linha Azul) */
+.drop-indicator {
+    position: absolute;
+    height: 4px;
+    background-color: #0d6efd;
+    border-radius: 2px;
+    pointer-events: none;
+    z-index: 9999;
+    box-shadow: 0 0 8px rgba(13, 110, 253, 0.6);
+    transition: top 0.05s ease, left 0.05s ease, width 0.05s ease;
+    display: none;
+}
+
+.drop-indicator::before {
+    content: '';
+    position: absolute;
+    left: -4px;
+    top: -3px;
+    width: 10px;
+    height: 10px;
+    background-color: #0d6efd;
+    border-radius: 50%;
 }

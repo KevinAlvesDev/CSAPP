@@ -26,7 +26,8 @@ from ..domain.checklist_service import (
     atualizar_prazo_item,
     obter_historico_responsavel,
     obter_historico_prazos,
-    obter_progresso_global_service
+    obter_progresso_global_service,
+    move_item,
 )
 from ..security.api_security import validate_api_origin
 
@@ -550,3 +551,44 @@ def get_prazos_history(item_id):
     except Exception as e:
         api_logger.error(f"Erro ao buscar histórico de prazos do item {item_id}: {e}", exc_info=True)
         return jsonify({'ok': False, 'error': 'Erro interno ao buscar histórico de prazos'}), 500
+
+
+@checklist_bp.route('/item/<int:item_id>/move', methods=['PATCH', 'POST'])
+@login_required
+@validate_api_origin
+@limiter.limit("100 per minute", key_func=lambda: g.user_email or get_remote_address())
+def move_item_endpoint(item_id):
+    """
+    Move um item do checklist para uma nova posição.
+    
+    Body (JSON):
+        {
+            "new_parent_id": 123,   // ID do novo pai (null para raiz, -1 para manter atual)
+            "new_order": 2          // Nova posição (0-based, opcional)
+        }
+    """
+    try:
+        item_id = validate_integer(item_id, min_value=1)
+    except ValidationError as e:
+        return jsonify({'ok': False, 'error': f'ID inválido: {str(e)}'}), 400
+    
+    if not request.is_json:
+        return jsonify({'ok': False, 'error': 'Content-Type deve ser application/json'}), 400
+    
+    data = request.get_json() or {}
+    
+    # new_parent_id: null = raiz, -1 = manter atual, número = novo pai
+    new_parent_id = data.get('new_parent_id', -1)
+    new_order = data.get('new_order')
+    
+    usuario_email = g.user_email if hasattr(g, 'user_email') else None
+    
+    try:
+        result = move_item(item_id, new_parent_id=new_parent_id, new_order=new_order, usuario_email=usuario_email)
+        return jsonify(result)
+    except ValueError as e:
+        api_logger.warning(f"Erro de validação ao mover item {item_id}: {e}")
+        return jsonify({'ok': False, 'error': str(e)}), 400
+    except Exception as e:
+        api_logger.error(f"Erro ao mover item {item_id}: {e}", exc_info=True)
+        return jsonify({'ok': False, 'error': 'Erro interno ao mover item'}), 500

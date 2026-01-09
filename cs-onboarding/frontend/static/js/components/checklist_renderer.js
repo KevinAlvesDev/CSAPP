@@ -71,6 +71,7 @@ class ChecklistRenderer {
         this.render();
         this.attachEventListeners();
         this.setupImageUploadHandlers();
+        this.initDragAndDrop();
 
         // Render com todas as tarefas minimizadas por padrão (sem expandir nós inicialmente)
 
@@ -146,7 +147,7 @@ class ChecklistRenderer {
         // UX: Adiciona animação de entrada
         // Adicionamos um delay leve baseado no índice se possível, mas aqui usamos genérico
         return `
-            <div id="checklist-item-${item.id}" class="checklist-item animate-fade-in" data-item-id="${item.id}" data-level="${item.level || 0}" style="animation-duration: 0.3s;">
+            <div id="checklist-item-${item.id}" class="checklist-item animate-fade-in" data-item-id="${item.id}" data-level="${item.level || 0}" data-parent-id="${item.parent_id || ''}" style="animation-duration: 0.3s;">
                 <div class="checklist-item-header position-relative level-${item.level || 0}" style="padding-left: 0;">
                     ${hasChildren ? `
                         <div class="position-absolute bottom-0 left-0 h-1 progress-bar-item" 
@@ -234,7 +235,12 @@ class ChecklistRenderer {
                             </i>
                         </button>
                         </span>
-                        <span class="col-delete">
+                        <span class="col-delete d-flex align-items-center">
+                         <button class="btn-icon btn-move-item p-1 border-0 bg-transparent drag-handle" 
+                                 data-item-id="${item.id}" 
+                                 title="Arrastar para mover">
+                             <i class="bi bi-grip-vertical text-secondary"></i>
+                         </button>
                          <button class="btn-icon btn-delete-item p-1 border-0 bg-transparent" 
                                  data-item-id="${item.id}" 
                                  title="Excluir tarefa">
@@ -1793,6 +1799,277 @@ class ChecklistRenderer {
             return `${local}@${shortDomain}`;
         }
         return s;
+    }
+
+    // ========================================
+    // DRAG AND DROP - MOVER TAREFAS
+    // ========================================
+
+    initDragAndDrop() {
+        this.draggedItem = null;
+        this.dragOverItem = null;
+        this.dropIndicator = null;
+
+        // Criar elemento indicador de drop
+        this.dropIndicator = document.createElement('div');
+        this.dropIndicator.className = 'drop-indicator';
+        this.dropIndicator.className = 'drop-indicator';
+        this.container.style.position = 'relative';
+        this.container.appendChild(this.dropIndicator);
+
+        // Event listeners para drag and drop
+        this.container.addEventListener('dragstart', this.handleDragStart.bind(this));
+        this.container.addEventListener('dragend', this.handleDragEnd.bind(this));
+        this.container.addEventListener('dragover', this.handleDragOver.bind(this));
+        this.container.addEventListener('dragleave', this.handleDragLeave.bind(this));
+        this.container.addEventListener('drop', this.handleDrop.bind(this));
+
+        // Ativa draggable apenas ao pressionar o handle
+        this.container.addEventListener('mousedown', (e) => {
+            const handle = e.target.closest('.drag-handle');
+            if (handle) {
+                const item = handle.closest('.checklist-item');
+                if (item) item.setAttribute('draggable', 'true');
+            }
+        });
+
+        // Desativa draggable ao soltar o mouse
+        this.container.addEventListener('mouseup', (e) => {
+            const item = e.target.closest('.checklist-item');
+            if (item) item.setAttribute('draggable', 'false');
+        });
+    }
+
+    handleDragStart(e) {
+        const item = e.target.closest('.checklist-item');
+        if (!item) return;
+
+        // O atributo draggable é setado no mousedown do handle
+        // Então se chegamos aqui, é porque o usuário clicou no handle corretamente
+
+        this.draggedItem = item;
+        item.classList.add('dragging');
+        item.style.opacity = '0.5';
+
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', item.dataset.itemId);
+
+
+
+        console.log('[DragDrop] Drag started:', item.dataset.itemId);
+    }
+
+    handleDragEnd(e) {
+        if (this.draggedItem) {
+            this.draggedItem.classList.remove('dragging');
+            this.draggedItem.style.opacity = '';
+            this.draggedItem.setAttribute('draggable', 'false');
+        }
+
+        // Limpar todos os indicadores
+        this.container.querySelectorAll('.checklist-item').forEach(item => {
+            item.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-over-inside');
+        });
+
+        this.dropIndicator.style.display = 'none';
+        this.draggedItem = null;
+        this.dragOverItem = null;
+    }
+
+    handleDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+
+        const targetItem = e.target.closest('.checklist-item');
+        if (!targetItem || targetItem === this.draggedItem) {
+            return;
+        }
+
+        // Não permitir soltar sobre um descendente
+        if (this.isDescendant(this.draggedItem, targetItem)) {
+            e.dataTransfer.dropEffect = 'none';
+            return;
+        }
+
+        this.dragOverItem = targetItem;
+
+        // Determinar posição do mouse relativa ao item
+        const rect = targetItem.getBoundingClientRect();
+        const y = e.clientY - rect.top;
+        const height = rect.height;
+        const header = targetItem.querySelector('.checklist-item-header');
+        const headerHeight = header ? header.offsetHeight : 40;
+
+        // Limpar classes anteriores
+        targetItem.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-over-inside');
+
+        // Calcular geometria para o indicador
+        const containerRect = this.container.getBoundingClientRect();
+        const relativeTop = rect.top - containerRect.top;
+        const relativeLeft = rect.left - containerRect.left;
+
+        // Zonas: Top < 40% (Before), Bottom > 60% (After), Middle 20% (Inside)
+        if (y < headerHeight * 0.4) {
+            this.dropPosition = 'before';
+            // Posicionar indicador no topo do item
+            this.dropIndicator.style.top = `${relativeTop - 2}px`;
+            this.dropIndicator.style.left = `${relativeLeft}px`;
+            this.dropIndicator.style.width = `${rect.width}px`;
+            this.dropIndicator.style.display = 'block';
+            targetItem.classList.remove('drag-over-inside');
+
+        } else if (y > headerHeight * 0.6) {
+            this.dropPosition = 'after';
+            // Posicionar indicador na base do item
+            this.dropIndicator.style.top = `${relativeTop + rect.height - 2}px`;
+            this.dropIndicator.style.left = `${relativeLeft}px`;
+            this.dropIndicator.style.width = `${rect.width}px`;
+            this.dropIndicator.style.display = 'block';
+            targetItem.classList.remove('drag-over-inside');
+
+        } else {
+            this.dropPosition = 'inside';
+            this.dropIndicator.style.display = 'none';
+            targetItem.classList.add('drag-over-inside');
+        }
+    }
+
+    handleDragLeave(e) {
+        const targetItem = e.target.closest('.checklist-item');
+        if (targetItem && !targetItem.contains(e.relatedTarget)) {
+            targetItem.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-over-inside');
+        }
+    }
+
+    async handleDrop(e) {
+        e.preventDefault();
+
+        const targetItem = e.target.closest('.checklist-item');
+        if (!targetItem || targetItem === this.draggedItem || !this.draggedItem) {
+            return;
+        }
+
+        // Não permitir soltar sobre um descendente
+        if (this.isDescendant(this.draggedItem, targetItem)) {
+            this.showToast('Não é possível mover para dentro de um item filho', 'warning');
+            return;
+        }
+
+        const draggedId = parseInt(this.draggedItem.dataset.itemId);
+        const targetId = parseInt(targetItem.dataset.itemId);
+        const targetParentId = targetItem.dataset.parentId ? parseInt(targetItem.dataset.parentId) : null;
+
+        console.log('[DragDrop] Drop:', draggedId, 'to', targetId, 'position:', this.dropPosition);
+
+        let newParentId, newOrder;
+
+        if (this.dropPosition === 'inside') {
+            // Mover para dentro do item alvo
+            newParentId = targetId;
+            newOrder = 0; // Primeiro filho
+        } else {
+            // Mover como irmão (before/after)
+            newParentId = targetParentId === null ? null : targetParentId;
+
+            // Calcular nova ordem baseada na posição dos irmãos
+            const siblings = this.getSiblings(targetItem);
+            const targetIndex = siblings.indexOf(targetItem);
+
+            if (this.dropPosition === 'before') {
+                newOrder = targetIndex;
+            } else {
+                newOrder = targetIndex + 1;
+            }
+        }
+
+        // Chamar API para mover
+        await this.moveItem(draggedId, newParentId, newOrder);
+    }
+
+    isDescendant(parent, child) {
+        if (!parent || !child) return false;
+        const parentId = parseInt(parent.dataset.itemId);
+        let current = child;
+        while (current) {
+            const currentParentId = current.dataset.parentId;
+            if (currentParentId && parseInt(currentParentId) === parentId) {
+                return true;
+            }
+            current = this.container.querySelector(`[data-item-id="${currentParentId}"]`);
+        }
+        return false;
+    }
+
+    getSiblings(item) {
+        const parentId = item.dataset.parentId || '';
+        let container;
+
+        if (parentId) {
+            // Está dentro de um pai
+            const parent = this.container.querySelector(`[data-item-id="${parentId}"]`);
+            container = parent ? parent.querySelector('.checklist-item-children') : null;
+        } else {
+            // Está na raiz
+            container = this.container.querySelector('#checklist-tree-root');
+        }
+
+        if (!container) return [];
+        return Array.from(container.querySelectorAll(':scope > .checklist-item'));
+    }
+
+    async moveItem(itemId, newParentId, newOrder) {
+        if (!this.hasService()) {
+            this.showToast('Serviço não disponível', 'error');
+            return;
+        }
+
+        try {
+            // Mostrar loading
+            const item = this.container.querySelector(`[data-item-id="${itemId}"]`);
+            if (item) item.style.opacity = '0.5';
+
+            const result = await this.service.api.moveItem(itemId, newParentId, newOrder);
+
+            if (result && result.ok) {
+                this.showToast('Item movido com sucesso!', 'success');
+                // Recarregar o checklist para refletir as mudanças
+                await this.reloadChecklist();
+            } else {
+                throw new Error(result?.error || 'Erro desconhecido');
+            }
+        } catch (error) {
+            console.error('[MoveItem] Error:', error);
+            this.showToast('Erro ao mover item: ' + error.message, 'error');
+            // Restaurar opacidade
+            const item = this.container.querySelector(`[data-item-id="${itemId}"]`);
+            if (item) item.style.opacity = '';
+        }
+    }
+
+    async reloadChecklist() {
+        if (!this.hasService()) return;
+
+        try {
+            const result = await this.service.api.getTree(this.implantacaoId, 'nested');
+            if (result && result.items) {
+                this.data = result.items;
+                this.buildFlatData(this.data);
+                this.render();
+            }
+        } catch (error) {
+            console.error('[ReloadChecklist] Error:', error);
+        }
+    }
+
+    showToast(message, type = 'info') {
+        // Usar notifier se disponível
+        if (window.Notifier) {
+            window.Notifier[type] ? window.Notifier[type](message) : window.Notifier.info(message);
+        } else if (window.$toast) {
+            window.$toast[type] ? window.$toast[type](message) : window.$toast.info(message);
+        } else {
+            console.log(`[Toast ${type}]:`, message);
+        }
     }
 }
 

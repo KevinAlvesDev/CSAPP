@@ -440,6 +440,66 @@
     body.dark-mode .editor-sidebar strong {
         color: var(--body-color);
     }
+
+    /* Drag and Drop Styles */
+    .checklist-item-editor[draggable="true"] {
+        cursor: grab;
+    }
+
+    .checklist-item-editor.dragging {
+        opacity: 0.5;
+        background: #e2e8f0;
+        border: 2px dashed #a0aec0;
+    }
+
+    .checklist-item-editor.drag-over-top {
+        box-shadow: 0 -4px 0 0 #3182ce;
+        z-index: 10;
+    }
+
+    .checklist-item-editor.drag-over-bottom {
+        box-shadow: 0 4px 0 0 #3182ce;
+        z-index: 10;
+    }
+
+    .checklist-item-editor.drag-over-inside {
+        background: rgba(49, 130, 206, 0.1);
+        border: 2px dashed #3182ce;
+    }
+
+    /* Indicador Visual de Drop (Linha Azul) */
+    .drop-indicator {
+        position: absolute;
+        height: 4px;
+        background-color: #0d6efd;
+        border-radius: 2px;
+        pointer-events: none;
+        z-index: 9999;
+        box-shadow: 0 0 8px rgba(13, 110, 253, 0.6);
+        transition: top 0.05s ease, left 0.05s ease, width 0.05s ease;
+        display: none;
+    }
+
+    .drop-indicator::before {
+        content: '';
+        position: absolute;
+        left: -4px;
+        top: -3px;
+        width: 10px;
+        height: 10px;
+        background-color: #0d6efd;
+        border-radius: 50%;
+    }
+
+
+
+    .btn-move-item {
+        cursor: grab;
+    }
+
+    .btn-move-item:active {
+        cursor: grabbing;
+    }
 </style>
 {% endblock %}
 

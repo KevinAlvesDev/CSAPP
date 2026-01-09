@@ -16,6 +16,7 @@ from .items import (
     delete_checklist_item,
     update_item_responsavel,
     atualizar_prazo_item,
+    move_item,
 )
 
 # Importações de comments.py
@@ -55,6 +56,7 @@ __all__ = [
     'delete_checklist_item',
     'update_item_responsavel',
     'atualizar_prazo_item',
+    'move_item',
     # Comments
     'add_comment_to_item',
     'listar_comentarios_implantacao',

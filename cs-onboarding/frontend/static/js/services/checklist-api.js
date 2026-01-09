@@ -134,6 +134,25 @@ class ChecklistAPI {
     async sendCommentEmail(comentarioId) {
         return this.api.post(`/api/checklist/comment/${comentarioId}/email`);
     }
+
+    // ========================================
+    // MOVE / REORDER
+    // ========================================
+
+    /**
+     * Move um item para nova posição
+     * @param {number} itemId - ID do item
+     * @param {number|null} newParentId - Novo pai (null = raiz, -1 = manter)
+     * @param {number|null} newOrder - Nova posição (opcional)
+     * @returns {Promise<Object>}
+     */
+    async moveItem(itemId, newParentId = -1, newOrder = null) {
+        const data = { new_parent_id: newParentId };
+        if (newOrder !== null) {
+            data.new_order = newOrder;
+        }
+        return this.api.patch(`/api/checklist/item/${itemId}/move`, data);
+    }
 }
 
 // Export para uso global

@@ -12,6 +12,7 @@
     init() {
       this.bindEvents();
       this.checkEmptyState();
+      this.initDragAndDrop();
     },
 
     bindEvents() {
@@ -84,6 +85,9 @@
               </select>
             </div>
             <div class="d-flex align-items-center gap-1">
+               <button type="button" class="btn btn-sm btn-light border btn-move-item drag-handle" title="Mover">
+                <i class="bi bi-grip-vertical text-secondary"></i>
+              </button>
               <button type="button" class="btn btn-sm btn-primary btn-add-child" title="Adicionar filho">
                 <i class="bi bi-plus-lg"></i>
               </button>
@@ -459,6 +463,198 @@
       estruturaInput.value = JSON.stringify(estrutura);
 
       form.submit();
+    },
+
+    // ===================================
+    // DRAG AND DROP
+    // ===================================
+
+    initDragAndDrop() {
+      const container = document.getElementById('itemsContainer');
+      if (!container) return;
+
+      this.draggedItem = null;
+      this.dropPosition = null;
+
+      // Indicator
+      this.dropIndicator = document.createElement('div');
+      this.dropIndicator.className = 'drop-indicator';
+      this.dropIndicator.className = 'drop-indicator';
+      container.appendChild(this.dropIndicator);
+      container.style.position = 'relative';
+
+      container.addEventListener('dragstart', this.handleDragStart.bind(this));
+      container.addEventListener('dragend', this.handleDragEnd.bind(this));
+      container.addEventListener('dragover', this.handleDragOver.bind(this));
+      container.addEventListener('dragleave', this.handleDragLeave.bind(this));
+      container.addEventListener('drop', this.handleDrop.bind(this));
+
+      // Ativa draggable apenas ao pressionar o handle
+      container.addEventListener('mousedown', (e) => {
+        const handle = e.target.closest('.drag-handle');
+        if (handle) {
+          const item = handle.closest('.checklist-item-editor');
+          if (item) item.setAttribute('draggable', 'true');
+        }
+      });
+
+      // Desativa draggable ao soltar o mouse
+      container.addEventListener('mouseup', (e) => {
+        const item = e.target.closest('.checklist-item-editor');
+        if (item) item.setAttribute('draggable', 'false');
+      });
+    },
+
+    handleDragStart(e) {
+      const item = e.target.closest('.checklist-item-editor');
+      if (!item) return;
+
+      // O atributo draggable é setado dinamicamente no mousedown
+
+
+      this.draggedItem = item;
+      item.classList.add('dragging');
+      item.style.opacity = '0.5';
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', item.dataset.itemId);
+    },
+
+    handleDragEnd(e) {
+      if (this.draggedItem) {
+        this.draggedItem.classList.remove('dragging');
+        this.draggedItem.style.opacity = '';
+        this.draggedItem.setAttribute('draggable', 'false');
+      }
+      this.dropIndicator.style.display = 'none';
+
+      const container = document.getElementById('itemsContainer');
+      container.querySelectorAll('.checklist-item-editor').forEach(el => {
+        el.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-over-inside');
+      });
+
+      this.draggedItem = null;
+    },
+
+    handleDragOver(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+
+      const targetItem = e.target.closest('.checklist-item-editor');
+      if (!targetItem || targetItem === this.draggedItem) return;
+
+      // Check descendant
+      if (this.draggedItem.contains(targetItem)) {
+        e.dataTransfer.dropEffect = 'none';
+        return;
+      }
+
+      const rect = targetItem.getBoundingClientRect();
+      const y = e.clientY - rect.top;
+      const header = targetItem.querySelector('.checklist-item-header-editor');
+      const headerHeight = header ? header.offsetHeight : 40;
+
+      targetItem.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-over-inside');
+
+      const container = document.getElementById('itemsContainer');
+      const containerRect = container.getBoundingClientRect();
+      const relativeTop = rect.top - containerRect.top;
+      const relativeLeft = rect.left - containerRect.left;
+
+      if (y < headerHeight * 0.4) {
+        this.dropPosition = 'before';
+        this.dropIndicator.style.top = `${relativeTop - 2}px`;
+        this.dropIndicator.style.left = `${relativeLeft}px`;
+        this.dropIndicator.style.width = `${rect.width}px`;
+        this.dropIndicator.style.display = 'block';
+        targetItem.classList.remove('drag-over-inside');
+
+      } else if (y > headerHeight * 0.6) {
+        this.dropPosition = 'after';
+        this.dropIndicator.style.top = `${relativeTop + rect.height - 2}px`;
+        this.dropIndicator.style.left = `${relativeLeft}px`;
+        this.dropIndicator.style.width = `${rect.width}px`;
+        this.dropIndicator.style.display = 'block';
+        targetItem.classList.remove('drag-over-inside');
+
+      } else {
+        this.dropPosition = 'inside';
+        this.dropIndicator.style.display = 'none';
+        targetItem.classList.add('drag-over-inside');
+      }
+    },
+
+    handleDragLeave(e) {
+      const targetItem = e.target.closest('.checklist-item-editor');
+      if (targetItem && !targetItem.contains(e.relatedTarget)) {
+        targetItem.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-over-inside');
+      }
+    },
+
+    handleDrop(e) {
+      e.preventDefault();
+      const targetItem = e.target.closest('.checklist-item-editor');
+
+      if (!targetItem || !this.draggedItem || targetItem === this.draggedItem) return;
+      if (this.draggedItem.contains(targetItem)) return;
+
+      const draggedElement = this.draggedItem; // Keep reference
+
+      // Remove from old position
+      draggedElement.remove();
+
+      if (this.dropPosition === 'inside') {
+        // Append to target's children
+        const itemBody = targetItem.querySelector(':scope > .item-body');
+        if (itemBody) {
+          itemBody.classList.remove('d-none'); // Expand
+
+          // Ensure item-children exists
+          let childrenContainer = itemBody.querySelector(':scope > .item-children');
+          if (!childrenContainer) {
+            childrenContainer = document.createElement('div');
+            childrenContainer.className = 'item-children';
+            childrenContainer.dataset.parentId = targetItem.dataset.itemId;
+            itemBody.appendChild(childrenContainer);
+          }
+          childrenContainer.appendChild(draggedElement);
+
+          // Update parent ID and Levels
+          draggedElement.dataset.parentId = targetItem.dataset.itemId;
+          const newLevel = parseInt(targetItem.dataset.level) + 1;
+          this.updateLevels(draggedElement, newLevel);
+        }
+      } else if (this.dropPosition === 'before') {
+        targetItem.parentNode.insertBefore(draggedElement, targetItem);
+
+        // Same parent as target
+        draggedElement.dataset.parentId = targetItem.dataset.parentId;
+        const newLevel = parseInt(targetItem.dataset.level);
+        this.updateLevels(draggedElement, newLevel);
+      } else if (this.dropPosition === 'after') {
+        targetItem.parentNode.insertBefore(draggedElement, targetItem.nextSibling);
+
+        // Same parent as target
+        draggedElement.dataset.parentId = targetItem.dataset.parentId;
+        const newLevel = parseInt(targetItem.dataset.level);
+        this.updateLevels(draggedElement, newLevel);
+      }
+
+      this.checkEmptyState();
+    },
+
+    updateLevels(element, newLevel) {
+      element.setAttribute('data-level', newLevel);
+      element.style.marginLeft = (newLevel * 20) + 'px';
+
+      const itemBody = element.querySelector(':scope > .item-body');
+      const childrenContainer = itemBody ? itemBody.querySelector(':scope > .item-children') : null;
+
+      if (childrenContainer) {
+        const children = Array.from(childrenContainer.children).filter(el => el.classList.contains('checklist-item-editor'));
+        children.forEach(child => {
+          this.updateLevels(child, newLevel + 1);
+        });
+      }
     }
   };
 
