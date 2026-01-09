@@ -1375,10 +1375,14 @@
               updateText('modal-responsavel_cliente', nomeResp, true);
             }
 
-            // E-mail Responsável
-            const emailResp = empresa.email || empresa.responsavelemail || '';
+            // E-mail Responsável - pode vir múltiplos emails separados por ';'
+            let emailResp = empresa.email || empresa.responsavelemail || '';
+            if (emailResp && emailResp.includes(';')) {
+              // Pegar apenas o primeiro email
+              emailResp = emailResp.split(';')[0].trim();
+            }
             if (emailResp) {
-              updateText('modal-email_responsavel', emailResp, true);
+              updateText('modal-email_responsavel', emailResp.trim(), true);
             }
 
             // Telefone Responsável - pode vir com nome concatenado (ex: "NOME: TELEFONE;")
@@ -1403,7 +1407,23 @@
             }
 
             if (telResp) {
-              updateText('modal-telefone_responsavel', telResp.replace(/;+$/, '').trim(), true);
+              // Formatar telefone para (XX) XXXXX-XXXX ou (XX) XXXX-XXXX
+              let telFormatado = telResp.replace(/;+$/, '').trim();
+
+              // Se estiver no formato (XX)XXXXX-XXXX (sem espaço), adicionar espaço
+              telFormatado = telFormatado.replace(/^\((\d{2})\)(\d)/, '($1) $2');
+
+              // Se não tiver parênteses, tentar formatar: 31984637633 -> (31) 98463-7633
+              if (!telFormatado.includes('(') && /^\d{10,11}$/.test(telFormatado.replace(/\D/g, ''))) {
+                const digits = telFormatado.replace(/\D/g, '');
+                if (digits.length === 11) {
+                  telFormatado = `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+                } else if (digits.length === 10) {
+                  telFormatado = `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+                }
+              }
+
+              updateText('modal-telefone_responsavel', telFormatado, true);
             }
 
             const now = new Date().getTime();
