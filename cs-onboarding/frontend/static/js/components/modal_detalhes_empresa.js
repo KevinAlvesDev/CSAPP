@@ -1268,7 +1268,8 @@
                         if (!datestr) return null;
                         // Aceitar ISO YYYY-MM-DD
                         if (/^\d{4}-\d{2}-\d{2}/.test(datestr)) {
-                            return new Date(datestr);
+                            const parts = datestr.split('T')[0].split('-');
+                            return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
                         }
                         var m = datestr && datestr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
                         if (!m) return null;
