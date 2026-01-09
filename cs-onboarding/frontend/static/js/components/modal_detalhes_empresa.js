@@ -1277,6 +1277,11 @@
                     allowInput: false,
                     locale: flatpickr.l10ns.default || flatpickr.l10ns.pt,
                     parseDate: function (datestr) {
+                        if (!datestr) return null;
+                        // Aceitar ISO YYYY-MM-DD
+                        if (/^\d{4}-\d{2}-\d{2}/.test(datestr)) {
+                            return new Date(datestr);
+                        }
                         var m = datestr && datestr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
                         if (!m) return null;
                         var d = parseInt(m[1], 10);
