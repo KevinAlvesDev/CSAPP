@@ -320,25 +320,39 @@
                 return '';
             };
 
-            const setFpDate = (fp, s, inputSelector) => {
+            const setFpDate = (fpVar, s, inputSelector) => {
+                // DEBUG
+                if (s) console.log(`[setFpDate] Setting ${inputSelector} with value:`, s);
+
                 const iso = normalizeToISO(s);
-                if (!iso) return;
+                if (!iso) {
+                    if (s) console.warn(`[setFpDate] Falha ao normalizar data: ${s}`);
+                    return;
+                }
 
                 // Converter ISO para formato brasileiro DD/MM/YYYY
                 const parts = iso.split('-');
                 const brDate = (parts.length === 3) ? `${parts[2]}/${parts[1]}/${parts[0]}` : '';
 
+                const input = modal.querySelector(inputSelector);
+                // Tenta pegar a instância da variável ou do objeto DOM
+                const fp = fpVar || (input && input._flatpickr);
+
                 // Tentar usar Flatpickr se disponível
                 if (fp && typeof fp.setDate === 'function') {
                     fp.setDate(iso, true, 'Y-m-d');
-                } else if (inputSelector && brDate) {
+                    console.log(`[setFpDate] Flatpickr setDate success for ${inputSelector}`);
+                } else if (input && brDate) {
                     // Fallback: popular o input diretamente com formato brasileiro
-                    const input = modal.querySelector(inputSelector);
-                    if (input) {
-                        input.value = brDate;
-                    }
+                    input.value = brDate;
+                    console.log(`[setFpDate] Fallback input value set for ${inputSelector} to ${brDate}`);
+                    // Dispatch input event to ensure UI updates (like removing floating labels overlap if any)
+                    input.dispatchEvent(new Event('input'));
+                } else {
+                    console.warn(`[setFpDate] Elemento input não encontrado para ${inputSelector}`);
                 }
             };
+
 
             const isDetailsPage = document.getElementById('checklist-area-treinamento');
             safeSet('#modal-redirect_to', isDetailsPage ? 'detalhes' : 'dashboard', modal);
