@@ -1080,9 +1080,15 @@
                     };
                     const toBr = (iso) => {
                         if (!iso) return '';
-                        const m = String(iso).trim().match(/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/);
+                        let s = String(iso).trim();
+                        if (s.includes('T')) s = s.split('T')[0];
+                        if (s.includes(' ')) s = s.split(' ')[0];
+                        const m = s.match(/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/);
                         return m ? `${m[3]}/${m[2]}/${m[1]}` : '';
                     };
+
+                    console.log('OAMD Data:', d.persistibles); // DEBUG
+
                     setIfEmpty('#modal-id_favorecido', d.persistibles.id_favorecido);
                     setIfEmpty('#modal-chave_oamd', d.persistibles.chave_oamd);
                     setIfEmpty('#modal-cnpj', d.persistibles.cnpj);
@@ -1090,12 +1096,26 @@
                     setIfEmpty('#modal-nivel_atendimento', d.persistibles.nivel_atendimento);
                     const dc = toBr(d.persistibles.data_cadastro);
                     if (dc) setIfEmpty('#modal-data_cadastro', dc);
-                    const setFp = (fp, isoSel, inputSel) => {
+
+                    const setFp = (fpVar, isoSel, inputSel) => {
                         const iso = d.persistibles[isoSel];
-                        if (fp && typeof fp.setDate === 'function' && iso) fp.setDate(iso, true, 'Y-m-d');
-                        else if (iso) {
-                            const el = modalForm.querySelector(inputSel);
-                            if (el) el.value = toBr(iso);
+                        if (!iso) return;
+
+                        const el = modalForm.querySelector(inputSel);
+                        // Tentar pegar instância do elemento se a variável for nula
+                        const fp = fpVar || (el && el._flatpickr);
+
+                        // Normalizar ISO (remover hora) para o Flatpickr/Value
+                        let isoDate = String(iso).trim();
+                        if (isoDate.includes('T')) isoDate = isoDate.split('T')[0];
+                        if (isoDate.includes(' ')) isoDate = isoDate.split(' ')[0];
+
+                        if (fp && typeof fp.setDate === 'function') {
+                            fp.setDate(isoDate, true, 'Y-m-d');
+                        } else if (el) {
+                            el.value = toBr(isoDate);
+                            // Simular evento input para remover classes visuais se houver
+                            el.dispatchEvent(new Event('input'));
                         }
                     };
                     setFp(window.fpInicioEfetivo, 'data_inicio_efetivo', '#modal-inicio_efetivo');
