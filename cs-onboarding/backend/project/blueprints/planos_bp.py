@@ -316,7 +316,7 @@ def clonar_plano(plano_id):
         if not user:
             return jsonify({'error': 'Usuário não autenticado'}), 401
         
-        criado_por = user.get('nome', 'Sistema')
+        criado_por = user.get('usuario') or g.user_email or 'sistema'
         
         # Obter dados do request
         data = request.get_json()
