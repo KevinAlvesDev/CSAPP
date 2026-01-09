@@ -226,7 +226,6 @@ class ChecklistRenderer {
                         </span>
                         
                         <span class="col-comment">
-                        ${item.level === 0 ? `
                         <button class="btn-icon btn-comment-toggle p-1 border-0 bg-transparent" 
                                 data-item-id="${item.id}" 
                                 title="Comentários">
@@ -234,7 +233,6 @@ class ChecklistRenderer {
                                 ${hasComment ? '<span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle" style="font-size: 0.4rem;"></span>' : ''}
                             </i>
                         </button>
-                        ` : ''}
                         </span>
                         <span class="col-delete">
                          <button class="btn-icon btn-delete-item p-1 border-0 bg-transparent" 
@@ -1146,7 +1144,7 @@ class ChecklistRenderer {
                         </div>
                         <small class="text-muted">${dataFormatada}</small>
                     </div>
-                    <p class="mb-1 small">${this.escapeHtml(c.texto)}</p>
+                    <p class="mb-1 small" style="white-space: pre-wrap; word-wrap: break-word;">${this.escapeHtml(c.texto)}</p>
                     ${c.imagem_url ? `<a href="${c.imagem_url}" target="_blank"><img src="${c.imagem_url}" class="img-fluid rounded mt-1" style="max-height: 100px;"></a>` : ''}
                     <div class="d-flex gap-2 mt-1">
                         ${isExterno && temEmailResponsavel ? `
@@ -1567,7 +1565,7 @@ class ChecklistRenderer {
                     </div>
                     <small class="text-muted">${c.data_criacao || ''}</small>
                 </div>
-                <p class="mb-1 small">${this.escapeHtml(c.texto)}</p>
+                <p class="mb-1 small" style="white-space: pre-wrap; word-wrap: break-word;">${this.escapeHtml(c.texto)}</p>
                 ${c.imagem_url ? `
                     <div class="mt-2">
                         <img src="${c.imagem_url}" 

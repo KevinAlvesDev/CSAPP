@@ -25,7 +25,8 @@
         <small class="text-secondary">{{ comentario.data_criacao | format_date_br }}</small>
     </div>
     <div class="comment-content-wrapper">
-        <p class="mb-1 small comment-text" id="comment-text-{{ comentario.id }}">{{ comentario.texto | safe }}</p>
+        <p class="mb-1 small comment-text" id="comment-text-{{ comentario.id }}"
+            style="white-space: pre-wrap; word-wrap: break-word;">{{ comentario.texto | safe }}</p>
         {% if comentario.texto and comentario.texto | length > 200 %}
         <button class="btn btn-sm btn-link p-0 small" data-action="toggle-comment"
             data-target-id="comment-text-{{ comentario.id }}">Ver mais...</button>

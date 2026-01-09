@@ -7,6 +7,9 @@ Variáveis necessárias: impl, g, csrf_token, metrics (opcional)
 valor_cell, dias_cell, progress_bar %}
 
 <tr data-impl-id="{{ impl.id }}">
+    {# Coluna ID #}
+    <td class="text-nowrap">{{ impl.id }}</td>
+
     {# Coluna Empresa #}
     <td class="text-truncate" style="max-width: 350px;">
         {{ empresa_link(impl) }}

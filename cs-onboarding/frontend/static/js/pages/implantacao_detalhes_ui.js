@@ -195,7 +195,7 @@
                         </button>` : ''}
                  </div>
               </div>
-              <div class="comentario-texto text-break">${escapeHtml(c.texto)}</div>
+              <div class="comentario-texto text-break" style="white-space: pre-wrap; word-wrap: break-word;">${escapeHtml(c.texto)}</div>
               ${c.imagem_url ? `<div class="mt-2"><img src="${c.imagem_url}" class="img-fluid rounded comment-image-thumbnail" style="cursor: pointer;" style="max-height: 200px;" alt="Imagem anexada"></div>` : ''}
             </div>
           </div>`;

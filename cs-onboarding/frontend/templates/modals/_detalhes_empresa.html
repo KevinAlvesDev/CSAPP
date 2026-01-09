@@ -72,7 +72,7 @@
                             <div class="input-group">
                                 <input type="text" class="form-control date-mask custom-datepicker no-datepicker"
                                     id="modal-data_cadastro" name="data_cadastro" placeholder="DD/MM/AAAA"
-                                    value="{% if implantacao and implantacao.data_cadastro is defined and implantacao.data_cadastro %}{{ implantacao.data_cadastro.strftime('%Y-%m-%d') }}{% endif %}">
+                                    value="{{ implantacao.data_cadastro_iso or implantacao.data_cadastro or '' }}">
                                 <button class="btn btn-outline-secondary" type="button" id="btn-cal-data_cadastro"><i
                                         class="bi bi-calendar3"></i></button>
                             </div>

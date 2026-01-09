@@ -63,7 +63,8 @@ def sanitize_string(value: str, max_length: int = None, min_length: int = 0, all
         raise ValidationError(f"String deve ter no mínimo {min_length} caracteres")
     if max_length and len(value) > max_length:
         raise ValidationError(f"String deve ter no máximo {max_length} caracteres")
-    value = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', value)
+    # Remove caracteres de controle, MAS preserva \n (0x0A) e \r (0x0D) para manter formatação
+    value = re.sub(r'[\x00-\x09\x0b\x0c\x0e-\x1f\x7f-\x9f]', '', value)
     if not allow_html:
         value = html.escape(value)
     else:

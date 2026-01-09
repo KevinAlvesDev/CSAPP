@@ -39,12 +39,12 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
             <!-- Botões de Ação (Direita) -->
             <div class="d-flex align-items-center justify-content-end" style="flex: 1;">
                 <!-- Ícone de Notificações -->
-                <div class="position-relative me-3" style="z-index: 9999;">
+                <div class="position-relative me-3">
                     <button class="btn btn-sm btn-outline-light position-relative" id="notificationBtn"
                         title="Notificações" style="overflow: visible;">
                         <i class="bi bi-bell fs-5"></i>
                         <span class="position-absolute badge rounded-pill bg-danger" id="notificationBadge"
-                            style="display: none; top: -8px; right: -8px; z-index: 9999; font-size: 0.7rem; padding: 0.25em 0.5em;">
+                            style="display: none; top: -8px; right: -8px; font-size: 0.7rem; padding: 0.25em 0.5em;">
                             0
                         </span>
                     </button>
@@ -150,6 +150,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                             <table class="table table-striped table-hover table-sm align-middle">
                                 <thead>
                                     <tr>
+                                        <th scope="col">ID</th>
                                         <th scope="col">Empresa</th>
                                         <th scope="col">Implantador</th>
                                         <th scope="col">Tipo</th>
@@ -164,6 +165,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                                 <tbody>
                                     {% for impl in implantacoes_novas %}
                                     <tr>
+                                        <td class="text-nowrap">{{ impl.id }}</td>
                                         <td class="text-truncate" style="max-width: 350px;">
                                             {{ empresa_link(impl) }}
                                         </td>
@@ -204,6 +206,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                             <table class="table table-hover align-middle">
                                 <thead>
                                     <tr>
+                                        <th scope="col">ID</th>
                                         <th scope="col">Empresa</th>
                                         <th scope="col">Implantador</th>
                                         <th scope="col">Tipo</th>
@@ -218,6 +221,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                                 </thead>
                                 <tbody>
                                     {% for impl in implantacoes_sem_previsao %} <tr>
+                                        <td class="text-nowrap">{{ impl.id }}</td>
                                         <td class="text-truncate" style="max-width: 350px;">
                                             {{ empresa_link(impl) }}
                                         </td>
@@ -256,6 +260,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                             <table class="table table-striped table-hover table-sm align-middle">
                                 <thead>
                                     <tr>
+                                        <th scope="col">ID</th>
                                         <th scope="col">Empresa</th>
                                         <th scope="col">Implantador</th>
                                         <th scope="col">Tipo</th>
@@ -270,6 +275,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                                 </thead>
                                 <tbody id="andamento-tbody">
                                     {% for impl in implantacoes_andamento %} <tr>
+                                        <td class="text-nowrap">{{ impl.id }}</td>
                                         <td class="text-truncate" style="max-width: 350px;">
                                             {{ empresa_link(impl) }}
                                         </td>
@@ -297,6 +303,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                             <table class="table table-hover align-middle">
                                 <thead>
                                     <tr>
+                                        <th scope="col">ID</th>
                                         <th scope="col">Empresa</th>
                                         <th scope="col">Implantador</th>
                                         <th scope="col">Tipo</th>
@@ -311,6 +318,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                                 </thead>
                                 <tbody>
                                     {% for impl in implantacoes_futuras %} <tr>
+                                        <td class="text-nowrap">{{ impl.id }}</td>
                                         <td class="text-truncate" style="max-width: 350px;">
                                             {{ empresa_link(impl) }}
                                         </td>
@@ -369,6 +377,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                             <table class="table table-hover align-middle">
                                 <thead>
                                     <tr>
+                                        <th scope="col">ID</th>
                                         <th scope="col">Empresa</th>
                                         <th scope="col">Implantador</th>
                                         <th scope="col">Tipo</th>
@@ -382,6 +391,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                                 </thead>
                                 <tbody>
                                     {% for impl in implantacoes_finalizadas %} <tr>
+                                        <td class="text-nowrap">{{ impl.id }}</td>
                                         <td class="text-truncate" style="max-width: 350px;">
                                             {{ empresa_link(impl) }}
                                         </td>
@@ -420,6 +430,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                             <table class="table table-hover align-middle">
                                 <thead>
                                     <tr>
+                                        <th scope="col">ID</th>
                                         <th scope="col">Empresa</th>
                                         <th scope="col">Implantador</th>
                                         <th scope="col">Tipo</th>
@@ -434,6 +445,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                                 </thead>
                                 <tbody>
                                     {% for impl in implantacoes_paradas %} <tr>
+                                        <td class="text-nowrap">{{ impl.id }}</td>
                                         <td class="text-truncate" style="max-width: 350px;">
                                             {{ empresa_link(impl) }}
                                         </td>
@@ -476,6 +488,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                             <table class="table table-hover align-middle">
                                 <thead>
                                     <tr>
+                                        <th scope="col">ID</th>
                                         <th scope="col">Empresa</th>
                                         <th scope="col">Implantador</th>
                                         <th scope="col">Tipo</th>
@@ -490,6 +503,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                                 </thead>
                                 <tbody>
                                     {% for impl in implantacoes_canceladas %} <tr>
+                                        <td class="text-nowrap">{{ impl.id }}</td>
                                         <td class="text-truncate" style="max-width: 350px;">{{ impl.nome_empresa }}</td>
                                         <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or
                                             impl.usuario_cs }}</td>
