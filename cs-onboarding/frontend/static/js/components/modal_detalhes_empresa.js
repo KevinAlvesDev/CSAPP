@@ -1289,9 +1289,9 @@
             };
 
             // CAMPOS DE DATA SOMENTE LEITURA - NÃO INICIALIZAR FLATPICKR
-            // window.fpInicioEfetivo = ensureInstance('#modal-inicio_efetivo');
-            // window.fpInicioProd = ensureInstance('#modal-data_inicio_producao');
-            // window.fpFinalImpl = ensureInstance('#modal-data_final_implantacao');
+            window.fpInicioEfetivo = ensureInstance('#modal-inicio_efetivo');
+            window.fpInicioProd = ensureInstance('#modal-data_inicio_producao');
+            window.fpFinalImpl = ensureInstance('#modal-data_final_implantacao');
         })();
 
         // Controlar botão "Abrir Tela de Apoio"
