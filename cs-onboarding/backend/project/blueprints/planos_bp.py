@@ -323,8 +323,8 @@ def clonar_plano(plano_id):
         if not data:
             return jsonify({'error': 'Dados não fornecidos'}), 400
         
-        novo_nome = data.get('nome', '').strip()
-        nova_descricao = data.get('descricao', '').strip() or None
+        novo_nome = (data.get('nome') or '').strip()
+        nova_descricao = (data.get('descricao') or '').strip() or None
         
         if not novo_nome:
             return jsonify({'error': 'Nome do novo plano é obrigatório'}), 400
