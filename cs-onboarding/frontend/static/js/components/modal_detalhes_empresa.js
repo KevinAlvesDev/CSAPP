@@ -463,15 +463,15 @@
                     safeSet('#modal-contatos', impl.contatos || '', modal);
                     safeSet('#modal-resp_estrategico_obs', impl.resp_estrategico_obs || '', modal);
 
-                    // Set dates
-                    setFpDate(window.fpInicioEfetivo, impl.data_inicio_efetivo, '#modal-inicio_efetivo');
-                    setFpDate(window.fpInicioProd, impl.data_inicio_producao, '#modal-data_inicio_producao');
-                    setFpDate(window.fpFinalImpl, impl.data_final_implantacao, '#modal-data_final_implantacao');
+                    // Set dates - PRIORITIZE ISO FIELDS FROM BACKEND which are reliable
+                    setFpDate(window.fpInicioEfetivo, impl.data_inicio_efetivo_iso || impl.data_inicio_efetivo, '#modal-inicio_efetivo');
+                    setFpDate(window.fpInicioProd, impl.data_inicio_producao_iso || impl.data_inicio_producao, '#modal-data_inicio_producao');
+                    setFpDate(window.fpFinalImpl, impl.data_final_implantacao_iso || impl.data_final_implantacao, '#modal-data_final_implantacao');
 
                     // Data Cadastro
-                    if (impl.data_criacao) {
-                        // Lidar com formatos: "2026-01-08T23:05:25" ou "2026-01-08 23:05:25"
-                        const iso = String(impl.data_criacao).trim();
+                    if (impl.data_cadastro_iso || impl.data_criacao) {
+                        // Prefer ISO field
+                        const iso = String(impl.data_cadastro_iso || impl.data_criacao).trim();
                         // Pegar apenas a parte da data (antes de T ou espaço)
                         const datePart = iso.split('T')[0].split(' ')[0];
                         const p = datePart.split('-');
