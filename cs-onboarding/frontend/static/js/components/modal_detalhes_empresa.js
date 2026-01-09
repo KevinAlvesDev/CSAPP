@@ -340,10 +340,12 @@
 
                 // Tentar usar Flatpickr se disponível
                 if (fp && typeof fp.setDate === 'function') {
-                    fp.setDate(iso, true, 'Y-m-d');
-                    // Reforço visual: garantir formato BR no input visível
-                    if (fp.altInput && brDate) fp.altInput.value = brDate;
-                    console.log(`[setFpDate] Flatpickr setDate success for ${inputSelector}`);
+                    fp.setDate(iso, false, 'Y-m-d');
+                    if (fp.altInput && brDate) {
+                        fp.altInput.value = brDate;
+                        console.log(`[setFpDate] Forced visual: ${brDate}`);
+                    }
+                    console.log(`[setFpDate] Success ${inputSelector}`);
                 } else if (input && brDate) {
                     // Fallback: popular o input diretamente com formato brasileiro
                     input.value = brDate;
@@ -1109,7 +1111,7 @@
                         if (isoDate.includes(' ')) isoDate = isoDate.split(' ')[0];
 
                         if (fp && typeof fp.setDate === 'function') {
-                            fp.setDate(isoDate, true, 'Y-m-d');
+                            fp.setDate(isoDate, false, 'Y-m-d');
                             // Reforço visual: garantir formato BR no input visível caso o Flatpickr falhe
                             if (fp.altInput) fp.altInput.value = toBr(isoDate);
                         } else if (el) {
