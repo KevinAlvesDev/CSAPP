@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 
 (function () {
   document.addEventListener('DOMContentLoaded', function () {
@@ -25,12 +25,12 @@
       locale: {
         firstDayOfWeek: 1,
         weekdays: {
-          shorthand: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
-          longhand: ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']
+          shorthand: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'SÃ¡b'],
+          longhand: ['Domingo', 'Segunda-feira', 'TerÃ§a-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'SÃ¡bado']
         },
         months: {
           shorthand: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
-          longhand: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+          longhand: ['Janeiro', 'Fevereiro', 'MarÃ§o', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
         }
       }
     };
@@ -51,7 +51,7 @@
     }
 
     // =========================================================================
-    // Global Comments Logic (New "Comentários" Tab)
+    // Global Comments Logic (New "ComentÃ¡rios" Tab)
     // =========================================================================
     let globalCommentsState = {
       page: 1,
@@ -63,7 +63,7 @@
     const commentsTabBtn = document.getElementById('comments-tab');
     if (commentsTabBtn) {
       commentsTabBtn.addEventListener('shown.bs.tab', function (e) {
-        // Sempre recarrega os comentários quando a aba é exibida
+        // Sempre recarrega os comentÃ¡rios quando a aba Ã© exibida
         resetGlobalComments();
         carregarComentariosGerais();
       });
@@ -145,12 +145,12 @@
             }
           }
         } else {
-          showToast('Erro ao carregar comentários: ' + (data.error || 'Erro desconhecido'), 'error');
+          showToast('Erro ao carregar comentÃ¡rios: ' + (data.error || 'Erro desconhecido'), 'error');
         }
 
       } catch (error) {
-        console.error('Erro ao carregar comentários gerais:', error);
-        showToast('Erro ao carregar comentários. Tente novamente.', 'error');
+        console.error('Erro ao carregar comentÃ¡rios gerais:', error);
+        showToast('Erro ao carregar comentÃ¡rios. Tente novamente.', 'error');
         if (!append && loadingEl) loadingEl.classList.add('d-none');
       } finally {
         globalCommentsState.isLoading = false;
@@ -173,13 +173,13 @@
                  <div class="d-flex flex-column">
                     <div class="d-flex align-items-center gap-2">
                         <span class="fw-bold text-dark">
-                            <i class="bi bi-person-circle me-1 text-secondary"></i>${escapeHtml(c.usuario_nome || c.usuario_cs || 'Usuário')}
+                            <i class="bi bi-person-circle me-1 text-secondary"></i>${escapeHtml(c.usuario_nome || c.usuario_cs || 'UsuÃ¡rio')}
                         </span>
                         <span class="badge ${c.visibilidade === 'externo' ? 'bg-warning text-dark' : 'bg-primary text-white'} rounded-pill" style="font-size: 0.65rem;">
                             ${c.visibilidade === 'externo' ? 'Externo' : 'Interno'}
                         </span>
-                        ${c.tag === 'Ação interna' ? '<span class="badge rounded-pill bg-primary text-white" style="font-size: 0.65rem;"><i class="bi bi-briefcase"></i> Ação interna</span>' : ''}
-                        ${c.tag === 'Reunião' ? '<span class="badge rounded-pill bg-danger" style="font-size: 0.65rem;"><i class="bi bi-calendar-event"></i> Reunião</span>' : ''}
+                        ${c.tag === 'AÃ§Ã£o interna' ? '<span class="badge rounded-pill bg-primary text-white" style="font-size: 0.65rem;"><i class="bi bi-briefcase"></i> AÃ§Ã£o interna</span>' : ''}
+                        ${c.tag === 'ReuniÃ£o' ? '<span class="badge rounded-pill bg-danger" style="font-size: 0.65rem;"><i class="bi bi-calendar-event"></i> ReuniÃ£o</span>' : ''}
                         ${(c.tag === 'No Show' || c.noshow) ? '<span class="badge rounded-pill bg-warning text-dark" style="font-size: 0.65rem;"><i class="bi bi-calendar-x"></i> No show</span>' : ''}
                         ${(c.tag === 'Simples registro' || c.tag === 'simples registro' || (c.tag && c.tag.toLowerCase() === 'simples registro')) ? '<span class="badge rounded-pill bg-secondary" style="font-size: 0.65rem;"><i class="bi bi-pencil-square"></i> Simples registro</span>' : ''}
                     </div>
@@ -240,7 +240,7 @@
               }
             }, 200);
           } else {
-            showToast('Tarefa não encontrada na visualização atual.', 'warning');
+            showToast('Tarefa nÃ£o encontrada na visualizaÃ§Ã£o atual.', 'warning');
           }
         });
       });
@@ -267,7 +267,7 @@
         if (input.classList.contains('date-mask') && window.IMask) {
           config.onReady = function (selectedDates, dateStr, instance) {
             if (instance.altInput) {
-              // Aplica a máscara ao input visível (altInput)
+              // Aplica a mÃ¡scara ao input visÃ­vel (altInput)
               const mask = IMask(instance.altInput, {
                 mask: Date,
                 pattern: 'd/`m/`Y',
@@ -291,7 +291,7 @@
                 }
               });
 
-              // Sincronizar alterações manuais na máscara com o Flatpickr
+              // Sincronizar alteraÃ§Ãµes manuais na mÃ¡scara com o Flatpickr
               mask.on('accept', function () {
                 if (mask.masked.isComplete) {
                   instance.setDate(mask.value, true, 'd/m/Y');
@@ -315,34 +315,34 @@
       document.querySelectorAll('button[id^="btn_cal_"], button[id^="btn-cal-"], button[id*="cal-"], button[data-toggle]').forEach(btn => {
         btn.addEventListener('click', (e) => {
           e.preventDefault();
-          const target = btn.previousElementSibling; // Assumindo que o input está imediatamente antes do botão (estrutura input-group)
-          // No DOM final do flatpickr (com altInput), a estrutura é:
+          const target = btn.previousElementSibling; // Assumindo que o input estÃ¡ imediatamente antes do botÃ£o (estrutura input-group)
+          // No DOM final do flatpickr (com altInput), a estrutura Ã©:
           // input[hidden], input[text].form-control, button
-          // Portanto, previousElementSibling do botão é o altInput.
+          // Portanto, previousElementSibling do botÃ£o Ã© o altInput.
           // Mas o target para inicializar flatpickr deve ser o input original.
 
-          // Se o flatpickr já estiver inicializado no input original (que pode estar oculto antes do altInput)
-          // O input original geralmente é acessível.
-          // Vamos verificar se o elemento anterior tem a instância _flatpickr.
+          // Se o flatpickr jÃ¡ estiver inicializado no input original (que pode estar oculto antes do altInput)
+          // O input original geralmente Ã© acessÃ­vel.
+          // Vamos verificar se o elemento anterior tem a instÃ¢ncia _flatpickr.
 
-          // Caso altInput esteja presente, o DOM é:
+          // Caso altInput esteja presente, o DOM Ã©:
           // <input type="hidden" ...> (original)
           // <input type="text" ...> (altInput)
           // <button ...>
 
-          // O previousElementSibling do botão é o altInput.
-          // O altInput não tem a propriedade _flatpickr, mas podemos acessá-lo?
-          // Não diretamente.
+          // O previousElementSibling do botÃ£o Ã© o altInput.
+          // O altInput nÃ£o tem a propriedade _flatpickr, mas podemos acessÃ¡-lo?
+          // NÃ£o diretamente.
 
-          // Mas se já foi inicializado, podemos buscar a instância flatpickr associada.
+          // Mas se jÃ¡ foi inicializado, podemos buscar a instÃ¢ncia flatpickr associada.
 
           // Se target for o altInput, precisamos achar o original?
-          // Na verdade, se já está inicializado, podemos apenas chamar open() na instância.
+          // Na verdade, se jÃ¡ estÃ¡ inicializado, podemos apenas chamar open() na instÃ¢ncia.
 
           // Vamos tentar encontrar o input original.
           let inputOriginal = target;
 
-          // Se o target for o altInput (não tem a classe original custom-datepicker se o flatpickr moveu as classes, mas geralmente copia)
+          // Se o target for o altInput (nÃ£o tem a classe original custom-datepicker se o flatpickr moveu as classes, mas geralmente copia)
           // Mas o _flatpickr fica no elemento original.
 
           // Melhor abordagem: procurar o input com a classe custom-datepicker dentro do mesmo parent node.
@@ -352,7 +352,7 @@
           if (originalInput && originalInput._flatpickr) {
             originalInput._flatpickr.open();
           } else if (target && target.classList.contains('custom-datepicker')) {
-            // Fallback se não estiver inicializado (ex: dinamicamente)
+            // Fallback se nÃ£o estiver inicializado (ex: dinamicamente)
             const fp = window.flatpickr(target, Object.assign({}, baseConfig));
             fp.open();
           }
@@ -546,13 +546,13 @@
               if (data.error) {
                 showToast(data.error, 'error');
               } else {
-                showToast(data.message || 'Início desfeito com sucesso!', 'success');
+                showToast(data.message || 'InÃ­cio desfeito com sucesso!', 'success');
                 setTimeout(() => location.reload(), 1000);
               }
             })
             .catch(err => {
               console.error(err);
-              showToast('Erro ao desfazer início.', 'error');
+              showToast('Erro ao desfazer inÃ­cio.', 'error');
             });
         });
       }
@@ -560,7 +560,7 @@
 
 
 
-    // Navegação entre abas (Timeline -> Comentários / Plano)
+    // NavegaÃ§Ã£o entre abas (Timeline -> ComentÃ¡rios / Plano)
     function activateTab(targetId) {
       if (!window.bootstrap) return;
       const triggerEl = document.querySelector(`[data-bs-target="${targetId}"]`);
@@ -634,7 +634,7 @@
             btnEmail.disabled = true;
             btnEmail.classList.add('btn-secondary');
             btnEmail.classList.remove('btn-primary');
-            btnEmail.title = 'Email do responsável não cadastrado. Acesse "Editar Detalhes" para adicionar.';
+            btnEmail.title = 'Email do responsÃ¡vel nÃ£o cadastrado. Acesse "Editar Detalhes" para adicionar.';
             btnEmail.setAttribute('data-bs-toggle', 'tooltip');
             btnEmail.setAttribute('data-bs-placement', 'top');
 
@@ -775,7 +775,7 @@
         let actions = '';
         const m = /Item\s+(\d+)/.exec(log.detalhes || '');
         const itemId = m ? parseInt(m[1], 10) : null;
-        if (t === 'novo_comentario' && itemId) actions += `<button class="btn btn-sm btn-outline-primary timeline-action-comments" data-item-id="${itemId}">Ver comentários</button>`;
+        if (t === 'novo_comentario' && itemId) actions += `<button class="btn btn-sm btn-outline-primary timeline-action-comments" data-item-id="${itemId}">Ver comentÃ¡rios</button>`;
         return `
           <li class="timeline-item">
             <div class="timeline-icon"><i class="bi ${icon}"></i></div>
@@ -851,7 +851,7 @@
       let actions = '';
       const m = /Item\s+(\d+)/.exec(detalhes || '');
       const itemId = m ? parseInt(m[1], 10) : null;
-      if (t === 'novo_comentario' && itemId) actions += `<button class="btn btn-sm btn-outline-primary timeline-action-comments" data-item-id="${itemId}">Ver comentários</button>`;
+      if (t === 'novo_comentario' && itemId) actions += `<button class="btn btn-sm btn-outline-primary timeline-action-comments" data-item-id="${itemId}">Ver comentÃ¡rios</button>`;
       const usuario = (window.CONFIG && window.CONFIG.emailUsuarioLogado) ? window.CONFIG.emailUsuarioLogado : '';
       const li = document.createElement('li');
       li.className = 'timeline-item';
@@ -1004,7 +1004,7 @@
           const data = await resp.json();
           if (data && data.ok) {
             showToast('Detalhes atualizados', 'success');
-            // permanece no modal; opcionalmente, reativar botão salvar
+            // permanece no modal; opcionalmente, reativar botÃ£o salvar
           } else {
             showToast('Erro ao salvar detalhes', 'error');
           }
@@ -1021,8 +1021,8 @@
 
       const comentarioId = targetBtn.dataset.comentarioId;
       const confirmed = await showConfirm({
-        title: 'Excluir Comentário',
-        message: 'Tem certeza que deseja excluir este comentário? Esta ação não pode ser desfeita.',
+        title: 'Excluir ComentÃ¡rio',
+        message: 'Tem certeza que deseja excluir este comentÃ¡rio? Esta aÃ§Ã£o nÃ£o pode ser desfeita.',
         confirmText: 'Excluir',
         cancelText: 'Cancelar',
         type: 'danger',
@@ -1042,7 +1042,7 @@
 
         if (!response.ok) {
           const errorText = await response.text();
-          showToast('Erro ao excluir comentário: ' + (errorText || `Status ${response.status}`), 'error');
+          showToast('Erro ao excluir comentÃ¡rio: ' + (errorText || `Status ${response.status}`), 'error');
           return;
         }
 
@@ -1050,7 +1050,7 @@
         if (contentType.includes('application/json')) {
           const data = await response.json();
           if (!data.ok && !data.success) {
-            showToast('Erro ao excluir comentário: ' + (data.error || 'Erro desconhecido'), 'error');
+            showToast('Erro ao excluir comentÃ¡rio: ' + (data.error || 'Erro desconhecido'), 'error');
             return;
           }
         } else if (!contentType.includes('text/html')) {
@@ -1058,7 +1058,7 @@
             const text = await response.text();
             const data = JSON.parse(text);
             if (!data.ok && !data.success) {
-              showToast('Erro ao excluir comentário: ' + (data.error || 'Erro desconhecido'), 'error');
+              showToast('Erro ao excluir comentÃ¡rio: ' + (data.error || 'Erro desconhecido'), 'error');
               return;
             }
           } catch (err) {
@@ -1072,7 +1072,7 @@
         if (comentarioItem) comentarioItem.remove();
         if (itemId) await carregarComentarios(itemId);
 
-        showToast('Comentário excluído com sucesso', 'success');
+        showToast('ComentÃ¡rio excluÃ­do com sucesso', 'success');
         try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) { }
       } catch (error) {
         showToast('Erro ao comunicar com o servidor: ' + error.message, 'error');
@@ -1083,657 +1083,12 @@
 
 
 
-
-
-    const modalDetalhesEmpresa = document.getElementById('modalDetalhesEmpresa');
-    if (modalDetalhesEmpresa && window.flatpickr) {
-      modalDetalhesEmpresa.addEventListener('shown.bs.modal', function (event) {
-        const configWithMask = Object.assign({}, baseConfig, {
-          onReady: function (selectedDates, dateStr, instance) {
-            if (instance.altInput && window.IMask) {
-              IMask(instance.altInput, {
-                mask: Date,
-                pattern: 'd/`m/`Y',
-                blocks: {
-                  d: { mask: IMask.MaskedRange, from: 1, to: 31, maxLength: 2 },
-                  m: { mask: IMask.MaskedRange, from: 1, to: 12, maxLength: 2 },
-                  Y: { mask: IMask.MaskedRange, from: 1900, to: 2100, maxLength: 4 }
-                },
-                format: function (date) {
-                  var day = date.getDate();
-                  var month = date.getMonth() + 1;
-                  var year = date.getFullYear();
-                  if (day < 10) day = "0" + day;
-                  if (month < 10) month = "0" + month;
-                  return [day, month, year].join('/');
-                },
-                parse: function (str) {
-                  var yearMonthDay = str.split('/');
-                  return new Date(yearMonthDay[2], yearMonthDay[1] - 1, yearMonthDay[0]);
-                },
-                lazy: false,
-                overwrite: true
-              });
-            }
-          }
-        });
-
-        // CAMPOS DE DATA SOMENTE LEITURA - NÃO INICIALIZAR FLATPICKR
-        // Os campos modal-inicio_efetivo, modal-data_inicio_producao, modal-data_final_implantacao
-        // são somente leitura e não devem ter datepicker ativo
-        // (Removida inicialização do Flatpickr para esses campos)
-
-        // Duplicate dataCadastro initialization removed
-      });
-
-      const tomSelectInstances = {};
-      function initTomSelectMulti(selectId, valueStr) {
-        const select = document.getElementById(selectId);
-        if (!select || !select.classList.contains('tom-select-multi')) return;
-
-        // Check for existing instance in our tracking object
-        if (tomSelectInstances[selectId]) {
-          try {
-            tomSelectInstances[selectId].destroy();
-          } catch (e) {
-            console.warn('Error destroying Tom Select instance:', e);
-          }
-          delete tomSelectInstances[selectId];
-        }
-
-        // Check for existing instance on the element itself
-        if (select.tomselect) {
-          try {
-            select.tomselect.destroy();
-          } catch (e) {
-            console.warn('Error destroying Tom Select from element:', e);
-          }
-        }
-
-        const tomSelect = new TomSelect(select, {
-          plugins: ['remove_button'],
-          maxItems: null,
-          placeholder: 'Selecione...',
-          allowEmptyOption: true,
-          create: false
-        });
-
-        if (valueStr && valueStr.trim() !== '') {
-          const values = valueStr.split(',').map(v => v.trim()).filter(v => v && v !== '');
-          if (values.length > 0) {
-            tomSelect.setValue(values);
-          }
-        }
-
-        tomSelectInstances[selectId] = tomSelect;
-      }
-
-      function initTomSelectSingle(selectId, valueStr) {
-        const select = document.getElementById(selectId);
-        if (!select || !select.classList.contains('tom-select-single')) return;
-
-        // Check for existing instance in our tracking object
-        if (tomSelectInstances[selectId]) {
-          try {
-            tomSelectInstances[selectId].destroy();
-          } catch (e) {
-            console.warn('Error destroying Tom Select instance:', e);
-          }
-          delete tomSelectInstances[selectId];
-        }
-
-        // Check for existing instance on the element itself
-        if (select.tomselect) {
-          try {
-            select.tomselect.destroy();
-          } catch (e) {
-            console.warn('Error destroying Tom Select from element:', e);
-          }
-        }
-
-        const tomSelect = new TomSelect(select, {
-          placeholder: 'Selecione...',
-          allowEmptyOption: true,
-          create: false
-        });
-
-        if (valueStr && valueStr.trim() !== '') {
-          tomSelect.setValue(valueStr.trim());
-        }
-
-        tomSelectInstances[selectId] = tomSelect;
-      }
-
-      // Global Click Listener for Consultar OAMD Button (Delegation)
-      document.addEventListener('click', async function (e) {
-        const btnConsultar = e.target.closest('#btn-consultar-oamd');
-        if (!btnConsultar) return;
-
-        e.preventDefault();
-        e.stopPropagation();
-
-
-        const loaderConsultar = document.getElementById('btn-consultar-oamd-loader');
-        const iconConsultar = document.getElementById('btn-consultar-oamd-icon');
-        const inputIdFav = document.getElementById('modal-id_favorecido');
-
-        // Get ID from input or button dataset
-        const currentId = inputIdFav ? inputIdFav.value.trim() : (btnConsultar.dataset.idFavorecido || '');
-
-        if (!currentId) {
-          showToast('ID Favorecido não informado', 'warning');
-          return;
-        }
-
-        btnConsultar.disabled = true;
-        if (loaderConsultar) loaderConsultar.classList.remove('d-none');
-        if (iconConsultar) iconConsultar.classList.add('d-none');
-
-        try {
-          const response = await fetch(`/api/consultar_empresa?id_favorecido=${currentId}`, {
-            method: 'GET',
-            headers: {
-              'Accept': 'application/json',
-              'X-CSRFToken': CONFIG.csrfToken
-            }
-          });
-
-          if (!response.ok) {
-            let errorMsg = `Erro na requisição: ${response.status}`;
-            try {
-              const errData = await response.json();
-              if (errData.error) errorMsg = errData.error;
-            } catch (e) { }
-            throw new Error(errorMsg);
-          }
-
-          const data = await response.json();
-
-          if (data.ok && data.mapped) {
-            const m = data.mapped;
-
-            const updateDate = (inputId, val) => {
-              const input = document.getElementById(inputId);
-              if (!input || !val) return;
-
-              let dateVal = String(val).split('T')[0];
-
-              if (input._flatpickr) {
-                input._flatpickr.setDate(dateVal, true);
-
-                const altInput = input._flatpickr.altInput;
-                if (altInput) {
-                  altInput.classList.add('bg-success', 'bg-opacity-10');
-                  setTimeout(() => altInput.classList.remove('bg-success', 'bg-opacity-10'), 2000);
-                  altInput.readOnly = true;
-                  altInput.classList.add('bg-light');
-                  altInput.style.cursor = 'not-allowed';
-                }
-              } else {
-                input.value = dateVal;
-              }
-
-              input.readOnly = true;
-              input.classList.add('bg-light');
-              input.style.cursor = 'not-allowed';
-              const parent = input.closest('.input-group');
-              if (parent) {
-                const btn = parent.querySelector('button');
-                if (btn) btn.disabled = true;
-              }
-            };
-
-            updateDate('modal-data_inicio_producao', m.data_inicio_producao);
-            updateDate('modal-inicio_efetivo', m.data_inicio_efetivo);
-            updateDate('modal-data_final_implantacao', m.data_final_implantacao);
-            updateDate('modal-data_cadastro', m.data_cadastro);
-
-            const updateText = (inputId, val, allowEdit = false) => {
-              const input = document.getElementById(inputId);
-              if (input && val) {
-                input.value = val;
-                input.classList.add('bg-success', 'bg-opacity-10');
-                setTimeout(() => input.classList.remove('bg-success', 'bg-opacity-10'), 2000);
-
-                // Só torna readonly se NOT allowEdit
-                if (!allowEdit) {
-                  input.readOnly = true;
-                  input.classList.add('bg-light');
-                  input.style.cursor = 'not-allowed';
-                }
-              }
-            };
-
-            updateText('modal-status_implantacao', m.status_implantacao);
-            updateText('modal-nivel_atendimento', m.nivel_atendimento);
-            updateText('modal-chave_oamd', m.chave_oamd);
-            (function () {
-              const empresa = data.empresa || {};
-              let infraVal = m.informacao_infra || '';
-              if (!infraVal) {
-                const nomezw = String(empresa.nomeempresazw || '').trim();
-                const mName = nomezw.match(/zw[_-]?(\d+)/i);
-                if (mName && mName[1]) infraVal = `ZW_${mName[1]}`;
-              }
-              if (!infraVal) {
-                const empzw = empresa.empresazw;
-                const empzwNum = typeof empzw === 'number' ? empzw : parseInt(String(empzw || '').trim(), 10);
-                if (!Number.isNaN(empzwNum) && empzwNum > 1) infraVal = `ZW_${empzwNum}`;
-              }
-              updateText('modal-informacao_infra', infraVal);
-
-              let linkVal = m.tela_apoio_link || '';
-              if ((!linkVal || !String(linkVal).trim()) && infraVal) {
-                const mDigits = String(infraVal).match(/(\d+)/);
-                if (mDigits && mDigits[1]) linkVal = `http://zw${mDigits[1]}.pactosolucoes.com.br/app`;
-              }
-              if (!linkVal || !String(linkVal).trim()) {
-                const entries = Object.entries(empresa);
-                for (let i = 0; i < entries.length; i++) {
-                  const v = String(entries[i][1] || '');
-                  const mUrl = v.match(/https?:\/\/[^\s]*zw(\d+)[^\s]*/i);
-                  if (mUrl && mUrl[1]) { linkVal = `http://zw${mUrl[1]}.pactosolucoes.com.br/app`; break; }
-                }
-              }
-              updateText('modal-tela_apoio_link', linkVal);
-            })();
-
-            if (m.cnpj) {
-              const cnpjInput = document.getElementById('modal-cnpj');
-              if (cnpjInput) {
-                cnpjInput.value = m.cnpj;
-                cnpjInput.dispatchEvent(new Event('input'));
-                cnpjInput.classList.add('bg-success', 'bg-opacity-10');
-                setTimeout(() => cnpjInput.classList.remove('bg-success', 'bg-opacity-10'), 2000);
-
-                cnpjInput.readOnly = true;
-                cnpjInput.classList.add('bg-light');
-                cnpjInput.style.cursor = 'not-allowed';
-              }
-            }
-
-            if (m.nivel_receita) {
-              const mrrInput = document.getElementById('modal-valor_atribuido');
-              if (mrrInput) {
-                mrrInput.value = m.nivel_receita;
-                mrrInput.dispatchEvent(new Event('input'));
-                mrrInput.classList.add('bg-success', 'bg-opacity-10');
-                setTimeout(() => mrrInput.classList.remove('bg-success', 'bg-opacity-10'), 2000);
-
-                mrrInput.readOnly = true;
-                mrrInput.classList.add('bg-light');
-                mrrInput.style.cursor = 'not-allowed';
-              }
-            }
-
-            // Preencher campos de contato do responsável a partir dos dados brutos
-            const empresa = data.empresa || {};
-
-            // Responsável Cliente (Nome)
-            const nomeResp = empresa.nomedono || empresa.responsavelnome || '';
-            if (nomeResp) {
-              updateText('modal-responsavel_cliente', nomeResp, true);
-            }
-
-            // E-mail Responsável - pode vir múltiplos emails separados por ';'
-            let emailResp = empresa.email || empresa.responsavelemail || '';
-            if (emailResp && emailResp.includes(';')) {
-              // Pegar apenas o primeiro email
-              emailResp = emailResp.split(';')[0].trim();
-            }
-            if (emailResp) {
-              updateText('modal-email_responsavel', emailResp.trim(), true);
-            }
-
-            // Telefone Responsável - pode vir com nome concatenado (ex: "NOME: TELEFONE;")
-            let telResp = empresa.telefone || empresa.responsaveltelefone || '';
-
-            if (telResp && telResp.includes(':')) {
-              const parts = telResp.split(':');
-              if (parts.length >= 2) {
-                // Parte 1 é o Nome
-                const nomeDoTelefone = parts[0].trim();
-                // Parte 2 é o Telefone
-                const numeroDoTelefone = parts.slice(1).join(':').trim().replace(/;+$/, '').trim();
-
-                // Preencher o campo de Nome com o valor extraído
-                if (nomeDoTelefone) {
-                  updateText('modal-responsavel_cliente', nomeDoTelefone, true);
-                }
-
-                // Usar apenas o número para o campo de telefone
-                telResp = numeroDoTelefone;
-              }
-            }
-
-            if (telResp) {
-              // Formatar telefone para (XX) XXXXX-XXXX ou (XX) XXXX-XXXX
-              let telFormatado = telResp.replace(/;+$/, '').trim();
-
-              // Se estiver no formato (XX)XXXXX-XXXX (sem espaço), adicionar espaço
-              telFormatado = telFormatado.replace(/^\((\d{2})\)(\d)/, '($1) $2');
-
-              // Se não tiver parênteses, tentar formatar: 31984637633 -> (31) 98463-7633
-              if (!telFormatado.includes('(') && /^\d{10,11}$/.test(telFormatado.replace(/\D/g, ''))) {
-                const digits = telFormatado.replace(/\D/g, '');
-                if (digits.length === 11) {
-                  telFormatado = `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
-                } else if (digits.length === 10) {
-                  telFormatado = `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
-                }
-              }
-
-              updateText('modal-telefone_responsavel', telFormatado, true);
-            }
-
-            const now = new Date().getTime();
-            const lastUpdateSpan = document.getElementById('oamd-last-update');
-            const lastUpdateTimeSpan = document.getElementById('oamd-last-update-time');
-            if (lastUpdateSpan && lastUpdateTimeSpan) {
-              lastUpdateSpan.style.display = 'inline-block';
-              lastUpdateTimeSpan.textContent = new Date(now).toLocaleTimeString();
-            }
-
-            const cacheKey = `oamd_cache_${currentId}`;
-            localStorage.setItem(cacheKey, JSON.stringify({
-              timestamp: now,
-              data: m
-            }));
-
-            showToast('Dados atualizados com sucesso do OAMD', 'success');
-
-          } else {
-            showToast('Não foi possível obter dados do OAMD', 'warning');
-          }
-
-        } catch (error) {
-          console.error('Erro ao consultar OAMD:', error);
-          showToast('Erro ao consultar OAMD: ' + error.message, 'error');
-        } finally {
-          btnConsultar.disabled = false;
-          if (loaderConsultar) loaderConsultar.classList.add('d-none');
-          if (iconConsultar) iconConsultar.classList.remove('d-none');
-        }
-      });
-
-      modalDetalhesEmpresa.addEventListener('shown.bs.modal', function (event) {
-        const btn = event.relatedTarget || document.querySelector('[data-bs-target="#modalDetalhesEmpresa"]');
-        let cargo = '', nivelReceita = '', seguimento = '', tiposPlanos = '', sistemaAnterior = '', recorrenciaUsa = '';
-        let catraca = '', facial = '', modeloCatraca = '', modeloFacial = '';
-        let idFavorecido = ''; // Declare at the top to avoid ReferenceError
-
-        if (btn) {
-          cargo = btn.dataset.cargo || '';
-          nivelReceita = btn.dataset.nivelReceita || '';
-          seguimento = btn.dataset.seguimento || '';
-          tiposPlanos = btn.dataset.tiposPlanos || '';
-          sistemaAnterior = btn.dataset.sistemaAnterior || '';
-          recorrenciaUsa = btn.dataset.recorrenciaUsa || '';
-          catraca = btn.dataset.catraca || '';
-          facial = btn.dataset.facial || '';
-          modeloCatraca = btn.dataset.modeloCatraca || '';
-          modeloFacial = btn.dataset.modeloFacial || '';
-          const wellhub = btn.dataset.wellhub || '';
-          const totalpass = btn.dataset.totalpass || '';
-          idFavorecido = btn.dataset.idFavorecido || '';
-
-          if (!idFavorecido) {
-            const inputIdFav = document.getElementById('modal-id_favorecido');
-            if (inputIdFav && inputIdFav.value) {
-              idFavorecido = inputIdFav.value;
-            }
-          }
-          // Nota: valores de wellhub/totalpass são definidos por modal_detalhes_empresa.js
-        }
-
-        const cargoSelect = document.getElementById('modal-cargo_responsavel');
-        const nivelReceitaSelect = document.getElementById('modal-nivel_receita');
-        const seguimentoSelect = document.getElementById('modal-seguimento');
-        const tiposPlanosSelect = document.getElementById('modal-tipos_planos');
-        const sistemaAnteriorSelect = document.getElementById('modal-sistema_anterior');
-        const recorrenciaUsaSelect = document.getElementById('modal-recorrencia_usa');
-
-        if (cargoSelect && !cargo) cargo = cargoSelect.dataset.value || '';
-        if (nivelReceitaSelect && !nivelReceita) nivelReceita = nivelReceitaSelect.dataset.value || '';
-        if (seguimentoSelect && !seguimento) seguimento = seguimentoSelect.dataset.value || '';
-        if (tiposPlanosSelect && !tiposPlanos) tiposPlanos = tiposPlanosSelect.dataset.value || '';
-        if (sistemaAnteriorSelect && !sistemaAnterior) sistemaAnterior = sistemaAnteriorSelect.dataset.value || '';
-        if (recorrenciaUsaSelect && !recorrenciaUsa) recorrenciaUsa = recorrenciaUsaSelect.dataset.value || '';
-
-        initTomSelectMulti('modal-seguimento', seguimento);
-        initTomSelectMulti('modal-tipos_planos', tiposPlanos);
-
-        // Initialize Modalidades, Horários, and Formas de Pagamento (same behavior as Segmento and Tipos de Planos)
-        const modalidadesSelect = document.getElementById('modal-modalidades');
-        const horariosSelect = document.getElementById('modal-horarios_func');
-        const formasPagamentoSelect = document.getElementById('modal-formas_pagamento');
-
-        const modalidades = btn ? (btn.dataset.modalidades || '') : (modalidadesSelect ? (modalidadesSelect.dataset.value || '') : '');
-        const horarios = btn ? (btn.dataset.horariosFuncamento || '') : (horariosSelect ? (horariosSelect.dataset.value || '') : '');
-        const formasPagamento = btn ? (btn.dataset.formasPagamento || '') : (formasPagamentoSelect ? (formasPagamentoSelect.dataset.value || '') : '');
-
-        initTomSelectMulti('modal-modalidades', modalidades);
-        initTomSelectMulti('modal-horarios_func', horarios);
-        initTomSelectMulti('modal-formas_pagamento', formasPagamento);
-
-        initTomSelectSingle('modal-cargo_responsavel', cargo);
-        initTomSelectSingle('modal-nivel_receita', nivelReceita);
-        initTomSelectSingle('modal-sistema_anterior', sistemaAnterior);
-        initTomSelectSingle('modal-recorrencia_usa', recorrenciaUsa);
-
-        const catracaSelect = document.getElementById('modal-catraca');
-        const facialSelect = document.getElementById('modal-facial');
-        const rowCatracaModelo = document.getElementById('row-catraca-modelo');
-        const rowFacialModelo = document.getElementById('row-facial-modelo');
-        const modeloCatracaInput = document.getElementById('modal-modelo_catraca');
-        const modeloFacialInput = document.getElementById('modal-modelo_facial');
-
-        function atualizarCamposCondicionais() {
-          if (catracaSelect && rowCatracaModelo) {
-            const isCatracaSim = catracaSelect.value === 'Sim';
-            rowCatracaModelo.style.display = isCatracaSim ? 'block' : 'none';
-            if (modeloCatracaInput) {
-              modeloCatracaInput.required = isCatracaSim;
-              if (!isCatracaSim) modeloCatracaInput.value = '';
-            }
-          }
-
-          if (facialSelect && rowFacialModelo) {
-            const isFacialSim = facialSelect.value === 'Sim';
-            rowFacialModelo.style.display = isFacialSim ? 'block' : 'none';
-            if (modeloFacialInput) {
-              modeloFacialInput.required = isFacialSim;
-              if (!isFacialSim) modeloFacialInput.value = '';
-            }
-          }
-        }
-
-        // Nota: valores de catraca/facial são definidos por modal_detalhes_empresa.js
-        // Aqui mantemos apenas a lógica de UI condicional (mostrar/esconder modelo)
-        if (catracaSelect) {
-          catracaSelect.addEventListener('change', atualizarCamposCondicionais);
-          if (modeloCatracaInput && catracaSelect.value === 'Sim' && modeloCatraca) {
-            modeloCatracaInput.value = modeloCatraca;
-          }
-        }
-
-        if (facialSelect) {
-          facialSelect.addEventListener('change', atualizarCamposCondicionais);
-          if (modeloFacialInput && facialSelect.value === 'Sim' && modeloFacial) {
-            modeloFacialInput.value = modeloFacial;
-          }
-        }
-
-        // Dispara a atualização após modal_detalhes_empresa.js ter definido os valores
-        setTimeout(function () {
-          atualizarCamposCondicionais();
-        }, 150);
-
-        // Antiga Lógica do botão Consultar OAMD (Removida em favor do listener global)
-        // Mantendo apenas inicialização de cache visual
-        const lastUpdateSpan = document.getElementById('oamd-last-update');
-        const lastUpdateTimeSpan = document.getElementById('oamd-last-update-time');
-        const inputIdFav = document.getElementById('modal-id_favorecido');
-
-        // Verificar cache local se houver ID inicial
-        if (idFavorecido) {
-          const cacheKey = `oamd_cache_${idFavorecido}`;
-          const cachedData = localStorage.getItem(cacheKey);
-
-          if (cachedData) {
-            try {
-              const parsed = JSON.parse(cachedData);
-              const now = new Date().getTime();
-              if (now - parsed.timestamp < 300000) { // 5 min
-                if (lastUpdateSpan && lastUpdateTimeSpan) {
-                  lastUpdateSpan.style.display = 'inline-block';
-                  lastUpdateTimeSpan.textContent = new Date(parsed.timestamp).toLocaleTimeString();
-                }
-              }
-            } catch (e) {
-              console.error('Erro ao ler cache OAMD', e);
-            }
-          }
-        }
-
-
-      });
-
-      modalDetalhesEmpresa.addEventListener('hidden.bs.modal', function () {
-        Object.keys(tomSelectInstances).forEach(key => {
-          if (tomSelectInstances[key]) {
-            try {
-              tomSelectInstances[key].destroy();
-            } catch (e) {
-            }
-            delete tomSelectInstances[key];
-          }
-        });
-      });
-
-      modalDetalhesEmpresa.addEventListener('shown.bs.modal', function () {
-        const telefoneInput = document.getElementById('modal-telefone_responsavel');
-        if (telefoneInput && window.formatarTelefone) {
-          formatarTelefone(telefoneInput);
-        }
-
-        const alunosAtivosInput = document.getElementById('modal-alunos_ativos');
-        if (alunosAtivosInput) {
-          alunosAtivosInput.setAttribute('min', '0');
-          alunosAtivosInput.setAttribute('step', '1');
-          alunosAtivosInput.addEventListener('input', function () {
-            const value = this.value;
-            if (value.includes('.')) {
-              this.value = Math.floor(parseFloat(value) || 0);
-            }
-            if (parseInt(this.value, 10) < 0) {
-              this.value = 0;
-            }
-          });
-          alunosAtivosInput.addEventListener('blur', function () {
-            const numValue = parseInt(this.value, 10);
-            if (isNaN(numValue) || numValue < 0 || this.value === '') {
-              this.value = 0;
-            } else {
-              this.value = numValue;
-            }
-          });
-        }
-
-        const idFavorecidoInput = document.getElementById('modal-id_favorecido');
-        if (idFavorecidoInput) {
-          idFavorecidoInput.addEventListener('input', function () {
-            this.value = this.value.replace(/[^0-9]/g, '');
-          });
-        }
-
-        // Campo valor_atribuido (Nível de Receita) não usa máscara de moeda
-        // pois o valor vindo do OAMD é texto descritivo (ex: "Platina (MRR do grupo entre R$1.000,00 a R$ 1.999,99)")
-
-
-        const cnpjInput = document.getElementById('modal-cnpj');
-        if (cnpjInput && window.IMask) {
-          const cnpjMask = IMask(cnpjInput, {
-            mask: '00.000.000/0000-00'
-          });
-
-          cnpjInput.addEventListener('blur', function () {
-            const val = cnpjMask.unmaskedValue;
-            if (val && !validateCNPJ(val)) {
-              this.classList.add('is-invalid');
-              let feedback = this.parentNode.querySelector('.invalid-feedback');
-              if (!feedback) {
-                feedback = document.createElement('div');
-                feedback.className = 'invalid-feedback';
-                feedback.innerText = 'CNPJ inválido';
-                this.parentNode.appendChild(feedback);
-              }
-              feedback.style.display = 'block';
-            } else {
-              this.classList.remove('is-invalid');
-              let feedback = this.parentNode.querySelector('.invalid-feedback');
-              if (feedback) feedback.style.display = 'none';
-            }
-          });
-          cnpjInput.addEventListener('input', function () {
-            this.classList.remove('is-invalid');
-            let feedback = this.parentNode.querySelector('.invalid-feedback');
-            if (feedback) feedback.style.display = 'none';
-          });
-        }
-
-        // Máscara de dinheiro para valor_monetario
-        const valorInput = document.getElementById('modal-valor_monetario');
-        if (valorInput && window.IMask) {
-          IMask(valorInput, {
-            mask: 'R$ num',
-            blocks: {
-              num: {
-                mask: Number,
-                scale: 2,
-                thousandsSeparator: '.',
-                radix: ',',
-                mapToRadix: ['.'],
-                min: 0,
-                max: 999999999.99,  // Increased limit to ~1 billion
-                normalizeZeros: false,  // Allow typing 0
-                padFractionalZeros: false  // Don't force decimal places
-              }
-            }
-          });
-        }
-
-        const telaApoioInput = document.getElementById('modal-tela_apoio_link');
-        if (telaApoioInput) {
-          telaApoioInput.addEventListener('blur', function () {
-            const val = this.value;
-            if (val && !isValidURL(val)) {
-              this.classList.add('is-invalid');
-              let feedback = this.parentNode.querySelector('.invalid-feedback');
-              if (!feedback) {
-                feedback = document.createElement('div');
-                feedback.className = 'invalid-feedback';
-                feedback.innerText = 'URL inválida (ex: https://exemplo.com)';
-                this.parentNode.appendChild(feedback);
-              }
-              feedback.style.display = 'block';
-            } else {
-              this.classList.remove('is-invalid');
-              let feedback = this.parentNode.querySelector('.invalid-feedback');
-              if (feedback) feedback.style.display = 'none';
-            }
-          });
-          telaApoioInput.addEventListener('input', function () {
-            this.classList.remove('is-invalid');
-            let feedback = this.parentNode.querySelector('.invalid-feedback');
-            if (feedback) feedback.style.display = 'none';
-          });
-        }
-
-        // Duplicate dataCadastro initialization removed
-      });
-    }
+    // =========================================================================
+    // MODAL DETALHES EMPRESA - LÃ³gica movida para modal_detalhes_empresa.js
+    // Este arquivo NÃƒO deve ter lÃ³gica do modal para evitar conflitos
+    // =========================================================================
   });
+
 
   function isValidURL(string) {
     try {
@@ -1776,4 +1131,5 @@
     return true;
   }
 })();
+
 

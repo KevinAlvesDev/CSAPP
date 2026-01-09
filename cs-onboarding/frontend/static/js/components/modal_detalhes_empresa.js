@@ -303,11 +303,20 @@
 
             const normalizeToISO = (s) => {
                 if (!s) return '';
-                const t = String(s).trim();
+                let t = String(s).trim();
+
+                // Se tiver T ou espaço (datetime), pegar só a parte da data
+                if (t.includes('T')) t = t.split('T')[0];
+                if (t.includes(' ')) t = t.split(' ')[0];
+
+                // Formato BR: DD/MM/YYYY -> YYYY-MM-DD
                 let m = t.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
                 if (m) return `${m[3]}-${m[2]}-${m[1]}`;
-                m = t.match(/^(\d{4})-(\d{2})-(\d{2})/);
+
+                // Formato ISO: YYYY-MM-DD
+                m = t.match(/^(\d{4})-(\d{2})-(\d{2})$/);
                 if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+
                 return '';
             };
 
@@ -315,17 +324,18 @@
                 const iso = normalizeToISO(s);
                 if (!iso) return;
 
+                // Converter ISO para formato brasileiro DD/MM/YYYY
+                const parts = iso.split('-');
+                const brDate = (parts.length === 3) ? `${parts[2]}/${parts[1]}/${parts[0]}` : '';
+
                 // Tentar usar Flatpickr se disponível
                 if (fp && typeof fp.setDate === 'function') {
                     fp.setDate(iso, true, 'Y-m-d');
-                } else if (inputSelector) {
+                } else if (inputSelector && brDate) {
                     // Fallback: popular o input diretamente com formato brasileiro
                     const input = modal.querySelector(inputSelector);
                     if (input) {
-                        const parts = iso.split('-');
-                        if (parts.length === 3) {
-                            input.value = `${parts[2]}/${parts[1]}/${parts[0]}`;
-                        }
+                        input.value = brDate;
                     }
                 }
             };
@@ -1103,7 +1113,82 @@
                         if (digits && digits[1]) link = `http://zw${digits[1]}.pactosolucoes.com.br/app`;
                     }
                     forceSet('#modal-tela_apoio_link', link);
-                    if (typeof window.__saveFormSnapshot === 'function') window.__saveFormSnapshot();
+
+                    // =========================================================
+                    // CONSULTA DADOS DE CONTATO (nome, email, telefone)
+                    // =========================================================
+                    try {
+                        const contactRes = await fetch(`/api/consultar_empresa?id_favorecido=${idFavorecido}`, {
+                            headers: { 'Accept': 'application/json' }
+                        });
+                        if (contactRes.ok) {
+                            const contactData = await contactRes.json();
+                            if (contactData.ok && contactData.empresa) {
+                                const empresa = contactData.empresa;
+
+                                // Responsável Cliente (Nome)
+                                const nomeResp = empresa.nomedono || empresa.responsavelnome || '';
+                                if (nomeResp) {
+                                    setIfEmpty('#modal-responsavel_cliente', nomeResp);
+                                }
+
+                                // E-mail Responsável - pode vir múltiplos emails separados por ';'
+                                let emailResp = empresa.email || empresa.responsavelemail || '';
+                                if (emailResp && emailResp.includes(';')) {
+                                    // Pegar apenas o primeiro email
+                                    emailResp = emailResp.split(';')[0].trim();
+                                }
+                                if (emailResp) {
+                                    setIfEmpty('#modal-email_responsavel', emailResp.trim());
+                                }
+
+                                // Telefone Responsável - pode vir com nome concatenado (ex: "NOME: TELEFONE;")
+                                let telResp = empresa.telefone || empresa.responsaveltelefone || '';
+
+                                if (telResp && telResp.includes(':')) {
+                                    const parts = telResp.split(':');
+                                    if (parts.length >= 2) {
+                                        // Parte 1 é o Nome
+                                        const nomeDoTelefone = parts[0].trim();
+                                        // Parte 2 é o Telefone
+                                        const numeroDoTelefone = parts.slice(1).join(':').trim().replace(/;+$/, '').trim();
+
+                                        // Preencher o campo de Nome com o valor extraído se vazio
+                                        if (nomeDoTelefone) {
+                                            setIfEmpty('#modal-responsavel_cliente', nomeDoTelefone);
+                                        }
+
+                                        // Usar apenas o número para o campo de telefone
+                                        telResp = numeroDoTelefone;
+                                    }
+                                }
+
+                                if (telResp) {
+                                    // Formatar telefone para (XX) XXXXX-XXXX ou (XX) XXXX-XXXX
+                                    let telFormatado = telResp.replace(/;+$/, '').trim();
+
+                                    // Se estiver no formato (XX)XXXXX-XXXX (sem espaço), adicionar espaço
+                                    telFormatado = telFormatado.replace(/^\((\d{2})\)(\d)/, '($1) $2');
+
+                                    // Se não tiver parênteses, tentar formatar: 31984637633 -> (31) 98463-7633
+                                    if (!telFormatado.includes('(') && /^\d{10,11}$/.test(telFormatado.replace(/\D/g, ''))) {
+                                        const digits = telFormatado.replace(/\D/g, '');
+                                        if (digits.length === 11) {
+                                            telFormatado = `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+                                        } else if (digits.length === 10) {
+                                            telFormatado = `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+                                        }
+                                    }
+
+                                    setIfEmpty('#modal-telefone_responsavel', telFormatado);
+                                }
+                            }
+                        }
+                    } catch (contactErr) {
+                        console.warn('Erro ao buscar dados de contato:', contactErr);
+                    }
+                    // =========================================================
+
                     const ts = document.getElementById('oamd-last-update');
                     const tspan = document.getElementById('oamd-last-update-time');
                     if (ts && tspan) {
@@ -1111,6 +1196,7 @@
                         tspan.innerText = `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
                         ts.style.display = '';
                     }
+                    if (typeof window.__saveFormSnapshot === 'function') window.__saveFormSnapshot();
                     try {
                         // Só tentar aplicar se a implantação existir no banco
                         if (implId && implId !== '0' && parseInt(implId) > 0) {
