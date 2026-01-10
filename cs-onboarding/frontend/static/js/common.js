@@ -1,34 +1,49 @@
 /**
- * CS Onboarding - Common Scripts
- * Centralizes global functionality, date handling, masking, and HTMX polyfills.
- * Moved from base.html for better maintainability and caching.
+ * CS Onboarding - Common Scripts (Refactored)
+ * 
+ * This file has been refactored to use modular architecture.
+ * Most functionality has been extracted to separate modules:
+ * 
+ * - utils/date-utils.js     - Date formatting, validation, masking, Flatpickr
+ * - utils/phone-utils.js    - Phone formatting and validation
+ * - utils/html-utils.js     - HTML escaping, progress bar, multi-select
+ * - ui/toast.js             - Toast notifications
+ * - ui/confirm-dialog.js    - Confirmation dialogs
+ * - ui/loading.js           - Skeleton loading states
+ * - ui/nprogress.js         - Request progress bar
+ * - ui/sidebar.js           - Sidebar navigation, theme toggle, tooltips
+ * 
+ * This file now only contains:
+ * - Service Container initialization
+ * - HTMX Polyfill (legacy)
+ * - Global Modals initialization
+ * - API Client (apiFetch)
+ * - UX Enhancements (animations, ripple effects)
  */
 
 (function () {
     'use strict';
 
     // ========================================
-    // SERVICE CONTAINER INITIALIZATION (SOLID 10/10)
+    // SERVICE CONTAINER INITIALIZATION
     // ========================================
-    // Nota: Os arquivos core/service-container.js, services/api-service.js e 
-    // services/notification-service.js devem ser carregados ANTES deste arquivo
 
-    // Cria container global (Dependency Injection)
+    // Create container global (Dependency Injection)
     window.appContainer = window.ServiceContainer ? new window.ServiceContainer() : null;
 
-    // Função para inicializar serviços (será chamada após carregar dependências)
+    // Function to initialize services (called after dependencies are loaded)
     window.initializeServices = function () {
         if (!window.appContainer) return;
 
-        // Registra NProgress (será criado mais abaixo neste arquivo)
+        // Register NProgress
         window.appContainer.registerValue('progress', window.NProgress);
 
-        // Registra funções base (showToast, showConfirm)
+        // Register base functions
         window.appContainer.registerValue('showToast', window.showToast);
         window.appContainer.registerValue('showConfirm', window.showConfirm);
         window.appContainer.registerValue('apiFetch', window.apiFetch);
 
-        // Registra NotificationService
+        // Register NotificationService
         if (window.NotificationService) {
             window.appContainer.register('notifier', (container) => {
                 return new window.NotificationService({
@@ -38,7 +53,7 @@
             });
         }
 
-        // Registra ApiService
+        // Register ApiService
         if (window.ApiService) {
             window.appContainer.register('api', (container) => {
                 return new window.ApiService(
@@ -49,7 +64,7 @@
             });
         }
 
-        // Expõe serviços globalmente para backward compatibility
+        // Expose services globally for backward compatibility
         if (window.appContainer.has('api')) {
             window.$api = window.appContainer.resolve('api');
         }
@@ -57,14 +72,14 @@
             window.$notifier = window.appContainer.resolve('notifier');
         }
 
-        // Registra ChecklistAPI
+        // Register ChecklistAPI
         if (window.ChecklistAPI) {
             window.appContainer.register('checklistAPI', (container) => {
                 return new window.ChecklistAPI(container.resolve('api'));
             });
         }
 
-        // Registra ChecklistService
+        // Register ChecklistService
         if (window.ChecklistService) {
             window.appContainer.register('checklistService', (container) => {
                 return new window.ChecklistService(
@@ -74,303 +89,17 @@
             });
         }
 
-        // Expõe ChecklistService globalmente
+        // Expose ChecklistService globally
         if (window.appContainer.has('checklistService')) {
             window.$checklistService = window.appContainer.resolve('checklistService');
         }
 
-        console.log('✅ Service Container initialized with SOLID architecture');
+        console.log('✅ Service Container initialized');
     };
 
-
-    // --- Flatpickr Localization ---
-    function configureFlatpickrLocale() {
-        if (window.flatpickr) {
-            flatpickr.localize({
-                weekdays: {
-                    shorthand: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
-                    longhand: ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']
-                },
-                months: {
-                    shorthand: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
-                    longhand: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
-                },
-                firstDayOfWeek: 1,
-                rangeSeparator: ' até ',
-                weekAbbreviation: 'Sem',
-                scrollTitle: 'Role para aumentar',
-                toggleTitle: 'Clique para alternar',
-                amPM: ['AM', 'PM'],
-                yearAriaLabel: 'Ano',
-                monthAriaLabel: 'Mês',
-                hourAriaLabel: 'Hora',
-                minuteAriaLabel: 'Minuto',
-                time_24hr: false
-            });
-        }
-    }
-
-    // --- Date Validation & Masking ---
-
-    window.validateDateInput = function (input) {
-        var value = input.value.trim();
-        input.classList.remove('is-invalid', 'is-valid');
-
-        if (!value || value.length === 0) {
-            return;
-        }
-
-        // Check format DD/MM/YYYY
-        var regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
-        var match = value.match(regex);
-
-        if (!match) {
-            input.classList.add('is-invalid');
-            return false;
-        }
-
-        var day = parseInt(match[1], 10);
-        var month = parseInt(match[2], 10);
-        var year = parseInt(match[3], 10);
-
-        // Validate limits
-        if (day < 1 || day > 31 || month < 1 || month > 12 || year < 1900 || year > 2100) {
-            input.classList.add('is-invalid');
-            return false;
-        }
-
-        // Validate if date exists
-        var date = new Date(year, month - 1, day);
-        if (date.getDate() !== day || date.getMonth() !== month - 1 || date.getFullYear() !== year) {
-            input.classList.add('is-invalid');
-            return false;
-        }
-
-        input.classList.add('is-valid');
-        return true;
-    };
-
-    window.applyDateMask = function (input) {
-        if (!input || input.dataset.maskApplied) return;
-
-        input.dataset.maskApplied = 'true';
-        input.setAttribute('maxlength', '10');
-        input.setAttribute('inputmode', 'numeric');
-
-        // Apply mask while typing
-        input.addEventListener('input', function (e) {
-            var oldValue = this.dataset.oldValue || '';
-            var cursorPos = this.selectionStart;
-            var value = this.value.replace(/\D/g, ''); // Remove non-digits
-
-            // If value didn't change (formatting only), do nothing
-            if (value === oldValue.replace(/\D/g, '')) {
-                return;
-            }
-
-            // Save old value
-            this.dataset.oldValue = value;
-
-            if (value.length > 8) {
-                value = value.substring(0, 8);
-            }
-
-            // Apply formatting DD/MM/YYYY
-            var formatted = '';
-            if (value.length > 0) {
-                formatted = value.substring(0, 2);
-                if (value.length > 2) {
-                    formatted += '/' + value.substring(2, 4);
-                }
-                if (value.length > 4) {
-                    formatted += '/' + value.substring(4, 8);
-                }
-            }
-
-            // Only update if value really changed
-            if (this.value !== formatted) {
-                this.value = formatted;
-
-                // Adjust cursor position
-                var newCursorPos = cursorPos;
-                var addedChars = formatted.length - (oldValue.replace(/\D/g, '').length);
-
-                if (formatted.length > cursorPos && formatted.charAt(cursorPos) === '/') {
-                    newCursorPos = cursorPos + 1;
-                } else if (addedChars > 0 && cursorPos < formatted.length) {
-                    newCursorPos = cursorPos + addedChars;
-                }
-
-                if (newCursorPos > formatted.length) {
-                    newCursorPos = formatted.length;
-                }
-
-                if (typeof this.setSelectionRange === 'function' && (this.type || '').toLowerCase() !== 'hidden' && document.activeElement === this) {
-                    try { this.setSelectionRange(newCursorPos, newCursorPos); } catch (_) { }
-                }
-            }
-
-            // Real-time validation if complete
-            if (formatted.length === 10) {
-                window.validateDateInput(this);
-            } else {
-                this.classList.remove('is-invalid', 'is-valid');
-            }
-        });
-
-        // Validate on blur
-        input.addEventListener('blur', function () {
-            window.validateDateInput(this);
-        });
-
-        // Prevent non-numeric input
-        input.addEventListener('keypress', function (e) {
-            if (e.ctrlKey || e.metaKey || e.altKey) return true;
-            var char = String.fromCharCode(e.which || e.keyCode);
-            if (!/[0-9]/.test(char)) {
-                e.preventDefault();
-                return false;
-            }
-        });
-
-        // Allow navigation keys
-        input.addEventListener('keydown', function (e) {
-            if ([8, 9, 27, 13, 46, 35, 36, 37, 38, 39, 40].indexOf(e.keyCode) !== -1) return true;
-            if ((e.keyCode === 65 || e.keyCode === 67 || e.keyCode === 86 || e.keyCode === 88) && (e.ctrlKey || e.metaKey)) {
-                return true;
-            }
-        });
-    };
-
-    window.initDateFields = function () {
-        document.querySelectorAll('input[type="text"]').forEach(function (input) {
-            if (input.disabled || input.readOnly || input.classList.contains('no-datepicker')) {
-                return;
-            }
-
-            var placeholder = (input.getAttribute('placeholder') || '').toLowerCase();
-            var name = (input.getAttribute('name') || '').toLowerCase();
-            var id = (input.getAttribute('id') || '').toLowerCase();
-            var className = (input.className || '').toLowerCase();
-
-            var isDateField = (
-                className.includes('flatpickr-date') ||
-                className.includes('date-input') ||
-                placeholder.includes('dd/mm') ||
-                placeholder.includes('dd/mm/aaaa') ||
-                (name.includes('data_') && !name.includes('data_cadastro')) ||
-                (name.includes('_data') && !name.includes('cadastro_data')) ||
-                (id.includes('data_') && !id.includes('data_cadastro')) ||
-                (id.includes('_data') && !id.includes('cadastro_data')) ||
-                (id.includes('date') && !id.includes('update')) ||
-                (name.includes('date') && !name.includes('update'))
-            );
-
-            if (isDateField) {
-                if (!window.flatpickr) {
-                    window.applyDateMask(input);
-                }
-
-                if (window.flatpickr && !input._flatpickr) {
-                    try {
-                        var dateConfig = {
-                            dateFormat: 'Y-m-d',
-                            altInput: true,
-                            altFormat: 'd/m/Y',
-                            allowInput: false,
-                            clickOpens: true,
-                            locale: flatpickr.l10ns.default || flatpickr.l10ns.pt, // Use configured locale
-                            parseDate: function (datestr, format) {
-                                var regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
-                                var match = datestr.match(regex);
-                                if (!match) return null;
-                                var day = parseInt(match[1], 10);
-                                var month = parseInt(match[2], 10) - 1;
-                                var year = parseInt(match[3], 10);
-                                var date = new Date(year, month, day);
-                                if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) return null;
-                                return date;
-                            }
-                        };
-
-                        var fp = window.flatpickr(input, dateConfig);
-
-                        if (fp && fp.altInput) {
-                            fp.altInput.removeAttribute('data-mask-applied');
-                            window.applyDateMask(fp.altInput);
-
-                            fp.config.onChange.push(function (selectedDates, dateStr, instance) {
-                                if (instance.altInput) {
-                                    window.validateDateInput(instance.altInput);
-                                }
-                            });
-
-                            var originalSetDate = fp.setDate;
-                            fp.setDate = function (date, triggerChange) {
-                                var result = originalSetDate.call(this, date, triggerChange);
-                                if (this.altInput) {
-                                    setTimeout(function () {
-                                        window.validateDateInput(fp.altInput);
-                                    }, 10);
-                                }
-                                return result;
-                            };
-                        }
-                    } catch (e) { }
-                }
-            }
-        });
-    };
-
-    // --- Utils Centralizados ---
-    window.escapeHtml = function (text) {
-        if (!text) return '';
-        return String(text)
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;")
-            .replace(/\n/g, '<br>');
-    };
-
-    window.formatDate = function (dateStr, includeTime) {
-        if (!dateStr) return '';
-
-        // Se já estiver no formato brasileiro (dd/mm/yyyy às HH:MM), retornar como está
-        var brFormatRegex = /^\d{2}\/\d{2}\/\d{4}(\s+às\s+\d{2}:\d{2})?$/;
-        if (brFormatRegex.test(String(dateStr).trim())) {
-            return String(dateStr);
-        }
-
-        var d = new Date(dateStr);
-        if (isNaN(d.getTime())) return String(dateStr);
-        var day = String(d.getDate()).padStart(2, '0');
-        var month = String(d.getMonth() + 1).padStart(2, '0');
-        var year = d.getFullYear();
-        var out = day + '/' + month + '/' + year;
-        if (includeTime) {
-            var hours = String(d.getHours()).padStart(2, '0');
-            var minutes = String(d.getMinutes()).padStart(2, '0');
-            out += ' às ' + hours + ':' + minutes;
-        }
-        return out;
-    };
-
-    window.updateProgressBar = function (percent) {
-        var p = Math.max(0, Math.min(100, Number(percent) || 0));
-        var labelEl = document.querySelector('#checklist-global-progress-percent');
-        var barEl = document.querySelector('#checklist-global-progress-bar');
-        if (labelEl) labelEl.textContent = p + '%';
-        if (barEl) {
-            barEl.style.width = p + '%';
-            barEl.setAttribute('aria-valuenow', String(p));
-            if (!barEl.getAttribute('aria-valuemax')) barEl.setAttribute('aria-valuemax', '100');
-            if (!barEl.getAttribute('aria-valuemin')) barEl.setAttribute('aria-valuemin', '0');
-        }
-    };
-
-    // --- HTMX Polyfill ---
+    // ========================================
+    // HTMX POLYFILL (Legacy)
+    // ========================================
 
     function ensureHTMX() {
         if (window.htmx) return true;
@@ -461,108 +190,8 @@
             else { ensureHTMX(); }
         }
 
-        // Modal specific HTMX handling
-        document.addEventListener('submit', function (ev) {
-            var form = ev.target;
-            if (!form || !form.matches('#modalGerenciarUsuarios form[hx-post]')) return;
-            ev.preventDefault();
-            try {
-                var targetSel = form.getAttribute('hx-target');
-                var postUrl = form.getAttribute('hx-post');
-                var swapMode = (form.getAttribute('hx-swap') || 'innerHTML').toLowerCase();
-                var target = targetSel ? document.querySelector(targetSel) : null;
-                if (!postUrl || !target) return;
-                var fd = new FormData(form);
-                fetch(postUrl, { method: 'POST', body: fd, headers: { 'HX-Request': 'true' } })
-                    .then(function (r) { return r.text(); })
-                    .then(function (html) {
-                        if (swapMode === 'outerhtml') { target.outerHTML = html; }
-                        else if (swapMode === 'beforeend') {
-                            var temp = document.createElement('div'); temp.innerHTML = html;
-                            Array.from(temp.childNodes).forEach(function (n) { target.appendChild(n); });
-                        } else { target.innerHTML = html; }
-                    })
-                    .catch(function (e) { console.error('Modal form submission failed:', e); });
-            } catch (e) { console.error('Error processing modal submit:', e); }
-        }, true);
-
-        // Delete comment specific handling
-        document.addEventListener('click', function (ev) {
-            var el = ev.target && ev.target.closest('button[hx-post], a[hx-post]');
-            if (!el) return;
-            var postUrl = el.getAttribute('hx-post');
-            if (!postUrl || postUrl.indexOf('/api/excluir_comentario/') === -1) return;
-            ev.preventDefault();
-            ev.stopPropagation();
-            try { ev.stopImmediatePropagation(); } catch (e) { }
-            var confirmMsg = el.getAttribute('hx-confirm');
-            if (confirmMsg && !window.confirm(confirmMsg)) return;
-            var targetSel = el.getAttribute('hx-target');
-            var swapMode = (el.getAttribute('hx-swap') || 'outerHTML').toLowerCase();
-            var target = targetSel ? document.querySelector(targetSel) : null;
-            if (!target) return;
-            try { el.disabled = true; } catch (e) { }
-            fetch(postUrl, { method: 'POST', headers: { 'HX-Request': 'true' } })
-                .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
-                .then(function (html) {
-                    if (swapMode === 'outerhtml') { target.outerHTML = html; }
-                    else { target.innerHTML = html; }
-                })
-                .catch(function (e) { console.error('Delete comment failed:', e); })
-                .finally(function () { try { el.disabled = false; } catch (e) { } });
-        }, true);
-
-        // Send Email specific handling
-        document.addEventListener('click', function (ev) {
-            var el = ev.target && ev.target.closest('button[hx-post], a[hx-post]');
-            if (!el) return;
-            var postUrl = el.getAttribute('hx-post');
-            if (!postUrl || postUrl.indexOf('/api/enviar_email_comentario/') === -1) return;
-            ev.preventDefault();
-            ev.stopPropagation();
-            try { ev.stopImmediatePropagation(); } catch (e) { }
-            var confirmMsg = el.getAttribute('hx-confirm');
-            if (confirmMsg && !window.confirm(confirmMsg)) return;
-            var targetSel = el.getAttribute('hx-target');
-            var swapMode = (el.getAttribute('hx-swap') || 'beforeend').toLowerCase();
-            var target = targetSel ? document.querySelector(targetSel) : null;
-            if (!target) return;
-            try { el.disabled = true; } catch (e) { }
-            fetch(postUrl, { method: 'POST', headers: { 'HX-Request': 'true' } })
-                .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
-                .then(function (html) {
-                    if (swapMode === 'outerhtml') { target.outerHTML = html; }
-                    else if (swapMode === 'beforeend') {
-                        var temp = document.createElement('div'); temp.innerHTML = html;
-                        Array.from(temp.childNodes).forEach(function (n) { target.appendChild(n); });
-                    } else { target.innerHTML = html; }
-                    try {
-                        var ok = /text-success/.test(html);
-                        var msg = ok ? 'E-mail enviado ao responsável.' : 'Falha ao enviar e-mail ao responsável.';
-                        var cls = ok ? 'alert-success' : 'alert-danger';
-                        var alert = document.createElement('div');
-                        alert.className = 'alert ' + cls + ' alert-dismissible fade show my-2';
-                        alert.innerHTML = msg + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
-                        var container = document.querySelector('#detalhesTabContent') || document.querySelector('.container') || document.body;
-                        container.prepend(alert);
-                        setTimeout(function () { try { var ai = bootstrap.Alert.getOrCreateInstance(alert); ai.close(); } catch (e) { } }, 3000);
-                    } catch (e) { }
-                })
-                .catch(function () {
-                    try {
-                        var alert = document.createElement('div');
-                        alert.className = 'alert alert-danger alert-dismissible fade show my-2';
-                        alert.innerHTML = 'Falha ao enviar e-mail ao responsável.' + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
-                        var container = document.querySelector('#detalhesTabContent') || document.querySelector('.container') || document.body;
-                        container.prepend(alert);
-                        setTimeout(function () { try { var ai = bootstrap.Alert.getOrCreateInstance(alert); ai.close(); } catch (e) { } }, 3000);
-                    } catch (e) { }
-                })
-                .finally(function () { try { el.disabled = false; } catch (e) { } });
-        }, true);
-
         // HTMX Error handling
-        document.addEventListener('htmx:responseError', function (ev) {
+        document.addEventListener('htmx:responseError', function () {
             try {
                 var alert = document.createElement('div');
                 alert.className = 'alert alert-danger alert-dismissible fade show my-2';
@@ -574,472 +203,10 @@
         });
     }
 
-    // --- Sidebar & Tooltips ---
-
-    function initSidebarAndTooltips() {
-        // Tooltips
-        try {
-            var tooltipEls = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-            tooltipEls.forEach(function (el) { bootstrap.Tooltip.getOrCreateInstance(el); });
-        } catch (e) { }
-
-        // Sidebar Toggle
-        const sidebarToggle = document.getElementById('sidebarToggle');
-        const sidebar = document.getElementById('menu');
-        const mainContent = document.querySelector('.main-content');
-
-        if (sidebarToggle && sidebar) {
-            function updateMainContent() {
-                if (sidebar.classList.contains('collapsed')) {
-                    if (mainContent) {
-                        mainContent.style.marginLeft = '60px';
-                        mainContent.style.width = 'calc(100% - 60px)';
-                    }
-                } else {
-                    if (mainContent) {
-                        mainContent.style.marginLeft = '280px';
-                        mainContent.style.width = 'calc(100% - 280px)';
-                    }
-                }
-            }
-
-            const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
-            if (isCollapsed) {
-                sidebar.classList.add('collapsed');
-            }
-            updateMainContent();
-
-            const icon = sidebarToggle.querySelector('i');
-            if (icon) {
-                icon.style.transform = isCollapsed ? 'rotate(180deg)' : 'rotate(0deg)';
-            }
-
-            sidebarToggle.addEventListener('click', function () {
-                sidebar.classList.toggle('collapsed');
-                const icon = sidebarToggle.querySelector('i');
-                if (icon) {
-                    icon.style.transform = sidebar.classList.contains('collapsed') ? 'rotate(180deg)' : 'rotate(0deg)';
-                }
-                updateMainContent();
-                localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
-            });
-        }
-
-        // Theme Toggle (Dark Mode)
-        const themeToggle = document.getElementById('themeToggle');
-        const themeIcon = document.getElementById('themeIcon');
-        const themeText = document.getElementById('themeText');
-
-        function applyTheme(isDark) {
-            if (isDark) {
-                document.documentElement.setAttribute('data-bs-theme', 'dark');
-                document.documentElement.classList.add('dark-mode');
-                document.body.classList.add('dark-mode');
-                if (themeIcon) {
-                    themeIcon.classList.remove('bi-moon-stars');
-                    themeIcon.classList.add('bi-sun-fill');
-                }
-                if (themeText) themeText.textContent = 'Tema Claro';
-            } else {
-                document.documentElement.removeAttribute('data-bs-theme');
-                document.documentElement.classList.remove('dark-mode');
-                document.body.classList.remove('dark-mode');
-                if (themeIcon) {
-                    themeIcon.classList.remove('bi-sun-fill');
-                    themeIcon.classList.add('bi-moon-stars');
-                }
-                if (themeText) themeText.textContent = 'Tema Escuro';
-            }
-        }
-
-        // Carregar tema salvo (sync with inline script in head)
-        const savedTheme = localStorage.getItem('theme');
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const isDarkMode = savedTheme === 'dark' || (savedTheme === null && prefersDark);
-        applyTheme(isDarkMode);
-
-        if (themeToggle) {
-            themeToggle.addEventListener('click', function (e) {
-                e.preventDefault();
-                const isDark = document.body.classList.contains('dark-mode');
-                applyTheme(!isDark);
-                const newTheme = !isDark ? 'dark' : 'light';
-                localStorage.setItem('theme', newTheme);
-                // Set cookie for server-side rendering
-                document.cookie = 'theme=' + newTheme + ';path=/;max-age=31536000';
-            });
-        }
-    }
-
-    // --- Utility Functions ---
-
-    window.formatarTelefone = function (input) {
-        // Remove tudo que não é número
-        let v = input.value.replace(/\D/g, '').substring(0, 11);
-
-        // Aplica máscara conforme o tamanho
-        if (v.length > 10) {
-            // Celular: (XX) XXXXX-XXXX
-            v = v.replace(/^(\d{2})(\d{5})(\d{4}).*/, '($1) $2-$3');
-        } else if (v.length > 6) {
-            // Telefone fixo: (XX) XXXX-XXXX
-            v = v.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
-        } else if (v.length > 2) {
-            // DDD + início: (XX) XXXX
-            v = v.replace(/^(\d{2})(\d{0,5}).*/, '($1) $2');
-        } else if (v.length > 0) {
-            // Apenas DDD: (XX
-            v = v.replace(/^(\d{0,2}).*/, '($1');
-        }
-
-        input.value = v;
-
-        // Validação visual
-        const telefoneInput = input;
-        const telefoneNumeros = v.replace(/\D/g, '');
-        const isValid = telefoneNumeros.length >= 10 && telefoneNumeros.length <= 11;
-
-        // Remove classes anteriores
-        telefoneInput.classList.remove('is-valid', 'is-invalid');
-
-        // Adiciona classe de validação
-        if (telefoneNumeros.length > 0) {
-            if (isValid) {
-                telefoneInput.classList.add('is-valid');
-                telefoneInput.setCustomValidity('');
-            } else {
-                telefoneInput.classList.add('is-invalid');
-                telefoneInput.setCustomValidity('Telefone deve ter 10 ou 11 dígitos');
-            }
-        } else {
-            telefoneInput.setCustomValidity('');
-        }
-    };
-
-    window.validarTelefone = function (telefone) {
-        if (!telefone) return true; // Campo opcional
-        const numeros = telefone.replace(/\D/g, '');
-        return numeros.length >= 10 && numeros.length <= 11;
-    };
-
-    window.validarTelefoneCompleto = function (input) {
-        const telefone = input.value.trim();
-        const telefoneInput = input;
-
-        // Remove classes anteriores
-        telefoneInput.classList.remove('is-valid', 'is-invalid');
-
-        if (telefone.length === 0) {
-            // Campo vazio é válido (opcional)
-            telefoneInput.setCustomValidity('');
-            return true;
-        }
-
-        const numeros = telefone.replace(/\D/g, '');
-        const isValid = numeros.length >= 10 && numeros.length <= 11;
-
-        if (isValid) {
-            telefoneInput.classList.add('is-valid');
-            telefoneInput.setCustomValidity('');
-            return true;
-        } else {
-            telefoneInput.classList.add('is-invalid');
-            telefoneInput.setCustomValidity('Telefone deve ter 10 ou 11 dígitos');
-            return false;
-        }
-    };
-
-    window.setMultipleSelect = function (selectElement, dataValue) {
-        if (!selectElement) return;
-        Array.from(selectElement.options).forEach(opt => opt.selected = false);
-        const values = (typeof dataValue === 'string' && dataValue)
-            ? dataValue.split(',').map(s => s.trim()).filter(s => s.length > 0)
-            : [];
-        if (values.length > 0) {
-            let hasSelection = false;
-            Array.from(selectElement.options).forEach(opt => {
-                if (values.includes(opt.value)) {
-                    opt.selected = true;
-                    hasSelection = true;
-                }
-            });
-            if (!hasSelection && selectElement.options.length > 0 && selectElement.options[0].value === "") {
-                selectElement.options[0].selected = true;
-            }
-        } else {
-            if (selectElement.options.length > 0 && selectElement.options[0].value === "") {
-                selectElement.options[0].selected = true;
-            }
-        }
-    };
-
-    // --- Mobile & Modal Helpers ---
-
-    document.addEventListener('show.bs.modal', function () {
-        try {
-            var menu = document.getElementById('menu');
-            var push = document.querySelector('.push');
-            var backdrop = document.querySelector('.bigslide-backdrop');
-            if (document.body.classList.contains('menu-open')) {
-                document.body.classList.remove('menu-open');
-                if (menu) menu.classList.remove('open');
-                if (push) push.classList.remove('push-shifted');
-                if (backdrop) backdrop.classList.add('d-none');
-            }
-            // Se bigSlide estiver ativo, aciona o fechamento para sincronizar estado interno
-            if (window.jQuery && jQuery.fn && jQuery.fn.bigSlide) {
-                jQuery('.menu-link').trigger('click');
-            }
-        } catch (e) { /* ignora erros de ambiente */ }
-    });
-
-    // --- Initialization ---
-
-    document.addEventListener('DOMContentLoaded', function () {
-        configureFlatpickrLocale();
-        initDateFields();
-        setupHTMXFallback();
-        initSidebarAndTooltips();
-    });
-
-    // Re-initialize when modals are opened
-    document.addEventListener('shown.bs.modal', function () {
-        setTimeout(function () {
-            if (window.initDateFields) window.initDateFields();
-        }, 100);
-    });
-
     // ========================================
-    // SISTEMA DE TOASTS (Enterprise Grade)
+    // GLOBAL MODALS INITIALIZATION
     // ========================================
-    // ========================================
-    // SISTEMA DE TOASTS (Premium Design)
-    // ========================================
-    window.showToast = function (message, type = 'info', duration = 5000) {
-        let toastContainer = document.getElementById('toastContainer');
 
-        // Auto-healing: Create container if missing
-        if (!toastContainer) {
-            toastContainer = document.createElement('div');
-            toastContainer.id = 'toastContainer';
-            toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
-            toastContainer.style.zIndex = '9999'; // Acima de tudo (modais são 1055)
-            document.body.appendChild(toastContainer);
-        }
-
-        const toastId = 'toast-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-
-        // Definições de Estilo por Tipo
-        const config = {
-            success: {
-                icon: 'bi-check-lg',
-                color: '#10b981', // Emerald 500
-                bgIcon: 'rgba(16, 185, 129, 0.1)',
-                title: 'Sucesso'
-            },
-            error: {
-                icon: 'bi-x-lg',
-                color: '#ef4444', // Red 500
-                bgIcon: 'rgba(239, 68, 68, 0.1)',
-                title: 'Erro'
-            },
-            warning: {
-                icon: 'bi-exclamation-lg',
-                color: '#f59e0b', // Amber 500
-                bgIcon: 'rgba(245, 158, 11, 0.1)',
-                title: 'Atenção'
-            },
-            info: {
-                icon: 'bi-info-lg',
-                color: '#3b82f6', // Blue 500
-                bgIcon: 'rgba(59, 130, 246, 0.1)',
-                title: 'Informação'
-            }
-        }[type] || {
-            icon: 'bi-bell-fill',
-            color: '#6366f1', // Indigo 500
-            bgIcon: 'rgba(99, 102, 241, 0.1)',
-            title: 'Notificação'
-        };
-
-        // Dark Mode Check
-        const isDark = document.body.classList.contains('dark-mode') ||
-            document.documentElement.getAttribute('data-bs-theme') === 'dark';
-
-        const bgColor = isDark ? 'rgba(30, 30, 35, 0.95)' : 'rgba(255, 255, 255, 0.98)';
-        const textColor = isDark ? '#e2e8f0' : '#1e293b';
-        const borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
-        const shadow = isDark ? '0 10px 30px -5px rgba(0, 0, 0, 0.5)' : '0 10px 30px -5px rgba(0, 0, 0, 0.1)';
-
-        const toastHTML = `
-        <div id="${toastId}" class="toast border-0 mb-3" role="alert" aria-live="assertive" aria-atomic="true"
-             style="
-                background: ${bgColor};
-                backdrop-filter: blur(10px);
-                border: 1px solid ${borderColor};
-                border-left: 4px solid ${config.color};
-                box-shadow: ${shadow};
-                border-radius: 12px;
-                min-width: 320px;
-                max-width: 400px;
-                overflow: hidden;
-                transform: translateX(100%);
-                transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-             ">
-             
-             <div class="d-flex p-3 align-items-start">
-                <!-- Icone Circular -->
-                <div class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0 me-3"
-                     style="width: 38px; height: 38px; background: ${config.bgIcon}; color: ${config.color};">
-                    <i class="bi ${config.icon} fs-5"></i>
-                </div>
-
-                <!-- Conteúdo -->
-                <div class="flex-grow-1">
-                    <h6 class="mb-1 fw-bold" style="color: ${textColor}; font-size: 0.95rem;">${config.title}</h6>
-                    <p class="mb-0 text-muted" style="font-size: 0.85rem; line-height: 1.4;">${message}</p>
-                </div>
-
-                <!-- Fechar -->
-                <button type="button" class="btn-close ms-2" data-bs-dismiss="toast" aria-label="Close" 
-                        style="opacity: 0.5; font-size: 0.8rem;"></button>
-             </div>
-
-             <!-- Barra de Progresso -->
-             <div class="toast-progress" style="height: 3px; background: ${config.bgIcon}; width: 100%;">
-                <div style="height: 100%; background: ${config.color}; width: 100%; transition: width ${duration}ms linear;"></div>
-             </div>
-        </div>
-        `;
-
-        toastContainer.insertAdjacentHTML('beforeend', toastHTML);
-        const toastElement = document.getElementById(toastId);
-
-        // Ativar animação de entrada
-        requestAnimationFrame(() => {
-            toastElement.style.transform = 'translateX(0)';
-        });
-
-        // Ativar animação da barra de progresso
-        setTimeout(() => {
-            const progressBar = toastElement.querySelector('.toast-progress > div');
-            if (progressBar) progressBar.style.width = '0%';
-        }, 50);
-
-        if (typeof bootstrap !== 'undefined' && bootstrap.Toast) {
-            const toast = new bootstrap.Toast(toastElement, {
-                autohide: true,
-                delay: duration
-            });
-            toast.show();
-
-            // Animação de saída manual para garantir suavidade
-            toastElement.addEventListener('hide.bs.toast', function (e) {
-                // Impede o hide padrão imediato para fazer animação css primeiro
-                // mas o bootstrap já lida com fade. Vamos apenas garantir translate.
-                toastElement.style.transform = 'translateX(120%)';
-                toastElement.style.opacity = '0';
-            });
-
-            toastElement.addEventListener('hidden.bs.toast', function () {
-                toastElement.remove();
-            });
-        }
-    };
-
-    // ========================================
-    // SISTEMA DE CONFIRMAÇÕES INTELIGENTES
-    // ========================================
-    window.showConfirm = function (options) {
-        return new Promise((resolve) => {
-            const {
-                title = 'Confirmar ação',
-                message = 'Tem certeza que deseja continuar?',
-                confirmText = 'Confirmar',
-                cancelText = 'Cancelar',
-                type = 'warning',
-                icon = 'bi-exclamation-triangle-fill'
-            } = options;
-
-            const modalId = 'confirmModal-' + Date.now();
-            const modalHTML = `
-          <div class="modal fade" id="${modalId}" tabindex="-1" aria-labelledby="${modalId}Label" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-              <div class="modal-content">
-                <div class="modal-header border-0 pb-0">
-                  <h5 class="modal-title" id="${modalId}Label">
-                    <i class="bi ${icon} text-${type} me-2"></i>${title}
-                  </h5>
-                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                  <p>${message}</p>
-                </div>
-                <div class="modal-footer border-0">
-                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">${cancelText}</button>
-                  <button type="button" class="btn btn-${type === 'danger' ? 'danger' : 'primary'}" id="${modalId}Confirm">${confirmText}</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        `;
-
-            document.body.insertAdjacentHTML('beforeend', modalHTML);
-            const modalElement = document.getElementById(modalId);
-            const modal = new bootstrap.Modal(modalElement);
-
-            document.getElementById(modalId + 'Confirm').addEventListener('click', () => {
-                modal.hide();
-                resolve(true);
-                modalElement.addEventListener('hidden.bs.modal', () => modalElement.remove(), { once: true });
-            });
-
-            modalElement.addEventListener('hidden.bs.modal', () => {
-                resolve(false);
-                modalElement.remove();
-            }, { once: true });
-
-            modal.show();
-        });
-    };
-
-    // ========================================
-    // LOADING STATES - Skeleton Screen Helper
-    // ========================================
-    window.showSkeleton = function (container, count = 3) {
-        if (!container) return;
-
-        const skeletonHTML = `
-        <div class="skeleton-item mb-3">
-          <div class="skeleton-line" style="height: 20px; width: 60%; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s ease-in-out infinite; border-radius: 4px; margin-bottom: 10px;"></div>
-          <div class="skeleton-line" style="height: 16px; width: 100%; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s ease-in-out infinite; border-radius: 4px; margin-bottom: 8px;"></div>
-          <div class="skeleton-line" style="height: 16px; width: 80%; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s ease-in-out infinite; border-radius: 4px;"></div>
-        </div>
-      `;
-
-        container.innerHTML = skeletonHTML.repeat(count);
-    };
-
-    // Adicionar animação CSS para skeleton
-    if (!document.getElementById('skeleton-styles')) {
-        const style = document.createElement('style');
-        style.id = 'skeleton-styles';
-        style.textContent = `
-        @keyframes skeleton-loading {
-          0% { background-position: 200% 0; }
-          100% { background-position: -200% 0; }
-        }
-        .skeleton-item {
-          padding: 1rem;
-          background: #fff;
-          border-radius: 8px;
-          border: 1px solid #e9ecef;
-        }
-      `;
-        document.head.appendChild(style);
-    }
-
-    // --- Global Modals Initialization ---
     function initGlobalModals() {
         // Modal Gerenciar Usuários
         const modalGerenciarUsuarios = document.getElementById('modalGerenciarUsuarios');
@@ -1075,7 +242,7 @@
                     .then(html => {
                         contentDiv.innerHTML = html;
 
-                        // Adicionar preview de foto
+                        // Add photo preview handler
                         const fotoInput = document.getElementById('foto');
                         if (fotoInput) {
                             fotoInput.addEventListener('change', function (e) {
@@ -1085,7 +252,6 @@
                                     reader.onload = function (event) {
                                         const previewContainer = document.getElementById('profile-photo-preview');
                                         if (previewContainer) {
-                                            // Se for uma div (placeholder), substituir por img
                                             if (previewContainer.tagName === 'DIV') {
                                                 const img = document.createElement('img');
                                                 img.id = 'profile-photo-preview';
@@ -1095,7 +261,6 @@
                                                 img.src = event.target.result;
                                                 previewContainer.parentNode.replaceChild(img, previewContainer);
                                             } else {
-                                                // Se já for img, apenas atualizar o src
                                                 previewContainer.src = event.target.result;
                                             }
                                         }
@@ -1119,14 +284,12 @@
                     const fd = new FormData(form);
                     fetch(postUrl, { method: 'POST', body: fd, headers: { 'HX-Request': 'true' } })
                         .then(function (r) {
-                            // Atualização global da UI baseada nos headers da resposta
                             const updatedPhoto = r.headers.get('X-Updated-Photo-Url');
                             const updatedName = r.headers.get('X-Updated-Name');
 
                             if (updatedPhoto) {
                                 const els = document.querySelectorAll('.user-photo-global, #sidebar-user-photo');
                                 els.forEach(function (img) {
-                                    // Adicionar timestamp para evitar cache
                                     img.src = updatedPhoto + '?v=' + new Date().getTime();
                                 });
                             }
@@ -1159,77 +322,12 @@
     }
 
     // ========================================
-    // GLOBAL PROGRESS BAR (Minimal NProgress)
+    // API CLIENT WRAPPER
     // ========================================
-    const NProgress = {
-        activeRequests: 0,
-        timer: null,
 
-        get element() {
-            let el = document.getElementById('nprogress-bar');
-            if (!el) {
-                const container = document.createElement('div');
-                container.id = 'nprogress-container';
-                container.innerHTML = '<div id="nprogress-bar"></div>';
-                document.body.appendChild(container);
-                el = container.firstChild;
-            }
-            return el;
-        },
-
-        start() {
-            if (this.activeRequests === 0) {
-                const el = this.element;
-                el.style.transition = 'none';
-                el.style.opacity = '1';
-                el.style.width = '0%';
-
-                // Force reflow
-                void el.offsetWidth;
-
-                el.style.transition = 'width 0.2s ease-out, opacity 0.3s ease';
-                el.style.width = '15%';
-                this.simulateProgress();
-            }
-            this.activeRequests++;
-        },
-
-        simulateProgress() {
-            if (this.timer) clearInterval(this.timer);
-            this.timer = setInterval(() => {
-                const currentWidth = parseFloat(this.element.style.width) || 0;
-                if (currentWidth < 90) {
-                    const inc = Math.random() * 5;
-                    this.element.style.width = (currentWidth + inc) + '%';
-                }
-            }, 300);
-        },
-
-        done() {
-            this.activeRequests--;
-            if (this.activeRequests <= 0) {
-                this.activeRequests = 0;
-                if (this.timer) clearInterval(this.timer);
-
-                this.element.style.width = '100%';
-
-                setTimeout(() => {
-                    this.element.style.opacity = '0';
-                    setTimeout(() => {
-                        this.element.style.width = '0%';
-                    }, 300);
-                }, 200);
-            }
-        }
-    };
-    window.NProgress = NProgress;
-
-    // ========================================
-    // API CLIENT WRAPPER (Enterprise Grade)
-    // ========================================
     window.apiFetch = async function (url, options = {}) {
         // Start Progress Bar (unless suppressed)
-        if (options.showProgress !== false) {
+        if (options.showProgress !== false && window.NProgress) {
             NProgress.start();
         }
 
@@ -1238,12 +336,11 @@
         };
 
         // Only set Content-Type to JSON if body is NOT FormData
-        // If it IS FormData, let the browser set Content-Type with boundary
         if (!(options.body instanceof FormData)) {
             defaultHeaders['Content-Type'] = 'application/json';
         }
 
-        // Auto-inject CSRF Token from input or meta tag
+        // Auto-inject CSRF Token
         const csrfToken = document.querySelector('input[name="csrf_token"]')?.value ||
             document.querySelector('meta[name="csrf-token"]')?.content;
 
@@ -1262,7 +359,7 @@
         try {
             const response = await fetch(url, config);
 
-            // Handle 401 Unauthorized (Redirect to login)
+            // Handle 401 Unauthorized
             if (response.status === 401) {
                 window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
                 return;
@@ -1275,7 +372,6 @@
                     const errorData = await response.json();
                     errorMessage = errorData.error || errorData.message || errorMessage;
                 } catch (e) {
-                    // Tentar ler texto se não for JSON
                     try {
                         const text = await response.text();
                         if (text && text.length < 200) errorMessage = text;
@@ -1284,41 +380,36 @@
                 throw new Error(errorMessage);
             }
 
-            // Return JSON by default, unless configured otherwise
+            // Return JSON by default
             if (options.parseJson === false) return response;
             return await response.json();
 
         } catch (error) {
             console.error('API Error:', error);
-            if (options.showErrorToast !== false) {
+            if (options.showErrorToast !== false && window.showToast) {
                 window.showToast(error.message, 'error');
             }
             throw error;
         } finally {
-            if (options.showProgress !== false) {
+            if (options.showProgress !== false && window.NProgress) {
                 NProgress.done();
             }
         }
     };
 
-    // Call initGlobalModals on load
-    document.addEventListener('DOMContentLoaded', function () {
-        initGlobalModals();
+    // ========================================
+    // UX ENHANCEMENTS
+    // ========================================
 
-        // ===========================================
-        // UX ENHANCEMENTS INITIALIZATION
-        // ===========================================
-
+    function initUXEnhancements() {
         // 1. Entrance Animations for Cards
         const cards = document.querySelectorAll('.card, .metric-card, .list-group-item');
         cards.forEach((card, index) => {
-            // Apply staggered animation
-            // Limit to first 20 items to avoid performance hit on large lists
             if (index < 20) {
                 card.classList.add('animate-fade-in-up');
-                card.style.animationDelay = `${index * 50}ms`; // 50ms stagger
+                card.style.animationDelay = `${index * 50}ms`;
             } else {
-                card.classList.add('animate-fade-in'); // Faster fade for rest
+                card.classList.add('animate-fade-in');
             }
         });
 
@@ -1335,42 +426,26 @@
                 ripple.style.left = `${x}px`;
                 ripple.style.top = `${y}px`;
 
-                // Remove existing ripples to clean up
                 const existing = btn.querySelector('.ripple');
                 if (existing) existing.remove();
 
                 btn.appendChild(ripple);
-
                 setTimeout(() => ripple.remove(), 600);
             }
         });
 
-        // 3. Initialize Bootstrap Tooltips (Global)
-        if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
-            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-            tooltipTriggerList.map(function (tooltipTriggerEl) {
-                return new bootstrap.Tooltip(tooltipTriggerEl);
-            });
-        }
-
-        // 4. Real-time Form Validation
+        // 3. Real-time Form Validation
         const emailInputs = document.querySelectorAll('input[type="email"]');
         emailInputs.forEach(input => {
-            input.addEventListener('blur', function () {
-                validateEmail(this);
-            });
+            input.addEventListener('blur', function () { validateEmail(this); });
             input.addEventListener('input', function () {
-                if (this.classList.contains('is-invalid')) {
-                    validateEmail(this);
-                }
+                if (this.classList.contains('is-invalid')) validateEmail(this);
             });
         });
 
         const requiredInputs = document.querySelectorAll('input[required], textarea[required], select[required]');
         requiredInputs.forEach(input => {
-            input.addEventListener('blur', function () {
-                validateRequired(this);
-            });
+            input.addEventListener('blur', function () { validateRequired(this); });
         });
 
         function validateEmail(input) {
@@ -1393,7 +468,6 @@
 
         function validateRequired(input) {
             const value = input.value.trim();
-
             if (!value) {
                 input.classList.add('is-invalid');
                 input.classList.remove('is-valid');
@@ -1418,12 +492,46 @@
             const existing = input.parentNode.querySelector('[data-validation-error]');
             if (existing) existing.remove();
         }
+    }
+
+    // ========================================
+    // RE-INITIALIZE DATE FIELDS ON MODAL OPEN
+    // ========================================
+
+    document.addEventListener('shown.bs.modal', function () {
+        setTimeout(function () {
+            if (window.initDateFields) window.initDateFields();
+        }, 100);
     });
 
     // ========================================
-    // INITIALIZE SERVICE CONTAINER
+    // INITIALIZATION
     // ========================================
-    // Chama após todos os serviços base estarem definidos
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // Initialize Flatpickr locale (from date-utils.js)
+        if (window.configureFlatpickrLocale) {
+            window.configureFlatpickrLocale();
+        }
+
+        // Initialize date fields (from date-utils.js)
+        if (window.initDateFields) {
+            window.initDateFields();
+        }
+
+        // Setup HTMX fallback
+        setupHTMXFallback();
+
+        // Initialize global modals
+        initGlobalModals();
+
+        // Initialize UX enhancements
+        initUXEnhancements();
+
+        console.log('✅ Common.js initialized (refactored)');
+    });
+
+    // Initialize Service Container
     if (typeof window.initializeServices === 'function') {
         window.initializeServices();
     }

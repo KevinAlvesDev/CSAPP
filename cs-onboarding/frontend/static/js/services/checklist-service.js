@@ -241,6 +241,48 @@ class ChecklistService {
         }
     }
 
+    /**
+     * Move um item para nova posição
+     * @param {number} itemId - ID do item
+     * @param {number|null} newParentId - Novo pai
+     * @param {number|null} newOrder - Nova posição
+     * @returns {Promise<{success: boolean, error?: string}>}
+     */
+    async moveItem(itemId, newParentId, newOrder) {
+        try {
+            const data = await this.api.moveItem(itemId, newParentId, newOrder);
+
+            if (data && data.ok) {
+                return { success: true };
+            }
+
+            throw new Error(data?.error || 'Erro ao mover item');
+        } catch (error) {
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    }
+
+    /**
+     * Carrega a árvore do checklist
+     * @param {number} implantacaoId
+     * @param {string} format
+     * @returns {Promise<{items?: Array, error?: string}>}
+     */
+    async getTree(implantacaoId, format = 'nested') {
+        try {
+            const data = await this.api.getTree(implantacaoId, format);
+            if (data && (data.items || Array.isArray(data))) {
+                return { items: data.items || data };
+            }
+            throw new Error(data?.error || 'Erro ao carregar árvore');
+        } catch (error) {
+            return { items: [], error: error.message };
+        }
+    }
+
     // ========================================
     // COMMENTS
     // ========================================

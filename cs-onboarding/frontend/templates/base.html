@@ -164,12 +164,34 @@
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
   <script src="https://unpkg.com/imask"></script>
-  <script src="{{ url_for('static', filename='js/common.js') }}"></script>
   <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+
+  <!-- ========================================
+       MODULAR ARCHITECTURE (SOLID Principles)
+       ======================================== -->
+
+  <!-- Utils Layer -->
+  <script src="{{ url_for('static', filename='js/utils/date-utils.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/utils/phone-utils.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/utils/html-utils.js') }}"></script>
   <script src="{{ url_for('static', filename='js/utils/fetch_retry.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/components/modal_detalhes_empresa.js') }}"></script>
+
+  <!-- UI Layer -->
+  <script src="{{ url_for('static', filename='js/ui/toast.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/ui/confirm-dialog.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/ui/loading.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/ui/nprogress.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/ui/sidebar.js') }}"></script>
+
+  <!-- Core (Legacy - will be refactored) -->
+  <script src="{{ url_for('static', filename='js/common.js') }}"></script>
+
+  <!-- Services & Utilities -->
   <script src="{{ url_for('static', filename='js/utils/bug_prevention_service.js') }}"></script>
   <script src="{{ url_for('static', filename='js/utils/table_sort.js') }}"></script>
+
+  <!-- Components -->
+  <script src="{{ url_for('static', filename='js/components/modal_detalhes_empresa.js') }}"></script>
   <script src="{{ url_for('static', filename='js/components/notifications.js') }}"></script>
 
   {% block scripts_extra %}{% endblock %}
