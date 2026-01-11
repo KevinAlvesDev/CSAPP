@@ -1218,10 +1218,17 @@
                                   ${issue.type_icon ? `<img src="${issue.type_icon}" width="16" height="16" title="${issue.type}">` : ''}
                                   <span class="fw-bold text-dark" style="font-size: 0.9rem;">${issue.key}</span>
                                </div>
-                               <span class="jira-status-badge ${badgeClass} text-white bg-opacity-75 border-0">${issue.status}</span>
+                               <div class="d-flex gap-1 align-items-center">
+                                   <span class="jira-status-badge ${badgeClass} text-white bg-opacity-75 border-0">${issue.status}</span>
+                                   ${issue.is_linked ? `
+                                        <button class="btn btn-link text-danger p-0 ms-1 unlink-jira-btn" data-key="${issue.key}" title="Desvincular ticket da implantação" style="z-index: 10;">
+                                            <i class="bi bi-link-45deg fs-5"></i><i class="bi bi-x fs-6" style="margin-left: -8px;"></i>
+                                        </button>
+                                   ` : ''}
+                               </div>
                           </div>
                           <h6 class="card-title text-dark fw-semibold mb-3 flex-grow-1" style="font-size: 0.95rem; line-height: 1.4;">
-                              ${escapeHtml(issue.summary)}
+                               ${escapeHtml(issue.summary)}
                           </h6>
                           <div class="mt-auto d-flex justify-content-between align-items-end border-top pt-3">
                                <span class="badge bg-light text-primary border border-primary"><i class="bi bi-search me-1"></i>Resultado Busca</span>
@@ -1235,6 +1242,45 @@
 
             if (cardsContainer) {
               cardsContainer.insertAdjacentHTML('afterbegin', cardHtml);
+
+              // Bind Unlink Event for this new card
+              const newBtn = cardsContainer.querySelector(`.unlink-jira-btn[data-key="${issue.key}"]`);
+              if (newBtn) {
+                newBtn.addEventListener('click', async (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+
+                  const key = newBtn.dataset.key;
+                  const confirmed = await showConfirm({
+                    title: 'Desvincular Ticket',
+                    message: `Deseja realmente desvincular o ticket <strong>${key}</strong> desta implantação?`,
+                    confirmText: 'Desvincular',
+                    cancelText: 'Cancelar',
+                    type: 'danger',
+                    icon: 'bi-link-45deg'
+                  });
+
+                  if (!confirmed) return;
+
+                  try {
+                    const resp = await fetch(`/api/implantacao/${CONFIG.implantacaoId}/jira-issues/${key}`, {
+                      method: 'DELETE',
+                      headers: { 'X-CSRFToken': CONFIG.csrfToken }
+                    });
+
+                    if (resp.ok) {
+                      showToast('Vínculo removido com sucesso!', 'success');
+                      loadJiraIssues(true);
+                    } else {
+                      const data = await resp.json();
+                      showToast(data.error || 'Erro ao desvincular', 'error');
+                    }
+                  } catch (err) {
+                    console.error(err);
+                    showToast('Erro de conexão ao desvincular', 'error');
+                  }
+                });
+              }
             }
 
             const bsModal = bootstrap.Modal.getInstance(modalConsultaTicket);

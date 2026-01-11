@@ -233,92 +233,111 @@ class ChecklistRenderer {
     }
 
     attachEventListeners() {
-        // Expand/Collapse
-        document.addEventListener('click', (e) => {
-            const button = e.target.closest('.btn-expand');
-            if (button && this.container.contains(button)) {
-                e.preventDefault(); e.stopPropagation();
-                const itemId = parseInt(button.dataset.itemId);
-                if (!isNaN(itemId)) this.toggleExpand(itemId);
-            }
-        });
+        this.cleanupEventListeners();
 
-        // Checkbox Toggle
-        this.container.addEventListener('change', (e) => {
-            if (e.target.classList.contains('checklist-checkbox')) {
-                const itemId = parseInt(e.target.dataset.itemId);
-                this.handleCheck(itemId, e.target.checked);
-            }
-        });
+        this._handlers = {
+            docClick: (e) => {
+                const button = e.target.closest('.btn-expand');
+                if (button && this.container.contains(button)) {
+                    e.preventDefault(); e.stopPropagation();
+                    const itemId = parseInt(button.dataset.itemId);
+                    if (!isNaN(itemId)) this.toggleExpand(itemId);
+                }
+            },
+            checkboxChange: (e) => {
+                if (e.target.classList.contains('checklist-checkbox')) {
+                    const itemId = parseInt(e.target.dataset.itemId);
+                    this.handleCheck(itemId, e.target.checked);
+                }
+            },
+            commentsClick: (e) => {
+                if (!this.comments) return;
+                if (e.target.closest('.btn-comment-toggle')) {
+                    const itemId = parseInt(e.target.closest('.btn-comment-toggle').dataset.itemId);
+                    this.comments.toggleComments(itemId);
+                } else if (e.target.closest('.btn-save-comment')) {
+                    const itemId = parseInt(e.target.closest('.btn-save-comment').dataset.itemId);
+                    this.comments.saveComment(itemId);
+                } else if (e.target.closest('.btn-cancel-comment')) {
+                    const itemId = parseInt(e.target.closest('.btn-cancel-comment').dataset.itemId);
+                    this.comments.cancelComment(itemId);
+                } else if (e.target.closest('.btn-delete-comment')) {
+                    const btn = e.target.closest('.btn-delete-comment');
+                    this.comments.deleteComment(parseInt(btn.dataset.commentId), parseInt(btn.dataset.itemId));
+                } else if (e.target.closest('.btn-edit-comment')) {
+                    const btn = e.target.closest('.btn-edit-comment');
+                    this.comments.startEditComment(parseInt(btn.dataset.commentId), parseInt(btn.dataset.itemId));
+                } else if (e.target.closest('.btn-save-edit')) {
+                    const btn = e.target.closest('.btn-save-edit');
+                    this.comments.saveEditedComment(parseInt(btn.dataset.commentId), parseInt(btn.dataset.itemId));
+                } else if (e.target.closest('.btn-cancel-edit')) {
+                    const btn = e.target.closest('.btn-cancel-edit');
+                    this.comments.cancelEditComment(parseInt(btn.dataset.commentId), parseInt(btn.dataset.itemId));
+                } else if (e.target.closest('.btn-send-email-comment')) {
+                    // ToDO: Implement email send in comments component
+                    const btn = e.target.closest('.btn-send-email-comment');
+                    // this.comments.sendEmail(...) 
+                }
+            },
+            modalsClick: (e) => {
+                if (e.target.closest('.js-edit-resp')) this.openRespModal(parseInt(e.target.closest('.js-edit-resp').dataset.itemId));
+                else if (e.target.closest('.js-edit-prev')) {
+                    const itemId = parseInt(e.target.closest('.js-edit-prev').dataset.itemId);
+                    const node = this.flatData[itemId];
+                    if (node.completed || node.data_conclusao) {
+                        this.showToast('Tarefa concluída: não é possível adicionar previsão', 'warning');
+                    } else {
+                        this.openPrevModal(itemId);
+                    }
+                }
+                else if (e.target.closest('.js-edit-tag')) this.openTagModal(parseInt(e.target.closest('.js-edit-tag').dataset.itemId));
+                else if (e.target.closest('.btn-delete-item')) this.deleteItem(parseInt(e.target.closest('.btn-delete-item').dataset.itemId));
+            },
+            tagsClick: (e) => {
+                const visibilityTag = e.target.closest('.comentario-tipo-tag.interno, .comentario-tipo-tag.externo');
+                if (visibilityTag) {
+                    const container = visibilityTag.closest('.d-flex');
+                    if (container) container.querySelectorAll('.comentario-tipo-tag.interno, .comentario-tipo-tag.externo').forEach(t => t.classList.remove('active'));
+                    visibilityTag.classList.add('active');
+                }
 
-        // Delegate to Comments Component
-        this.container.addEventListener('click', (e) => {
-            if (!this.comments) return;
-
-            if (e.target.closest('.btn-comment-toggle')) {
-                const itemId = parseInt(e.target.closest('.btn-comment-toggle').dataset.itemId);
-                this.comments.toggleComments(itemId);
-            } else if (e.target.closest('.btn-save-comment')) {
-                const itemId = parseInt(e.target.closest('.btn-save-comment').dataset.itemId);
-                this.comments.saveComment(itemId);
-            } else if (e.target.closest('.btn-cancel-comment')) {
-                const itemId = parseInt(e.target.closest('.btn-cancel-comment').dataset.itemId);
-                this.comments.cancelComment(itemId);
-            } else if (e.target.closest('.btn-delete-comment')) {
-                const btn = e.target.closest('.btn-delete-comment');
-                this.comments.deleteComment(parseInt(btn.dataset.commentId), parseInt(btn.dataset.itemId));
-            } else if (e.target.closest('.btn-edit-comment')) {
-                const btn = e.target.closest('.btn-edit-comment');
-                this.comments.startEditComment(parseInt(btn.dataset.commentId), parseInt(btn.dataset.itemId));
-            } else if (e.target.closest('.btn-save-edit')) {
-                const btn = e.target.closest('.btn-save-edit');
-                this.comments.saveEditedComment(parseInt(btn.dataset.commentId), parseInt(btn.dataset.itemId));
-            } else if (e.target.closest('.btn-cancel-edit')) {
-                const btn = e.target.closest('.btn-cancel-edit');
-                this.comments.cancelEditComment(parseInt(btn.dataset.commentId), parseInt(btn.dataset.itemId));
-            } else if (e.target.closest('.btn-send-email-comment')) {
-                // ToDO: Implement email send in comments component
-                const btn = e.target.closest('.btn-send-email-comment');
-                // this.comments.sendEmail(...) 
-            }
-        });
-
-        // Edit Modals
-        this.container.addEventListener('click', (e) => {
-            if (e.target.closest('.js-edit-resp')) this.openRespModal(parseInt(e.target.closest('.js-edit-resp').dataset.itemId));
-            else if (e.target.closest('.js-edit-prev')) {
-                const itemId = parseInt(e.target.closest('.js-edit-prev').dataset.itemId);
-                const node = this.flatData[itemId];
-                if (node.completed || node.data_conclusao) {
-                    this.showToast('Tarefa concluída: não é possível adicionar previsão', 'warning');
-                } else {
-                    this.openPrevModal(itemId);
+                const tagOption = e.target.closest('.comentario-tipo-tag.tag-option');
+                if (tagOption) {
+                    const container = tagOption.closest('.d-flex');
+                    if (tagOption.classList.contains('active')) {
+                        tagOption.classList.remove('active');
+                    } else {
+                        if (container) container.querySelectorAll('.comentario-tipo-tag.tag-option').forEach(t => t.classList.remove('active'));
+                        tagOption.classList.add('active');
+                    }
                 }
             }
-            else if (e.target.closest('.js-edit-tag')) this.openTagModal(parseInt(e.target.closest('.js-edit-tag').dataset.itemId));
-            else if (e.target.closest('.btn-delete-item')) this.deleteItem(parseInt(e.target.closest('.btn-delete-item').dataset.itemId));
-        });
+        };
 
-        // Tag selectors handling (Manual to ensure it works inside dynamic HTML)
-        this.container.addEventListener('click', (e) => {
-            const visibilityTag = e.target.closest('.comentario-tipo-tag.interno, .comentario-tipo-tag.externo');
-            if (visibilityTag) {
-                const container = visibilityTag.closest('.d-flex');
-                if (container) container.querySelectorAll('.comentario-tipo-tag.interno, .comentario-tipo-tag.externo').forEach(t => t.classList.remove('active'));
-                visibilityTag.classList.add('active');
-            }
+        // Attach all
+        document.addEventListener('click', this._handlers.docClick);
+        this.container.addEventListener('change', this._handlers.checkboxChange);
+        this.container.addEventListener('click', this._handlers.commentsClick);
+        this.container.addEventListener('click', this._handlers.modalsClick);
+        this.container.addEventListener('click', this._handlers.tagsClick);
+    }
 
-            const tagOption = e.target.closest('.comentario-tipo-tag.tag-option');
-            if (tagOption) {
-                const container = tagOption.closest('.d-flex');
-                if (tagOption.classList.contains('active')) {
-                    tagOption.classList.remove('active');
-                } else {
-                    if (container) container.querySelectorAll('.comentario-tipo-tag.tag-option').forEach(t => t.classList.remove('active'));
-                    tagOption.classList.add('active');
-                }
-            }
-        });
+    cleanupEventListeners() {
+        if (this._handlers) {
+            document.removeEventListener('click', this._handlers.docClick);
+            this.container.removeEventListener('change', this._handlers.checkboxChange);
+            this.container.removeEventListener('click', this._handlers.commentsClick);
+            this.container.removeEventListener('click', this._handlers.modalsClick);
+            this.container.removeEventListener('click', this._handlers.tagsClick);
+            this._handlers = null;
+        }
+    }
+
+    destroy() {
+        this.cleanupEventListeners();
+        if (this.comments && typeof this.comments.destroy === 'function') {
+            this.comments.destroy();
+        }
     }
 
     // Toggle Logic
@@ -728,6 +747,9 @@ class ChecklistRenderer {
 // Initializer
 document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('checklist-container') && window.IMPLANTACAO_ID) {
+        if (window.checklistRenderer && typeof window.checklistRenderer.destroy === 'function') {
+            window.checklistRenderer.destroy();
+        }
         window.checklistRenderer = new ChecklistRenderer('checklist-container', window.IMPLANTACAO_ID);
     }
 });

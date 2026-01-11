@@ -316,41 +316,51 @@ class ChecklistComments {
     // ========================================
 
     setupImageUploadHandlers() {
-        // Event delegation for image inputs
-        this.container.addEventListener('change', (e) => {
-            if (e.target.classList.contains('comentario-imagem-input')) {
-                const itemId = e.target.dataset.itemId;
-                const file = e.target.files[0];
-                this.handleImageSelect(itemId, file);
-            }
-        });
-
-        // Paste support
-        this.container.addEventListener('paste', (e) => {
-            const target = e.target;
-            if (target.id && target.id.startsWith('comment-input-')) {
-                const itemId = target.id.replace('comment-input-', '');
-                const items = e.clipboardData?.items;
-                if (items) {
-                    for (let i = 0; i < items.length; i++) {
-                        if (items[i].type.indexOf('image') !== -1) {
-                            e.preventDefault();
-                            const blob = items[i].getAsFile();
-                            this.handleImageSelect(itemId, blob);
-                            break;
+        this._handlers = {
+            change: (e) => {
+                if (e.target.classList.contains('comentario-imagem-input')) {
+                    const itemId = e.target.dataset.itemId;
+                    const file = e.target.files[0];
+                    this.handleImageSelect(itemId, file);
+                }
+            },
+            paste: (e) => {
+                const target = e.target;
+                if (target.id && target.id.startsWith('comment-input-')) {
+                    const itemId = target.id.replace('comment-input-', '');
+                    const items = e.clipboardData?.items;
+                    if (items) {
+                        for (let i = 0; i < items.length; i++) {
+                            if (items[i].type.indexOf('image') !== -1) {
+                                e.preventDefault();
+                                const blob = items[i].getAsFile();
+                                this.handleImageSelect(itemId, blob);
+                                break;
+                            }
                         }
                     }
                 }
+            },
+            click: (e) => {
+                if (e.target.classList.contains('comment-image-thumbnail')) {
+                    const src = e.target.getAttribute('src');
+                    if (src) this.openImageModal(src);
+                }
             }
-        });
+        };
 
-        // Click on thumbnail to open modal
-        this.container.addEventListener('click', (e) => {
-            if (e.target.classList.contains('comment-image-thumbnail')) {
-                const src = e.target.getAttribute('src');
-                if (src) this.openImageModal(src);
-            }
-        });
+        this.container.addEventListener('change', this._handlers.change);
+        this.container.addEventListener('paste', this._handlers.paste);
+        this.container.addEventListener('click', this._handlers.click);
+    }
+
+    destroy() {
+        if (this._handlers) {
+            this.container.removeEventListener('change', this._handlers.change);
+            this.container.removeEventListener('paste', this._handlers.paste);
+            this.container.removeEventListener('click', this._handlers.click);
+            this._handlers = null;
+        }
     }
 
     handleImageSelect(itemId, file) {
