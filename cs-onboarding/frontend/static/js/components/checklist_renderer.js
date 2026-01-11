@@ -6,6 +6,13 @@
 class ChecklistRenderer {
     constructor(containerId, implantacaoId) {
         this.container = document.getElementById(containerId);
+
+        // SINGLETON ENFORCEMENT
+        if (this.container && this.container._checklistRendererInstance) {
+            console.warn('[ChecklistRenderer] Destroying previous instance on same container before creating new one.');
+            try { this.container._checklistRendererInstance.destroy(); } catch (e) { console.error(e); }
+        }
+
         this.implantacaoId = implantacaoId;
         this.data = window.CHECKLIST_DATA || [];
         this.expandedItems = new Set();
@@ -30,6 +37,10 @@ class ChecklistRenderer {
         // Initialize Components
         this.comments = window.ChecklistComments ? new window.ChecklistComments(this, this.container) : null;
         this.dragDrop = window.ChecklistDragDrop ? new window.ChecklistDragDrop(this, this.container) : null;
+
+        if (this.container) {
+            this.container._checklistRendererInstance = this;
+        }
 
         this.init();
     }
@@ -334,6 +345,11 @@ class ChecklistRenderer {
     }
 
     destroy() {
+        // Clear singleton reference if it matches this instance
+        if (this.container && this.container._checklistRendererInstance === this) {
+            this.container._checklistRendererInstance = null;
+        }
+
         this.cleanupEventListeners();
         if (this.comments && typeof this.comments.destroy === 'function') {
             this.comments.destroy();
