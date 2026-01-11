@@ -114,7 +114,7 @@ class ChecklistAPI {
      * @returns {Promise<Object>}
      */
     async saveComment(itemId, commentData) {
-        return this.api.post(`/api/checklist/comment/${itemId}`, commentData);
+        return this.api.post(`/api/checklist/comment/${itemId}`, commentData, { showErrorToast: false });
     }
 
     /**
@@ -124,7 +124,7 @@ class ChecklistAPI {
      * @returns {Promise<Object>}
      */
     async updateComment(comentarioId, texto) {
-        return this.api.patch(`/api/checklist/comment/${comentarioId}`, { texto });
+        return this.api.patch(`/api/checklist/comment/${comentarioId}`, { texto }, { showErrorToast: false });
     }
 
     /**
@@ -133,7 +133,7 @@ class ChecklistAPI {
      * @returns {Promise<Object>}
      */
     async deleteComment(comentarioId) {
-        return this.api.delete(`/api/checklist/comment/${comentarioId}`);
+        return this.api.delete(`/api/checklist/comment/${comentarioId}`, { showErrorToast: false });
     }
 
     /**
