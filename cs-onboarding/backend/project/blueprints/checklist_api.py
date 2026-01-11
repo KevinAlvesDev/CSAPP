@@ -168,10 +168,53 @@ def add_comment(item_id):
     if tag and tag not in valid_tags:
         tag = None
 
+    send_email = data.get('send_email', False)
     usuario_email = g.user_email if hasattr(g, 'user_email') else None
 
     try:
         result = add_comment_to_item(item_id, texto, visibilidade, usuario_email, noshow, tag, imagem_url, imagem_base64)
+        
+        if result.get('ok') and send_email and visibilidade == 'externo':
+            try:
+                from ..mail.email_utils import send_external_comment_notification
+                
+                # We need full data for email. Reuse existing query function.
+                # Assuming id was added to result in previous step.
+                comentario_id = result.get('id') or result.get('comentario', {}).get('id')
+                
+                if comentario_id:
+                    email_data = obter_comentario_para_email(comentario_id)
+                    
+                    if email_data and email_data['email_responsavel']:
+                        implantacao = {
+                            'id': email_data['impl_id'],
+                            'nome_empresa': email_data['nome_empresa'],
+                            'email_responsavel': email_data['email_responsavel']
+                        }
+                        comentario_obj = {
+                            'id': email_data['id'],
+                            'texto': email_data['texto'],
+                            'tarefa_filho': email_data['tarefa_nome'],
+                            'usuario_cs': email_data['usuario_cs']
+                        }
+                        
+                        sent = send_external_comment_notification(implantacao, comentario_obj)
+                        result['email_sent'] = sent
+                        
+                        if sent:
+                             # Log email sent event
+                            try:
+                                from ..db import logar_timeline
+                                detalhe = f"E-mail enviado para responsável com resumo de '{email_data.get('tarefa_nome') or ''}'."
+                                logar_timeline(email_data['impl_id'], usuario_email, 'email_comentario_enviado', detalhe)
+                            except Exception:
+                                pass
+
+            except Exception as e:
+                api_logger.error(f"Erro ao tentar enviar email automático para comentário {item_id}: {e}")
+                result['email_sent'] = False
+                result['email_error'] = str(e)
+
         return jsonify(result)
     except ValueError as e:
         api_logger.error(f"Erro de validação ao adicionar comentário ao item {item_id}: {e}")

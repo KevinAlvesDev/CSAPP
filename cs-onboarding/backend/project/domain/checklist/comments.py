@@ -93,9 +93,18 @@ def add_comment_to_item(item_id, text, visibilidade='interno', usuario_email=Non
             INSERT INTO comentarios_h (checklist_item_id, usuario_cs, texto, data_criacao, visibilidade, noshow, tag, imagem_url)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """
+        if db_type == 'postgres':
+            insert_sql += " RETURNING id"
+        
         if db_type == 'sqlite': insert_sql = insert_sql.replace('%s', '?')
         cursor.execute(insert_sql, (item_id, usuario_email, text, now, visibilidade, noshow_val, tag, imagem_url))
         
+        if db_type == 'postgres':
+            res_id = cursor.fetchone()
+            new_id = res_id[0] if res_id else None
+        else:
+            new_id = cursor.lastrowid
+
         # 4. Atualizar campo legado 'comment' no checklist_items
         update_legacy_sql = "UPDATE checklist_items SET comment = %s, updated_at = %s WHERE id = %s"
         if db_type == 'sqlite': update_legacy_sql = update_legacy_sql.replace('%s', '?')
@@ -115,7 +124,9 @@ def add_comment_to_item(item_id, text, visibilidade='interno', usuario_email=Non
         return {
             'ok': True,
             'item_id': item_id,
+            'id': new_id,
             'comentario': {
+                'id': new_id,
                 'texto': text,
                 'usuario_cs': usuario_email,
                 'data_criacao': _format_datetime(now),

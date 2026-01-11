@@ -216,8 +216,14 @@ class ChecklistRenderer {
                                 <span class="comentario-tipo-tag tag-option noshow" data-item-id="${item.id}" data-tag="No Show"><i class="bi bi-calendar-x"></i> No show</span>
                                 <span class="comentario-tipo-tag tag-option simples-registro" data-item-id="${item.id}" data-tag="Simples registro"><i class="bi bi-pencil-square"></i> Registro</span>
                              </div>
-                             <div class="d-flex gap-2">
+                             <div class="d-flex gap-2 align-items-center">
                                 <label class="btn btn-sm btn-outline-secondary mb-0"><i class="bi bi-paperclip"></i><input type="file" class="d-none comentario-imagem-input" data-item-id="${item.id}" accept="image/*"></label>
+                                
+                                <div class="form-check d-flex align-items-center d-none mb-0" id="div-check-email-${item.id}">
+                                    <input class="form-check-input me-1" type="checkbox" id="check-email-${item.id}" style="cursor: pointer;">
+                                    <label class="form-check-label small text-muted user-select-none" for="check-email-${item.id}" style="cursor: pointer;">Enviar email</label>
+                                </div>
+
                                 <button class="btn btn-sm btn-secondary btn-cancel-comment" data-item-id="${item.id}">Cancelar</button>
                                 <button class="btn btn-sm btn-primary btn-save-comment" data-item-id="${item.id}"><i class="bi bi-send me-1"></i>Salvar</button>
                              </div>
@@ -285,9 +291,10 @@ class ChecklistRenderer {
                     const btn = e.target.closest('.btn-cancel-edit');
                     this.comments.cancelEditComment(parseInt(btn.dataset.commentId), parseInt(btn.dataset.itemId));
                 } else if (e.target.closest('.btn-send-email-comment')) {
-                    // ToDO: Implement email send in comments component
                     const btn = e.target.closest('.btn-send-email-comment');
-                    // this.comments.sendEmail(...) 
+                    if (this.comments) {
+                        this.comments.sendEmail(parseInt(btn.dataset.commentId));
+                    }
                 }
             },
             modalsClick: (e) => {
@@ -310,6 +317,11 @@ class ChecklistRenderer {
                     const container = visibilityTag.closest('.d-flex');
                     if (container) container.querySelectorAll('.comentario-tipo-tag.interno, .comentario-tipo-tag.externo').forEach(t => t.classList.remove('active'));
                     visibilityTag.classList.add('active');
+
+                    // Update request: handle email checkbox visibility
+                    const itemId = visibilityTag.dataset.itemId;
+                    const tipo = visibilityTag.dataset.tipo;
+                    this.updateEmailCheckboxVisibility(itemId, tipo);
                 }
 
                 const tagOption = e.target.closest('.comentario-tipo-tag.tag-option');
@@ -331,6 +343,30 @@ class ChecklistRenderer {
         this.container.addEventListener('click', this._handlers.commentsClick);
         this.container.addEventListener('click', this._handlers.modalsClick);
         this.container.addEventListener('click', this._handlers.tagsClick);
+    }
+
+    updateEmailCheckboxVisibility(itemId, tipo) {
+        const divCheckbox = document.getElementById(`div-check-email-${itemId}`);
+        const checkbox = document.getElementById(`check-email-${itemId}`);
+        const emailResponsavel = window.CONFIG ? window.CONFIG.emailResponsavel : '';
+        const temEmail = emailResponsavel && emailResponsavel.trim() !== '';
+
+        if (divCheckbox && checkbox) {
+            if (tipo === 'externo') {
+                divCheckbox.classList.remove('d-none');
+                if (!temEmail) {
+                    checkbox.disabled = true;
+                    checkbox.checked = false;
+                    divCheckbox.setAttribute('title', 'Email do responsável não cadastrado');
+                } else {
+                    checkbox.disabled = false;
+                    divCheckbox.removeAttribute('title');
+                }
+            } else {
+                divCheckbox.classList.add('d-none');
+                checkbox.checked = false;
+            }
+        }
     }
 
     cleanupEventListeners() {

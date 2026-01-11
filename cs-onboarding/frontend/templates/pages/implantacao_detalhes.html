@@ -618,6 +618,18 @@
                                                                             data-tipo="tarefa">
                                                                             <i class="bi bi-send me-1"></i>Salvar
                                                                         </button>
+                                                                        <div class="form-check form-check-inline d-none align-self-center ms-2"
+                                                                            id="div-check-email-{{ tarefa.id }}">
+                                                                            <input class="form-check-input"
+                                                                                type="checkbox"
+                                                                                id="check-email-{{ tarefa.id }}"
+                                                                                value="true">
+                                                                            <label class="form-check-label small"
+                                                                                for="check-email-{{ tarefa.id }}"
+                                                                                title="Enviar notificação por e-mail para o responsável">
+                                                                                <i class="bi bi-envelope"></i> Enviar
+                                                                            </label>
+                                                                        </div>
                                                                         <button type="button"
                                                                             class="btn btn-sm btn-primary btn-enviar-email d-none"
                                                                             data-tarefa-id="{{ tarefa.id }}"

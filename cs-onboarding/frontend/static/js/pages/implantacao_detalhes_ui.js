@@ -633,6 +633,28 @@
 
       if (btnEmail) {
         const deveMostrar = tipo === 'externo';
+
+        // Checkbox logic
+        const divCheckbox = document.getElementById(`div-check-email-${tarefaId}`);
+        const checkbox = document.getElementById(`check-email-${tarefaId}`);
+
+        if (divCheckbox && checkbox) {
+          if (deveMostrar) {
+            divCheckbox.classList.remove('d-none');
+            if (!temEmail) {
+              checkbox.disabled = true;
+              checkbox.checked = false;
+              divCheckbox.setAttribute('title', 'Email do responsável não cadastrado');
+            } else {
+              checkbox.disabled = false;
+              divCheckbox.removeAttribute('title');
+            }
+          } else {
+            divCheckbox.classList.add('d-none');
+            checkbox.checked = false;
+          }
+        }
+
         if (deveMostrar) {
           btnEmail.classList.remove('d-none');
 

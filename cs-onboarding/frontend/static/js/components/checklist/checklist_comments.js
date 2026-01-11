@@ -217,6 +217,10 @@ class ChecklistComments {
         const fileInput = commentsSection?.querySelector(`.comentario-imagem-input`);
         const imageFile = fileInput?.files?.[0] || null;
 
+        // Get email notification
+        const checkboxEmail = commentsSection?.querySelector(`#check-email-${itemId}`);
+        const send_email = checkboxEmail ? checkboxEmail.checked : false;
+
         if (!texto && !imageFile) {
             if (this.renderer.showToast) this.renderer.showToast('Digite um comentário ou anexe uma imagem', 'warning');
             return;
@@ -225,7 +229,7 @@ class ChecklistComments {
         if (!this.renderer.service) return;
 
         // Delegate to service
-        const data = { texto, visibilidade, noshow, tag };
+        const data = { texto, visibilidade, noshow, tag, send_email };
         const result = await this.renderer.service.saveComment(itemId, data, imageFile);
 
         if (result.success) {
@@ -488,6 +492,13 @@ class ChecklistComments {
                 if (this.renderer.showToast) this.renderer.showToast(result.error || 'Erro ao editar', 'error');
             }
         }
+    }
+
+    async sendEmail(commentId) {
+        if (!this.renderer.service) return;
+
+        // Service already handles confirmation/toasts
+        await this.renderer.service.sendCommentEmail(commentId);
     }
 
     escapeHtml(text) {
