@@ -92,12 +92,56 @@ class ChecklistComments {
         `;
     }
 
+    getCurrentUser() {
+        const main = document.getElementById('main-content');
+        return {
+            email: main ? main.dataset.emailUsuarioLogado : '',
+            isManager: main ? main.dataset.isManager === 'true' : false
+        };
+    }
+
+    checkTimeLimit(dateStr) {
+        if (!dateStr) return false;
+        // Tentar parsear data. Se for formato DD/MM/YYYY HH:mm, converter (fallback)
+        let date = new Date(dateStr);
+        if (isNaN(date.getTime())) {
+            // Fallback simples para DD/MM/YYYY HH:MM (pt-BR)
+            const parts = dateStr.split(/[\/\s:]/); // separa por / espaço ou :
+            if (parts.length >= 5) {
+                // new Date(year, monthIndex, day, hours, minutes)
+                date = new Date(parts[2], parts[1] - 1, parts[0], parts[3], parts[4]);
+            }
+        }
+
+        if (isNaN(date.getTime())) return false; // Fail safe
+
+        const now = new Date();
+        const diffMs = now - date;
+        const diffHours = diffMs / (1000 * 60 * 60);
+        return diffHours < 3;
+    }
+
     renderSingleComment(c, itemId, emailResponsavel) {
-        const escape = window.HtmlUtils ? window.HtmlUtils.escapeHtml : (t) => t; // Use HtmlUtils if available
+        const escape = window.HtmlUtils ? window.HtmlUtils.escapeHtml : (t) => t;
         const isInterno = c.visibilidade === 'interno';
         const isExterno = c.visibilidade === 'externo';
         const badgeClass = isInterno ? 'bg-secondary' : 'bg-info text-dark';
         const temEmailResponsavel = emailResponsavel && emailResponsavel.trim() !== '';
+
+        const user = this.getCurrentUser();
+        // Use ISO se houver, senão data_criacao (que pode ser string formatada)
+        const dateForCheck = c.created_at_iso || c.data_criacao;
+
+        const isOwner = user.email === c.usuario_cs;
+        const withinTimeLimit = this.checkTimeLimit(dateForCheck);
+
+        // Pode editar se for gestor OU (dono E dentro do prazo)
+        const canEditOrDelete = user.isManager || (isOwner && withinTimeLimit);
+        // Mostra desabilitado se for dono MAS o prazo expirou (e não é gestor)
+        const showDisabled = isOwner && !withinTimeLimit && !user.isManager;
+
+        // Se pode editar ou deve mostrar desabilitado, renderizamos os botões
+        const shouldRenderButtons = canEditOrDelete || showDisabled;
 
         return `
             <div class="comment-item border rounded p-2 mb-2 bg-white" data-comment-id="${c.id}">
@@ -110,27 +154,41 @@ class ChecklistComments {
                         ${(c.tag === 'No Show' || c.noshow) ? '<span class="badge rounded-pill small bg-warning text-dark"><i class="bi bi-calendar-x"></i> No show</span>' : ''}
                         ${c.tag === 'Simples registro' ? '<span class="badge rounded-pill small bg-secondary"><i class="bi bi-pencil-square"></i> Simples registro</span>' : ''}
                     </div>
-                    <small class="text-muted">${c.data_criacao || ''}</small>
                 </div>
-                <p class="mb-1 small" style="white-space: pre-wrap; word-wrap: break-word;">${escape(c.texto)}</p>
+                <div class="d-flex justify-content-between align-items-center">
+                     <small class="text-muted" style="font-size: 0.7em;">${c.data_criacao || ''}</small>
+                </div>
+                
+                <p class="mb-1 small mt-2" style="white-space: pre-wrap; word-wrap: break-word;">${escape(c.texto)}</p>
                 ${c.imagem_url ? `
                     <div class="mt-1">
                          <img src="${c.imagem_url}" class="img-fluid rounded comment-image-thumbnail" style="max-height: 100px; cursor: pointer;" title="Clique para ampliar">
                     </div>
                 ` : ''}
-                <div class="d-flex gap-2 mt-1">
+                <div class="d-flex gap-2 mt-2 justify-content-end action-buttons">
                     ${isExterno && temEmailResponsavel ? `
-                        <button class="btn btn-sm btn-link text-primary p-0 small btn-send-email-comment" 
+                        <button class="btn btn-sm btn-link text-primary p-0 small btn-send-email-comment me-auto" 
                                 data-comment-id="${c.id}" 
                                 title="Enviar para ${emailResponsavel}">
-                            <i class="bi bi-envelope me-1"></i>Enviar email ao responsável
+                            <i class="bi bi-envelope me-1"></i>Enviar email
                         </button>
                     ` : ''}
-                    <button class="btn btn-sm btn-link text-danger p-0 small btn-delete-comment" 
-                            data-comment-id="${c.id}"
-                            data-item-id="${itemId}">
-                        <i class="bi bi-trash me-1"></i>Excluir
-                    </button>
+                    
+                    ${shouldRenderButtons ? `
+                        <button class="btn btn-sm btn-link ${canEditOrDelete ? 'text-secondary' : 'text-muted'} p-0 small btn-edit-comment" 
+                                data-comment-id="${c.id}"
+                                data-item-id="${itemId}"
+                                ${!canEditOrDelete ? 'disabled title="Prazo de 3h para edição expirado"' : ''}>
+                            <i class="bi bi-pencil me-1"></i>Editar
+                        </button>
+                        <div class="vr"></div>
+                        <button class="btn btn-sm btn-link ${canEditOrDelete ? 'text-danger' : 'text-muted'} p-0 small btn-delete-comment" 
+                                data-comment-id="${c.id}"
+                                data-item-id="${itemId}"
+                                ${!canEditOrDelete ? 'disabled title="Prazo de 3h para exclusão expirado"' : ''}>
+                            <i class="bi bi-trash me-1"></i>Excluir
+                        </button>
+                    ` : ''}
                 </div>
             </div>
         `;
@@ -365,6 +423,71 @@ class ChecklistComments {
             const bsModal = new window.bootstrap.Modal(modal);
             bsModal.show();
         }
+    }
+
+    startEditComment(commentId, itemId) {
+        const commentEl = this.container.querySelector(`.comment-item[data-comment-id="${commentId}"]`);
+        if (!commentEl) return;
+
+        // Save current HTML to restore on cancel
+        if (!commentEl.dataset.originalHtml) {
+            commentEl.dataset.originalHtml = commentEl.innerHTML;
+        }
+
+        const p = commentEl.querySelector('p.small');
+        const currentText = p ? p.innerText : '';
+
+        // Replace content with edit form
+        // We use innerHTML but be careful not to break event delegation.
+        // The delegation is on the container, so replacing innerHTML of a child is fine.
+        commentEl.innerHTML = `
+            <div class="edit-mode-wrapper p-1">
+                <textarea class="form-control form-control-sm mb-2" rows="3">${this.escapeHtml(currentText)}</textarea>
+                <div class="d-flex justify-content-end gap-2">
+                    <button class="btn btn-sm btn-secondary btn-cancel-edit" data-comment-id="${commentId}" data-item-id="${itemId}">Cancelar</button>
+                    <button class="btn btn-sm btn-primary btn-save-edit" data-comment-id="${commentId}" data-item-id="${itemId}">Salvar</button>
+                </div>
+            </div>
+        `;
+    }
+
+    cancelEditComment(commentId, itemId) {
+        const commentEl = this.container.querySelector(`.comment-item[data-comment-id="${commentId}"]`);
+        if (commentEl && commentEl.dataset.originalHtml) {
+            commentEl.innerHTML = commentEl.dataset.originalHtml;
+            delete commentEl.dataset.originalHtml;
+        }
+    }
+
+    async saveEditedComment(commentId, itemId) {
+        const commentEl = this.container.querySelector(`.comment-item[data-comment-id="${commentId}"]`);
+        const textarea = commentEl.querySelector('textarea');
+        const newText = textarea.value.trim();
+
+        if (!newText) {
+            if (this.renderer.showToast) this.renderer.showToast('Digite um texto', 'warning');
+            return;
+        }
+
+        if (this.renderer.service) {
+            const result = await this.renderer.service.updateComment(commentId, newText);
+            if (result.success) {
+                await this.loadComments(itemId);
+                // Trigger global updates if needed, though comments don't affect progress usually
+            } else {
+                if (this.renderer.showToast) this.renderer.showToast(result.error || 'Erro ao editar', 'error');
+            }
+        }
+    }
+
+    escapeHtml(text) {
+        if (!text) return '';
+        return text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
     }
 }
 

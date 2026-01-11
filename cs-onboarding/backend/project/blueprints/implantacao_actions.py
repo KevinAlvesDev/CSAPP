@@ -660,3 +660,152 @@ def cancelar_implantacao():
         app_logger.error(f"Erro ao cancelar implantação ID {implantacao_id}: {e}")
         flash(f'Erro ao cancelar implantação: {e}', 'error')
         return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
+
+
+@implantacao_actions_bp.route('/api/implantacao/<int:implantacao_id>/jira-issues', methods=['GET'])
+@login_required
+def get_jira_issues(implantacao_id):
+    """
+    Retorna as issues do Jira relacionadas à implantação (empresa) + tickets vinculados manualmente.
+    """
+    try:
+        from ..domain.implantacao_service import _get_implantacao_and_validate_access
+        implantacao, _ = _get_implantacao_and_validate_access(implantacao_id, g.user_email, g.perfil)
+        
+        # Buscar chaves extras vinculadas manualmente (Via Service)
+        from ..domain.jira_service import get_linked_jira_keys, search_issues_by_context
+        extra_keys = get_linked_jira_keys(implantacao_id)
+        
+        app_logger.info(f"DEBUG: Implantacao ID {implantacao_id} - Extra Keys: {extra_keys}")
+        
+        result = search_issues_by_context(implantacao, extra_keys=extra_keys)
+
+        # --- FALLBACK INJECTION ---
+        if extra_keys and 'issues' in result:
+             returned_keys = set(i.get('key') for i in result['issues'])
+             for k in extra_keys:
+                 if k not in returned_keys:
+                     app_logger.warning(f"Ticket {k} no BD mas não retornado pelo Jira. Injetando Stub.")
+                     result['issues'].insert(0, {
+                         'key': k,
+                         'summary': 'Carregando detalhes ou Ticket arquivado...',
+                         'status': 'Salvo', 
+                         'status_color': 'bg-secondary',
+                         'created': datetime.now().isoformat(),
+                         'type': 'Unknown',
+                         'priority': 'N/A',
+                         'link': '#',
+                         'is_linked': True,
+                         'is_fallback': True
+                     })
+        # ----------------------------------------
+        
+        return jsonify(result)
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 403
+    except Exception as e:
+        app_logger.error(f"Erro na rota jira-issues: {e}")
+        return jsonify({'error': 'Erro interno servidor'}), 500
+
+@implantacao_actions_bp.route('/api/implantacao/<int:implantacao_id>/jira-issues', methods=['POST'])
+@login_required
+def create_jira_issue_action(implantacao_id):
+    """
+    Cria uma nova issue no Jira.
+    """
+    try:
+        from ..domain.implantacao_service import _get_implantacao_and_validate_access
+        implantacao, _ = _get_implantacao_and_validate_access(implantacao_id, g.user_email, g.perfil)
+        
+        data = request.get_json()
+        if not data:
+             return jsonify({'error': 'JSON inválido'}), 400
+             
+        from ..domain.jira_service import create_jira_issue, save_jira_link
+        result = create_jira_issue(implantacao, data)
+        
+        if result.get('success'):
+            # --- AUTO-SAVE LINK ---
+            try:
+                new_key = result.get('key')
+                if new_key:
+                    save_jira_link(implantacao_id, new_key, g.user_email)
+            except Exception as e_link:
+                app_logger.error(f"Erro no auto-vinculo do Jira criado: {e_link}")
+            # ----------------------
+            
+            return jsonify(result), 201
+        else:
+            return jsonify(result), 400
+            
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 403
+    except Exception as e:
+        app_logger.error(f"Erro na criação de issue Jira: {e}")
+        return jsonify({'error': 'Erro interno servidor'}), 500
+
+@implantacao_actions_bp.route('/api/implantacao/<int:implantacao_id>/jira-issues/fetch', methods=['POST'])
+@login_required
+def fetch_jira_issue_action(implantacao_id):
+    """
+    Busca um ticket específico e o VINCULA à implantação.
+    """
+    try:
+        data = request.get_json()
+        if not data or 'key' not in data:
+            return jsonify({'error': 'Chave do ticket obrigatória'}), 400
+            
+        key = data['key'].strip().upper()
+        
+        # Validar acesso
+        from ..domain.implantacao_service import _get_implantacao_and_validate_access
+        _get_implantacao_and_validate_access(implantacao_id, g.user_email, g.perfil)
+        
+        from ..domain.jira_service import get_issue_details, save_jira_link
+        result = get_issue_details(key)
+        
+        if 'error' in result:
+            return jsonify(result), 404
+            
+        # SUCESSO! Agora salvamos o vínculo no banco de dados via Service.
+        try:
+            save_jira_link(implantacao_id, key, g.user_email)
+        except Exception as e_save:
+             app_logger.error(f"Erro ao salvar link Jira: {e_save}")
+             return jsonify({'error': f'Erro de persistência: {str(e_save)}', 'issue': result.get('issue')}), 500
+
+        # Marcamos como vinculado para o frontend habilitar a opção de desvincular
+        if 'issue' in result:
+            result['issue']['is_linked'] = True
+
+        return jsonify(result)
+        
+    except Exception as e:
+        app_logger.error(f"Erro ao buscar/vincular ticket Jira {implantacao_id}: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@implantacao_actions_bp.route('/api/implantacao/<int:implantacao_id>/jira-issues/<path:jira_key>', methods=['DELETE'])
+@login_required
+def delete_jira_link_action(implantacao_id, jira_key):
+    """
+    Remove o vínculo de um ticket Jira com a implantação.
+    """
+    try:
+        jira_key = jira_key.strip().upper()
+        
+        # Validar acesso
+        from ..domain.implantacao_service import _get_implantacao_and_validate_access
+        _get_implantacao_and_validate_access(implantacao_id, g.user_email, g.perfil)
+        
+        from ..domain.jira_service import remove_jira_link
+        
+        # Remove via service (idempotente)
+        remove_jira_link(implantacao_id, jira_key)
+        
+        return jsonify({'success': True, 'message': 'Vínculo removido com sucesso'})
+            
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 403
+    except Exception as e:
+        app_logger.error(f"Erro na exclusão de vinculo Jira: {e}")
+        return jsonify({'error': 'Erro interno servidor'}), 500

@@ -28,6 +28,7 @@ from ..domain.checklist_service import (
     obter_historico_prazos,
     obter_progresso_global_service,
     move_item,
+    update_comment_service,
 )
 from ..security.api_security import validate_api_origin
 
@@ -303,6 +304,43 @@ def send_comment_email(comentario_id):
     except Exception as e:
         api_logger.error(f"Erro ao enviar email do comentário {comentario_id}: {e}", exc_info=True)
         return jsonify({'ok': False, 'error': 'Erro interno ao enviar email'}), 500
+
+
+@checklist_bp.route('/comment/<int:comentario_id>', methods=['PUT', 'PATCH'])
+@login_required
+@validate_api_origin
+@limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
+def update_comment(comentario_id):
+    """
+    Atualiza um comentário (apenas o próprio autor ou gestores, até 3h).
+    """
+    from ..constants import PERFIS_COM_GESTAO
+
+    try:
+        comentario_id = validate_integer(comentario_id, min_value=1)
+    except ValidationError as e:
+        return jsonify({'ok': False, 'error': f'ID inválido: {str(e)}'}), 400
+
+    if not request.is_json:
+        return jsonify({'ok': False, 'error': 'Content-Type deve ser application/json'}), 400
+
+    data = request.get_json() or {}
+    novo_texto = data.get('texto')
+
+    usuario_email = g.user_email if hasattr(g, 'user_email') else None
+    
+    # Check permissão gestor
+    is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
+
+    try:
+        result = update_comment_service(comentario_id, novo_texto, usuario_email, is_manager)
+        return jsonify(result)
+    except ValueError as ve:
+         # Erro de validação ou permissão (incluindo timeout de 3h)
+         return jsonify({'ok': False, 'error': str(ve)}), 403
+    except Exception as e:
+        api_logger.error(f"Erro ao atualizar comentário {comentario_id}: {e}", exc_info=True)
+        return jsonify({'ok': False, 'error': 'Erro interno ao atualizar comentário'}), 500
 
 
 @checklist_bp.route('/comment/<int:comentario_id>', methods=['DELETE'])

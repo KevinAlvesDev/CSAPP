@@ -25,6 +25,7 @@ from .checklist import (
     listar_comentarios_item,
     obter_comentario_para_email,
     excluir_comentario_service,
+    update_comment_service,
     # Tree
     get_checklist_tree,
     build_nested_tree,
@@ -39,7 +40,6 @@ from .checklist import (
     listar_usuarios_cs,
 )
 
-# Manter __all__ para compatibilidade com imports *
 __all__ = [
     # Items
     'toggle_item_status',
@@ -53,6 +53,7 @@ __all__ = [
     'listar_comentarios_item',
     'obter_comentario_para_email',
     'excluir_comentario_service',
+    'update_comment_service',
     # Tree
     'get_checklist_tree',
     'build_nested_tree',

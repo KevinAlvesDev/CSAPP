@@ -26,6 +26,7 @@ from .comments import (
     listar_comentarios_item,
     obter_comentario_para_email,
     excluir_comentario_service,
+    update_comment_service,
 )
 
 # Importações de tree.py
@@ -63,6 +64,7 @@ __all__ = [
     'listar_comentarios_item',
     'obter_comentario_para_email',
     'excluir_comentario_service',
+    'update_comment_service',
     # Tree
     'get_checklist_tree',
     'build_nested_tree',

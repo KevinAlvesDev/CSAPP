@@ -118,7 +118,8 @@ def add_comment_to_item(item_id, text, visibilidade='interno', usuario_email=Non
             'comentario': {
                 'texto': text,
                 'usuario_cs': usuario_email,
-                'data_criacao': now.isoformat(),
+                'data_criacao': _format_datetime(now),
+                'created_at_iso': now.isoformat(),
                 'visibilidade': visibilidade,
                 'noshow': noshow,
                 'tag': tag
@@ -158,7 +159,14 @@ def listar_comentarios_implantacao(impl_id, page=1, per_page=20):
     formatted_comments = []
     for c in comments:
         c_dict = dict(c)
-        c_dict['data_criacao'] = _format_datetime(c_dict.get('data_criacao'))
+        # Store ISO BEFORE formatting for display
+        raw_date = c_dict.get('data_criacao')
+        if hasattr(raw_date, 'isoformat'):
+            c_dict['created_at_iso'] = raw_date.isoformat()
+        else:
+            c_dict['created_at_iso'] = raw_date # Assuming it's already a string if not datetime
+
+        c_dict['data_criacao'] = _format_datetime(raw_date)
         formatted_comments.append(c_dict)
         
     return {
@@ -200,7 +208,13 @@ def listar_comentarios_item(item_id):
     comentarios_formatados = []
     for c in comentarios:
         c_dict = dict(c)
-        c_dict['data_criacao'] = _format_datetime(c_dict.get('data_criacao'))
+        raw_date = c_dict.get('data_criacao')
+        if hasattr(raw_date, 'isoformat'):
+            c_dict['created_at_iso'] = raw_date.isoformat()
+        else:
+            c_dict['created_at_iso'] = raw_date
+            
+        c_dict['data_criacao'] = _format_datetime(raw_date)
         c_dict['email_responsavel'] = email_responsavel
         c_dict['tarefa_id'] = item_id  # Adicionar item_id para permitir recarregar após exclusão
         comentarios_formatados.append(c_dict)
@@ -231,47 +245,142 @@ def obter_comentario_para_email(comentario_id):
     return dados
 
 
-def excluir_comentario_service(comentario_id, usuario_email, is_manager):
+def _check_edit_permission(comentario, usuario_email, is_manager):
     """
-    Exclui um comentário (apenas dono ou gestor).
+    Verifica se o usuário pode editar/excluir o comentário.
+    Regras:
+    1. Dono ou Gestor.
+    2. Criação < 3 horas atrás.
     """
+    # 1. Check Owner/Manager
+    is_owner = comentario['usuario_cs'] == usuario_email
+    if not (is_owner or is_manager):
+        raise ValueError('Permissão negada: apenas o autor ou gestores podem alterar.')
+
+    # 2. Check 3-hour limit
+    data_criacao = comentario['data_criacao']
+    
+    # Normalização de Timezone para comparação
+    tz_brasilia = timezone(timedelta(hours=-3))
+    agora = datetime.now(tz_brasilia)
+
+    # Se data_criacao for string (SQLite as vezes), converter
+    if isinstance(data_criacao, str):
+        try:
+            data_criacao = datetime.fromisoformat(data_criacao)
+        except ValueError:
+            # Fallback se formato for diferente
+            pass
+
+    # Se for naive, assumir que é do mesmo TZ que salvamos (Brasília)
+    if data_criacao.tzinfo is None:
+        data_criacao = data_criacao.replace(tzinfo=tz_brasilia)
+    else:
+        # Se for aware, converter para Brasilia para garantir
+        data_criacao = data_criacao.astimezone(tz_brasilia)
+
+    diff = agora - data_criacao
+    if diff > timedelta(hours=3):
+         raise ValueError('Permissão negada: o tempo limite de 3 horas para edição/exclusão expirou.')
+
+
+def update_comment_service(comentario_id, novo_texto, usuario_email, is_manager):
+    """
+    Atualiza o texto de um comentário existente.
+    """
+    if not novo_texto or not novo_texto.strip():
+        raise ValueError("Texto do comentário é obrigatório")
+
+    novo_texto = sanitize_string(novo_texto.strip(), max_length=8000, min_length=1)
+
     comentario = query_db(
-        "SELECT id, usuario_cs FROM comentarios_h WHERE id = %s",
+        "SELECT id, usuario_cs, data_criacao, checklist_item_id FROM comentarios_h WHERE id = %s",
         (comentario_id,),
         one=True
     )
     if not comentario:
         raise ValueError('Comentário não encontrado')
 
-    is_owner = comentario['usuario_cs'] == usuario_email
-    if not (is_owner or is_manager):
-        raise ValueError('Permissão negada')
+    # Validar permissões e prazo
+    _check_edit_permission(comentario, usuario_email, is_manager)
 
-    # Fetch related item info BEFORE delete
+    item_id = comentario['checklist_item_id']
+
+    with db_transaction_with_lock() as (conn, cursor, db_type):
+        update_sql = "UPDATE comentarios_h SET texto = %s WHERE id = %s"
+        if db_type == 'sqlite': update_sql = update_sql.replace('%s', '?')
+        cursor.execute(update_sql, (novo_texto, comentario_id))
+
+        # Verificar se este é o comentário mais recente deste item para atualizar o campo legado
+        # Se for o mais recente (ou um dos), atualizamos o legado para refletir o texto atual.
+        # Busca o último comentário APÓS o update (que acabamos de fazer, mas a data não mudou)
+        latest_query = "SELECT texto FROM comentarios_h WHERE checklist_item_id = %s ORDER BY data_criacao DESC LIMIT 1"
+        if db_type == 'sqlite': latest_query = latest_query.replace('%s', '?')
+        cursor.execute(latest_query, (item_id,))
+        latest = cursor.fetchone()
+        
+        should_update_legacy = False
+        if latest:
+            latest_text = latest['texto'] if hasattr(latest, 'keys') else latest[0]
+            # Se o texto do último comentário for igual ao novo texto (significa que editamos o último), atualiza legado
+            if latest_text == novo_texto:
+                should_update_legacy = True
+        
+        if should_update_legacy:
+            legacy_sql = "UPDATE checklist_items SET comment = %s WHERE id = %s"
+            if db_type == 'sqlite': legacy_sql = legacy_sql.replace('%s', '?')
+            cursor.execute(legacy_sql, (novo_texto, item_id))
+        
+        conn.commit()
+
+    return {'ok': True, 'message': 'Comentário atualizado', 'novo_texto': novo_texto}
+
+
+def excluir_comentario_service(comentario_id, usuario_email, is_manager):
+    """
+    Exclui um comentário (apenas dono ou gestor, até 3h).
+    """
+    comentario = query_db(
+        "SELECT id, usuario_cs, data_criacao, checklist_item_id FROM comentarios_h WHERE id = %s",
+        (comentario_id,),
+        one=True
+    )
+    if not comentario:
+        raise ValueError('Comentário não encontrado')
+
+    # Validar permissões e prazo
+    _check_edit_permission(comentario, usuario_email, is_manager)
+
+    checklist_item_id = comentario['checklist_item_id']
+
+    # Fetch related item info BEFORE delete for logging
     item_info = query_db(
         """
         SELECT ci.id as item_id, ci.title as item_title, ci.implantacao_id
-        FROM comentarios_h c
-        JOIN checklist_items ci ON c.checklist_item_id = ci.id
-        WHERE c.id = %s
+        FROM checklist_items ci
+        WHERE ci.id = %s
         """,
-        (comentario_id,), one=True
+        (checklist_item_id,), one=True
     )
 
     execute_db("DELETE FROM comentarios_h WHERE id = %s", (comentario_id,))
 
     # Verificar se ainda há comentários para este item e atualizar campo legado
-    if item_info and item_info.get('item_id'):
-        remaining = query_db(
-            "SELECT COUNT(*) as cnt FROM comentarios_h WHERE checklist_item_id = %s",
-            (item_info['item_id'],), one=True
+    if checklist_item_id:
+        # Buscar o agora "novo" último comentário para restaurar o legado, ou limpar se vazio
+        latest_rem = query_db(
+            "SELECT texto FROM comentarios_h WHERE checklist_item_id = %s ORDER BY data_criacao DESC LIMIT 1",
+            (checklist_item_id,), one=True
         )
-        if remaining and remaining.get('cnt', 0) == 0:
-            # Limpa o campo legado 'comment' pois não há mais comentários
-            execute_db(
-                "UPDATE checklist_items SET comment = NULL WHERE id = %s",
-                (item_info['item_id'],)
-            )
+        
+        new_legacy_text = None
+        if latest_rem:
+             new_legacy_text = latest_rem['texto']
+        
+        execute_db(
+            "UPDATE checklist_items SET comment = %s WHERE id = %s",
+            (new_legacy_text, checklist_item_id)
+        )
 
     if item_info:
         try:

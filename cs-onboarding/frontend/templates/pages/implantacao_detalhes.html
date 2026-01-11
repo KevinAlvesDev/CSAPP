@@ -416,6 +416,12 @@
                                 <i class="bi bi-exclamation-triangle me-1"></i>Avisos
                             </button>
                         </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="jira-tab" data-bs-toggle="tab" data-bs-target="#jira-content"
+                                type="button" role="tab">
+                                <i class="bi bi-layers me-1"></i>Jira
+                            </button>
+                        </li>
 
                     </ul>
                 </div>
@@ -723,6 +729,62 @@
                                 <button class="btn btn-sm btn-outline-primary" id="btn-load-more-comments">
                                     Carregar mais
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Jira -->
+                    <div class="tab-pane fade d-none" id="jira-content" role="tabpanel">
+                        <div class="custom-card-body">
+                            <!-- Header da Aba -->
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <div>
+                                    <h5 class="mb-1 text-dark fw-bold">Tickets Jira</h5>
+                                    <p class="text-muted small mb-0">Gerencie bugs e tarefas deste cliente.</p>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <button
+                                        class="btn btn-white text-secondary d-flex align-items-center gap-2 shadow-sm border"
+                                        id="btn-consulta-jira" style="border-radius: 8px;">
+                                        <i class="bi bi-search"></i> Consultar Jira
+                                    </button>
+                                    <button class="btn btn-primary d-flex align-items-center gap-2 shadow-sm"
+                                        id="btn-novo-ticket-jira"
+                                        style="border-radius: 8px; background-color: #4F46E5; border-color: #4F46E5;">
+                                        <i class="bi bi-plus-lg"></i> Novo Item
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="jira-loading" class="text-center py-5 d-none">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Carregando...</span>
+                                </div>
+                                <p class="mt-2 text-muted">Sincronizando com Jira...</p>
+                            </div>
+                            <div id="jira-error"
+                                class="alert alert-danger d-none my-3 border-0 bg-danger bg-opacity-10 text-danger rounded-3">
+                            </div>
+                            <div id="jira-empty" class="text-center py-5 d-none">
+                                <div class="mb-3 bg-light rounded-circle d-inline-flex align-items-center justify-content-center"
+                                    style="width: 64px; height: 64px;">
+                                    <i class="bi bi-layers text-secondary fs-3"></i>
+                                </div>
+                                <h6 class="text-dark fw-bold">Nenhum ticket encontrado</h6>
+                                <p class="text-muted small">Crie o primeiro ticket para iniciar o acompanhamento.</p>
+                            </div>
+
+                            <!-- Lista de Cards -->
+                            <div id="jira-list-container" class="d-none">
+                                <div class="d-flex justify-content-end mb-2">
+                                    <button class="btn btn-sm btn-light text-muted border-0" id="btn-refresh-jira"
+                                        title="Atualizar lista">
+                                        <i class="bi bi-arrow-clockwise"></i> Atualizar
+                                    </button>
+                                </div>
+                                <div class="row g-3" id="jira-cards-container">
+                                    <!-- Cards serão injetados via JS -->
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1347,6 +1409,189 @@ Sim - Academia XYZ
 
 <!-- Modal Detalhes da Empresa -->
 {% include 'modals/_detalhes_empresa.html' %}
+
+<!-- Modal Consultar Ticket Jira -->
+<div class="modal fade" id="modalConsultarTicketJira" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
+            <div class="modal-header border-0 pb-0 pt-4 px-4 align-items-center">
+                <h5 class="modal-title fw-bold text-dark text-start w-100">Consultar Ticket Jira</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="formConsultarTicketJira">
+                    <div class="form-group">
+                        <label class="form-label fw-bold text-secondary style=" font-size: 0.85rem;">CHAVE DO
+                            TICKET</label>
+                        <input type="text" class="form-control form-control-lg" id="jira-consulta-key"
+                            placeholder="Ex: M1-1234" required style="text-transform: uppercase;">
+                    </div>
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg"
+                            style="background-color: #4F46E5; border-color: #4F46E5;">
+                            <span id="btn-consulta-jira-spinner" class="spinner-border spinner-border-sm me-2 d-none"
+                                role="status" aria-hidden="true"></span>
+                            Buscar Ticket
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Novo Ticket Jira -->
+<div class="modal fade" id="modalNovoTicketJira" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
+            <!-- Header Minimalista -->
+            <div class="modal-header border-0 pb-0 pt-4 px-4 align-items-center">
+                <div class="d-flex flex-column">
+                    <h5 class="modal-title fw-bold text-dark fs-4">Novo item</h5>
+                    <div class="d-flex gap-3 mt-3">
+                        <!-- Etiquetas de topo (Visuais) -->
+                        <div class="d-flex align-items-center text-primary bg-primary bg-opacity-10 px-3 py-1 rounded-pill small"
+                            role="button">
+                            <i class="bi bi-calendar-event me-2"></i> <span class="fw-semibold">Vencimento</span>
+                        </div>
+                        <div class="d-flex align-items-center text-primary bg-primary bg-opacity-10 px-3 py-1 rounded-pill small"
+                            role="button">
+                            <i class="bi bi-person me-2"></i> <span class="fw-semibold">{{ g.user.name if g.user and
+                                g.user.name else 'Responsável' }}</span>
+                        </div>
+                        <div class="d-flex align-items-center text-muted bg-light px-3 py-1 rounded-pill small"
+                            role="button">
+                            <i class="bi bi-tag me-2"></i> <span>Etiquetas</span>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close align-self-start mt-1" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body px-4 pt-4 pb-4">
+                <form id="formNovoTicketJira">
+                    <div class="vstack gap-4">
+
+                        <!-- Título -->
+                        <div class="form-group">
+                            <label class="form-label fw-bold text-secondary" style="font-size: 0.85rem;">Título <span
+                                    class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-lg" id="jira-titulo"
+                                placeholder="Resumo do problema ou tarefa" required style="font-size: 1rem;">
+                        </div>
+
+                        <!-- Descrição -->
+                        <div class="form-group position-relative">
+                            <label class="form-label fw-bold text-secondary"
+                                style="font-size: 0.85rem;">Descrição</label>
+                            <textarea class="form-control p-3" id="jira-descricao" rows="5"
+                                placeholder="Descreva os detalhes..."
+                                style="resize: vertical; font-size: 0.95rem;"></textarea>
+                            <div class="text-end text-muted mt-1" style="font-size: 0.75rem;">0/8000</div>
+                        </div>
+
+                        <!-- Contatos & Origem -->
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label fw-bold text-secondary"
+                                    style="font-size: 0.85rem;">Contatos</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-0 ps-3"><i
+                                            class="bi bi-search text-muted small"></i></span>
+                                    <input type="text" class="form-control" id="jira-contatos"
+                                        placeholder="Nome do contato" style="font-size: 0.95rem;">
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="form-group position-relative">
+                                    <label class="form-label fw-bold text-secondary" style="font-size: 0.85rem;">Ticket
+                                        Origem</label>
+                                    <input type="text" class="form-control" id="jira-origem" placeholder="Ex: #1234"
+                                        style="font-size: 0.95rem;">
+                                    <div class="text-end text-muted position-absolute end-0 bottom-50 pe-3 mb-1"
+                                        style="font-size: 0.7rem;">0/2000</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Configurações Jira (Selects) -->
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold text-secondary" style="font-size: 0.85rem;">Projeto
+                                    Jira <span class="text-danger">*</span></label>
+                                <select class="form-select" id="jira-projeto" required style="font-size: 0.95rem;">
+                                    <option value="" selected disabled>Selecione...</option>
+                                    <option value="M1">M1 - ADM / CRM / Notas</option>
+                                    <option value="MJ">MJ - MIGRAÇÃO JOÃO</option>
+                                    <option value="M5">M5 - DESKTOP</option>
+                                    <option value="GC">GC - GRANDES CONTAS</option>
+                                    <option value="PAY">PAY - PACTOPAY</option>
+                                    <option value="TW">TW - TREINO</option>
+                                    <option value="IN">IN - INFRA</option>
+                                    <option value="APPS">APPS - APLICATIVOS</option>
+                                    <option value="E2">E2 - MIGRAÇÃO LUIZ</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold text-secondary" style="font-size: 0.85rem;">Tipo do
+                                    Jira <span class="text-danger">*</span></label>
+                                <select class="form-select" id="jira-tipo" required style="font-size: 0.95rem;">
+                                    <option value="10021" selected>Bug</option>
+                                    <option value="10055">Ajuste BD</option>
+                                    <option value="10062">Evolução / Melhoria</option>
+                                    <option value="10057">Customização</option>
+                                    <option value="10019">Tarefa</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold text-secondary" style="font-size: 0.85rem;">SLA do Jira
+                                    <span class="text-danger">*</span></label>
+                                <select class="form-select" id="jira-sla" required style="font-size: 0.95rem;">
+                                    <option value="" selected disabled>Selecione...</option>
+                                    <option value="1">Nível 1 - Alto</option>
+                                    <option value="2">Nível 2 - Normal</option>
+                                    <option value="3">Nível 3 - Baixo</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Info Readonly Jira -->
+                        <div class="form-group">
+                            <label class="form-label fw-bold text-secondary" style="font-size: 0.85rem;">Jira (ID
+                                Gerado)</label>
+                            <input type="text" class="form-control bg-light border-0 text-muted"
+                                value="Gerado automaticamente" disabled readonly
+                                style="font-size: 0.95rem; font-style: italic;">
+                        </div>
+
+                        <!-- Link E-notas -->
+                        <div class="form-group position-relative">
+                            <label class="form-label fw-bold text-secondary" style="font-size: 0.85rem;">Link do ticket
+                                E-notas</label>
+                            <input type="url" class="form-control" id="jira-link-enotas" placeholder="https://..."
+                                style="font-size: 0.95rem;">
+                            <div class="text-end text-muted position-absolute end-0 bottom-50 pe-3 mb-1"
+                                style="font-size: 0.7rem;">0/2000</div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Footer -->
+            <div class="modal-footer border-0 px-4 pb-4 pt-0">
+                <button type="button" class="btn btn-outline-secondary border-0 fw-semibold px-3"
+                    data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" form="formNovoTicketJira" class="btn btn-primary px-4 fw-bold shadow-sm"
+                    style="background-color: #4F46E5; border-color: #4F46E5; border-radius: 8px;">
+                    <span class="d-none spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"
+                        id="btn-save-jira-spinner"></span>
+                    Salvar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 {% endblock %}
 

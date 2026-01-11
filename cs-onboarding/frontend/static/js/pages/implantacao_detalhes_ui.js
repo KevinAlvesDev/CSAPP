@@ -1,13 +1,16 @@
 ﻿'use strict';
 
 (function () {
+  let CONFIG = {}; // Declared in IIFE scope
+
   document.addEventListener('DOMContentLoaded', function () {
     const mainContent = document.getElementById('main-content');
     if (!mainContent) {
       return;
     }
 
-    const CONFIG = {
+    // Populate CONFIG
+    CONFIG = {
       implantacaoId: mainContent.dataset.implantacaoId,
       emailUsuarioLogado: mainContent.dataset.emailUsuarioLogado,
       userEmail: mainContent.dataset.emailUsuarioLogado || '',
@@ -15,6 +18,9 @@
       csrfToken: document.querySelector('input[name="csrf_token"]')?.value || '',
       isManager: (mainContent.dataset.isManager || 'false') === 'true'
     };
+
+    // Make it available globally for debugging if needed, but safe
+    window.CONFIG = CONFIG;
 
     const baseConfig = {
       mode: 'single',
@@ -1087,49 +1093,412 @@
     // MODAL DETALHES EMPRESA - LÃ³gica movida para modal_detalhes_empresa.js
     // Este arquivo NÃƒO deve ter lÃ³gica do modal para evitar conflitos
     // =========================================================================
+    // }); // Removed to maintain CONFIG scope for functions below
+
+
+    function isValidURL(string) {
+      try {
+        new URL(string);
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    function validateCNPJ(cnpj) {
+      cnpj = cnpj.replace(/[^\d]+/g, '');
+      if (cnpj == '') return false;
+      if (cnpj.length != 14) return false;
+      if (/^(\d)\1+$/.test(cnpj)) return false;
+
+      let tamanho = cnpj.length - 2
+      let numeros = cnpj.substring(0, tamanho);
+      let digitos = cnpj.substring(tamanho);
+      let soma = 0;
+      let pos = tamanho - 7;
+      for (let i = tamanho; i >= 1; i--) {
+        soma += numeros.charAt(tamanho - i) * pos--;
+        if (pos < 2) pos = 9;
+      }
+      let resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
+      if (resultado != digitos.charAt(0)) return false;
+
+      tamanho = tamanho + 1;
+      numeros = cnpj.substring(0, tamanho);
+      soma = 0;
+      pos = tamanho - 7;
+      for (let i = tamanho; i >= 1; i--) {
+        soma += numeros.charAt(tamanho - i) * pos--;
+        if (pos < 2) pos = 9;
+      }
+      resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
+      if (resultado != digitos.charAt(1)) return false;
+
+      return true;
+    }
+    // =========================================================================
+
+    // =========================================================================
+    // Jira Integration Logic (Enhanced)
+    // =========================================================================
+    const jiraTabBtn = document.getElementById('jira-tab');
+    const btnNovoTicket = document.getElementById('btn-novo-ticket-jira');
+    const btnRefreshJira = document.getElementById('btn-refresh-jira');
+    const modalNovoTicket = document.getElementById('modalNovoTicketJira');
+    const formNovoTicket = document.getElementById('formNovoTicketJira');
+
+    // Elementos Consulta
+    const btnConsultaJira = document.getElementById('btn-consulta-jira');
+    const modalConsultaTicket = document.getElementById('modalConsultarTicketJira');
+    const formConsultaTicket = document.getElementById('formConsultarTicketJira');
+
+    let jiraLoaded = false;
+    let jiraIsSubmitting = false;
+
+    // --- Lógica Consulta Jira ---
+    if (btnConsultaJira) {
+      btnConsultaJira.addEventListener('click', () => {
+        const modal = new bootstrap.Modal(modalConsultaTicket);
+        modal.show();
+        setTimeout(() => {
+          const input = document.getElementById('jira-consulta-key');
+          if (input) input.focus();
+        }, 500);
+      });
+    }
+
+    if (formConsultaTicket) {
+      formConsultaTicket.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const keyInput = document.getElementById('jira-consulta-key');
+        const btnSubmit = formConsultaTicket.querySelector('button[type="submit"]');
+        const spinner = document.getElementById('btn-consulta-jira-spinner');
+
+        const key = keyInput.value.trim().toUpperCase();
+        if (!key) return;
+
+        try {
+          btnSubmit.disabled = true;
+          if (spinner) spinner.classList.remove('d-none');
+
+          const res = await fetch(`/api/implantacao/${CONFIG.implantacaoId}/jira-issues/fetch`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': CONFIG.csrfToken || ''
+            },
+            body: JSON.stringify({ key: key })
+          });
+
+          const data = await res.json();
+
+          if (!res.ok) throw new Error(data.error || 'Erro ao buscar ticket');
+
+          if (data.issue) {
+            const cardsContainer = document.getElementById('jira-cards-container');
+            const emptyEl = document.getElementById('jira-empty');
+            const listContainer = document.getElementById('jira-list-container');
+
+            if (emptyEl) emptyEl.classList.add('d-none');
+            if (listContainer) listContainer.classList.remove('d-none');
+
+            const issue = data.issue;
+            // Badge Logic Check
+            let badgeClass = 'bg-secondary';
+            const st = (issue.status || '').toLowerCase();
+            if (st.includes('done') || st.includes('concluído') || st.includes('resolvido')) badgeClass = 'bg-success';
+            else if (st.includes('progress') || st.includes('andamento')) badgeClass = 'bg-primary';
+
+            const cardHtml = `
+              <div class="col-12 col-md-6 col-lg-4 animate__animated animate__fadeIn">
+                  <div class="jira-card h-100 shadow-sm" style="border: 2px solid #4F46E5 !important;" onclick="window.open('${issue.link}', '_blank')">
+                       <div class="card-body d-flex flex-column h-100">
+                          <div class="d-flex justify-content-between align-items-start mb-2">
+                               <div class="d-flex align-items-center gap-2">
+                                  ${issue.type_icon ? `<img src="${issue.type_icon}" width="16" height="16" title="${issue.type}">` : ''}
+                                  <span class="fw-bold text-dark" style="font-size: 0.9rem;">${issue.key}</span>
+                               </div>
+                               <span class="jira-status-badge ${badgeClass} text-white bg-opacity-75 border-0">${issue.status}</span>
+                          </div>
+                          <h6 class="card-title text-dark fw-semibold mb-3 flex-grow-1" style="font-size: 0.95rem; line-height: 1.4;">
+                              ${escapeHtml(issue.summary)}
+                          </h6>
+                          <div class="mt-auto d-flex justify-content-between align-items-end border-top pt-3">
+                               <span class="badge bg-light text-primary border border-primary"><i class="bi bi-search me-1"></i>Resultado Busca</span>
+                              <small class="text-muted" style="font-size: 0.75rem;">
+                                  <i class="bi bi-clock me-1"></i>${formatarData(issue.created).split(' ')[0]}
+                              </small>
+                          </div>
+                      </div>
+                  </div>
+              </div>`;
+
+            if (cardsContainer) {
+              cardsContainer.insertAdjacentHTML('afterbegin', cardHtml);
+            }
+
+            const bsModal = bootstrap.Modal.getInstance(modalConsultaTicket);
+            bsModal.hide();
+            formConsultaTicket.reset();
+          }
+
+        } catch (err) {
+          console.error(err);
+          showToast(err.message, 'error');
+        } finally {
+          if (btnSubmit) btnSubmit.disabled = false;
+          if (spinner) spinner.classList.add('d-none');
+        }
+      });
+    }
+
+    // Init Jira Listeners
+    // Init Jira Listeners
+    if (jiraTabBtn) {
+      jiraTabBtn.addEventListener('shown.bs.tab', function () {
+        if (!jiraLoaded) loadJiraIssues();
+      });
+    }
+
+    if (btnNovoTicket) {
+      btnNovoTicket.addEventListener('click', () => {
+        const modal = new bootstrap.Modal(modalNovoTicket);
+
+        // Pre-fill fields if empty
+        const companyName = document.querySelector('.page-title-header h2')?.innerText?.trim() || '';
+        const systemKey = companyName.split('-')[0]?.trim(); // Ex: M1 from "M1 - ..."
+
+        // Tentar inferir projeto
+        const projectMap = {
+          'M1': 'M1', 'MJ': 'MJ', 'M5': 'M5', 'GC': 'GC',
+          'PAY': 'PAY', 'TW': 'TW', 'IN': 'IN', 'APPS': 'APPS', 'E2': 'E2'
+        };
+        const projSelect = document.getElementById('jira-projeto');
+        if (projSelect && systemKey && projectMap[systemKey]) {
+          projSelect.value = projectMap[systemKey];
+        }
+
+        modal.show();
+      });
+    }
+
+    if (btnRefreshJira) {
+      btnRefreshJira.addEventListener('click', () => {
+        loadJiraIssues(true);
+      });
+    }
+
+    if (formNovoTicket) {
+      formNovoTicket.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (jiraIsSubmitting) return;
+
+        // O botão está fora do form (no footer do modal), vinculado pelo atributo form="..."
+        const btnSave = document.querySelector(`button[form="${formNovoTicket.id}"]`);
+        const spinner = document.getElementById('btn-save-jira-spinner');
+
+        try {
+          if (btnSave) btnSave.disabled = true;
+          jiraIsSubmitting = true;
+          if (spinner) spinner.classList.remove('d-none');
+
+          const payload = {
+            summary: document.getElementById('jira-titulo').value,
+            description: document.getElementById('jira-descricao').value,
+            project: document.getElementById('jira-projeto').value,
+            issuetype: document.getElementById('jira-tipo').value,
+            priority: document.getElementById('jira-sla').value,
+            // Custom Fields
+            custom_contact: document.getElementById('jira-contatos').value,
+            custom_origin: document.getElementById('jira-origem').value,
+            custom_enotas_link: document.getElementById('jira-link-enotas').value
+          };
+
+          // Validação extra (Project is mandatory)
+          if (!payload.project) {
+            throw new Error("Selecione um Projeto Jira.");
+          }
+
+          const res = await fetch(`/api/implantacao/${CONFIG.implantacaoId}/jira-issues`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': CONFIG.csrfToken
+            },
+            body: JSON.stringify(payload)
+          });
+
+          const data = await res.json();
+
+          if (!res.ok) throw new Error(data.error || 'Erro ao criar ticket');
+
+          // Sucesso
+          const modal = bootstrap.Modal.getInstance(modalNovoTicket);
+          modal.hide();
+          formNovoTicket.reset();
+
+          // Toast ou Alerta Sucesso
+          showToast(`Ticket ${data.key} criado com sucesso!`, 'success');
+
+          // Recarrega lista
+          loadJiraIssues(true);
+
+        } catch (err) {
+          console.error(err);
+          showToast(err.message, 'error');
+        } finally {
+          jiraIsSubmitting = false;
+          if (btnSave) btnSave.disabled = false;
+          if (spinner) spinner.classList.add('d-none');
+        }
+      });
+    }
+
+    async function loadJiraIssues(force = false) {
+      const loadingEl = document.getElementById('jira-loading');
+      const listContainer = document.getElementById('jira-list-container');
+      const cardsContainer = document.getElementById('jira-cards-container');
+      const errorEl = document.getElementById('jira-error');
+      const emptyEl = document.getElementById('jira-empty');
+
+      if (!loadingEl) return;
+
+      loadingEl.classList.remove('d-none');
+      listContainer.classList.add('d-none');
+      errorEl.classList.add('d-none');
+      emptyEl.classList.add('d-none');
+
+      try {
+        // Add timestamp to prevent caching if forced
+        const url = `/api/implantacao/${CONFIG.implantacaoId}/jira-issues` + (force ? `?t=${Date.now()}` : '');
+        const resp = await fetch(url);
+        const data = await resp.json();
+
+        loadingEl.classList.add('d-none');
+
+        if (data.error) {
+          if (data.error.includes('não configurado') || data.error.includes('Jira credentials')) {
+            errorEl.innerHTML = `<strong>Integração não ativa.</strong> Configure as variáveis de ambiente JIRA_URL e Token.`;
+          } else {
+            errorEl.innerText = `Erro: ${data.error}`;
+          }
+          errorEl.classList.remove('d-none');
+          return;
+        }
+
+        const issues = data.issues || [];
+
+        if (issues.length === 0) {
+          emptyEl.classList.remove('d-none');
+          listContainer.classList.add('d-none');
+        } else {
+          renderJiraCards(issues, cardsContainer);
+          listContainer.classList.remove('d-none');
+        }
+        jiraLoaded = true;
+
+      } catch (err) {
+        loadingEl.classList.add('d-none');
+        errorEl.innerHTML = `<strong>Erro de conexão:</strong> <br/>${err.message}`;
+        errorEl.classList.remove('d-none');
+        console.error(err);
+      }
+    }
+
+    function renderJiraCards(issues, container) {
+      if (!container) return;
+
+      container.innerHTML = issues.map(issue => {
+        // Status Color Mapping (Simplificado)
+        // Blue-gray vem do backend default, mas vamos normalizar se possível
+        // Vamos usar classes do Bootstrap para badges
+        let badgeClass = 'bg-secondary';
+        const st = (issue.status || '').toLowerCase();
+        if (st.includes('done') || st.includes('concluído') || st.includes('resolvido')) badgeClass = 'bg-success';
+        else if (st.includes('progress') || st.includes('andamento')) badgeClass = 'bg-primary';
+        else if (st.includes('todo') || st.includes('fazer') || st.includes('aberto')) badgeClass = 'bg-secondary';
+
+        return `
+        <div class="col-12 col-md-6 col-lg-4 animate__animated animate__fadeIn">
+            <div class="jira-card h-100 position-relative" style="cursor: pointer;" onclick="window.open('${issue.link}', '_blank')">
+                <div class="card-body d-flex flex-column h-100">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                         <div class="d-flex align-items-center gap-2">
+                            ${issue.type_icon ? `<img src="${issue.type_icon}" width="16" height="16" title="${issue.type}">` : ''}
+                            <span class="fw-bold text-dark" style="font-size: 0.9rem;">${issue.key}</span>
+                         </div>
+                         <div class="d-flex gap-1 align-items-center">
+                            <span class="jira-status-badge ${badgeClass} text-white bg-opacity-75 border-0">${issue.status}</span>
+                            ${issue.is_linked ? `
+                                <button class="btn btn-link text-danger p-0 ms-1 unlink-jira-btn" data-key="${issue.key}" title="Desvincular ticket da implantação" style="z-index: 10;">
+                                    <i class="bi bi-link-45deg fs-5"></i><i class="bi bi-x fs-6" style="margin-left: -8px;"></i>
+                                </button>
+                            ` : ''}
+                         </div>
+                    </div>
+                    
+                    <h6 class="card-title text-dark fw-semibold mb-3 flex-grow-1" style="font-size: 0.95rem; line-height: 1.4;">
+                        ${escapeHtml(issue.summary)}
+                    </h6>
+                    
+                    <div class="mt-auto d-flex justify-content-between align-items-end border-top pt-3">
+                        <div class="d-flex align-items-center gap-2">
+                             ${issue.priority_icon ? `<img src="${issue.priority_icon}" width="16" height="16" title="Prioridade: ${issue.priority}">` : `<span class="badge bg-light text-dark border">${issue.priority}</span>`}
+                             <span class="text-muted small" style="font-size: 0.8rem;">${issue.priority}</span>
+                        </div>
+                        <small class="text-muted" style="font-size: 0.75rem;">
+                            <i class="bi bi-clock me-1"></i>${formatarData(issue.created).split(' ')[0]}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        `;
+      }).join('');
+
+      // Bind Unlink Events
+      container.querySelectorAll('.unlink-jira-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          e.stopPropagation(); // Não abrir o link do card
+
+          const key = btn.dataset.key;
+
+          const confirmed = await showConfirm({
+            title: 'Desvincular Ticket',
+            message: `Deseja realmente desvincular o ticket <strong>${key}</strong> desta implantação?`,
+            confirmText: 'Desvincular',
+            cancelText: 'Cancelar',
+            type: 'danger',
+            icon: 'bi-link-45deg'
+          });
+
+          if (!confirmed) return;
+
+          try {
+            const resp = await fetch(`/api/implantacao/${CONFIG.implantacaoId}/jira-issues/${key}`, {
+              method: 'DELETE',
+              headers: {
+                'X-CSRFToken': CONFIG.csrfToken
+              }
+            });
+
+            if (resp.ok) {
+              showToast('Vínculo removido com sucesso!', 'success');
+              loadJiraIssues(true); // Recarrega a lista
+            } else {
+              const data = await resp.json();
+              showToast(data.error || 'Erro ao desvincular', 'error');
+            }
+          } catch (err) {
+            console.error(err);
+            showToast('Erro de conexão ao desvincular', 'error');
+          }
+        });
+      });
+    }
   });
 
-
-  function isValidURL(string) {
-    try {
-      new URL(string);
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  function validateCNPJ(cnpj) {
-    cnpj = cnpj.replace(/[^\d]+/g, '');
-    if (cnpj == '') return false;
-    if (cnpj.length != 14) return false;
-    if (/^(\d)\1+$/.test(cnpj)) return false;
-
-    let tamanho = cnpj.length - 2
-    let numeros = cnpj.substring(0, tamanho);
-    let digitos = cnpj.substring(tamanho);
-    let soma = 0;
-    let pos = tamanho - 7;
-    for (let i = tamanho; i >= 1; i--) {
-      soma += numeros.charAt(tamanho - i) * pos--;
-      if (pos < 2) pos = 9;
-    }
-    let resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
-    if (resultado != digitos.charAt(0)) return false;
-
-    tamanho = tamanho + 1;
-    numeros = cnpj.substring(0, tamanho);
-    soma = 0;
-    pos = tamanho - 7;
-    for (let i = tamanho; i >= 1; i--) {
-      soma += numeros.charAt(tamanho - i) * pos--;
-      if (pos < 2) pos = 9;
-    }
-    resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
-    if (resultado != digitos.charAt(1)) return false;
-
-    return true;
-  }
 })();
 
 

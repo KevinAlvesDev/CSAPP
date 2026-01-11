@@ -27,6 +27,18 @@ def init_db():
 
             # (Bloco DDL PostgreSQL omitido aqui no pensamento para brevidade, mas incluído no tool call)
 
+            # Nova Tabela de Links Jira para Postgres
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS implantacao_jira_links (
+                    id SERIAL PRIMARY KEY,
+                    implantacao_id INTEGER NOT NULL REFERENCES implantacoes(id) ON DELETE CASCADE,
+                    jira_key VARCHAR(20) NOT NULL,
+                    data_vinculo TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    vinculado_por TEXT,
+                    UNIQUE(implantacao_id, jira_key)
+                );
+            """)
+
             try:
                 cursor.execute("""
                     DO $$
@@ -140,6 +152,21 @@ def init_db_command():
     click.echo('Inicialização do banco de dados concluída.')
 
 
+def _criar_tabela_jira_links(cursor):
+    """Cria tabela para vincular tickets Jira manualmente."""
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS implantacao_jira_links (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            implantacao_id INTEGER NOT NULL,
+            jira_key VARCHAR(20) NOT NULL,
+            data_vinculo DATETIME DEFAULT CURRENT_TIMESTAMP,
+            vinculado_por TEXT,
+            FOREIGN KEY (implantacao_id) REFERENCES implantacoes(id) ON DELETE CASCADE,
+            UNIQUE(implantacao_id, jira_key)
+        )
+    """)
+
+
 def _criar_tabelas_basicas_sqlite(cursor):
     """Cria tabelas básicas do SQLite se o script completo não estiver disponível."""
     # Tabela usuarios
@@ -217,6 +244,9 @@ def _criar_tabelas_basicas_sqlite(cursor):
             FOREIGN KEY (usuario_cs) REFERENCES usuarios(usuario)
         )
         """)
+
+    # Tabela Links Jira
+    _criar_tabela_jira_links(cursor)
 
     # Tabela avisos_implantacao (NOVA)
     cursor.execute("""

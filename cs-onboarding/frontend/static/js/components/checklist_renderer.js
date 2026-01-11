@@ -267,6 +267,15 @@ class ChecklistRenderer {
             } else if (e.target.closest('.btn-delete-comment')) {
                 const btn = e.target.closest('.btn-delete-comment');
                 this.comments.deleteComment(parseInt(btn.dataset.commentId), parseInt(btn.dataset.itemId));
+            } else if (e.target.closest('.btn-edit-comment')) {
+                const btn = e.target.closest('.btn-edit-comment');
+                this.comments.startEditComment(parseInt(btn.dataset.commentId), parseInt(btn.dataset.itemId));
+            } else if (e.target.closest('.btn-save-edit')) {
+                const btn = e.target.closest('.btn-save-edit');
+                this.comments.saveEditedComment(parseInt(btn.dataset.commentId), parseInt(btn.dataset.itemId));
+            } else if (e.target.closest('.btn-cancel-edit')) {
+                const btn = e.target.closest('.btn-cancel-edit');
+                this.comments.cancelEditComment(parseInt(btn.dataset.commentId), parseInt(btn.dataset.itemId));
             } else if (e.target.closest('.btn-send-email-comment')) {
                 // ToDO: Implement email send in comments component
                 const btn = e.target.closest('.btn-send-email-comment');

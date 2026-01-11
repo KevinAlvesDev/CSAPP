@@ -400,6 +400,34 @@ class ChecklistService {
     }
 
     /**
+     * Atualiza comentário
+     * @param {number} comentarioId - ID do comentário
+     * @param {string} novoTexto - Novo texto
+     * @returns {Promise<{success: boolean, error?: string}>}
+     */
+    async updateComment(comentarioId, novoTexto) {
+        if (!this.validateCommentText(novoTexto)) {
+            return { success: false, error: 'Validação falhou' };
+        }
+
+        try {
+            const data = await this.api.updateComment(comentarioId, novoTexto);
+
+            if (data && data.ok) {
+                this.notifier.success('Comentário atualizado');
+                return { success: true };
+            }
+
+            throw new Error(data?.error || 'Erro ao atualizar comentário');
+        } catch (error) {
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    }
+
+    /**
      * Envia comentário por email com confirmação
      * @param {number} comentarioId - ID do comentário
      * @returns {Promise<{success: boolean, cancelled?: boolean, error?: string}>}

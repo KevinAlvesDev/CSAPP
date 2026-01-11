@@ -118,6 +118,16 @@ class ChecklistAPI {
     }
 
     /**
+     * Atualiza comentário
+     * @param {number} comentarioId - ID do comentário
+     * @param {string} texto - Novo texto
+     * @returns {Promise<Object>}
+     */
+    async updateComment(comentarioId, texto) {
+        return this.api.patch(`/api/checklist/comment/${comentarioId}`, { texto });
+    }
+
+    /**
      * Exclui comentário
      * @param {number} comentarioId - ID do comentário
      * @returns {Promise<Object>}
