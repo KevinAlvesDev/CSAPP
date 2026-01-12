@@ -423,6 +423,10 @@ def atualizar_detalhes_empresa():
     redirect_to = request.form.get('redirect_to', 'dashboard')
     user_perfil_acesso = g.perfil.get('perfil_acesso') if g.perfil else None
 
+    # Determine response type early
+    wants_json = 'application/json' in (request.headers.get('Accept') or '')
+    is_modal = (redirect_to or '').lower() == 'modal'
+
     dest_url = url_for('main.dashboard')
     if redirect_to == 'detalhes':
         dest_url = url_for('main.ver_implantacao', impl_id=implantacao_id)
@@ -432,6 +436,8 @@ def atualizar_detalhes_empresa():
         final_campos, error = build_detalhes_campos()
         
         if error:
+            if wants_json or is_modal:
+                return jsonify({'ok': False, 'error': error}), 400
             flash(error, 'warning')
             return redirect(dest_url)
 
@@ -444,7 +450,9 @@ def atualizar_detalhes_empresa():
             app_logger.error(f"ERRO NO logar_timeline: {e}")
             pass
 
-        flash('Detalhes da implantação atualizados com sucesso!', 'success')
+        # Conditional Flash: Only flash if NOT returning JSON/Modal
+        if not (wants_json or is_modal):
+            flash('Detalhes da implantação atualizados com sucesso!', 'success')
         
         # Force cache clear
         try:
@@ -454,42 +462,61 @@ def atualizar_detalhes_empresa():
             app_logger.error(f"Erro ao limpar cache: {ex}")
             pass
 
+        if wants_json or is_modal:
+             return jsonify({'ok': True, 'implantacao_id': implantacao_id})
+
     except AttributeError as e:
         if 'isoformat' in str(e):
             app_logger.error(f"ERRO: Tentativa de chamar .isoformat() em string: {e}")
-            flash('❌ Erro ao processar data. Verifique o formato (DD/MM/AAAA).', 'error')
+            msg = '❌ Erro ao processar data. Verifique o formato (DD/MM/AAAA).'
         else:
             app_logger.error(f"ERRO AttributeError: {e}")
-            flash('❌ Erro ao processar dados. Tente novamente.', 'error')
+            msg = '❌ Erro ao processar dados. Tente novamente.'
+            
+        if wants_json or is_modal:
+             return jsonify({'ok': False, 'error': msg}), 400
+        flash(msg, 'error')
+            
     except ValueError as e:
         error_msg = str(e)
         app_logger.warning(f"Validation error: {error_msg}")
-        flash(error_msg if error_msg else '❌ Dados inválidos. Verifique os campos.', 'error')
+        msg = error_msg if error_msg else '❌ Dados inválidos. Verifique os campos.'
+        
+        if wants_json or is_modal:
+             return jsonify({'ok': False, 'error': msg}), 400
+        flash(msg, 'error')
+
     except PermissionError as e:
         app_logger.warning(f"Permission denied: {e}")
-        flash('❌ Você não tem permissão para realizar esta ação.', 'error')
+        msg = '❌ Você não tem permissão para realizar esta ação.'
+        
+        if wants_json or is_modal:
+             return jsonify({'ok': False, 'error': msg}), 403
+        flash(msg, 'error')
+
     except TimeoutError as e:
         app_logger.error(f"Timeout error: {e}")
-        flash('❌ Operação demorou muito tempo. Verifique sua conexão e tente novamente.', 'error')
+        msg = '❌ Operação demorou muito tempo. Verifique sua conexão e tente novamente.'
+        
+        if wants_json or is_modal:
+             return jsonify({'ok': False, 'error': msg}), 504
+        flash(msg, 'error')
+
     except Exception as e:
         app_logger.error(f"ERRO COMPLETO ao atualizar detalhes (Impl. ID {implantacao_id}): {e}", exc_info=True)
         
         error_str = str(e).lower()
         if 'database' in error_str or 'connection' in error_str:
-            flash('❌ Erro de conexão com o banco de dados. Tente novamente em alguns segundos.', 'error')
+            msg = '❌ Erro de conexão com o banco de dados. Tente novamente em alguns segundos.'
         elif 'timeout' in error_str:
-            flash('❌ Tempo de espera esgotado. Tente novamente.', 'error')
+            msg = '❌ Tempo de espera esgotado. Tente novamente.'
         else:
-            flash('❌ Erro inesperado ao atualizar detalhes. Nossa equipe foi notificada.', 'error')
-
-    try:
-        wants_json = 'application/json' in (request.headers.get('Accept') or '')
-        is_modal = (request.form.get('redirect_to') or '').lower() == 'modal'
+            msg = '❌ Erro inesperado ao atualizar detalhes. Nossa equipe foi notificada.'
+            
         if wants_json or is_modal:
-            from flask import jsonify
-            return jsonify({'ok': True, 'implantacao_id': implantacao_id})
-    except Exception:
-        pass
+             return jsonify({'ok': False, 'error': msg}), 500
+        flash(msg, 'error')
+
     return redirect(dest_url)
 
 

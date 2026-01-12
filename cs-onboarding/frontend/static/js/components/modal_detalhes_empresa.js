@@ -766,7 +766,7 @@
                             saveBtn.classList.add('btn-success');
                         }
 
-                        if (window.showToast) showToast('✅ Detalhes salvos com sucesso!', 'success');
+                        if (window.showToast) showToast('Detalhes da implantação atualizados com sucesso!', 'success');
 
                         const ts = document.getElementById('oamd-last-update');
                         const tspan = document.getElementById('oamd-last-update-time');
