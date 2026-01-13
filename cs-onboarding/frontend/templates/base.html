@@ -48,6 +48,7 @@
 
   <div class="main-layout">
     <!-- Sidebar sempre visível -->
+    {% block sidebar %}
     <nav id="menu" class="sidebar-menu" role="navigation">
       <div class="sidebar-header d-flex align-items-center justify-content-between mb-3">
         <div class="d-flex align-items-center">
@@ -67,13 +68,24 @@
         </button>
       </div>
       <ul class="nav flex-column">
-        <li class="nav-item"><a class="nav-link {% if request.endpoint == 'main.dashboard' %}active{% endif %}"
-            href="{{ url_for('main.dashboard') }}"><i class="bi bi-speedometer2 me-2"></i><span class="nav-link-text">
+        {% set current_dashboard = 'onboarding.dashboard' %}
+        {% if request.blueprint == 'ongoing' %}
+        {% set current_dashboard = 'ongoing.dashboard' %}
+        {% elif request.blueprint == 'grandes_contas' %}
+        {% set current_dashboard = 'grandes_contas.dashboard' %}
+        {% elif request.blueprint == 'onboarding' %}
+        {% set current_dashboard = 'onboarding.dashboard' %}
+        {% endif %}
+
+        <li class="nav-item"><a
+            class="nav-link {% if request.endpoint and 'dashboard' in request.endpoint %}active{% endif %}"
+            href="{{ url_for(current_dashboard) }}"><i class="bi bi-speedometer2 me-2"></i><span class="nav-link-text">
               Dashboard</span></a></li>
         {% if implantacao and implantacao.id %}
-        <li class="nav-item"><a class="nav-link {% if request.endpoint == 'main.ver_implantacao' %}active{% endif %}"
-            href="{{ url_for('main.ver_implantacao', impl_id=implantacao.id) }}"><i class="bi bi-kanban me-2"></i><span
-              class="nav-link-text"> Detalhes da Implantação</span></a></li>
+        <li class="nav-item"><a
+            class="nav-link {% if request.endpoint == 'onboarding.ver_implantacao' %}active{% endif %}"
+            href="{{ url_for('onboarding.ver_implantacao', impl_id=implantacao.id) }}"><i
+              class="bi bi-kanban me-2"></i><span class="nav-link-text"> Detalhes da Implantação</span></a></li>
         {% endif %}
         <li class="nav-item"><a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#modalPerfil"><i
               class="bi bi-person-circle me-2"></i><span class="nav-link-text"> Perfil</span></a></li>
@@ -128,10 +140,17 @@
             <span class="nav-link-text" id="themeText">Tema Escuro</span>
           </a>
         </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('core.modules_selection') }}">
+            <i class="bi bi-grid-3x3-gap me-2"></i>
+            <span class="nav-link-text">Trocar Módulo</span>
+          </a>
+        </li>
         <li class="nav-item"><a class="nav-link text-danger" href="{{ url_for('auth.logout') }}"><i
               class="bi bi-box-arrow-left me-2"></i><span class="nav-link-text"> Sair</span></a></li>
       </ul>
     </nav>
+    {% endblock %}
 
     <!-- Conteúdo principal -->
     <div class="main-content">

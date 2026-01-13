@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}CS Grandes Contas - Dashboard{% endblock %}
+
+{% block sidebar %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+    <header class="d-flex justify-content-end align-items-center mb-4">
+        <div>
+            <a href="{{ url_for('core.modules_selection') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left"></i> Trocar Módulo
+            </a>
+        </div>
+    </header>
+
+    <div class="d-flex justify-content-center align-items-center flex-grow-1" style="min-height: calc(100vh - 150px);">
+        <img src="{{ url_for('static', filename='imagens/em_breve.png') }}" alt="Em Breve" class="img-fluid"
+            style="max-height: 80vh; width: auto; max-width: 100%; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
+    </div>
+</div>
+{% endblock %}

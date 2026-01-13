@@ -185,7 +185,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                                             {% else %}
                                             <span class="text-muted small">Aguardando</span>
                                             {% endif %}
-                                            <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}"
+                                            <a href="{{ url_for('onboarding.ver_implantacao', impl_id=impl.id) }}"
                                                 class="btn btn-sm btn-primary ms-1"><i class="bi bi-eye me-1"></i> Ver
                                                 Detalhes</a>
                                         </td>
@@ -242,7 +242,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                                             {% else %}
                                             <span class="text-muted small">Aguardando</span>
                                             {% endif %}
-                                            <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}"
+                                            <a href="{{ url_for('onboarding.ver_implantacao', impl_id=impl.id) }}"
                                                 class="btn btn-sm btn-primary ms-1"><i class="bi bi-eye me-1"></i> Ver
                                                 Detalhes</a>
                                         </td>
@@ -286,7 +286,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                                         <td>{{ progress_bar(impl) }}</td>
                                         <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_monetario|float) if
                                             impl.valor_monetario else 'N/A' }}</td>
-                                        <td><a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}"
+                                        <td><a href="{{ url_for('onboarding.ver_implantacao', impl_id=impl.id) }}"
                                                 class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver
                                                 Detalhes</a></td>
                                         {{ ultima_atividade_cell(impl) }}
@@ -359,7 +359,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                                             {% else %}
                                             <span class="text-muted small">Aguardando</span>
                                             {% endif %}
-                                            <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}"
+                                            <a href="{{ url_for('onboarding.ver_implantacao', impl_id=impl.id) }}"
                                                 class="btn btn-sm btn-primary ms-1"><i class="bi bi-eye me-1"></i> Ver
                                                 Detalhes</a>
                                         </td>
@@ -402,7 +402,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                                         <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_monetario|float) if
                                             impl.valor_monetario else 'N/A' }}</td>
                                         <td class="text-nowrap">
-                                            <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}"
+                                            <a href="{{ url_for('onboarding.ver_implantacao', impl_id=impl.id) }}"
                                                 class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver
                                                 Histórico</a>
                                             {% if impl.usuario_cs == g.user_email %}
@@ -460,7 +460,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                                         <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_monetario|float) if
                                             impl.valor_monetario else 'N/A' }}</td>
                                         <td class="text-nowrap">
-                                            <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}"
+                                            <a href="{{ url_for('onboarding.ver_implantacao', impl_id=impl.id) }}"
                                                 class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver
                                                 Detalhes</a>
                                             {% if impl.usuario_cs == g.user_email %}
@@ -517,7 +517,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                                         <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_monetario|float) if
                                             impl.valor_monetario else 'N/A' }}</td>
                                         <td class="text-nowrap">
-                                            <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}"
+                                            <a href="{{ url_for('onboarding.ver_implantacao', impl_id=impl.id) }}"
                                                 class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver
                                                 Detalhes</a>
                                         </td>

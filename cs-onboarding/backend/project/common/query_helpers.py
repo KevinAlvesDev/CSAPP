@@ -14,7 +14,8 @@ def get_implantacoes_with_progress(
     status: Optional[str] = None,
     limit: Optional[int] = None,
     offset: Optional[int] = None,
-    sort_by_status: bool = False
+    sort_by_status: bool = False,
+    context: Optional[str] = None
 ) -> List[Dict[str, Any]]:
     """
     Busca implantações com progresso calculado (SEM N+1).
@@ -99,6 +100,10 @@ def get_implantacoes_with_progress(
     if status:
         query += f" AND i.status = {placeholder}"
         args.append(status)
+    
+    if context:
+        query += f" AND i.contexto = {placeholder}"
+        args.append(context)
     
     if sort_by_status:
         query += """

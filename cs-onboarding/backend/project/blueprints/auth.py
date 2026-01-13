@@ -94,7 +94,7 @@ def permission_required(required_profiles):
                         pass
 
                 security_logger.warning(f'Access denied for user {g.user_email} with role {user_perfil} trying to access {request.path}')
-                return redirect(url_for('main.dashboard'))
+                return redirect(url_for('core.modules_selection'))
             return f(*args, **kwargs)
         return decorated_function
     return decorator
@@ -128,9 +128,9 @@ def login():
     Agora suporta apenas login via Google OAuth.
     O POST foi removido pois não há mais formulário de senha.
     """
-    # Se usuário já estiver logado, redireciona para dashboard
+    # Se usuário já estiver logado, redireciona para seleção de módulos
     if g.user:
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('core.modules_selection'))
 
     # Renderiza a página de login
     login_bg_file = current_app.config.get('LOGIN_BG_FILE', 'imagens/teladelogin.jpg')
@@ -342,7 +342,7 @@ def google_callback():
             auth_logger.warning(f"Falha ao salvar token do Google: {token_err}")
 
         auth_logger.info(f'User logged in via Google: {email}')
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('core.modules_selection'))
 
     except Exception as e:
         auth_logger.error(f'Google Login Callback Error: {e}', exc_info=True)
@@ -396,7 +396,7 @@ def dev_login():
 
     auth_logger.info(f'Dev login realizado: {dev_email}')
     flash('Logado em modo desenvolvimento com acesso de Administrador.', 'success')
-    return redirect(url_for('main.dashboard'))
+    return redirect(url_for('core.modules_selection'))
 
 
 @auth_bp.route('/dev-login-as', methods=['GET', 'POST'])
@@ -460,6 +460,6 @@ def dev_login_as():
         auth_logger.warning(f"Falha ao sincronizar perfil dev para {email}: {e}")
 
     flash(f'Logado como {email} (desenvolvimento).', 'success')
-    return redirect(url_for('main.dashboard'))
+    return redirect(url_for('core.modules_selection'))
 
 

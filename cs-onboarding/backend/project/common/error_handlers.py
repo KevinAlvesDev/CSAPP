@@ -95,13 +95,13 @@ def handle_view_errors(f):
             return f(*args, **kwargs)
         except ValueError as e:
             flash(str(e), 'error')
-            return redirect(url_for('main.dashboard'))
+            return redirect(url_for('onboarding.dashboard'))
         except PermissionError as e:
             flash(str(e) or 'Você não tem permissão para acessar este recurso', 'error')
-            return redirect(url_for('main.dashboard'))
+            return redirect(url_for('onboarding.dashboard'))
         except FileNotFoundError as e:
             flash(str(e) or 'Recurso não encontrado', 'error')
-            return redirect(url_for('main.dashboard'))
+            return redirect(url_for('onboarding.dashboard'))
         except Exception as e:
             api_logger.error(f"Error in view {f.__name__}: {str(e)}", exc_info=True)
             
@@ -110,7 +110,7 @@ def handle_view_errors(f):
                 return render_template('error.html', error=str(e)), 500
             
             flash('Ocorreu um erro inesperado. Tente novamente.', 'error')
-            return redirect(url_for('main.dashboard'))
+            return redirect(url_for('onboarding.dashboard'))
     
     return decorated_function
 

@@ -30,7 +30,7 @@ def save_gamification_rules_from_modal():
     Rota (apenas POST) para salvar as regras de gamificação
     enviadas pelo formulário dentro do modal em base.html.
     """
-    fallback_redirect = redirect(request.referrer or url_for('main.dashboard'))
+    fallback_redirect = redirect(request.referrer or url_for('onboarding.dashboard'))
 
     try:
         updates_to_make = []

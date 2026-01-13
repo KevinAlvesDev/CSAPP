@@ -171,7 +171,7 @@ def analytics_dashboard():
         logger = get_logger('analytics')
         logger.error(f"Erro ao carregar dashboard de analytics: {e}", exc_info=True)
         flash(f"Erro interno ao carregar os dados de relatórios: {e}", "error")
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('onboarding.dashboard'))
 
 
 @analytics_bp.route('/analytics/implants_by_day')

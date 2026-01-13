@@ -188,7 +188,7 @@
   <header class="header-bg p-3 d-flex align-items-center position-relative rounded-3">
     <h1 class="main-title mb-0 fs-4 w-100 text-center">CS ONBOARDING Minha Agenda</h1>
     <div class="d-flex align-items-center position-absolute end-0 top-50 translate-middle-y">
-      <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm btn-outline-secondary">
+      <a href="{{ url_for('onboarding.dashboard') }}" class="btn btn-sm btn-outline-secondary">
         <i class="bi bi-house me-1"></i> Dashboard
       </a>
     </div>
@@ -196,7 +196,7 @@
   <main class="container py-3">
     <div class="d-flex justify-content-between align-items-center mb-3">
       <div class="agenda-toolbar">
-        <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-primary btn-sm"><i
+        <a href="{{ url_for('onboarding.dashboard') }}" class="btn btn-outline-primary btn-sm"><i
             class="bi bi-arrow-left me-1"></i> Voltar ao dashboard</a>
         {% if google_connected %}
         <span class="agenda-timezone d-none d-md-inline"></span>

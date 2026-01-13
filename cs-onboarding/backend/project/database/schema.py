@@ -241,6 +241,7 @@ def _criar_tabelas_basicas_sqlite(cursor):
             motivo_cancelamento TEXT,
             comprovante_cancelamento_url TEXT,
             definicao_carteira TEXT,
+            contexto VARCHAR(50) DEFAULT 'onboarding',
             FOREIGN KEY (usuario_cs) REFERENCES usuarios(usuario)
         )
         """)
@@ -697,7 +698,9 @@ def _migrar_colunas_implantacoes(cursor):
             'comprovante_cancelamento_url': 'TEXT',
             'status_implantacao_oamd': 'TEXT',
             'nivel_atendimento': 'TEXT',
-            'data_cadastro': 'DATETIME'
+            'data_cadastro': 'DATETIME',
+            'contexto': 'VARCHAR(50) DEFAULT "onboarding"',
+            'definicao_carteira': 'TEXT'
         }
 
         colunas_adicionadas = 0
@@ -761,6 +764,8 @@ def ensure_implantacoes_status_constraint():
             'wellhub': 'VARCHAR(10)',
             'totalpass': 'VARCHAR(10)',
             'valor_monetario': 'TEXT',
+            'definicao_carteira': 'TEXT',
+            'contexto': 'VARCHAR(50) DEFAULT \'onboarding\'',
         }
         for col_name, col_type in check_cols.items():
             try:

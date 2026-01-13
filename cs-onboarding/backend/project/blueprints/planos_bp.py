@@ -33,7 +33,7 @@ def requires_permission(allowed_roles):
                 if request.is_json:
                     return jsonify({'error': 'Permissão negada'}), 403
                 flash('Você não tem permissão para acessar esta funcionalidade.', 'error')
-                return redirect(url_for('main.dashboard'))
+                return redirect(url_for('onboarding.dashboard'))
 
             return f(*args, **kwargs)
         return decorated_function
@@ -81,7 +81,7 @@ def listar_planos():
         if request.is_json:
             return jsonify({'error': str(e)}), 500
         flash(f'Erro ao listar planos: {str(e)}', 'error')
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('onboarding.dashboard'))
 
 
 @planos_bp.route('/<int:plano_id>', methods=['GET'])

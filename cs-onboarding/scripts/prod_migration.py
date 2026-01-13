@@ -60,6 +60,13 @@ def run_migration():
             ensure_column('comentarios_h', 'imagem_url', 'TEXT', 'TEXT')
 
             # =========================================================
+            # 1.0.1 Implantacoes Columns (Contexto, Carteira)
+            # =========================================================
+            logger.info("Checking implantacoes columns...")
+            ensure_column('implantacoes', 'contexto', 'TEXT', 'TEXT')
+            ensure_column('implantacoes', 'definicao_carteira', 'TEXT', 'TEXT')
+            
+            # =========================================================
             # 1.1 Planos Sucesso Columns
             # =========================================================
             logger.info("Checking planos_sucesso columns...")

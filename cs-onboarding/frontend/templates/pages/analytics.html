@@ -54,7 +54,7 @@
     <header class="header-bg p-3 d-flex align-items-center position-relative rounded-3">
         <h1 class="main-title mb-0 fs-4 w-100 text-center">Dashboard Gerencial</h1>
         <div class="d-flex align-items-center position-absolute end-0 top-50 translate-middle-y">
-            <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm btn-outline-primary">
+            <a href="{{ url_for('onboarding.dashboard') }}" class="btn btn-sm btn-outline-primary">
                 <i class="bi bi-arrow-left me-1"></i> Voltar ao Dashboard
             </a>
         </div>
@@ -381,7 +381,7 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}"
+                                    <a href="{{ url_for('onboarding.ver_implantacao', impl_id=impl.id) }}"
                                         class="btn btn-sm btn-outline-primary py-0 px-2">Ver</a>
                                 </td>
                             </tr>
@@ -428,7 +428,7 @@
                                             default('N/A') }}</td>
                                         <td><span class="badge bg-danger">{{ impl.dias_parada | int }} dias</span></td>
                                         <td>
-                                            <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}"
+                                            <a href="{{ url_for('onboarding.ver_implantacao', impl_id=impl.id) }}"
                                                 class="btn btn-sm btn-outline-primary py-0 px-2">Ver</a>
                                         </td>
                                     </tr>
@@ -487,7 +487,7 @@
                                 </td>
                                 <td>{{ impl.data_cancelamento | format_date_br(include_time=False) }}</td>
                                 <td>
-                                    <a href="{{ url_for('main.ver_implantacao', impl_id=impl.id) }}"
+                                    <a href="{{ url_for('onboarding.ver_implantacao', impl_id=impl.id) }}"
                                         class="btn btn-sm btn-outline-primary py-0 px-2">Ver</a>
                                 </td>
                             </tr>
@@ -547,7 +547,7 @@
                                 <td class="text-nowrap"><span class="badge bg-secondary text-dark">{{ item.dias |
                                         default(0) }} dias</span></td>
                                 <td>
-                                    <a href="{{ url_for('main.ver_implantacao', impl_id=item.impl_id | default(item.id)) }}"
+                                    <a href="{{ url_for('onboarding.ver_implantacao', impl_id=item.impl_id | default(item.id)) }}"
                                         class="btn btn-sm btn-outline-primary py-0 px-2">Ver</a>
                                 </td>
                             </tr>

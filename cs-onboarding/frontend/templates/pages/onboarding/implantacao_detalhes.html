@@ -16,7 +16,7 @@
     <header class="header-bg p-3 d-flex align-items-center position-relative rounded-3 mb-4">
         <h1 class="main-title mb-0 fs-4 w-100 text-center">Detalhes da Implantação</h1>
         <div class="d-flex align-items-center position-absolute end-0 top-50 translate-middle-y">
-            <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm btn-outline-secondary">
+            <a href="{{ url_for('onboarding.dashboard') }}" class="btn btn-sm btn-outline-secondary">
                 <i class="bi bi-house me-1"></i> Dashboard
             </a>
         </div>
@@ -1076,7 +1076,7 @@ Sim - Academia XYZ
                 <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2"></i>Remover Plano</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ url_for('actions.remover_plano_implantacao') }}" method="POST">
+            <form action="{{ url_for('onboarding_actions.remover_plano_implantacao') }}" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
                 <div class="modal-body">
@@ -1106,7 +1106,7 @@ Sim - Academia XYZ
                 <h5 class="modal-title">Finalizar Implantação</h5><button type="button" class="btn-close"
                     data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ url_for('actions.finalizar_implantacao') }}" method="POST">
+            <form action="{{ url_for('onboarding_actions.finalizar_implantacao') }}" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <div class="alert alert-warning">
@@ -1142,7 +1142,7 @@ Sim - Academia XYZ
                 <h5 class="modal-title">Parar Implantação</h5><button type="button" class="btn-close"
                     data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ url_for('actions.parar_implantacao') }}" method="POST" id="formPararImplantacao">
+            <form action="{{ url_for('onboarding_actions.parar_implantacao') }}" method="POST" id="formPararImplantacao">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
@@ -1179,7 +1179,7 @@ Sim - Academia XYZ
                 <h5 class="modal-title">Retomar Implantação</h5><button type="button" class="btn-close"
                     data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ url_for('actions.retomar_implantacao') }}" method="POST">
+            <form action="{{ url_for('onboarding_actions.retomar_implantacao') }}" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <p>Deseja retomar esta implantação e alterar o status para "Em Andamento"?</p>
@@ -1226,7 +1226,7 @@ Sim - Academia XYZ
                 <h5 class="modal-title">Reabrir Implantação</h5><button type="button" class="btn-close"
                     data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ url_for('actions.reabrir_implantacao') }}" method="POST">
+            <form action="{{ url_for('onboarding_actions.reabrir_implantacao') }}" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <p>A implantação voltará para o status "Em Andamento". Confirmar?</p>
@@ -1296,7 +1296,7 @@ Sim - Academia XYZ
                 <h5 class="modal-title">Transferir CS</h5><button type="button" class="btn-close"
                     data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ url_for('actions.transferir_implantacao') }}" method="POST">
+            <form action="{{ url_for('onboarding_actions.transferir_implantacao') }}" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <p>Transferir <strong>{{ implantacao.nome_empresa }}</strong> de <strong>{{ implantacao.usuario_cs
@@ -1331,7 +1331,7 @@ Sim - Academia XYZ
                 <h5 class="modal-title text-danger">Excluir Implantação</h5><button type="button" class="btn-close"
                     data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ url_for('actions.excluir_implantacao') }}" method="POST">
+            <form action="{{ url_for('onboarding_actions.excluir_implantacao') }}" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <h5 class="text-danger fw-bold"><i class="bi bi-exclamation-octagon-fill me-2"></i>Atenção!
@@ -1358,7 +1358,7 @@ Sim - Academia XYZ
                 <h5 class="modal-title text-danger">Cancelar Implantação</h5><button type="button" class="btn-close"
                     data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ url_for('actions.cancelar_implantacao') }}" method="POST" enctype="multipart/form-data"
+            <form action="{{ url_for('onboarding_actions.cancelar_implantacao') }}" method="POST" enctype="multipart/form-data"
                 id="formCancelarImplantacao">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">

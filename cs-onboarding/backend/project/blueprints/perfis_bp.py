@@ -24,7 +24,7 @@ def listar_perfis():
     except Exception as e:
         logger.error(f"Erro ao listar perfis: {e}", exc_info=True)
         flash(f'Erro ao carregar perfis: {str(e)}', 'error')
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('onboarding.dashboard'))
 
 
 @perfis_bp.route('/novo', methods=['GET'])

@@ -10,7 +10,7 @@ from ...domain.hierarquia_service import get_hierarquia_implantacao
 from .details import _format_implantacao_dates
 
 
-def listar_implantacoes(user_email, status_filter=None, page=1, per_page=50, is_admin=False):
+def listar_implantacoes(user_email, status_filter=None, page=1, per_page=50, is_admin=False, context=None):
     """
     Lista implantações com paginação e filtro.
     Substitui a lógica do endpoint GET /api/v1/implantacoes.
@@ -21,6 +21,7 @@ def listar_implantacoes(user_email, status_filter=None, page=1, per_page=50, is_
         page: Página atual
         per_page: Itens por página
         is_admin: Se é admin (pode ver todas)
+        context: Filtro de contexto (onboarding, ongoing, grandes_contas)
         
     Returns:
         dict: Dados com paginação
@@ -47,6 +48,10 @@ def listar_implantacoes(user_email, status_filter=None, page=1, per_page=50, is_
     if status_filter:
         where_clauses.append("i.status = %s")
         params.append(status_filter)
+    
+    if context:
+        where_clauses.append("i.contexto = %s")
+        params.append(context)
         
     where_str = " WHERE " + " AND ".join(where_clauses) if where_clauses else ""
     

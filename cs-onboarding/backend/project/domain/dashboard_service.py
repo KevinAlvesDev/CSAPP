@@ -23,7 +23,8 @@ def get_dashboard_data(
     filtered_cs_email: str = None,
     page: int = None,
     per_page: int = None,
-    use_cache: bool = True
+    use_cache: bool = True,
+    context: str = None
 ) -> Tuple[Dict, Dict]:
     """
     Busca dados do dashboard de forma otimizada (SEM N+1).
@@ -45,7 +46,8 @@ def get_dashboard_data(
         per_page = 100
     
     # Cache
-    cache_key = f'dashboard_data_{user_email}_{filtered_cs_email or "all"}_p{page}_pp{per_page}'
+    # Cache
+    cache_key = f'dashboard_data_{user_email}_{filtered_cs_email or "all"}_{context or "all"}_p{page}_pp{per_page}'
     
     from ..config.cache_config import cache
     if cache and use_cache:
@@ -86,7 +88,8 @@ def get_dashboard_data(
         usuario_cs=usuario_filtro,
         limit=limit,
         offset=offset,
-        sort_by_status=True  # Paridade com original: ordenar por status
+        sort_by_status=True,  # Paridade com original: ordenar por status
+        context=context
     )
     
     # Estruturas de dados

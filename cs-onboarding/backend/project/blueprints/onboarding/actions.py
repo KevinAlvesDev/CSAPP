@@ -9,21 +9,21 @@ from flask import Blueprint, current_app, flash, g, redirect, request, url_for, 
 from flask_limiter.util import get_remote_address
 from werkzeug.utils import secure_filename
 
-from ..blueprints.auth import login_required, permission_required
-from ..common import utils
-from ..common.audit_decorator import audit
-from ..common.validation import ValidationError, sanitize_string, validate_date, validate_integer
-from ..config.cache_config import clear_implantacao_cache, clear_user_cache
-from ..config.logging_config import app_logger
-from ..constants import NAO_DEFINIDO_BOOL, PERFIS_COM_CRIACAO, PERFIS_COM_GESTAO
-from ..core.extensions import limiter, r2_client
-from ..db import execute_and_fetch_one, execute_db, logar_timeline
-from ..domain.task_definitions import MODULO_PENDENCIAS
+from ..auth import login_required, permission_required
+from ...common import utils
+from ...common.audit_decorator import audit
+from ...common.validation import ValidationError, sanitize_string, validate_date, validate_integer
+from ...config.cache_config import clear_implantacao_cache, clear_user_cache
+from ...config.logging_config import app_logger
+from ...constants import NAO_DEFINIDO_BOOL, PERFIS_COM_CRIACAO, PERFIS_COM_GESTAO
+from ...core.extensions import limiter, r2_client
+from ...db import execute_and_fetch_one, execute_db, logar_timeline
+from ...domain.task_definitions import MODULO_PENDENCIAS
 
-implantacao_actions_bp = Blueprint('actions', __name__)
+onboarding_actions_bp = Blueprint('onboarding_actions', __name__)
 
 
-@implantacao_actions_bp.route('/criar_implantacao', methods=['POST'])
+@onboarding_actions_bp.route('/criar_implantacao', methods=['POST'])
 @login_required
 @permission_required(PERFIS_COM_CRIACAO)
 @limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
@@ -47,7 +47,7 @@ def criar_implantacao():
             except Exception:
                 id_favorecido = None
 
-        from ..domain.implantacao_service import criar_implantacao_service
+        from ...domain.implantacao_service import criar_implantacao_service
         implantacao_id = criar_implantacao_service(nome_empresa, usuario_atribuido, usuario_criador, id_favorecido)
 
         flash(f'Implantação "{nome_empresa}" criada com sucesso. Aplique um plano de sucesso para criar as tarefas.', 'success')
@@ -59,18 +59,18 @@ def criar_implantacao():
             clear_implantacao_cache(implantacao_id)
         except Exception:
             pass
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('onboarding.dashboard'))
 
     except ValueError as e:
         flash(str(e), 'error')
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('onboarding.dashboard'))
     except Exception as e:
         app_logger.error(f"ERRO ao criar implantação por {usuario_criador}: {e}")
         flash(f'Erro ao criar implantação: {e}.', 'error')
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('onboarding.dashboard'))
 
 
-@implantacao_actions_bp.route('/criar_implantacao_modulo', methods=['POST'])
+@onboarding_actions_bp.route('/criar_implantacao_modulo', methods=['POST'])
 @login_required
 @permission_required(PERFIS_COM_CRIACAO)
 @limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
@@ -93,7 +93,7 @@ def criar_implantacao_modulo():
             except Exception:
                 id_favorecido = None
 
-        from ..domain.implantacao_service import criar_implantacao_modulo_service
+        from ...domain.implantacao_service import criar_implantacao_modulo_service
         implantacao_id = criar_implantacao_modulo_service(nome_empresa, usuario_atribuido, usuario_criador, modulo_tipo, id_favorecido)
 
         try:
@@ -105,18 +105,18 @@ def criar_implantacao_modulo():
             pass
 
         flash(f'Implantação de Módulo "{nome_empresa}" criada e atribuída a {usuario_atribuido}.', 'success')
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('onboarding.dashboard'))
 
     except ValueError as e:
         flash(str(e), 'error')
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('onboarding.dashboard'))
     except Exception as e:
         app_logger.error(f"ERRO ao criar implantação de módulo por {usuario_criador}: {e}")
         flash(f'Erro ao criar implantação de módulo: {e}.', 'error')
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('onboarding.dashboard'))
 
 
-@implantacao_actions_bp.route('/iniciar_implantacao', methods=['POST'])
+@onboarding_actions_bp.route('/iniciar_implantacao', methods=['POST'])
 @login_required
 @limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 def iniciar_implantacao():
@@ -126,15 +126,15 @@ def iniciar_implantacao():
         implantacao_id = validate_integer(request.form.get('implantacao_id'), min_value=1)
     except ValidationError as e:
         flash(f'ID de implantação inválido: {str(e)}', 'error')
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('onboarding.dashboard'))
 
     redirect_to_fallback = request.form.get('redirect_to', 'dashboard')
-    dest_url_fallback = url_for('main.dashboard')
+    dest_url_fallback = url_for('onboarding.dashboard')
     if redirect_to_fallback == 'detalhes':
-        dest_url_fallback = url_for('main.ver_implantacao', impl_id=implantacao_id)
+        dest_url_fallback = url_for('onboarding.ver_implantacao', impl_id=implantacao_id)
 
     try:
-        from ..domain.implantacao_service import iniciar_implantacao_service
+        from ...domain.implantacao_service import iniciar_implantacao_service
         iniciar_implantacao_service(implantacao_id, usuario_cs_email)
 
         flash('Implantação iniciada com sucesso!', 'success')
@@ -144,7 +144,7 @@ def iniciar_implantacao():
         except Exception:
             pass
 
-        return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
+        return redirect(url_for('onboarding.ver_implantacao', impl_id=implantacao_id))
 
     except ValueError as e:
         flash(str(e), 'error')
@@ -152,10 +152,10 @@ def iniciar_implantacao():
     except Exception as e:
         app_logger.error(f"Erro ao iniciar implantação ID {implantacao_id}: {e}")
         flash('Erro ao iniciar implantação.', 'error')
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('onboarding.dashboard'))
 
 
-@implantacao_actions_bp.route('/desfazer_inicio_implantacao', methods=['POST'])
+@onboarding_actions_bp.route('/desfazer_inicio_implantacao', methods=['POST'])
 @login_required
 def desfazer_inicio_implantacao():
     data = request.get_json()
@@ -169,7 +169,7 @@ def desfazer_inicio_implantacao():
         return jsonify({'error': 'ID da implantação é obrigatório'}), 400
         
     try:
-        from ..domain.implantacao.status import desfazer_inicio_implantacao_service
+        from ...domain.implantacao.status import desfazer_inicio_implantacao_service
         desfazer_inicio_implantacao_service(implantacao_id, usuario_cs_email)
         
         try:
@@ -188,7 +188,7 @@ def desfazer_inicio_implantacao():
         return jsonify({'error': 'Erro interno ao desfazer início.'}), 500
 
 
-@implantacao_actions_bp.route('/agendar_implantacao', methods=['POST'])
+@onboarding_actions_bp.route('/agendar_implantacao', methods=['POST'])
 @login_required
 @limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 def agendar_implantacao():
@@ -198,15 +198,15 @@ def agendar_implantacao():
 
     if not data_prevista:
         flash('A data de início previsto é obrigatória.', 'error')
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('onboarding.dashboard'))
     try:
         data_prevista_iso = validate_date(data_prevista)
     except ValidationError:
         flash('Data de início inválida. Formatos aceitos: DD/MM/AAAA, MM/DD/AAAA, AAAA-MM-DD.', 'error')
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('onboarding.dashboard'))
 
     try:
-        from ..domain.implantacao_service import agendar_implantacao_service
+        from ...domain.implantacao_service import agendar_implantacao_service
         nome_empresa = agendar_implantacao_service(implantacao_id, usuario_cs_email, data_prevista_iso)
 
         flash(f'Implantação "{nome_empresa}" movida para "Futuras" com início em {data_prevista}.', 'success')
@@ -222,10 +222,10 @@ def agendar_implantacao():
         app_logger.error(f"Erro ao agendar implantação ID {implantacao_id}: {e}")
         flash(f'Erro ao agendar implantação: {e}', 'error')
 
-    return redirect(url_for('main.dashboard', refresh='1'))
+    return redirect(url_for('onboarding.dashboard', refresh='1'))
 
 
-@implantacao_actions_bp.route('/marcar_sem_previsao', methods=['POST'])
+@onboarding_actions_bp.route('/marcar_sem_previsao', methods=['POST'])
 @login_required
 @limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 def marcar_sem_previsao():
@@ -235,10 +235,10 @@ def marcar_sem_previsao():
         implantacao_id = validate_integer(int(implantacao_id_raw), min_value=1)
     except Exception:
         flash('ID da implantação inválido.', 'error')
-        return redirect(url_for('main.dashboard', refresh='1'))
+        return redirect(url_for('onboarding.dashboard', refresh='1'))
 
     try:
-        from ..domain.implantacao_service import marcar_sem_previsao_service
+        from ...domain.implantacao_service import marcar_sem_previsao_service
         nome_empresa = marcar_sem_previsao_service(implantacao_id, usuario_cs_email)
 
         flash(f'Implantação "{nome_empresa}" marcada como "Sem previsão".', 'success')
@@ -253,10 +253,10 @@ def marcar_sem_previsao():
         app_logger.error(f"Erro ao marcar sem previsão implantação ID {implantacao_id}: {e}")
         flash(f'Erro ao marcar sem previsão: {e}', 'error')
 
-    return redirect(url_for('main.dashboard', refresh='1'))
+    return redirect(url_for('onboarding.dashboard', refresh='1'))
 
 
-@implantacao_actions_bp.route('/finalizar_implantacao', methods=['POST'])
+@onboarding_actions_bp.route('/finalizar_implantacao', methods=['POST'])
 @login_required
 @limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 @audit(action='FINALIZE_IMPLANTACAO', target_type='implantacao')
@@ -264,9 +264,9 @@ def finalizar_implantacao():
     usuario_cs_email = g.user_email
     implantacao_id = request.form.get('implantacao_id')
     redirect_target = request.form.get('redirect_to', 'dashboard')
-    dest_url = url_for('main.dashboard')
+    dest_url = url_for('onboarding.dashboard')
     if redirect_target == 'detalhes':
-        dest_url = url_for('main.ver_implantacao', impl_id=implantacao_id)
+        dest_url = url_for('onboarding.ver_implantacao', impl_id=implantacao_id)
 
     try:
         data_finalizacao = request.form.get('data_finalizacao')
@@ -279,7 +279,7 @@ def finalizar_implantacao():
             flash('Data da finalização inválida. Formatos aceitos: DD/MM/AAAA, MM/DD/AAAA, AAAA-MM-DD.', 'error')
             return redirect(dest_url)
 
-        from ..domain.implantacao_service import finalizar_implantacao_service
+        from ...domain.implantacao_service import finalizar_implantacao_service
         finalizar_implantacao_service(implantacao_id, usuario_cs_email, data_final_iso)
 
         flash('Implantação finalizada com sucesso!', 'success')
@@ -298,7 +298,7 @@ def finalizar_implantacao():
     return redirect(dest_url)
 
 
-@implantacao_actions_bp.route('/parar_implantacao', methods=['POST'])
+@onboarding_actions_bp.route('/parar_implantacao', methods=['POST'])
 @login_required
 @limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 def parar_implantacao():
@@ -306,7 +306,7 @@ def parar_implantacao():
     implantacao_id = request.form.get('implantacao_id')
     motivo = request.form.get('motivo_parada', '').strip()
     data_parada = request.form.get('data_parada')
-    dest_url = url_for('main.ver_implantacao', impl_id=implantacao_id)
+    dest_url = url_for('onboarding.ver_implantacao', impl_id=implantacao_id)
 
     if not motivo:
         flash('O motivo da parada é obrigatório.', 'error')
@@ -323,7 +323,7 @@ def parar_implantacao():
     try:
         user_perfil_acesso = g.perfil.get('perfil_acesso') if getattr(g, 'perfil', None) else None
         
-        from ..domain.implantacao_service import parar_implantacao_service
+        from ...domain.implantacao_service import parar_implantacao_service
         parar_implantacao_service(implantacao_id, usuario_cs_email, user_perfil_acesso, data_parada_iso, motivo)
 
         flash('Implantação marcada como "Parada" com data retroativa.', 'success')
@@ -342,21 +342,21 @@ def parar_implantacao():
     return redirect(dest_url)
 
 
-@implantacao_actions_bp.route('/retomar_implantacao', methods=['POST'])
+@onboarding_actions_bp.route('/retomar_implantacao', methods=['POST'])
 @login_required
 @limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 def retomar_implantacao():
     usuario_cs_email = g.user_email
     implantacao_id = request.form.get('implantacao_id')
     redirect_to = request.form.get('redirect_to', 'dashboard')
-    dest_url = url_for('main.dashboard')
+    dest_url = url_for('onboarding.dashboard')
     if redirect_to == 'detalhes':
-        dest_url = url_for('main.ver_implantacao', impl_id=implantacao_id)
+        dest_url = url_for('onboarding.ver_implantacao', impl_id=implantacao_id)
 
     try:
         user_perfil_acesso = g.perfil.get('perfil_acesso') if getattr(g, 'perfil', None) else None
         
-        from ..domain.implantacao_service import retomar_implantacao_service
+        from ...domain.implantacao_service import retomar_implantacao_service
         retomar_implantacao_service(implantacao_id, usuario_cs_email, user_perfil_acesso)
 
         flash('Implantação retomada e movida para "Em Andamento".', 'success')
@@ -376,19 +376,19 @@ def retomar_implantacao():
     return redirect(dest_url)
 
 
-@implantacao_actions_bp.route('/reabrir_implantacao', methods=['POST'])
+@onboarding_actions_bp.route('/reabrir_implantacao', methods=['POST'])
 @login_required
 @limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 def reabrir_implantacao():
     usuario_cs_email = g.user_email
     implantacao_id = request.form.get('implantacao_id')
     redirect_to = request.form.get('redirect_to', 'dashboard')
-    dest_url = url_for('main.dashboard')
+    dest_url = url_for('onboarding.dashboard')
     if redirect_to == 'detalhes':
-        dest_url = url_for('main.ver_implantacao', impl_id=implantacao_id)
+        dest_url = url_for('onboarding.ver_implantacao', impl_id=implantacao_id)
 
     try:
-        from ..domain.implantacao_service import reabrir_implantacao_service
+        from ...domain.implantacao_service import reabrir_implantacao_service
         reabrir_implantacao_service(implantacao_id, usuario_cs_email)
 
         flash('Implantação reaberta com sucesso e movida para "Em Andamento".', 'success')
@@ -400,7 +400,7 @@ def reabrir_implantacao():
 
     except ValueError as e:
         flash(str(e), 'error')
-        return redirect(request.referrer or url_for('main.dashboard'))
+        return redirect(request.referrer or url_for('onboarding.dashboard'))
     except Exception as e:
         app_logger.error(f"Erro ao reabrir implantação ID {implantacao_id}: {e}")
         flash(f'Erro ao reabrir implantação: {e}', 'error')
@@ -408,7 +408,7 @@ def reabrir_implantacao():
     return redirect(dest_url)
 
 
-@implantacao_actions_bp.route('/atualizar_detalhes_empresa', methods=['POST'])
+@onboarding_actions_bp.route('/atualizar_detalhes_empresa', methods=['POST'])
 @login_required
 @limiter.limit("100 per minute", key_func=lambda: g.user_email or get_remote_address())
 def atualizar_detalhes_empresa():
@@ -416,7 +416,7 @@ def atualizar_detalhes_empresa():
     Atualiza os detalhes da empresa/cliente de uma implantação.
     Refatorado: Usa helpers.build_detalhes_campos para processamento de formulário.
     """
-    from .helpers import build_detalhes_campos
+    from ..helpers import build_detalhes_campos
     
     usuario_cs_email = g.user_email
     implantacao_id = request.form.get('implantacao_id')
@@ -427,9 +427,9 @@ def atualizar_detalhes_empresa():
     wants_json = 'application/json' in (request.headers.get('Accept') or '')
     is_modal = (redirect_to or '').lower() == 'modal'
 
-    dest_url = url_for('main.dashboard')
+    dest_url = url_for('onboarding.dashboard')
     if redirect_to == 'detalhes':
-        dest_url = url_for('main.ver_implantacao', impl_id=implantacao_id)
+        dest_url = url_for('onboarding.ver_implantacao', impl_id=implantacao_id)
 
     try:
         # Usar helper para construir campos do formulário
@@ -441,7 +441,7 @@ def atualizar_detalhes_empresa():
             flash(error, 'warning')
             return redirect(dest_url)
 
-        from ..domain.implantacao_service import atualizar_detalhes_empresa_service
+        from ...domain.implantacao_service import atualizar_detalhes_empresa_service
         atualizar_detalhes_empresa_service(implantacao_id, usuario_cs_email, user_perfil_acesso, final_campos)
 
         try:
@@ -520,7 +520,7 @@ def atualizar_detalhes_empresa():
     return redirect(dest_url)
 
 
-@implantacao_actions_bp.route('/remover_plano_implantacao', methods=['POST'])
+@onboarding_actions_bp.route('/remover_plano_implantacao', methods=['POST'])
 @login_required
 @limiter.limit("30 per minute", key_func=lambda: g.user_email or get_remote_address())
 def remover_plano_implantacao():
@@ -529,10 +529,10 @@ def remover_plano_implantacao():
     implantacao_id = request.form.get('implantacao_id')
     user_perfil_acesso = g.perfil.get('perfil_acesso') if g.perfil else None
 
-    dest_url = url_for('main.ver_implantacao', impl_id=implantacao_id)
+    dest_url = url_for('onboarding.ver_implantacao', impl_id=implantacao_id)
 
     try:
-        from ..domain.implantacao_service import remover_plano_implantacao_service
+        from ...domain.implantacao_service import remover_plano_implantacao_service
         remover_plano_implantacao_service(implantacao_id, usuario_cs_email, user_perfil_acesso)
 
         flash('Plano de sucesso removido com sucesso!', 'success')
@@ -551,7 +551,7 @@ def remover_plano_implantacao():
     return redirect(dest_url)
 
 
-@implantacao_actions_bp.route('/transferir_implantacao', methods=['POST'])
+@onboarding_actions_bp.route('/transferir_implantacao', methods=['POST'])
 @login_required
 @permission_required(PERFIS_COM_GESTAO)
 @limiter.limit("30 per minute", key_func=lambda: g.user_email or get_remote_address())
@@ -560,15 +560,15 @@ def transferir_implantacao():
     usuario_cs_email = g.user_email
     implantacao_id = request.form.get('implantacao_id')
     novo_usuario_cs = request.form.get('novo_usuario_cs')
-    dest_url = url_for('main.ver_implantacao', impl_id=implantacao_id)
+    dest_url = url_for('onboarding.ver_implantacao', impl_id=implantacao_id)
 
     try:
-        from ..domain.implantacao_service import transferir_implantacao_service
+        from ...domain.implantacao_service import transferir_implantacao_service
         antigo_usuario_cs = transferir_implantacao_service(implantacao_id, usuario_cs_email, novo_usuario_cs)
         
         flash(f'Implantação transferida para {novo_usuario_cs} com sucesso!', 'success')
         if antigo_usuario_cs == usuario_cs_email:
-            return redirect(url_for('main.dashboard'))
+            return redirect(url_for('onboarding.dashboard'))
             
     except ValueError as e:
         flash(str(e), 'error')
@@ -579,7 +579,7 @@ def transferir_implantacao():
     return redirect(dest_url)
 
 
-@implantacao_actions_bp.route('/excluir_implantacao', methods=['POST'])
+@onboarding_actions_bp.route('/excluir_implantacao', methods=['POST'])
 @login_required
 @limiter.limit("100 per minute", key_func=lambda: g.user_email or get_remote_address())
 @audit(action='DELETE_IMPLANTACAO', target_type='implantacao')
@@ -589,7 +589,7 @@ def excluir_implantacao():
     user_perfil_acesso = g.perfil.get('perfil_acesso') if g.perfil else None
 
     try:
-        from ..domain.implantacao_service import excluir_implantacao_service
+        from ...domain.implantacao_service import excluir_implantacao_service
         excluir_implantacao_service(implantacao_id, usuario_cs_email, user_perfil_acesso)
         
         flash('Implantação e todos os dados associados foram excluídos com sucesso.', 'success')
@@ -604,12 +604,12 @@ def excluir_implantacao():
         app_logger.error(f"Erro ao excluir implantação ID {implantacao_id}: {e}")
         flash('Erro ao excluir implantação.', 'error')
         
-    return redirect(url_for('main.dashboard'))
+    return redirect(url_for('onboarding.dashboard'))
 
 
 
 
-@implantacao_actions_bp.route('/cancelar_implantacao', methods=['POST'])
+@onboarding_actions_bp.route('/cancelar_implantacao', methods=['POST'])
 @login_required
 @audit(action='CANCEL_IMPLANTACAO', target_type='implantacao')
 def cancelar_implantacao():
@@ -621,22 +621,22 @@ def cancelar_implantacao():
 
     if not r2_client:
         flash('Erro: Serviço de armazenamento R2 não configurado. Não é possível fazer upload do comprovante obrigatório.', 'error')
-        return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
+        return redirect(url_for('onboarding.ver_implantacao', impl_id=implantacao_id))
 
     if not all([implantacao_id, data_cancelamento, motivo]):
         flash('Todos os campos (Data, Motivo Resumo) são obrigatórios para cancelar.', 'error')
-        return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
+        return redirect(url_for('onboarding.ver_implantacao', impl_id=implantacao_id))
 
     try:
         data_cancel_iso = validate_date(data_cancelamento)
     except ValidationError:
         flash('Data do cancelamento inválida. Formatos aceitos: DD/MM/AAAA, MM/DD/AAAA, AAAA-MM-DD.', 'error')
-        return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
+        return redirect(url_for('onboarding.ver_implantacao', impl_id=implantacao_id))
 
     file = request.files.get('comprovante_cancelamento')
     if not file or file.filename == '':
         flash('O upload do print do e-mail de cancelamento é obrigatório.', 'error')
-        return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
+        return redirect(url_for('onboarding.ver_implantacao', impl_id=implantacao_id))
 
     try:
         comprovante_url = None
@@ -672,35 +672,35 @@ def cancelar_implantacao():
                 comprovante_url = url_for('main.serve_upload', filename=f'comprovantes_cancelamento/{nome_unico}')
         else:
             flash('Tipo de arquivo inválido para o comprovante.', 'error')
-            return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
+            return redirect(url_for('onboarding.ver_implantacao', impl_id=implantacao_id))
 
-        from ..domain.implantacao_service import cancelar_implantacao_service
+        from ...domain.implantacao_service import cancelar_implantacao_service
         cancelar_implantacao_service(implantacao_id, usuario_cs_email, user_perfil_acesso, data_cancel_iso, motivo, comprovante_url)
 
         flash('Implantação cancelada com sucesso.', 'success')
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('onboarding.dashboard'))
 
     except ValueError as e:
         flash(str(e), 'error')
-        return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
+        return redirect(url_for('onboarding.ver_implantacao', impl_id=implantacao_id))
     except Exception as e:
         app_logger.error(f"Erro ao cancelar implantação ID {implantacao_id}: {e}")
         flash(f'Erro ao cancelar implantação: {e}', 'error')
-        return redirect(url_for('main.ver_implantacao', impl_id=implantacao_id))
+        return redirect(url_for('onboarding.ver_implantacao', impl_id=implantacao_id))
 
 
-@implantacao_actions_bp.route('/api/implantacao/<int:implantacao_id>/jira-issues', methods=['GET'])
+@onboarding_actions_bp.route('/api/implantacao/<int:implantacao_id>/jira-issues', methods=['GET'])
 @login_required
 def get_jira_issues(implantacao_id):
     """
     Retorna as issues do Jira relacionadas à implantação (empresa) + tickets vinculados manualmente.
     """
     try:
-        from ..domain.implantacao_service import _get_implantacao_and_validate_access
+        from ...domain.implantacao_service import _get_implantacao_and_validate_access
         implantacao, _ = _get_implantacao_and_validate_access(implantacao_id, g.user_email, g.perfil)
         
         # Buscar chaves extras vinculadas manualmente (Via Service)
-        from ..domain.jira_service import get_linked_jira_keys, search_issues_by_context
+        from ...domain.jira_service import get_linked_jira_keys, search_issues_by_context
         extra_keys = get_linked_jira_keys(implantacao_id)
         
         app_logger.info(f"DEBUG: Implantacao ID {implantacao_id} - Extra Keys: {extra_keys}")
@@ -734,21 +734,21 @@ def get_jira_issues(implantacao_id):
         app_logger.error(f"Erro na rota jira-issues: {e}")
         return jsonify({'error': 'Erro interno servidor'}), 500
 
-@implantacao_actions_bp.route('/api/implantacao/<int:implantacao_id>/jira-issues', methods=['POST'])
+@onboarding_actions_bp.route('/api/implantacao/<int:implantacao_id>/jira-issues', methods=['POST'])
 @login_required
 def create_jira_issue_action(implantacao_id):
     """
     Cria uma nova issue no Jira.
     """
     try:
-        from ..domain.implantacao_service import _get_implantacao_and_validate_access
+        from ...domain.implantacao_service import _get_implantacao_and_validate_access
         implantacao, _ = _get_implantacao_and_validate_access(implantacao_id, g.user_email, g.perfil)
         
         data = request.get_json()
         if not data:
              return jsonify({'error': 'JSON inválido'}), 400
              
-        from ..domain.jira_service import create_jira_issue, save_jira_link
+        from ...domain.jira_service import create_jira_issue, save_jira_link
         result = create_jira_issue(implantacao, data)
         
         if result.get('success'):
@@ -771,7 +771,7 @@ def create_jira_issue_action(implantacao_id):
         app_logger.error(f"Erro na criação de issue Jira: {e}")
         return jsonify({'error': 'Erro interno servidor'}), 500
 
-@implantacao_actions_bp.route('/api/implantacao/<int:implantacao_id>/jira-issues/fetch', methods=['POST'])
+@onboarding_actions_bp.route('/api/implantacao/<int:implantacao_id>/jira-issues/fetch', methods=['POST'])
 @login_required
 def fetch_jira_issue_action(implantacao_id):
     """
@@ -785,10 +785,10 @@ def fetch_jira_issue_action(implantacao_id):
         key = data['key'].strip().upper()
         
         # Validar acesso
-        from ..domain.implantacao_service import _get_implantacao_and_validate_access
+        from ...domain.implantacao_service import _get_implantacao_and_validate_access
         _get_implantacao_and_validate_access(implantacao_id, g.user_email, g.perfil)
         
-        from ..domain.jira_service import get_issue_details, save_jira_link
+        from ...domain.jira_service import get_issue_details, save_jira_link
         result = get_issue_details(key)
         
         if 'error' in result:
@@ -811,7 +811,7 @@ def fetch_jira_issue_action(implantacao_id):
         app_logger.error(f"Erro ao buscar/vincular ticket Jira {implantacao_id}: {e}")
         return jsonify({'error': str(e)}), 500
 
-@implantacao_actions_bp.route('/api/implantacao/<int:implantacao_id>/jira-issues/<path:jira_key>', methods=['DELETE'])
+@onboarding_actions_bp.route('/api/implantacao/<int:implantacao_id>/jira-issues/<path:jira_key>', methods=['DELETE'])
 @login_required
 def delete_jira_link_action(implantacao_id, jira_key):
     """
@@ -821,10 +821,10 @@ def delete_jira_link_action(implantacao_id, jira_key):
         jira_key = jira_key.strip().upper()
         
         # Validar acesso
-        from ..domain.implantacao_service import _get_implantacao_and_validate_access
+        from ...domain.implantacao_service import _get_implantacao_and_validate_access
         _get_implantacao_and_validate_access(implantacao_id, g.user_email, g.perfil)
         
-        from ..domain.jira_service import remove_jira_link
+        from ...domain.jira_service import remove_jira_link
         
         # Remove via service (idempotente)
         remove_jira_link(implantacao_id, jira_key)

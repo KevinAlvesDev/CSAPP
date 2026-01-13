@@ -233,7 +233,7 @@ def create_app(test_config=None):
     from .blueprints.checklist_api import checklist_bp
     from .blueprints.gamification import gamification_bp
     from .blueprints.health import health_bp
-    from .blueprints.implantacao_actions import implantacao_actions_bp
+    # from .blueprints.implantacao_actions import implantacao_actions_bp # MOVIDO
     from .blueprints.main import main_bp
     from .blueprints.management import management_bp
     from .blueprints.planos_bp import planos_bp
@@ -261,7 +261,10 @@ def create_app(test_config=None):
     app.register_blueprint(auth_bp)
     app.register_blueprint(api_bp)
     app.register_blueprint(api_v1_bp)
-    app.register_blueprint(implantacao_actions_bp)
+    # app.register_blueprint(implantacao_actions_bp) # MOVIDO PARA ONBOARDING
+    
+    from .blueprints.onboarding.actions import onboarding_actions_bp
+    app.register_blueprint(onboarding_actions_bp)
     app.register_blueprint(profile_bp)
     app.register_blueprint(management_bp)
     app.register_blueprint(analytics_bp)
@@ -276,6 +279,18 @@ def create_app(test_config=None):
     app.register_blueprint(upload_bp)
     app.register_blueprint(risc_bp)  # RISC (Proteção entre Contas)
     app.register_blueprint(checklist_finalizacao_bp)
+
+    from .blueprints.core import core_bp
+    app.register_blueprint(core_bp)
+    
+    from .blueprints.onboarding import onboarding_bp
+    app.register_blueprint(onboarding_bp)
+
+    from .blueprints.ongoing import ongoing_bp
+    app.register_blueprint(ongoing_bp)
+
+    from .blueprints.grandes_contas import grandes_contas_bp
+    app.register_blueprint(grandes_contas_bp)
 
 
 
