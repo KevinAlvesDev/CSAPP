@@ -1233,7 +1233,7 @@
 
             const cardHtml = `
               <div class="col-12 col-md-6 col-lg-4 animate__animated animate__fadeIn">
-                  <div class="jira-card h-100 shadow-sm" style="border: 2px solid #4F46E5 !important;" onclick="window.open('${issue.link}', '_blank')">
+                  <div class="jira-card h-100 shadow-sm" style="border: 2px solid #4F46E5 !important;" onclick="(function(link) { if (!link || link === '#' || link === 'https:/#') { showToast('Este ticket não está disponível ou foi arquivado', 'warning'); return; } const url = link.startsWith('http') ? link : 'https://' + link; try { window.open(url, '_blank'); } catch(e) { showToast('Erro ao abrir link do Jira', 'error'); } })('${issue.link}')">
                        <div class="card-body d-flex flex-column h-100">
                           <div class="d-flex justify-content-between align-items-start mb-2">
                                <div class="d-flex align-items-center gap-2">
@@ -1495,7 +1495,7 @@
 
         return `
         <div class="col-12 col-md-6 col-lg-4 animate__animated animate__fadeIn">
-            <div class="jira-card h-100 position-relative" style="cursor: pointer;" onclick="const url = '${issue.link}'; window.open(url.startsWith('http') ? url : 'https://' + url, '_blank')">
+            <div class="jira-card h-100 position-relative" style="cursor: pointer;" onclick="(function(link) { if (!link || link === '#' || link === 'https:/#') { showToast('Este ticket não está disponível ou foi arquivado', 'warning'); return; } const url = link.startsWith('http') ? link : 'https://' + link; try { window.open(url, '_blank'); } catch(e) { showToast('Erro ao abrir link do Jira', 'error'); } })('${issue.link}')">
                 <div class="card-body d-flex flex-column h-100">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                          <div class="d-flex align-items-center gap-2">
