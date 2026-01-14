@@ -1142,7 +1142,8 @@ Sim - Academia XYZ
                 <h5 class="modal-title">Parar Implantação</h5><button type="button" class="btn-close"
                     data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ url_for('onboarding_actions.parar_implantacao') }}" method="POST" id="formPararImplantacao">
+            <form action="{{ url_for('onboarding_actions.parar_implantacao') }}" method="POST"
+                id="formPararImplantacao">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
@@ -1358,8 +1359,8 @@ Sim - Academia XYZ
                 <h5 class="modal-title text-danger">Cancelar Implantação</h5><button type="button" class="btn-close"
                     data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ url_for('onboarding_actions.cancelar_implantacao') }}" method="POST" enctype="multipart/form-data"
-                id="formCancelarImplantacao">
+            <form action="{{ url_for('onboarding_actions.cancelar_implantacao') }}" method="POST"
+                enctype="multipart/form-data" id="formCancelarImplantacao">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <p class="fw-bold">Deseja realmente cancelar esta implantação?</p>
@@ -1395,6 +1396,7 @@ Sim - Academia XYZ
     // Dados do checklist para renderização
     window.CHECKLIST_DATA = {{ checklist_tree | tojson if checklist_tree else '[]' }};
     window.IMPLANTACAO_ID = {{ implantacao.id }};
+    window.PLANO_PERMITE_EXCLUIR_TAREFAS = {{ 'true' if plano_sucesso and plano_sucesso.get('permite_excluir_tarefas') else 'false' }};
 </script>
 
 <!-- Service Layer Scripts (SOLID architecture) -->
@@ -1501,6 +1503,15 @@ Sim - Academia XYZ
                                 placeholder="Descreva os detalhes..."
                                 style="resize: vertical; font-size: 0.95rem;"></textarea>
                             <div class="text-end text-muted mt-1" style="font-size: 0.75rem;">0/8000</div>
+                        </div>
+
+                        <!-- Anexos -->
+                        <div class="form-group">
+                            <label class="form-label fw-bold text-secondary" style="font-size: 0.85rem;">Anexos
+                                (Arquivos/Prints)</label>
+                            <input type="file" class="form-control" id="jira-arquivos" multiple>
+                            <div class="form-text text-muted" style="font-size: 0.75rem;">Você pode selecionar múltiplos
+                                arquivos para anexar ao ticket.</div>
                         </div>
 
                         <!-- Contatos & Origem -->

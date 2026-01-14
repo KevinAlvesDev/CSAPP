@@ -49,14 +49,15 @@ def criar_plano_sucesso(nome: str, descricao: str, criado_por: str, estrutura: D
 
         try:
             sql_plano = """
-                INSERT INTO planos_sucesso (nome, descricao, criado_por, data_criacao, data_atualizacao, dias_duracao)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                INSERT INTO planos_sucesso (nome, descricao, criado_por, data_criacao, data_atualizacao, dias_duracao, permite_excluir_tarefas)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
             """
             if db_type == 'sqlite':
                 sql_plano = sql_plano.replace('%s', '?')
 
             now = datetime.now()
-            cursor.execute(sql_plano, (nome.strip(), descricao or '', criado_por, now, now, dias_duracao))
+            permite_excluir = estrutura.get('permite_excluir_tarefas', False)
+            cursor.execute(sql_plano, (nome.strip(), descricao or '', criado_por, now, now, dias_duracao, permite_excluir))
 
             if db_type == 'postgres':
                 cursor.execute("SELECT lastval()")
@@ -114,14 +115,15 @@ def criar_plano_sucesso_checklist(nome: str, descricao: str, criado_por: str, es
 
         try:
             sql_plano = """
-                INSERT INTO planos_sucesso (nome, descricao, criado_por, data_criacao, data_atualizacao, dias_duracao)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                INSERT INTO planos_sucesso (nome, descricao, criado_por, data_criacao, data_atualizacao, dias_duracao, permite_excluir_tarefas)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
             """
             if db_type == 'sqlite':
                 sql_plano = sql_plano.replace('%s', '?')
 
             now = datetime.now()
-            cursor.execute(sql_plano, (nome.strip(), descricao or '', criado_por, now, now, dias_duracao))
+            permite_excluir = estrutura.get('permite_excluir_tarefas', False)
+            cursor.execute(sql_plano, (nome.strip(), descricao or '', criado_por, now, now, dias_duracao, permite_excluir))
 
             if db_type == 'postgres':
                 cursor.execute("SELECT lastval()")
@@ -190,6 +192,10 @@ def atualizar_plano_sucesso(plano_id: int, dados: Dict) -> bool:
     if 'dias_duracao' in dados:
         campos_atualizaveis.append("dias_duracao = %s")
         valores.append(int(dados['dias_duracao']) if dados['dias_duracao'] else None)
+    
+    if 'permite_excluir_tarefas' in dados:
+        campos_atualizaveis.append("permite_excluir_tarefas = %s")
+        valores.append(bool(dados['permite_excluir_tarefas']))
 
     if not campos_atualizaveis:
         return True

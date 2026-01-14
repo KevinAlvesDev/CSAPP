@@ -335,6 +335,7 @@ def _criar_tabelas_basicas_sqlite(cursor):
             data_atualizacao DATETIME DEFAULT CURRENT_TIMESTAMP,
             dias_duracao INTEGER,
             ativo INTEGER DEFAULT 1,
+            permite_excluir_tarefas INTEGER DEFAULT 0,
             FOREIGN KEY (criado_por) REFERENCES usuarios(usuario)
         )
     """)
@@ -567,7 +568,8 @@ def _migrar_colunas_planos_sucesso(cursor):
 
         colunas_para_adicionar = {
             'data_atualizacao': 'DATETIME DEFAULT CURRENT_TIMESTAMP',
-            'dias_duracao': 'INTEGER'
+            'dias_duracao': 'INTEGER',
+            'permite_excluir_tarefas': 'INTEGER DEFAULT 0'
         }
 
         colunas_adicionadas = 0

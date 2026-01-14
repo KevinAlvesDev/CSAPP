@@ -46,8 +46,8 @@ describe('ChecklistService - Validations', () => {
         expect(result).toBe(false);
     });
 
-    test('validateCommentText should reject text longer than 5000 chars', () => {
-        const longText = 'a'.repeat(5001);
+    test('validateCommentText should reject text longer than 12000 chars', () => {
+        const longText = 'a'.repeat(12001);
         const result = service.validateCommentText(longText);
 
         expect(result).toBe(false);

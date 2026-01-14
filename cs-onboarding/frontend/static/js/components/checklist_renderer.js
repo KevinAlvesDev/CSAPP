@@ -52,6 +52,25 @@ class ChecklistRenderer {
         return this.service && typeof this.service.loadComments === 'function';
     }
 
+    /**
+     * Verifica se o usuário pode excluir itens
+     * Apenas gestores ou se o plano permitir explicitamente
+     */
+    canDeleteItems() {
+        // Verificar se é gestor
+        const mainContent = document.getElementById('main-content');
+        const isManager = mainContent?.dataset?.isManager === 'true';
+
+        // Se for gestor, sempre pode excluir
+        if (isManager) {
+            return true;
+        }
+
+        // Verificar se o plano permite exclusão
+        const permiteExcluir = window.PLANO_PERMITE_EXCLUIR_TAREFAS || false;
+        return permiteExcluir;
+    }
+
     init() {
         if (!this.data || this.data.length === 0) {
             this.renderEmpty();
@@ -188,7 +207,7 @@ class ChecklistRenderer {
                         </span>
                         <span class="col-delete d-flex align-items-center">
                              <button class="btn-icon btn-move-item p-1 border-0 bg-transparent drag-handle" data-item-id="${item.id}" title="Arrastar para mover"><i class="bi bi-grip-vertical text-secondary"></i></button>
-                             <button class="btn-icon btn-delete-item p-1 border-0 bg-transparent" data-item-id="${item.id}" title="Excluir tarefa"><i class="bi bi-trash text-danger"></i></button>
+                             ${this.canDeleteItems() ? `<button class="btn-icon btn-delete-item p-1 border-0 bg-transparent" data-item-id="${item.id}" title="Excluir tarefa"><i class="bi bi-trash text-danger"></i></button>` : ''}
                         </span>
                     </div>
                 </div>

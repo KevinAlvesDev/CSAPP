@@ -744,12 +744,20 @@ def create_jira_issue_action(implantacao_id):
         from ...domain.implantacao_service import _get_implantacao_and_validate_access
         implantacao, _ = _get_implantacao_and_validate_access(implantacao_id, g.user_email, g.perfil)
         
-        data = request.get_json()
+        files_list = None
+        data = None
+
+        if request.content_type and 'multipart/form-data' in request.content_type:
+            data = request.form.to_dict()
+            files_list = request.files.getlist('files')
+        else:
+            data = request.get_json()
+        
         if not data:
-             return jsonify({'error': 'JSON inválido'}), 400
+             return jsonify({'error': 'JSON ou Form inválido'}), 400
              
         from ...domain.jira_service import create_jira_issue, save_jira_link
-        result = create_jira_issue(implantacao, data)
+        result = create_jira_issue(implantacao, data, files=files_list)
         
         if result.get('success'):
             # --- AUTO-SAVE LINK ---

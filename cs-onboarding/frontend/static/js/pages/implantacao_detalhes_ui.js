@@ -1370,30 +1370,37 @@
           jiraIsSubmitting = true;
           if (spinner) spinner.classList.remove('d-none');
 
-          const payload = {
-            summary: document.getElementById('jira-titulo').value,
-            description: document.getElementById('jira-descricao').value,
-            project: document.getElementById('jira-projeto').value,
-            issuetype: document.getElementById('jira-tipo').value,
-            priority: document.getElementById('jira-sla').value,
-            // Custom Fields
-            custom_contact: document.getElementById('jira-contatos').value,
-            custom_origin: document.getElementById('jira-origem').value,
-            custom_enotas_link: document.getElementById('jira-link-enotas').value
-          };
+          const formData = new FormData();
+
+          formData.append('summary', document.getElementById('jira-titulo').value);
+          formData.append('description', document.getElementById('jira-descricao').value);
+          formData.append('project', document.getElementById('jira-projeto').value);
+          formData.append('issuetype', document.getElementById('jira-tipo').value);
+          formData.append('priority', document.getElementById('jira-sla').value);
+
+          formData.append('custom_contact', document.getElementById('jira-contatos').value);
+          formData.append('custom_origin', document.getElementById('jira-origem').value);
+          formData.append('custom_enotas_link', document.getElementById('jira-link-enotas').value);
 
           // Validação extra (Project is mandatory)
-          if (!payload.project) {
+          if (!formData.get('project')) {
             throw new Error("Selecione um Projeto Jira.");
+          }
+
+          // Handle Files
+          const fileInput = document.getElementById('jira-arquivos');
+          if (fileInput && fileInput.files && fileInput.files.length > 0) {
+            Array.from(fileInput.files).forEach(file => {
+              formData.append('files', file);
+            });
           }
 
           const res = await fetch(`/api/implantacao/${CONFIG.implantacaoId}/jira-issues`, {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json',
               'X-CSRFToken': CONFIG.csrfToken
             },
-            body: JSON.stringify(payload)
+            body: formData
           });
 
           const data = await res.json();
@@ -1488,7 +1495,7 @@
 
         return `
         <div class="col-12 col-md-6 col-lg-4 animate__animated animate__fadeIn">
-            <div class="jira-card h-100 position-relative" style="cursor: pointer;" onclick="window.open('${issue.link}', '_blank')">
+            <div class="jira-card h-100 position-relative" style="cursor: pointer;" onclick="const url = '${issue.link}'; window.open(url.startsWith('http') ? url : 'https://' + url, '_blank')">
                 <div class="card-body d-flex flex-column h-100">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                          <div class="d-flex align-items-center gap-2">

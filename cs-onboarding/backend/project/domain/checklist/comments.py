@@ -37,7 +37,7 @@ def add_comment_to_item(item_id, text, visibilidade='interno', usuario_email=Non
         raise ValueError("Texto do comentário é obrigatório")
 
     usuario_email = usuario_email or (g.user_email if hasattr(g, 'user_email') else None)
-    text = sanitize_string(text.strip(), max_length=8000, min_length=1)
+    text = sanitize_string(text.strip(), max_length=12000, min_length=1)
     noshow = bool(noshow) or (tag == 'No Show')
 
     with db_transaction_with_lock() as (conn, cursor, db_type):
@@ -302,7 +302,7 @@ def update_comment_service(comentario_id, novo_texto, usuario_email, is_manager)
     if not novo_texto or not novo_texto.strip():
         raise ValueError("Texto do comentário é obrigatório")
 
-    novo_texto = sanitize_string(novo_texto.strip(), max_length=8000, min_length=1)
+    novo_texto = sanitize_string(novo_texto.strip(), max_length=12000, min_length=1)
 
     comentario = query_db(
         "SELECT id, usuario_cs, data_criacao, checklist_item_id FROM comentarios_h WHERE id = %s",

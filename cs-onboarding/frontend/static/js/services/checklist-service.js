@@ -38,8 +38,8 @@ class ChecklistService {
             return false;
         }
 
-        if (texto.length > 5000) {
-            this.notifier.warning('Comentário muito longo (máximo 5000 caracteres)');
+        if (texto.length > 12000) {
+            this.notifier.warning('Comentário muito longo (máximo 12000 caracteres)');
             return false;
         }
 
@@ -163,7 +163,7 @@ class ChecklistService {
      */
     async updateResponsavel(itemId, responsavel) {
         if (!this.validateResponsavel(responsavel)) {
-            return { success: false, error: 'Validação falhou' };
+            return { success: false }; // Validação já notificou o usuário
         }
 
         try {
@@ -193,11 +193,11 @@ class ChecklistService {
     async updatePrevisao(itemId, previsao, isCompleted = false) {
         if (isCompleted) {
             this.notifier.warning('Tarefa concluída: não é possível adicionar nova previsão');
-            return { success: false, error: 'Item já concluído' };
+            return { success: false }; // Notificação já exibida
         }
 
         if (!this.validatePrevisao(previsao)) {
-            return { success: false, error: 'Validação falhou' };
+            return { success: false }; // Validação já notificou o usuário
         }
 
         try {
@@ -325,7 +325,7 @@ class ChecklistService {
      */
     async saveComment(itemId, commentData, imageFile = null) {
         if (!this.validateCommentText(commentData.texto)) {
-            return { success: false, error: 'Validação falhou' };
+            return { success: false }; // Validação já notificou o usuário
         }
 
         try {
@@ -407,7 +407,7 @@ class ChecklistService {
      */
     async updateComment(comentarioId, novoTexto) {
         if (!this.validateCommentText(novoTexto)) {
-            return { success: false, error: 'Validação falhou' };
+            return { success: false }; // Validação já notificou o usuário
         }
 
         try {

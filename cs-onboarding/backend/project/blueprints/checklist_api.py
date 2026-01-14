@@ -443,9 +443,51 @@ def delete_item(item_id):
     # Vou arriscar e permitir por enquanto, ou chamar um serviço auxiliar `check_permission`.
     
     from ..constants import PERFIS_COM_GESTAO
+    from ..domain.perfis_service import verificar_permissao
+    from ..db import query_db
     
-    # Check permissão gestor
+    # Check permissão gestor ou permissão explícita de exclusão
+    # Admin sempre tem checklist.delete. Implantador teve removido.
+    # Se o perfil tiver a permissão 'checklist.delete', permite.
+    perfil_id = g.perfil['id'] if g.perfil else None
+    tem_permissao_excluir = verificar_permissao(perfil_id, 'checklist.delete')
+    
     is_manager = g.perfil and g.perfil.get('perfil_acesso') in PERFIS_COM_GESTAO
+    
+    # Verificar se o plano permite exclusão de tarefas
+    plano_permite_excluir = False
+    try:
+        # Buscar o item para obter implantacao_id ou plano_id
+        item = query_db("SELECT implantacao_id, plano_id FROM checklist_items WHERE id = %s", (item_id,), one=True)
+        if item:
+            # Tentar buscar pela implantação primeiro
+            if item.get('implantacao_id'):
+                plano_info = query_db("""
+                    SELECT ps.permite_excluir_tarefas 
+                    FROM implantacoes i
+                    JOIN planos_sucesso ps ON i.plano_sucesso_id = ps.id
+                    WHERE i.id = %s
+                """, (item['implantacao_id'],), one=True)
+                if plano_info:
+                    plano_permite_excluir = bool(plano_info.get('permite_excluir_tarefas'))
+            # Se não achou pela implantação, tentar pelo plano_id direto
+            elif item.get('plano_id'):
+                plano_info = query_db("""
+                    SELECT permite_excluir_tarefas 
+                    FROM planos_sucesso 
+                    WHERE id = %s
+                """, (item['plano_id'],), one=True)
+                if plano_info:
+                    plano_permite_excluir = bool(plano_info.get('permite_excluir_tarefas'))
+    except Exception as e:
+        api_logger.warning(f"Erro ao verificar permissão do plano para item {item_id}: {e}")
+    
+    # Se não for gestor E não tiver permissão explícita E o plano não permitir, bloqueia
+    # Nota: Administradores são 'gestores' em PERFIS_COM_GESTAO, e também têm a permissão.
+    # Implantadores NÃO são gestores (geralmente), e agora NÃO terão a permissão por padrão.
+    # Mas se o plano permitir explicitamente, eles podem excluir.
+    if not is_manager and not tem_permissao_excluir and not plano_permite_excluir:
+        return jsonify({'ok': False, 'error': 'Você não tem permissão para excluir tarefas.'}), 403
 
     try:
         # Serviço agora valida se é owner ou manager

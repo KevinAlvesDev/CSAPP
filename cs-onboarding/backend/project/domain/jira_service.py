@@ -145,9 +145,9 @@ PROJECT_IDS = {
     'E2': '10125'
 }
 
-def create_jira_issue(implantacao_data, issue_data):
+def create_jira_issue(implantacao_data, issue_data, files=None):
     """
-    Cria um ticket no Jira (API v3).
+    Cria um ticket no Jira (API v3) e opcionalmente anexa arquivos.
     """
     url, user, token = get_jira_credentials()
     if not all([url, user, token]):
@@ -230,11 +230,26 @@ def create_jira_issue(implantacao_data, issue_data):
         
         if response.status_code == 201:
             data = response.json()
+            key = data.get('key')
+            issue_id = data.get('id')
+            
+            # --- PROCESSAMENTO DE ARQUIVOS ---
+            if files:
+                attach_results = []
+                for file_obj in files:
+                    # file_obj deve ser um objeto FileStorage do Werkzeug ou tupla (nome, bytes, type)
+                    # Aqui esperamos FileStorage ou similar que tenha .filename, .read(), .content_type
+                    try:
+                        res_att = attach_file_to_issue(key, file_obj)
+                        attach_results.append(res_att)
+                    except Exception as e_att:
+                        logger.error(f"Erro anexando arquivo {file_obj}: {e_att}")
+            
             return {
                 'success': True,
-                'key': data.get('key'),
-                'id': data.get('id'),
-                'link': f"{url}/browse/{data.get('key')}"
+                'key': key,
+                'id': issue_id,
+                'link': f"{url}/browse/{key}"
             }
         else:
             logger.error(f"Erro Jira Create Body: {response.text}")
@@ -243,6 +258,52 @@ def create_jira_issue(implantacao_data, issue_data):
     except Exception as e:
         logger.error(f"Exceção create_jira_issue: {e}")
         return {'error': str(e)}
+
+def attach_file_to_issue(issue_key, file_storage):
+    """
+    Anexa um arquivo a uma issue existente.
+    """
+    url, user, token = get_jira_credentials()
+    if not all([url, user, token]):
+        return {'error': 'Configuração Jira inválida'}
+
+    # Ensure URL formatting
+    if url.endswith('/'):
+        url = url[:-1]
+        
+    endpoint = f"{url}/rest/api/3/issue/{issue_key}/attachments"
+    
+    # FileStorage (Flask) behaves like a file, but requests needs (filename, fileobj, content_type)
+    # file_storage.stream.seek(0) might be needed if already read, but usually it's at 0.
+    
+    try:
+        files = {
+            'file': (file_storage.filename, file_storage.stream, file_storage.content_type)
+        }
+        
+        # Jira requer header 'X-Atlassian-Token: no-check' para uploads
+        headers = {
+            "X-Atlassian-Token": "no-check",
+            "Accept": "application/json"
+        }
+        
+        response = requests.post(
+            endpoint,
+            files=files,
+            auth=HTTPBasicAuth(user, token),
+            headers=headers,
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            return {'success': True, 'data': response.json()}
+        else:
+            logger.warning(f"Erro ao anexar arquivo no Jira {issue_key}: {response.status_code} - {response.text}")
+            return {'success': False, 'error': response.text}
+            
+    except Exception as e:
+        logger.error(f"Exceção attach_file_to_issue: {e}")
+        return {'success': False, 'error': str(e)}
 
 def get_issue_details(issue_key):
     """
