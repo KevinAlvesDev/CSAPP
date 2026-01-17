@@ -36,50 +36,50 @@ def detect_smtp_settings(user_email):
     Detecta automaticamente host/porta/SSL/TLS com base no domínio do e-mail.
     Retorna dict: {host, port, use_tls, use_ssl}.
     """
-    if not user_email or '@' not in user_email:
+    if not user_email or "@" not in user_email:
         raise ValueError("E-mail inválido para detecção de SMTP.")
 
-    domain = user_email.split('@', 1)[1].lower().strip()
+    domain = user_email.split("@", 1)[1].lower().strip()
 
     COMMON = {
-        'gmail.com': ('smtp.gmail.com', 587, True, False),
-        'googlemail.com': ('smtp.gmail.com', 587, True, False),
-        'outlook.com': ('smtp.office365.com', 587, True, False),
-        'hotmail.com': ('smtp.office365.com', 587, True, False),
-        'live.com': ('smtp.office365.com', 587, True, False),
-        'office365.com': ('smtp.office365.com', 587, True, False),
-        'msn.com': ('smtp.office365.com', 587, True, False),
-        'yahoo.com': ('smtp.mail.yahoo.com', 587, True, False),
-        'yahoo.com.br': ('smtp.mail.yahoo.com', 587, True, False),
-        'icloud.com': ('smtp.mail.me.com', 587, True, False),
-        'me.com': ('smtp.mail.me.com', 587, True, False),
-        'mac.com': ('smtp.mail.me.com', 587, True, False),
-        'zoho.com': ('smtp.zoho.com', 587, True, False),
-        'yandex.com': ('smtp.yandex.com', 587, True, False),
-        'yandex.ru': ('smtp.yandex.ru', 587, True, False),
-        'uol.com.br': ('smtp.uol.com.br', 587, True, False),
-        'bol.com.br': ('smtp.bol.com.br', 587, True, False),
-        'terra.com.br': ('smtp.terra.com.br', 587, True, False),
-        'ig.com.br': ('smtp.ig.com.br', 587, True, False),
-        'globo.com': ('smtp.globo.com', 587, True, False),
+        "gmail.com": ("smtp.gmail.com", 587, True, False),
+        "googlemail.com": ("smtp.gmail.com", 587, True, False),
+        "outlook.com": ("smtp.office365.com", 587, True, False),
+        "hotmail.com": ("smtp.office365.com", 587, True, False),
+        "live.com": ("smtp.office365.com", 587, True, False),
+        "office365.com": ("smtp.office365.com", 587, True, False),
+        "msn.com": ("smtp.office365.com", 587, True, False),
+        "yahoo.com": ("smtp.mail.yahoo.com", 587, True, False),
+        "yahoo.com.br": ("smtp.mail.yahoo.com", 587, True, False),
+        "icloud.com": ("smtp.mail.me.com", 587, True, False),
+        "me.com": ("smtp.mail.me.com", 587, True, False),
+        "mac.com": ("smtp.mail.me.com", 587, True, False),
+        "zoho.com": ("smtp.zoho.com", 587, True, False),
+        "yandex.com": ("smtp.yandex.com", 587, True, False),
+        "yandex.ru": ("smtp.yandex.ru", 587, True, False),
+        "uol.com.br": ("smtp.uol.com.br", 587, True, False),
+        "bol.com.br": ("smtp.bol.com.br", 587, True, False),
+        "terra.com.br": ("smtp.terra.com.br", 587, True, False),
+        "ig.com.br": ("smtp.ig.com.br", 587, True, False),
+        "globo.com": ("smtp.globo.com", 587, True, False),
     }
 
     if domain in COMMON:
         host, port, use_tls, use_ssl = COMMON[domain]
         app_logger.info(f"Detecção SMTP: {domain} -> {host}:{port} (TLS={use_tls}, SSL={use_ssl})")
         return {
-            'host': host,
-            'port': port,
-            'use_tls': use_tls,
-            'use_ssl': use_ssl,
+            "host": host,
+            "port": port,
+            "use_tls": use_tls,
+            "use_ssl": use_ssl,
         }
 
     if re.search(r"(\.onmicrosoft\.com|\.office365\.com)$", domain):
         return {
-            'host': 'smtp.office365.com',
-            'port': 587,
-            'use_tls': True,
-            'use_ssl': False,
+            "host": "smtp.office365.com",
+            "port": 587,
+            "use_tls": True,
+            "use_ssl": False,
         }
 
     candidates = [
@@ -90,10 +90,10 @@ def detect_smtp_settings(user_email):
     chosen = candidates[0]
     app_logger.info(f"Detecção SMTP: domínio desconhecido '{domain}', usando heurística -> {chosen}:587 (TLS)")
     return {
-        'host': chosen,
-        'port': 587,
-        'use_tls': True,
-        'use_ssl': False,
+        "host": chosen,
+        "port": 587,
+        "use_tls": True,
+        "use_ssl": False,
     }
 
 
@@ -109,7 +109,7 @@ def load_smtp_settings(user_email):
         settings = query_db(
             'SELECT host, port, "user", password as hashed_password, use_tls, use_ssl FROM smtp_settings WHERE usuario_email = %s',
             (user_email,),
-            one=True
+            one=True,
         )
         return settings
     except Exception as e:
@@ -122,12 +122,12 @@ def save_smtp_settings(user_email, data):
     Salva ou atualiza as configurações SMTP para um usuário específico.
     Armazena um hash da senha.
     """
-    host = data.get('host')
-    port = data.get('port')
-    user = data.get('user')
-    password = data.get('password')
-    use_tls = data.get('use_tls', 'true').lower() == 'true'
-    use_ssl = data.get('use_ssl', 'false').lower() == 'true'
+    host = data.get("host")
+    port = data.get("port")
+    user = data.get("user")
+    password = data.get("password")
+    use_tls = data.get("use_tls", "true").lower() == "true"
+    use_ssl = data.get("use_ssl", "false").lower() == "true"
 
     if not all([user_email, host, port, user]):
         raise ValueError("Dados de SMTP incompletos para salvar.")
@@ -182,17 +182,19 @@ def test_smtp_connection(settings, plain_password):
     if not settings:
         raise ValueError("Configurações não encontradas.")
 
-    hashed_password = settings.get('hashed_password')
+    hashed_password = settings.get("hashed_password")
 
     if not _check_password(hashed_password, plain_password):
-        security_logger.warning(f"Falha no teste SMTP (Senha não confere com o HASH salvo) para usuário {settings.get('user')}")
+        security_logger.warning(
+            f"Falha no teste SMTP (Senha não confere com o HASH salvo) para usuário {settings.get('user')}"
+        )
         raise smtplib.SMTPAuthenticationError(535, b"Senha invalida. Nao corresponde a configuracao salva.")
 
-    host = settings.get('host')
-    port = int(settings.get('port', 587))
-    user = settings.get('user')
-    use_tls = settings.get('use_tls', True)
-    use_ssl = settings.get('use_ssl', False)
+    host = settings.get("host")
+    port = int(settings.get("port", 587))
+    user = settings.get("user")
+    use_tls = settings.get("use_tls", True)
+    use_ssl = settings.get("use_ssl", False)
 
     app_logger.info(f"Testando conexão SMTP para {user} em {host}:{port} (SSL: {use_ssl}, TLS: {use_tls})")
 
@@ -229,20 +231,20 @@ def send_email(subject, body_html, recipients, smtp_settings, plain_password, fr
     Requer a senha em texto plano, pois ela não é armazenada de forma reversível.
     """
 
-    host = smtp_settings.get('host')
-    port = int(smtp_settings.get('port', 587))
-    user = smtp_settings.get('user')
-    use_tls = smtp_settings.get('use_tls', True)
-    use_ssl = smtp_settings.get('use_ssl', False)
+    host = smtp_settings.get("host")
+    port = int(smtp_settings.get("port", 587))
+    user = smtp_settings.get("user")
+    use_tls = smtp_settings.get("use_tls", True)
+    use_ssl = smtp_settings.get("use_ssl", False)
 
-    msg = MIMEMultipart('alternative')
-    msg['Subject'] = subject
-    msg['From'] = f"{from_name} <{user}>" if from_name else user
-    msg['To'] = ", ".join(recipients)
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = f"{from_name} <{user}>" if from_name else user
+    msg["To"] = ", ".join(recipients)
     if reply_to:
-        msg['Reply-To'] = reply_to
+        msg["Reply-To"] = reply_to
 
-    msg.attach(MIMEText(body_html, 'html'))
+    msg.attach(MIMEText(body_html, "html"))
 
     try:
         if use_ssl:
@@ -264,25 +266,38 @@ def send_email(subject, body_html, recipients, smtp_settings, plain_password, fr
         raise
 
 
-def send_email_with_credentials(to_email, subject, body_text, body_html, reply_to,
-                                from_name, host, port, user, password, from_addr,
-                                use_tls=True, use_ssl=False, timeout=10):
+def send_email_with_credentials(
+    to_email,
+    subject,
+    body_text,
+    body_html,
+    reply_to,
+    from_name,
+    host,
+    port,
+    user,
+    password,
+    from_addr,
+    use_tls=True,
+    use_ssl=False,
+    timeout=10,
+):
     """
     Envia e-mail usando credenciais explícitas (branch usado no comentário externo).
     Retorna True em caso de sucesso; False em falha.
     """
     try:
-        msg = MIMEMultipart('alternative')
-        msg['Subject'] = subject
-        msg['From'] = f"{from_name} <{from_addr}>" if from_name else from_addr
-        msg['To'] = to_email
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = f"{from_name} <{from_addr}>" if from_name else from_addr
+        msg["To"] = to_email
         if reply_to:
-            msg['Reply-To'] = reply_to
+            msg["Reply-To"] = reply_to
 
         if body_text:
-            msg.attach(MIMEText(body_text, 'plain'))
+            msg.attach(MIMEText(body_text, "plain"))
         if body_html:
-            msg.attach(MIMEText(body_html, 'html'))
+            msg.attach(MIMEText(body_html, "html"))
 
         if use_ssl:
             context = ssl.create_default_context()
@@ -310,16 +325,16 @@ def send_email_global(subject, body_html, recipients, from_name=None, reply_to=N
     Retorna True em caso de sucesso; lança exceção em falha.
     """
     cfg = current_app.config
-    driver = (cfg.get('EMAIL_DRIVER') or 'smtp').lower()
+    driver = (cfg.get("EMAIL_DRIVER") or "smtp").lower()
 
-    from_addr = cfg.get('SMTP_FROM') or cfg.get('SMTP_USER')
+    from_addr = cfg.get("SMTP_FROM") or cfg.get("SMTP_USER")
     if not from_addr:
-        raise ValueError('Configuração de e-mail inválida: remetente (SMTP_FROM) ausente.')
+        raise ValueError("Configuração de e-mail inválida: remetente (SMTP_FROM) ausente.")
 
-    if driver == 'sendgrid':
-        api_key = cfg.get('SENDGRID_API_KEY')
+    if driver == "sendgrid":
+        api_key = cfg.get("SENDGRID_API_KEY")
         if not api_key:
-            raise ValueError('SendGrid não configurado: defina SENDGRID_API_KEY.')
+            raise ValueError("SendGrid não configurado: defina SENDGRID_API_KEY.")
 
         content = []
 
@@ -338,37 +353,39 @@ def send_email_global(subject, body_html, recipients, from_name=None, reply_to=N
 
         payload = {
             "from": {"email": from_addr, **({"name": from_name} if from_name else {})},
-            "personalizations": [{
-                "to": [{"email": r} for r in recipients],
-                "subject": subject,
-            }],
-            "content": content
+            "personalizations": [
+                {
+                    "to": [{"email": r} for r in recipients],
+                    "subject": subject,
+                }
+            ],
+            "content": content,
         }
         if reply_to:
             payload["reply_to"] = {"email": reply_to}
 
         try:
-            disable_tracking_env = str(cfg.get('SENDGRID_DISABLE_TRACKING', '')).lower() in ('1', 'true', 'yes')
-            domains_cfg = cfg.get('EMAIL_DISABLE_TRACKING_DOMAINS')
+            disable_tracking_env = str(cfg.get("SENDGRID_DISABLE_TRACKING", "")).lower() in ("1", "true", "yes")
+            domains_cfg = cfg.get("EMAIL_DISABLE_TRACKING_DOMAINS")
             disable_for_domain = False
             if domains_cfg:
-                domains_set = {d.strip().lower() for d in str(domains_cfg).split(',') if d.strip()}
+                domains_set = {d.strip().lower() for d in str(domains_cfg).split(",") if d.strip()}
                 for r in recipients:
-                    if '@' in r:
-                        r_dom = r.split('@', 1)[1].lower()
+                    if "@" in r:
+                        r_dom = r.split("@", 1)[1].lower()
                         if r_dom in domains_set:
                             disable_for_domain = True
                             break
             if disable_tracking_env or disable_for_domain:
                 payload["tracking_settings"] = {
                     "click_tracking": {"enable": False, "enable_text": False},
-                    "open_tracking": {"enable": False}
+                    "open_tracking": {"enable": False},
                 }
         except Exception:
             pass
 
         try:
-            base = cfg.get('SENDGRID_ENDPOINT', 'https://api.sendgrid.com')
+            base = cfg.get("SENDGRID_ENDPOINT", "https://api.sendgrid.com")
             url = f"{base.rstrip('/')}/v3/mail/send"
             resp = requests.post(
                 url,
@@ -381,7 +398,7 @@ def send_email_global(subject, body_html, recipients, from_name=None, reply_to=N
             )
 
             if resp.status_code == 202:
-                msg_id = resp.headers.get('X-Message-Id') or resp.headers.get('X-Message-ID')
+                msg_id = resp.headers.get("X-Message-Id") or resp.headers.get("X-Message-ID")
                 if msg_id:
                     app_logger.info(f"E-mail global (SendGrid) enviado para {recipients} (Message-ID: {msg_id})")
                 else:
@@ -393,26 +410,26 @@ def send_email_global(subject, body_html, recipients, from_name=None, reply_to=N
             app_logger.error(f"Falha de rede no envio via SendGrid: {e}")
             raise
 
-    host = cfg.get('SMTP_HOST')
-    port = int(cfg.get('SMTP_PORT', 587))
-    user = cfg.get('SMTP_USER')
-    password = cfg.get('SMTP_PASSWORD')
-    use_tls = cfg.get('SMTP_USE_TLS', True)
-    use_ssl = cfg.get('SMTP_USE_SSL', False)
+    host = cfg.get("SMTP_HOST")
+    port = int(cfg.get("SMTP_PORT", 587))
+    user = cfg.get("SMTP_USER")
+    password = cfg.get("SMTP_PASSWORD")
+    use_tls = cfg.get("SMTP_USE_TLS", True)
+    use_ssl = cfg.get("SMTP_USE_SSL", False)
 
     if not host:
-        raise ValueError('SMTP global não configurado (host ausente).')
+        raise ValueError("SMTP global não configurado (host ausente).")
 
-    msg = MIMEMultipart('alternative')
-    msg['Subject'] = subject
-    msg['From'] = f"{from_name} <{from_addr}>" if from_name else from_addr
-    msg['To'] = ", ".join(recipients)
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = f"{from_name} <{from_addr}>" if from_name else from_addr
+    msg["To"] = ", ".join(recipients)
     if reply_to:
-        msg['Reply-To'] = reply_to
+        msg["Reply-To"] = reply_to
     if body_text:
-        msg.attach(MIMEText(body_text, 'plain'))
+        msg.attach(MIMEText(body_text, "plain"))
     if body_html:
-        msg.attach(MIMEText(body_html, 'html'))
+        msg.attach(MIMEText(body_html, "html"))
 
     try:
         if use_ssl:
@@ -453,15 +470,15 @@ def send_external_comment_notification(implantacao, comentario):
     Returns:
         True (sempre, pois o envio é assíncrono)
     """
-    to_email = implantacao.get('email_responsavel')
-    nome_empresa = implantacao.get('nome_empresa', 'Empresa')
-    tarefa_nome = comentario.get('tarefa_filho', 'Tarefa')
-    texto = comentario.get('texto', '')
-    usuario_cs = comentario.get('usuario_cs', 'CS')
+    to_email = implantacao.get("email_responsavel")
+    nome_empresa = implantacao.get("nome_empresa", "Empresa")
+    tarefa_nome = comentario.get("tarefa_filho", "Tarefa")
+    texto = comentario.get("texto", "")
+    usuario_cs = comentario.get("usuario_cs", "CS")
 
     if not to_email:
         app_logger.warning("Email do responsável não configurado para envio de comentário externo")
-        return True # Retorna True pois a falha é na configuração, não no envio assíncrono
+        return True  # Retorna True pois a falha é na configuração, não no envio assíncrono
 
     subject = f"[CS Onboarding] Novo comentário na implantação - {nome_empresa}"
 
@@ -507,6 +524,7 @@ Este é um email automático do sistema CS Onboarding.
     # Função para enviar email em background
     def _send_email_background():
         from flask import current_app
+
         # Usar o contexto da aplicação Flask
         with current_app.app_context():
             try:
@@ -515,7 +533,7 @@ Este é um email automático do sistema CS Onboarding.
                     body_html=body_html,
                     recipients=[to_email],
                     from_name="CS Onboarding",
-                    body_text=body_text
+                    body_text=body_text,
                 )
                 app_logger.info(f"Notificação de comentário externo enviada para {to_email}")
             except Exception as e:
@@ -523,17 +541,18 @@ Este é um email automático do sistema CS Onboarding.
 
     # Enviar em background thread
     import threading
+
     from flask import current_app
-    
+
     # Capturar a referência do app antes de criar a thread
     app = current_app._get_current_object()
-    
+
     def _send_with_context():
         with app.app_context():
             _send_email_background()
-    
+
     thread = threading.Thread(target=_send_with_context, daemon=True)
     thread.start()
-    
+
     app_logger.info(f"Email de notificação agendado para envio em background para {to_email}")
     return True

@@ -11,14 +11,18 @@ Estrutura:
 """
 
 # Importações de dashboard.py (VERSÃO OTIMIZADA V2)
-from .dashboard_v2 import (
-    get_analytics_data_v2 as get_analytics_data,
+# Importações de cancelamentos.py
+from .cancelamentos import (
+    get_cancelamentos_data,
 )
 
 # Importações de charts.py
 from .charts import (
-    get_implants_by_day,
     get_funnel_counts,
+    get_implants_by_day,
+)
+from .dashboard_v2 import (
+    get_analytics_data_v2 as get_analytics_data,
 )
 
 # Importações de gamification.py
@@ -26,15 +30,10 @@ from .gamification import (
     get_gamification_rank,
 )
 
-# Importações de cancelamentos.py
-from .cancelamentos import (
-    get_cancelamentos_data,
-)
-
 # Importações de utils.py
 from .utils import (
-    calculate_time_in_status,
     _format_date_for_query,
+    calculate_time_in_status,
     date_col_expr,
     date_param_expr,
 )
@@ -42,17 +41,17 @@ from .utils import (
 # Exports públicos
 __all__ = [
     # Dashboard
-    'get_analytics_data',
+    "get_analytics_data",
     # Charts
-    'get_implants_by_day',
-    'get_funnel_counts',
+    "get_implants_by_day",
+    "get_funnel_counts",
     # Gamification
-    'get_gamification_rank',
+    "get_gamification_rank",
     # Cancelamentos
-    'get_cancelamentos_data',
+    "get_cancelamentos_data",
     # Utils
-    'calculate_time_in_status',
-    '_format_date_for_query',
-    'date_col_expr',
-    'date_param_expr',
+    "calculate_time_in_status",
+    "_format_date_for_query",
+    "date_col_expr",
+    "date_param_expr",
 ]

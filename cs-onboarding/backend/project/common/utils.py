@@ -1,4 +1,4 @@
-from datetime import date, datetime, timezone, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 # Timezone de Brasília (UTC-3)
 TZ_BRASILIA = timezone(timedelta(hours=-3))
@@ -9,15 +9,15 @@ def _convert_to_date_or_datetime(dt_obj):
         return dt_obj
     original_str = dt_obj
     try:
-        if ' ' in dt_obj or 'T' in dt_obj:
-            dt_obj = dt_obj.replace('Z', '').split('+')[0].split('.')[0]
-            for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S'):
+        if " " in dt_obj or "T" in dt_obj:
+            dt_obj = dt_obj.replace("Z", "").split("+")[0].split(".")[0]
+            for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%dT%H:%M:%S"):
                 try:
                     return datetime.strptime(dt_obj, fmt)
                 except ValueError:
                     continue
-            return datetime.strptime(original_str.split()[0], '%Y-%m-%d').date()
-        return datetime.strptime(dt_obj, '%Y-%m-%d').date()
+            return datetime.strptime(original_str.split()[0], "%Y-%m-%d").date()
+        return datetime.strptime(dt_obj, "%Y-%m-%d").date()
     except Exception:
         return original_str
 
@@ -25,11 +25,11 @@ def _convert_to_date_or_datetime(dt_obj):
 def format_date_br(dt_obj, include_time=False):
     """Formata data para o formato brasileiro, convertendo para horário de Brasília se necessário."""
     if not dt_obj:
-        return 'N/A'
+        return "N/A"
     dt_obj = _convert_to_date_or_datetime(dt_obj)
     if not isinstance(dt_obj, (datetime, date)):
-        return 'Data Inválida'
-    
+        return "Data Inválida"
+
     # Se for datetime e incluir hora, converter para horário de Brasília
     if include_time and isinstance(dt_obj, datetime):
         # Se não tiver timezone (naive), assumir que está em UTC
@@ -37,14 +37,14 @@ def format_date_br(dt_obj, include_time=False):
             dt_obj = dt_obj.replace(tzinfo=timezone.utc)
         # Converter para horário de Brasília
         dt_obj = dt_obj.astimezone(TZ_BRASILIA)
-        output_fmt = '%d/%m/%Y às %H:%M'
+        output_fmt = "%d/%m/%Y às %H:%M"
     else:
-        output_fmt = '%d/%m/%Y'
-    
+        output_fmt = "%d/%m/%Y"
+
     try:
         return dt_obj.strftime(output_fmt)
     except ValueError:
-        return 'Data Inválida'
+        return "Data Inválida"
 
 
 def format_date_iso_for_json(dt_obj, only_date=False):
@@ -52,7 +52,7 @@ def format_date_iso_for_json(dt_obj, only_date=False):
         return None
 
     if isinstance(dt_obj, str):
-        if len(dt_obj) >= 10 and dt_obj[4] == '-' and dt_obj[7] == '-':
+        if len(dt_obj) >= 10 and dt_obj[4] == "-" and dt_obj[7] == "-":
             if only_date:
                 return dt_obj[:10]
             return dt_obj
@@ -65,11 +65,11 @@ def format_date_iso_for_json(dt_obj, only_date=False):
     if not isinstance(dt_obj, (datetime, date)):
         return None
     if only_date:
-        output_fmt = '%Y-%m-%d'
+        output_fmt = "%Y-%m-%d"
     else:
         if isinstance(dt_obj, date) and not isinstance(dt_obj, datetime):
             dt_obj = datetime.combine(dt_obj, datetime.min.time())
-        output_fmt = '%Y-%m-%d %H:%M:%S'
+        output_fmt = "%Y-%m-%d %H:%M:%S"
     try:
         return dt_obj.strftime(output_fmt)
     except ValueError:
@@ -78,7 +78,8 @@ def format_date_iso_for_json(dt_obj, only_date=False):
 
 def allowed_file(filename):
     from ..constants import ALLOWED_EXTENSIONS
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 def calcular_progresso(concluidas, total):
@@ -105,15 +106,15 @@ def calcular_dias_decorridos(data_inicio):
 
 def gerar_cor_status(status):
     cores = {
-        'andamento': '#3498db',
-        'finalizada': '#2ecc71',
-        'pausada': '#f39c12',
-        'parada': '#f39c12',
-        'cancelada': '#e74c3c',
-        'nova': '#9b59b6',
-        'futura': '#1abc9c',
+        "andamento": "#3498db",
+        "finalizada": "#2ecc71",
+        "pausada": "#f39c12",
+        "parada": "#f39c12",
+        "cancelada": "#e74c3c",
+        "nova": "#9b59b6",
+        "futura": "#1abc9c",
     }
-    return cores.get(status.lower() if status else '', '#95a5a6')
+    return cores.get(status.lower() if status else "", "#95a5a6")
 
 
 def load_profiles_list(exclude_self=True):
@@ -121,8 +122,10 @@ def load_profiles_list(exclude_self=True):
         from flask import g
 
         from ..db import query_db
-        users = query_db(
-            """
+
+        users = (
+            query_db(
+                """
             SELECT
                 p.usuario,
                 p.nome,
@@ -135,11 +138,14 @@ def load_profiles_list(exclude_self=True):
             GROUP BY p.usuario, p.nome, p.cargo, p.perfil_acesso
             ORDER BY p.usuario
             """,
-            (), one=False
-        ) or []
+                (),
+                one=False,
+            )
+            or []
+        )
         if exclude_self:
-            current_user = getattr(g, 'user_email', None)
-            users = [u for u in users if u.get('usuario') != current_user]
+            current_user = getattr(g, "user_email", None)
+            users = [u for u in users if u.get("usuario") != current_user]
         return users
     except Exception:
         return []

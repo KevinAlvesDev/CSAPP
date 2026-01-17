@@ -42,17 +42,14 @@ def init_r2(app):
     global r2_client
 
     try:
-        if app.config.get('R2_CONFIGURADO', False):
+        if app.config.get("R2_CONFIGURADO", False):
             r2_client = boto3.client(
-                's3',
-                endpoint_url=app.config['R2_ENDPOINT_URL'],
-                aws_access_key_id=app.config['R2_ACCESS_KEY_ID'],
-                aws_secret_access_key=app.config['R2_SECRET_ACCESS_KEY'],
-                config=BotocoreConfig(
-                    signature_version='s3v4',
-                    s3={'addressing_style': 'virtual'}
-                ),
-                region_name='auto'
+                "s3",
+                endpoint_url=app.config["R2_ENDPOINT_URL"],
+                aws_access_key_id=app.config["R2_ACCESS_KEY_ID"],
+                aws_secret_access_key=app.config["R2_SECRET_ACCESS_KEY"],
+                config=BotocoreConfig(signature_version="s3v4", s3={"addressing_style": "virtual"}),
+                region_name="auto",
             )
             pass
     except Exception:

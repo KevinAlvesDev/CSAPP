@@ -5,19 +5,19 @@ from flask import current_app
 from ..db import execute_db, query_db
 
 ALLOWED_TABLES = [
-    'usuarios',
-    'perfil_usuario',
-    'implantacoes',
-    'timeline_log',
-    'gamificacao_metricas_mensais',
-    'gamificacao_regras',
-    'smtp_settings',
-    'checklist_items',
-    'comentarios_h',
-    'planos_sucesso',
+    "usuarios",
+    "perfil_usuario",
+    "implantacoes",
+    "timeline_log",
+    "gamificacao_metricas_mensais",
+    "gamificacao_regras",
+    "smtp_settings",
+    "checklist_items",
+    "comentarios_h",
+    "planos_sucesso",
 ]
 
-ALLOWED_ID_COLUMNS = ['id', 'usuario', 'usuario_email']
+ALLOWED_ID_COLUMNS = ["id", "usuario", "usuario_email"]
 
 
 def _validate_table_name(table: str) -> str:
@@ -58,7 +58,7 @@ def _validate_id_column(id_column: str) -> str:
     return id_column
 
 
-def soft_delete(table: str, record_id: int, id_column: str = 'id') -> bool:
+def soft_delete(table: str, record_id: int, id_column: str = "id") -> bool:
     """
     Marca um registro como excluído (soft delete).
 
@@ -99,7 +99,7 @@ def soft_delete(table: str, record_id: int, id_column: str = 'id') -> bool:
         return False
 
 
-def restore(table: str, record_id: int, id_column: str = 'id') -> bool:
+def restore(table: str, record_id: int, id_column: str = "id") -> bool:
     """
     Restaura um registro excluído (soft delete).
 
@@ -135,7 +135,7 @@ def restore(table: str, record_id: int, id_column: str = 'id') -> bool:
         return False
 
 
-def hard_delete(table: str, record_id: int, id_column: str = 'id') -> bool:
+def hard_delete(table: str, record_id: int, id_column: str = "id") -> bool:
     """
     Exclui permanentemente um registro (hard delete).
 
@@ -251,7 +251,7 @@ def exclude_deleted(query: str) -> str:
         query = exclude_deleted(query)
         # Resultado: "SELECT * FROM implantacoes WHERE usuario_cs = %s AND deleted_at IS NULL"
     """
-    if 'WHERE' in query.upper():
+    if "WHERE" in query.upper():
         return query + " AND deleted_at IS NULL"
     else:
         return query + " WHERE deleted_at IS NULL"

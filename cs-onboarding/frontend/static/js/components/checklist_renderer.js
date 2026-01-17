@@ -42,6 +42,9 @@ class ChecklistRenderer {
             this.container._checklistRendererInstance = this;
         }
 
+        this.tagsMap = {};
+        this.tagsList = [];
+
         this.init();
     }
 
@@ -72,6 +75,14 @@ class ChecklistRenderer {
     }
 
     init() {
+        // Load tags asynchronously, but proceed with render
+        this.loadTags().then(() => {
+            // Re-render to apply correct colors if data already rendered
+            if (this.data && this.data.length > 0) {
+                this.updateAllItemsUI();
+            }
+        });
+
         if (!this.data || this.data.length === 0) {
             this.renderEmpty();
             return;
@@ -84,6 +95,39 @@ class ChecklistRenderer {
         // Initial updates
         this.updateProgressFromLocalData();
         this.updateAllItemsUI();
+    }
+
+    async loadTags() {
+        if (!window.$configService) return;
+        try {
+            // Fetch 'ambos' to get everything or 'tarefa' specific? 
+            // Items can have tags that are 'tarefa' type (Cliente, Rede) or 'ambos' (Ação interna).
+            // So we fetch 'ambos' (which logic in API might need adjustment if we want ALL tags regardless of type? 
+            // API code: `if tipo != 'ambos': sql += " AND (tipo = %s OR tipo = 'ambos')"`
+            // If I pass 'ambos', it filters `tipo='ambos' OR tipo='ambos'`. 
+            // Wait, my API implementation:
+            // `if tipo != 'ambos': ... params.append(tipo)`
+            // If I pass 'ambos', it DOES NOT filter by type, so it returns ALL rows.
+            // Correct.
+
+            const tags = await window.$configService.getTags('ambos');
+            this.tagsList = tags;
+            this.tagsMap = {};
+            this.tagsData = {};
+            tags.forEach(t => {
+                this.tagsMap[t.nome] = t.cor_badge;
+                this.tagsData[t.nome] = t;
+            });
+            // Re-render tree to show dynamic tags in forms
+            if (this.data && this.data.length > 0) {
+                this.render();
+                // We also need to re-attach listeners because render() replaces innerHTML
+                this.attachEventListeners();
+                this.updateAllItemsUI();
+            }
+        } catch (e) {
+            console.error('[ChecklistRenderer] Failed to load tags:', e);
+        }
     }
 
     buildFlatData(nodes, parentId = null) {
@@ -112,6 +156,28 @@ class ChecklistRenderer {
             return '<div class="text-muted text-center py-4">Nenhum item encontrado</div>';
         }
         return items.map(item => this.renderItem(item)).join('');
+    }
+
+    renderTagOptions(itemId) {
+        if (!this.tagsList || this.tagsList.length === 0) {
+            // Fallback defaults while loading or on failure
+            return `
+               <span class="comentario-tipo-tag tag-option acao-interna" data-item-id="${itemId}" data-tag="Ação interna"><i class="bi bi-briefcase"></i> Ação interna</span>
+               <span class="comentario-tipo-tag tag-option reuniao" data-item-id="${itemId}" data-tag="Reunião"><i class="bi bi-calendar-event"></i> Reunião</span>
+               <span class="comentario-tipo-tag tag-option noshow" data-item-id="${itemId}" data-tag="No Show"><i class="bi bi-calendar-x"></i> No Show</span>
+               <span class="comentario-tipo-tag tag-option simples-registro" data-item-id="${itemId}" data-tag="Simples registro"><i class="bi bi-pencil-square"></i> Simples registro</span>
+            `;
+        }
+
+        return this.tagsList
+            .filter(t => t.tipo === 'comentario' || t.tipo === 'ambos')
+            .sort((a, b) => a.ordem - b.ordem)
+            .map(t => {
+                // Ensure valid class name from tag name if we want specific classes, 
+                // but we rely on generic .comentario-tipo-tag and data-tag now.
+                return `<span class="comentario-tipo-tag tag-option" data-item-id="${itemId}" data-tag="${t.nome}" title="${t.nome}"><i class="bi ${t.icone}"></i> ${t.nome}</span>`;
+            })
+            .join('');
     }
 
     renderItem(item) {
@@ -230,10 +296,7 @@ class ChecklistRenderer {
                              <div class="d-flex align-items-center gap-2 flex-wrap">
                                 <span class="comentario-tipo-tag interno active" data-tipo="interno" data-item-id="${item.id}"><i class="bi bi-lock-fill"></i> Interno</span>
                                 <span class="comentario-tipo-tag externo" data-tipo="externo" data-item-id="${item.id}"><i class="bi bi-globe"></i> Externo</span>
-                                <span class="comentario-tipo-tag tag-option acao-interna" data-item-id="${item.id}" data-tag="Ação interna"><i class="bi bi-briefcase"></i> Ação interna</span>
-                                <span class="comentario-tipo-tag tag-option reuniao" data-item-id="${item.id}" data-tag="Reunião"><i class="bi bi-calendar-event"></i> Reunião</span>
-                                <span class="comentario-tipo-tag tag-option noshow" data-item-id="${item.id}" data-tag="No Show"><i class="bi bi-calendar-x"></i> No show</span>
-                                <span class="comentario-tipo-tag tag-option simples-registro" data-item-id="${item.id}" data-tag="Simples registro"><i class="bi bi-pencil-square"></i> Registro</span>
+                                ${this.renderTagOptions(item.id)}
                              </div>
                              <div class="d-flex gap-2 align-items-center">
                                 <label class="btn btn-sm btn-outline-secondary mb-0"><i class="bi bi-paperclip"></i><input type="file" class="d-none comentario-imagem-input" data-item-id="${item.id}" accept="image/*"></label>
@@ -706,11 +769,7 @@ class ChecklistRenderer {
                      <label class="form-label small">Selecione a tag</label>
                      <select class="form-select" id="tag-edit-select">
                        <option value="">Definir tag</option>
-                       <option value="Ação interna">Ação interna</option>
-                       <option value="Reunião">Reunião</option>
-                       <option value="Cliente">Cliente</option>
-                       <option value="Rede">Rede</option>
-                       <option value="No Show">No Show</option>
+                       ${this.tagsList.filter(t => t.tipo === 'tarefa' || t.tipo === 'ambos').map(t => `<option value="${t.nome}">${t.nome}</option>`).join('')}
                      </select>
                    </div>
                  </div>
@@ -801,11 +860,18 @@ class ChecklistRenderer {
     escapeHtml(t) { return t || ''; } // Fallback
 
     getTagClass(tag) {
-        if (tag === 'Ação interna') return 'bg-secondary';
-        if (tag === 'Reunião') return 'bg-info text-dark';
-        if (tag === 'Cliente') return 'bg-warning text-dark';
-        if (tag === 'Rede') return 'bg-primary';
-        if (tag === 'No Show') return 'bg-danger';
+        if (!tag) return 'bg-light text-dark';
+        if (this.tagsMap && this.tagsMap[tag]) {
+            return this.tagsMap[tag];
+        }
+        // Fallbacks for legacy/hardcoded support during migration
+        if (tag === 'Ação interna') return 'bg-primary';
+        if (tag === 'Reunião') return 'bg-danger';
+        if (tag === 'Cliente') return 'bg-info';
+        if (tag === 'Rede') return 'bg-success';
+        if (tag === 'No Show') return 'bg-warning text-dark';
+        if (tag === 'Simples registro') return 'bg-secondary';
+
         return 'bg-light text-dark';
     }
 

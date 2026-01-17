@@ -89,6 +89,18 @@
             });
         }
 
+        // Register ConfigService
+        if (window.ConfigService) {
+            window.appContainer.register('configService', (container) => {
+                return new window.ConfigService(container.resolve('api'));
+            });
+        }
+
+        // Expose ConfigService globally
+        if (window.appContainer.has('configService')) {
+            window.$configService = window.appContainer.resolve('configService');
+        }
+
         // Expose ChecklistService globally
         if (window.appContainer.has('checklistService')) {
             window.$checklistService = window.appContainer.resolve('checklistService');

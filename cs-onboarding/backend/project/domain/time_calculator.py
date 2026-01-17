@@ -1,4 +1,3 @@
-
 """
 Módulo para calcular corretamente os tempos de implantação considerando mudanças de status.
 """
@@ -19,16 +18,16 @@ def parse_datetime(dt_obj):
         return datetime.combine(dt_obj, datetime.min.time())
     elif isinstance(dt_obj, str):
         try:
-            return datetime.fromisoformat(dt_obj.replace('Z', '+00:00')).replace(tzinfo=None)
+            return datetime.fromisoformat(dt_obj.replace("Z", "+00:00")).replace(tzinfo=None)
         except ValueError:
             try:
-                if '.' in dt_obj:
-                    return datetime.strptime(dt_obj, '%Y-%m-%d %H:%M:%S.%f')
+                if "." in dt_obj:
+                    return datetime.strptime(dt_obj, "%Y-%m-%d %H:%M:%S.%f")
                 else:
-                    return datetime.strptime(dt_obj, '%Y-%m-%d %H:%M:%S')
+                    return datetime.strptime(dt_obj, "%Y-%m-%d %H:%M:%S")
             except ValueError:
                 try:
-                    return datetime.strptime(dt_obj, '%Y-%m-%d')
+                    return datetime.strptime(dt_obj, "%Y-%m-%d")
                 except ValueError:
                     return None
     return None
@@ -47,39 +46,39 @@ def get_status_history(impl_id):
         AND tipo_evento = 'status_alterado'
         ORDER BY data_criacao ASC
         """,
-        (impl_id,)
+        (impl_id,),
     )
 
     history = []
     import re
 
     for log in logs or []:
-        dt = parse_datetime(log.get('data_criacao'))
-        detalhes = log.get('detalhes', '').lower()
+        dt = parse_datetime(log.get("data_criacao"))
+        detalhes = log.get("detalhes", "").lower()
 
         if dt:
             # Parada (pode ser retroativa)
-            if 'parada' in detalhes or 'retroativamente' in detalhes:
+            if "parada" in detalhes or "retroativamente" in detalhes:
                 # Procurar data no texto (formato: YYYY-MM-DD)
-                date_match = re.search(r'(\d{4}-\d{2}-\d{2})', log.get('detalhes', ''))
+                date_match = re.search(r"(\d{4}-\d{2}-\d{2})", log.get("detalhes", ""))
                 if date_match:
                     parada_date = parse_datetime(date_match.group(1))
                     if parada_date:
-                        history.append((parada_date, 'andamento', 'parada', log.get('detalhes', '')))
+                        history.append((parada_date, "andamento", "parada", log.get("detalhes", "")))
                 else:
                     # Se não tem data no texto, usar a data do log
-                    history.append((dt, 'andamento', 'parada', log.get('detalhes', '')))
+                    history.append((dt, "andamento", "parada", log.get("detalhes", "")))
             # Retomada
-            elif 'retomada' in detalhes or 'reaberta' in detalhes:
-                history.append((dt, 'parada', 'andamento', log.get('detalhes', '')))
+            elif "retomada" in detalhes or "reaberta" in detalhes:
+                history.append((dt, "parada", "andamento", log.get("detalhes", "")))
             # Finalizada
-            elif 'finalizada' in detalhes:
-                history.append((dt, 'andamento', 'finalizada', log.get('detalhes', '')))
+            elif "finalizada" in detalhes:
+                history.append((dt, "andamento", "finalizada", log.get("detalhes", "")))
 
     return history
 
 
-def calculate_total_days_in_status(impl_id, target_status='andamento'):
+def calculate_total_days_in_status(impl_id, target_status="andamento"):
     """
     Calcula o total de dias que a implantação passou em um status específico,
     considerando todos os períodos (não apenas o atual).
@@ -92,8 +91,7 @@ def calculate_total_days_in_status(impl_id, target_status='andamento'):
         Total de dias no status especificado
     """
     impl = query_db(
-        "SELECT data_inicio_efetivo, data_finalizacao, status FROM implantacoes WHERE id = %s",
-        (impl_id,), one=True
+        "SELECT data_inicio_efetivo, data_finalizacao, status FROM implantacoes WHERE id = %s", (impl_id,), one=True
     )
 
     if not impl:
@@ -101,28 +99,28 @@ def calculate_total_days_in_status(impl_id, target_status='andamento'):
 
     agora = datetime.now()
     status_history = get_status_history(impl_id)
-    current_status = impl.get('status')
-    inicio_efetivo = parse_datetime(impl.get('data_inicio_efetivo'))
+    current_status = impl.get("status")
+    inicio_efetivo = parse_datetime(impl.get("data_inicio_efetivo"))
 
     if not inicio_efetivo:
         return 0
 
     # Se não há histórico, usar cálculo simples baseado no status atual
     if not status_history:
-        if target_status == 'andamento':
-            if current_status == 'andamento':
+        if target_status == "andamento":
+            if current_status == "andamento":
                 delta = agora - inicio_efetivo
                 return max(0, delta.days)
-            elif current_status == 'parada':
+            elif current_status == "parada":
                 # Estava em andamento até entrar em parada
-                parada_inicio = parse_datetime(impl.get('data_finalizacao'))
+                parada_inicio = parse_datetime(impl.get("data_finalizacao"))
                 if parada_inicio and parada_inicio > inicio_efetivo:
                     delta = parada_inicio - inicio_efetivo
                     return max(0, delta.days)
             return 0
-        elif target_status == 'parada':
-            if current_status == 'parada':
-                parada_inicio = parse_datetime(impl.get('data_finalizacao'))
+        elif target_status == "parada":
+            if current_status == "parada":
+                parada_inicio = parse_datetime(impl.get("data_finalizacao"))
                 if parada_inicio:
                     delta = agora - parada_inicio
                     return max(0, delta.days)
@@ -134,7 +132,7 @@ def calculate_total_days_in_status(impl_id, target_status='andamento'):
 
     periods = []
     current_start = inicio_efetivo
-    status_before_history = 'andamento'  # Assumir que começou em andamento
+    status_before_history = "andamento"  # Assumir que começou em andamento
 
     # Processar histórico
     for hist_date, _old_status, new_status, _ in status_history:
@@ -147,13 +145,13 @@ def calculate_total_days_in_status(impl_id, target_status='andamento'):
 
     # Adicionar período atual se estiver no status alvo
     if current_status == target_status:
-        if target_status == 'parada':
-            parada_inicio = parse_datetime(impl.get('data_finalizacao'))
+        if target_status == "parada":
+            parada_inicio = parse_datetime(impl.get("data_finalizacao"))
             if parada_inicio:
                 if agora > parada_inicio:
                     periods.append((parada_inicio, agora))
-        elif target_status == 'andamento':
-            if current_status == 'andamento':
+        elif target_status == "andamento":
+            if current_status == "andamento":
                 # Se está em andamento, o período atual começa na última mudança ou no início efetivo
                 start_date = current_start if status_history else inicio_efetivo
                 if agora > start_date:
@@ -173,12 +171,11 @@ def calculate_days_passed(impl_id):
     """
     Calcula dias passados em andamento (excluindo períodos de parada).
     """
-    return calculate_total_days_in_status(impl_id, 'andamento')
+    return calculate_total_days_in_status(impl_id, "andamento")
 
 
 def calculate_days_parada(impl_id):
     """
     Calcula total de dias parados (acumulando todos os períodos de parada).
     """
-    return calculate_total_days_in_status(impl_id, 'parada')
-
+    return calculate_total_days_in_status(impl_id, "parada")

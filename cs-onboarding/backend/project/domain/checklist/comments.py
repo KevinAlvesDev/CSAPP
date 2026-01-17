@@ -3,23 +3,33 @@ Módulo de Comentários do Checklist
 Adicionar, listar e excluir comentários.
 Princípio SOLID: Single Responsibility
 """
+
 import logging
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 
 from flask import g
 
 from ...common.validation import sanitize_string
-from ...db import db_transaction_with_lock, query_db, execute_db, logar_timeline
+from ...db import db_transaction_with_lock, execute_db, logar_timeline, query_db
 from .utils import _format_datetime
 
 logger = logging.getLogger(__name__)
 
 
-def add_comment_to_item(item_id, text, visibilidade='interno', usuario_email=None, noshow=False, tag=None, imagem_url=None, imagem_base64=None):
+def add_comment_to_item(
+    item_id,
+    text,
+    visibilidade="interno",
+    usuario_email=None,
+    noshow=False,
+    tag=None,
+    imagem_url=None,
+    imagem_base64=None,
+):
     """
     Adiciona um comentário ao histórico e atualiza o campo legado 'comment' no item.
     Centraliza a lógica de comentários.
-    
+
     Args:
         tag: Tag do comentário (Ação interna, Reunião, No Show)
         imagem_url: URL da imagem anexada ao comentário (opcional)
@@ -30,56 +40,63 @@ def add_comment_to_item(item_id, text, visibilidade='interno', usuario_email=Non
         imagem_url = imagem_base64
     try:
         item_id = int(item_id)
-    except (ValueError, TypeError):
-        raise ValueError("item_id deve ser um inteiro válido")
+    except (ValueError, TypeError) as err:
+        raise ValueError("item_id deve ser um inteiro válido") from err
 
     if not text or not text.strip():
         raise ValueError("Texto do comentário é obrigatório")
 
-    usuario_email = usuario_email or (g.user_email if hasattr(g, 'user_email') else None)
+    usuario_email = usuario_email or (g.user_email if hasattr(g, "user_email") else None)
     text = sanitize_string(text.strip(), max_length=12000, min_length=1)
-    noshow = bool(noshow) or (tag == 'No Show')
+    noshow = bool(noshow) or (tag == "No Show")
 
     with db_transaction_with_lock() as (conn, cursor, db_type):
         # 1. Verificar item
         check_query = "SELECT id, implantacao_id, title FROM checklist_items WHERE id = %s"
-        if db_type == 'sqlite': check_query = check_query.replace('%s', '?')
+        if db_type == "sqlite":
+            check_query = check_query.replace("%s", "?")
         cursor.execute(check_query, (item_id,))
         item = cursor.fetchone()
         if not item:
             raise ValueError(f"Item {item_id} não encontrado")
-        
+
         # Handle result access
-        if hasattr(item, 'keys'):
-            implantacao_id = item['implantacao_id']
-            item_title = item['title']
+        if hasattr(item, "keys"):
+            implantacao_id = item["implantacao_id"]
+            item_title = item["title"]
         else:
             implantacao_id = item[1]
             item_title = item[2]
 
         # 2. Garantir coluna checklist_item_id e tag em comentarios_h (Self-healing)
-        if db_type == 'postgres':
+        if db_type == "postgres":
             try:
-                cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_name='comentarios_h' AND column_name='checklist_item_id'")
+                cursor.execute(
+                    "SELECT column_name FROM information_schema.columns WHERE table_name='comentarios_h' AND column_name='checklist_item_id'"
+                )
                 if not cursor.fetchone():
                     cursor.execute("ALTER TABLE comentarios_h ADD COLUMN IF NOT EXISTS checklist_item_id INTEGER")
                     try:
-                        cursor.execute("ALTER TABLE comentarios_h ADD CONSTRAINT fk_comentarios_checklist_item FOREIGN KEY (checklist_item_id) REFERENCES checklist_items(id)")
+                        cursor.execute(
+                            "ALTER TABLE comentarios_h ADD CONSTRAINT fk_comentarios_checklist_item FOREIGN KEY (checklist_item_id) REFERENCES checklist_items(id)"
+                        )
                     except Exception:
                         pass
                 # Garantir coluna tag
-                cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_name='comentarios_h' AND column_name='tag'")
+                cursor.execute(
+                    "SELECT column_name FROM information_schema.columns WHERE table_name='comentarios_h' AND column_name='tag'"
+                )
                 if not cursor.fetchone():
                     cursor.execute("ALTER TABLE comentarios_h ADD COLUMN IF NOT EXISTS tag VARCHAR(50)")
             except Exception:
                 pass
-        elif db_type == 'sqlite':
+        elif db_type == "sqlite":
             try:
                 cursor.execute("PRAGMA table_info(comentarios_h)")
                 cols = [r[1] for r in cursor.fetchall()]
-                if 'checklist_item_id' not in cols:
+                if "checklist_item_id" not in cols:
                     cursor.execute("ALTER TABLE comentarios_h ADD COLUMN checklist_item_id INTEGER")
-                if 'tag' not in cols:
+                if "tag" not in cols:
                     cursor.execute("ALTER TABLE comentarios_h ADD COLUMN tag TEXT")
             except Exception:
                 pass
@@ -88,18 +105,19 @@ def add_comment_to_item(item_id, text, visibilidade='interno', usuario_email=Non
         # Usar horário local de Brasília (UTC-3)
         tz_brasilia = timezone(timedelta(hours=-3))
         now = datetime.now(tz_brasilia)
-        noshow_val = noshow if db_type == 'postgres' else (1 if noshow else 0)
+        noshow_val = noshow if db_type == "postgres" else (1 if noshow else 0)
         insert_sql = """
             INSERT INTO comentarios_h (checklist_item_id, usuario_cs, texto, data_criacao, visibilidade, noshow, tag, imagem_url)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """
-        if db_type == 'postgres':
+        if db_type == "postgres":
             insert_sql += " RETURNING id"
-        
-        if db_type == 'sqlite': insert_sql = insert_sql.replace('%s', '?')
+
+        if db_type == "sqlite":
+            insert_sql = insert_sql.replace("%s", "?")
         cursor.execute(insert_sql, (item_id, usuario_email, text, now, visibilidade, noshow_val, tag, imagem_url))
-        
-        if db_type == 'postgres':
+
+        if db_type == "postgres":
             res_id = cursor.fetchone()
             new_id = res_id[0] if res_id else None
         else:
@@ -107,34 +125,38 @@ def add_comment_to_item(item_id, text, visibilidade='interno', usuario_email=Non
 
         # 4. Atualizar campo legado 'comment' no checklist_items
         update_legacy_sql = "UPDATE checklist_items SET comment = %s, updated_at = %s WHERE id = %s"
-        if db_type == 'sqlite': update_legacy_sql = update_legacy_sql.replace('%s', '?')
+        if db_type == "sqlite":
+            update_legacy_sql = update_legacy_sql.replace("%s", "?")
         cursor.execute(update_legacy_sql, (text, now, item_id))
 
         # 5. Log na timeline
         try:
-            detalhe = f"Comentário criado — {item_title} <span class=\"d-none related-id\" data-item-id=\"{item_id}\"></span>"
+            detalhe = (
+                f'Comentário criado — {item_title} <span class="d-none related-id" data-item-id="{item_id}"></span>'
+            )
             log_sql = "INSERT INTO timeline_log (implantacao_id, usuario_cs, tipo_evento, detalhes, data_criacao) VALUES (%s, %s, %s, %s, %s)"
-            if db_type == 'sqlite': log_sql = log_sql.replace('%s', '?')
-            cursor.execute(log_sql, (implantacao_id, usuario_email, 'novo_comentario', detalhe, now))
+            if db_type == "sqlite":
+                log_sql = log_sql.replace("%s", "?")
+            cursor.execute(log_sql, (implantacao_id, usuario_email, "novo_comentario", detalhe, now))
         except Exception as e:
             logger.warning(f"Erro ao logar timeline: {e}")
 
         conn.commit()
 
         return {
-            'ok': True,
-            'item_id': item_id,
-            'id': new_id,
-            'comentario': {
-                'id': new_id,
-                'texto': text,
-                'usuario_cs': usuario_email,
-                'data_criacao': _format_datetime(now),
-                'created_at_iso': now.isoformat(),
-                'visibilidade': visibilidade,
-                'noshow': noshow,
-                'tag': tag
-            }
+            "ok": True,
+            "item_id": item_id,
+            "id": new_id,
+            "comentario": {
+                "id": new_id,
+                "texto": text,
+                "usuario_cs": usuario_email,
+                "data_criacao": _format_datetime(now),
+                "created_at_iso": now.isoformat(),
+                "visibilidade": visibilidade,
+                "noshow": noshow,
+                "tag": tag,
+            },
         }
 
 
@@ -143,7 +165,7 @@ def listar_comentarios_implantacao(impl_id, page=1, per_page=20):
     Lista todos os comentários de uma implantação com paginação.
     """
     offset = (page - 1) * per_page
-    
+
     count_query = """
         SELECT COUNT(*) as total
         FROM comentarios_h c
@@ -151,13 +173,13 @@ def listar_comentarios_implantacao(impl_id, page=1, per_page=20):
         WHERE ci.implantacao_id = %s
     """
     total_res = query_db(count_query, (impl_id,), one=True)
-    total = total_res['total'] if total_res else 0
+    total = total_res["total"] if total_res else 0
 
     comments_query = """
-        SELECT 
-            c.id, c.texto, c.usuario_cs, c.data_criacao, c.visibilidade, c.noshow, c.imagem_url, c.tag,
-            ci.id as item_id, ci.title as item_title,
-            COALESCE(p.nome, c.usuario_cs) as usuario_nome
+        SELECT
+        c.id, c.texto, c.usuario_cs, c.data_criacao, c.visibilidade, c.noshow, c.imagem_url, c.tag,
+        ci.id as item_id, ci.title as item_title,
+        COALESCE(p.nome, c.usuario_cs) as usuario_nome
         FROM comentarios_h c
         JOIN checklist_items ci ON c.checklist_item_id = ci.id
         LEFT JOIN perfil_usuario p ON c.usuario_cs = p.usuario
@@ -166,34 +188,30 @@ def listar_comentarios_implantacao(impl_id, page=1, per_page=20):
         LIMIT %s OFFSET %s
     """
     comments = query_db(comments_query, (impl_id, per_page, offset))
-    
+
     formatted_comments = []
     for c in comments:
         c_dict = dict(c)
         # Store ISO BEFORE formatting for display
-        raw_date = c_dict.get('data_criacao')
-        if hasattr(raw_date, 'isoformat'):
-            c_dict['created_at_iso'] = raw_date.isoformat()
+        raw_date = c_dict.get("data_criacao")
+        if hasattr(raw_date, "isoformat"):
+            c_dict["created_at_iso"] = raw_date.isoformat()
         else:
-            c_dict['created_at_iso'] = raw_date # Assuming it's already a string if not datetime
+            c_dict["created_at_iso"] = raw_date  # Assuming it's already a string if not datetime
 
-        c_dict['data_criacao'] = _format_datetime(raw_date)
+        c_dict["data_criacao"] = _format_datetime(raw_date)
         formatted_comments.append(c_dict)
-        
-    return {
-        'comments': formatted_comments,
-        'total': total,
-        'page': page,
-        'per_page': per_page
-    }
+
+    return {"comments": formatted_comments, "total": total, "page": page, "per_page": per_page}
 
 
 def listar_comentarios_item(item_id):
     """
     Lista todos os comentários de um item específico.
     """
-    comentarios = query_db(
-        """
+    comentarios = (
+        query_db(
+            """
         SELECT c.id, c.texto, c.usuario_cs, c.data_criacao, c.visibilidade, c.imagem_url, c.noshow, c.tag,
                 COALESCE(p.nome, c.usuario_cs) as usuario_nome
         FROM comentarios_h c
@@ -201,8 +219,10 @@ def listar_comentarios_item(item_id):
         WHERE c.checklist_item_id = %s
         ORDER BY c.data_criacao DESC
         """,
-        (item_id,)
-    ) or []
+            (item_id,),
+        )
+        or []
+    )
 
     item_info = query_db(
         """
@@ -212,28 +232,25 @@ def listar_comentarios_item(item_id):
         WHERE ci.id = %s
         """,
         (item_id,),
-        one=True
+        one=True,
     )
-    email_responsavel = item_info.get('email_responsavel', '') if item_info else ''
+    email_responsavel = item_info.get("email_responsavel", "") if item_info else ""
 
     comentarios_formatados = []
     for c in comentarios:
         c_dict = dict(c)
-        raw_date = c_dict.get('data_criacao')
-        if hasattr(raw_date, 'isoformat'):
-            c_dict['created_at_iso'] = raw_date.isoformat()
+        raw_date = c_dict.get("data_criacao")
+        if hasattr(raw_date, "isoformat"):
+            c_dict["created_at_iso"] = raw_date.isoformat()
         else:
-            c_dict['created_at_iso'] = raw_date
-            
-        c_dict['data_criacao'] = _format_datetime(raw_date)
-        c_dict['email_responsavel'] = email_responsavel
-        c_dict['tarefa_id'] = item_id  # Adicionar item_id para permitir recarregar após exclusão
+            c_dict["created_at_iso"] = raw_date
+
+        c_dict["data_criacao"] = _format_datetime(raw_date)
+        c_dict["email_responsavel"] = email_responsavel
+        c_dict["tarefa_id"] = item_id  # Adicionar item_id para permitir recarregar após exclusão
         comentarios_formatados.append(c_dict)
 
-    return {
-        'comentarios': comentarios_formatados,
-        'email_responsavel': email_responsavel
-    }
+    return {"comentarios": comentarios_formatados, "email_responsavel": email_responsavel}
 
 
 def obter_comentario_para_email(comentario_id):
@@ -251,9 +268,16 @@ def obter_comentario_para_email(comentario_id):
         WHERE c.id = %s
         """,
         (comentario_id,),
-        one=True
+        one=True,
     )
     return dados
+
+
+def registrar_envio_email_comentario(implantacao_id, usuario_email, detalhe):
+    try:
+        logar_timeline(implantacao_id, usuario_email, "email_comentario_enviado", detalhe)
+    except Exception:
+        pass
 
 
 def _check_edit_permission(comentario, usuario_email, is_manager):
@@ -264,13 +288,13 @@ def _check_edit_permission(comentario, usuario_email, is_manager):
     2. Criação < 3 horas atrás.
     """
     # 1. Check Owner/Manager
-    is_owner = comentario['usuario_cs'] == usuario_email
+    is_owner = comentario["usuario_cs"] == usuario_email
     if not (is_owner or is_manager):
-        raise ValueError('Permissão negada: apenas o autor ou gestores podem alterar.')
+        raise ValueError("Permissão negada: apenas o autor ou gestores podem alterar.")
 
     # 2. Check 3-hour limit
-    data_criacao = comentario['data_criacao']
-    
+    data_criacao = comentario["data_criacao"]
+
     # Normalização de Timezone para comparação
     tz_brasilia = timezone(timedelta(hours=-3))
     agora = datetime.now(tz_brasilia)
@@ -292,7 +316,7 @@ def _check_edit_permission(comentario, usuario_email, is_manager):
 
     diff = agora - data_criacao
     if diff > timedelta(hours=3):
-         raise ValueError('Permissão negada: o tempo limite de 3 horas para edição/exclusão expirou.')
+        raise ValueError("Permissão negada: o tempo limite de 3 horas para edição/exclusão expirou.")
 
 
 def update_comment_service(comentario_id, novo_texto, usuario_email, is_manager):
@@ -307,44 +331,47 @@ def update_comment_service(comentario_id, novo_texto, usuario_email, is_manager)
     comentario = query_db(
         "SELECT id, usuario_cs, data_criacao, checklist_item_id FROM comentarios_h WHERE id = %s",
         (comentario_id,),
-        one=True
+        one=True,
     )
     if not comentario:
-        raise ValueError('Comentário não encontrado')
+        raise ValueError("Comentário não encontrado")
 
     # Validar permissões e prazo
     _check_edit_permission(comentario, usuario_email, is_manager)
 
-    item_id = comentario['checklist_item_id']
+    item_id = comentario["checklist_item_id"]
 
     with db_transaction_with_lock() as (conn, cursor, db_type):
         update_sql = "UPDATE comentarios_h SET texto = %s WHERE id = %s"
-        if db_type == 'sqlite': update_sql = update_sql.replace('%s', '?')
+        if db_type == "sqlite":
+            update_sql = update_sql.replace("%s", "?")
         cursor.execute(update_sql, (novo_texto, comentario_id))
 
         # Verificar se este é o comentário mais recente deste item para atualizar o campo legado
         # Se for o mais recente (ou um dos), atualizamos o legado para refletir o texto atual.
         # Busca o último comentário APÓS o update (que acabamos de fazer, mas a data não mudou)
         latest_query = "SELECT texto FROM comentarios_h WHERE checklist_item_id = %s ORDER BY data_criacao DESC LIMIT 1"
-        if db_type == 'sqlite': latest_query = latest_query.replace('%s', '?')
+        if db_type == "sqlite":
+            latest_query = latest_query.replace("%s", "?")
         cursor.execute(latest_query, (item_id,))
         latest = cursor.fetchone()
-        
+
         should_update_legacy = False
         if latest:
-            latest_text = latest['texto'] if hasattr(latest, 'keys') else latest[0]
+            latest_text = latest["texto"] if hasattr(latest, "keys") else latest[0]
             # Se o texto do último comentário for igual ao novo texto (significa que editamos o último), atualiza legado
             if latest_text == novo_texto:
                 should_update_legacy = True
-        
+
         if should_update_legacy:
             legacy_sql = "UPDATE checklist_items SET comment = %s WHERE id = %s"
-            if db_type == 'sqlite': legacy_sql = legacy_sql.replace('%s', '?')
+            if db_type == "sqlite":
+                legacy_sql = legacy_sql.replace("%s", "?")
             cursor.execute(legacy_sql, (novo_texto, item_id))
-        
+
         conn.commit()
 
-    return {'ok': True, 'message': 'Comentário atualizado', 'novo_texto': novo_texto}
+    return {"ok": True, "message": "Comentário atualizado", "novo_texto": novo_texto}
 
 
 def excluir_comentario_service(comentario_id, usuario_email, is_manager):
@@ -354,15 +381,15 @@ def excluir_comentario_service(comentario_id, usuario_email, is_manager):
     comentario = query_db(
         "SELECT id, usuario_cs, data_criacao, checklist_item_id FROM comentarios_h WHERE id = %s",
         (comentario_id,),
-        one=True
+        one=True,
     )
     if not comentario:
-        raise ValueError('Comentário não encontrado')
+        raise ValueError("Comentário não encontrado")
 
     # Validar permissões e prazo
     _check_edit_permission(comentario, usuario_email, is_manager)
 
-    checklist_item_id = comentario['checklist_item_id']
+    checklist_item_id = comentario["checklist_item_id"]
 
     # Fetch related item info BEFORE delete for logging
     item_info = query_db(
@@ -371,7 +398,8 @@ def excluir_comentario_service(comentario_id, usuario_email, is_manager):
         FROM checklist_items ci
         WHERE ci.id = %s
         """,
-        (checklist_item_id,), one=True
+        (checklist_item_id,),
+        one=True,
     )
 
     execute_db("DELETE FROM comentarios_h WHERE id = %s", (comentario_id,))
@@ -381,21 +409,19 @@ def excluir_comentario_service(comentario_id, usuario_email, is_manager):
         # Buscar o agora "novo" último comentário para restaurar o legado, ou limpar se vazio
         latest_rem = query_db(
             "SELECT texto FROM comentarios_h WHERE checklist_item_id = %s ORDER BY data_criacao DESC LIMIT 1",
-            (checklist_item_id,), one=True
+            (checklist_item_id,),
+            one=True,
         )
-        
+
         new_legacy_text = None
         if latest_rem:
-             new_legacy_text = latest_rem['texto']
-        
-        execute_db(
-            "UPDATE checklist_items SET comment = %s WHERE id = %s",
-            (new_legacy_text, checklist_item_id)
-        )
+            new_legacy_text = latest_rem["texto"]
+
+        execute_db("UPDATE checklist_items SET comment = %s WHERE id = %s", (new_legacy_text, checklist_item_id))
 
     if item_info:
         try:
             detalhe = f"Comentário em '{item_info.get('item_title', '')}' excluído."
-            logar_timeline(item_info['implantacao_id'], usuario_email, 'comentario_excluido', detalhe)
+            logar_timeline(item_info["implantacao_id"], usuario_email, "comentario_excluido", detalhe)
         except Exception:
             pass

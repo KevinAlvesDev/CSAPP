@@ -3,6 +3,7 @@ Módulo de Dados do Dashboard
 Buscar e processar dados para o dashboard.
 Princípio SOLID: Single Responsibility
 """
+
 from datetime import date, datetime
 
 from flask import current_app, g
@@ -35,14 +36,14 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
     if page is not None and per_page is None:
         per_page = 100
 
-    cache_key = f'dashboard_data_{user_email}_{filtered_cs_email or "all"}_p{page}_pp{per_page}'
+    cache_key = f"dashboard_data_{user_email}_{filtered_cs_email or 'all'}_p{page}_pp{per_page}"
 
     if cache and use_cache:
         cached_data = cache.get(cache_key)
         if cached_data:
             return cached_data
 
-    perfil_acesso = g.perfil.get('perfil_acesso') if g.get('perfil') else None
+    perfil_acesso = g.perfil.get("perfil_acesso") if g.get("perfil") else None
     manager_profiles = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
 
     is_manager_view = perfil_acesso in manager_profiles
@@ -97,7 +98,6 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
 
     pagination = None
     if page is not None:
-
         count_sql = """
             SELECT COUNT(*) as total
             FROM implantacoes i
@@ -112,9 +112,10 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
             count_args.append(filtered_cs_email)
 
         total_result = query_db(count_sql, tuple(count_args), one=True)
-        total = total_result.get('total', 0) if total_result else 0
+        total = total_result.get("total", 0) if total_result else 0
 
         from ...database import Pagination
+
         pagination = Pagination(page=page, per_page=per_page, total=total)
 
         query_sql += " LIMIT %s OFFSET %s"
@@ -124,22 +125,31 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
     impl_list = impl_list if impl_list is not None else []
 
     dashboard_data = {
-        'andamento': [], 'futuras': [], 'sem_previsao': [],
-        'finalizadas': [], 'paradas': [], 'novas': [], 'canceladas': []
+        "andamento": [],
+        "futuras": [],
+        "sem_previsao": [],
+        "finalizadas": [],
+        "paradas": [],
+        "novas": [],
+        "canceladas": [],
     }
     metrics = {
-        'impl_andamento_total': 0,
-        'implantacoes_futuras': 0, 'implantacoes_sem_previsao': 0, 'impl_finalizadas': 0, 'impl_paradas': 0,
-        'impl_novas': 0, 'impl_canceladas': 0,
-        'modulos_total': 0,
-        'total_valor_andamento': 0.0,
-        'total_valor_futuras': 0.0,
-        'total_valor_sem_previsao': 0.0,
-        'total_valor_finalizadas': 0.0,
-        'total_valor_paradas': 0.0,
-        'total_valor_novas': 0.0,
-        'total_valor_canceladas': 0.0,
-        'total_valor_modulos': 0.0,
+        "impl_andamento_total": 0,
+        "implantacoes_futuras": 0,
+        "implantacoes_sem_previsao": 0,
+        "impl_finalizadas": 0,
+        "impl_paradas": 0,
+        "impl_novas": 0,
+        "impl_canceladas": 0,
+        "modulos_total": 0,
+        "total_valor_andamento": 0.0,
+        "total_valor_futuras": 0.0,
+        "total_valor_sem_previsao": 0.0,
+        "total_valor_finalizadas": 0.0,
+        "total_valor_paradas": 0.0,
+        "total_valor_novas": 0.0,
+        "total_valor_canceladas": 0.0,
+        "total_valor_modulos": 0.0,
     }
 
     agora = datetime.now()
@@ -148,49 +158,53 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
         if not impl or not isinstance(impl, dict):
             continue
 
-        impl_id = impl.get('id')
+        impl_id = impl.get("id")
         if impl_id is None:
             current_app.logger.warning(f"Skipping implantacao without id: {impl}")
             continue
 
-        status_raw = impl.get('status')
+        status_raw = impl.get("status")
         if isinstance(status_raw, str):
-            status = status_raw.replace('\xa0', ' ').strip().lower()
+            status = status_raw.replace("\xa0", " ").strip().lower()
         else:
-            status = str(status_raw).strip().lower() if status_raw else ''
+            status = str(status_raw).strip().lower() if status_raw else ""
 
         if not status:
-            current_app.logger.warning(f"Implantacao {impl_id} has empty/null status. Raw value: {status_raw}. Will try to categorize anyway.")
-            status = 'andamento'
+            current_app.logger.warning(
+                f"Implantacao {impl_id} has empty/null status. Raw value: {status_raw}. Will try to categorize anyway."
+            )
+            status = "andamento"
         try:
-            if impl.get('tipo') == 'modulo' and status in ['nova', 'andamento', 'parada', 'futura', 'sem_previsao']:
-                metrics['modulos_total'] += 1
+            if impl.get("tipo") == "modulo" and status in ["nova", "andamento", "parada", "futura", "sem_previsao"]:
+                metrics["modulos_total"] += 1
                 try:
-                    modulo_valor = float(impl.get('valor_monetario', 0.0) or 0.0)
+                    modulo_valor = float(impl.get("valor_monetario", 0.0) or 0.0)
                 except (ValueError, TypeError):
                     modulo_valor = 0.0
-                metrics['total_valor_modulos'] += modulo_valor
+                metrics["total_valor_modulos"] += modulo_valor
         except Exception:
             pass
 
-        impl['data_criacao_iso'] = format_date_iso_for_json(impl.get('data_criacao'), only_date=True)
-        impl['data_inicio_efetivo_iso'] = format_date_iso_for_json(impl.get('data_inicio_efetivo'), only_date=True)
-        impl['data_inicio_producao_iso'] = format_date_iso_for_json(impl.get('data_inicio_producao'), only_date=True)
-        impl['data_final_implantacao_iso'] = format_date_iso_for_json(impl.get('data_final_implantacao'), only_date=True)
+        impl["data_criacao_iso"] = format_date_iso_for_json(impl.get("data_criacao"), only_date=True)
+        impl["data_inicio_efetivo_iso"] = format_date_iso_for_json(impl.get("data_inicio_efetivo"), only_date=True)
+        impl["data_inicio_producao_iso"] = format_date_iso_for_json(impl.get("data_inicio_producao"), only_date=True)
+        impl["data_final_implantacao_iso"] = format_date_iso_for_json(
+            impl.get("data_final_implantacao"), only_date=True
+        )
 
         try:
             prog_percent, _, _ = _get_progress(impl_id)
         except Exception:
-            total_tasks = impl.get('total_tarefas', 0) or 0
-            done_tasks = impl.get('tarefas_concluidas', 0) or 0
+            total_tasks = impl.get("total_tarefas", 0) or 0
+            done_tasks = impl.get("tarefas_concluidas", 0) or 0
             prog_percent = int(round((done_tasks / total_tasks) * 100)) if total_tasks > 0 else 100
-        impl['progresso'] = prog_percent
+        impl["progresso"] = prog_percent
 
         try:
-            impl_valor = float(impl.get('valor_monetario', 0.0) or 0.0)
+            impl_valor = float(impl.get("valor_monetario", 0.0) or 0.0)
         except (ValueError, TypeError):
             impl_valor = 0.0
-        impl['valor_monetario_float'] = impl_valor
+        impl["valor_monetario_float"] = impl_valor
 
         try:
             dias_passados = calculate_days_passed(impl_id)
@@ -205,106 +219,122 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
 
         # Processar último comentário com robustez contra erros
         try:
-            ultima_atividade_raw = impl.get('ultima_atividade')
-            
+            ultima_atividade_raw = impl.get("ultima_atividade")
+
             # Formatar tempo relativo com fallback seguro
             if ultima_atividade_raw:
                 try:
-                    ultima_atividade_text, ultima_atividade_dias, ultima_atividade_status = format_relative_time(ultima_atividade_raw)
+                    ultima_atividade_text, ultima_atividade_dias, ultima_atividade_status = format_relative_time(
+                        ultima_atividade_raw
+                    )
                 except Exception as e:
                     current_app.logger.warning(f"Erro ao formatar tempo relativo para impl {impl_id}: {e}")
-                    ultima_atividade_text, ultima_atividade_dias, ultima_atividade_status = 'Sem comentários', None, 'gray'
+                    ultima_atividade_text, ultima_atividade_dias, ultima_atividade_status = (
+                        "Sem comentários",
+                        None,
+                        "gray",
+                    )
             else:
                 # Não há comentários registrados
-                ultima_atividade_text, ultima_atividade_dias, ultima_atividade_status = 'Sem comentários', None, 'gray'
-            
+                ultima_atividade_text, ultima_atividade_dias, ultima_atividade_status = "Sem comentários", None, "gray"
+
             # Garantir valores seguros
-            impl['ultima_atividade_text'] = ultima_atividade_text or 'Sem comentários'
-            impl['ultima_atividade_dias'] = ultima_atividade_dias if ultima_atividade_dias is not None else 0
-            impl['ultima_atividade_status'] = ultima_atividade_status or 'gray'
-            
+            impl["ultima_atividade_text"] = ultima_atividade_text or "Sem comentários"
+            impl["ultima_atividade_dias"] = ultima_atividade_dias if ultima_atividade_dias is not None else 0
+            impl["ultima_atividade_status"] = ultima_atividade_status or "gray"
+
         except Exception as e:
             # Fallback completo em caso de erro crítico
             current_app.logger.error(f"Erro crítico ao processar ultima_atividade para impl {impl_id}: {e}")
-            impl['ultima_atividade_text'] = 'Sem comentários'
-            impl['ultima_atividade_dias'] = 0
-            impl['ultima_atividade_status'] = 'gray'
+            impl["ultima_atividade_text"] = "Sem comentários"
+            impl["ultima_atividade_dias"] = 0
+            impl["ultima_atividade_status"] = "gray"
 
-        impl['dias_passados'] = dias_passados
+        impl["dias_passados"] = dias_passados
 
-        if status == 'finalizada':
-            dashboard_data['finalizadas'].append(impl)
-            metrics['impl_finalizadas'] += 1
-            metrics['total_valor_finalizadas'] += impl_valor
-        elif status == 'cancelada':
-            dashboard_data['canceladas'].append(impl)
-            metrics['impl_canceladas'] += 1
-            metrics['total_valor_canceladas'] += impl_valor
-        elif status == 'parada':
+        if status == "finalizada":
+            dashboard_data["finalizadas"].append(impl)
+            metrics["impl_finalizadas"] += 1
+            metrics["total_valor_finalizadas"] += impl_valor
+        elif status == "cancelada":
+            dashboard_data["canceladas"].append(impl)
+            metrics["impl_canceladas"] += 1
+            metrics["total_valor_canceladas"] += impl_valor
+        elif status == "parada":
             try:
                 dias_parada = calculate_days_parada(impl_id)
             except Exception as e:
                 current_app.logger.warning(f"Error calculating dias_parada for impl {impl_id}: {e}")
                 dias_parada = 0
 
-            impl['dias_parada'] = dias_parada
-            dashboard_data['paradas'].append(impl)
-            metrics['impl_paradas'] += 1
-            metrics['total_valor_paradas'] += impl_valor
-        elif status == 'futura':
-            dashboard_data['futuras'].append(impl)
-            metrics['implantacoes_futuras'] += 1
-            metrics['total_valor_futuras'] += impl_valor
+            impl["dias_parada"] = dias_parada
+            dashboard_data["paradas"].append(impl)
+            metrics["impl_paradas"] += 1
+            metrics["total_valor_paradas"] += impl_valor
+        elif status == "futura":
+            dashboard_data["futuras"].append(impl)
+            metrics["implantacoes_futuras"] += 1
+            metrics["total_valor_futuras"] += impl_valor
 
-            data_prevista_str = impl.get('data_inicio_previsto')
+            data_prevista_str = impl.get("data_inicio_previsto")
             data_prevista_obj = None
 
             if data_prevista_str and isinstance(data_prevista_str, str):
                 try:
-                    data_prevista_obj = datetime.strptime(data_prevista_str, '%Y-%m-%d').date()
+                    data_prevista_obj = datetime.strptime(data_prevista_str, "%Y-%m-%d").date()
                 except ValueError:
-                    current_app.logger.warning(f"Invalid data_inicio_previsto format for impl {impl_id}: {data_prevista_str}")
+                    current_app.logger.warning(
+                        f"Invalid data_inicio_previsto format for impl {impl_id}: {data_prevista_str}"
+                    )
             elif isinstance(data_prevista_str, date):
                 data_prevista_obj = data_prevista_str
 
-            impl['data_inicio_previsto_fmt_d'] = format_date_br(data_prevista_obj or data_prevista_str, include_time=False)
+            impl["data_inicio_previsto_fmt_d"] = format_date_br(
+                data_prevista_obj or data_prevista_str, include_time=False
+            )
 
             if data_prevista_obj and data_prevista_obj < agora.date():
-                impl['atrasada_para_iniciar'] = True
+                impl["atrasada_para_iniciar"] = True
             else:
-                impl['atrasada_para_iniciar'] = False
+                impl["atrasada_para_iniciar"] = False
 
-        elif status == 'nova':
-            dashboard_data['novas'].append(impl)
-            metrics['impl_novas'] += 1
-            metrics['total_valor_novas'] += impl_valor
+        elif status == "nova":
+            dashboard_data["novas"].append(impl)
+            metrics["impl_novas"] += 1
+            metrics["total_valor_novas"] += impl_valor
 
-        elif status == 'sem_previsao':
-            dashboard_data['sem_previsao'].append(impl)
-            metrics['implantacoes_sem_previsao'] += 1
-            metrics['total_valor_sem_previsao'] += impl_valor
+        elif status == "sem_previsao":
+            dashboard_data["sem_previsao"].append(impl)
+            metrics["implantacoes_sem_previsao"] += 1
+            metrics["total_valor_sem_previsao"] += impl_valor
 
-        elif status == 'andamento' or status == 'atrasada':
-            if status == 'atrasada':
+        elif status == "andamento" or status == "atrasada":
+            if status == "atrasada":
                 try:
-                    execute_db("UPDATE implantacoes SET status = 'andamento' WHERE id = %s AND status = 'atrasada'", (impl_id,))
-                    status = 'andamento'
-                    impl['status'] = 'andamento'
+                    execute_db(
+                        "UPDATE implantacoes SET status = 'andamento' WHERE id = %s AND status = 'atrasada'", (impl_id,)
+                    )
+                    status = "andamento"
+                    impl["status"] = "andamento"
                 except Exception as e:
-                    current_app.logger.warning(f"Error updating status from atrasada to andamento for impl {impl_id}: {e}")
-            dashboard_data['andamento'].append(impl)
-            metrics['impl_andamento_total'] += 1
-            metrics['total_valor_andamento'] += impl_valor
+                    current_app.logger.warning(
+                        f"Error updating status from atrasada to andamento for impl {impl_id}: {e}"
+                    )
+            dashboard_data["andamento"].append(impl)
+            metrics["impl_andamento_total"] += 1
+            metrics["total_valor_andamento"] += impl_valor
         else:
-            current_app.logger.warning(f"Unknown or null status for implantacao {impl_id}: '{status}' (raw: '{status_raw}'). Categorizing as 'andamento' by default.")
-            dashboard_data['andamento'].append(impl)
-            metrics['impl_andamento_total'] += 1
-            metrics['total_valor_andamento'] += impl_valor
+            current_app.logger.warning(
+                f"Unknown or null status for implantacao {impl_id}: '{status}' (raw: '{status_raw}'). Categorizing as 'andamento' by default."
+            )
+            dashboard_data["andamento"].append(impl)
+            metrics["impl_andamento_total"] += 1
+            metrics["total_valor_andamento"] += impl_valor
 
     for bucket in dashboard_data.values():
         for item in bucket:
-            if isinstance(item, dict) and 'dias_passados' not in item:
-                item['dias_passados'] = 0
+            if isinstance(item, dict) and "dias_passados" not in item:
+                item["dias_passados"] = 0
 
     if not is_manager_view and not filtered_cs_email and impl_list:
         try:
@@ -315,8 +345,7 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
                     impl_finalizadas = %s, impl_paradas = %s
                 WHERE usuario = %s
                 """,
-                (metrics['impl_andamento_total'],
-                 metrics['impl_finalizadas'], metrics['impl_paradas'], user_email)
+                (metrics["impl_andamento_total"], metrics["impl_finalizadas"], metrics["impl_paradas"], user_email),
             )
         except Exception as update_err:
             current_app.logger.error(f"Failed to update metrics for user {user_email}: {update_err}")
@@ -352,11 +381,11 @@ def get_tags_metrics(start_date=None, end_date=None, user_email=None):
     if start_date:
         query_sql += " AND date(ch.data_criacao) >= %s"
         args.append(start_date)
-    
+
     if end_date:
         query_sql += " AND date(ch.data_criacao) <= %s"
         args.append(end_date)
-        
+
     if user_email:
         query_sql += " AND ch.usuario_cs = %s"
         args.append(user_email)
@@ -366,41 +395,36 @@ def get_tags_metrics(start_date=None, end_date=None, user_email=None):
     rows = query_db(query_sql, tuple(args))
     if not rows:
         return {}
-        
+
     report = {}
-    
+
     for row in rows:
-        email = row['usuario_cs']
-        nome = row['user_name'] or email
-        vis = row['visibilidade'] or 'interno'
-        tag = row['tag'] or 'Sem tag'
-        qtd = row['qtd']
-        
+        email = row["usuario_cs"]
+        nome = row["user_name"] or email
+        vis = row["visibilidade"] or "interno"
+        tag = row["tag"] or "Sem tag"
+        qtd = row["qtd"]
+
         if email not in report:
             report[email] = {
-                'nome': nome,
-                'total_interno': 0,
-                'total_externo': 0,
-                'total_geral': 0,
-                'tags_count': {
-                    'Ação interna': 0,
-                    'Reunião': 0,
-                    'No Show': 0,
-                    'Sem tag': 0
-                }
+                "nome": nome,
+                "total_interno": 0,
+                "total_externo": 0,
+                "total_geral": 0,
+                "tags_count": {"Ação interna": 0, "Reunião": 0, "No Show": 0, "Sem tag": 0},
             }
-            
-        report[email]['total_geral'] += qtd
-            
-        if vis == 'interno':
-            report[email]['total_interno'] += qtd
-        elif vis == 'externo':
-            report[email]['total_externo'] += qtd
-            
+
+        report[email]["total_geral"] += qtd
+
+        if vis == "interno":
+            report[email]["total_interno"] += qtd
+        elif vis == "externo":
+            report[email]["total_externo"] += qtd
+
         # Normalizar tag key
-        if tag in report[email]['tags_count']:
-             report[email]['tags_count'][tag] += qtd
+        if tag in report[email]["tags_count"]:
+            report[email]["tags_count"][tag] += qtd
         else:
-             report[email]['tags_count'][tag] = qtd
-            
+            report[email]["tags_count"][tag] = qtd
+
     return report

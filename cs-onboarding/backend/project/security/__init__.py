@@ -1,4 +1,3 @@
-
 from .api_security import validate_api_origin
 from .middleware import configure_cors, init_rate_limiting_headers, init_security_headers
 
@@ -8,4 +7,3 @@ __all__ = [
     "init_rate_limiting_headers",
     "init_security_headers",
 ]
-

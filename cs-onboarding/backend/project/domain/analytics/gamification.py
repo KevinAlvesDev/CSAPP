@@ -3,6 +3,7 @@ Módulo de Gamificação para Analytics
 Ranking de gamificação por mês/ano.
 Princípio SOLID: Single Responsibility
 """
+
 from datetime import datetime
 
 from ...db import query_db
@@ -23,6 +24,6 @@ def get_gamification_rank(month=None, year=None):
         ORDER BY gm.pontuacao_calculada DESC, nome ASC
     """
     rows = query_db(query, (m, y)) or []
-    labels = [r.get('nome') for r in rows]
-    data = [r.get('pontos', 0) for r in rows]
-    return { 'labels': labels, 'data': data, 'month': m, 'year': y }
+    labels = [r.get("nome") for r in rows]
+    data = [r.get("pontos", 0) for r in rows]
+    return {"labels": labels, "data": data, "month": m, "year": y}

@@ -23,5 +23,5 @@ from .external import (
 
 # Manter __all__ para compatibilidade com imports *
 __all__ = [
-    'consultar_empresa_oamd',
+    "consultar_empresa_oamd",
 ]

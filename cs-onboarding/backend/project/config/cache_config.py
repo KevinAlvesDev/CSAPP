@@ -19,22 +19,18 @@ def init_cache(app):
     """
     global cache
 
-    redis_url = os.environ.get('REDIS_URL')
+    redis_url = os.environ.get("REDIS_URL")
 
     if redis_url:
         cache_config = {
-            'CACHE_TYPE': 'redis',
-            'CACHE_REDIS_URL': redis_url,
-            'CACHE_DEFAULT_TIMEOUT': 300,
-            'CACHE_KEY_PREFIX': 'csapp_'
+            "CACHE_TYPE": "redis",
+            "CACHE_REDIS_URL": redis_url,
+            "CACHE_DEFAULT_TIMEOUT": 300,
+            "CACHE_KEY_PREFIX": "csapp_",
         }
         app.logger.info("Cache initialized with Redis backend")
     else:
-        cache_config = {
-            'CACHE_TYPE': 'SimpleCache',
-            'CACHE_DEFAULT_TIMEOUT': 300,
-            'CACHE_THRESHOLD': 500
-        }
+        cache_config = {"CACHE_TYPE": "SimpleCache", "CACHE_DEFAULT_TIMEOUT": 300, "CACHE_THRESHOLD": 500}
         app.logger.info("Cache initialized with SimpleCache backend (development)")
 
     cache = Cache(app, config=cache_config)
@@ -48,10 +44,10 @@ def clear_user_cache(user_email):
     Útil quando dados do usuário são atualizados.
     """
     if cache:
-        cache.delete(f'user_profile_{user_email}')  # Cache de perfil
-        cache.delete(f'dashboard_data_{user_email}')
-        cache.delete(f'dashboard_data_{user_email}_all_pNone_ppNone')
-        cache.delete(f'user_implantacoes_{user_email}')
+        cache.delete(f"user_profile_{user_email}")  # Cache de perfil
+        cache.delete(f"dashboard_data_{user_email}")
+        cache.delete(f"dashboard_data_{user_email}_all_pNone_ppNone")
+        cache.delete(f"user_implantacoes_{user_email}")
 
 
 def clear_implantacao_cache(implantacao_id):
@@ -60,10 +56,10 @@ def clear_implantacao_cache(implantacao_id):
     Útil quando a implantação é atualizada.
     """
     if cache:
-        cache.delete(f'implantacao_details_{implantacao_id}')
-        cache.delete(f'implantacao_tasks_{implantacao_id}')
-        cache.delete(f'implantacao_timeline_{implantacao_id}')
-        cache.delete(f'progresso_impl_{implantacao_id}')
+        cache.delete(f"implantacao_details_{implantacao_id}")
+        cache.delete(f"implantacao_tasks_{implantacao_id}")
+        cache.delete(f"implantacao_timeline_{implantacao_id}")
+        cache.delete(f"progresso_impl_{implantacao_id}")
 
 
 def clear_all_cache():

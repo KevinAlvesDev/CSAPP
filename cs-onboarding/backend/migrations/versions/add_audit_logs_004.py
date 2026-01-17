@@ -4,9 +4,10 @@ Versão: 004
 Data: 2026-01-05
 """
 
+
 def upgrade_postgres(cursor):
     """Cria tabela de auditoria no PostgreSQL"""
-    
+
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS audit_logs (
             id SERIAL PRIMARY KEY,
@@ -22,7 +23,7 @@ def upgrade_postgres(cursor):
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
-    
+
     # Índices para busca rápida
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_audit_user_email ON audit_logs(user_email);
@@ -34,7 +35,7 @@ def upgrade_postgres(cursor):
 
 def upgrade_sqlite(cursor):
     """Cria tabela de auditoria no SQLite"""
-    
+
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS audit_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -50,7 +51,7 @@ def upgrade_sqlite(cursor):
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
-    
+
     # Índices
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_user_email ON audit_logs(user_email)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_logs(action)")

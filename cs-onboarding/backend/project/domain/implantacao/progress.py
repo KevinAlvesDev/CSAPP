@@ -3,6 +3,7 @@ Módulo de Progresso de Implantação
 Responsável pelo cálculo de progresso e gerenciamento de cache.
 Princípio SOLID: Single Responsibility
 """
+
 from functools import wraps
 
 from flask import current_app
@@ -26,13 +27,14 @@ def cached_progress(ttl=30):
     Returns:
         Decorator function
     """
+
     def decorator(func):
         @wraps(func)
         def wrapper(impl_id, *args, **kwargs):
             if not cache:
                 return func(impl_id, *args, **kwargs)
 
-            cache_key = f'progresso_impl_{impl_id}'
+            cache_key = f"progresso_impl_{impl_id}"
 
             try:
                 cached_result = cache.get(cache_key)
@@ -49,6 +51,7 @@ def cached_progress(ttl=30):
                 return func(impl_id, *args, **kwargs)
 
         return wrapper
+
     return decorator
 
 
@@ -56,7 +59,7 @@ def invalidar_cache_progresso(impl_id):
     """
     Invalida o cache de progresso de uma implantação específica.
     Deve ser chamado sempre que o status de uma tarefa mudar.
-    
+
     Args:
         impl_id: ID da implantação
     """
@@ -64,7 +67,7 @@ def invalidar_cache_progresso(impl_id):
         return
 
     try:
-        cache_key = f'progresso_impl_{impl_id}'
+        cache_key = f"progresso_impl_{impl_id}"
         cache.delete(cache_key)
     except Exception as e:
         if current_app:
@@ -75,25 +78,21 @@ def _get_progress_optimized(impl_id):
     """
     Versão otimizada que usa uma única query com checklist_items.
     Agora usa checklist_items (estrutura consolidada).
-    
+
     Lógica de cálculo do progresso:
     - Conta apenas itens "folha" (que não têm filhos) para evitar dupla contagem
     - Itens folha são: subtarefas OU tarefas sem subtarefas
     - Se tipo_item não estiver preenchido, usa lógica baseada em parent_id
     """
     try:
-        items_exist = query_db(
-            "SELECT id FROM checklist_items WHERE implantacao_id = %s LIMIT 1",
-            (impl_id,),
-            one=True
-        )
+        items_exist = query_db("SELECT id FROM checklist_items WHERE implantacao_id = %s LIMIT 1", (impl_id,), one=True)
     except Exception:
         items_exist = None
 
     if not items_exist:
         return 0, 0, 0
 
-    is_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
+    is_sqlite = current_app.config.get("USE_SQLITE_LOCALLY", False)
 
     try:
         if is_sqlite:
@@ -111,8 +110,8 @@ def _get_progress_optimized(impl_id):
             """
             result = query_db(query, (impl_id, impl_id), one=True) or {}
 
-            total = int(result.get('total', 0) or 0)
-            done = int(result.get('done', 0) or 0)
+            total = int(result.get("total", 0) or 0)
+            done = int(result.get("done", 0) or 0)
         else:
             query = """
                 SELECT
@@ -128,16 +127,14 @@ def _get_progress_optimized(impl_id):
             """
             result = query_db(query, (impl_id, impl_id), one=True) or {}
 
-            total = int(result.get('total', 0) or 0)
-            done = int(result.get('done', 0) or 0)
+            total = int(result.get("total", 0) or 0)
+            done = int(result.get("done", 0) or 0)
 
         if total == 0:
             any_items = query_db(
-                "SELECT COUNT(*) as count FROM checklist_items WHERE implantacao_id = %s",
-                (impl_id,),
-                one=True
+                "SELECT COUNT(*) as count FROM checklist_items WHERE implantacao_id = %s", (impl_id,), one=True
             )
-            if any_items and int(any_items.get('count', 0) or 0) > 0:
+            if any_items and int(any_items.get("count", 0) or 0) > 0:
                 if is_sqlite:
                     fallback_query = """
                         SELECT
@@ -157,8 +154,8 @@ def _get_progress_optimized(impl_id):
                     """
                     fallback_result = query_db(fallback_query, (impl_id,), one=True) or {}
 
-                total = int(fallback_result.get('total', 0) or 0)
-                done = int(fallback_result.get('done', 0) or 0)
+                total = int(fallback_result.get("total", 0) or 0)
+                done = int(fallback_result.get("done", 0) or 0)
 
         return int(round((done / total) * 100)) if total > 0 else 100, total, done
 
@@ -173,26 +170,27 @@ def _get_progress_legacy(impl_id):
     Agora usa checklist_items (estrutura consolidada).
     """
     try:
-        items_exist = query_db(
-            "SELECT id FROM checklist_items WHERE implantacao_id = %s LIMIT 1",
-            (impl_id,),
-            one=True
-        )
+        items_exist = query_db("SELECT id FROM checklist_items WHERE implantacao_id = %s LIMIT 1", (impl_id,), one=True)
     except Exception:
         items_exist = None
 
     if items_exist:
-        sub = query_db(
-            """
+        sub = (
+            query_db(
+                """
             SELECT COUNT(*) as total, SUM(CASE WHEN completed THEN 1 ELSE 0 END) as done
             FROM checklist_items
             WHERE implantacao_id = %s AND tipo_item = 'subtarefa'
             """,
-            (impl_id,), one=True
-        ) or {}
+                (impl_id,),
+                one=True,
+            )
+            or {}
+        )
 
-        th_no = query_db(
-            """
+        th_no = (
+            query_db(
+                """
             SELECT COUNT(*) as total,
                    SUM(CASE WHEN completed THEN 1 ELSE 0 END) as done
             FROM checklist_items ci
@@ -204,11 +202,14 @@ def _get_progress_legacy(impl_id):
                 AND s.tipo_item = 'subtarefa'
             )
             """,
-            (impl_id,), one=True
-        ) or {}
+                (impl_id,),
+                one=True,
+            )
+            or {}
+        )
 
-        total = int(sub.get('total', 0) or 0) + int(th_no.get('total', 0) or 0)
-        done = int(sub.get('done', 0) or 0) + int(th_no.get('done', 0) or 0)
+        total = int(sub.get("total", 0) or 0) + int(th_no.get("total", 0) or 0)
+        done = int(sub.get("done", 0) or 0) + int(th_no.get("done", 0) or 0)
         return int(round((done / total) * 100)) if total > 0 else 100, total, done
 
     return 0, 0, 0
@@ -220,7 +221,7 @@ def _get_progress(impl_id):
     Calcula progresso da implantação usando apenas modelo hierárquico.
     Usa versão otimizada se habilitada via feature flag.
     """
-    use_optimized = current_app.config.get('USE_OPTIMIZED_PROGRESS', True)
+    use_optimized = current_app.config.get("USE_OPTIMIZED_PROGRESS", True)
 
     if use_optimized:
         return _get_progress_optimized(impl_id)

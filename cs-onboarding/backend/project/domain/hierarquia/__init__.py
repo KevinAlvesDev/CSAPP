@@ -9,27 +9,26 @@ Estrutura:
 """
 
 # Importações de tree.py
-from .tree import (
-    get_hierarquia_implantacao,
-)
-
-# Importações de tasks.py
-from .tasks import (
-    toggle_subtarefa,
-    calcular_progresso_implantacao,
-)
-
 # Importações de comments.py
 from .comments import (
     adicionar_comentario_tarefa,
     get_comentarios_tarefa,
 )
 
+# Importações de tasks.py
+from .tasks import (
+    calcular_progresso_implantacao,
+    toggle_subtarefa,
+)
+from .tree import (
+    get_hierarquia_implantacao,
+)
+
 # Exports públicos
 __all__ = [
-    'get_hierarquia_implantacao',
-    'toggle_subtarefa',
-    'calcular_progresso_implantacao',
-    'adicionar_comentario_tarefa',
-    'get_comentarios_tarefa',
+    "get_hierarquia_implantacao",
+    "toggle_subtarefa",
+    "calcular_progresso_implantacao",
+    "adicionar_comentario_tarefa",
+    "get_comentarios_tarefa",
 ]

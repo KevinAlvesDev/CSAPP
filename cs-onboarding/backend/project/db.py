@@ -1,9 +1,7 @@
 from contextlib import contextmanager
 from datetime import datetime
 
-import click
 from flask import current_app
-from flask.cli import with_appcontext
 
 from .common.exceptions import DatabaseError
 from .database import get_db_connection as get_pooled_connection
@@ -24,7 +22,7 @@ def db_connection():
     Garante que a conexão seja fechada corretamente, mesmo em caso de erro.
     """
     conn, db_type = None, None
-    use_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
+    use_sqlite = current_app.config.get("USE_SQLITE_LOCALLY", False)
 
     try:
         conn, db_type = get_db_connection()
@@ -44,19 +42,20 @@ def query_db(query, args=(), one=False, raise_on_error=False):
     """
     try:
         from .performance_monitoring import track_query
+
         track_query()
     except:
         pass
 
     conn, db_type = None, None
-    use_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
+    use_sqlite = current_app.config.get("USE_SQLITE_LOCALLY", False)
 
     try:
         conn, db_type = get_db_connection()
         cursor = conn.cursor()
 
-        if db_type == 'sqlite':
-            query = query.replace('%s', '?')
+        if db_type == "sqlite":
+            query = query.replace("%s", "?")
 
         cursor.execute(query, args)
 
@@ -74,7 +73,7 @@ def query_db(query, args=(), one=False, raise_on_error=False):
             conn.rollback()
 
         if raise_on_error:
-            raise DatabaseError(f"Erro ao executar query: {e}", {'query': query[:100], 'args': args}) from e
+            raise DatabaseError(f"Erro ao executar query: {e}", {"query": query[:100], "args": args}) from e
 
         return None if one else []
     finally:
@@ -88,19 +87,20 @@ def execute_db(query, args=(), raise_on_error=False):
     """
     try:
         from .performance_monitoring import track_query
+
         track_query()
     except:
         pass
 
     conn, db_type = None, None
-    use_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
+    use_sqlite = current_app.config.get("USE_SQLITE_LOCALLY", False)
 
     try:
         conn, db_type = get_db_connection()
         cursor = conn.cursor()
 
-        if db_type == 'sqlite':
-            query = query.replace('%s', '?')
+        if db_type == "sqlite":
+            query = query.replace("%s", "?")
 
         cursor.execute(query, args)
         conn.commit()
@@ -116,7 +116,7 @@ def execute_db(query, args=(), raise_on_error=False):
             conn.rollback()
 
         if raise_on_error:
-            raise DatabaseError(f"Erro ao executar query: {e}", {'query': query[:100], 'args': args}) from e
+            raise DatabaseError(f"Erro ao executar query: {e}", {"query": query[:100], "args": args}) from e
 
         return None
     finally:
@@ -130,14 +130,14 @@ def execute_and_fetch_one(query, args=()):
     valor (ex: RETURNING id) e faz commit.
     """
     conn, db_type = None, None
-    use_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
+    use_sqlite = current_app.config.get("USE_SQLITE_LOCALLY", False)
 
     try:
         conn, db_type = get_db_connection()
         cursor = conn.cursor()
 
-        if db_type == 'sqlite':
-            query = query.replace('%s', '?')
+        if db_type == "sqlite":
+            query = query.replace("%s", "?")
 
         cursor.execute(query, args)
         result = cursor.fetchone()
@@ -163,13 +163,13 @@ def db_transaction_with_lock():
     Garante atomicidade e previne race conditions.
     """
     conn, db_type = None, None
-    use_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
+    use_sqlite = current_app.config.get("USE_SQLITE_LOCALLY", False)
 
     try:
         conn, db_type = get_db_connection()
         cursor = None
 
-        if db_type == 'sqlite':
+        if db_type == "sqlite":
             conn.execute("BEGIN IMMEDIATE TRANSACTION")
             cursor = conn.cursor()
         else:
@@ -204,18 +204,17 @@ def logar_timeline(implantacao_id, usuario_cs, tipo_evento, detalhe):
         conn, db_type = get_db_connection()
         cursor = conn.cursor()
         sql = "INSERT INTO timeline_log (implantacao_id, usuario_cs, tipo_evento, detalhes, data_criacao) VALUES (%s, %s, %s, %s, %s)"
-        if db_type == 'sqlite':
-            sql = sql.replace('%s', '?')
+        if db_type == "sqlite":
+            sql = sql.replace("%s", "?")
         cursor.execute(sql, (implantacao_id, usuario_cs, tipo_evento, detalhe, datetime.now()))
         conn.commit()
     except Exception:
         if conn:
             conn.rollback()
     finally:
-        use_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
+        use_sqlite = current_app.config.get("USE_SQLITE_LOCALLY", False)
         if use_sqlite and conn:
             conn.close()
-
 
 
 # Schema initialization logic has been moved to backend/project/database/schema.py

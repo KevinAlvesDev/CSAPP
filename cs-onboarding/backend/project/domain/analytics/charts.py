@@ -3,6 +3,7 @@ Módulo de Gráficos de Analytics
 Gráficos de implantações por dia e funil de status.
 Princípio SOLID: Single Responsibility
 """
+
 from datetime import date, datetime, timedelta
 
 from flask import current_app
@@ -13,10 +14,10 @@ from .utils import date_col_expr, date_param_expr
 
 def get_implants_by_day(start_date=None, end_date=None, cs_email=None):
     """Contagem de implantações finalizadas por dia, com filtros opcionais."""
-    is_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
+    is_sqlite = current_app.config.get("USE_SQLITE_LOCALLY", False)
 
     query = f"""
-        SELECT {date_col_expr('i.data_finalizacao')} AS dia, COUNT(*) AS total
+        SELECT {date_col_expr("i.data_finalizacao")} AS dia, COUNT(*) AS total
         FROM implantacoes i
         WHERE i.status = 'finalizada'
     """
@@ -31,19 +32,19 @@ def get_implants_by_day(start_date=None, end_date=None, cs_email=None):
             return None, None
         if isinstance(val, datetime):
             dt = val.date()
-            ds = dt.strftime('%Y-%m-%d')
+            ds = dt.strftime("%Y-%m-%d")
         elif isinstance(val, date):
             dt = val
-            ds = val.strftime('%Y-%m-%d')
+            ds = val.strftime("%Y-%m-%d")
         else:
             ds = str(val)
             try:
-                dt = datetime.strptime(ds, '%Y-%m-%d').date()
+                dt = datetime.strptime(ds, "%Y-%m-%d").date()
             except ValueError:
                 return None, None
         if is_end and not is_sqlite:
-            return '<', (dt + timedelta(days=1)).strftime('%Y-%m-%d')
-        return '<=' if is_end else '>=', ds
+            return "<", (dt + timedelta(days=1)).strftime("%Y-%m-%d")
+        return "<=" if is_end else ">=", ds
 
     if start_date:
         op, val = _fmt(start_date, is_end=False)
@@ -59,14 +60,14 @@ def get_implants_by_day(start_date=None, end_date=None, cs_email=None):
 
     query += f" GROUP BY {date_col_expr('i.data_finalizacao')} ORDER BY {date_col_expr('i.data_finalizacao')}"
     rows = query_db(query, tuple(args)) or []
-    labels = [r.get('dia') for r in rows]
-    data = [r.get('total', 0) for r in rows]
-    return { 'labels': labels, 'data': data }
+    labels = [r.get("dia") for r in rows]
+    data = [r.get("total", 0) for r in rows]
+    return {"labels": labels, "data": data}
 
 
 def get_funnel_counts(start_date=None, end_date=None, cs_email=None):
     """Contagem de implantações por status, com período opcional (data_criacao)."""
-    is_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
+    is_sqlite = current_app.config.get("USE_SQLITE_LOCALLY", False)
 
     query = """
         SELECT i.status, COUNT(*) AS total
@@ -84,19 +85,19 @@ def get_funnel_counts(start_date=None, end_date=None, cs_email=None):
             return None, None
         if isinstance(val, datetime):
             dt = val.date()
-            ds = dt.strftime('%Y-%m-%d')
+            ds = dt.strftime("%Y-%m-%d")
         elif isinstance(val, date):
             dt = val
-            ds = val.strftime('%Y-%m-%d')
+            ds = val.strftime("%Y-%m-%d")
         else:
             ds = str(val)
             try:
-                dt = datetime.strptime(ds, '%Y-%m-%d').date()
+                dt = datetime.strptime(ds, "%Y-%m-%d").date()
             except ValueError:
                 return None, None
         if is_end and not is_sqlite:
-            return '<', (dt + timedelta(days=1)).strftime('%Y-%m-%d')
-        return '<=' if is_end else '>=', ds
+            return "<", (dt + timedelta(days=1)).strftime("%Y-%m-%d")
+        return "<=" if is_end else ">=", ds
 
     if start_date:
         op, val = _fmt(start_date, is_end=False)
@@ -112,8 +113,8 @@ def get_funnel_counts(start_date=None, end_date=None, cs_email=None):
 
     query += " GROUP BY i.status"
     rows = query_db(query, tuple(args)) or []
-    mapping = { r.get('status'): r.get('total', 0) for r in rows }
-    ordered_labels = ['nova', 'futura', 'andamento', 'parada', 'finalizada', 'cancelada']
-    labels_pt = ['Novas', 'Futuras', 'Em Andamento', 'Paradas', 'Finalizadas', 'Canceladas']
+    mapping = {r.get("status"): r.get("total", 0) for r in rows}
+    ordered_labels = ["nova", "futura", "andamento", "parada", "finalizada", "cancelada"]
+    labels_pt = ["Novas", "Futuras", "Em Andamento", "Paradas", "Finalizadas", "Canceladas"]
     data = [mapping.get(k, 0) for k in ordered_labels]
-    return { 'labels': labels_pt, 'data': data }
+    return {"labels": labels_pt, "data": data}

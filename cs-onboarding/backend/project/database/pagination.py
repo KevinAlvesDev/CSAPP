@@ -93,20 +93,20 @@ class Pagination:
     def to_dict(self):
         """Retorna representação em dicionário."""
         return {
-            'page': self.page,
-            'per_page': self.per_page,
-            'total': self.total,
-            'pages': self.pages,
-            'has_prev': self.has_prev,
-            'has_next': self.has_next,
-            'prev_num': self.prev_num,
-            'next_num': self.next_num,
-            'offset': self.offset,
-            'limit': self.limit
+            "page": self.page,
+            "per_page": self.per_page,
+            "total": self.total,
+            "pages": self.pages,
+            "has_prev": self.has_prev,
+            "has_next": self.has_next,
+            "prev_num": self.prev_num,
+            "next_num": self.next_num,
+            "offset": self.offset,
+            "limit": self.limit,
         }
 
 
-def get_page_args(page_param='page', per_page_param='per_page', default_per_page=50, max_per_page=200):
+def get_page_args(page_param="page", per_page_param="per_page", default_per_page=50, max_per_page=200):
     """
     Extrai argumentos de paginação da request.
 

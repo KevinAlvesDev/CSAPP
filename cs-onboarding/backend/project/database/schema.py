@@ -1,9 +1,9 @@
-
 import click
 from flask import current_app
 from flask.cli import with_appcontext
 
 from ..db import get_db_connection
+
 
 def init_db():
     """Inicializa o schema do banco de dados (SQLite ou PostgreSQL)."""
@@ -12,8 +12,7 @@ def init_db():
         conn, db_type = get_db_connection()
         cursor = conn.cursor()
 
-        if db_type == 'postgres':
-
+        if db_type == "postgres":
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS usuarios (
                 usuario VARCHAR(255) PRIMARY KEY,
@@ -66,68 +65,82 @@ def init_db():
                 """)
             except Exception:
                 try:
-                    cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_name='checklist_items'")
+                    cursor.execute(
+                        "SELECT column_name FROM information_schema.columns WHERE table_name='checklist_items'"
+                    )
                     cols = [r[0] for r in cursor.fetchall()]
-                    if 'previsao_original' not in cols:
+                    if "previsao_original" not in cols:
                         cursor.execute("ALTER TABLE checklist_items ADD COLUMN previsao_original TIMESTAMP NULL")
-                    if 'nova_previsao' not in cols:
+                    if "nova_previsao" not in cols:
                         cursor.execute("ALTER TABLE checklist_items ADD COLUMN nova_previsao TIMESTAMP NULL")
                 except Exception:
                     pass
 
-        elif db_type == 'sqlite':
-             # Criar TODAS as tabelas diretamente (sem depender de script externo)
-             _criar_tabelas_basicas_sqlite(cursor)
-             _migrar_colunas_perfil_usuario(cursor)
+        elif db_type == "sqlite":
+            # Criar TODAS as tabelas diretamente (sem depender de script externo)
+            _criar_tabelas_basicas_sqlite(cursor)
+            _migrar_colunas_perfil_usuario(cursor)
 
-             # Migrar colunas faltantes na tabela implantacoes
-             _migrar_colunas_implantacoes(cursor)
+            # Migrar colunas faltantes na tabela implantacoes
+            _migrar_colunas_implantacoes(cursor)
 
-             # Migrar coluna detalhes na tabela timeline_log
-             _migrar_coluna_timeline_detalhes(cursor)
+            # Migrar coluna detalhes na tabela timeline_log
+            _migrar_coluna_timeline_detalhes(cursor)
 
-             # Migrar colunas faltantes na tabela planos_sucesso
-             _migrar_colunas_planos_sucesso(cursor)
+            # Migrar colunas faltantes na tabela planos_sucesso
+            _migrar_colunas_planos_sucesso(cursor)
 
-             # Migrar coluna checklist_item_id na tabela comentarios_h
-             _migrar_coluna_comentarios_checklist_item(cursor)
+            # Migrar coluna checklist_item_id na tabela comentarios_h
+            _migrar_coluna_comentarios_checklist_item(cursor)
 
-             # Migrar colunas de prazos em checklist_items
-             _migrar_colunas_prazos_checklist_items(cursor)
+            # Migrar colunas de prazos em checklist_items
+            _migrar_colunas_prazos_checklist_items(cursor)
 
-             # Criar tabela de histórico de responsável
-             _criar_tabela_responsavel_history(cursor, db_type)
+            # Criar tabela de histórico de responsável
+            _criar_tabela_responsavel_history(cursor, db_type)
 
-             # Inserir regras de gamificação padrão se não existirem
-             try:
-                 cursor.execute("SELECT COUNT(*) FROM gamificacao_regras")
-                 count = cursor.fetchone()[0] if cursor.rowcount > 0 else 0
-                 if count == 0:
-                     _inserir_regras_gamificacao_padrao(cursor)
-             except Exception:
-                 pass
+            # Inserir regras de gamificação padrão se não existirem
+            try:
+                cursor.execute("SELECT COUNT(*) FROM gamificacao_regras")
+                count = cursor.fetchone()[0] if cursor.rowcount > 0 else 0
+                if count == 0:
+                    _inserir_regras_gamificacao_padrao(cursor)
+            except Exception:
+                pass
 
         # Criar índices para performance
         try:
             # Índices básicos
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_items_implantacao_id ON checklist_items (implantacao_id)")
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_checklist_items_implantacao_id ON checklist_items (implantacao_id)"
+            )
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_items_parent_id ON checklist_items (parent_id)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_comentarios_h_checklist_item_id ON comentarios_h (checklist_item_id)")
-            
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_comentarios_h_checklist_item_id ON comentarios_h (checklist_item_id)"
+            )
+
             # Índices de performance adicionais
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_implantacoes_status ON implantacoes (status)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_implantacoes_usuario_cs ON implantacoes (usuario_cs)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_implantacoes_data_criacao ON implantacoes (data_criacao)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_implantacoes_tipo ON implantacoes (tipo)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_timeline_log_implantacao_id ON timeline_log (implantacao_id)")
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_timeline_log_implantacao_id ON timeline_log (implantacao_id)"
+            )
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_comentarios_h_data_criacao ON comentarios_h (data_criacao)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_comentarios_h_usuario_cs ON comentarios_h (usuario_cs)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_items_completed ON checklist_items (completed)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_perfil_usuario_perfil_acesso ON perfil_usuario (perfil_acesso)")
-            
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_perfil_usuario_perfil_acesso ON perfil_usuario (perfil_acesso)"
+            )
+
             # Índices compostos
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_implantacoes_status_usuario ON implantacoes (status, usuario_cs)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_comentarios_h_item_data ON comentarios_h (checklist_item_id, data_criacao)")
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_implantacoes_status_usuario ON implantacoes (status, usuario_cs)"
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_comentarios_h_item_data ON comentarios_h (checklist_item_id, data_criacao)"
+            )
         except Exception as idx_err:
             try:
                 current_app.logger.warning(f"Falha ao criar índices: {idx_err}")
@@ -144,12 +157,13 @@ def init_db():
         if conn:
             conn.close()
 
-@click.command('init-db')
+
+@click.command("init-db")
 @with_appcontext
 def init_db_command():
     """Cria as tabelas do banco de dados via linha de comando."""
     init_db()
-    click.echo('Inicialização do banco de dados concluída.')
+    click.echo("Inicialização do banco de dados concluída.")
 
 
 def _criar_tabela_jira_links(cursor):
@@ -388,7 +402,7 @@ def _criar_tabelas_basicas_sqlite(cursor):
     # ========================================
     # SISTEMA DE PERFIS E PERMISSÕES (RBAC)
     # ========================================
-    
+
     # Tabela de Perfis de Acesso
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS perfis_acesso (
@@ -404,7 +418,7 @@ def _criar_tabelas_basicas_sqlite(cursor):
             criado_por VARCHAR(100)
         )
     """)
-    
+
     # Tabela de Recursos/Funcionalidades
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS recursos (
@@ -418,7 +432,7 @@ def _criar_tabelas_basicas_sqlite(cursor):
             ativo BOOLEAN DEFAULT 1
         )
     """)
-    
+
     # Tabela de Permissões
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS permissoes (
@@ -430,7 +444,7 @@ def _criar_tabelas_basicas_sqlite(cursor):
             UNIQUE(perfil_id, recurso_id)
         )
     """)
-    
+
     # Inserir dados iniciais de perfis e recursos
     _popular_dados_iniciais_perfis(cursor)
 
@@ -465,61 +479,67 @@ def _popular_dados_iniciais_perfis(cursor):
         cursor.execute("SELECT COUNT(*) FROM perfis_acesso")
         if cursor.fetchone()[0] > 0:
             return  # Dados já existem
-        
+
         # Inserir perfis padrão
         perfis = [
-            ('Administrador', 'Acesso total ao sistema', 1, '#dc3545', 'bi-shield-check', 'Sistema'),
-            ('Implantador', 'Gerencia implantações e checklists', 1, '#0d6efd', 'bi-person-workspace', 'Sistema'),
-            ('Visualizador', 'Apenas visualização, sem edição', 1, '#6c757d', 'bi-eye', 'Sistema'),
+            ("Administrador", "Acesso total ao sistema", 1, "#dc3545", "bi-shield-check", "Sistema"),
+            ("Implantador", "Gerencia implantações e checklists", 1, "#0d6efd", "bi-person-workspace", "Sistema"),
+            ("Visualizador", "Apenas visualização, sem edição", 1, "#6c757d", "bi-eye", "Sistema"),
         ]
-        
+
         for perfil in perfis:
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT OR IGNORE INTO perfis_acesso (nome, descricao, sistema, cor, icone, criado_por)
                 VALUES (?, ?, ?, ?, ?, ?)
-            """, perfil)
-        
+            """,
+                perfil,
+            )
+
         # Inserir recursos
         recursos = [
-            ('dashboard.view', 'Visualizar Dashboard', 'Acessar página principal', 'Dashboard', 'pagina', 1),
-            ('dashboard.export', 'Exportar Relatórios', 'Exportar dados', 'Dashboard', 'acao', 2),
-            ('implantacoes.list', 'Listar Implantações', 'Ver lista', 'Implantações', 'pagina', 10),
-            ('implantacoes.view', 'Visualizar Detalhes', 'Ver detalhes', 'Implantações', 'acao', 11),
-            ('implantacoes.create', 'Criar Implantação', 'Criar nova', 'Implantações', 'acao', 12),
-            ('implantacoes.edit', 'Editar Implantação', 'Modificar dados', 'Implantações', 'acao', 13),
-            ('implantacoes.delete', 'Excluir Implantação', 'Remover do sistema', 'Implantações', 'acao', 14),
-            ('implantacoes.finalize', 'Finalizar Implantação', 'Marcar como concluída', 'Implantações', 'acao', 15),
-            ('checklist.view', 'Visualizar Checklist', 'Ver checklist', 'Checklist', 'pagina', 20),
-            ('checklist.check', 'Marcar Tarefas', 'Marcar/desmarcar', 'Checklist', 'acao', 21),
-            ('checklist.comment', 'Adicionar Comentários', 'Comentar', 'Checklist', 'acao', 22),
-            ('checklist.edit', 'Editar Tarefas', 'Modificar tarefas', 'Checklist', 'acao', 23),
-            ('checklist.delete', 'Excluir Tarefas', 'Remover tarefas', 'Checklist', 'acao', 24),
-            ('planos.list', 'Listar Planos', 'Ver lista', 'Planos de Sucesso', 'pagina', 30),
-            ('planos.view', 'Visualizar Plano', 'Ver detalhes', 'Planos de Sucesso', 'acao', 31),
-            ('planos.create', 'Criar Plano', 'Criar novo', 'Planos de Sucesso', 'acao', 32),
-            ('planos.edit', 'Editar Plano', 'Modificar plano', 'Planos de Sucesso', 'acao', 33),
-            ('planos.clone', 'Clonar Plano', 'Duplicar plano', 'Planos de Sucesso', 'acao', 34),
-            ('planos.delete', 'Excluir Plano', 'Remover plano', 'Planos de Sucesso', 'acao', 35),
-            ('planos.apply', 'Aplicar Plano', 'Aplicar a implantação', 'Planos de Sucesso', 'acao', 36),
-            ('usuarios.list', 'Listar Usuários', 'Ver lista', 'Usuários', 'pagina', 40),
-            ('usuarios.view', 'Visualizar Usuário', 'Ver detalhes', 'Usuários', 'acao', 41),
-            ('usuarios.create', 'Criar Usuário', 'Adicionar novo', 'Usuários', 'acao', 42),
-            ('usuarios.edit', 'Editar Usuário', 'Modificar dados', 'Usuários', 'acao', 43),
-            ('usuarios.delete', 'Excluir Usuário', 'Remover do sistema', 'Usuários', 'acao', 44),
-            ('perfis.list', 'Listar Perfis', 'Ver lista', 'Perfis de Acesso', 'pagina', 50),
-            ('perfis.view', 'Visualizar Perfil', 'Ver detalhes', 'Perfis de Acesso', 'acao', 51),
-            ('perfis.create', 'Criar Perfil', 'Criar novo', 'Perfis de Acesso', 'acao', 52),
-            ('perfis.edit', 'Editar Perfil', 'Modificar perfil', 'Perfis de Acesso', 'acao', 53),
-            ('perfis.delete', 'Excluir Perfil', 'Remover do sistema', 'Perfis de Acesso', 'acao', 54),
-            ('perfis.permissions', 'Gerenciar Permissões', 'Definir permissões', 'Perfis de Acesso', 'acao', 55),
+            ("dashboard.view", "Visualizar Dashboard", "Acessar página principal", "Dashboard", "pagina", 1),
+            ("dashboard.export", "Exportar Relatórios", "Exportar dados", "Dashboard", "acao", 2),
+            ("implantacoes.list", "Listar Implantações", "Ver lista", "Implantações", "pagina", 10),
+            ("implantacoes.view", "Visualizar Detalhes", "Ver detalhes", "Implantações", "acao", 11),
+            ("implantacoes.create", "Criar Implantação", "Criar nova", "Implantações", "acao", 12),
+            ("implantacoes.edit", "Editar Implantação", "Modificar dados", "Implantações", "acao", 13),
+            ("implantacoes.delete", "Excluir Implantação", "Remover do sistema", "Implantações", "acao", 14),
+            ("implantacoes.finalize", "Finalizar Implantação", "Marcar como concluída", "Implantações", "acao", 15),
+            ("checklist.view", "Visualizar Checklist", "Ver checklist", "Checklist", "pagina", 20),
+            ("checklist.check", "Marcar Tarefas", "Marcar/desmarcar", "Checklist", "acao", 21),
+            ("checklist.comment", "Adicionar Comentários", "Comentar", "Checklist", "acao", 22),
+            ("checklist.edit", "Editar Tarefas", "Modificar tarefas", "Checklist", "acao", 23),
+            ("checklist.delete", "Excluir Tarefas", "Remover tarefas", "Checklist", "acao", 24),
+            ("planos.list", "Listar Planos", "Ver lista", "Planos de Sucesso", "pagina", 30),
+            ("planos.view", "Visualizar Plano", "Ver detalhes", "Planos de Sucesso", "acao", 31),
+            ("planos.create", "Criar Plano", "Criar novo", "Planos de Sucesso", "acao", 32),
+            ("planos.edit", "Editar Plano", "Modificar plano", "Planos de Sucesso", "acao", 33),
+            ("planos.clone", "Clonar Plano", "Duplicar plano", "Planos de Sucesso", "acao", 34),
+            ("planos.delete", "Excluir Plano", "Remover plano", "Planos de Sucesso", "acao", 35),
+            ("planos.apply", "Aplicar Plano", "Aplicar a implantação", "Planos de Sucesso", "acao", 36),
+            ("usuarios.list", "Listar Usuários", "Ver lista", "Usuários", "pagina", 40),
+            ("usuarios.view", "Visualizar Usuário", "Ver detalhes", "Usuários", "acao", 41),
+            ("usuarios.create", "Criar Usuário", "Adicionar novo", "Usuários", "acao", 42),
+            ("usuarios.edit", "Editar Usuário", "Modificar dados", "Usuários", "acao", 43),
+            ("usuarios.delete", "Excluir Usuário", "Remover do sistema", "Usuários", "acao", 44),
+            ("perfis.list", "Listar Perfis", "Ver lista", "Perfis de Acesso", "pagina", 50),
+            ("perfis.view", "Visualizar Perfil", "Ver detalhes", "Perfis de Acesso", "acao", 51),
+            ("perfis.create", "Criar Perfil", "Criar novo", "Perfis de Acesso", "acao", 52),
+            ("perfis.edit", "Editar Perfil", "Modificar perfil", "Perfis de Acesso", "acao", 53),
+            ("perfis.delete", "Excluir Perfil", "Remover do sistema", "Perfis de Acesso", "acao", 54),
+            ("perfis.permissions", "Gerenciar Permissões", "Definir permissões", "Perfis de Acesso", "acao", 55),
         ]
-        
+
         for recurso in recursos:
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT OR IGNORE INTO recursos (codigo, nome, descricao, categoria, tipo, ordem)
                 VALUES (?, ?, ?, ?, ?, ?)
-            """, recurso)
-        
+            """,
+                recurso,
+            )
+
         # Conceder todas as permissões ao Administrador
         cursor.execute("""
             INSERT OR IGNORE INTO permissoes (perfil_id, recurso_id, concedida)
@@ -527,7 +547,7 @@ def _popular_dados_iniciais_perfis(cursor):
             FROM perfis_acesso p, recursos r
             WHERE p.nome = 'Administrador'
         """)
-        
+
         # Conceder permissões ao Implantador (sem Usuários e Perfis)
         cursor.execute("""
             INSERT OR IGNORE INTO permissoes (perfil_id, recurso_id, concedida)
@@ -535,7 +555,7 @@ def _popular_dados_iniciais_perfis(cursor):
             FROM perfis_acesso p, recursos r
             WHERE p.nome = 'Implantador' AND r.categoria NOT IN ('Usuários', 'Perfis de Acesso')
         """)
-        
+
         # Conceder apenas visualização ao Visualizador
         cursor.execute("""
             INSERT OR IGNORE INTO permissoes (perfil_id, recurso_id, concedida)
@@ -543,8 +563,8 @@ def _popular_dados_iniciais_perfis(cursor):
             FROM perfis_acesso p, recursos r
             WHERE p.nome = 'Visualizador' AND (r.codigo LIKE '%.view' OR r.codigo LIKE '%.list')
         """)
-        
-    except Exception as e:
+
+    except Exception:
         # Silenciar erros - dados podem já existir
         pass
 
@@ -554,7 +574,7 @@ def _migrar_coluna_timeline_detalhes(cursor):
     try:
         cursor.execute("PRAGMA table_info(timeline_log)")
         colunas = [row[1] for row in cursor.fetchall()]
-        if 'detalhes' not in colunas:
+        if "detalhes" not in colunas:
             cursor.execute("ALTER TABLE timeline_log ADD COLUMN detalhes TEXT")
     except Exception:
         pass
@@ -566,16 +586,22 @@ def _migrar_colunas_planos_sucesso(cursor):
         cursor.execute("PRAGMA table_info(planos_sucesso)")
         colunas_existentes = [row[1] for row in cursor.fetchall()]
 
+        # Whitelist de colunas permitidas (segurança contra SQL injection)
         colunas_para_adicionar = {
-            'data_atualizacao': 'DATETIME DEFAULT CURRENT_TIMESTAMP',
-            'dias_duracao': 'INTEGER',
-            'permite_excluir_tarefas': 'INTEGER DEFAULT 0'
+            "data_atualizacao": "DATETIME DEFAULT CURRENT_TIMESTAMP",
+            "dias_duracao": "INTEGER",
+            "permite_excluir_tarefas": "INTEGER DEFAULT 0",
         }
 
         colunas_adicionadas = 0
         for coluna, tipo in colunas_para_adicionar.items():
             if coluna not in colunas_existentes:
                 try:
+                    # Validação: coluna deve estar na whitelist
+                    if coluna not in colunas_para_adicionar:
+                        raise ValueError(f"Coluna não permitida: {coluna}")
+                    
+                    # Usar f-string apenas com valores validados da whitelist
                     cursor.execute(f"ALTER TABLE planos_sucesso ADD COLUMN {coluna} {tipo}")
                     colunas_adicionadas += 1
                 except Exception:
@@ -591,7 +617,7 @@ def _migrar_coluna_comentarios_checklist_item(cursor):
         cursor.execute("PRAGMA table_info(comentarios_h)")
         colunas_existentes = [row[1] for row in cursor.fetchall()]
 
-        if 'checklist_item_id' not in colunas_existentes:
+        if "checklist_item_id" not in colunas_existentes:
             cursor.execute("ALTER TABLE comentarios_h ADD COLUMN checklist_item_id INTEGER")
     except Exception:
         pass
@@ -602,9 +628,9 @@ def _migrar_colunas_prazos_checklist_items(cursor):
         cursor.execute("PRAGMA table_info(checklist_items)")
         cols = cursor.fetchall()
         names = [c[1] for c in cols]
-        if 'previsao_original' not in names:
+        if "previsao_original" not in names:
             cursor.execute("ALTER TABLE checklist_items ADD COLUMN previsao_original DATETIME")
-        if 'nova_previsao' not in names:
+        if "nova_previsao" not in names:
             cursor.execute("ALTER TABLE checklist_items ADD COLUMN nova_previsao DATETIME")
     except Exception:
         pass
@@ -612,7 +638,7 @@ def _migrar_colunas_prazos_checklist_items(cursor):
 
 def _criar_tabela_responsavel_history(cursor, db_type):
     try:
-        if db_type == 'sqlite':
+        if db_type == "sqlite":
             cursor.execute(
                 """
                 CREATE TABLE IF NOT EXISTS checklist_responsavel_history (
@@ -647,7 +673,7 @@ def _migrar_colunas_perfil_usuario(cursor):
     try:
         cursor.execute("PRAGMA table_info(perfil_usuario)")
         colunas_existentes = [row[1] for row in cursor.fetchall()]
-        if 'ultimo_check_externo' not in colunas_existentes:
+        if "ultimo_check_externo" not in colunas_existentes:
             cursor.execute("ALTER TABLE perfil_usuario ADD COLUMN ultimo_check_externo DATETIME")
     except Exception:
         pass
@@ -659,56 +685,62 @@ def _migrar_colunas_implantacoes(cursor):
         cursor.execute("PRAGMA table_info(implantacoes)")
         colunas_existentes = [row[1] for row in cursor.fetchall()]
 
+        # Whitelist de colunas permitidas (segurança contra SQL injection)
         colunas_para_adicionar = {
-            'cargo_responsavel': 'TEXT',
-            'telefone_responsavel': 'TEXT',
-            'data_inicio_producao': 'DATETIME',
-            'data_final_implantacao': 'DATETIME',
-            'id_favorecido': 'TEXT',
-            'cnpj': 'TEXT',
-            'nivel_receita': 'TEXT',
-            'chave_oamd': 'TEXT',
-            'tela_apoio_link': 'TEXT',
-            'informacao_infra': 'TEXT',
-            'seguimento': 'TEXT',
-            'tipos_planos': 'TEXT',
-            'modalidades': 'TEXT',
-            'horarios_func': 'TEXT',
-            'formas_pagamento': 'TEXT',
-            'diaria': 'TEXT',
-            'freepass': 'TEXT',
-            'alunos_ativos': 'INTEGER',
-            'sistema_anterior': 'TEXT',
-            'importacao': 'TEXT',
-            'recorrencia_usa': 'TEXT',
-            'boleto': 'TEXT',
-            'nota_fiscal': 'TEXT',
-            'catraca': 'TEXT',
-            'modelo_catraca': 'TEXT',
-            'facial': 'TEXT',
-            'modelo_facial': 'TEXT',
-            'wellhub': 'TEXT',
-            'totalpass': 'TEXT',
-            'valor_atribuido': 'TEXT',
-            'resp_estrategico_nome': 'TEXT',
-            'resp_onb_nome': 'TEXT',
-            'resp_estrategico_obs': 'TEXT',
-            'contatos': 'TEXT',
-            'motivo_parada': 'TEXT',
-            'data_cancelamento': 'DATETIME',
-            'motivo_cancelamento': 'TEXT',
-            'comprovante_cancelamento_url': 'TEXT',
-            'status_implantacao_oamd': 'TEXT',
-            'nivel_atendimento': 'TEXT',
-            'data_cadastro': 'DATETIME',
-            'contexto': 'VARCHAR(50) DEFAULT "onboarding"',
-            'definicao_carteira': 'TEXT'
+            "cargo_responsavel": "TEXT",
+            "telefone_responsavel": "TEXT",
+            "data_inicio_producao": "DATETIME",
+            "data_final_implantacao": "DATETIME",
+            "id_favorecido": "TEXT",
+            "cnpj": "TEXT",
+            "nivel_receita": "TEXT",
+            "chave_oamd": "TEXT",
+            "tela_apoio_link": "TEXT",
+            "informacao_infra": "TEXT",
+            "seguimento": "TEXT",
+            "tipos_planos": "TEXT",
+            "modalidades": "TEXT",
+            "horarios_func": "TEXT",
+            "formas_pagamento": "TEXT",
+            "diaria": "TEXT",
+            "freepass": "TEXT",
+            "alunos_ativos": "INTEGER",
+            "sistema_anterior": "TEXT",
+            "importacao": "TEXT",
+            "recorrencia_usa": "TEXT",
+            "boleto": "TEXT",
+            "nota_fiscal": "TEXT",
+            "catraca": "TEXT",
+            "modelo_catraca": "TEXT",
+            "facial": "TEXT",
+            "modelo_facial": "TEXT",
+            "wellhub": "TEXT",
+            "totalpass": "TEXT",
+            "valor_atribuido": "TEXT",
+            "resp_estrategico_nome": "TEXT",
+            "resp_onb_nome": "TEXT",
+            "resp_estrategico_obs": "TEXT",
+            "contatos": "TEXT",
+            "motivo_parada": "TEXT",
+            "data_cancelamento": "DATETIME",
+            "motivo_cancelamento": "TEXT",
+            "comprovante_cancelamento_url": "TEXT",
+            "status_implantacao_oamd": "TEXT",
+            "nivel_atendimento": "TEXT",
+            "data_cadastro": "DATETIME",
+            "contexto": 'VARCHAR(50) DEFAULT "onboarding"',
+            "definicao_carteira": "TEXT",
         }
 
         colunas_adicionadas = 0
         for coluna, tipo in colunas_para_adicionar.items():
             if coluna not in colunas_existentes:
                 try:
+                    # Validação: coluna deve estar na whitelist
+                    if coluna not in colunas_para_adicionar:
+                        raise ValueError(f"Coluna não permitida: {coluna}")
+                    
+                    # Usar f-string apenas com valores validados da whitelist
                     cursor.execute(f"ALTER TABLE implantacoes ADD COLUMN {coluna} {tipo}")
                     colunas_adicionadas += 1
                 except Exception:
@@ -721,20 +753,23 @@ def _migrar_colunas_implantacoes(cursor):
 def _inserir_regras_gamificacao_padrao(cursor):
     """Insere regras de gamificação padrão no banco."""
     regras = [
-        ('eleg_nota_qualidade_min', 'Elegibilidade', 'Nota Qualidade (Mín %)', 80, 'percentual'),
-        ('eleg_assiduidade_min', 'Elegibilidade', 'Assiduidade (Mín %)', 85, 'percentual'),
-        ('eleg_planos_sucesso_min', 'Elegibilidade', 'Planos de Sucesso (Mín %)', 75, 'percentual'),
-        ('eleg_reclamacoes_max', 'Elegibilidade', 'Reclamações (Máx)', 1, 'quantidade'),
-        ('eleg_perda_prazo_max', 'Elegibilidade', 'Perda de Prazo (Máx)', 2, 'quantidade'),
+        ("eleg_nota_qualidade_min", "Elegibilidade", "Nota Qualidade (Mín %)", 80, "percentual"),
+        ("eleg_assiduidade_min", "Elegibilidade", "Assiduidade (Mín %)", 85, "percentual"),
+        ("eleg_planos_sucesso_min", "Elegibilidade", "Planos de Sucesso (Mín %)", 75, "percentual"),
+        ("eleg_reclamacoes_max", "Elegibilidade", "Reclamações (Máx)", 1, "quantidade"),
+        ("eleg_perda_prazo_max", "Elegibilidade", "Perda de Prazo (Máx)", 2, "quantidade"),
     ]
 
     for regra_id, categoria, descricao, valor_pontos, tipo_valor in regras:
         try:
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT OR IGNORE INTO gamificacao_regras 
                 (regra_id, categoria, descricao, valor_pontos, tipo_valor) 
                 VALUES (?, ?, ?, ?, ?)
-            """, (regra_id, categoria, descricao, valor_pontos, tipo_valor))
+            """,
+                (regra_id, categoria, descricao, valor_pontos, tipo_valor),
+            )
         except Exception:
             pass
 
@@ -748,29 +783,34 @@ def ensure_implantacoes_status_constraint():
     conn, db_type = None, None
     try:
         conn, db_type = get_db_connection()
-        if db_type != 'postgres':
+        if db_type != "postgres":
             return
         cursor = conn.cursor()
-        
-        # Migração de colunas críticas para Postgres (Safety check)
+
+        # Whitelist de colunas permitidas para Postgres (segurança contra SQL injection)
         check_cols = {
-            'status_implantacao_oamd': 'VARCHAR(255)',
-            'nivel_atendimento': 'VARCHAR(255)',
-            'data_cadastro': 'TIMESTAMP',
-            'chave_oamd': 'TEXT',
-            'tela_apoio_link': 'TEXT',
-            'informacao_infra': 'TEXT',
-            'cnpj': 'VARCHAR(20)',
-            'modelo_catraca': 'TEXT',
-            'modelo_facial': 'TEXT',
-            'wellhub': 'VARCHAR(10)',
-            'totalpass': 'VARCHAR(10)',
-            'valor_monetario': 'TEXT',
-            'definicao_carteira': 'TEXT',
-            'contexto': 'VARCHAR(50) DEFAULT \'onboarding\'',
+            "status_implantacao_oamd": "VARCHAR(255)",
+            "nivel_atendimento": "VARCHAR(255)",
+            "data_cadastro": "TIMESTAMP",
+            "chave_oamd": "TEXT",
+            "tela_apoio_link": "TEXT",
+            "informacao_infra": "TEXT",
+            "cnpj": "VARCHAR(20)",
+            "modelo_catraca": "TEXT",
+            "modelo_facial": "TEXT",
+            "wellhub": "VARCHAR(10)",
+            "totalpass": "VARCHAR(10)",
+            "valor_monetario": "TEXT",
+            "definicao_carteira": "TEXT",
+            "contexto": "VARCHAR(50) DEFAULT 'onboarding'",
         }
         for col_name, col_type in check_cols.items():
             try:
+                # Validação: coluna deve estar na whitelist
+                if col_name not in check_cols:
+                    raise ValueError(f"Coluna não permitida: {col_name}")
+                
+                # Usar f-string apenas com valores validados da whitelist
                 cursor.execute(f"ALTER TABLE implantacoes ADD COLUMN IF NOT EXISTS {col_name} {col_type}")
             except Exception:
                 pass
@@ -796,6 +836,6 @@ def ensure_implantacoes_status_constraint():
         if conn:
             conn.rollback()
     finally:
-        use_sqlite = current_app.config.get('USE_SQLITE_LOCALLY', False)
+        use_sqlite = current_app.config.get("USE_SQLITE_LOCALLY", False)
         if use_sqlite and conn:
             conn.close()

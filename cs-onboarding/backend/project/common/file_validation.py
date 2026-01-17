@@ -2,6 +2,7 @@ import os
 
 try:
     import magic
+
     MAGIC_AVAILABLE = True
 except ImportError:
     MAGIC_AVAILABLE = False
@@ -9,34 +10,34 @@ from flask import current_app
 from werkzeug.utils import secure_filename
 
 ALLOWED_EXTENSIONS = {
-    'png': ['image/png'],
-    'jpg': ['image/jpeg'],
-    'jpeg': ['image/jpeg'],
-    'gif': ['image/gif'],
-    'webp': ['image/webp'],
-    'pdf': ['application/pdf'],
-    'doc': ['application/msword'],
-    'docx': ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
-    'xls': ['application/vnd.ms-excel'],
-    'xlsx': ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
-    'ppt': ['application/vnd.ms-powerpoint'],
-    'pptx': ['application/vnd.openxmlformats-officedocument.presentationml.presentation'],
-    'txt': ['text/plain'],
-    'csv': ['text/csv', 'text/plain'],
-    'zip': ['application/zip'],
-    'rar': ['application/x-rar-compressed'],
+    "png": ["image/png"],
+    "jpg": ["image/jpeg"],
+    "jpeg": ["image/jpeg"],
+    "gif": ["image/gif"],
+    "webp": ["image/webp"],
+    "pdf": ["application/pdf"],
+    "doc": ["application/msword"],
+    "docx": ["application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+    "xls": ["application/vnd.ms-excel"],
+    "xlsx": ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
+    "ppt": ["application/vnd.ms-powerpoint"],
+    "pptx": ["application/vnd.openxmlformats-officedocument.presentationml.presentation"],
+    "txt": ["text/plain"],
+    "csv": ["text/csv", "text/plain"],
+    "zip": ["application/zip"],
+    "rar": ["application/x-rar-compressed"],
 }
 
 MAX_FILE_SIZE = 10 * 1024 * 1024
 
 
 def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 def get_file_extension(filename):
-    if '.' in filename:
-        return filename.rsplit('.', 1)[1].lower()
+    if "." in filename:
+        return filename.rsplit(".", 1)[1].lower()
     return None
 
 
@@ -88,7 +89,7 @@ def validate_uploaded_file(file, filename=None):
     if not file:
         return False, "Nenhum arquivo enviado", None
     filename = filename or file.filename
-    if not filename or filename == '':
+    if not filename or filename == "":
         return False, "Nome de arquivo inválido", None
     safe_filename = secure_filename(filename)
     if not allowed_file(filename):
@@ -101,11 +102,11 @@ def validate_uploaded_file(file, filename=None):
     if not content_valid:
         return False, content_error, None
     metadata = {
-        'original_filename': filename,
-        'safe_filename': safe_filename,
-        'extension': get_file_extension(filename),
-        'mime_type': mime_type,
-        'size_bytes': file_size,
-        'size_mb': round(file_size / (1024 * 1024), 2)
+        "original_filename": filename,
+        "safe_filename": safe_filename,
+        "extension": get_file_extension(filename),
+        "mime_type": mime_type,
+        "size_bytes": file_size,
+        "size_mb": round(file_size / (1024 * 1024), 2),
     }
     return True, None, metadata

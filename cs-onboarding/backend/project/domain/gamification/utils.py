@@ -3,6 +3,7 @@ Módulo de Utilidades de Gamificação
 Funções auxiliares de cache e listagem de usuários.
 Princípio SOLID: Single Responsibility
 """
+
 from ...db import query_db
 
 
@@ -21,6 +22,6 @@ def get_all_cs_users_for_gamification():
     """Busca todos os usuários com nome e e-mail para o filtro de gamificação."""
     result = query_db(
         "SELECT usuario, nome, cargo FROM perfil_usuario WHERE perfil_acesso IS NOT NULL AND perfil_acesso != '' ORDER BY nome",
-        ()
+        (),
     )
     return result if result is not None else []

@@ -14,6 +14,7 @@ try:
     import sentry_sdk
     from sentry_sdk.integrations.flask import FlaskIntegration
     from sentry_sdk.integrations.logging import LoggingIntegration
+
     SENTRY_AVAILABLE = True
 except ImportError:
     SENTRY_AVAILABLE = False
@@ -35,18 +36,15 @@ def init_sentry(app):
         app.logger.info("Sentry não disponível (sentry-sdk não instalado)")
         return
 
-    sentry_dsn = app.config.get('SENTRY_DSN') or os.environ.get('SENTRY_DSN')
+    sentry_dsn = app.config.get("SENTRY_DSN") or os.environ.get("SENTRY_DSN")
 
     if not sentry_dsn:
         app.logger.info("Sentry não configurado (SENTRY_DSN não definido)")
         return
 
-    environment = app.config.get('FLASK_ENV', 'production')
+    environment = app.config.get("FLASK_ENV", "production")
 
-    logging_integration = LoggingIntegration(
-        level=None,
-        event_level='ERROR'
-    )
+    logging_integration = LoggingIntegration(level=None, event_level="ERROR")
 
     sentry_sdk.init(
         dsn=sentry_dsn,
@@ -56,7 +54,7 @@ def init_sentry(app):
         ],
         traces_sample_rate=0.1,
         environment=environment,
-        release=app.config.get('APP_VERSION', 'unknown'),
+        release=app.config.get("APP_VERSION", "unknown"),
         send_default_pii=False,
         max_breadcrumbs=50,
         before_send=before_send_filter,
@@ -82,22 +80,23 @@ def before_send_filter(event, hint):
         event modificado ou None para ignorar
     """
 
-    if event.get('level') == 'error':
-        exception = event.get('exception', {}).get('values', [{}])[0]
-        if exception.get('type') == 'NotFound':
+    if event.get("level") == "error":
+        exception = event.get("exception", {}).get("values", [{}])[0]
+        if exception.get("type") == "NotFound":
             return None
 
-    if 'request' in event:
-        headers = event['request'].get('headers', {})
-        if 'Authorization' in headers:
-            headers['Authorization'] = '[Filtered]'
-        if 'Cookie' in headers:
-            headers['Cookie'] = '[Filtered]'
+    if "request" in event:
+        headers = event["request"].get("headers", {})
+        if "Authorization" in headers:
+            headers["Authorization"] = "[Filtered]"
+        if "Cookie" in headers:
+            headers["Cookie"] = "[Filtered]"
 
     try:
         from flask import g
-        if hasattr(g, 'user_email'):
-            event.setdefault('user', {})['email'] = g.user_email
+
+        if hasattr(g, "user_email"):
+            event.setdefault("user", {})["email"] = g.user_email
     except Exception:
         pass
 
@@ -121,7 +120,7 @@ def capture_exception(exception, context=None):
         sentry_sdk.capture_exception(exception)
 
 
-def capture_message(message, level='info', context=None):
+def capture_message(message, level="info", context=None):
     """
     Captura uma mensagem manualmente e envia para o Sentry.
 

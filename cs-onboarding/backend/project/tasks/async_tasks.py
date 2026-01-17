@@ -30,12 +30,7 @@ class BackgroundTask:
         Exemplo:
             BackgroundTask.run(send_email, subject="Test", body="Hello")
         """
-        thread = threading.Thread(
-            target=func,
-            args=args,
-            kwargs=kwargs,
-            daemon=True
-        )
+        thread = threading.Thread(target=func, args=args, kwargs=kwargs, daemon=True)
         thread.start()
         return thread
 
@@ -64,6 +59,7 @@ class BackgroundTask:
                 recipients=["user@example.com"]
             )
         """
+
         def wrapper():
             with app.app_context():
                 try:
@@ -76,10 +72,14 @@ class BackgroundTask:
         return thread
 
 
-def send_email_async(subject: str, body_html: str, recipients: list,
-                     reply_to: Optional[str] = None,
-                     from_name: Optional[str] = None,
-                     body_text: Optional[str] = None) -> threading.Thread:
+def send_email_async(
+    subject: str,
+    body_html: str,
+    recipients: list,
+    reply_to: Optional[str] = None,
+    from_name: Optional[str] = None,
+    body_text: Optional[str] = None,
+) -> threading.Thread:
     """
     Envia email de forma assíncrona (não bloqueante).
 
@@ -114,7 +114,7 @@ def send_email_async(subject: str, body_html: str, recipients: list,
                     recipients=recipients,
                     reply_to=reply_to,
                     from_name=from_name,
-                    body_text=body_text
+                    body_text=body_text,
                 )
                 app.logger.info(f"Async email sent successfully to {recipients}")
             except Exception as e:

@@ -1,4 +1,3 @@
-
 """
 Documentação da API usando especificação OpenAPI 3.0.
 Acessível em /api/docs
@@ -6,7 +5,7 @@ Acessível em /api/docs
 
 from flask import Blueprint, jsonify, render_template_string
 
-api_docs_bp = Blueprint('api_docs', __name__)
+api_docs_bp = Blueprint("api_docs", __name__)
 
 OPENAPI_SPEC = {
     "openapi": "3.0.0",
@@ -14,30 +13,13 @@ OPENAPI_SPEC = {
         "title": "CSAPP API",
         "description": "API para gerenciamento de implantações de Customer Success",
         "version": "1.0.0",
-        "contact": {
-            "name": "Suporte CS",
-            "email": "suporte@csapp.com"
-        }
+        "contact": {"name": "Suporte CS", "email": "suporte@csapp.com"},
     },
-    "servers": [
-        {
-            "url": "/",
-            "description": "Servidor atual"
-        }
-    ],
+    "servers": [{"url": "/", "description": "Servidor atual"}],
     "tags": [
-        {
-            "name": "Tarefas",
-            "description": "Operações relacionadas a tarefas de implantação"
-        },
-        {
-            "name": "Comentários",
-            "description": "Operações relacionadas a comentários em tarefas"
-        },
-        {
-            "name": "Health",
-            "description": "Endpoints de monitoramento e saúde da aplicação"
-        }
+        {"name": "Tarefas", "description": "Operações relacionadas a tarefas de implantação"},
+        {"name": "Comentários", "description": "Operações relacionadas a comentários em tarefas"},
+        {"name": "Health", "description": "Endpoints de monitoramento e saúde da aplicação"},
     ],
     "paths": {
         "/api/toggle_tarefa_h/<tarefa_h_id>": {
@@ -50,10 +32,8 @@ OPENAPI_SPEC = {
                         "name": "tarefa_h_id",
                         "in": "path",
                         "required": True,
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "ID da tarefa hierárquica"
+                        "schema": {"type": "integer"},
+                        "description": "ID da tarefa hierárquica",
                     }
                 ],
                 "requestBody": {
@@ -65,12 +45,12 @@ OPENAPI_SPEC = {
                                 "properties": {
                                     "concluido": {
                                         "type": "boolean",
-                                        "description": "Status desejado (opcional, se não enviado alterna)"
+                                        "description": "Status desejado (opcional, se não enviado alterna)",
                                     }
-                                }
+                                },
                             }
                         }
-                    }
+                    },
                 },
                 "responses": {
                     "200": {
@@ -82,25 +62,16 @@ OPENAPI_SPEC = {
                                     "properties": {
                                         "ok": {"type": "boolean"},
                                         "novo_progresso": {"type": "number"},
-                                        "concluida": {"type": "boolean"}
-                                    }
+                                        "concluida": {"type": "boolean"},
+                                    },
                                 }
                             },
-                            "text/html": {
-                                "schema": {
-                                    "type": "string",
-                                    "description": "HTML fragment (HTMX response)"
-                                }
-                            }
-                        }
+                            "text/html": {"schema": {"type": "string", "description": "HTML fragment (HTMX response)"}},
+                        },
                     },
-                    "403": {
-                        "description": "Permissão negada"
-                    },
-                    "404": {
-                        "description": "Tarefa não encontrada"
-                    }
-                }
+                    "403": {"description": "Permissão negada"},
+                    "404": {"description": "Tarefa não encontrada"},
+                },
             }
         },
         "/api/toggle_subtarefa_h/<sub_id>": {
@@ -113,10 +84,8 @@ OPENAPI_SPEC = {
                         "name": "sub_id",
                         "in": "path",
                         "required": True,
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "ID da subtarefa"
+                        "schema": {"type": "integer"},
+                        "description": "ID da subtarefa",
                     }
                 ],
                 "requestBody": {
@@ -128,12 +97,12 @@ OPENAPI_SPEC = {
                                 "properties": {
                                     "concluido": {
                                         "type": "boolean",
-                                        "description": "Status desejado (opcional, se não enviado alterna)"
+                                        "description": "Status desejado (opcional, se não enviado alterna)",
                                     }
-                                }
+                                },
                             }
                         }
-                    }
+                    },
                 },
                 "responses": {
                     "200": {
@@ -145,25 +114,16 @@ OPENAPI_SPEC = {
                                     "properties": {
                                         "ok": {"type": "boolean"},
                                         "novo_progresso": {"type": "number"},
-                                        "concluida": {"type": "boolean"}
-                                    }
+                                        "concluida": {"type": "boolean"},
+                                    },
                                 }
                             },
-                            "text/html": {
-                                "schema": {
-                                    "type": "string",
-                                    "description": "HTML fragment (HTMX response)"
-                                }
-                            }
-                        }
+                            "text/html": {"schema": {"type": "string", "description": "HTML fragment (HTMX response)"}},
+                        },
                     },
-                    "403": {
-                        "description": "Permissão negada"
-                    },
-                    "404": {
-                        "description": "Subtarefa não encontrada"
-                    }
-                }
+                    "403": {"description": "Permissão negada"},
+                    "404": {"description": "Subtarefa não encontrada"},
+                },
             }
         },
         "/health": {
@@ -182,23 +142,21 @@ OPENAPI_SPEC = {
                                         "status": {"type": "string"},
                                         "timestamp": {"type": "string"},
                                         "version": {"type": "string"},
-                                        "checks": {"type": "object"}
-                                    }
+                                        "checks": {"type": "object"},
+                                    },
                                 }
                             }
-                        }
+                        },
                     },
-                    "503": {
-                        "description": "Aplicação não saudável"
-                    }
-                }
+                    "503": {"description": "Aplicação não saudável"},
+                },
             }
-        }
-    }
+        },
+    },
 }
 
 
-@api_docs_bp.route('/api/docs', methods=['GET'])
+@api_docs_bp.route("/api/docs", methods=["GET"])
 def api_documentation():
     """
     Renderiza a documentação da API usando Swagger UI.
@@ -239,10 +197,9 @@ def api_documentation():
     return render_template_string(swagger_ui_html)
 
 
-@api_docs_bp.route('/api/docs/spec', methods=['GET'])
+@api_docs_bp.route("/api/docs/spec", methods=["GET"])
 def api_spec():
     """
     Retorna a especificação OpenAPI em JSON.
     """
     return jsonify(OPENAPI_SPEC)
-

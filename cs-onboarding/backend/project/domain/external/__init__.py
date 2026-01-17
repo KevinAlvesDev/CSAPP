@@ -10,6 +10,10 @@ Estrutura:
 """
 
 # Função principal de consulta
+# Funções de mapeamento
+from .mapper import (
+    map_oamd_to_frontend,
+)
 from .oamd import (
     consultar_empresa_oamd,
 )
@@ -20,30 +24,25 @@ from .query import (
     execute_oamd_search,
 )
 
-# Funções de mapeamento
-from .mapper import (
-    map_oamd_to_frontend,
-)
-
 # Funções utilitárias
 from .utils import (
+    build_tela_apoio_link,
+    extract_infra_code,
     json_safe_value,
     sanitize_empresa_data,
-    extract_infra_code,
-    build_tela_apoio_link,
 )
 
 # Exports públicos
 __all__ = [
     # Principal
-    'consultar_empresa_oamd',
+    "consultar_empresa_oamd",
     # Query
-    'build_oamd_query',
-    'execute_oamd_search',
+    "build_oamd_query",
+    "execute_oamd_search",
     # Mapper
-    'map_oamd_to_frontend',
+    "map_oamd_to_frontend",
     # Utils
-    'json_safe_value',
-    'sanitize_empresa_data',
-    'extract_infra_code',
+    "json_safe_value",
+    "sanitize_empresa_data",
+    "extract_infra_code",
 ]

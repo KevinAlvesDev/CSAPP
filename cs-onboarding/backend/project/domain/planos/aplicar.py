@@ -3,8 +3,9 @@ Módulo de Aplicação de Planos
 Aplicar e remover planos de implantações.
 Princípio SOLID: Single Responsibility
 """
-from datetime import datetime, timedelta, date
-from typing import Dict, Optional
+
+from datetime import date, datetime, timedelta
+from typing import Dict
 
 from flask import current_app
 
@@ -21,9 +22,7 @@ def aplicar_plano_a_implantacao(implantacao_id: int, plano_id: int, usuario: str
         raise ValidationError("ID da implantação e do plano são obrigatórios")
 
     implantacao = query_db(
-        "SELECT id, data_inicio_efetivo, data_criacao FROM implantacoes WHERE id = %s",
-        (implantacao_id,),
-        one=True
+        "SELECT id, data_inicio_efetivo, data_criacao FROM implantacoes WHERE id = %s", (implantacao_id,), one=True
     )
     if not implantacao:
         raise ValidationError(f"Implantação com ID {implantacao_id} não encontrada")
@@ -32,26 +31,26 @@ def aplicar_plano_a_implantacao(implantacao_id: int, plano_id: int, usuario: str
     if not plano:
         raise ValidationError(f"Plano com ID {plano_id} não encontrado")
 
-    if not plano.get('ativo'):
+    if not plano.get("ativo"):
         raise ValidationError(f"Plano '{plano['nome']}' está inativo")
 
     data_previsao_termino = None
-    dias_duracao = plano.get('dias_duracao')
+    dias_duracao = plano.get("dias_duracao")
 
     if dias_duracao:
-        data_inicio = implantacao.get('data_inicio_efetivo') or implantacao.get('data_criacao')
+        data_inicio = implantacao.get("data_inicio_efetivo") or implantacao.get("data_criacao")
         if data_inicio:
             try:
                 if isinstance(data_inicio, str):
-                    data_inicio = datetime.strptime(data_inicio[:10], '%Y-%m-%d')
+                    data_inicio = datetime.strptime(data_inicio[:10], "%Y-%m-%d")
                 elif isinstance(data_inicio, date) and not isinstance(data_inicio, datetime):
-                     data_inicio = datetime.combine(data_inicio, datetime.min.time())
-                
+                    data_inicio = datetime.combine(data_inicio, datetime.min.time())
+
                 if isinstance(data_inicio, datetime):
                     data_previsao_termino = data_inicio + timedelta(days=int(dias_duracao))
-                else: 
-                     data_previsao_termino = datetime.now() + timedelta(days=int(dias_duracao))
-                     
+                else:
+                    data_previsao_termino = datetime.now() + timedelta(days=int(dias_duracao))
+
             except Exception as e:
                 current_app.logger.warning(f"Erro ao calcular previsão término (usando data atual): {e}")
                 data_previsao_termino = datetime.now() + timedelta(days=int(dias_duracao))
@@ -67,14 +66,14 @@ def aplicar_plano_a_implantacao(implantacao_id: int, plano_id: int, usuario: str
                     SELECT id FROM checklist_items WHERE implantacao_id = %s
                 )
             """
-            if db_type == 'sqlite':
-                sql_limpar_comentarios = sql_limpar_comentarios.replace('%s', '?')
+            if db_type == "sqlite":
+                sql_limpar_comentarios = sql_limpar_comentarios.replace("%s", "?")
             cursor.execute(sql_limpar_comentarios, (implantacao_id,))
-            
+
             # Agora deletar os itens do checklist
             sql_limpar = "DELETE FROM checklist_items WHERE implantacao_id = %s"
-            if db_type == 'sqlite':
-                sql_limpar = sql_limpar.replace('%s', '?')
+            if db_type == "sqlite":
+                sql_limpar = sql_limpar.replace("%s", "?")
             cursor.execute(sql_limpar, (implantacao_id,))
 
             _clonar_plano_para_implantacao(cursor, db_type, plano, implantacao_id, usuario)
@@ -84,8 +83,8 @@ def aplicar_plano_a_implantacao(implantacao_id: int, plano_id: int, usuario: str
                 SET plano_sucesso_id = %s, data_atribuicao_plano = %s, data_previsao_termino = %s
                 WHERE id = %s
             """
-            if db_type == 'sqlite':
-                sql_update = sql_update.replace('%s', '?')
+            if db_type == "sqlite":
+                sql_update = sql_update.replace("%s", "?")
 
             cursor.execute(sql_update, (plano_id, datetime.now(), data_previsao_termino, implantacao_id))
 
@@ -102,7 +101,9 @@ def aplicar_plano_a_implantacao(implantacao_id: int, plano_id: int, usuario: str
             raise DatabaseError(f"Erro ao aplicar plano: {e}") from e
 
 
-def aplicar_plano_a_implantacao_checklist(implantacao_id: int, plano_id: int, usuario: str, responsavel_nome: str | None = None) -> bool:
+def aplicar_plano_a_implantacao_checklist(
+    implantacao_id: int, plano_id: int, usuario: str, responsavel_nome: str | None = None
+) -> bool:
     """
     Aplica um plano de sucesso a uma implantação usando checklist_items.
     Clona a estrutura do plano (itens com implantacao_id = NULL) para a implantação.
@@ -111,9 +112,7 @@ def aplicar_plano_a_implantacao_checklist(implantacao_id: int, plano_id: int, us
         raise ValidationError("ID da implantação e do plano são obrigatórios")
 
     implantacao = query_db(
-        "SELECT id, data_inicio_efetivo, data_criacao FROM implantacoes WHERE id = %s",
-        (implantacao_id,),
-        one=True
+        "SELECT id, data_inicio_efetivo, data_criacao FROM implantacoes WHERE id = %s", (implantacao_id,), one=True
     )
     if not implantacao:
         raise ValidationError(f"Implantação com ID {implantacao_id} não encontrada")
@@ -122,18 +121,18 @@ def aplicar_plano_a_implantacao_checklist(implantacao_id: int, plano_id: int, us
     if not plano:
         raise ValidationError(f"Plano com ID {plano_id} não encontrado")
 
-    if not plano.get('ativo', True):
+    if not plano.get("ativo", True):
         raise ValidationError(f"Plano '{plano['nome']}' está inativo")
 
     data_previsao_termino = None
-    dias_duracao = plano.get('dias_duracao')
+    dias_duracao = plano.get("dias_duracao")
 
     if dias_duracao:
-        data_inicio = implantacao.get('data_inicio_efetivo') or implantacao.get('data_criacao')
+        data_inicio = implantacao.get("data_inicio_efetivo") or implantacao.get("data_criacao")
         if data_inicio:
             if isinstance(data_inicio, str):
                 try:
-                    data_inicio = datetime.strptime(data_inicio[:10], '%Y-%m-%d')
+                    data_inicio = datetime.strptime(data_inicio[:10], "%Y-%m-%d")
                 except:
                     data_inicio = datetime.now()
             data_previsao_termino = data_inicio + timedelta(days=int(dias_duracao))
@@ -149,14 +148,14 @@ def aplicar_plano_a_implantacao_checklist(implantacao_id: int, plano_id: int, us
                     SELECT id FROM checklist_items WHERE implantacao_id = %s
                 )
             """
-            if db_type == 'sqlite':
-                sql_limpar_comentarios = sql_limpar_comentarios.replace('%s', '?')
+            if db_type == "sqlite":
+                sql_limpar_comentarios = sql_limpar_comentarios.replace("%s", "?")
             cursor.execute(sql_limpar_comentarios, (implantacao_id,))
-            
+
             # Agora deletar os itens do checklist
             sql_limpar = "DELETE FROM checklist_items WHERE implantacao_id = %s"
-            if db_type == 'sqlite':
-                sql_limpar = sql_limpar.replace('%s', '?')
+            if db_type == "sqlite":
+                sql_limpar = sql_limpar.replace("%s", "?")
             cursor.execute(sql_limpar, (implantacao_id,))
 
             # Responsável padrão: nome completo do usuário (fallback: email)
@@ -165,7 +164,7 @@ def aplicar_plano_a_implantacao_checklist(implantacao_id: int, plano_id: int, us
             else:
                 try:
                     perfil = query_db("SELECT nome FROM perfil_usuario WHERE usuario = %s", (usuario,), one=True)
-                    responsavel_padrao = perfil.get('nome') if perfil and perfil.get('nome') else usuario
+                    responsavel_padrao = perfil.get("nome") if perfil and perfil.get("nome") else usuario
                 except Exception:
                     responsavel_padrao = usuario
 
@@ -175,9 +174,11 @@ def aplicar_plano_a_implantacao_checklist(implantacao_id: int, plano_id: int, us
                 plano_id,
                 implantacao_id,
                 responsavel_padrao,
-                data_inicio if 'data_inicio' in locals() else (implantacao.get('data_inicio_efetivo') or implantacao.get('data_criacao')),
+                data_inicio
+                if "data_inicio" in locals()
+                else (implantacao.get("data_inicio_efetivo") or implantacao.get("data_criacao")),
                 int(dias_duracao or 0),
-                data_previsao_termino
+                data_previsao_termino,
             )
 
             sql_update = """
@@ -185,8 +186,8 @@ def aplicar_plano_a_implantacao_checklist(implantacao_id: int, plano_id: int, us
                 SET plano_sucesso_id = %s, data_atribuicao_plano = %s, data_previsao_termino = %s
                 WHERE id = %s
             """
-            if db_type == 'sqlite':
-                sql_update = sql_update.replace('%s', '?')
+            if db_type == "sqlite":
+                sql_update = sql_update.replace("%s", "?")
 
             cursor.execute(sql_update, (plano_id, datetime.now(), data_previsao_termino, implantacao_id))
 
@@ -197,20 +198,22 @@ def aplicar_plano_a_implantacao_checklist(implantacao_id: int, plano_id: int, us
             )
 
             try:
-                from ...db import logar_timeline
                 from ...common.utils import format_date_iso_for_json
+                from ...db import logar_timeline
+
                 prev_txt = format_date_iso_for_json(data_previsao_termino) if data_previsao_termino else None
 
                 detalhe = f"Plano aplicado: '{plano.get('nome')}'"
                 if prev_txt:
                     detalhe += f"; previsão de término: {prev_txt}"
-                logar_timeline(implantacao_id, usuario, 'plano_aplicado', detalhe)
+                logar_timeline(implantacao_id, usuario, "plano_aplicado", detalhe)
             except Exception:
                 pass
-            
+
             # Limpar cache relacionado à implantação
             try:
                 from ...config.cache_config import clear_implantacao_cache, clear_user_cache
+
                 clear_implantacao_cache(implantacao_id)
                 clear_user_cache(usuario)
             except Exception:
@@ -221,7 +224,7 @@ def aplicar_plano_a_implantacao_checklist(implantacao_id: int, plano_id: int, us
         except Exception as e:
             conn.rollback()
             current_app.logger.error(f"Erro ao aplicar plano: {e}", exc_info=True)
-            raise DatabaseError(f"Erro ao aplicar plano: {e}")
+            raise DatabaseError(f"Erro ao aplicar plano: {e}") from e
 
 
 def remover_plano_de_implantacao(implantacao_id: int, usuario: str) -> bool:
@@ -231,16 +234,12 @@ def remover_plano_de_implantacao(implantacao_id: int, usuario: str) -> bool:
     if not implantacao_id:
         raise ValidationError("ID da implantação é obrigatório")
 
-    implantacao = query_db(
-        "SELECT plano_sucesso_id FROM implantacoes WHERE id = %s",
-        (implantacao_id,),
-        one=True
-    )
+    implantacao = query_db("SELECT plano_sucesso_id FROM implantacoes WHERE id = %s", (implantacao_id,), one=True)
 
     if not implantacao:
         raise ValidationError(f"Implantação com ID {implantacao_id} não encontrada")
 
-    if not implantacao.get('plano_sucesso_id'):
+    if not implantacao.get("plano_sucesso_id"):
         return True
 
     sql = """
@@ -251,13 +250,14 @@ def remover_plano_de_implantacao(implantacao_id: int, usuario: str) -> bool:
 
     result = execute_db(sql, (implantacao_id,), raise_on_error=True)
 
-    current_app.logger.info(
-        f"Plano removido da implantação {implantacao_id} por {usuario}"
-    )
+    current_app.logger.info(f"Plano removido da implantação {implantacao_id} por {usuario}")
 
     try:
         from ...db import logar_timeline
-        logar_timeline(implantacao_id, usuario, 'plano_removido', f"Plano de sucesso removido da implantação por {usuario}.")
+
+        logar_timeline(
+            implantacao_id, usuario, "plano_removido", f"Plano de sucesso removido da implantação por {usuario}."
+        )
     except Exception:
         pass
 
@@ -269,24 +269,30 @@ def _clonar_plano_para_implantacao(cursor, db_type: str, plano: Dict, implantaca
     Clona a estrutura do plano para a implantação usando checklist_items.
     Converte itens do plano (tipo_item='plano_*') para itens de implantação (tipo_item='fase'/'grupo'/'tarefa'/'subtarefa').
     """
-    plano_id = plano.get('id')
+    plano_id = plano.get("id")
     if not plano_id:
         raise ValidationError("Plano deve ter um ID válido")
 
-    if db_type == 'postgres':
-        cursor.execute("""
+    if db_type == "postgres":
+        cursor.execute(
+            """
             SELECT id, parent_id, title, completed, comment, level, ordem, tipo_item, descricao, obrigatoria, status, tag
             FROM checklist_items 
             WHERE plano_id = %s
             ORDER BY ordem, id
-        """, (plano_id,))
+        """,
+            (plano_id,),
+        )
     else:
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT id, parent_id, title, completed, comment, level, ordem, tipo_item, descricao, obrigatoria, status, tag
             FROM checklist_items 
             WHERE plano_id = ?
             ORDER BY ordem, id
-        """, (plano_id,))
+        """,
+            (plano_id,),
+        )
 
     items_plano = cursor.fetchall()
 
@@ -296,43 +302,48 @@ def _clonar_plano_para_implantacao(cursor, db_type: str, plano: Dict, implantaca
     id_map = {}
 
     def clonar_item(item_plano, parent_id_implantacao):
-        item_id_plano = item_plano[0] if isinstance(item_plano, tuple) else item_plano['id']
-        parent_id_plano = item_plano[1] if isinstance(item_plano, tuple) else item_plano.get('parent_id')
-        title = item_plano[2] if isinstance(item_plano, tuple) else item_plano['title']
-        completed = item_plano[3] if isinstance(item_plano, tuple) else item_plano.get('completed', False)
-        comment = item_plano[4] if isinstance(item_plano, tuple) else item_plano.get('comment', '')
-        level = item_plano[5] if isinstance(item_plano, tuple) else item_plano.get('level', 0)
-        ordem = item_plano[6] if isinstance(item_plano, tuple) else item_plano.get('ordem', 0)
-        tipo_item_plano = item_plano[7] if isinstance(item_plano, tuple) else item_plano.get('tipo_item', '')
-        descricao = item_plano[8] if isinstance(item_plano, tuple) else item_plano.get('descricao', '')
-        obrigatoria = item_plano[9] if isinstance(item_plano, tuple) else item_plano.get('obrigatoria', False)
-        status = item_plano[10] if isinstance(item_plano, tuple) else item_plano.get('status', 'pendente')
-        tag = item_plano[11] if isinstance(item_plano, tuple) and len(item_plano) > 11 else item_plano.get('tag')
+        item_id_plano = item_plano[0] if isinstance(item_plano, tuple) else item_plano["id"]
+        parent_id_plano = item_plano[1] if isinstance(item_plano, tuple) else item_plano.get("parent_id")
+        title = item_plano[2] if isinstance(item_plano, tuple) else item_plano["title"]
+        completed = item_plano[3] if isinstance(item_plano, tuple) else item_plano.get("completed", False)
+        comment = item_plano[4] if isinstance(item_plano, tuple) else item_plano.get("comment", "")
+        level = item_plano[5] if isinstance(item_plano, tuple) else item_plano.get("level", 0)
+        ordem = item_plano[6] if isinstance(item_plano, tuple) else item_plano.get("ordem", 0)
+        tipo_item_plano = item_plano[7] if isinstance(item_plano, tuple) else item_plano.get("tipo_item", "")
+        descricao = item_plano[8] if isinstance(item_plano, tuple) else item_plano.get("descricao", "")
+        obrigatoria = item_plano[9] if isinstance(item_plano, tuple) else item_plano.get("obrigatoria", False)
+        status = item_plano[10] if isinstance(item_plano, tuple) else item_plano.get("status", "pendente")
+        tag = item_plano[11] if isinstance(item_plano, tuple) and len(item_plano) > 11 else item_plano.get("tag")
 
-        tipo_item_implantacao = tipo_item_plano.replace('plano_', '') if tipo_item_plano.startswith('plano_') else tipo_item_plano
+        tipo_item_implantacao = (
+            tipo_item_plano.replace("plano_", "") if tipo_item_plano.startswith("plano_") else tipo_item_plano
+        )
 
-        if db_type == 'postgres':
+        if db_type == "postgres":
             sql_insert = """
                 INSERT INTO checklist_items 
                 (parent_id, title, completed, comment, level, ordem, implantacao_id, tipo_item, descricao, obrigatoria, status, responsavel, tag, created_at, updated_at)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 RETURNING id
             """
-            cursor.execute(sql_insert, (
-                parent_id_implantacao,
-                title,
-                completed,
-                comment or descricao,
-                level,
-                ordem,
-                implantacao_id,
-                tipo_item_implantacao,
-                descricao,
-                obrigatoria,
-                status,
-                responsavel,
-                tag
-            ))
+            cursor.execute(
+                sql_insert,
+                (
+                    parent_id_implantacao,
+                    title,
+                    completed,
+                    comment or descricao,
+                    level,
+                    ordem,
+                    implantacao_id,
+                    tipo_item_implantacao,
+                    descricao,
+                    obrigatoria,
+                    status,
+                    responsavel,
+                    tag,
+                ),
+            )
             novo_id = cursor.fetchone()[0]
         else:
             sql_insert = """
@@ -340,51 +351,69 @@ def _clonar_plano_para_implantacao(cursor, db_type: str, plano: Dict, implantaca
                 (parent_id, title, completed, comment, level, ordem, implantacao_id, tipo_item, descricao, obrigatoria, status, responsavel, tag, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             """
-            cursor.execute(sql_insert, (
-                parent_id_implantacao,
-                title,
-                1 if completed else 0,
-                comment or descricao,
-                level,
-                ordem,
-                implantacao_id,
-                tipo_item_implantacao,
-                descricao,
-                1 if obrigatoria else 0,
-                status,
-                responsavel,
-                tag
-            ))
+            cursor.execute(
+                sql_insert,
+                (
+                    parent_id_implantacao,
+                    title,
+                    1 if completed else 0,
+                    comment or descricao,
+                    level,
+                    ordem,
+                    implantacao_id,
+                    tipo_item_implantacao,
+                    descricao,
+                    1 if obrigatoria else 0,
+                    status,
+                    responsavel,
+                    tag,
+                ),
+            )
             novo_id = cursor.lastrowid
 
         id_map[item_id_plano] = novo_id
 
-        if db_type == 'postgres':
-            cursor.execute("""
+        if db_type == "postgres":
+            cursor.execute(
+                """
                 SELECT id, parent_id, title, completed, comment, level, ordem, tipo_item, descricao, obrigatoria, status, tag
                 FROM checklist_items
                 WHERE plano_id = %s AND parent_id = %s
                 ORDER BY ordem, id
-            """, (plano_id, item_id_plano))
+            """,
+                (plano_id, item_id_plano),
+            )
         else:
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT id, parent_id, title, completed, comment, level, ordem, tipo_item, descricao, obrigatoria, status, tag
                 FROM checklist_items
                 WHERE plano_id = ? AND parent_id = ?
                 ORDER BY ordem, id
-            """, (plano_id, item_id_plano))
+            """,
+                (plano_id, item_id_plano),
+            )
 
         filhos = cursor.fetchall()
         for filho in filhos:
             clonar_item(filho, novo_id)
 
     for item in items_plano:
-        parent_id_plano = item[1] if isinstance(item, tuple) else item.get('parent_id')
+        parent_id_plano = item[1] if isinstance(item, tuple) else item.get("parent_id")
         if parent_id_plano is None:
             clonar_item(item, None)
 
 
-def _clonar_plano_para_implantacao_checklist(cursor, db_type: str, plano_id: int, implantacao_id: int, responsavel_padrao: str, data_base, dias_duracao: int, data_previsao_termino=None):
+def _clonar_plano_para_implantacao_checklist(
+    cursor,
+    db_type: str,
+    plano_id: int,
+    implantacao_id: int,
+    responsavel_padrao: str,
+    data_base,
+    dias_duracao: int,
+    data_previsao_termino=None,
+):
     """
     Clona a estrutura do plano (itens com implantacao_id = NULL) para a implantação.
     Usa abordagem iterativa para clonar toda a árvore mantendo a hierarquia.
@@ -393,7 +422,7 @@ def _clonar_plano_para_implantacao_checklist(cursor, db_type: str, plano_id: int
     item_map = {}
 
     def clone_item_recursivo(plano_item_id, new_parent_id):
-        if db_type == 'postgres':
+        if db_type == "postgres":
             sql_item = "SELECT title, completed, comment, level, ordem, obrigatoria, tipo_item, descricao, status, responsavel, tag FROM checklist_items WHERE id = %s"
             cursor.execute(sql_item, (plano_item_id,))
             row = cursor.fetchone()
@@ -401,9 +430,9 @@ def _clonar_plano_para_implantacao_checklist(cursor, db_type: str, plano_id: int
                 return None
 
             title, completed, comment, level, ordem, obrigatoria = row[0], row[1], row[2], row[3], row[4], row[5]
-            tipo_item_plano = row[6] or ''
-            descricao = row[7] or ''
-            status = row[8] or 'pendente'
+            tipo_item_plano = row[6] or ""
+            descricao = row[7] or ""
+            status = row[8] or "pendente"
             responsavel = row[9]
             tag = row[10]
         else:
@@ -419,25 +448,27 @@ def _clonar_plano_para_implantacao_checklist(cursor, db_type: str, plano_id: int
             level = row[3] if row[3] is not None else 0
             ordem = row[4] if row[4] is not None else 0
             obrigatoria = bool(row[5]) if row[5] is not None else False
-            tipo_item_plano = row[6] or ''
-            descricao = row[7] or ''
-            status = row[8] or 'pendente'
+            tipo_item_plano = row[6] or ""
+            descricao = row[7] or ""
+            status = row[8] or "pendente"
             responsavel = row[9]
             tag = row[10]
 
-        tipo_item_implantacao = tipo_item_plano.replace('plano_', '') if tipo_item_plano.startswith('plano_') else tipo_item_plano
+        tipo_item_implantacao = (
+            tipo_item_plano.replace("plano_", "") if tipo_item_plano.startswith("plano_") else tipo_item_plano
+        )
 
         if not tipo_item_implantacao:
             if level == 0:
-                tipo_item_implantacao = 'fase'
+                tipo_item_implantacao = "fase"
             elif level == 1:
-                tipo_item_implantacao = 'grupo'
+                tipo_item_implantacao = "grupo"
             elif level == 2:
-                tipo_item_implantacao = 'tarefa'
+                tipo_item_implantacao = "tarefa"
             else:
-                tipo_item_implantacao = 'subtarefa'
+                tipo_item_implantacao = "subtarefa"
 
-        if db_type == 'postgres':
+        if db_type == "postgres":
             previsao_original = data_previsao_termino
             responsavel = responsavel_padrao
             sql_insert = """
@@ -445,7 +476,26 @@ def _clonar_plano_para_implantacao_checklist(cursor, db_type: str, plano_id: int
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 RETURNING id
             """
-            cursor.execute(sql_insert, (new_parent_id, title, completed, comment, level, ordem, implantacao_id, obrigatoria, tipo_item_implantacao, descricao, status, responsavel, tag, previsao_original, None))
+            cursor.execute(
+                sql_insert,
+                (
+                    new_parent_id,
+                    title,
+                    completed,
+                    comment,
+                    level,
+                    ordem,
+                    implantacao_id,
+                    obrigatoria,
+                    tipo_item_implantacao,
+                    descricao,
+                    status,
+                    responsavel,
+                    tag,
+                    previsao_original,
+                    None,
+                ),
+            )
             result = cursor.fetchone()
             new_item_id = result[0] if result else None
         else:
@@ -455,7 +505,26 @@ def _clonar_plano_para_implantacao_checklist(cursor, db_type: str, plano_id: int
                 INSERT INTO checklist_items (parent_id, title, completed, comment, level, ordem, implantacao_id, obrigatoria, tipo_item, descricao, status, responsavel, tag, previsao_original, nova_previsao, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             """
-            cursor.execute(sql_insert, (new_parent_id, title, 1 if completed else 0, comment, level, ordem, implantacao_id, 1 if obrigatoria else 0, tipo_item_implantacao, descricao, status, responsavel, tag, previsao_original, None))
+            cursor.execute(
+                sql_insert,
+                (
+                    new_parent_id,
+                    title,
+                    1 if completed else 0,
+                    comment,
+                    level,
+                    ordem,
+                    implantacao_id,
+                    1 if obrigatoria else 0,
+                    tipo_item_implantacao,
+                    descricao,
+                    status,
+                    responsavel,
+                    tag,
+                    previsao_original,
+                    None,
+                ),
+            )
             new_item_id = cursor.lastrowid
 
         if not new_item_id:
@@ -463,7 +532,7 @@ def _clonar_plano_para_implantacao_checklist(cursor, db_type: str, plano_id: int
 
         item_map[plano_item_id] = new_item_id
 
-        if db_type == 'postgres':
+        if db_type == "postgres":
             sql_filhos = "SELECT id FROM checklist_items WHERE parent_id = %s AND plano_id = %s ORDER BY ordem, id"
             cursor.execute(sql_filhos, (plano_item_id, plano_id))
             filhos = cursor.fetchall()
@@ -478,7 +547,7 @@ def _clonar_plano_para_implantacao_checklist(cursor, db_type: str, plano_id: int
 
         return new_item_id
 
-    if db_type == 'postgres':
+    if db_type == "postgres":
         sql_raiz = "SELECT id FROM checklist_items WHERE plano_id = %s AND parent_id IS NULL ORDER BY ordem, id"
         cursor.execute(sql_raiz, (plano_id,))
         raizes = cursor.fetchall()

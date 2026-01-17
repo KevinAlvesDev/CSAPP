@@ -3,6 +3,7 @@ Módulo de Métricas de Gamificação
 Buscar e salvar métricas mensais de gamificação.
 Princípio SOLID: Single Responsibility
 """
+
 from datetime import date, datetime
 
 from ...db import execute_db, query_db
@@ -26,27 +27,28 @@ def _get_gamification_automatic_data_bulk(mes, ano, primeiro_dia_str, fim_ultimo
 
     tma_data_map = {}
     for impl in impl_finalizadas_raw:
-        if not isinstance(impl, dict): continue
-        email = impl.get('usuario_cs')
-        dt_criacao = impl.get('data_criacao')
-        dt_finalizacao = impl.get('data_finalizacao')
+        if not isinstance(impl, dict):
+            continue
+        email = impl.get("usuario_cs")
+        dt_criacao = impl.get("data_criacao")
+        dt_finalizacao = impl.get("data_finalizacao")
         if not email or not dt_criacao or not dt_finalizacao:
             continue
 
         if email not in tma_data_map:
-            tma_data_map[email] = {'total_dias': 0, 'count': 0}
+            tma_data_map[email] = {"total_dias": 0, "count": 0}
 
         dt_criacao_datetime = None
         dt_finalizacao_datetime = None
         if isinstance(dt_criacao, str):
             try:
-                dt_criacao_datetime = datetime.fromisoformat(dt_criacao.replace('Z', '+00:00'))
+                dt_criacao_datetime = datetime.fromisoformat(dt_criacao.replace("Z", "+00:00"))
             except ValueError:
                 try:
-                    if '.' in dt_criacao:
-                        dt_criacao_datetime = datetime.strptime(dt_criacao, '%Y-%m-%d %H:%M:%S.%f')
+                    if "." in dt_criacao:
+                        dt_criacao_datetime = datetime.strptime(dt_criacao, "%Y-%m-%d %H:%M:%S.%f")
                     else:
-                        dt_criacao_datetime = datetime.strptime(dt_criacao, '%Y-%m-%d %H:%M:%S')
+                        dt_criacao_datetime = datetime.strptime(dt_criacao, "%Y-%m-%d %H:%M:%S")
                 except ValueError:
                     pass
         elif isinstance(dt_criacao, date) and not isinstance(dt_criacao, datetime):
@@ -56,13 +58,13 @@ def _get_gamification_automatic_data_bulk(mes, ano, primeiro_dia_str, fim_ultimo
 
         if isinstance(dt_finalizacao, str):
             try:
-                dt_finalizacao_datetime = datetime.fromisoformat(dt_finalizacao.replace('Z', '+00:00'))
+                dt_finalizacao_datetime = datetime.fromisoformat(dt_finalizacao.replace("Z", "+00:00"))
             except ValueError:
                 try:
-                    if '.' in dt_finalizacao:
-                        dt_finalizacao_datetime = datetime.strptime(dt_finalizacao, '%Y-%m-%d %H:%M:%S.%f')
+                    if "." in dt_finalizacao:
+                        dt_finalizacao_datetime = datetime.strptime(dt_finalizacao, "%Y-%m-%d %H:%M:%S.%f")
                     else:
-                        dt_finalizacao_datetime = datetime.strptime(dt_finalizacao, '%Y-%m-%d %H:%M:%S')
+                        dt_finalizacao_datetime = datetime.strptime(dt_finalizacao, "%Y-%m-%d %H:%M:%S")
                 except ValueError:
                     pass
         elif isinstance(dt_finalizacao, date) and not isinstance(dt_finalizacao, datetime):
@@ -71,12 +73,18 @@ def _get_gamification_automatic_data_bulk(mes, ano, primeiro_dia_str, fim_ultimo
             dt_finalizacao_datetime = dt_finalizacao
 
         if dt_criacao_datetime and dt_finalizacao_datetime:
-            criacao_naive = dt_criacao_datetime.replace(tzinfo=None) if dt_criacao_datetime.tzinfo else dt_criacao_datetime
-            final_naive = dt_finalizacao_datetime.replace(tzinfo=None) if dt_finalizacao_datetime.tzinfo else dt_finalizacao_datetime
+            criacao_naive = (
+                dt_criacao_datetime.replace(tzinfo=None) if dt_criacao_datetime.tzinfo else dt_criacao_datetime
+            )
+            final_naive = (
+                dt_finalizacao_datetime.replace(tzinfo=None)
+                if dt_finalizacao_datetime.tzinfo
+                else dt_finalizacao_datetime
+            )
             try:
                 delta = final_naive - criacao_naive
-                tma_data_map[email]['total_dias'] += max(0, delta.days)
-                tma_data_map[email]['count'] += 1
+                tma_data_map[email]["total_dias"] += max(0, delta.days)
+                tma_data_map[email]["count"] += 1
             except TypeError:
                 pass
 
@@ -89,7 +97,7 @@ def _get_gamification_automatic_data_bulk(mes, ano, primeiro_dia_str, fim_ultimo
 
     impl_iniciadas_raw = query_db(sql_iniciadas, tuple(args_iniciadas))
     impl_iniciadas_raw = impl_iniciadas_raw if impl_iniciadas_raw is not None else []
-    iniciadas_map = {row['usuario_cs']: row['total'] for row in impl_iniciadas_raw if isinstance(row, dict)}
+    iniciadas_map = {row["usuario_cs"]: row["total"] for row in impl_iniciadas_raw if isinstance(row, dict)}
 
     sql_tarefas = """
         SELECT i.usuario_cs, COALESCE(ci.tag, 'Ação interna') as tag, COUNT(DISTINCT ci.id) as total
@@ -111,19 +119,21 @@ def _get_gamification_automatic_data_bulk(mes, ano, primeiro_dia_str, fim_ultimo
 
     tarefas_map = {}
     for row in tarefas_concluidas_raw:
-        if not isinstance(row, dict): continue
-        email = row.get('usuario_cs')
-        tag = row.get('tag')
-        total = row.get('total', 0)
-        if not email or not tag: continue
+        if not isinstance(row, dict):
+            continue
+        email = row.get("usuario_cs")
+        tag = row.get("tag")
+        total = row.get("total", 0)
+        if not email or not tag:
+            continue
 
         if email not in tarefas_map:
-            tarefas_map[email] = {'Ação interna': 0, 'Reunião': 0}
+            tarefas_map[email] = {"Ação interna": 0, "Reunião": 0}
 
-        if tag == 'Ação interna':
-            tarefas_map[email]['Ação interna'] = total
-        elif tag == 'Reunião':
-            tarefas_map[email]['Reunião'] = total
+        if tag == "Ação interna":
+            tarefas_map[email]["Ação interna"] = total
+        elif tag == "Reunião":
+            tarefas_map[email]["Reunião"] = total
 
     return tma_data_map, iniciadas_map, tarefas_map
 
@@ -133,27 +143,27 @@ def obter_metricas_mensais(usuario_cs, mes, ano):
     return query_db(
         "SELECT * FROM gamificacao_metricas_mensais WHERE usuario_cs = %s AND mes = %s AND ano = %s",
         (usuario_cs, mes, ano),
-        one=True
+        one=True,
     )
 
 
 def salvar_metricas_mensais(data_to_save, existing_record_id=None):
     """
     Salva ou atualiza métricas mensais de gamificação.
-    
+
     Args:
         data_to_save: Dicionário com os dados a salvar
         existing_record_id: ID do registro existente (None para inserir novo)
-        
+
     Returns:
         bool: True se sucesso
     """
     if existing_record_id:
         # Atualizar registro existente
-        set_clauses = [f"{key} = %s" for key in data_to_save.keys() if key not in ['usuario_cs', 'mes', 'ano']]
+        set_clauses = [f"{key} = %s" for key in data_to_save.keys() if key not in ["usuario_cs", "mes", "ano"]]
         sql_update = f"""
             UPDATE gamificacao_metricas_mensais
-            SET {', '.join(set_clauses)}
+            SET {", ".join(set_clauses)}
             WHERE id = %s
         """
         args = list(data_to_save.values())[3:] + [existing_record_id]
@@ -161,9 +171,11 @@ def salvar_metricas_mensais(data_to_save, existing_record_id=None):
     else:
         # Inserir novo registro
         columns = data_to_save.keys()
-        values_placeholders = ['%s'] * len(columns)
-        sql_insert = f"INSERT INTO gamificacao_metricas_mensais ({', '.join(columns)}) VALUES ({', '.join(values_placeholders)})"
+        values_placeholders = ["%s"] * len(columns)
+        sql_insert = (
+            f"INSERT INTO gamificacao_metricas_mensais ({', '.join(columns)}) VALUES ({', '.join(values_placeholders)})"
+        )
         args = list(data_to_save.values())
         execute_db(sql_insert, tuple(args))
-    
+
     return True

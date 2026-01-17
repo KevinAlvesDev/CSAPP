@@ -7,30 +7,28 @@ Estrutura:
 - admin.py   -> Operações administrativas
 """
 
-# Importações de users.py
-from .users import (
-    listar_usuarios_service,
-    verificar_usuario_existe,
-    obter_perfil_usuario,
-    obter_perfis_disponiveis,
-    listar_todos_cs_com_cache,
-)
-
-# Importações de admin.py
 from .admin import (
     atualizar_perfil_usuario_service,
     excluir_usuario_service,
     limpar_implantacoes_orfas_service,
 )
+from .backup import perform_backup
+from .users import (
+    listar_todos_cs_com_cache,
+    listar_usuarios_service,
+    obter_perfil_usuario,
+    obter_perfis_disponiveis,
+    verificar_usuario_existe,
+)
 
-# Exports públicos
 __all__ = [
-    'listar_usuarios_service',
-    'verificar_usuario_existe',
-    'obter_perfil_usuario',
-    'obter_perfis_disponiveis',
-    'listar_todos_cs_com_cache',
-    'atualizar_perfil_usuario_service',
-    'excluir_usuario_service',
-    'limpar_implantacoes_orfas_service',
+    "listar_usuarios_service",
+    "verificar_usuario_existe",
+    "obter_perfil_usuario",
+    "obter_perfis_disponiveis",
+    "listar_todos_cs_com_cache",
+    "atualizar_perfil_usuario_service",
+    "excluir_usuario_service",
+    "limpar_implantacoes_orfas_service",
+    "perform_backup",
 ]

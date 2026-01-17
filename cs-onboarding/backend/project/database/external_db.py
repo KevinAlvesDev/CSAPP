@@ -1,11 +1,12 @@
 import logging
+import socket
+import ssl
 import unicodedata
+import urllib.parse
 
 from flask import current_app
 from sqlalchemy import create_engine, text
-import socket
-import urllib.parse
-import ssl
+
 try:
     import socks
 except ImportError:
@@ -18,113 +19,127 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+
 def normalize_text(text):
     """Remove acentos e converte para minúsculas."""
     if not text:
         return ""
-    return unicodedata.normalize('NFKD', text).encode('ASCII', 'ignore').decode('utf-8').lower()
+    return unicodedata.normalize("NFKD", text).encode("ASCII", "ignore").decode("utf-8").lower()
+
 
 import os
 import time
 from functools import wraps
-from sqlalchemy.exc import OperationalError, InterfaceError
+
+from sqlalchemy.exc import InterfaceError, OperationalError
+
 
 def with_retries(max_retries=3, delay=2, backoff=2, exceptions=(OperationalError, InterfaceError, RuntimeError)):
     """Decorator para repetir uma operação em caso de erro de conexão."""
+
     def decorator(f):
         @wraps(f)
         def wrapper(*args, **kwargs):
             retries = 0
             current_delay = delay
             last_exception = None
-            
+
             while retries < max_retries:
                 try:
                     return f(*args, **kwargs)
                 except exceptions as e:
                     retries += 1
                     last_exception = e
-                    
+
                     # Se for RuntimeError e não for relacionado a conexão, não faz sentido repetir
-                    if isinstance(e, RuntimeError) and "conexão" not in str(e).lower() and "engine" not in str(e).lower():
+                    if (
+                        isinstance(e, RuntimeError)
+                        and "conexão" not in str(e).lower()
+                        and "engine" not in str(e).lower()
+                    ):
                         raise
-                        
+
                     if retries >= max_retries:
                         logger.error(f"Falha definitiva após {max_retries} tentativas: {e}")
                         break
-                        
-                    logger.warning(f"Falha na conexão com banco externo. Tentativa {retries}/{max_retries} em {current_delay}s... Erro: {e}")
+
+                    logger.warning(
+                        f"Falha na conexão com banco externo. Tentativa {retries}/{max_retries} em {current_delay}s... Erro: {e}"
+                    )
                     time.sleep(current_delay)
                     current_delay *= backoff
-            
+
             if last_exception:
                 raise last_exception
+
         return wrapper
+
     return decorator
+
 
 def get_external_engine():
     """
     Retorna uma engine SQLAlchemy para o banco de dados externo.
     Utiliza pooling moderado para evitar esgotar conexões do banco legado.
     """
-    if not hasattr(current_app, 'external_db_engine') or current_app.external_db_engine is None:
-        external_db_url = current_app.config.get('EXTERNAL_DB_URL')
+    if not hasattr(current_app, "external_db_engine") or current_app.external_db_engine is None:
+        external_db_url = current_app.config.get("EXTERNAL_DB_URL")
 
         if not external_db_url:
             logger.warning("EXTERNAL_DB_URL não configurada.")
             return None
 
         # --- Lógica de Proxy ---
-        proxy_url = os.environ.get('EXTERNAL_DB_PROXY_URL')
-        
+        proxy_url = os.environ.get("EXTERNAL_DB_PROXY_URL")
+
         # Se houver proxy, usamos pg8000 (Pure Python) pois psycopg2 (C) ignora proxies SOCKS do Python
         use_pg8000 = bool(proxy_url and socks and pg8000)
 
         try:
             # Timeout via env var ou default 5s (rápido para falhar e não travar a UI)
-            timeout = int(os.environ.get('EXTERNAL_DB_TIMEOUT', 5))
-            
+            timeout = int(os.environ.get("EXTERNAL_DB_TIMEOUT", 5))
+
             # Argumentos de conexão otimizados para resiliência
             connect_args = {
-                'connect_timeout': timeout,
-                'keepalives': 1,
-                'keepalives_idle': 30,
-                'keepalives_interval': 10,
-                'keepalives_count': 5,
+                "connect_timeout": timeout,
+                "keepalives": 1,
+                "keepalives_idle": 30,
+                "keepalives_interval": 10,
+                "keepalives_count": 5,
             }
-            
+
             # Forçar SSL Mode conforme o ambiente - Muitos bancos AWS/RDS exigem SSL
-            if external_db_url.lower().startswith('postgresql'):
+            if external_db_url.lower().startswith("postgresql"):
                 # Tenta 'prefer' para ser compatível com bancos velhos, mas permite SSL se disponível
-                connect_args['sslmode'] = os.environ.get('EXTERNAL_DB_SSLMODE', 'prefer')
+                connect_args["sslmode"] = os.environ.get("EXTERNAL_DB_SSLMODE", "prefer")
                 # Timeout de query no nível do protocolo Postgres
-                connect_args['options'] = f'-c statement_timeout={timeout * 1000}'
+                connect_args["options"] = f"-c statement_timeout={timeout * 1000}"
 
             if use_pg8000:
                 logger.info(f"Usando Proxy Bridge (pg8000) para OAMD via: {proxy_url}")
-                
+
                 def proxy_creator():
                     # TAG: V7 - CREDENTIALS_DECODE_FIX
                     proxy_parsed = urllib.parse.urlparse(proxy_url)
                     db_parsed = urllib.parse.urlparse(external_db_url)
-                    
+
                     # CORREÇÃO CRÍTICA: Decodificar e LIMPAR espaços (strip)
                     db_user = urllib.parse.unquote(db_parsed.username).strip() if db_parsed.username else None
                     db_pass = urllib.parse.unquote(db_parsed.password).strip() if db_parsed.password else None
-                    db_name = urllib.parse.unquote(db_parsed.path.lstrip('/')).strip() if db_parsed.path else None
+                    db_name = urllib.parse.unquote(db_parsed.path.lstrip("/")).strip() if db_parsed.path else None
                     db_host = (db_parsed.hostname or "").strip()
-                    
-                    p_type = socks.SOCKS5 if proxy_parsed.scheme.startswith('socks5') else socks.HTTP
-                    
+
+                    p_type = socks.SOCKS5 if proxy_parsed.scheme.startswith("socks5") else socks.HTTP
+
                     # 1. Contexto SSL Ultra-Permissivo
                     ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
                     ssl_context.check_hostname = False
                     ssl_context.verify_mode = ssl.CERT_NONE
                     try:
-                        ssl_context.set_ciphers('DEFAULT@SECLEVEL=0')
+                        ssl_context.set_ciphers("DEFAULT@SECLEVEL=0")
                     except:
                         pass
-                    ssl_context.options |= 0x4 
+                    ssl_context.options |= 0x4
 
                     # 2. Monkey-patch TEMPORÁRIO do socket global
                     original_socket = socket.socket
@@ -136,11 +151,11 @@ def get_external_engine():
                             proxy_parsed.port or (1080 if p_type == socks.SOCKS5 else 8080),
                             rdns=True,
                             username=proxy_parsed.username,
-                            password=proxy_parsed.password
+                            password=proxy_parsed.password,
                         )
-                        
+
                         logger.info(f"V9: Conectando {db_user} ao banco '{db_name}' em {db_host}...")
-                        
+
                         try:
                             # pg8000 usará o socket interceptado e nosso contexto SSL
                             return pg8000.connect(
@@ -150,7 +165,7 @@ def get_external_engine():
                                 port=db_parsed.port or 5432,
                                 database=db_name,
                                 ssl_context=ssl_context,
-                                timeout=timeout
+                                timeout=timeout,
                             )
                         except Exception as ssl_fail:
                             # Fallback sem SSL
@@ -163,7 +178,7 @@ def get_external_engine():
                                     port=db_parsed.port or 5432,
                                     database=db_name,
                                     ssl_context=None,
-                                    timeout=timeout
+                                    timeout=timeout,
                                 )
                             raise ssl_fail
                     except Exception as proxy_err:
@@ -171,7 +186,7 @@ def get_external_engine():
                         raise proxy_err
                     finally:
                         socket.socket = original_socket
-                
+
                 engine = create_engine(
                     "postgresql+pg8000://",
                     creator=proxy_creator,
@@ -180,7 +195,7 @@ def get_external_engine():
                     pool_size=3,
                     max_overflow=5,
                     pool_timeout=timeout,
-                    execution_options={"isolation_level": "AUTOCOMMIT"}
+                    execution_options={"isolation_level": "AUTOCOMMIT"},
                 )
             else:
                 # Conexão direta via Psycopg2
@@ -193,9 +208,9 @@ def get_external_engine():
                     max_overflow=5,
                     pool_timeout=timeout,
                     connect_args=connect_args,
-                    execution_options={"isolation_level": "AUTOCOMMIT"} 
+                    execution_options={"isolation_level": "AUTOCOMMIT"},
                 )
-            
+
             current_app.external_db_engine = engine
             logger.info("Engine OAMD inicializada.")
         except Exception as e:
@@ -203,6 +218,7 @@ def get_external_engine():
             return None
 
     return current_app.external_db_engine
+
 
 @with_retries(max_retries=2, delay=1)
 def query_external_db(query_str, params=None):
@@ -227,57 +243,48 @@ def query_external_db(query_str, params=None):
         # Esses erros costumam ser transitórios (rede, VPN caindo, etc)
         logger.warning(f"Erro transiente no banco externo: {e}")
         # Invalidamos a engine para que a próxima tentativa (do retry) crie uma nova
-        if hasattr(current_app, 'external_db_engine'):
+        if hasattr(current_app, "external_db_engine"):
             current_app.external_db_engine = None
         raise
     except Exception as e:
         logger.error(f"Erro não recuperável na query externa: {e}")
         raise
 
+
 def find_cs_user_by_email(email):
     """
     Busca um usuário na tabela 'customersuccess' do banco externo.
     Como a tabela não possui campo de email, utilizamos uma heurística baseada no nome.
-    
+
     Args:
         email (str): O email fornecido no login.
-        
+
     Returns:
         dict: Dados do usuário se encontrado, None caso contrário.
     """
-    if not email or '@' not in email:
+    if not email or "@" not in email:
         return None
 
     # Extrair parte do nome do email (ex: 'nome.sobrenome@...' -> 'nome sobrenome')
-    local_part = email.split('@')[0]
-    name_parts = local_part.replace('.', ' ').replace('_', ' ').split()
+    local_part = email.split("@")[0]
+    name_parts = local_part.replace(".", " ").replace("_", " ").split()
 
     if not name_parts:
         return None
 
     # --- SPECIAL BYPASS FOR DEV USER ---
     # Garante acesso ao desenvolvedor principal mesmo se o banco externo estiver configurado mas desatualizado
-    if email == 'kevinpereira@pactosolucoes.com.br' and current_app.config.get('DEBUG', False):
+    if email == "kevinpereira@pactosolucoes.com.br" and current_app.config.get("DEBUG", False):
         logger.info(f"DEV MODE: Forçando mock de usuário CS para: {email}")
-        return {
-            'codigo': 99999,
-            'nome': 'Kevin Pereira',
-            'ativo': True,
-            'url': None
-        }
+        return {"codigo": 99999, "nome": "Kevin Pereira", "ativo": True, "url": None}
 
     # --- MOCK PARA DESENVOLVIMENTO LOCAL (QUANDO SEM BANCO EXTERNO) ---
     # Permite login sem conexão com banco legado se a URL não estiver configurada E estiver em modo DEBUG
     # Isso impede que em produção (onde DEBUG é False) o mock seja usado acidentalmente se a URL falhar.
-    if not current_app.config.get('EXTERNAL_DB_URL') and current_app.config.get('DEBUG', False):
+    if not current_app.config.get("EXTERNAL_DB_URL") and current_app.config.get("DEBUG", False):
         logger.warning(f"DEV MODE: EXTERNAL_DB_URL não configurada. Mockando usuário CS para: {email}")
-        if email.endswith('@pactosolucoes.com.br'):
-            return {
-                'codigo': 99999,
-                'nome': ' '.join(name_parts).title(),
-                'ativo': True,
-                'url': None
-            }
+        if email.endswith("@pactosolucoes.com.br"):
+            return {"codigo": 99999, "nome": " ".join(name_parts).title(), "ativo": True, "url": None}
         return None
     # ------------------------------------------------------------------
 
@@ -293,11 +300,11 @@ def find_cs_user_by_email(email):
 
     try:
         # Busca ampla pelo primeiro nome
-        results = query_external_db(query, {'name_pattern': f"%{first_name}%"})
+        results = query_external_db(query, {"name_pattern": f"%{first_name}%"})
 
         # Refinar resultados no Python
         for user in results:
-            db_name_norm = normalize_text(user['nome'])
+            db_name_norm = normalize_text(user["nome"])
             # Verificar se todas as partes do nome do email estão no nome do banco
             match = True
             for part in name_parts:

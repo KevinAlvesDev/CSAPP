@@ -149,10 +149,25 @@ class ChecklistComments {
                     <div class="d-flex align-items-center gap-2">
                         <strong class="small"><i class="bi bi-person-fill me-1"></i>${escape(c.usuario_nome || c.usuario_cs)}</strong>
                         <span class="badge rounded-pill small ${badgeClass}">${c.visibilidade}</span>
-                        ${c.tag === 'Ação interna' ? '<span class="badge rounded-pill small bg-primary"><i class="bi bi-briefcase"></i> Ação interna</span>' : ''}
-                        ${c.tag === 'Reunião' ? '<span class="badge rounded-pill small bg-danger"><i class="bi bi-calendar-event"></i> Reunião</span>' : ''}
-                        ${(c.tag === 'No Show' || c.noshow) ? '<span class="badge rounded-pill small bg-warning text-dark"><i class="bi bi-calendar-x"></i> No show</span>' : ''}
-                        ${c.tag === 'Simples registro' ? '<span class="badge rounded-pill small bg-secondary"><i class="bi bi-pencil-square"></i> Simples registro</span>' : ''}
+                        ${(() => {
+                if (c.tag && this.renderer.tagsData && this.renderer.tagsData[c.tag]) {
+                    const t = this.renderer.tagsData[c.tag];
+                    return `<span class="badge rounded-pill small ${t.cor_badge}"><i class="bi ${t.icone}"></i> ${c.tag}</span>`;
+                } else if (c.tag) {
+                    // Fallback for tags not in dictionary or during loading
+                    let bg = 'bg-secondary';
+                    let icon = 'bi-tag-fill';
+                    // Legacy mapping fallbacks
+                    if (c.tag === 'Ação interna') { bg = 'bg-primary'; icon = 'bi-briefcase'; }
+                    else if (c.tag === 'Reunião') { bg = 'bg-danger'; icon = 'bi-calendar-event'; }
+                    else if (c.tag === 'No Show' || c.noshow) { bg = 'bg-warning text-dark'; icon = 'bi-calendar-x'; }
+                    return `<span class="badge rounded-pill small ${bg}"><i class="bi ${icon}"></i> ${c.tag}</span>`;
+                } else if (c.noshow) {
+                    // Legacy noshow boolean support
+                    return '<span class="badge rounded-pill small bg-warning text-dark"><i class="bi bi-calendar-x"></i> No show</span>';
+                }
+                return '';
+            })()}
                     </div>
                 </div>
                 <div class="d-flex justify-content-between align-items-center">
