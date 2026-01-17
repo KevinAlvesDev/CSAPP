@@ -535,6 +535,7 @@ class ChecklistRenderer {
                 this.propagateDown(itemId, !completed);
                 this.propagateUp(itemId);
                 this.updateAllItemsUI();
+                if (window.showToast) window.showToast(result.error || 'Erro ao alterar status', 'error');
             }
         }
         this.isLoading = false;
@@ -669,6 +670,8 @@ class ChecklistRenderer {
                     const m = bootstrap.Modal.getInstance(modal);
                     if (m) m.hide();
                     if (window.reloadTimeline) window.reloadTimeline();
+                } else {
+                    if (window.showToast) window.showToast(result.error || 'Erro ao atualizar responsável', 'error');
                 }
             }
         };
@@ -742,6 +745,7 @@ class ChecklistRenderer {
                     // Rollback
                     this.flatData[itemId].nova_previsao = old;
                     this.updateItemUI(itemId);
+                    if (window.showToast) window.showToast(result.error || 'Erro ao atualizar previsão', 'error');
                 }
             }
         };
@@ -807,6 +811,7 @@ class ChecklistRenderer {
                     // Rollback
                     this.flatData[itemId].tag = old;
                     this.updateItemUI(itemId);
+                    if (window.showToast) window.showToast(result.error || 'Erro ao atualizar tag', 'error');
                 }
             }
         };
@@ -817,14 +822,17 @@ class ChecklistRenderer {
 
     // Logic for deletes
     async deleteItem(itemId) {
-        if (!confirm('Tem certeza que deseja excluir?')) return;
         if (this.service) {
-            await this.service.deleteItem(itemId);
-            // Quick remove from DOM
-            const el = this.container.querySelector(`.checklist-item[data-item-id="${itemId}"]`);
-            if (el) el.remove();
-            delete this.flatData[itemId];
-            this.updateProgressFromLocalData();
+            const result = await this.service.deleteItem(itemId);
+            if (result.success) {
+                // Quick remove from DOM
+                const el = this.container.querySelector(`.checklist-item[data-item-id="${itemId}"]`);
+                if (el) el.remove();
+                delete this.flatData[itemId];
+                this.updateProgressFromLocalData();
+            } else if (!result.cancelled && window.showToast) {
+                window.showToast(result.error || 'Erro ao excluir item', 'error');
+            }
         }
     }
 

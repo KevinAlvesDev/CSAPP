@@ -298,6 +298,12 @@ class ChecklistComments {
             const historyContainer = this.container.querySelector(`#comments-history-${itemId}`);
             const hasComments = historyContainer && historyContainer.querySelectorAll('.comment-item').length > 0;
             this.updateCommentIndicator(itemId, hasComments);
+        } else {
+            if (this.renderer.showToast) {
+                this.renderer.showToast(result.error || 'Erro ao excluir comentário', 'error');
+            } else if (window.showToast) {
+                window.showToast(result.error || 'Erro ao excluir comentário', 'error');
+            }
         }
     }
 
