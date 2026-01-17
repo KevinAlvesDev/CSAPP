@@ -417,7 +417,7 @@ def send_email_global(subject, body_html, recipients, from_name=None, reply_to=N
     try:
         if use_ssl:
             context = ssl.create_default_context()
-            server = smtplib.SMTP_SSL(host, port, context=context)
+            server = smtplib.SMTP_SSL(host, port, context=context, timeout=10)
         else:
             server = smtplib.SMTP(host, port, timeout=10)
             if use_tls:
@@ -429,6 +429,12 @@ def send_email_global(subject, body_html, recipients, from_name=None, reply_to=N
         server.quit()
         app_logger.info(f"E-mail global (SMTP) enviado para {recipients}")
         return True
+    except smtplib.SMTPAuthenticationError as e:
+        app_logger.error(f"Falha de autenticação SMTP: {e}")
+        raise
+    except (OSError, socket.gaierror, smtplib.SMTPConnectError, smtplib.SMTPServerDisconnected, TimeoutError) as e:
+        app_logger.error(f"Falha de conectividade SMTP ({host}:{port}): {e}")
+        raise
     except Exception as e:
         app_logger.error(f"Falha no envio de e-mail global (SMTP): {e}")
         raise
@@ -438,13 +444,14 @@ def send_external_comment_notification(implantacao, comentario):
     """
     Envia notificação de um novo comentário externo para o responsável da implantação.
     Usa o sistema de email global (SMTP ou SendGrid).
+    O envio é feito em background para não bloquear a requisição.
 
     Args:
         implantacao: dict com 'nome_empresa', 'email_responsavel'
         comentario: dict com 'texto', 'tarefa_filho', 'usuario_cs'
 
     Returns:
-        True se enviado com sucesso, False caso contrário
+        True (sempre, pois o envio é assíncrono)
     """
     to_email = implantacao.get('email_responsavel')
     nome_empresa = implantacao.get('nome_empresa', 'Empresa')
@@ -454,7 +461,7 @@ def send_external_comment_notification(implantacao, comentario):
 
     if not to_email:
         app_logger.warning("Email do responsável não configurado para envio de comentário externo")
-        return False
+        return True # Retorna True pois a falha é na configuração, não no envio assíncrono
 
     subject = f"[CS Onboarding] Novo comentário na implantação - {nome_empresa}"
 
@@ -497,16 +504,24 @@ Comentário de: {usuario_cs}
 Este é um email automático do sistema CS Onboarding.
     """
 
-    try:
-        send_email_global(
-            subject=subject,
-            body_html=body_html,
-            recipients=[to_email],
-            from_name="CS Onboarding",
-            body_text=body_text
-        )
-        app_logger.info(f"Notificação de comentário externo enviada para {to_email}")
-        return True
-    except Exception as e:
-        app_logger.error(f"Falha ao enviar notificação de comentário externo para {to_email}: {e}")
-        return False
+    # Função para enviar email em background
+    def _send_email_background():
+        try:
+            send_email_global(
+                subject=subject,
+                body_html=body_html,
+                recipients=[to_email],
+                from_name="CS Onboarding",
+                body_text=body_text
+            )
+            app_logger.info(f"Notificação de comentário externo enviada para {to_email}")
+        except Exception as e:
+            app_logger.error(f"Falha ao enviar notificação de comentário externo para {to_email}: {e}")
+
+    # Enviar em background thread
+    import threading
+    thread = threading.Thread(target=_send_email_background, daemon=True)
+    thread.start()
+    
+    app_logger.info(f"Email de notificação agendado para envio em background para {to_email}")
+    return True
