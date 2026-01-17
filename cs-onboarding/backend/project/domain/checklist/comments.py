@@ -284,12 +284,16 @@ def _check_edit_permission(comentario, usuario_email, is_manager):
     """
     Verifica se o usuário pode editar/excluir o comentário.
     Regras:
-    1. Dono ou Gestor.
-    2. Criação < 3 horas atrás.
+    1. Gestor: Acesso total irrestrito (sem limite de tempo).
+    2. Dono: Apenas até 3 horas após criação.
     """
-    # 1. Check Owner/Manager
+    # 0. Gestor tem permissão total (Bypass de todas as restrições)
+    if is_manager:
+        return
+
+    # 1. Se não é gestor, DEVE ser o dono
     is_owner = comentario["usuario_cs"] == usuario_email
-    if not (is_owner or is_manager):
+    if not is_owner:
         raise ValueError("Permissão negada: apenas o autor ou gestores podem alterar.")
 
     # 2. Check 3-hour limit
@@ -304,14 +308,12 @@ def _check_edit_permission(comentario, usuario_email, is_manager):
         try:
             data_criacao = datetime.fromisoformat(data_criacao)
         except ValueError:
-            # Fallback se formato for diferente
             pass
 
     # Se for naive, assumir que é do mesmo TZ que salvamos (Brasília)
     if data_criacao.tzinfo is None:
         data_criacao = data_criacao.replace(tzinfo=tz_brasilia)
     else:
-        # Se for aware, converter para Brasilia para garantir
         data_criacao = data_criacao.astimezone(tz_brasilia)
 
     diff = agora - data_criacao
