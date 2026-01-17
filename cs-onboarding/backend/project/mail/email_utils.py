@@ -506,21 +506,33 @@ Este é um email automático do sistema CS Onboarding.
 
     # Função para enviar email em background
     def _send_email_background():
-        try:
-            send_email_global(
-                subject=subject,
-                body_html=body_html,
-                recipients=[to_email],
-                from_name="CS Onboarding",
-                body_text=body_text
-            )
-            app_logger.info(f"Notificação de comentário externo enviada para {to_email}")
-        except Exception as e:
-            app_logger.error(f"Falha ao enviar notificação de comentário externo para {to_email}: {e}")
+        from flask import current_app
+        # Usar o contexto da aplicação Flask
+        with current_app.app_context():
+            try:
+                send_email_global(
+                    subject=subject,
+                    body_html=body_html,
+                    recipients=[to_email],
+                    from_name="CS Onboarding",
+                    body_text=body_text
+                )
+                app_logger.info(f"Notificação de comentário externo enviada para {to_email}")
+            except Exception as e:
+                app_logger.error(f"Falha ao enviar notificação de comentário externo para {to_email}: {e}")
 
     # Enviar em background thread
     import threading
-    thread = threading.Thread(target=_send_email_background, daemon=True)
+    from flask import current_app
+    
+    # Capturar a referência do app antes de criar a thread
+    app = current_app._get_current_object()
+    
+    def _send_with_context():
+        with app.app_context():
+            _send_email_background()
+    
+    thread = threading.Thread(target=_send_with_context, daemon=True)
     thread.start()
     
     app_logger.info(f"Email de notificação agendado para envio em background para {to_email}")
