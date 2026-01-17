@@ -1,0 +1,239 @@
+/* 
+ * Melhorias de UI para Comentários do Checklist
+ * Solução para o problema de identificação quando múltiplas caixas de comentários estão abertas
+ */
+
+/* ========================================
+   CABEÇALHO DA TAREFA NA SEÇÃO DE COMENTÁRIOS
+   ======================================== */
+
+.comment-task-header {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border: 1px solid #bae6fd;
+    border-radius: 8px;
+    padding: 0.75rem;
+    margin-bottom: 1rem !important;
+}
+
+.comment-task-header .task-title-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #0369a1;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.comment-task-header .task-title-text {
+    font-size: 0.9rem;
+    color: #0c4a6e;
+    font-weight: 500;
+    line-height: 1.4;
+    margin-top: 0.25rem;
+    padding-left: 1.75rem;
+}
+
+/* ========================================
+   DESTAQUE VISUAL DA TAREFA COM COMENTÁRIO ABERTO
+   ======================================== */
+
+.checklist-item.comment-section-open {
+    background: linear-gradient(90deg, rgba(102, 126, 234, 0.08) 0%, rgba(255, 255, 255, 0) 100%);
+}
+
+.checklist-item.comment-section-open .checklist-item-header {
+    border-left: 4px solid #667eea !important;
+    background: rgba(102, 126, 234, 0.1) !important;
+}
+
+/* ========================================
+   BORDA COLORIDA NA SEÇÃO DE COMENTÁRIOS
+   ======================================== */
+
+.checklist-comments-section {
+    margin-left: 8px;
+    transition: all 0.3s ease;
+}
+
+.checklist-comments-section.show {
+    box-shadow: -4px 0 12px rgba(102, 126, 234, 0.15);
+}
+
+.checklist-comment-form {
+    position: relative;
+    border-left: 4px solid #667eea;
+    padding-left: 1rem;
+}
+
+/* Removido o ::before duplicado que causava a linha bugada */
+
+/* ========================================
+   ANIMAÇÃO DE ABERTURA SUAVE
+   ======================================== */
+
+.checklist-comments-section.collapsing {
+    transition: height 0.35s ease;
+}
+
+.checklist-comments-section.show {
+    animation: slideInComment 0.3s ease-out;
+}
+
+@keyframes slideInComment {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ========================================
+   CONTADOR DE COMENTÁRIOS ABERTOS
+   ======================================== */
+
+.comments-open-badge {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 0.75rem 1.25rem;
+    border-radius: 50px;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    font-size: 0.85rem;
+    font-weight: 600;
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    gap: 0.5rem;
+    animation: bounceIn 0.5s ease;
+}
+
+.comments-open-badge.visible {
+    display: flex;
+}
+
+.comments-open-badge .badge-count {
+    background: rgba(255, 255, 255, 0.3);
+    padding: 0.25rem 0.5rem;
+    border-radius: 20px;
+    font-weight: 700;
+}
+
+@keyframes bounceIn {
+    0% {
+        transform: scale(0.3);
+        opacity: 0;
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+
+    70% {
+        transform: scale(0.9);
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* ========================================
+   MELHORIAS NO FORMULÁRIO DE COMENTÁRIO
+   ======================================== */
+
+.checklist-comment-form {
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 1.25rem;
+}
+
+.checklist-comment-form textarea:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+/* ========================================
+   DARK MODE SUPPORT
+   ======================================== */
+
+body.dark-mode .comment-task-header {
+    background: linear-gradient(135deg, #1e3a5f 0%, #1e293b 100%);
+    border-color: #334155;
+}
+
+body.dark-mode .comment-task-header .task-title-label {
+    color: #60a5fa;
+}
+
+body.dark-mode .comment-task-header .task-title-text {
+    color: #cbd5e1;
+}
+
+body.dark-mode .checklist-item.comment-section-open {
+    background: linear-gradient(90deg, rgba(102, 126, 234, 0.15) 0%, rgba(0, 0, 0, 0) 100%);
+}
+
+body.dark-mode .checklist-item.comment-section-open .checklist-item-header {
+    background: rgba(102, 126, 234, 0.2) !important;
+}
+
+body.dark-mode .checklist-comment-form {
+    background: var(--card-bg);
+}
+
+body.dark-mode .comments-open-badge {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* ========================================
+   RESPONSIVIDADE
+   ======================================== */
+
+@media (max-width: 768px) {
+    .comment-task-header {
+        padding: 0.5rem;
+    }
+
+    .comment-task-header .task-title-label {
+        font-size: 0.8rem;
+    }
+
+    .comment-task-header .task-title-text {
+        font-size: 0.85rem;
+        padding-left: 1.5rem;
+    }
+
+    .comments-open-badge {
+        bottom: 10px;
+        right: 10px;
+        padding: 0.5rem 1rem;
+        font-size: 0.75rem;
+    }
+}
+
+/* ========================================
+   SCROLL HIGHLIGHT
+   ======================================== */
+
+.checklist-item.scroll-highlight {
+    animation: highlightPulse 1.5s ease-out;
+}
+
+@keyframes highlightPulse {
+
+    0%,
+    100% {
+        background: transparent;
+    }
+
+    50% {
+        background: rgba(102, 126, 234, 0.15);
+    }
+}

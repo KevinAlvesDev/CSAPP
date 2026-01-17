@@ -5,6 +5,9 @@
 
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/implantacao_detalhes.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/checklist_comments_improvements.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/drag_drop_improvements.css') }}">
+
 {% endblock %}
 
 {% block content %}
@@ -1415,6 +1418,11 @@ Sim - Academia XYZ
 <script src="{{ url_for('static', filename='js/components/checklist/checklist_drag_drop.js') }}"></script>
 <script src="{{ url_for('static', filename='js/components/checklist/checklist_comments.js') }}"></script>
 <script src="{{ url_for('static', filename='js/components/checklist_renderer.js') }}"></script>
+
+<script src="{{ url_for('static', filename='js/utils/checklist_comments_ui.js') }}"></script>
+<script src="{{ url_for('static', filename='js/utils/drag_drop_visual_patch.js') }}"></script>
+<script src="{{ url_for('static', filename='js/utils/placeholder_drop_fix.js') }}"></script>
+
 
 <script src="{{ url_for('static', filename='js/pages/implantacao_detalhes_ui.js') }}"></script>
 

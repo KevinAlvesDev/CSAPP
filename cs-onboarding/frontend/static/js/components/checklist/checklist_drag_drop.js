@@ -19,9 +19,9 @@ class ChecklistDragDrop {
     }
 
     init() {
-        // Create drop indicator element (Line)
+        // Create drop placeholder element (Full-size ghost)
         this.dropIndicator = document.createElement('div');
-        this.dropIndicator.className = 'drop-indicator';
+        this.dropIndicator.className = 'drop-placeholder';
         this.dropIndicator.style.display = 'none';
 
         // Create drop hint element (Tooltip)
@@ -67,29 +67,40 @@ class ChecklistDragDrop {
         const style = document.createElement('style');
         style.id = 'checklist-dnd-styles-v2';
         style.textContent = `
-            .drop-indicator {
-                position: absolute;
-                height: 4px;
-                background-color: #0d6efd;
-                border-radius: 4px;
-                pointer-events: none;
-                z-index: 1050;
-                box-shadow: 0 0 4px rgba(13, 110, 253, 0.5);
-                transition: top 0.1s ease, left 0.1s ease;
+            /* Placeholder visual completo que ocupa espaço real */
+            .drop-placeholder {
+                display: none;
+                min-height: 60px;
+                background: linear-gradient(135deg, rgba(13, 110, 253, 0.08) 0%, rgba(13, 110, 253, 0.12) 100%);
+                border: 2px dashed #0d6efd;
+                border-radius: 8px;
+                margin: 4px 0;
+                position: relative;
+                transition: all 0.2s ease;
+                animation: placeholderPulse 1.5s ease-in-out infinite;
             }
-            .drop-indicator::before, .drop-indicator::after {
-                content: '';
+            
+            .drop-placeholder::before {
+                content: '↓ Soltar aqui';
                 position: absolute;
-                width: 10px;
-                height: 10px;
-                background-color: #0d6efd;
-                border-radius: 50%;
                 top: 50%;
-                transform: translateY(-50%);
-                box-shadow: 0 0 2px rgba(255,255,255,0.8);
+                left: 50%;
+                transform: translate(-50%, -50%);
+                color: #0d6efd;
+                font-weight: 600;
+                font-size: 0.9rem;
+                opacity: 0.7;
+                pointer-events: none;
             }
-            .drop-indicator::before { left: -4px; }
-            .drop-indicator::after { right: -4px; }
+            
+            @keyframes placeholderPulse {
+                0%, 100% {
+                    background: linear-gradient(135deg, rgba(13, 110, 253, 0.08) 0%, rgba(13, 110, 253, 0.12) 100%);
+                }
+                50% {
+                    background: linear-gradient(135deg, rgba(13, 110, 253, 0.12) 0%, rgba(13, 110, 253, 0.18) 100%);
+                }
+            }
 
             .drop-hint-tooltip {
                 position: fixed;
@@ -115,10 +126,10 @@ class ChecklistDragDrop {
             }
             
             .checklist-item.dragging {
-                background-color: #fff3cd !important;
-                opacity: 0.6;
-                border: 1px dashed #ffc107;
+                opacity: 0.4;
+                transform: scale(0.98);
             }
+            
             .drag-handle { cursor: grab; }
             .drag-handle:active { cursor: grabbing; }
         `;
