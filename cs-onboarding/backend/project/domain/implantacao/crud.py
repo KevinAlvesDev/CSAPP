@@ -13,7 +13,9 @@ from ...constants import MODULO_OPCOES, PERFIS_COM_GESTAO
 from ...db import execute_and_fetch_one, execute_db, logar_timeline, query_db
 
 
-def criar_implantacao_service(nome_empresa, usuario_atribuido, usuario_criador, id_favorecido=None):
+def criar_implantacao_service(
+    nome_empresa, usuario_atribuido, usuario_criador, id_favorecido=None, contexto="onboarding"
+):
     """
     Cria uma nova implantação completa.
     """
@@ -23,22 +25,24 @@ def criar_implantacao_service(nome_empresa, usuario_atribuido, usuario_criador, 
         raise ValueError("Usuário a ser atribuído é obrigatório.")
 
     # Verifica se já existe um SISTEMA ativo para esta empresa (permite Sistema + Módulo simultaneamente)
+    # E verifica dentro do MESMO CONTEXTO
     existente = query_db(
         """
         SELECT id, status
         FROM implantacoes
         WHERE LOWER(nome_empresa) = LOWER(%s)
           AND tipo = 'completa'
+          AND contexto = %s
           AND status IN ('nova','futura','andamento','parada')
         LIMIT 1
         """,
-        (nome_empresa,),
+        (nome_empresa, contexto),
         one=True,
     )
     if existente:
         status_existente = existente.get("status")
         raise ValueError(
-            f'Já existe uma implantação de sistema ativa para "{nome_empresa}" (status: {status_existente}).'
+            f'Já existe uma implantação de sistema ativa para "{nome_empresa}" neste contexto (status: {status_existente}).'
         )
 
     tipo = "completa"
@@ -46,9 +50,9 @@ def criar_implantacao_service(nome_empresa, usuario_atribuido, usuario_criador, 
     agora = datetime.now()
 
     result = execute_and_fetch_one(
-        "INSERT INTO implantacoes (usuario_cs, nome_empresa, tipo, data_criacao, status, data_inicio_previsto, data_inicio_efetivo, id_favorecido) "
-        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
-        (usuario_atribuido, nome_empresa, tipo, agora, status, None, None, id_favorecido),
+        "INSERT INTO implantacoes (usuario_cs, nome_empresa, tipo, data_criacao, status, data_inicio_previsto, data_inicio_efetivo, id_favorecido, contexto) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
+        (usuario_atribuido, nome_empresa, tipo, agora, status, None, None, id_favorecido, contexto),
     )
 
     implantacao_id = result.get("id") if result else None
@@ -59,7 +63,7 @@ def criar_implantacao_service(nome_empresa, usuario_atribuido, usuario_criador, 
         implantacao_id,
         usuario_criador,
         "implantacao_criada",
-        f'Implantação "{nome_empresa}" ({tipo.capitalize()}) criada e atribuída a {usuario_atribuido}.',
+        f'Implantação "{nome_empresa}" ({tipo.capitalize()}) criada e atribuída a {usuario_atribuido}. Contexto: {contexto}.',
     )
 
     # Criar checklist de finalização automaticamente
@@ -76,7 +80,9 @@ def criar_implantacao_service(nome_empresa, usuario_atribuido, usuario_criador, 
     return implantacao_id
 
 
-def criar_implantacao_modulo_service(nome_empresa, usuario_atribuido, usuario_criador, modulo_tipo, id_favorecido=None):
+def criar_implantacao_modulo_service(
+    nome_empresa, usuario_atribuido, usuario_criador, modulo_tipo, id_favorecido=None, contexto="onboarding"
+):
     """
     Cria uma nova implantação de módulo.
     """
@@ -101,16 +107,17 @@ def criar_implantacao_modulo_service(nome_empresa, usuario_atribuido, usuario_cr
         FROM implantacoes
         WHERE LOWER(nome_empresa) = LOWER(%s)
           AND tipo = 'modulo'
+          AND contexto = %s
           AND status IN ('nova','futura','andamento','parada')
         LIMIT 1
         """,
-        (nome_empresa,),
+        (nome_empresa, contexto),
         one=True,
     )
     if existente:
         status_existente = existente.get("status")
         raise ValueError(
-            f'Já existe uma implantação de módulo ativa para "{nome_empresa}" (status: {status_existente}).'
+            f'Já existe uma implantação de módulo ativa para "{nome_empresa}" neste contexto (status: {status_existente}).'
         )
 
     tipo = "modulo"
@@ -118,9 +125,9 @@ def criar_implantacao_modulo_service(nome_empresa, usuario_atribuido, usuario_cr
     agora = datetime.now()
 
     result = execute_and_fetch_one(
-        "INSERT INTO implantacoes (usuario_cs, nome_empresa, tipo, data_criacao, status, data_inicio_previsto, data_inicio_efetivo, id_favorecido) "
-        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
-        (usuario_atribuido, nome_empresa, tipo, agora, status, None, None, id_favorecido),
+        "INSERT INTO implantacoes (usuario_cs, nome_empresa, tipo, data_criacao, status, data_inicio_previsto, data_inicio_efetivo, id_favorecido, contexto) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
+        (usuario_atribuido, nome_empresa, tipo, agora, status, None, None, id_favorecido, contexto),
     )
 
     implantacao_id = result.get("id") if result else None
@@ -132,7 +139,7 @@ def criar_implantacao_modulo_service(nome_empresa, usuario_atribuido, usuario_cr
         implantacao_id,
         usuario_criador,
         "implantacao_criada",
-        f'Implantação de Módulo "{nome_empresa}" (módulo: {modulo_label}) criada e atribuída a {usuario_atribuido}.',
+        f'Implantação de Módulo "{nome_empresa}" (módulo: {modulo_label}) criada e atribuída a {usuario_atribuido}. Contexto: {contexto}.',
     )
 
     # Criar checklist de finalização automaticamente

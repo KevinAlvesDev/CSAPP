@@ -15,7 +15,14 @@ from .estrutura import _criar_estrutura_plano, _criar_estrutura_plano_checklist
 from .validacao import validar_estrutura_checklist, validar_estrutura_hierarquica
 
 
-def criar_plano_sucesso(nome: str, descricao: str, criado_por: str, estrutura: Dict, dias_duracao: int = None) -> int:
+def criar_plano_sucesso(
+    nome: str,
+    descricao: str,
+    criado_por: str,
+    estrutura: Dict,
+    dias_duracao: int = None,
+    context: str = "onboarding",
+) -> int:
     """
     Cria um plano de sucesso com estrutura hierárquica.
     """
@@ -52,8 +59,8 @@ def criar_plano_sucesso(nome: str, descricao: str, criado_por: str, estrutura: D
 
         try:
             sql_plano = """
-                INSERT INTO planos_sucesso (nome, descricao, criado_por, data_criacao, data_atualizacao, dias_duracao, permite_excluir_tarefas)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO planos_sucesso (nome, descricao, criado_por, data_criacao, data_atualizacao, dias_duracao, permite_excluir_tarefas, contexto)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """
             if db_type == "sqlite":
                 sql_plano = sql_plano.replace("%s", "?")
@@ -61,7 +68,17 @@ def criar_plano_sucesso(nome: str, descricao: str, criado_por: str, estrutura: D
             now = datetime.now()
             permite_excluir = estrutura.get("permite_excluir_tarefas", False)
             cursor.execute(
-                sql_plano, (nome.strip(), descricao or "", criado_por, now, now, dias_duracao, permite_excluir)
+                sql_plano,
+                (
+                    nome.strip(),
+                    descricao or "",
+                    criado_por,
+                    now,
+                    now,
+                    dias_duracao,
+                    permite_excluir,
+                    context,
+                ),
             )
 
             if db_type == "postgres":
@@ -84,7 +101,12 @@ def criar_plano_sucesso(nome: str, descricao: str, criado_por: str, estrutura: D
 
 
 def criar_plano_sucesso_checklist(
-    nome: str, descricao: str, criado_por: str, estrutura: Dict, dias_duracao: int = None
+    nome: str,
+    descricao: str,
+    criado_por: str,
+    estrutura: Dict,
+    dias_duracao: int = None,
+    context: str = "onboarding",
 ) -> int:
     """
     Cria um plano de sucesso usando a tabela checklist_items (hierarquia infinita).
@@ -124,8 +146,8 @@ def criar_plano_sucesso_checklist(
 
         try:
             sql_plano = """
-                INSERT INTO planos_sucesso (nome, descricao, criado_por, data_criacao, data_atualizacao, dias_duracao, permite_excluir_tarefas)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO planos_sucesso (nome, descricao, criado_por, data_criacao, data_atualizacao, dias_duracao, permite_excluir_tarefas, contexto)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """
             if db_type == "sqlite":
                 sql_plano = sql_plano.replace("%s", "?")
@@ -133,7 +155,17 @@ def criar_plano_sucesso_checklist(
             now = datetime.now()
             permite_excluir = estrutura.get("permite_excluir_tarefas", False)
             cursor.execute(
-                sql_plano, (nome.strip(), descricao or "", criado_por, now, now, dias_duracao, permite_excluir)
+                sql_plano,
+                (
+                    nome.strip(),
+                    descricao or "",
+                    criado_por,
+                    now,
+                    now,
+                    dias_duracao,
+                    permite_excluir,
+                    context,
+                ),
             )
 
             if db_type == "postgres":
@@ -253,12 +285,21 @@ def excluir_plano_sucesso(plano_id: int) -> bool:
     return result is not None
 
 
-def listar_planos_sucesso(ativo_apenas: bool = True, busca: str = None) -> List[Dict]:
+def listar_planos_sucesso(
+    ativo_apenas: bool = True, busca: str = None, context: str = None
+) -> List[Dict]:
     """
     Lista todos os planos de sucesso.
     """
     sql = "SELECT * FROM planos_sucesso WHERE 1=1"
     params = []
+
+    if context:
+        if context == "onboarding":
+            sql += " AND (contexto IS NULL OR contexto = 'onboarding')"
+        else:
+            sql += " AND contexto = %s"
+            params.append(context)
 
     if ativo_apenas:
         sql += " AND ativo = %s"
@@ -465,7 +506,13 @@ def _plano_usa_checklist_items(plano_id: int) -> bool:
     return count and count.get("count", 0) > 0
 
 
-def clonar_plano_sucesso(plano_id: int, novo_nome: str, criado_por: str, nova_descricao: str = None) -> int:
+def clonar_plano_sucesso(
+    plano_id: int,
+    novo_nome: str,
+    criado_por: str,
+    nova_descricao: str = None,
+    context: str = None,
+) -> int:
     """
     Clona um plano de sucesso existente com todas as suas tarefas.
 
@@ -474,6 +521,7 @@ def clonar_plano_sucesso(plano_id: int, novo_nome: str, criado_por: str, nova_de
         novo_nome: Nome do novo plano
         criado_por: Usuário que está clonando
         nova_descricao: Descrição opcional (se None, usa "Baseado em: [nome original]")
+        context: Contexto do novo plano (opcional)
 
     Returns:
         ID do novo plano criado
@@ -548,6 +596,7 @@ def clonar_plano_sucesso(plano_id: int, novo_nome: str, criado_por: str, nova_de
             criado_por=criado_por,
             estrutura=estrutura,
             dias_duracao=plano_original.get("dias_duracao"),
+            context=context or plano_original.get("contexto", "onboarding"),
         )
 
         current_app.logger.info(

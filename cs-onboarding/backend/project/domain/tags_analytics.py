@@ -8,7 +8,10 @@ from typing import Any, Dict, Optional
 
 
 def get_tags_by_user_chart_data(
-    cs_email: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None
+    cs_email: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    context: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Retrieves comment tag statistics grouped by user.
@@ -55,6 +58,8 @@ def get_tags_by_user_chart_data(
         COUNT(*) as comment_count
         FROM comentarios_h ch
         LEFT JOIN perfil_usuario p ON ch.usuario_cs = p.usuario
+        LEFT JOIN checklist_items ci ON ch.checklist_item_id = ci.id
+        JOIN implantacoes i ON ci.implantacao_id = i.id
         WHERE ch.usuario_cs IS NOT NULL
     """
 
@@ -76,9 +81,15 @@ def get_tags_by_user_chart_data(
         query += f" AND {date_col_expr('ch.data_criacao')} >= {date_param_expr()}"
         args.append(start_date)
 
-    if end_date:
         query += f" AND {date_col_expr('ch.data_criacao')} <= {date_param_expr()}"
         args.append(end_date)
+    
+    if context:
+        if context == "onboarding":
+            query += " AND (i.contexto IS NULL OR i.contexto = 'onboarding') "
+        else:
+            query += " AND i.contexto = %s "
+            args.append(context)
 
     query += " GROUP BY COALESCE(p.nome, ch.usuario_cs), ch.visibilidade, ch.tag ORDER BY user_name"
 

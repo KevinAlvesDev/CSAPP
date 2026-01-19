@@ -1,0 +1,843 @@
+{% extends "base.html" %}
+{% from 'macros/dashboard.html' import empresa_data_attrs %}
+
+{% block title %}Detalhes da Implantação - {{ implantacao.nome_empresa }} (GC){% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/implantacao_detalhes.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/checklist_comments_improvements.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/drag_drop_improvements.css') }}">
+
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4 content-wrapper" id="main-content" data-implantacao-id="{{ implantacao.id }}"
+    data-email-usuario-logado="{{ email_usuario_logado }}"
+    data-email-responsavel="{{ implantacao.email_responsavel or '' }}"
+    data-is-manager="{{ 'true' if g.perfil and g.perfil.get('perfil_acesso') in ['Administrador', 'Gerente', 'Coordenador'] else 'false' }}">
+
+    <header class="header-bg p-3 d-flex align-items-center position-relative rounded-3 mb-4">
+        <h1 class="main-title mb-0 fs-4 w-100 text-center">Detalhes da Implantação (Grandes Contas)</h1>
+        <div class="d-flex align-items-center position-absolute end-0 top-50 translate-middle-y">
+            <a href="{{ url_for('grandes_contas.dashboard') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-house me-1"></i> Dashboard
+            </a>
+        </div>
+    </header>
+
+    <!-- Flash messages agora são exibidos como toasts flutuantes automaticamente -->
+
+    <div class="row g-3">
+        <!-- Sidebar (Coluna Esquerda) -->
+        <div class="sidebar-column">
+
+            <!-- Card Plano de Sucesso (Lógica Importante) -->
+            {% if plano_sucesso %}
+            <div class="custom-card border-primary border-top border-4">
+                <div class="custom-card-header">
+                    <h5 class="custom-card-title"><i class="bi bi-diagram-3-fill me-2 text-primary"></i>Plano Atual</h5>
+                    <div class="d-flex gap-1">
+                        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
+                            data-bs-target="#modalSelecionarPlano">Alterar</button>
+                        <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal"
+                            data-bs-target="#modalRemoverPlano" title="Remover plano da implantação">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="custom-card-body">
+                    <h5 class="fw-bold mb-1">{{ plano_sucesso.nome }}</h5>
+                    <p class="text-muted small mb-3">{{ plano_sucesso.descricao }}</p>
+
+                    <!-- Info de datas da implantação -->
+                    <div class="plano-datas-info">
+                        <div class="data-item">
+                            <span class="data-label"><i class="bi bi-calendar-event me-1"></i>Início</span>
+                            <span class="data-value">{{ implantacao.data_inicio_efetivo_fmt_d or
+                                implantacao.data_criacao_fmt_d or 'Não definido' }}</span>
+                        </div>
+                        {% if plano_sucesso.dias_duracao %}
+                        <div class="data-item">
+                            <span class="data-label"><i class="bi bi-hourglass-split me-1"></i>Duração</span>
+                            <span class="data-value">{{ plano_sucesso.dias_duracao }} dias</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label"><i class="bi bi-calendar-check me-1"></i>Previsão Término</span>
+                            <span class="data-value destaque">{{ implantacao.data_previsao_termino_fmt_d or
+                                'Calculando...' }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="custom-card cta-card mb-4">
+                <div class="custom-card-body text-center">
+                    <div class="mb-3 text-danger">
+                        <i class="bi bi-exclamation-circle-fill" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="cta-title mb-2">Nenhum Plano Definido</h5>
+                    <p class="text-muted small mb-3">Esta implantação ainda não possui um plano de sucesso vinculado.
+                        Selecione um para gerar as tarefas.</p>
+                    <button class="btn btn-danger w-100 fw-bold shadow-sm" data-bs-toggle="modal"
+                        data-bs-target="#modalSelecionarPlano">
+                        <i class="bi bi-plus-circle me-2"></i>Selecionar Plano Agora
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Card Ações Rápidas -->
+            <div class="custom-card">
+                <div class="custom-card-header">
+                    <h5 class="custom-card-title">Ações Rápidas</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    <!-- Removido: Adicionar Tarefa -->
+                    <button class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-3" {{
+                        empresa_data_attrs(implantacao) }}>
+                        <div class="bg-light p-2 rounded text-info"><i class="bi bi-pencil-square"></i></div>
+                        <div>
+                            <h6 class="mb-0 fw-bold">Editar Detalhes</h6>
+                        </div>
+                    </button>
+
+                    {% if implantacao.status == 'andamento' %}
+                    <button class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-3"
+                        data-bs-toggle="modal" data-bs-target="#modalFinalizar">
+                        <div class="bg-success bg-opacity-10 p-2 rounded text-success"><i class="bi bi-check-lg"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 fw-bold text-dark">Finalizar Implantação</h6>
+                        </div>
+                    </button>
+                    <button class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-3"
+                        data-bs-toggle="modal" data-bs-target="#modalParar">
+                        <div class="bg-warning bg-opacity-10 p-2 rounded text-warning"><i class="bi bi-pause-fill"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 fw-bold text-dark">Parar Implantação</h6>
+                        </div>
+                    </button>
+                    <button class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-3"
+                        data-bs-toggle="modal" data-bs-target="#modalDesfazerInicio">
+                        <div class="bg-secondary bg-opacity-10 p-2 rounded text-secondary"><i
+                                class="bi bi-arrow-counterclockwise"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 fw-bold text-dark">Cancelar início</h6>
+                        </div>
+                    </button>
+                    {% elif implantacao.status == 'parada' %}
+                    <button class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-3"
+                        data-bs-toggle="modal" data-bs-target="#modalRetomar">
+                        <div class="bg-primary bg-opacity-10 p-2 rounded text-primary"><i class="bi bi-play-fill"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 fw-bold text-dark">Retomar Implantação</h6>
+                        </div>
+                    </button>
+                    {% endif %}
+
+                    <button class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-3"
+                        data-bs-toggle="modal" data-bs-target="#modalTransferir">
+                        <div class="bg-info bg-opacity-10 p-2 rounded text-info"><i class="bi bi-arrow-left-right"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 fw-bold text-dark">Transferir Implantação</h6>
+                        </div>
+                    </button>
+
+                    {% if implantacao.status != 'cancelada' %}
+                    <button class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-3"
+                        data-bs-toggle="modal" data-bs-target="#modalCancelar">
+                        <div class="bg-warning bg-opacity-10 p-2 rounded text-warning"><i class="bi bi-x-circle"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 fw-bold text-dark">Cancelar Implantação</h6>
+                        </div>
+                    </button>
+                    {% endif %}
+
+                    <button class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-3"
+                        data-bs-toggle="modal" data-bs-target="#modalExcluirImplantacao">
+                        <div class="bg-danger bg-opacity-10 p-2 rounded text-danger"><i class="bi bi-trash"></i></div>
+                        <div>
+                            <h6 class="mb-0 fw-bold text-dark">Excluir Implantação</h6>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Card Resumo da Empresa -->
+            <div class="custom-card mt-3">
+                <div class="custom-card-header border-0 pb-0">
+                    <h5 class="custom-card-title d-flex align-items-center">
+                        <div class="rounded-circle bg-primary bg-opacity-10 p-2 me-2 d-flex align-items-center justify-content-center"
+                            style="width: 32px; height: 32px;">
+                            <i class="bi bi-building text-primary"></i>
+                        </div>
+                        Resumo da Empresa
+                    </h5>
+                </div>
+                <div class="custom-card-body pt-3">
+                    <!-- Informações Principais -->
+                    <div class="company-summary d-flex flex-column gap-3">
+
+                        <!-- Nome da Empresa -->
+                        <div class="d-flex align-items-center">
+                            <div class="min-w-40px">
+                                <div class="bg-primary bg-opacity-10 text-primary rounded p-2 d-inline-flex align-items-center justify-content-center"
+                                    style="width: 36px; height: 36px;">
+                                    <i class="bi bi-building-fill"></i>
+                                </div>
+                            </div>
+                            <div class="ms-3">
+                                <div class="text-muted small fw-semibold text-uppercase"
+                                    style="font-size: 0.75rem; letter-spacing: 0.5px;">Empresa</div>
+                                <div class="fw-bold text-dark">{{ implantacao.nome_empresa }}</div>
+                            </div>
+                        </div>
+
+                        <!-- Status da Implantação -->
+                        <div class="d-flex align-items-center">
+                            <div class="min-w-40px">
+                                {% set status_color = 'primary' %}
+                                {% set status_icon = 'bi-activity' %}
+
+                                {% if implantacao.status == 'nova' %}
+                                {% set status_color = 'secondary' %}
+                                {% set status_icon = 'bi-star-fill' %}
+                                {% elif implantacao.status == 'futura' %}
+                                {% set status_color = 'info' %}
+                                {% set status_icon = 'bi-calendar-plus-fill' %}
+                                {% elif implantacao.status == 'andamento' %}
+                                {% set status_color = 'primary' %}
+                                {% set status_icon = 'bi-play-circle-fill' %}
+                                {% elif implantacao.status == 'parada' %}
+                                {% set status_color = 'warning' %}
+                                {% set status_icon = 'bi-pause-circle-fill' %}
+                                {% elif implantacao.status == 'finalizada' %}
+                                {% set status_color = 'success' %}
+                                {% set status_icon = 'bi-check-circle-fill' %}
+                                {% elif implantacao.status == 'cancelada' %}
+                                {% set status_color = 'danger' %}
+                                {% set status_icon = 'bi-x-circle-fill' %}
+                                {% endif %}
+
+                                <div class="bg-{{ status_color }} bg-opacity-10 text-{{ status_color }} rounded p-2 d-inline-flex align-items-center justify-content-center"
+                                    style="width: 36px; height: 36px;">
+                                    <i class="bi {{ status_icon }}"></i>
+                                </div>
+                            </div>
+                            <div class="ms-3">
+                                <div class="text-muted small fw-semibold text-uppercase"
+                                    style="font-size: 0.75rem; letter-spacing: 0.5px;">Status</div>
+                                <div>
+                                    <span class="badge bg-{{ status_color }} bg-opacity-75">{{ implantacao.status|title
+                                        }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Data de Início -->
+                        <div class="d-flex align-items-center">
+                            <div class="min-w-40px">
+                                <div class="bg-info bg-opacity-10 text-info rounded p-2 d-inline-flex align-items-center justify-content-center"
+                                    style="width: 36px; height: 36px;">
+                                    <i class="bi bi-calendar2-week-fill"></i>
+                                </div>
+                            </div>
+                            <div class="ms-3">
+                                <div class="text-muted small fw-semibold text-uppercase"
+                                    style="font-size: 0.75rem; letter-spacing: 0.5px;">Data de Início</div>
+                                <div class="fw-medium">
+                                    {% if implantacao.data_inicio_efetivo_fmt_d %}
+                                    {{ implantacao.data_inicio_efetivo_fmt_d }} <span
+                                        class="badge bg-light text-muted border ms-1">Efetivo</span>
+                                    {% elif implantacao.data_inicio_previsto_fmt_d %}
+                                    {{ implantacao.data_inicio_previsto_fmt_d }} <span
+                                        class="badge bg-light text-muted border ms-1">Previsto</span>
+                                    {% elif implantacao.data_criacao_fmt_d %}
+                                    {{ implantacao.data_criacao_fmt_d }} <span
+                                        class="badge bg-light text-muted border ms-1">Criação</span>
+                                    {% else %}
+                                    <span class="text-muted fst-italic">Não definida</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ID Favorecido -->
+                        {% if implantacao.id_favorecido %}
+                        <div class="d-flex align-items-center">
+                            <div class="min-w-40px">
+                                <div class="bg-secondary bg-opacity-10 text-secondary rounded p-2 d-inline-flex align-items-center justify-content-center"
+                                    style="width: 36px; height: 36px;">
+                                    <i class="bi bi-fingerprint"></i>
+                                </div>
+                            </div>
+                            <div class="ms-3">
+                                <div class="text-muted small fw-semibold text-uppercase"
+                                    style="font-size: 0.75rem; letter-spacing: 0.5px;">ID Favorecido</div>
+                                <div class="font-monospace user-select-all">{{ implantacao.id_favorecido }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card Responsável e Contato -->
+            {% if implantacao.responsavel_cliente or implantacao.email_responsavel or implantacao.telefone_responsavel
+            %}
+            <div class="custom-card mt-3">
+                <div class="custom-card-header border-0 pb-0">
+                    <h5 class="custom-card-title d-flex align-items-center">
+                        <div class="rounded-circle bg-success bg-opacity-10 p-2 me-2 d-flex align-items-center justify-content-center"
+                            style="width: 32px; height: 32px;">
+                            <i class="bi bi-person-lines-fill text-success"></i>
+                        </div>
+                        Contato
+                    </h5>
+                </div>
+                <div class="custom-card-body pt-3">
+                    <div class="d-flex flex-column gap-3">
+
+                        <!-- Responsável -->
+                        {% if implantacao.responsavel_cliente %}
+                        <div class="d-flex align-items-center">
+                            <div class="min-w-40px">
+                                <div class="bg-success bg-opacity-10 text-success rounded p-2 d-inline-flex align-items-center justify-content-center"
+                                    style="width: 36px; height: 36px;">
+                                    <i class="bi bi-person-fill"></i>
+                                </div>
+                            </div>
+                            <div class="ms-3">
+                                <div class="text-muted small fw-semibold text-uppercase"
+                                    style="font-size: 0.75rem; letter-spacing: 0.5px;">Responsável</div>
+                                <div class="fw-medium text-dark">
+                                    {{ implantacao.responsavel_cliente }}
+                                    {% if implantacao.cargo_responsavel %}
+                                    <span class="text-muted small">({{ implantacao.cargo_responsavel }})</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Contato (Email/Tel) -->
+                        {% if implantacao.email_responsavel %}
+                        <div class="d-flex align-items-center">
+                            <div class="min-w-40px">
+                                <div class="bg-warning bg-opacity-10 text-warning rounded p-2 d-inline-flex align-items-center justify-content-center"
+                                    style="width: 36px; height: 36px;">
+                                    <i class="bi bi-envelope-fill"></i>
+                                </div>
+                            </div>
+                            <div class="ms-3">
+                                <div class="text-muted small fw-semibold text-uppercase"
+                                    style="font-size: 0.75rem; letter-spacing: 0.5px;">E-mail</div>
+                                <div>
+                                    <a href="mailto:{{ implantacao.email_responsavel }}" class="text-decoration-none">{{
+                                        implantacao.email_responsavel }}</a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if implantacao.telefone_responsavel %}
+                        <div class="d-flex align-items-center">
+                            <div class="min-w-40px">
+                                <div class="bg-info bg-opacity-10 text-info rounded p-2 d-inline-flex align-items-center justify-content-center"
+                                    style="width: 36px; height: 36px;">
+                                    <i class="bi bi-telephone-fill"></i>
+                                </div>
+                            </div>
+                            <div class="ms-3">
+                                <div class="text-muted small fw-semibold text-uppercase"
+                                    style="font-size: 0.75rem; letter-spacing: 0.5px;">Telefone</div>
+                                <div>
+                                    <a href="https://wa.me/55{{ implantacao.telefone_responsavel|replace(' ','')|replace('-','')|replace('(','')|replace(')','') }}"
+                                        target="_blank" class="text-decoration-none">
+                                        {{ implantacao.telefone_responsavel }} <i
+                                            class="bi bi-whatsapp text-success ms-1 small"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div> <!-- Fecha sidebar-column -->
+
+        <!-- Coluna Principal (Conteúdo) -->
+        <div class="main-column">
+
+            <!-- Card Unificado: Plano de Sucesso + Linha do Tempo -->
+            <div class="custom-card" style="min-height: 400px;">
+                <div class="custom-card-header flex-column align-items-stretch gap-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="custom-card-title mb-0">
+                            <i class="bi bi-clipboard-data me-2 text-primary"></i>Acompanhamento
+                        </h5>
+                    </div>
+
+                    <!-- Tabs de navegação -->
+                    <ul class="nav tab-switcher" id="contentTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="plano-tab" data-bs-toggle="tab"
+                                data-bs-target="#plano-content" type="button" role="tab">
+                                <i class="bi bi-diagram-3 me-1"></i>Plano de Sucesso
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="timeline-tab" data-bs-toggle="tab"
+                                data-bs-target="#timeline-content" type="button" role="tab">
+                                <i class="bi bi-clock-history me-1"></i>Linha do Tempo
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="comments-tab" data-bs-toggle="tab"
+                                data-bs-target="#comments-content" type="button" role="tab">
+                                <i class="bi bi-chat-square-text me-1"></i>Comentários
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="carteira-tab" data-bs-toggle="tab"
+                                data-bs-target="#carteira-content" type="button" role="tab">
+                                <i class="bi bi-briefcase me-1"></i>Definição de Carteira
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="avisos-tab" data-bs-toggle="tab"
+                                data-bs-target="#avisos-content" type="button" role="tab">
+                                <i class="bi bi-exclamation-triangle me-1"></i>Avisos
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="jira-tab" data-bs-toggle="tab" data-bs-target="#jira-content"
+                                type="button" role="tab">
+                                <i class="bi bi-layers me-1"></i>Jira
+                            </button>
+                        </li>
+
+                    </ul>
+                </div>
+
+                <div class="tab-content">
+                    <style>
+                        .custom-card .tab-content>.tab-pane:not(.active) {
+                            display: none !important;
+                        }
+
+                        .custom-card .tab-content>.tab-pane.active {
+                            display: block !important;
+                        }
+                    </style>
+                    <!-- Tab: Plano de Sucesso -->
+                    <div class="tab-pane fade show active" id="plano-content" role="tabpanel">
+                        <div class="custom-card-body plano-sucesso-container" id="plano-hierarquia">
+                            {% if checklist_tree and checklist_tree|length > 0 %}
+                            <!-- Novo Checklist Hierárquico -->
+                            <div id="checklist-container" data-implantacao-id="{{ implantacao.id }}"
+                                data-previsao-termino="{{ implantacao.data_previsao_termino or '' }}">
+                                <!-- Progresso Global -->
+                                <div class="checklist-global-progress mb-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="text-muted small">Progresso Global do Onboarding</span>
+                                        <span id="checklist-global-progress-percent"
+                                            class="fw-bold text-primary">0%</span>
+                                    </div>
+                                    <div class="progress-thick">
+                                        <div id="checklist-global-progress-bar" class="progress-bar" role="progressbar"
+                                            style="width: 0%; transition: width 0.25s ease-in-out;" aria-valuenow="0"
+                                            aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Checklist Tree será renderizado via JavaScript -->
+                                <div class="checklist-grid px-2 py-1 text-muted small"
+                                    style="border-bottom: 1px solid rgba(0,0,0,0.06);">
+                                    <span class="col-empty"></span>
+                                    <span class="col-checkbox"></span>
+                                    <span class="col-title">Tarefa</span>
+                                    <span class="col-spacer"></span>
+                                    <span class="col-tag">Tag</span>
+                                    <span class="col-qtd" style="text-align:center">QTD</span>
+                                    <span class="col-responsavel">Responsável</span>
+                                    <span class="col-prev-orig">Prev. orig</span>
+                                    <span class="col-prev-atual">Nova previsão</span>
+                                    <span class="col-conclusao d-none">Data de conclusão</span>
+                                    <span class="col-status">Status</span>
+                                    <span class="col-comment"></span>
+                                    <span class="col-delete"></span>
+                                </div>
+                                <div id="checklist-tree-root"></div>
+                            </div>
+                            {% elif false %}
+                            <!-- Modelo Antigo (Compatibilidade) -->
+                            <!-- ... Removido para brevidade, usando apenas o novo ... -->
+                            {% else %}
+                            <div class="empty-state">
+                                <!-- Ícone removido conforme solicitação -->
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Tab: Linha do Tempo -->
+                    <div class="tab-pane fade d-none" id="timeline-content" role="tabpanel"
+                        data-impl-id="{{ implantacao.id }}">
+                        <div class="custom-card-body" style="max-height: calc(100vh - 350px); overflow-y: auto;">
+                            <ul class="timeline-list" id="timeline-list">
+                                {% if not logs_timeline %}
+                                <li class="alert alert-light text-center small py-2">Nenhum evento registrado.</li>
+                                {% endif %}
+                                {% for log in logs_timeline %}
+                                <li class="timeline-item">
+                                    <div class="timeline-icon">
+                                        {% if log.tipo_evento == 'novo_comentario' %} <i
+                                            class="bi bi-chat-left-text-fill"></i>
+                                        {% elif 'tarefa' in log.tipo_evento %} <i class="bi bi-check-circle-fill"></i>
+                                        {% elif 'status' in log.tipo_evento %} <i class="bi bi-flag-fill"></i>
+                                        {% else %} <i class="bi bi-info-circle-fill"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="timeline-content shadow-sm">
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span class="fw-bold text-primary">{{ log.usuario_nome }}</span>
+                                            <span class="small text-muted">{{ log.data_criacao_fmt_dt_hr }}</span>
+                                        </div>
+                                        <p class="mb-0 text-secondary">{{ log.detalhes | safe | replace('\n', '<br>') }}
+                                        </p>
+                                        <div class="mt-2 d-flex gap-2">
+                                            {% if log.tipo_evento == 'novo_comentario' and log.related_item_id %}
+                                            <button class="btn btn-sm btn-outline-primary timeline-action-comments"
+                                                data-item-id="{{ log.related_item_id }}">
+                                                Ver comentários
+                                            </button>
+                                            {% endif %}
+
+                                        </div>
+                                    </div>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Comentários -->
+                    <div class="tab-pane fade d-none" id="comments-content" role="tabpanel">
+                        <div class="custom-card-body">
+                            <div id="comments-list-container" class="d-flex flex-column gap-3"
+                                style="max-height: calc(100vh - 350px); overflow-y: auto;">
+                                <!-- Comments will be loaded here -->
+                                <div class="text-center py-5 text-muted" id="comments-loading">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Carregando...</span>
+                                    </div>
+                                    <p class="mt-2 small">Carregando comentários...</p>
+                                </div>
+                                <div class="text-center py-5 text-muted d-none" id="comments-empty">
+                                    <i class="bi bi-chat-square text-secondary fs-1"></i>
+                                    <p class="mt-2">Nenhum comentário encontrado nesta implantação.</p>
+                                </div>
+                            </div>
+                            <div class="text-center mt-3 d-none" id="comments-pagination">
+                                <button class="btn btn-sm btn-outline-primary" id="btn-load-more-comments">
+                                    Carregar mais
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Jira -->
+                    <div class="tab-pane fade d-none" id="jira-content" role="tabpanel">
+                        <div class="custom-card-body">
+                            <!-- Header da Aba -->
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <div>
+                                    <h5 class="mb-1 text-dark fw-bold">Tickets Jira</h5>
+                                    <p class="text-muted small mb-0">Gerencie bugs e tarefas deste cliente.</p>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <button
+                                        class="btn btn-white text-secondary d-flex align-items-center gap-2 shadow-sm border"
+                                        id="btn-consulta-jira" style="border-radius: 8px;">
+                                        <i class="bi bi-search"></i> Consultar Jira
+                                    </button>
+                                    <button class="btn btn-primary d-flex align-items-center gap-2 shadow-sm"
+                                        id="btn-novo-ticket-jira"
+                                        style="border-radius: 8px; background-color: #4F46E5; border-color: #4F46E5;">
+                                        <i class="bi bi-plus-lg"></i> Novo Item
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="jira-loading" class="text-center py-5 d-none">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Carregando...</span>
+                                </div>
+                                <p class="mt-2 text-muted">Sincronizando com Jira...</p>
+                            </div>
+                            <div id="jira-error"
+                                class="alert alert-danger d-none my-3 border-0 bg-danger bg-opacity-10 text-danger rounded-3">
+                            </div>
+                            <div id="jira-empty" class="text-center py-5 d-none">
+                                <div class="mb-3 bg-light rounded-circle d-inline-flex align-items-center justify-content-center"
+                                    style="width: 64px; height: 64px;">
+                                    <i class="bi bi-layers text-secondary fs-3"></i>
+                                </div>
+                                <h6 class="text-dark fw-bold">Nenhum ticket encontrado</h6>
+                                <p class="text-muted small">Crie o primeiro ticket para iniciar o acompanhamento.</p>
+                            </div>
+
+                            <!-- Lista de Cards -->
+                            <div id="jira-list-container" class="d-none">
+                                <div class="d-flex justify-content-end mb-2">
+                                    <button class="btn btn-sm btn-light text-muted border-0" id="btn-refresh-jira"
+                                        title="Atualizar lista">
+                                        <i class="bi bi-arrow-clockwise"></i> Atualizar
+                                    </button>
+                                </div>
+                                <div class="row g-3" id="jira-cards-container">
+                                    <!-- Cards serão injetados aqui via JS -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- OUTRAS TABS (Carteira, Avisos) OMITIDAS POR BREVIDADE MAS MANTIDAS NO LAYOUT -->
+                    <div class="tab-pane fade d-none" id="carteira-content" role="tabpanel">
+                        <div class="custom-card-body">
+                            <div class="alert alert-info mb-4">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <strong>Definição de Carteira</strong>
+                                <p class="mb-0 mt-2 small">Adicione informações importantes sobre esta implantação:
+                                    contatos, grupos de WhatsApp, requisitos técnicos, etc.</p>
+                            </div>
+
+                            <!-- Modo de Edição / Visualização -->
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="mb-0">
+                                    <i class="bi bi-file-text me-2"></i>Informações da Carteira
+                                </h6>
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" id="btn-edit-carteira">
+                                        <i class="bi bi-pencil me-1"></i>Editar
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-success d-none" id="btn-save-carteira">
+                                        <i class="bi bi-check-lg me-1"></i>Salvar
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-secondary d-none"
+                                        id="btn-cancel-carteira">
+                                        <i class="bi bi-x-lg me-1"></i>Cancelar
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Área de Visualização -->
+                            <div id="carteira-view-mode">
+                                <div class="card">
+                                    <div class="card-body" id="carteira-content-display"
+                                        style="min-height: 300px; white-space: pre-wrap; font-family: 'Courier New', monospace; font-size: 0.9rem; line-height: 1.6; text-align: left; display: block;">
+                                        <div class="text-muted text-center">
+                                            <p class="mb-2">Nenhuma informação adicionada ainda.</p>
+                                            <p class="small mb-0">Clique em "Editar" para adicionar informações sobre
+                                                esta implantação.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Área de Edição -->
+                            <div id="carteira-edit-mode" class="d-none">
+                                <div class="mb-3">
+                                    <label for="carteira-textarea" class="form-label fw-bold">
+                                        Conteúdo
+                                        <span class="text-muted small">(Links serão automaticamente clicáveis na
+                                            visualização)</span>
+                                    </label>
+                                    <textarea class="form-control font-monospace" id="carteira-textarea" rows="20"
+                                        placeholder="Exemplo:
+
+1- Grupo de WhatsApp
+https://chat.whatsapp.com/exemplo
+
+2- Contato do responsável
+Nome: João Silva
+Telefone: (11) 99999-9999
+Email: joao@exemplo.com
+
+3- Cliente referência
+Sim - Academia XYZ
+
+4- Observações importantes
+..."></textarea>
+                                    <div class="form-text">
+                                        <i class="bi bi-lightbulb me-1"></i>
+                                        Dica: Você pode usar formatação livre. Links HTTP/HTTPS serão automaticamente
+                                        convertidos em links clicáveis.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Indicador de salvamento -->
+                            <div id="carteira-save-status" class="mt-2 small text-muted d-none">
+                                <i class="bi bi-clock-history me-1"></i>
+                                <span id="carteira-save-text">Salvando...</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade d-none" id="avisos-content" role="tabpanel">
+                        <div class="custom-card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <div>
+                                    <h6 class="mb-1">
+                                        <i class="bi bi-exclamation-triangle me-2"></i>Central de Avisos
+                                    </h6>
+                                    <p class="text-muted small mb-0">Alertas automáticos e avisos personalizados</p>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-primary" id="btn-add-aviso">
+                                    <i class="bi bi-plus-circle me-1"></i>Adicionar Aviso
+                                </button>
+                            </div>
+
+                            <!-- Avisos Automáticos do Sistema -->
+                            <div class="mb-4">
+                                <h6 class="fw-bold mb-3 text-muted small">
+                                    <i class="bi bi-robot me-1"></i>AVISOS AUTOMÁTICOS DO SISTEMA
+                                </h6>
+                                <div id="avisos-sistema">
+                                    {% if implantacao.status == 'parada' %}
+                                    <div class="alert alert-danger d-flex align-items-start" role="alert">
+                                        <i class="bi bi-exclamation-octagon-fill fs-4 me-3 flex-shrink-0"></i>
+                                        <div>
+                                            <h6 class="alert-heading mb-2">Implantação Parada</h6>
+                                            <p class="mb-1">Esta implantação está parada desde {{
+                                                implantacao.data_parada_fmt if implantacao.data_parada_fmt else 'data
+                                                não disponível' }}.</p>
+                                            {% if implantacao.motivo_parada %}
+                                            <p class="mb-0"><strong>Motivo:</strong> {{ implantacao.motivo_parada }}</p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% endif %}
+
+                                    {% if not plano_sucesso %}
+                                    <div class="alert alert-warning d-flex align-items-start" role="alert">
+                                        <i class="bi bi-exclamation-triangle-fill fs-4 me-3 flex-shrink-0"></i>
+                                        <div>
+                                            <h6 class="alert-heading mb-2">Plano de Sucesso Não Definido</h6>
+                                            <p class="mb-0">Esta implantação ainda não possui um plano de sucesso
+                                                vinculado. Selecione um plano para gerar as tarefas.</p>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+
+                                    {% if implantacao.progresso and implantacao.progresso < 20 and
+                                        implantacao.dias_passados and implantacao.dias_passados> 15 %}
+                                        <div class="alert alert-warning d-flex align-items-start" role="alert">
+                                            <i class="bi bi-clock-fill fs-4 me-3 flex-shrink-0"></i>
+                                            <div>
+                                                <h6 class="alert-heading mb-2">Progresso Baixo</h6>
+                                                <p class="mb-0">Esta implantação está há {{ implantacao.dias_passados }}
+                                                    dias em andamento com apenas {{ implantacao.progresso }}% de
+                                                    progresso.</p>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+
+                                        {% if implantacao.data_previsao_termino and implantacao.atrasada %}
+                                        <div class="alert alert-danger d-flex align-items-start" role="alert">
+                                            <i class="bi bi-calendar-x-fill fs-4 me-3 flex-shrink-0"></i>
+                                            <div>
+                                                <h6 class="alert-heading mb-2">Prazo Vencido</h6>
+                                                <p class="mb-0">A previsão de término era {{
+                                                    implantacao.data_previsao_termino_fmt_d }}. Esta implantação está
+                                                    atrasada.</p>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+
+                                        {% if implantacao.status != 'parada' and plano_sucesso and (not
+                                        implantacao.progresso or implantacao.progresso >= 20 or not
+                                        implantacao.dias_passados or implantacao.dias_passados <= 15) and (not
+                                            implantacao.atrasada) %} <div
+                                            class="alert alert-success d-flex align-items-start" role="alert">
+                                            <i class="bi bi-check-circle-fill fs-4 me-3 flex-shrink-0"></i>
+                                            <div>
+                                                <h6 class="alert-heading mb-2">Tudo em Ordem</h6>
+                                                <p class="mb-0">Não há avisos ou alertas críticos para esta implantação
+                                                    no momento.</p>
+                                            </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Avisos Personalizados -->
+                        <div>
+                            <h6 class="fw-bold mb-3 text-muted small">
+                                <i class="bi bi-person-fill me-1"></i>AVISOS PERSONALIZADOS
+                            </h6>
+                            <div id="avisos-personalizados-list">
+                                <!-- Avisos serão carregados aqui via JavaScript -->
+                                <div class="text-center py-4 text-muted" id="avisos-loading">
+                                    <div class="spinner-border spinner-border-sm" role="status">
+                                        <span class="visually-hidden">Carregando...</span>
+                                    </div>
+                                    <p class="mt-2 small">Carregando avisos...</p>
+                                </div>
+                                <div class="alert alert-info d-none" id="avisos-empty">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    Nenhum aviso personalizado adicionado. Clique em "Adicionar Aviso" para criar um.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div> <!-- Fecha main-column -->
+</div> <!-- Fecha row -->
+
+</div>
+
+<!-- Modais de Ação -->
+{% include 'pages/grandes_contas/modais_implantacao.html' %}
+
+
+{% endblock %}
+
+{% block scripts_extra %}
+
+<!-- Scripts de Drag and Drop e Checklist -->
+<script src="{{ url_for('static', filename='js/components/checklist/checklist_drag_drop.js') }}"></script>
+<script src="{{ url_for('static', filename='js/components/checklist_renderer.js') }}"></script>
+<script src="{{ url_for('static', filename='js/components/checklist/checklist_comments.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages/carteira_editor.js') }}"></script>
+<script src="{{ url_for('static', filename='js/components/avisos_manager.js') }}"></script>
+<script src="{{ url_for('static', filename='js/utils/checklist_comments_ui.js') }}"></script>
+
+<!-- Logica principal da pagina -->
+<script src="{{ url_for('static', filename='js/pages/implantacao_detalhes_ui.js') }}"></script>
+
+<script>
+    // Inicializacao
+    document.addEventListener('DOMContentLoaded', function () {
+        // ... Lógica específica, se houver ...
+
+        // CORREÇÃO DOS FORM ACTIONS NOS MODAIS REUTILIZADOS (SE NECESSÁRIO)
+        // Se formos duplicar o arquivo de modais, isso não será necessário.
+        // Vou assumir que vamos duplicar o arquivo de modais para manter tudo separado.
+    });
+</script>
+{% endblock %}

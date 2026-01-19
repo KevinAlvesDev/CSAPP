@@ -285,11 +285,12 @@
     <h1 class="main-title mb-0 fs-4 w-100 text-center">Planos de Sucesso</h1>
     <div class="d-flex align-items-center position-absolute end-0 top-50 translate-middle-y gap-2">
       {% if pode_editar %}
-      <a href="{{ url_for('planos.novo_plano') }}" class="btn btn-sm btn-primary">
+      <a href="{{ url_for('planos.novo_plano', context=context) }}" class="btn btn-sm btn-primary">
         <i class="bi bi-plus-lg me-1"></i> Novo Plano
       </a>
       {% endif %}
-      <a href="{{ url_for('onboarding.dashboard') }}" class="btn btn-sm btn-outline-secondary">
+      <a href="{{ url_for(context + '.dashboard') if context and context != 'None' else url_for('onboarding.dashboard') }}"
+        class="btn btn-sm btn-outline-secondary">
         <i class="bi bi-house me-1"></i> Dashboard
       </a>
     </div>
@@ -299,6 +300,9 @@
 
     <div class="search-filter-bar">
       <form method="GET" action="{{ url_for('planos.listar_planos') }}" class="row g-3 align-items-end">
+        {% if context %}
+        <input type="hidden" name="context" value="{{ context }}">
+        {% endif %}
         <div class="col-md-6">
           <label for="busca" class="form-label fw-bold">
             <i class="bi bi-search me-1"></i>Buscar Planos
@@ -347,7 +351,7 @@
         {% endif %}
       </p>
       {% if pode_editar and not busca %}
-      <a href="{{ url_for('planos.novo_plano') }}" class="btn btn-plano btn-plano-primary">
+      <a href="{{ url_for('planos.novo_plano', context=context) }}" class="btn btn-plano btn-plano-primary">
         <i class="bi bi-plus-circle"></i>Criar Primeiro Plano
       </a>
       {% endif %}
@@ -387,6 +391,9 @@
               placeholder="Descreva o objetivo deste plano..."></textarea>
             <div class="form-text">Se deixar em branco, será preenchido automaticamente</div>
           </div>
+          {% if context %}
+          <input type="hidden" name="context" value="{{ context }}">
+          {% endif %}
         </form>
       </div>
       <div class="modal-footer">

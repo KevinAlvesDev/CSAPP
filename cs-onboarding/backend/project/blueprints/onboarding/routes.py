@@ -58,15 +58,15 @@ def dashboard():
 
     tags_report = {}
     try:
-        tags_report = get_tags_metrics(start_date, end_date, tags_report_email)
+        tags_report = get_tags_metrics(start_date, end_date, tags_report_email, context='onboarding')
     except Exception as e:
         current_app.logger.error(f"Erro ao buscar tags metrics: {e}")
 
     try:
         # Usar versão otimizada do dashboard (consolidada)
         dashboard_data, metrics = get_dashboard_data(
-            user_email, filtered_cs_email=current_cs_filter, use_cache=True
-        )  # context='onboarding' (futuro)
+            user_email, filtered_cs_email=current_cs_filter, use_cache=True, context='onboarding'
+        )
 
         if sort_days in ["asc", "desc"]:
             andamento_list = dashboard_data.get("andamento", [])

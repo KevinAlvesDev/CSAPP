@@ -54,7 +54,8 @@
     <header class="header-bg p-3 d-flex align-items-center position-relative rounded-3">
         <h1 class="main-title mb-0 fs-4 w-100 text-center">Dashboard Gerencial</h1>
         <div class="d-flex align-items-center position-absolute end-0 top-50 translate-middle-y">
-            <a href="{{ url_for('onboarding.dashboard') }}" class="btn btn-sm btn-outline-primary">
+            <a href="{{ url_for(context + '.dashboard') if context and context != 'None' else url_for('onboarding.dashboard') }}"
+                class="btn btn-sm btn-outline-primary">
                 <i class="bi bi-arrow-left me-1"></i> Voltar ao Dashboard
             </a>
         </div>
@@ -74,6 +75,9 @@
                     {% endif %}
                     <input type="hidden" name="task_start_date" value="{{ current_task_start_date | default('') }}">
                     <input type="hidden" name="task_end_date" value="{{ current_task_end_date | default('') }}">
+                    {% if context %}
+                    <input type="hidden" name="context" value="{{ context }}">
+                    {% endif %}
 
                     <div class="row g-3 align-items-end" id="analytics-filters-row">
                         <div class="col-md-3">
@@ -122,8 +126,8 @@
                         <div class="col-md-2 d-flex">
                             <button type="submit" class="btn btn-primary w-100 me-2"><i
                                     class="bi bi-funnel-fill me-1"></i> Filtrar</button>
-                            <a href="{{ url_for('analytics.analytics_dashboard') }}" class="btn btn-outline-secondary"
-                                title="Limpar Filtros"><i class="bi bi-x-lg"></i></a>
+                            <a href="{{ url_for('analytics.analytics_dashboard', context=context) }}"
+                                class="btn btn-outline-secondary" title="Limpar Filtros"><i class="bi bi-x-lg"></i></a>
                         </div>
                     </div>
                 </form>
@@ -217,6 +221,9 @@
                     {% if current_end_date %}
                     <input type="hidden" name="end_date" value="{{ current_end_date }}">
                     {% endif %}
+                    {% if context %}
+                    <input type="hidden" name="context" value="{{ context }}">
+                    {% endif %}
 
                     <div class="row g-3 align-items-end">
                         <div class="col-md-3">
@@ -255,7 +262,7 @@
                             <button type="submit" class="btn btn-primary flex-grow-1">
                                 <i class="bi bi-funnel-fill me-1"></i> Filtrar Tags
                             </button>
-                            <a href="{{ url_for('analytics.analytics_dashboard', cs_email=current_cs_email, status_filter=current_status_filter, start_date=current_start_date, end_date=current_end_date) }}"
+                            <a href="{{ url_for('analytics.analytics_dashboard', cs_email=current_cs_email, status_filter=current_status_filter, start_date=current_start_date, end_date=current_end_date, context=context) }}"
                                 class="btn btn-outline-secondary" title="Limpar Filtros de Tags">
                                 <i class="bi bi-x-lg"></i>
                             </a>
@@ -349,10 +356,10 @@
                                 <th scope="col">Implantador</th>
                                 <th scope="col">
                                     Início da Implantação
-                                    <a href="{{ url_for('analytics.analytics_dashboard', cs_email=current_cs_email, status_filter=current_status_filter, start_date=current_start_date, end_date=current_end_date, sort_impl_date='desc') }}"
+                                    <a href="{{ url_for('analytics.analytics_dashboard', cs_email=current_cs_email, status_filter=current_status_filter, start_date=current_start_date, end_date=current_end_date, sort_impl_date='desc', context=context) }}"
                                         class="ms-1" title="Ordenar por mais recente"><i
                                             class="bi bi-sort-down-alt"></i></a>
-                                    <a href="{{ url_for('analytics.analytics_dashboard', cs_email=current_cs_email, status_filter=current_status_filter, start_date=current_start_date, end_date=current_end_date, sort_impl_date='asc') }}"
+                                    <a href="{{ url_for('analytics.analytics_dashboard', cs_email=current_cs_email, status_filter=current_status_filter, start_date=current_start_date, end_date=current_end_date, sort_impl_date='asc', context=context) }}"
                                         class="ms-1" title="Ordenar por mais antiga"><i class="bi bi-sort-up"></i></a>
                                 </th>
                                 <th scope="col">Início em Produção</th>
@@ -381,7 +388,7 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <a href="{{ url_for('onboarding.ver_implantacao', impl_id=impl.id) }}"
+                                    <a href="{{ url_for((context if context and context != 'None' else 'onboarding') + '.ver_implantacao', impl_id=impl.id) }}"
                                         class="btn btn-sm btn-outline-primary py-0 px-2">Ver</a>
                                 </td>
                             </tr>
@@ -428,7 +435,7 @@
                                             default('N/A') }}</td>
                                         <td><span class="badge bg-danger">{{ impl.dias_parada | int }} dias</span></td>
                                         <td>
-                                            <a href="{{ url_for('onboarding.ver_implantacao', impl_id=impl.id) }}"
+                                            <a href="{{ url_for((context if context and context != 'None' else 'onboarding') + '.ver_implantacao', impl_id=impl.id) }}"
                                                 class="btn btn-sm btn-outline-primary py-0 px-2">Ver</a>
                                         </td>
                                     </tr>
@@ -487,7 +494,7 @@
                                 </td>
                                 <td>{{ impl.data_cancelamento | format_date_br(include_time=False) }}</td>
                                 <td>
-                                    <a href="{{ url_for('onboarding.ver_implantacao', impl_id=impl.id) }}"
+                                    <a href="{{ url_for((context if context and context != 'None' else 'onboarding') + '.ver_implantacao', impl_id=impl.id) }}"
                                         class="btn btn-sm btn-outline-primary py-0 px-2">Ver</a>
                                 </td>
                             </tr>
@@ -547,7 +554,7 @@
                                 <td class="text-nowrap"><span class="badge bg-secondary text-dark">{{ item.dias |
                                         default(0) }} dias</span></td>
                                 <td>
-                                    <a href="{{ url_for('onboarding.ver_implantacao', impl_id=item.impl_id | default(item.id)) }}"
+                                    <a href="{{ url_for((context if context and context != 'None' else 'onboarding') + '.ver_implantacao', impl_id=item.impl_id | default(item.id)) }}"
                                         class="btn btn-sm btn-outline-primary py-0 px-2">Ver</a>
                                 </td>
                             </tr>

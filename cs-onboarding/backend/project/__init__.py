@@ -312,6 +312,10 @@ def create_app(test_config=None):
 
     app.register_blueprint(grandes_contas_bp)
 
+    from .blueprints.grandes_contas.actions import grandes_contas_actions_bp
+
+    app.register_blueprint(grandes_contas_actions_bp, url_prefix="/grandes-contas/actions")
+
     try:
         with app.app_context():
             app.gamification_rules = _get_all_gamification_rules_grouped()

@@ -109,7 +109,14 @@ def save_profile():
 
     if not nome or not cargo:
         flash("Nome e Cargo são obrigatórios.", "error")
-        return redirect(url_for("profile.profile"))
+        # Redirect to current context dashboard
+        referer = request.headers.get('Referer', '')
+        if '/grandes-contas/' in referer:
+            return redirect(url_for("grandes_contas.dashboard"))
+        elif '/ongoing/' in referer:
+            return redirect(url_for("ongoing.dashboard"))
+        else:
+            return redirect(url_for("onboarding.dashboard"))
 
     # Manter foto atual se não houver nova
     foto_url = g.perfil.get("foto_url")
@@ -154,4 +161,11 @@ def save_profile():
         response.headers["X-Updated-Cargo"] = cargo or ""
         return response
 
-    return redirect(url_for("profile.profile"))
+    # Redirect to current context dashboard
+    referer = request.headers.get('Referer', '')
+    if '/grandes-contas/' in referer:
+        return redirect(url_for("grandes_contas.dashboard"))
+    elif '/ongoing/' in referer:
+        return redirect(url_for("ongoing.dashboard"))
+    else:
+        return redirect(url_for("onboarding.dashboard"))

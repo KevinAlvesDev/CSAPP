@@ -62,12 +62,15 @@ def analytics_dashboard():
             except ValidationError:
                 end_date = None
                 flash("Erro nos filtros: Data final inválida — ignorada", "warning")
+        
+        context = request.args.get("context", "onboarding")
     except Exception as e:
         flash(f"Erro nos filtros: {str(e)}", "warning")
         cs_email = None
         status_filter = "todas"
         start_date = None
         end_date = None
+        context = "onboarding"
 
     task_cs_email = None
     task_start_date = None
@@ -104,9 +107,9 @@ def analytics_dashboard():
     try:
         # CACHE: Gerar chave única baseada nos filtros
         from ..config.cache_config import cache
-
-        cache_key = f"analytics_dash_{cs_email}_{status_filter}_{start_date}_{end_date}_{task_cs_email}_{task_start_date}_{task_end_date}_{sort_impl_date}"
-
+        
+        cache_key = f"analytics_dash_{cs_email}_{status_filter}_{start_date}_{end_date}_{task_cs_email}_{task_start_date}_{task_end_date}_{sort_impl_date}_{context}"
+        
         # Tentar buscar do cache (2 minutos)
         analytics_data = cache.get(cache_key)
 
@@ -122,6 +125,7 @@ def analytics_dashboard():
                 task_start_date=task_start_date,
                 task_end_date=task_end_date,
                 sort_impl_date=sort_impl_date,
+                context=context,
             )
             # Salvar no cache por 2 minutos (120 segundos)
             cache.set(cache_key, analytics_data, timeout=120)
@@ -163,7 +167,9 @@ def analytics_dashboard():
             current_end_date=end_date,
             current_sort_impl_date=sort_impl_date,
             user_info=g.user,
+
             user_perfil=user_perfil,
+            context=context,
         )
 
     except Exception as e:
@@ -172,6 +178,8 @@ def analytics_dashboard():
         logger = get_logger("analytics")
         logger.error(f"Erro ao carregar dashboard de analytics: {e}", exc_info=True)
         flash(f"Erro interno ao carregar os dados de relatórios: {e}", "error")
+        if context == "grandes_contas":
+            return redirect(url_for("grandes_contas.dashboard"))
         return redirect(url_for("onboarding.dashboard"))
 
 
@@ -194,7 +202,8 @@ def api_implants_by_day():
         if g.perfil.get("perfil_acesso") not in PERFIS_COM_GESTAO:
             cs_email = g.user_email
 
-        payload = get_implants_by_day(start_date=start_date, end_date=end_date, cs_email=cs_email)
+        context = request.args.get("context", "onboarding")
+        payload = get_implants_by_day(start_date=start_date, end_date=end_date, cs_email=cs_email, context=context)
         return jsonify({"ok": True, **payload})
     except ValidationError as e:
         return jsonify({"ok": False, "error": f"Parâmetro inválido: {str(e)}"}), 400
@@ -229,7 +238,8 @@ def cancelamentos_dashboard():
         if g.perfil.get("perfil_acesso") not in PERFIS_COM_GESTAO:
             cs_email = g.user_email
 
-        payload = get_cancelamentos_data(cs_email=cs_email, start_date=start_date, end_date=end_date)
+        context = request.args.get("context", "onboarding")
+        payload = get_cancelamentos_data(cs_email=cs_email, start_date=start_date, end_date=end_date, context=context)
         return render_template(
             "pages/cancelamentos.html",
             **payload,
@@ -241,7 +251,10 @@ def cancelamentos_dashboard():
         )
     except Exception as e:
         flash(f"Erro ao carregar cancelamentos: {e}", "error")
-        return redirect(url_for("analytics.analytics_dashboard"))
+        context = request.args.get("context", "onboarding")
+        if context == "grandes_contas":
+            return redirect(url_for("grandes_contas.dashboard"))
+        return redirect(url_for("onboarding.dashboard"))
 
 
 @analytics_bp.route("/cancelamentos/export/csv")
@@ -261,12 +274,14 @@ def export_cancelamentos_csv():
         if g.perfil.get("perfil_acesso") not in PERFIS_COM_GESTAO:
             cs_email = g.user_email
 
-        payload = get_cancelamentos_data(cs_email=cs_email, start_date=start_date, end_date=end_date)
+        context = request.args.get("context", "onboarding")
+        payload = get_cancelamentos_data(cs_email=cs_email, start_date=start_date, end_date=end_date, context=context)
         rows = payload.get("dataset", [])
         headers = [
             "id",
             "nome_empresa",
             "usuario_cs",
+            "contexto",
             "data_criacao",
             "data_cancelamento",
             "motivo_cancelamento",
@@ -308,7 +323,8 @@ def api_funnel():
         if g.perfil.get("perfil_acesso") not in PERFIS_COM_GESTAO:
             cs_email = g.user_email
 
-        payload = get_funnel_counts(start_date=start_date, end_date=end_date, cs_email=cs_email)
+        context = request.args.get("context", "onboarding")
+        payload = get_funnel_counts(start_date=start_date, end_date=end_date, cs_email=cs_email, context=context)
         return jsonify({"ok": True, **payload})
     except ValidationError as e:
         return jsonify({"ok": False, "error": f"Parâmetro inválido: {str(e)}"}), 400

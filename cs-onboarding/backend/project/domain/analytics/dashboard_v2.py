@@ -88,6 +88,7 @@ def calculate_all_days_batch(impl_ids: List[int], db_type: str = "postgres") -> 
     return result
 
 
+
 def get_analytics_data_v2(
     target_cs_email=None,
     target_status=None,
@@ -98,6 +99,7 @@ def get_analytics_data_v2(
     task_start_date=None,
     task_end_date=None,
     sort_impl_date=None,
+    context=None,
 ):
     """
     Versão otimizada que elimina N+1.
@@ -119,6 +121,13 @@ def get_analytics_data_v2(
         WHERE 1=1
     """
     args_impl = []
+
+    if context:
+        if context == "onboarding":
+            query_impl += " AND (i.contexto IS NULL OR i.contexto = 'onboarding') "
+        else:
+            query_impl += " AND i.contexto = %s "
+            args_impl.append(context)
 
     if target_cs_email:
         query_impl += " AND i.usuario_cs = %s "
@@ -160,6 +169,14 @@ def get_analytics_data_v2(
         WHERE i.tipo = 'modulo'
     """
     args_modules = []
+    
+    if context:
+        if context == "onboarding":
+            query_modules += " AND (i.contexto IS NULL OR i.contexto = 'onboarding') "
+        else:
+            query_modules += " AND i.contexto = %s "
+            args_modules.append(context)
+
     if target_cs_email:
         query_modules += " AND i.usuario_cs = %s "
         args_modules.append(target_cs_email)
@@ -231,6 +248,13 @@ def get_analytics_data_v2(
     """
     args_tasks = []
 
+    if context:
+        if context == "onboarding":
+            query_tasks += " AND (i.contexto IS NULL OR i.contexto = 'onboarding') "
+        else:
+            query_tasks += " AND i.contexto = %s "
+            args_tasks.append(context)
+
     if task_cs_email:
         query_tasks += " AND i.usuario_cs = %s "
         args_tasks.append(task_cs_email)
@@ -283,6 +307,13 @@ def get_analytics_data_v2(
         WHERE i.status = 'finalizada' AND i.tipo = 'completa'
     """
     args_impl_ano = []
+    
+    if context:
+        if context == "onboarding":
+            query_impl_ano += " AND (i.contexto IS NULL OR i.contexto = 'onboarding') "
+        else:
+            query_impl_ano += " AND i.contexto = %s "
+            args_impl_ano.append(context)
 
     if is_sqlite:
         query_impl_ano += " AND strftime('%Y', i.data_finalizacao) = %s "
@@ -534,7 +565,10 @@ def get_analytics_data_v2(
     from ..tags_analytics import get_tags_by_user_chart_data
 
     tags_chart_data = get_tags_by_user_chart_data(
-        cs_email=task_cs_email, start_date=task_start_date_to_query, end_date=task_end_date_to_query
+        cs_email=task_cs_email,
+        start_date=task_start_date_to_query,
+        end_date=task_end_date_to_query,
+        context=context,
     )
 
     return {
@@ -549,3 +583,4 @@ def get_analytics_data_v2(
         "default_task_start_date": default_task_start_date_str,
         "default_task_end_date": default_task_end_date_str,
     }
+

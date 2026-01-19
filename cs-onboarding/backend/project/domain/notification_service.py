@@ -10,12 +10,28 @@ from ..config.logging_config import api_logger
 from ..db import query_db
 
 
-def get_user_notifications(user_email):
+def _get_context_url(path, context):
+    """Gera URL com prefixo de contexto correto."""
+    prefix = "/onboarding"
+    if context == "grandes_contas":
+        prefix = "/grandes-contas"
+    elif context == "ongoing":
+        prefix = "/ongoing"
+    
+    # Se o caminho já tem o prefixo (improvável aqui), não duplica
+    if path.startswith(prefix):
+        return path
+        
+    return f"{prefix}{path}"
+
+
+def get_user_notifications(user_email, context=None):
     """
-    Busca todas as notificações para um usuário.
+    Busca todas as notificações para um usuário, filtradas por contexto.
 
     Args:
         user_email: Email do usuário
+        context: Contexto (onboarding, grandes_contas, ongoing)
 
     Returns:
         dict: {
@@ -34,43 +50,43 @@ def get_user_notifications(user_email):
         fim_hoje = hoje.replace(hour=23, minute=59, second=59)
 
         # 1. TAREFAS CRÍTICAS (atrasadas + vence hoje)
-        notifications.extend(_get_critical_tasks(user_email, hoje, fim_hoje))
+        notifications.extend(_get_critical_tasks(user_email, hoje, fim_hoje, context))
 
         # 2. IMPLANTAÇÕES PARADAS (a cada 7 dias)
-        notifications.extend(_get_stopped_implementations(user_email, hoje))
+        notifications.extend(_get_stopped_implementations(user_email, hoje, context))
 
         # 3. TAREFAS URGENTES (vence em 1-2 dias)
-        notifications.extend(_get_urgent_tasks(user_email, hoje, fim_hoje))
+        notifications.extend(_get_urgent_tasks(user_email, hoje, fim_hoje, context))
 
         # 4. Implantações futuras (7 dias)
-        notifications.extend(_get_upcoming_future(user_email, hoje))
+        notifications.extend(_get_upcoming_future(user_email, hoje, context))
 
         # 5. Largada Falsa (NOVO)
-        notifications.extend(_get_false_start(user_email, hoje))
+        notifications.extend(_get_false_start(user_email, hoje, context))
 
         # 6. Estagnação Silenciosa (NOVO)
-        notifications.extend(_get_silent_stagnation(user_email, hoje))
+        notifications.extend(_get_silent_stagnation(user_email, hoje, context))
 
         # 7. Ritmo Lento (NOVO)
-        notifications.extend(_get_slow_pace(user_email, hoje))
+        notifications.extend(_get_slow_pace(user_email, hoje, context))
 
         # 8. Sem previsão
-        notifications.extend(_get_no_forecast(user_email, hoje))
+        notifications.extend(_get_no_forecast(user_email, hoje, context))
 
         # 9. Reta Final / Sprint (NOVO)
-        notifications.extend(_get_final_sprint(user_email))
+        notifications.extend(_get_final_sprint(user_email, context))
 
         # 10. Tarefas próximas
-        notifications.extend(_get_upcoming_tasks(user_email, hoje))
+        notifications.extend(_get_upcoming_tasks(user_email, hoje, context))
 
         # 11. Novas aguardando
-        notifications.extend(_get_new_waiting(user_email))
+        notifications.extend(_get_new_waiting(user_email, context))
 
         # 12. Resumo Semanal
-        notifications.extend(_get_weekly_summary(user_email, hoje))
+        notifications.extend(_get_weekly_summary(user_email, hoje, context))
 
         # 13. Concluídas na semana
-        notifications.extend(_get_completed_this_week(user_email, inicio_semana))
+        notifications.extend(_get_completed_this_week(user_email, inicio_semana, context))
 
         # Ordenar por prioridade e limitar
         notifications.sort(key=lambda x: x["priority"])
@@ -87,7 +103,7 @@ def get_user_notifications(user_email):
         return {"ok": False, "error": "Erro ao buscar notificações", "notifications": []}
 
 
-def _get_false_start(user_email, hoje):
+def _get_false_start(user_email, hoje, context):
     """
     Largada Falsa: Implantação criada há mais de 5 dias, ainda 'nova' ou sem progresso.
     Priority: 2 (Alto Risco)
@@ -95,19 +111,29 @@ def _get_false_start(user_email, hoje):
     notifications = []
     limite_criacao = hoje - timedelta(days=5)
 
-    sql = """
+    params = [user_email, limite_criacao]
+    where_context = ""
+    if context:
+        if context == "onboarding":
+            where_context = "AND (contexto IS NULL OR contexto = 'onboarding')"
+        else:
+            where_context = "AND contexto = %s"
+            params.append(context)
+
+    sql = f"""
         SELECT id, nome_empresa, data_criacao 
         FROM implantacoes 
         WHERE usuario_cs = %s 
         AND status IN ('nova', 'andamento')
         AND data_criacao < %s
+        {where_context}
         AND (
             SELECT COUNT(*) FROM checklist_items 
             WHERE implantacao_id = implantacoes.id 
             AND completed = TRUE
         ) = 0
     """
-    results = query_db(sql, (user_email, limite_criacao)) or []
+    results = query_db(sql, tuple(params)) or []
 
     for row in results:
         if isinstance(row, dict):
@@ -118,13 +144,13 @@ def _get_false_start(user_email, hoje):
                     "priority": 2,
                     "title": f"🚦 {row['nome_empresa']}",
                     "message": f"Criada há {dias_criacao} dias e nenhuma tarefa concluída. Engajamento necessário!",
-                    "action_url": f"/implantacao/{row['id']}",
+                    "action_url": _get_context_url(f"/implantacao/{row['id']}", context),
                 }
             )
     return notifications
 
 
-def _get_silent_stagnation(user_email, hoje):
+def _get_silent_stagnation(user_email, hoje, context):
     """
     Estagnação Silenciosa: Em andamento, mas sem registros na timeline há 4+ dias.
     Priority: 3 (Risco Médio)
@@ -132,16 +158,28 @@ def _get_silent_stagnation(user_email, hoje):
     notifications = []
     limite = hoje - timedelta(days=4)
 
-    sql = """
+    params = [user_email]
+    where_context = ""
+    if context:
+        if context == "onboarding":
+            where_context = "AND (i.contexto IS NULL OR i.contexto = 'onboarding')"
+        else:
+            where_context = "AND i.contexto = %s"
+            params.append(context)
+    
+    params.append(limite)
+
+    sql = f"""
         SELECT i.id, i.nome_empresa, MAX(tl.data_criacao) as ultima_interacao
         FROM implantacoes i
         LEFT JOIN timeline_log tl ON tl.implantacao_id = i.id
         WHERE i.usuario_cs = %s
+        {where_context}
         AND i.status = 'andamento'
         GROUP BY i.id
         HAVING MAX(tl.data_criacao) < %s OR MAX(tl.data_criacao) IS NULL
     """
-    results = query_db(sql, (user_email, limite)) or []
+    results = query_db(sql, tuple(params)) or []
 
     for row in results:
         if isinstance(row, dict):
@@ -157,13 +195,13 @@ def _get_silent_stagnation(user_email, hoje):
                     "priority": 3,
                     "title": f"👻 {row['nome_empresa']}",
                     "message": f"Sem nenhuma atividade registrada há {dias} dias. O cliente sumiu?",
-                    "action_url": f"/implantacao/{row['id']}",
+                    "action_url": _get_context_url(f"/implantacao/{row['id']}", context),
                 }
             )
     return notifications
 
 
-def _get_slow_pace(user_email, hoje):
+def _get_slow_pace(user_email, hoje, context):
     """
     Ritmo Lento: Implantação ativa onde a última tarefa concluída foi há mais de 15 dias.
     Priority: 4
@@ -171,17 +209,29 @@ def _get_slow_pace(user_email, hoje):
     notifications = []
     limite = hoje - timedelta(days=15)
 
-    sql = """
+    params = [user_email]
+    where_context = ""
+    if context:
+        if context == "onboarding":
+            where_context = "AND (i.contexto IS NULL OR i.contexto = 'onboarding')"
+        else:
+            where_context = "AND i.contexto = %s"
+            params.append(context)
+    
+    params.append(limite)
+
+    sql = f"""
         SELECT i.id, i.nome_empresa, MAX(ci.data_conclusao) as ultima_conclusao
         FROM implantacoes i
         JOIN checklist_items ci ON ci.implantacao_id = i.id
         WHERE i.usuario_cs = %s
+        {where_context}
         AND i.status = 'andamento'
         AND ci.completed = TRUE
         GROUP BY i.id
         HAVING MAX(ci.data_conclusao) < %s
     """
-    results = query_db(sql, (user_email, limite)) or []
+    results = query_db(sql, tuple(params)) or []
 
     for row in results:
         if isinstance(row, dict):
@@ -193,34 +243,41 @@ def _get_slow_pace(user_email, hoje):
                     "priority": 4,
                     "title": f"🐢 Ritmo Lento: {row['nome_empresa']}",
                     "message": f"Nenhuma tarefa concluída nos últimos {dias_sem_progresso} dias. Precisa de ajuda?",
-                    "action_url": f"/implantacao/{row['id']}",
+                    "action_url": _get_context_url(f"/implantacao/{row['id']}", context),
                 }
             )
     return notifications
 
 
-def _get_final_sprint(user_email):
+def _get_final_sprint(user_email, context):
     """
     Reta Final: Progresso > 80% mas ainda não finalizada.
     Priority: 5 (Oportunidade)
     """
     notifications = []
 
-    # Esta query depende de como calculamos progresso.
-    # Vou fazer uma aproximação contando items.
-    # Garante que só notifica se progresso >= 80% (0.8)
-    sql = """
+    params = [user_email]
+    where_context = ""
+    if context:
+        if context == "onboarding":
+            where_context = "AND (i.contexto IS NULL OR i.contexto = 'onboarding')"
+        else:
+            where_context = "AND i.contexto = %s"
+            params.append(context)
+
+    sql = f"""
         SELECT i.id, i.nome_empresa,
                CAST(SUM(CASE WHEN ci.completed THEN 1 ELSE 0 END) AS FLOAT) / COUNT(*) * 100 as progresso
         FROM implantacoes i
         JOIN checklist_items ci ON ci.implantacao_id = i.id
         WHERE i.usuario_cs = %s
+        {where_context}
         AND i.status = 'andamento'
         AND ci.tipo_item = 'subtarefa'
         GROUP BY i.id
         HAVING (CAST(SUM(CASE WHEN ci.completed THEN 1 ELSE 0 END) AS FLOAT) / COUNT(*)) >= 0.8
     """
-    results = query_db(sql, (user_email,)) or []
+    results = query_db(sql, tuple(params)) or []
 
     for row in results:
         if isinstance(row, dict):
@@ -231,17 +288,28 @@ def _get_final_sprint(user_email):
                     "priority": 5,
                     "title": f"🏁 {row['nome_empresa']}",
                     "message": f"Progresso em {prog}%. Falta pouco para fechar essa implantação!",
-                    "action_url": f"/implantacao/{row['id']}",
+                    "action_url": _get_context_url(f"/implantacao/{row['id']}", context),
                 }
             )
     return notifications
 
 
-def _get_critical_tasks(user_email, hoje, fim_hoje):
+def _get_critical_tasks(user_email, hoje, fim_hoje, context):
     """Busca tarefas críticas (atrasadas + vence hoje)."""
     notifications = []
 
-    sql_criticas = """
+    params = [hoje, hoje, user_email]
+    where_context = ""
+    if context:
+        if context == "onboarding":
+            where_context = "AND (i.contexto IS NULL OR i.contexto = 'onboarding')"
+        else:
+            where_context = "AND i.contexto = %s"
+            params.append(context)
+    
+    params.extend([fim_hoje, hoje])
+
+    sql_criticas = f"""
         SELECT 
             i.id, 
             i.nome_empresa,
@@ -250,6 +318,7 @@ def _get_critical_tasks(user_email, hoje, fim_hoje):
         FROM implantacoes i
         JOIN checklist_items ci ON ci.implantacao_id = i.id
         WHERE i.usuario_cs = %s
+        {where_context}
         AND i.status IN ('andamento', 'nova', 'futura')
         AND ci.tipo_item = 'subtarefa'
         AND ci.completed = FALSE
@@ -260,7 +329,7 @@ def _get_critical_tasks(user_email, hoje, fim_hoje):
         ORDER BY COUNT(CASE WHEN ci.previsao_original < %s THEN 1 END) DESC
         LIMIT 5
     """
-    criticas = query_db(sql_criticas, (hoje, hoje, user_email, fim_hoje, hoje)) or []
+    criticas = query_db(sql_criticas, tuple(params)) or []
 
     for row in criticas:
         if isinstance(row, dict):
@@ -283,18 +352,27 @@ def _get_critical_tasks(user_email, hoje, fim_hoje):
                         "priority": 1,
                         "title": f"🔥 {nome[:30]}{'...' if len(nome) > 30 else ''}",
                         "message": f"{total} tarefas críticas: {', '.join(partes)}",
-                        "action_url": f"/implantacao/{impl_id}",
+                        "action_url": _get_context_url(f"/implantacao/{impl_id}", context),
                     }
                 )
 
     return notifications
 
 
-def _get_stopped_implementations(user_email, hoje):
+def _get_stopped_implementations(user_email, hoje, context):
     """Busca implantações paradas (notifica a cada 7 dias)."""
     notifications = []
 
-    sql_paradas = """
+    params = [user_email]
+    where_context = ""
+    if context:
+        if context == "onboarding":
+            where_context = "AND (i.contexto IS NULL OR i.contexto = 'onboarding')"
+        else:
+            where_context = "AND i.contexto = %s"
+            params.append(context)
+
+    sql_paradas = f"""
         SELECT 
             i.id,
             i.nome_empresa,
@@ -309,9 +387,10 @@ def _get_stopped_implementations(user_email, hoje):
             GROUP BY implantacao_id
         ) tl ON tl.implantacao_id = i.id
         WHERE i.usuario_cs = %s
+        {where_context}
         AND i.status = 'parada'
     """
-    paradas = query_db(sql_paradas, (user_email,)) or []
+    paradas = query_db(sql_paradas, tuple(params)) or []
 
     for row in paradas:
         if isinstance(row, dict):
@@ -334,19 +413,30 @@ def _get_stopped_implementations(user_email, hoje):
                                 "priority": 2,
                                 "title": f"⏸️ {nome[:30]}{'...' if len(nome) > 30 else ''}",
                                 "message": f"Parada há {dias_parada} dias. Motivo: {motivo[:40]}...",
-                                "action_url": f"/implantacao/{impl_id}",
+                                "action_url": _get_context_url(f"/implantacao/{impl_id}", context),
                             }
                         )
 
     return notifications
 
 
-def _get_urgent_tasks(user_email, hoje, fim_hoje):
+def _get_urgent_tasks(user_email, hoje, fim_hoje, context):
     """Busca tarefas urgentes (vence em 1-2 dias)."""
     notifications = []
     depois_amanha = hoje + timedelta(days=2)
 
-    sql_urgentes = """
+    params = [user_email]
+    where_context = ""
+    if context:
+        if context == "onboarding":
+            where_context = "AND (i.contexto IS NULL OR i.contexto = 'onboarding')"
+        else:
+            where_context = "AND i.contexto = %s"
+            params.append(context)
+    
+    params.extend([fim_hoje, depois_amanha])
+
+    sql_urgentes = f"""
         SELECT 
             i.id,
             i.nome_empresa,
@@ -354,6 +444,7 @@ def _get_urgent_tasks(user_email, hoje, fim_hoje):
         FROM implantacoes i
         JOIN checklist_items ci ON ci.implantacao_id = i.id
         WHERE i.usuario_cs = %s
+        {where_context}
         AND i.status IN ('andamento', 'nova', 'futura')
         AND ci.tipo_item = 'subtarefa'
         AND ci.completed = FALSE
@@ -365,7 +456,7 @@ def _get_urgent_tasks(user_email, hoje, fim_hoje):
         ORDER BY COUNT(ci.id) DESC
         LIMIT 5
     """
-    urgentes = query_db(sql_urgentes, (user_email, fim_hoje, depois_amanha)) or []
+    urgentes = query_db(sql_urgentes, tuple(params)) or []
 
     for row in urgentes:
         if isinstance(row, dict):
@@ -379,30 +470,42 @@ def _get_urgent_tasks(user_email, hoje, fim_hoje):
                     "priority": 3,
                     "title": f"⏰ {nome[:30]}{'...' if len(nome) > 30 else ''}",
                     "message": f"{total} tarefas vencem em breve (1-2 dias)",
-                    "action_url": f"/implantacao/{impl_id}?tab=plano",
+                    "action_url": _get_context_url(f"/implantacao/{impl_id}?tab=plano", context),
                 }
             )
 
     return notifications
 
 
-def _get_upcoming_future(user_email, hoje):
+def _get_upcoming_future(user_email, hoje, context):
     """Busca implantações futuras próximas (faltando 7 dias para início)."""
     notifications = []
     daqui_7_dias = hoje + timedelta(days=7)
 
-    sql_futuras = """
+    params = [user_email]
+    where_context = ""
+    if context:
+        if context == "onboarding":
+            where_context = "AND (contexto IS NULL OR contexto = 'onboarding')"
+        else:
+            where_context = "AND contexto = %s"
+            params.append(context)
+    
+    params.append(daqui_7_dias)
+
+    sql_futuras = f"""
         SELECT 
             id,
             nome_empresa,
             data_inicio_previsto
         FROM implantacoes
         WHERE usuario_cs = %s
+        {where_context}
         AND status = 'futura'
         AND data_inicio_previsto IS NOT NULL
         AND DATE(data_inicio_previsto) = DATE(%s)
     """
-    futuras = query_db(sql_futuras, (user_email, daqui_7_dias)) or []
+    futuras = query_db(sql_futuras, tuple(params)) or []
 
     for row in futuras:
         if isinstance(row, dict):
@@ -415,28 +518,38 @@ def _get_upcoming_future(user_email, hoje):
                     "priority": 4,
                     "title": "📅 Previsão de Início",
                     "message": f"{nome} está agendada para iniciar em 7 dias",
-                    "action_url": f"/implantacao/{impl_id}",
+                    "action_url": _get_context_url(f"/implantacao/{impl_id}", context),
                 }
             )
 
     return notifications
 
 
-def _get_no_forecast(user_email, hoje):
+def _get_no_forecast(user_email, hoje, context):
     """Busca implantações sem previsão (30 dias, depois a cada 7 dias)."""
     notifications = []
 
-    sql_sem_previsao = """
+    params = [user_email]
+    where_context = ""
+    if context:
+        if context == "onboarding":
+            where_context = "AND (contexto IS NULL OR contexto = 'onboarding')"
+        else:
+            where_context = "AND contexto = %s"
+            params.append(context)
+
+    sql_sem_previsao = f"""
         SELECT 
             id,
             nome_empresa,
             data_criacao
         FROM implantacoes
         WHERE usuario_cs = %s
+        {where_context}
         AND status = 'sem_previsao'
         AND data_inicio_previsto IS NULL
     """
-    sem_previsao = query_db(sql_sem_previsao, (user_email,)) or []
+    sem_previsao = query_db(sql_sem_previsao, tuple(params)) or []
 
     for row in sem_previsao:
         if isinstance(row, dict):
@@ -458,20 +571,31 @@ def _get_no_forecast(user_email, hoje):
                                 "priority": 5,
                                 "title": "⏳ Sem Previsão",
                                 "message": f"{nome} aguarda definição há {dias_sem_previsao} dias",
-                                "action_url": f"/implantacao/{impl_id}",
+                                "action_url": _get_context_url(f"/implantacao/{impl_id}", context),
                             }
                         )
 
     return notifications
 
 
-def _get_upcoming_tasks(user_email, hoje):
+def _get_upcoming_tasks(user_email, hoje, context):
     """Busca tarefas próximas (vence em 3-7 dias)."""
     notifications = []
     depois_amanha = hoje + timedelta(days=2)
     daqui_7_dias = hoje + timedelta(days=7)
 
-    sql_proximas = """
+    params = [user_email]
+    where_context = ""
+    if context:
+        if context == "onboarding":
+            where_context = "AND (i.contexto IS NULL OR i.contexto = 'onboarding')"
+        else:
+            where_context = "AND i.contexto = %s"
+            params.append(context)
+    
+    params.extend([depois_amanha, daqui_7_dias])
+
+    sql_proximas = f"""
         SELECT 
             i.id,
             i.nome_empresa,
@@ -479,6 +603,7 @@ def _get_upcoming_tasks(user_email, hoje):
         FROM implantacoes i
         JOIN checklist_items ci ON ci.implantacao_id = i.id
         WHERE i.usuario_cs = %s
+        {where_context}
         AND i.status IN ('andamento', 'nova', 'futura')
         AND ci.tipo_item = 'subtarefa'
         AND ci.completed = FALSE
@@ -490,7 +615,7 @@ def _get_upcoming_tasks(user_email, hoje):
         ORDER BY COUNT(ci.id) DESC
         LIMIT 5
     """
-    proximas = query_db(sql_proximas, (user_email, depois_amanha, daqui_7_dias)) or []
+    proximas = query_db(sql_proximas, tuple(params)) or []
 
     for row in proximas:
         if isinstance(row, dict):
@@ -504,24 +629,34 @@ def _get_upcoming_tasks(user_email, hoje):
                     "priority": 6,
                     "title": "⚠️ Tarefas Próximas",
                     "message": f"{nome}: {total} tarefas vencem nesta semana",
-                    "action_url": f"/implantacao/{impl_id}?tab=plano",
+                    "action_url": _get_context_url(f"/implantacao/{impl_id}?tab=plano", context),
                 }
             )
 
     return notifications
 
 
-def _get_new_waiting(user_email):
+def _get_new_waiting(user_email, context):
     """Busca implantações novas aguardando início."""
     notifications = []
 
-    sql_novas = """
+    params = [user_email]
+    where_context = ""
+    if context:
+        if context == "onboarding":
+            where_context = "AND (contexto IS NULL OR contexto = 'onboarding')"
+        else:
+            where_context = "AND contexto = %s"
+            params.append(context)
+
+    sql_novas = f"""
         SELECT COUNT(*) as total
         FROM implantacoes
         WHERE usuario_cs = %s
+        {where_context}
         AND status = 'nova'
     """
-    novas = query_db(sql_novas, (user_email,), one=True)
+    novas = query_db(sql_novas, tuple(params), one=True)
     total_novas = novas.get("total", 0) if novas else 0
 
     if total_novas > 0:
@@ -531,30 +666,40 @@ def _get_new_waiting(user_email):
                 "priority": 7,
                 "title": "📋 Implantações Novas",
                 "message": f"Você tem {total_novas} nova(s) implantação(ões) aguardando.",
-                "action_url": "/dashboard",
+                "action_url": _get_context_url("/dashboard", context),
             }
         )
 
     return notifications
 
 
-def _get_weekly_summary(user_email, hoje):
+def _get_weekly_summary(user_email, hoje, context):
     """Busca resumo semanal (apenas segundas-feiras)."""
     notifications = []
 
     if hoje.weekday() == 0:
-        sql_pendentes = """
+        params = [user_email]
+        where_context = ""
+        if context:
+            if context == "onboarding":
+                where_context = "AND (i.contexto IS NULL OR i.contexto = 'onboarding')"
+            else:
+                where_context = "AND i.contexto = %s"
+                params.append(context)
+
+        sql_pendentes = f"""
             SELECT 
                 COUNT(DISTINCT i.id) as implantacoes,
                 COUNT(ci.id) as tarefas
             FROM checklist_items ci
             JOIN implantacoes i ON ci.implantacao_id = i.id
             WHERE i.usuario_cs = %s
+            {where_context}
             AND i.status = 'andamento'
             AND ci.tipo_item = 'subtarefa'
             AND ci.completed = FALSE
         """
-        pendentes = query_db(sql_pendentes, (user_email,), one=True)
+        pendentes = query_db(sql_pendentes, tuple(params), one=True)
 
         if pendentes:
             total_tarefas = pendentes.get("tarefas", 0) or 0
@@ -567,25 +712,35 @@ def _get_weekly_summary(user_email, hoje):
                         "priority": 8,
                         "title": "📊 Resumo da Semana",
                         "message": f"{total_tarefas} pendências em {total_impl} implantações ativas.",
-                        "action_url": "/dashboard",
+                        "action_url": _get_context_url("/dashboard", context),
                     }
                 )
 
     return notifications
 
 
-def _get_completed_this_week(user_email, inicio_semana):
+def _get_completed_this_week(user_email, inicio_semana, context):
     """Busca implantações concluídas esta semana."""
     notifications = []
 
-    sql_concluidas = """
+    params = [user_email, inicio_semana]
+    where_context = ""
+    if context:
+        if context == "onboarding":
+            where_context = "AND (contexto IS NULL OR contexto = 'onboarding')"
+        else:
+            where_context = "AND contexto = %s"
+            params.append(context)
+
+    sql_concluidas = f"""
         SELECT COUNT(*) as total
         FROM implantacoes
         WHERE usuario_cs = %s
         AND status = 'finalizada'
         AND data_finalizacao >= %s
+        {where_context}
     """
-    concluidas = query_db(sql_concluidas, (user_email, inicio_semana), one=True)
+    concluidas = query_db(sql_concluidas, tuple(params), one=True)
     total_concluidas = concluidas.get("total", 0) if concluidas else 0
 
     if total_concluidas > 0:
@@ -595,7 +750,7 @@ def _get_completed_this_week(user_email, inicio_semana):
                 "priority": 9,
                 "title": "✅ Sucesso da Semana",
                 "message": f"Incrível! {total_concluidas} implantação(ões) concluída(s).",
-                "action_url": "/dashboard",
+                "action_url": _get_context_url("/dashboard", context),
             }
         )
 

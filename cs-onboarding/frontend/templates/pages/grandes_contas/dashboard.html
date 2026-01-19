@@ -1,22 +1,1013 @@
 {% extends "base.html" %}
 
-{% block title %}CS Grandes Contas - Dashboard{% endblock %}
+{% block title %}Grandes Contas{% endblock %}
 
-{% block sidebar %}{% endblock %}
+{# Importar macros do dashboard #}
+{% from 'macros/dashboard.html' import empresa_link, empresa_cell, implantador_cell, status_badge, tipo_badge,
+ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
 
 {% block content %}
-<div class="container-fluid p-4">
-    <header class="d-flex justify-content-end align-items-center mb-4">
-        <div>
-            <a href="{{ url_for('core.modules_selection') }}" class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-arrow-left"></i> Trocar Módulo
-            </a>
+<div class="container-fluid p-0">
+    <header class="header-bg py-2 px-3 rounded-3" style="z-index: 1000;">
+        <div class="d-flex align-items-center justify-content-between">
+            <!-- Seção Esquerda: Busca centralizada no espaço -->
+            <div class="d-flex align-items-center justify-content-center" style="flex: 1;">
+                <div style="width: 300px; position: relative;">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white border-end-0">
+                            <i class="bi bi-search text-muted"></i>
+                        </span>
+                        <input type="text" class="form-control border-start-0 ps-0" id="searchEmpresa"
+                            placeholder="Buscar empresa..." style="background-color: white;">
+                        <button class="btn btn-outline-secondary" type="button" id="clearSearch" style="display: none;">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                    <small class="text-white-50" id="searchCounter"
+                        style="display: none; position: absolute; top: 100%; left: 0; margin-top: 2px; white-space: nowrap;">
+                        <i class="bi bi-info-circle me-1"></i><span id="searchResults">0</span> resultado(s)
+                        encontrado(s)
+                    </small>
+                </div>
+            </div>
+
+            <!-- Título (Centro) -->
+            <div class="d-flex align-items-center justify-content-center" style="flex: 1;">
+                <h1 class="main-title mb-0 fs-4">CS GRANDES CONTAS</h1>
+            </div>
+
+            <!-- Botões de Ação (Direita) -->
+            <div class="d-flex align-items-center justify-content-end" style="flex: 1;">
+                <!-- Ícone de Notificações -->
+                <div class="position-relative me-3">
+                    <button class="btn btn-sm btn-outline-light position-relative" id="notificationBtn"
+                        title="Notificações" style="overflow: visible;">
+                        <i class="bi bi-bell fs-5"></i>
+                        <span class="position-absolute badge rounded-pill bg-danger" id="notificationBadge"
+                            style="display: none; top: -8px; right: -8px; font-size: 0.7rem; padding: 0.25em 0.5em;">
+                            0
+                        </span>
+                    </button>
+                </div>
+
+                {% if g.perfil and g.perfil.perfil_acesso in PERFIS_COM_CRIACAO %}
+                <button class="btn btn-sm btn-primary me-2" data-bs-toggle="modal"
+                    data-bs-target="#novaImplantacaoModal">
+                    <i class="bi bi-plus-circle me-1"></i> Nova Implantação
+                </button>
+                <button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#implantarModuloModal">
+                    <i class="bi bi-journal-plus me-1"></i> Implantar Módulo
+                </button>
+                {% endif %}
+            </div>
         </div>
     </header>
+    <main class="p-4" id="main-content">
 
-    <div class="d-flex justify-content-center align-items-center flex-grow-1" style="min-height: calc(100vh - 150px);">
-        <img src="{{ url_for('static', filename='imagens/em_breve.png') }}" alt="Em Breve" class="img-fluid"
-            style="max-height: 80vh; width: auto; max-width: 100%; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
+        {% if is_manager %}
+        <div class="card p-3 mb-4">
+            <h6 class="text-secondary mb-3 border-bottom pb-2">Filtrar Dashboard</h6>
+            <form method="GET" action="{{ url_for('grandes_contas.dashboard') }}" id="cs-filter-form">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-10">
+                        <label for="cs_filter" class="form-label small text-secondary">Filtrar por Implantador</label>
+                        <select id="cs_filter" name="cs_filter" class="form-select" onchange="this.form.submit()">
+                            <option value="">-- Ver Todos --</option>
+                            {% if all_cs_users %}
+                            {% for cs in all_cs_users %}
+                            <option value="{{ cs.usuario }}" {% if cs.usuario==current_cs_filter %}selected{% endif %}>
+                                {{ cs.nome }} ({{ cs.usuario }})
+                            </option>
+                            {% endfor %}
+                            {% endif %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <a href="{{ url_for('grandes_contas.dashboard') }}"
+                            class="btn btn-outline-secondary w-100">Limpar
+                            Filtro</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+        {% endif %}
+        <h2 class="h5 mb-3 text-center">Resumo Rápido {% if current_cs_filter and is_manager %}(Filtrado){% endif %}
+        </h2>
+        {% from 'macros/cards.html' import card_stats %}
+        {% set m = metrics or {} %}
+        <div class="metrics-grid mb-4">
+            {{ card_stats('Novas', m.impl_novas | default(0), 'dark', monetary_value=metrics.total_valor_novas) }}
+            {{ card_stats('Em Andamento', implantacoes_andamento|length if implantacoes_andamento else
+            (m.impl_andamento_total | default(0)), 'primary', monetary_value=metrics.total_valor_andamento) }}
+            {{ card_stats('Paradas', m.impl_paradas | default(0), 'danger', monetary_value=metrics.total_valor_paradas)
+            }}
+            {{ card_stats('Futuras', m.implantacoes_futuras | default(0), 'info',
+            monetary_value=metrics.total_valor_futuras) }}
+            {{ card_stats('Sem previsão', m.implantacoes_sem_previsao | default(0), 'warning',
+            monetary_value=metrics.total_valor_sem_previsao) }}
+            {{ card_stats('Concluídas', m.impl_finalizadas | default(0), 'success',
+            monetary_value=metrics.total_valor_finalizadas) }}
+            {{ card_stats('Canceladas', m.impl_canceladas | default(0), 'secondary',
+            monetary_value=metrics.total_valor_canceladas) }}
+        </div>
+
+        <!-- Flash messages agora são exibidos como toasts flutuantes automaticamente -->
+
+        <div class="card">
+            <div class="card-header">
+                <ul class="nav nav-pills card-header-pills" id="myTab" role="tablist">
+                    <li class="nav-item" role="presentation"><button class="nav-link active" id="novas-tab"
+                            data-bs-toggle="tab" data-bs-target="#novas" type="button" role="tab">Novas</button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" id="andamento-tab"
+                            data-bs-toggle="tab" data-bs-target="#andamento" type="button" role="tab">Em
+                            Andamento</button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" id="paradas-tab"
+                            data-bs-toggle="tab" data-bs-target="#paradas" type="button" role="tab">Paradas</button>
+                    </li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" id="futuras-tab"
+                            data-bs-toggle="tab" data-bs-target="#futuras" type="button" role="tab">Futuras</button>
+                    </li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" id="sem-previsao-tab"
+                            data-bs-toggle="tab" data-bs-target="#sem_previsao" type="button" role="tab">Sem
+                            previsão</button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" id="finalizadas-tab"
+                            data-bs-toggle="tab" data-bs-target="#finalizadas" type="button"
+                            role="tab">Concluídas</button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" id="canceladas-tab"
+                            data-bs-toggle="tab" data-bs-target="#canceladas" type="button"
+                            role="tab">Canceladas</button></li>
+                </ul>
+            </div>
+
+            <div class="card-body">
+                <div class="tab-content" id="myTabContent">
+                    <div class="tab-pane fade show active" id="novas" role="tabpanel" aria-labelledby="novas-tab">
+                        <h2 class="h5 mb-3">Implantações Novas (Aguardando Início)</h2>
+                        {% if not implantacoes_novas %}
+                        <div class="alert alert-info text-center" role="alert"> Nenhuma nova implantação aguardando
+                            início. </div>
+                        {% else %}
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover table-sm align-middle">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">ID</th>
+                                        <th scope="col">Empresa</th>
+                                        <th scope="col">Implantador</th>
+                                        <th scope="col">Tipo</th>
+                                        <th scope="col">Status</th>
+                                        <th scope="col">Valor (Total: R$ {{
+                                            "%.2f"|format(metrics.total_valor_novas|float) if metrics.total_valor_novas
+                                            else '0.00' }})</th>
+                                        <th scope="col">Ações</th>
+                                        <th scope="col">Último Comentário</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for impl in implantacoes_novas %}
+                                    <tr>
+                                        <td class="text-nowrap">{{ impl.id }}</td>
+                                        <td class="text-truncate" style="max-width: 350px;">
+                                            {{ empresa_link(impl) }}
+                                        </td>
+                                        <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or
+                                            impl.usuario_cs }}</td>
+                                        <td>{{ tipo_badge(impl.tipo) }}</td>
+                                        <td><span class="badge bg-dark">Nova</span></td>
+                                        <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_monetario|float) if
+                                            impl.valor_monetario else 'N/A' }}</td>
+                                        <td class="text-nowrap">
+                                            {% if impl.usuario_cs == g.user_email %}
+                                            <button type="button" class="btn btn-sm btn-success btn-iniciar-implantacao"
+                                                title="Iniciar Implantação" data-impl-id="{{ impl.id }}"
+                                                data-impl-nome="{{ impl.nome_empresa }}">
+                                                <i class="bi bi-play-circle me-1"></i> Iniciar
+                                            </button>
+                                            {% else %}
+                                            <span class="text-muted small">Aguardando</span>
+                                            {% endif %}
+                                            <a href="{{ url_for('grandes_contas.ver_implantacao', impl_id=impl.id) }}"
+                                                class="btn btn-sm btn-primary ms-1"><i class="bi bi-eye me-1"></i> Ver
+                                                Detalhes</a>
+                                        </td>
+                                        {{ ultima_atividade_cell(impl) }}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="tab-pane fade" id="sem_previsao" role="tabpanel" aria-labelledby="sem-previsao-tab">
+                        <h2 class="h5 mb-3">Implantações Sem Previsão</h2>
+                        {% if not implantacoes_sem_previsao %} <div class="alert alert-info text-center" role="alert">
+                            Nenhuma implantação marcada como sem previsão. </div>
+                        {% else %} <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">ID</th>
+                                        <th scope="col">Empresa</th>
+                                        <th scope="col">Implantador</th>
+                                        <th scope="col">Tipo</th>
+                                        <th scope="col">Status</th>
+                                        <th scope="col">Início Previsto</th>
+                                        <th scope="col">Valor (Total: R$ {{
+                                            "%.2f"|format(metrics.total_valor_sem_previsao|float) if
+                                            metrics.total_valor_sem_previsao else '0.00' }})</th>
+                                        <th scope="col">Ações</th>
+                                        <th scope="col">Último Comentário</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for impl in implantacoes_sem_previsao %} <tr>
+                                        <td class="text-nowrap">{{ impl.id }}</td>
+                                        <td class="text-truncate" style="max-width: 350px;">
+                                            {{ empresa_link(impl) }}
+                                        </td>
+                                        <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or
+                                            impl.usuario_cs }}</td>
+                                        <td>{{ tipo_badge(impl.tipo) }}</td>
+                                        <td>{{ status_badge('sem_previsao') }}</td>
+                                        <td><span class="text-muted small">Sem previsão</span></td>
+                                        <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_monetario|float) if
+                                            impl.valor_monetario else 'N/A' }}</td>
+                                        <td class="text-nowrap">
+                                            {% if impl.usuario_cs == g.user_email %}
+                                            <button type="button" class="btn btn-sm btn-success btn-iniciar-implantacao"
+                                                title="Iniciar Implantação" data-impl-id="{{ impl.id }}"
+                                                data-impl-nome="{{ impl.nome_empresa }}">
+                                                <i class="bi bi-play-circle me-1"></i> Iniciar
+                                            </button>
+                                            {% else %}
+                                            <span class="text-muted small">Aguardando</span>
+                                            {% endif %}
+                                            <a href="{{ url_for('grandes_contas.ver_implantacao', impl_id=impl.id) }}"
+                                                class="btn btn-sm btn-primary ms-1"><i class="bi bi-eye me-1"></i> Ver
+                                                Detalhes</a>
+                                        </td>
+                                        {{ ultima_atividade_cell(impl) }}
+                                    </tr> {% endfor %} </tbody>
+                            </table>
+                        </div> {% endif %}
+                    </div>
+
+                    <div class="tab-pane fade" id="andamento" role="tabpanel" aria-labelledby="andamento-tab">
+                        <h2 class="h5 mb-3">Clientes em Andamento</h2>
+                        {% if not implantacoes_andamento %} <div class="alert alert-info text-center" role="alert">
+                            Nenhuma implantação em andamento. </div>
+                        {% else %} <div class="table-responsive">
+                            <table class="table table-striped table-hover table-sm align-middle">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">ID</th>
+                                        <th scope="col">Empresa</th>
+                                        <th scope="col">Implantador</th>
+                                        <th scope="col">Tipo</th>
+                                        <th scope="col">Dias</th>
+                                        <th scope="col" style="width: 20%;">Progresso</th>
+                                        <th scope="col">Valor (Total: R$ {{
+                                            "%.2f"|format(metrics.total_valor_andamento|float) if
+                                            metrics.total_valor_andamento else '0.00' }})</th>
+                                        <th scope="col">Ações</th>
+                                        <th scope="col">Último Comentário</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="andamento-tbody">
+                                    {% for impl in implantacoes_andamento %} <tr>
+                                        <td class="text-nowrap">{{ impl.id }}</td>
+                                        <td class="text-truncate" style="max-width: 350px;">
+                                            {{ empresa_link(impl) }}
+                                        </td>
+                                        <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or
+                                            impl.usuario_cs }}</td>
+                                        <td>{{ tipo_badge(impl.tipo) }}</td>
+                                        {{ dias_cell(impl) }}
+                                        <td>{{ progress_bar(impl) }}</td>
+                                        <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_monetario|float) if
+                                            impl.valor_monetario else 'N/A' }}</td>
+                                        <td><a href="{{ url_for('grandes_contas.ver_implantacao', impl_id=impl.id) }}"
+                                                class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver
+                                                Detalhes</a></td>
+                                        {{ ultima_atividade_cell(impl) }}
+                                    </tr> {% endfor %} </tbody>
+                            </table>
+                        </div> {% endif %}
+                    </div>
+
+                    <div class="tab-pane fade" id="futuras" role="tabpanel" aria-labelledby="futuras-tab">
+                        <h2 class="h5 mb-3">Implantações Futuras (Agendadas)</h2>
+                        {% if not implantacoes_futuras %} <div class="alert alert-info text-center" role="alert">
+                            Nenhuma implantação futura agendada. </div>
+                        {% else %} <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">ID</th>
+                                        <th scope="col">Empresa</th>
+                                        <th scope="col">Implantador</th>
+                                        <th scope="col">Tipo</th>
+                                        <th scope="col">Status</th>
+                                        <th scope="col">Início Previsto</th>
+                                        <th scope="col">Valor (Total: R$ {{
+                                            "%.2f"|format(metrics.total_valor_futuras|float) if
+                                            metrics.total_valor_futuras else '0.00' }})</th>
+                                        <th scope="col">Ações</th>
+                                        <th scope="col">Último Comentário</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for impl in implantacoes_futuras %} <tr>
+                                        <td class="text-nowrap">{{ impl.id }}</td>
+                                        <td class="text-truncate" style="max-width: 350px;">
+                                            {{ empresa_link(impl) }}
+                                        </td>
+                                        <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or
+                                            impl.usuario_cs }}</td>
+                                        <td>{{ tipo_badge(impl.tipo) }}</td>
+                                        <td>{{ status_badge('futura') }}</td>
+                                        <td>
+                                            {% if impl.data_inicio_previsto_fmt_d %}
+                                            <span
+                                                class="badge {% if impl.atrasada_para_iniciar %}bg-danger{% else %}bg-secondary{% endif %}">
+                                                {{ impl.data_inicio_previsto_fmt_d }}
+                                            </span>
+                                            {% if impl.atrasada_para_iniciar %}
+                                            <span class="badge bg-danger ms-1" title="Início atrasado!"><i
+                                                    class="bi bi-exclamation-triangle-fill"></i></span>
+                                            {% endif %}
+                                            {% else %}
+                                            <span class="text-muted small">N/A</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_monetario|float) if
+                                            impl.valor_monetario else 'N/A' }}</td>
+                                        <td class="text-nowrap">
+                                            {% if impl.usuario_cs == g.user_email %}
+                                            <button type="button" class="btn btn-sm btn-success btn-iniciar-implantacao"
+                                                title="Iniciar Agora" data-impl-id="{{ impl.id }}"
+                                                data-impl-nome="{{ impl.nome_empresa }}">
+                                                <i class="bi bi-play-circle me-1"></i> Iniciar
+                                            </button>
+
+                                            <button type="button" class="btn btn-sm btn-warning ms-1 btn-agendar-futuro"
+                                                data-bs-toggle="modal" data-bs-target="#agendarInicioModal"
+                                                data-impl-id="{{ impl.id }}" data-impl-nome="{{ impl.nome_empresa }}"
+                                                title="Reagendar Início">
+                                                <i class="bi bi-calendar-event me-1"></i> Reagendar
+                                            </button>
+                                            {% else %}
+                                            <span class="text-muted small">Aguardando</span>
+                                            {% endif %}
+                                            <a href="{{ url_for('grandes_contas.ver_implantacao', impl_id=impl.id) }}"
+                                                class="btn btn-sm btn-primary ms-1"><i class="bi bi-eye me-1"></i> Ver
+                                                Detalhes</a>
+                                        </td>
+                                        {{ ultima_atividade_cell(impl) }}
+                                    </tr> {% endfor %} </tbody>
+                            </table>
+                        </div> {% endif %}
+                    </div>
+
+                    <div class="tab-pane fade" id="finalizadas" role="tabpanel" aria-labelledby="finalizadas-tab">
+                        <h2 class="h5 mb-3">Implantações Concluídas</h2>
+                        {% if not implantacoes_finalizadas %} <div class="alert alert-info text-center" role="alert">
+                            Nenhuma implantação finalizada. </div>
+                        {% else %} <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">ID</th>
+                                        <th scope="col">Empresa</th>
+                                        <th scope="col">Implantador</th>
+                                        <th scope="col">Tipo</th>
+                                        <th scope="col">Progresso</th>
+                                        <th scope="col">Valor (Total: R$ {{
+                                            "%.2f"|format(metrics.total_valor_finalizadas|float) if
+                                            metrics.total_valor_finalizadas else '0.00' }})</th>
+                                        <th scope="col">Ações</th>
+                                        <th scope="col">Último Comentário</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for impl in implantacoes_finalizadas %} <tr>
+                                        <td class="text-nowrap">{{ impl.id }}</td>
+                                        <td class="text-truncate" style="max-width: 350px;">
+                                            {{ empresa_link(impl) }}
+                                        </td>
+                                        <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or
+                                            impl.usuario_cs }}</td>
+                                        <td>{{ tipo_badge(impl.tipo) }}</td>
+                                        <td><span class="badge bg-success">100% Concluída</span></td>
+                                        <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_monetario|float) if
+                                            impl.valor_monetario else 'N/A' }}</td>
+                                        <td class="text-nowrap">
+                                            <a href="{{ url_for('grandes_contas.ver_implantacao', impl_id=impl.id) }}"
+                                                class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver
+                                                Histórico</a>
+                                            {% if impl.usuario_cs == g.user_email %}
+                                            <form method="POST"
+                                                action="{{ url_for('grandes_contas_actions.reabrir_implantacao') }}"
+                                                style="display:inline;" onsubmit="return confirm('Tem certeza?');">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <input type="hidden" name="implantacao_id" value="{{ impl.id }}">
+                                                <input type="hidden" name="redirect_to" value="dashboard">
+                                                <button type="submit" class="btn btn-sm btn-warning ms-1"><i
+                                                        class="bi bi-folder-symlink me-1"></i> Reabrir</button>
+                                            </form>
+                                            {% endif %}
+                                        </td>
+                                        {{ ultima_atividade_cell(impl) }}
+                                    </tr> {% endfor %} </tbody>
+                            </table>
+                        </div> {% endif %}
+                    </div>
+
+                    <div class="tab-pane fade" id="paradas" role="tabpanel" aria-labelledby="paradas-tab">
+                        <h2 class="h5 mb-3">Implantações Paradas</h2>
+                        {% if not implantacoes_paradas %} <div class="alert alert-info text-center" role="alert">
+                            Nenhuma implantação parada. </div>
+                        {% else %} <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">ID</th>
+                                        <th scope="col">Empresa</th>
+                                        <th scope="col">Implantador</th>
+                                        <th scope="col">Tipo</th>
+                                        <th scope="col">Dias</th>
+                                        <th scope="col">Motivo</th>
+                                        <th scope="col">Valor (Total: R$ {{
+                                            "%.2f"|format(metrics.total_valor_paradas|float) if
+                                            metrics.total_valor_paradas else '0.00' }})</th>
+                                        <th scope="col">Ações</th>
+                                        <th scope="col">Último Comentário</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for impl in implantacoes_paradas %} <tr>
+                                        <td class="text-nowrap">{{ impl.id }}</td>
+                                        <td class="text-truncate" style="max-width: 350px;">
+                                            {{ empresa_link(impl) }}
+                                        </td>
+                                        <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or
+                                            impl.usuario_cs }}</td>
+                                        <td>{{ tipo_badge(impl.tipo) }}</td>
+                                        <td><span class="badge bg-danger js-dias-badge" data-impl-id="{{ impl.id }}"
+                                                data-start-iso="{{ impl.data_finalizacao | default('') }}"
+                                                data-status="parada">{{ impl.dias_parada | int }} dias</span></td>
+                                        <td class="text-truncate" style="max-width: 200px;">{{ impl.motivo_parada |
+                                            default('N/A') }}</td>
+                                        <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_monetario|float) if
+                                            impl.valor_monetario else 'N/A' }}</td>
+                                        <td class="text-nowrap">
+                                            <a href="{{ url_for('grandes_contas.ver_implantacao', impl_id=impl.id) }}"
+                                                class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver
+                                                Detalhes</a>
+                                            {% if impl.usuario_cs == g.user_email %}
+                                            <form method="POST"
+                                                action="{{ url_for('grandes_contas_actions.retomar_implantacao') }}"
+                                                style="display:inline;" onsubmit="return confirm('Tem certeza?');">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <input type="hidden" name="implantacao_id" value="{{ impl.id }}">
+                                                <input type="hidden" name="redirect_to" value="dashboard">
+                                                <button type="submit" class="btn btn-sm btn-success ms-1"><i
+                                                        class="bi bi-play-fill me-1"></i> Retomar</button>
+                                            </form>
+                                            {% endif %}
+                                        </td>
+                                        {{ ultima_atividade_cell(impl) }}
+                                    </tr> {% endfor %} </tbody>
+                            </table>
+                        </div> {% endif %}
+                    </div>
+
+                    <div class="tab-pane fade" id="canceladas" role="tabpanel" aria-labelledby="canceladas-tab">
+                        <h2 class="h5 mb-3">Implantações Canceladas</h2>
+                        {% if not implantacoes_canceladas %} <div class="alert alert-info text-center" role="alert">
+                            Nenhuma implantação cancelada. </div>
+                        {% else %} <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">ID</th>
+                                        <th scope="col">Empresa</th>
+                                        <th scope="col">Implantador</th>
+                                        <th scope="col">Tipo</th>
+                                        <th scope="col">Motivo</th>
+                                        <th scope="col">Data Cancelamento</th>
+                                        <th scope="col">Valor (Total: R$ {{
+                                            "%.2f"|format(metrics.total_valor_canceladas|float) if
+                                            metrics.total_valor_canceladas else '0.00' }})</th>
+                                        <th scope="col">Ações</th>
+                                        <th scope="col">Último Comentário</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for impl in implantacoes_canceladas %} <tr>
+                                        <td class="text-nowrap">{{ impl.id }}</td>
+                                        <td class="text-truncate" style="max-width: 350px;">{{ impl.nome_empresa }}</td>
+                                        <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or
+                                            impl.usuario_cs }}</td>
+                                        <td><span class="badge bg-info text-dark">{{ 'Módulo' if impl.tipo == 'modulo'
+                                                else 'Sistema' }}</span></td>
+                                        <td class="text-truncate" style="max-width: 200px;">{{ impl.motivo_cancelamento
+                                            |
+                                            default('N/A') }}</td>
+                                        <td>{{ impl.data_cancelamento_fmt if impl.data_cancelamento_fmt else 'N/A' }}
+                                        </td>
+                                        <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_monetario|float) if
+                                            impl.valor_monetario else 'N/A' }}</td>
+                                        <td class="text-nowrap">
+                                            <a href="{{ url_for('grandes_contas.ver_implantacao', impl_id=impl.id) }}"
+                                                class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver
+                                                Detalhes</a>
+                                        </td>
+                                        {{ ultima_atividade_cell(impl) }}
+                                    </tr> {% endfor %} </tbody>
+                            </table>
+                        </div> {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<div class="modal fade" id="novaImplantacaoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title">Nova Implantação (Grandes Contas)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('grandes_contas_actions.criar_implantacao') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="modal-body">
+                    {% if g.perfil.perfil_acesso in PERFIS_COM_CRIACAO %}
+                    <div class="mb-3">
+                        <label for="idFavorecido" class="form-label">ID Favorecido</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="idFavorecido" name="id_favorecido"
+                                placeholder="Digite o ID Favorecido" min="1" required>
+                            <button class="btn btn-outline-primary" type="button" id="btnConsultarEmpresa">
+                                <span class="spinner-border spinner-border-sm d-none" role="status"
+                                    aria-hidden="true"></span>
+                                Consultar
+                            </button>
+                        </div>
+                        <div id="consultaFeedback" class="form-text"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="nomeEmpresa" class="form-label">Nome Empresa</label>
+                        <input type="text" class="form-control" id="nomeEmpresa" name="nome_empresa" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="usuario_atribuido_cs" class="form-label">Atribuir ao Implantador</label>
+                        <select class="form-select" id="usuario_atribuido_cs" name="usuario_atribuido_cs" required>
+                            <option value="">Selecione um usuário...</option>
+                            {% if all_cs_users %}
+                            {% for user in all_cs_users %}
+                            <option value="{{ user.usuario }}">{{ user.nome }} ({{ user.usuario }})</option>
+                            {% endfor %}
+                            {% endif %}
+                        </select>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning"> Seu perfil de acesso ({{ g.perfil.perfil_acesso or 'Nenhum' }})
+                        não tem permissão para criar novas implantações. </div>
+                    {% endif %}
+                </div>
+                <div class="modal-footer header-bg">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    {% if g.perfil.perfil_acesso in PERFIS_COM_CRIACAO %}
+                    <button type="submit" class="btn btn-primary">Criar</button>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
     </div>
 </div>
+
+<div class="modal fade" id="implantarModuloModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title">Implantar Novo Módulo (Grandes Contas)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('grandes_contas_actions.criar_implantacao_modulo') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="modal-body">
+                    {% if g.perfil.perfil_acesso in PERFIS_COM_CRIACAO %}
+                    <p>Isso criará uma nova implantação do tipo "Módulo" e a definirá como "Nova" para o implantador
+                        selecionado.</p>
+                    <div class="mb-3">
+                        <label for="idFavorecidoModulo" class="form-label">ID Favorecido</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="idFavorecidoModulo" name="id_favorecido"
+                                placeholder="Digite o ID Favorecido" min="1" required>
+                            <button class="btn btn-outline-primary" type="button" id="btnConsultarEmpresaModulo">
+                                <span class="spinner-border spinner-border-sm d-none" role="status"
+                                    aria-hidden="true"></span>
+                                Consultar
+                            </button>
+                        </div>
+                        <div id="consultaFeedbackModulo" class="form-text"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="nomeEmpresaModulo" class="form-label">Nome Empresa (Cliente Existente)</label>
+                        <input type="text" class="form-control" id="nomeEmpresaModulo" name="nome_empresa_modulo"
+                            required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="modulo_tipo" class="form-label">Módulo a ser implantado</label>
+                        <select class="form-select" id="modulo_tipo" name="modulo_tipo" required>
+                            <option value="">Selecione um módulo...</option>
+                            <option value="nota_fiscal">Nota fiscal</option>
+                            <option value="vendas_online">Vendas Online</option>
+                            <option value="app_treino">App Treino</option>
+                            <option value="recorrencia">Recorrência</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="usuario_atribuido_cs_modulo" class="form-label">Atribuir ao Implantador</label>
+                        <select class="form-select" id="usuario_atribuido_cs_modulo" name="usuario_atribuido_cs_modulo"
+                            required>
+                            <option value="">Selecione um usuário...</option>
+                            {% if all_cs_users %}
+                            {% for user in all_cs_users %}
+                            <option value="{{ user.usuario }}">{{ user.nome }} ({{ user.usuario }})</option>
+                            {% endfor %}
+                            {% endif %}
+                        </select>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning"> Seu perfil de acesso ({{ g.perfil.perfil_acesso or 'Nenhum' }})
+                        não tem permissão para esta ação. </div>
+                    {% endif %}
+                </div>
+                <div class="modal-footer header-bg">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    {% if g.perfil.perfil_acesso in PERFIS_COM_CRIACAO %}
+                    <button type="submit" class="btn btn-primary">Criar Módulo</button>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="agendarInicioModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title" id="agendarInicioModalLabel">Agendar Início Futuro</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('grandes_contas_actions.agendar_implantacao') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <p>Selecione a data de início previsto para a implantação: <strong id="agendarNomeEmpresa"></strong>
+                    </p>
+                    <input type="hidden" name="implantacao_id" id="agendarImplId" value="">
+                    <div class="mb-3">
+                        <label for="data_inicio_previsto" class="form-label">Data de Início Previsto</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control flatpickr-date" id="data_inicio_previsto"
+                                name="data_inicio_previsto" placeholder="DD/MM/AAAA" inputmode="numeric"
+                                pattern="\d{2}/\d{2}/\d{4}" required>
+                            <button class="btn btn-outline-secondary" type="button" id="btn-cal-data_inicio_previsto"
+                                aria-label="Abrir calendário"><i class="bi bi-calendar3"></i></button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer header-bg">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-outline-warning"
+                        formaction="{{ url_for('grandes_contas_actions.marcar_sem_previsao') }}" formmethod="POST"
+                        formnovalidate>Sem
+                        previsão</button>
+                    <button type="submit" class="btn btn-primary">Agendar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal único para Iniciar Implantação (fora das tabelas) -->
+<div class="modal fade" id="modalIniciarImplantacao" tabindex="-1" aria-labelledby="modalIniciarImplantacaoLabel"
+    aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title" id="modalIniciarImplantacaoLabel">Iniciar Implantação</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-break mb-3">Escolha como deseja iniciar a implantação de <strong class="text-break"
+                        id="iniciarNomeEmpresa"></strong>:</p>
+
+                <!-- Opção 1: Iniciar Agora -->
+                <form method="POST" action="{{ url_for('grandes_contas_actions.iniciar_implantacao') }}"
+                    id="formIniciarAgora" class="mb-3">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="implantacao_id" id="iniciarImplId" value="">
+                    <input type="hidden" name="redirect_to" value="dashboard">
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="bi bi-play-circle me-2"></i> Iniciar Agora
+                    </button>
+                </form>
+
+                <!-- Opção 2: Agendar Início Futuro -->
+                <form method="POST" action="{{ url_for('grandes_contas_actions.agendar_implantacao') }}"
+                    id="formAgendarFuturo" class="mb-3">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="implantacao_id" id="agendarImplId2" value="">
+                    <div class="mb-2">
+                        <label for="data_inicio_previsto_modal" class="form-label small">Data de Início
+                            Previsto:</label>
+                        <div class="input-group input-group-sm">
+                            <input type="text" class="form-control flatpickr-date" id="data_inicio_previsto_modal"
+                                name="data_inicio_previsto" placeholder="DD/MM/AAAA" inputmode="numeric"
+                                pattern="\d{2}/\d{2}/\d{4}" required>
+                            <button class="btn btn-outline-secondary" type="button" id="btn-cal-modal"
+                                aria-label="Abrir calendário"><i class="bi bi-calendar3"></i></button>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-info w-100">
+                        <i class="bi bi-calendar-event me-2"></i> Agendar Início Futuro
+                    </button>
+                </form>
+
+                <!-- Opção 3: Sem Previsão -->
+                <form method="POST" action="{{ url_for('grandes_contas_actions.marcar_sem_previsao') }}"
+                    id="formSemPrevisao">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="implantacao_id" id="semPrevisaoImplId" value="">
+                    <button type="submit" class="btn btn-warning w-100">
+                        <i class="bi bi-question-circle me-2"></i> Marcar como Sem Previsão
+                    </button>
+                </form>
+            </div>
+            <div class="modal-footer header-bg">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal único para Iniciar Implantação (Grandes Contas) -->
+<div class="modal fade" id="modalIniciarImplantacao" tabindex="-1" aria-labelledby="modalIniciarImplantacaoLabel"
+    aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title" id="modalIniciarImplantacaoLabel">Iniciar Implantação (Grandes Contas)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-break mb-3">Escolha como deseja iniciar a implantação de <strong class="text-break"
+                        id="iniciarNomeEmpresa"></strong>:</p>
+
+                <!-- Opção 1: Iniciar Agora -->
+                <form method="POST" action="{{ url_for('grandes_contas_actions.iniciar_implantacao') }}"
+                    id="formIniciarAgora" class="mb-3">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="implantacao_id" id="iniciarImplId" value="">
+                    <input type="hidden" name="redirect_to" value="dashboard">
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="bi bi-play-circle me-2"></i> Iniciar Agora
+                    </button>
+                </form>
+
+                <!-- Opção 2: Agendar Início Futuro -->
+                <form method="POST" action="{{ url_for('grandes_contas_actions.agendar_implantacao') }}"
+                    id="formAgendarFuturo" class="mb-3">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="implantacao_id" id="agendarImplId2" value="">
+                    <div class="mb-2">
+                        <label for="data_inicio_previsto_modal" class="form-label small">Data de Início
+                            Previsto:</label>
+                        <div class="input-group input-group-sm">
+                            <input type="text" class="form-control flatpickr-date" id="data_inicio_previsto_modal"
+                                name="data_inicio_previsto" placeholder="DD/MM/AAAA" inputmode="numeric"
+                                pattern="\d{2}/\d{2}/\d{4}" required>
+                            <button class="btn btn-outline-secondary" type="button" id="btn-cal-modal"
+                                aria-label="Abrir calendário"><i class="bi bi-calendar3"></i></button>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-info w-100">
+                        <i class="bi bi-calendar-event me-2"></i> Agendar Início Futuro
+                    </button>
+                </form>
+
+                <!-- Opção 3: Sem Previsão -->
+                <form method="POST" action="{{ url_for('grandes_contas_actions.marcar_sem_previsao') }}"
+                    id="formSemPrevisao">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="implantacao_id" id="semPrevisaoImplId" value="">
+                    <button type="submit" class="btn btn-warning w-100">
+                        <i class="bi bi-question-circle me-2"></i> Marcar como Sem Previsão
+                    </button>
+                </form>
+            </div>
+            <div class="modal-footer header-bg">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+
+{% block scripts_extra %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const tabSelector = '#myTab .nav-link';
+        const tabs = document.querySelectorAll(tabSelector);
+        const tabStorageKey = 'tabAtiva-dashboard-gc';
+
+        tabs.forEach(tab => {
+            tab.addEventListener('shown.bs.tab', event => {
+                localStorage.setItem(tabStorageKey, event.target.id);
+            });
+        });
+
+        const abaAtivaId = localStorage.getItem(tabStorageKey);
+        const defaultTabEl = document.getElementById('novas-tab');
+
+        if (abaAtivaId) {
+            const tabEl = document.getElementById(abaAtivaId);
+            if (tabEl) {
+                try {
+                    new bootstrap.Tab(tabEl).show();
+                } catch (e) {
+                    localStorage.removeItem(tabStorageKey);
+                    if (defaultTabEl) new bootstrap.Tab(defaultTabEl).show();
+                }
+            } else {
+                localStorage.removeItem(tabStorageKey);
+                if (defaultTabEl) new bootstrap.Tab(defaultTabEl).show();
+            }
+        } else {
+            if (defaultTabEl) new bootstrap.Tab(defaultTabEl).show();
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        var agendarModal = document.getElementById('agendarInicioModal');
+        if (agendarModal) {
+            agendarModal.addEventListener('show.bs.modal', function (event) {
+                var button = event.relatedTarget;
+                var implId = button.getAttribute('data-impl-id');
+                var implNome = button.getAttribute('data-impl-nome');
+                var inputId = agendarModal.querySelector('#agendarImplId');
+                var nomeSpan = agendarModal.querySelector('#agendarNomeEmpresa');
+                if (inputId) inputId.value = implId;
+                if (nomeSpan) nomeSpan.textContent = implNome;
+            });
+        }
+    });
+
+    // Inicializar Flatpickr para datas
+    document.addEventListener('DOMContentLoaded', function () {
+        // Configurar locale pt
+        if (typeof flatpickr !== 'undefined') {
+            flatpickr.localize(flatpickr.l10ns.pt);
+            document.querySelectorAll('.flatpickr-date').forEach(function (elem) {
+                flatpickr(elem, {
+                    dateFormat: "d/m/Y",
+                    allowInput: true,
+                    disableMobile: "true"
+                });
+            });
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        var iniciarModal = document.getElementById('modalIniciarImplantacao');
+        if (iniciarModal) {
+            // Attach click handlers to all "Iniciar" buttons
+            document.querySelectorAll('.btn-iniciar-implantacao').forEach(function (btn) {
+                btn.addEventListener('click', function (e) {
+                    var implId = this.getAttribute('data-impl-id');
+                    var implNome = this.getAttribute('data-impl-nome');
+
+                    var modalNomeEl = iniciarModal.querySelector('#iniciarNomeEmpresa');
+                    var modalImplIdInput = iniciarModal.querySelector('#iniciarImplId');
+                    var agendarImplIdInput = iniciarModal.querySelector('#agendarImplId2');
+                    var semPrevisaoImplIdInput = iniciarModal.querySelector('#semPrevisaoImplId');
+
+                    if (modalNomeEl) {
+                        modalNomeEl.textContent = implNome;
+                    }
+                    if (modalImplIdInput) {
+                        modalImplIdInput.value = implId;
+                    }
+                    if (agendarImplIdInput) {
+                        agendarImplIdInput.value = implId;
+                    }
+                    if (semPrevisaoImplIdInput) {
+                        semPrevisaoImplIdInput.value = implId;
+                    }
+
+                    // Open the modal
+                    var bsModal = new bootstrap.Modal(iniciarModal);
+                    bsModal.show();
+                });
+            });
+
+            // Configure flatpickr for the date field in the modal
+            if (window.flatpickr) {
+                var fpModal = window.flatpickr('#data_inicio_previsto_modal', {
+                    dateFormat: 'd/m/Y',
+                    allowInput: true,
+                    minDate: 'today',
+                    locale: {
+                        firstDayOfWeek: 0,
+                        weekdays: {
+                            shorthand: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
+                            longhand: ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
+                        },
+                        months: {
+                            shorthand: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+                            longhand: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+                        }
+                    }
+                });
+                var btnModal = document.getElementById('btn-cal-modal');
+                if (btnModal && fpModal) {
+                    btnModal.addEventListener('click', function () {
+                        fpModal.open();
+                    });
+                }
+            }
+
+            // Convert date DD/MM/YYYY to YYYY-MM-DD before sending
+            var formAgendarFuturo = iniciarModal.querySelector('#formAgendarFuturo');
+            if (formAgendarFuturo) {
+                formAgendarFuturo.addEventListener('submit', function (e) {
+                    var input = formAgendarFuturo.querySelector('#data_inicio_previsto_modal');
+                    if (!input) return;
+                    var v = (input.value || '').trim();
+                    var m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+                    if (m) {
+                        input.value = m[3] + '-' + m[2] + '-' + m[1];
+                    }
+                });
+            }
+        }
+    });
+
+    // Consultar dados da empresa (Pacto Global)
+    const btnConsultar = document.getElementById('btnConsultarEmpresa');
+    if (btnConsultar) {
+        btnConsultar.addEventListener('click', consultarEmpresa);
+    }
+    const btnConsultarMod = document.getElementById('btnConsultarEmpresaModulo');
+    if (btnConsultarMod) {
+        btnConsultarMod.addEventListener('click', function () {
+            consultarEmpresa(true);
+        });
+    }
+
+    function consultarEmpresa(isModulo = false) {
+        const idInput = isModulo ? document.getElementById('idFavorecidoModulo') : document.getElementById('idFavorecido');
+        const nomeInput = isModulo ? document.getElementById('nomeEmpresaModulo') : document.getElementById('nomeEmpresa');
+        const feedbackDiv = isModulo ? document.getElementById('consultaFeedbackModulo') : document.getElementById('consultaFeedback');
+        const spinner = isModulo ? btnConsultarMod.querySelector('.spinner-border') : btnConsultar.querySelector('.spinner-border');
+
+        const idFavorecido = idInput.value;
+        if (!idFavorecido) return;
+
+        spinner.classList.remove('d-none');
+        feedbackDiv.textContent = 'Consultando...';
+        feedbackDiv.className = 'form-text text-muted';
+        nomeInput.value = '';
+
+        fetch(`/api/consultar_empresa/${idFavorecido}`)
+            .then(response => response.json())
+            .then(data => {
+                spinner.classList.add('d-none');
+                if (data.error) {
+                    feedbackDiv.textContent = data.error;
+                    feedbackDiv.className = 'form-text text-danger';
+                } else if (data.nome_fantasia) {
+                    nomeInput.value = data.nome_fantasia;
+                    feedbackDiv.textContent = 'Empresa encontrada!';
+                    feedbackDiv.className = 'form-text text-success';
+                }
+            })
+            .catch(err => {
+                spinner.classList.add('d-none');
+                feedbackDiv.textContent = 'Erro ao consultar API.';
+                feedbackDiv.className = 'form-text text-danger';
+            });
+    }
+</script>
 {% endblock %}

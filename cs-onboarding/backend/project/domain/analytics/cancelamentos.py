@@ -12,7 +12,7 @@ from ...db import query_db
 from .utils import date_col_expr, date_param_expr
 
 
-def get_cancelamentos_data(cs_email=None, start_date=None, end_date=None):
+def get_cancelamentos_data(cs_email=None, start_date=None, end_date=None, context=None):
     """
     Retorna dados detalhados de cancelamentos com métricas e gráficos.
     """
@@ -21,10 +21,16 @@ def get_cancelamentos_data(cs_email=None, start_date=None, end_date=None):
     query = """
             SELECT i.id, i.nome_empresa, i.usuario_cs, i.data_criacao, i.data_cancelamento,
                    i.motivo_cancelamento, i.seguimento, i.tipos_planos, i.alunos_ativos,
-                   i.nivel_receita, i.valor_atribuido
+                   i.nivel_receita, i.valor_atribuido, i.contexto
             FROM implantacoes i
             WHERE i.status = 'cancelada'
         """
+    if context:
+        if context == "onboarding":
+            query += " AND (i.contexto IS NULL OR i.contexto = 'onboarding') "
+        else:
+            query += " AND i.contexto = %s "
+            args.append(context)
     if cs_email:
         query += " AND i.usuario_cs = %s"
         args.append(cs_email)

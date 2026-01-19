@@ -31,7 +31,7 @@
 
     <div class="plano-actions">
         {% if pode_editar %}
-        <a href="{{ url_for('planos.obter_plano', plano_id=plano.id) }}?modo=editar"
+        <a href="{{ url_for('planos.obter_plano', plano_id=plano.id, context=context) }}?modo=editar"
             class="btn btn-plano btn-plano-primary" title="Editar plano">
             <i class="bi bi-pencil"></i>Editar
         </a>

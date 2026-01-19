@@ -103,8 +103,14 @@ def get_implantacoes_with_progress(
         args.append(status)
 
     if context:
-        query += f" AND i.contexto = {placeholder}"
-        args.append(context)
+        if context == 'onboarding':
+            if use_sqlite:
+                query += " AND (i.contexto IS NULL OR i.contexto = 'onboarding')"
+            else:
+                query += " AND (i.contexto IS NULL OR i.contexto = 'onboarding')"
+        else:
+            query += f" AND i.contexto = {placeholder}"
+            args.append(context)
 
     if sort_by_status:
         query += """
@@ -212,13 +218,14 @@ def get_checklist_tree_optimized(implantacao_id: int) -> List[Dict[str, Any]]:
     return query_db(query, (implantacao_id,)) or []
 
 
-def get_implantacoes_count(usuario_cs: Optional[str] = None, status: Optional[str] = None) -> int:
+def get_implantacoes_count(usuario_cs: Optional[str] = None, status: Optional[str] = None, context: Optional[str] = None) -> int:
     """
     Conta total de implantações para paginação.
 
     Args:
         usuario_cs: Filtrar por usuário CS
         status: Filtrar por status
+        context: Filtrar por contexto (ex: 'grandes_contas')
 
     Returns:
         Total de registros
@@ -237,6 +244,13 @@ def get_implantacoes_count(usuario_cs: Optional[str] = None, status: Optional[st
     if status:
         query += f" AND i.status = {placeholder}"
         args.append(status)
+
+    if context:
+        if context == 'onboarding':
+            query += " AND (i.contexto IS NULL OR i.contexto = 'onboarding')"
+        else:
+            query += f" AND i.contexto = {placeholder}"
+            args.append(context)
 
     res = query_db(query, tuple(args), one=True)
     return res.get("total", 0) if res else 0

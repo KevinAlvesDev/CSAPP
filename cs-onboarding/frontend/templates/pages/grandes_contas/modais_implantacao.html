@@ -1,0 +1,546 @@
+<!-- Modal Finalizar -->
+<div class="modal fade" id="modalFinalizar" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title">Finalizar Implantação (GC)</h5><button type="button" class="btn-close"
+                    data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('grandes_contas_actions.finalizar_implantacao') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Para finalizar, conclua as tarefas do Plano de
+                        Sucesso associado.
+                    </div>
+                    <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
+                    <input type="hidden" name="redirect_to" value="detalhes">
+                    <div class="mb-3">
+                        <label for="data_finalizacao" class="form-label fw-bold">Data da Finalização *</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control custom-datepicker date-mask no-datepicker"
+                                id="data_finalizacao" name="data_finalizacao" required placeholder="DD/MM/AAAA">
+                            <button class="btn btn-outline-secondary" type="button" id="btn_cal_data_finalizacao"><i
+                                    class="bi bi-calendar3"></i></button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Confirmar Finalização</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Parar -->
+<div class="modal fade" id="modalParar" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title">Parar Implantação (GC)</h5><button type="button" class="btn-close"
+                    data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('grandes_contas_actions.parar_implantacao') }}" method="POST"
+                id="formPararImplantacao">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
+                    <div class="mb-3">
+                        <label for="data_parada" class="form-label fw-bold">Data da Parada *</label>
+                        <input type="text" class="form-control" id="data_parada" name="data_parada" required
+                            placeholder="DD/MM/AAAA">
+                        <small class="text-danger d-none" id="data_parada_error">A data da parada é obrigatória.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="motivo_parada" class="form-label">Motivo *</label>
+                        <select class="form-select" id="motivo_parada" name="motivo_parada" required>
+                            <option value="">Selecione...</option>
+                            {% for motivo in justificativas_parada %}
+                            <option value="{{ motivo }}">{{ motivo }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Parar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Retomar -->
+<div class="modal fade" id="modalRetomar" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title">Retomar Implantação (GC)</h5><button type="button" class="btn-close"
+                    data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('grandes_contas_actions.retomar_implantacao') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <p>Deseja retomar esta implantação e alterar o status para "Em Andamento"?</p>
+                    <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
+                    <input type="hidden" name="redirect_to" value="detalhes">
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Retomar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Desfazer Início -->
+<div class="modal fade" id="modalDesfazerInicio" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-secondary text-white">
+                <h5 class="modal-title"><i class="bi bi-arrow-counterclockwise me-2"></i>Cancelar Início (GC)</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <!-- Modificado para funcionar sem JS específico, se possível. -->
+            <div class="modal-body">
+                <p>Tem certeza que deseja cancelar o início da implantação?</p>
+                <p class="text-muted small mb-0">
+                    <i class="bi bi-info-circle me-1"></i>
+                    O status voltará para "Nova" e a data de início será removida.
+                </p>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <!-- Ajuste: Usando form para submissão direta, contornando dependência de JS -->
+                <button type="button" class="btn btn-primary" onclick="cancelarInicioGC()">Confirmar</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    function cancelarInicioGC() {
+        const csrfToken = "{{ csrf_token() }}";
+        const implId = {{ implantacao.id }};
+
+    fetch("{{ url_for('grandes_contas_actions.desfazer_inicio_implantacao') }}", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": csrfToken
+        },
+        body: JSON.stringify({ implantacao_id: implId })
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert("Erro: " + data.error);
+            } else {
+                window.location.reload();
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Erro ao desfazer início.");
+        });
+    }
+</script>
+
+
+<!-- Modal Reabrir -->
+<div class="modal fade" id="modalReabrir" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title">Reabrir Implantação (GC)</h5><button type="button" class="btn-close"
+                    data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('grandes_contas_actions.reabrir_implantacao') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <p>A implantação voltará para o status "Em Andamento". Confirmar?</p>
+                    <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
+                    <input type="hidden" name="redirect_to" value="detalhes">
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Reabrir</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Transferir -->
+<div class="modal fade" id="modalTransferir" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title">Transferir CS (GC)</h5><button type="button" class="btn-close"
+                    data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('grandes_contas_actions.transferir_implantacao') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <p>Transferir <strong>{{ implantacao.nome_empresa }}</strong> de <strong>{{ implantacao.usuario_cs
+                            }}</strong> para:</p>
+                    <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
+                    <div class="mb-3">
+                        <label class="form-label">Novo CS</label>
+                        <select class="form-select" name="novo_usuario_cs" required>
+                            <option value="">Selecione...</option>
+                            {% for user in all_cs_users %}
+                            {% if user.usuario != implantacao.usuario_cs %}
+                            <option value="{{ user.usuario }}">{{ user.nome }} ({{ user.usuario }})</option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-info text-white">Confirmar Transferência</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Excluir -->
+<div class="modal fade" id="modalExcluirImplantacao" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title text-danger">Excluir Implantação (GC)</h5><button type="button" class="btn-close"
+                    data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('grandes_contas_actions.excluir_implantacao') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <h5 class="text-danger fw-bold"><i class="bi bi-exclamation-octagon-fill me-2"></i>Atenção!
+                        Irreversível!</h5>
+                    <p>Tem certeza que deseja excluir permanentemente a implantação de <strong>{{
+                            implantacao.nome_empresa }}</strong>?</p>
+                    <p class="text-muted small">Todos os dados, tarefas e histórico serão perdidos.</p>
+                    <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Excluir Permanentemente</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Cancelar -->
+<div class="modal fade" id="modalCancelar" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title text-danger">Cancelar Implantação (GC)</h5><button type="button"
+                    class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('grandes_contas_actions.cancelar_implantacao') }}" method="POST"
+                enctype="multipart/form-data" id="formCancelarImplantacao">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <p class="fw-bold">Deseja realmente cancelar esta implantação?</p>
+                    <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Data do Cancelamento *</label>
+                        <input type="text" class="form-control" id="data_cancelamento" name="data_cancelamento" required
+                            placeholder="DD/MM/AAAA">
+                        <small class="text-danger d-none" id="data_cancelamento_error">A data do cancelamento é
+                            obrigatória.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Motivo *</label>
+                        <textarea class="form-control" name="motivo_cancelamento" rows="3" required
+                            placeholder="Descreva o motivo..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Comprovante (Print/PDF) *</label>
+                        <input type="file" class="form-control" name="comprovante_cancelamento"
+                            accept="image/*, application/pdf" required>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Voltar</button>
+                    <button type="submit" class="btn btn-danger">Confirmar Cancelamento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Remover Plano -->
+<div class="modal fade" id="modalRemoverPlano" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2"></i>Remover Plano (GC)</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('grandes_contas_actions.remover_plano_implantacao') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
+                <div class="modal-body">
+                    <p>Tem certeza que deseja remover o plano <strong>{{ plano_sucesso.nome if plano_sucesso else ''
+                            }}</strong> desta implantação?</p>
+                    <p class="text-danger small mb-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Esta ação irá remover todas as fases, ações e tarefas associadas a este plano nesta implantação.
+                    </p>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Confirmar Remoção</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Selecionar Plano (Externo) -->
+{% include 'partials/_modal_selecionar_plano.html' %}
+
+<!-- Modal Consultar Ticket Jira -->
+<div class="modal fade" id="modalConsultarTicketJira" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
+            <div class="modal-header border-0 pb-0 pt-4 px-4 align-items-center">
+                <h5 class="modal-title fw-bold text-dark text-start w-100">Consultar Ticket Jira</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="formConsultarTicketJira">
+                    <div class="form-group">
+                        <label class="form-label fw-bold text-secondary style=" font-size: 0.85rem;">CHAVE DO
+                            TICKET</label>
+                        <input type="text" class="form-control form-control-lg" id="jira-consulta-key"
+                            placeholder="Ex: M1-1234" required style="text-transform: uppercase;">
+                    </div>
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg"
+                            style="background-color: #4F46E5; border-color: #4F46E5;">
+                            <span id="btn-consulta-jira-spinner" class="spinner-border spinner-border-sm me-2 d-none"
+                                role="status" aria-hidden="true"></span>
+                            Buscar Ticket
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Novo Ticket Jira -->
+<div class="modal fade" id="modalNovoTicketJira" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
+            <!-- Header Minimalista -->
+            <div class="modal-header border-0 pb-0 pt-4 px-4 align-items-center">
+                <div class="d-flex flex-column">
+                    <h5 class="modal-title fw-bold text-dark fs-4">Novo item</h5>
+                    <div class="d-flex gap-3 mt-3">
+                        <!-- Etiquetas de topo (Visuais) -->
+                        <div class="d-flex align-items-center text-primary bg-primary bg-opacity-10 px-3 py-1 rounded-pill small"
+                            role="button">
+                            <i class="bi bi-calendar-event me-2"></i> <span class="fw-semibold">Vencimento</span>
+                        </div>
+                        <div class="d-flex align-items-center text-primary bg-primary bg-opacity-10 px-3 py-1 rounded-pill small"
+                            role="button">
+                            <i class="bi bi-person me-2"></i> <span class="fw-semibold">{{ g.user.name if g.user and
+                                g.user.name else 'Responsável' }}</span>
+                        </div>
+                        <div class="d-flex align-items-center text-muted bg-light px-3 py-1 rounded-pill small"
+                            role="button">
+                            <i class="bi bi-tag me-2"></i> <span>Etiquetas</span>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close align-self-start mt-1" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body px-4 pt-4 pb-4">
+                <form id="formNovoTicketJira">
+                    <div class="vstack gap-4">
+
+                        <!-- Título -->
+                        <div class="form-group">
+                            <label class="form-label fw-bold text-secondary" style="font-size: 0.85rem;">Título <span
+                                    class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-lg" id="jira-titulo"
+                                placeholder="Resumo do problema ou tarefa" required style="font-size: 1rem;">
+                        </div>
+
+                        <!-- Descrição -->
+                        <div class="form-group position-relative">
+                            <label class="form-label fw-bold text-secondary"
+                                style="font-size: 0.85rem;">Descrição</label>
+                            <textarea class="form-control p-3" id="jira-descricao" rows="5"
+                                placeholder="Descreva os detalhes..."
+                                style="resize: vertical; font-size: 0.95rem;"></textarea>
+                            <div class="text-end text-muted mt-1" style="font-size: 0.75rem;">0/8000</div>
+                        </div>
+
+                        <!-- Anexos -->
+                        <div class="form-group">
+                            <label class="form-label fw-bold text-secondary" style="font-size: 0.85rem;">Anexos
+                                (Arquivos/Prints)</label>
+                            <input type="file" class="form-control" id="jira-arquivos" multiple>
+                            <div class="form-text text-muted" style="font-size: 0.75rem;">Você pode selecionar múltiplos
+                                arquivos para anexar ao ticket.</div>
+                        </div>
+
+                        <!-- Contatos & Origem -->
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label fw-bold text-secondary"
+                                    style="font-size: 0.85rem;">Contatos</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-0 ps-3"><i
+                                            class="bi bi-search text-muted small"></i></span>
+                                    <input type="text" class="form-control" id="jira-contatos"
+                                        placeholder="Nome do contato" style="font-size: 0.95rem;">
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="form-group position-relative">
+                                    <label class="form-label fw-bold text-secondary" style="font-size: 0.85rem;">Ticket
+                                        Origem</label>
+                                    <input type="text" class="form-control" id="jira-origem" placeholder="Ex: #1234"
+                                        style="font-size: 0.95rem;">
+                                    <div class="text-end text-muted position-absolute end-0 bottom-50 pe-3 mb-1"
+                                        style="font-size: 0.7rem;">0/2000</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Configurações Jira (Selects) -->
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold text-secondary" style="font-size: 0.85rem;">Projeto
+                                    Jira <span class="text-danger">*</span></label>
+                                <select class="form-select" id="jira-projeto" required style="font-size: 0.95rem;">
+                                    <option value="" selected disabled>Selecione...</option>
+                                    <option value="M1">M1 - ADM / CRM / Notas</option>
+                                    <option value="MJ">MJ - MIGRAÇÃO JOÃO</option>
+                                    <option value="M5">M5 - DESKTOP</option>
+                                    <option value="GC">GC - GRANDES CONTAS</option>
+                                    <option value="PAY">PAY - PACTOPAY</option>
+                                    <option value="TW">TW - TREINO</option>
+                                    <option value="IN">IN - INFRA</option>
+                                    <option value="APPS">APPS - APLICATIVOS</option>
+                                    <option value="E2">E2 - MIGRAÇÃO LUIZ</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold text-secondary" style="font-size: 0.85rem;">Tipo do
+                                    Jira <span class="text-danger">*</span></label>
+                                <select class="form-select" id="jira-tipo" required style="font-size: 0.95rem;">
+                                    <option value="10021" selected>Bug</option>
+                                    <option value="10055">Ajuste BD</option>
+                                    <option value="10062">Evolução / Melhoria</option>
+                                    <option value="10057">Customização</option>
+                                    <option value="10019">Tarefa</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold text-secondary" style="font-size: 0.85rem;">SLA do Jira
+                                    <span class="text-danger">*</span></label>
+                                <select class="form-select" id="jira-sla" required style="font-size: 0.95rem;">
+                                    <option value="" selected disabled>Selecione...</option>
+                                    <option value="1">Nível 1 - Alto</option>
+                                    <option value="2">Nível 2 - Normal</option>
+                                    <option value="3">Nível 3 - Baixo</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Info Readonly Jira -->
+                        <div class="form-group">
+                            <label class="form-label fw-bold text-secondary" style="font-size: 0.85rem;">Jira (ID
+                                Gerado)</label>
+                            <input type="text" class="form-control bg-light border-0 text-muted"
+                                value="Gerado automaticamente" disabled readonly
+                                style="font-size: 0.95rem; font-style: italic;">
+                        </div>
+
+                        <!-- Link E-notas -->
+                        <div class="form-group position-relative">
+                            <label class="form-label fw-bold text-secondary" style="font-size: 0.85rem;">Link do ticket
+                                E-notas</label>
+                            <input type="url" class="form-control" id="jira-link-enotas" placeholder="https://..."
+                                style="font-size: 0.95rem;">
+                            <div class="text-end text-muted position-absolute end-0 bottom-50 pe-3 mb-1"
+                                style="font-size: 0.7rem;">0/2000</div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Footer -->
+            <div class="modal-footer border-0 px-4 pb-4 pt-0">
+                <button type="button" class="btn btn-outline-secondary border-0 fw-semibold px-3"
+                    data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" form="formNovoTicketJira" class="btn btn-primary px-4 fw-bold shadow-sm"
+                    style="background-color: #4F46E5; border-color: #4F46E5; border-radius: 8px;">
+                    <span class="d-none spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"
+                        id="btn-save-jira-spinner"></span>
+                    Salvar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Adicionar/Editar Aviso -->
+<div class="modal fade" id="modalAviso" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title" id="modalAvisoLabel">Adicionar Aviso</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formAviso">
+                    <input type="hidden" id="aviso-id" value="">
+
+                    <div class="mb-3">
+                        <label for="aviso-tipo" class="form-label">Tipo de Aviso</label>
+                        <select class="form-select" id="aviso-tipo" required>
+                            <option value="info">Informação (Azul)</option>
+                            <option value="warning">Atenção (Amarelo)</option>
+                            <option value="danger">Urgente (Vermelho)</option>
+                            <option value="success">Sucesso (Verde)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="aviso-titulo" class="form-label">Título</label>
+                        <input type="text" class="form-control" id="aviso-titulo" placeholder="Ex: Reunião agendada"
+                            maxlength="100" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="aviso-mensagem" class="form-label">Mensagem</label>
+                        <textarea class="form-control" id="aviso-mensagem" rows="4" placeholder="Descreva o aviso..."
+                            maxlength="500" required></textarea>
+                        <div class="form-text">
+                            <span id="aviso-char-count">0</span>/500 caracteres
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer header-bg">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btn-save-aviso">Salvar Aviso</button>
+            </div>
+        </div>
+    </div>
+</div>

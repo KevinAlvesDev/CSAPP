@@ -25,20 +25,36 @@ from ..domain.task_definitions import MODULO_OBRIGATORIO, MODULO_PENDENCIAS, TAS
 # ============================================================================
 # REFATORAÇÃO SOLID - Importações do novo módulo de CRUD
 # ============================================================================
+from .implantacao.crud import (
+    cancelar_implantacao_service,
+    criar_implantacao_modulo_service,
+    criar_implantacao_service,
+    excluir_implantacao_service,
+    transferir_implantacao_service,
+)
 # ============================================================================
 # REFATORAÇÃO SOLID - Importações do novo módulo de detalhes
 # ============================================================================
 from .implantacao.details import (
     _format_implantacao_dates,
     _get_timeline_logs,
+    atualizar_detalhes_empresa_service,
 )
 
 # ============================================================================
 # REFATORAÇÃO SOLID - Importações do novo módulo de listagem
 # ============================================================================
+from .implantacao.listing import (
+    listar_implantacoes,
+    obter_implantacao_basica,
+)
 # ============================================================================
 # REFATORAÇÃO SOLID - Importações do novo módulo de integração OAMD
 # ============================================================================
+from .implantacao.oamd_integration import (
+    aplicar_dados_oamd,
+    consultar_dados_oamd,
+)
 # ============================================================================
 # REFATORAÇÃO SOLID - Importações do novo módulo de progresso
 # ============================================================================
@@ -49,6 +65,16 @@ from .implantacao.progress import (
 # ============================================================================
 # REFATORAÇÃO SOLID - Importações do novo módulo de status
 # ============================================================================
+from .implantacao.status import (
+    agendar_implantacao_service,
+    desfazer_inicio_implantacao_service,
+    finalizar_implantacao_service,
+    iniciar_implantacao_service,
+    marcar_sem_previsao_service,
+    parar_implantacao_service,
+    reabrir_implantacao_service,
+    retomar_implantacao_service,
+)
 
 try:
     from ..config.cache_config import cache

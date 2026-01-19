@@ -107,7 +107,26 @@
                 </div>
             `;
 
-            window.apiFetch('/planos/?ativo=true')
+            // Detectar o contexto da implantação atual
+            // Primeiro tenta pegar do URL (ex: /grandes_contas/...)
+            let context = 'onboarding'; // default
+            const path = window.location.pathname;
+
+            if (path.includes('/grandes_contas/')) {
+                context = 'grandes_contas';
+            } else if (path.includes('/onboarding/')) {
+                context = 'onboarding';
+            }
+
+            // Também pode tentar pegar de um atributo data no DOM se existir
+            const mainContent = document.getElementById('main-content');
+            if (mainContent && mainContent.dataset.context) {
+                context = mainContent.dataset.context;
+            }
+
+            console.log('Carregando planos para contexto:', context);
+
+            window.apiFetch(`/planos/?ativo=true&context=${context}`)
                 .then(data => {
                     if (data.success && data.planos) {
                         planosDisponiveis = data.planos;
@@ -118,7 +137,7 @@
                         <div class="col-12">
                             <div class="alert alert-warning">
                                 <i class="bi bi-exclamation-triangle me-2"></i>
-                                Nenhum plano ativo encontrado.
+                                Nenhum plano ativo encontrado para este módulo.
                             </div>
                         </div>
                     `;

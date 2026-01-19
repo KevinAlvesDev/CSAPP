@@ -11,6 +11,24 @@
     }
   })();
 </script>
+{% set current_dashboard = 'onboarding.dashboard' %}
+{% if request.blueprint == 'ongoing' %}
+{% set current_dashboard = 'ongoing.dashboard' %}
+{% elif request.blueprint == 'grandes_contas' %}
+{% set current_dashboard = 'grandes_contas.dashboard' %}
+{% elif request.blueprint == 'onboarding' %}
+{% set current_dashboard = 'onboarding.dashboard' %}
+{% endif %}
+
+{% set current_context = 'onboarding' %}
+{% if request.blueprint == 'grandes_contas' or (request.blueprint in ['analytics', 'planos'] and
+request.args.get('context') == 'grandes_contas') or (request.blueprint == 'perfis' and g.modulo_atual ==
+'grandes_contas') %}
+{% set current_context = 'grandes_contas' %}
+{% elif request.blueprint == 'ongoing' or (request.blueprint in ['analytics', 'planos'] and request.args.get('context')
+== 'ongoing') or (request.blueprint == 'perfis' and g.modulo_atual == 'ongoing') %}
+{% set current_context = 'ongoing' %}
+{% endif %}
 
 <head>
   <meta charset="UTF-8">
@@ -41,6 +59,10 @@
 
 
   {% block head_extra %}{% endblock %}
+  <script>
+    // Global context for JS components (notifications, etc)
+    window.currentContext = "{{ current_context }}";
+  </script>
 </head>
 
 <body class="{% if request.cookies.get('theme') == 'dark' %}dark-mode{% endif %}">
@@ -68,23 +90,16 @@
         </button>
       </div>
       <ul class="nav flex-column">
-        {% set current_dashboard = 'onboarding.dashboard' %}
-        {% if request.blueprint == 'ongoing' %}
-        {% set current_dashboard = 'ongoing.dashboard' %}
-        {% elif request.blueprint == 'grandes_contas' %}
-        {% set current_dashboard = 'grandes_contas.dashboard' %}
-        {% elif request.blueprint == 'onboarding' %}
-        {% set current_dashboard = 'onboarding.dashboard' %}
-        {% endif %}
-
         <li class="nav-item"><a
             class="nav-link {% if request.endpoint and 'dashboard' in request.endpoint %}active{% endif %}"
             href="{{ url_for(current_dashboard) }}"><i class="bi bi-speedometer2 me-2"></i><span class="nav-link-text">
               Dashboard</span></a></li>
         {% if implantacao and implantacao.id %}
+        {% set ver_impl_blueprint = (request.blueprint if request.blueprint in ['onboarding', 'grandes_contas',
+        'ongoing'] else (implantacao.contexto if (implantacao and implantacao.contexto) else 'onboarding')) %}
         <li class="nav-item"><a
-            class="nav-link {% if request.endpoint == 'onboarding.ver_implantacao' %}active{% endif %}"
-            href="{{ url_for('onboarding.ver_implantacao', impl_id=implantacao.id) }}"><i
+            class="nav-link {% if '.ver_implantacao' in (request.endpoint or '') %}active{% endif %}"
+            href="{{ url_for(ver_impl_blueprint + '.ver_implantacao', impl_id=implantacao.id) }}"><i
               class="bi bi-kanban me-2"></i><span class="nav-link-text"> Detalhes da Implantação</span></a></li>
         {% endif %}
         <li class="nav-item"><a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#modalPerfil"><i
@@ -98,8 +113,8 @@
 
         <li class="nav-item"><a
             class="nav-link {% if request.endpoint and request.endpoint.startswith('planos.') %}active{% endif %}"
-            href="{{ url_for('planos.listar_planos') }}"><i class="bi bi-diagram-3 me-2"></i><span
-              class="nav-link-text"> Planos de Sucesso</span></a></li>
+            href="{{ url_for('planos.listar_planos', context=current_context) }}"><i
+              class="bi bi-diagram-3 me-2"></i><span class="nav-link-text"> Planos de Sucesso</span></a></li>
 
         <li class="nav-item"><a class="nav-link" href="#" data-bs-toggle="modal"
             data-bs-target="#modalGerenciarUsuarios"><i class="bi bi-people-fill me-2"></i><span class="nav-link-text">
@@ -110,8 +125,8 @@
               class="nav-link-text"> Perfis de Acesso</span></a></li>
         <li class="nav-item"><a
             class="nav-link {% if request.endpoint == 'analytics.analytics_dashboard' %}active{% endif %}"
-            href="{{ url_for('analytics.analytics_dashboard') }}"><i class="bi bi-graph-up me-2"></i><span
-              class="nav-link-text"> Gerencial</span></a></li>
+            href="{{ url_for('analytics.analytics_dashboard', context=current_context) }}"><i
+              class="bi bi-graph-up me-2"></i><span class="nav-link-text"> Gerencial</span></a></li>
         <!-- <li class="nav-item"><a
           class="nav-link {% if request.endpoint == 'analytics.cancelamentos_dashboard' %}active{% endif %}"
           href="{{ url_for('analytics.cancelamentos_dashboard') }}"><i class="bi bi-x-circle me-2"></i><span class="nav-link-text"> Cancelamentos</span></a></li> -->

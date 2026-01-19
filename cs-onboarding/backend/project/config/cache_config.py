@@ -45,9 +45,16 @@ def clear_user_cache(user_email):
     """
     if cache:
         cache.delete(f"user_profile_{user_email}")  # Cache de perfil
-        cache.delete(f"dashboard_data_{user_email}")
-        cache.delete(f"dashboard_data_{user_email}_all_pNone_ppNone")
         cache.delete(f"user_implantacoes_{user_email}")
+        
+        # Limpar variações de dashboard_data (com e sem contexto)
+        contexts = ["onboarding", "grandes_contas", "ongoing", "all"]
+        for ctx in contexts:
+            cache.delete(f"dashboard_data_{user_email}_all_{ctx}_pNone_ppNone")
+            # Caso o usuário esteja filtrando outro CS (gestores)
+            # Nota: Isso lida apenas com o filtro 'all', mas é o caso mais comum.
+            # Limpar o prefixo seria melhor se o backend suportasse delete_matched
+            cache.delete(f"dashboard_data_{user_email}") # Legado
 
 
 def clear_implantacao_cache(implantacao_id):

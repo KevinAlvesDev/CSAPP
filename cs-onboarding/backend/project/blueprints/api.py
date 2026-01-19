@@ -156,7 +156,8 @@ def get_notifications():
     from ..domain.notification_service import get_user_notifications
 
     user_email = g.user_email
-    result = get_user_notifications(user_email)
+    context = request.args.get("context")
+    result = get_user_notifications(user_email, context=context)
 
     if not result.get("ok"):
         return jsonify(result), 500

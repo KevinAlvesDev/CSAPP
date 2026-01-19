@@ -3,7 +3,7 @@ Blueprint de Perfis de Acesso
 Rotas para gerenciar perfis e permissões (RBAC)
 """
 
-from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
+from flask import Blueprint, flash, g, jsonify, redirect, render_template, request, url_for
 
 from ..__init__ import csrf
 from ..blueprints.auth import login_required
@@ -13,6 +13,39 @@ from ..domain import perfis_service
 
 perfis_bp = Blueprint("perfis", __name__, url_prefix="/perfis")
 logger = get_logger("perfis")
+
+
+def _get_dashboard_redirect():
+    """Detecta o contexto atual e retorna o redirect apropriado para o dashboard."""
+    # Primeiro tenta pegar do g.modulo_atual (se disponível)
+    if hasattr(g, 'modulo_atual'):
+        if g.modulo_atual == 'grandes_contas':
+            return redirect(url_for("grandes_contas.dashboard"))
+        elif g.modulo_atual == 'ongoing':
+            return redirect(url_for("ongoing.dashboard"))
+    
+    # Fallback: verifica o referer
+    referer = request.headers.get('Referer', '')
+    if '/grandes-contas/' in referer:
+        return redirect(url_for("grandes_contas.dashboard"))
+    elif '/ongoing/' in referer:
+        return redirect(url_for("ongoing.dashboard"))
+    
+    # Default: onboarding
+    return redirect(url_for("onboarding.dashboard"))
+
+
+@perfis_bp.before_request
+def set_module_context():
+    """Define o contexto do módulo atual baseado no referer."""
+    referer = request.headers.get('Referer', '')
+    
+    if '/grandes-contas/' in referer:
+        g.modulo_atual = 'grandes_contas'
+    elif '/ongoing/' in referer:
+        g.modulo_atual = 'ongoing'
+    else:
+        g.modulo_atual = 'onboarding'
 
 
 @perfis_bp.route("/", methods=["GET"])
@@ -25,7 +58,7 @@ def listar_perfis():
     except Exception as e:
         logger.error(f"Erro ao listar perfis: {e}", exc_info=True)
         flash(f"Erro ao carregar perfis: {str(e)}", "error")
-        return redirect(url_for("onboarding.dashboard"))
+        return _get_dashboard_redirect()
 
 
 @perfis_bp.route("/novo", methods=["GET"])

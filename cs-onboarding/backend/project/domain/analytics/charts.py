@@ -12,7 +12,7 @@ from ...db import query_db
 from .utils import date_col_expr, date_param_expr
 
 
-def get_implants_by_day(start_date=None, end_date=None, cs_email=None):
+def get_implants_by_day(start_date=None, end_date=None, cs_email=None, context=None):
     """Contagem de implantações finalizadas por dia, com filtros opcionais."""
     is_sqlite = current_app.config.get("USE_SQLITE_LOCALLY", False)
 
@@ -22,6 +22,13 @@ def get_implants_by_day(start_date=None, end_date=None, cs_email=None):
         WHERE i.status = 'finalizada'
     """
     args = []
+
+    if context:
+        if context == "onboarding":
+            query += " AND (i.contexto IS NULL OR i.contexto = 'onboarding') "
+        else:
+            query += " AND i.contexto = %s "
+            args.append(context)
 
     if cs_email:
         query += " AND i.usuario_cs = %s"
@@ -65,7 +72,7 @@ def get_implants_by_day(start_date=None, end_date=None, cs_email=None):
     return {"labels": labels, "data": data}
 
 
-def get_funnel_counts(start_date=None, end_date=None, cs_email=None):
+def get_funnel_counts(start_date=None, end_date=None, cs_email=None, context=None):
     """Contagem de implantações por status, com período opcional (data_criacao)."""
     is_sqlite = current_app.config.get("USE_SQLITE_LOCALLY", False)
 
@@ -75,6 +82,13 @@ def get_funnel_counts(start_date=None, end_date=None, cs_email=None):
         WHERE 1=1
     """
     args = []
+
+    if context:
+        if context == "onboarding":
+            query += " AND (i.contexto IS NULL OR i.contexto = 'onboarding') "
+        else:
+            query += " AND i.contexto = %s "
+            args.append(context)
 
     if cs_email:
         query += " AND i.usuario_cs = %s"

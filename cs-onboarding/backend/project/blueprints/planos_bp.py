@@ -49,7 +49,10 @@ def listar_planos():
         ativo_apenas = request.args.get("ativo", "true").lower() == "true"
         busca = request.args.get("busca", "").strip()
 
-        planos = planos_sucesso_service.listar_planos_sucesso(ativo_apenas=ativo_apenas, busca=busca if busca else None)
+        context = request.args.get("context")
+        planos = planos_sucesso_service.listar_planos_sucesso(
+            ativo_apenas=ativo_apenas, busca=busca if busca else None, context=context
+        )
 
         pode_editar = True
         pode_excluir = True
@@ -72,6 +75,7 @@ def listar_planos():
             pode_excluir=pode_excluir,
             ativo_apenas=ativo_apenas,
             busca=busca,
+            context=context,
         )
 
     except Exception as e:
@@ -106,7 +110,10 @@ def obter_plano(plano_id):
         if modo_req not in ["visualizar", "editar"]:
             modo_req = "visualizar"
 
-        return render_template("pages/plano_sucesso_editor.html", plano=plano, modo=modo_req, pode_editar=pode_editar)
+        context = request.args.get("context")
+        return render_template(
+            "pages/plano_sucesso_editor.html", plano=plano, modo=modo_req, pode_editar=pode_editar, context=context
+        )
 
     except Exception as e:
         planos_logger.error(f"Erro ao obter plano {plano_id}: {str(e)}", exc_info=True)
@@ -120,7 +127,8 @@ def obter_plano(plano_id):
 @planos_bp.route("/novo", methods=["GET"])
 @login_required
 def novo_plano():
-    return render_template("pages/plano_sucesso_editor.html", modo="criar", pode_editar=True)
+    context = request.args.get("context", "onboarding")
+    return render_template("pages/plano_sucesso_editor.html", modo="criar", pode_editar=True, context=context)
 
 
 @planos_bp.route("/", methods=["POST"])
@@ -155,8 +163,18 @@ def criar_plano():
         user = get_current_user()
         criado_por = user.get("usuario") if user else "sistema"
 
+        context = data.get("context", "onboarding")
+        # Se não vier no body, tenta query string (caso de form submit)
+        if not context or context == "None":
+            context = request.args.get("context", "onboarding")
+
         plano_id = planos_sucesso_service.criar_plano_sucesso_checklist(
-            nome=nome, descricao=descricao, criado_por=criado_por, estrutura=estrutura, dias_duracao=dias_duracao
+            nome=nome,
+            descricao=descricao,
+            criado_por=criado_por,
+            estrutura=estrutura,
+            dias_duracao=dias_duracao,
+            context=context,
         )
 
         if request.is_json:
@@ -310,9 +328,15 @@ def clonar_plano(plano_id):
         if not novo_nome:
             return jsonify({"error": "Nome do novo plano é obrigatório"}), 400
 
+        context = data.get("context")
+
         # Clonar plano
         novo_plano_id = planos_sucesso_service.clonar_plano_sucesso(
-            plano_id=plano_id, novo_nome=novo_nome, criado_por=criado_por, nova_descricao=nova_descricao
+            plano_id=plano_id,
+            novo_nome=novo_nome,
+            criado_por=criado_por,
+            nova_descricao=nova_descricao,
+            context=context,
         )
 
         planos_logger.info(f"Plano {plano_id} clonado como '{novo_nome}' (ID {novo_plano_id}) por {criado_por}")
@@ -401,20 +425,26 @@ def aplicar_plano_implantacao(implantacao_id):
             return jsonify({"success": True, "message": "Plano aplicado com sucesso à implantação"}), 200
 
         flash("Plano aplicado com sucesso!", "success")
-        return redirect(url_for("main.ver_implantacao", impl_id=implantacao_id))
+        impl = planos_sucesso_service.query_db("SELECT contexto FROM implantacoes WHERE id = %s", (implantacao_id,), one=True)
+        context_bp = impl.get("contexto") if impl and impl.get("contexto") else "onboarding"
+        return redirect(url_for(f"{context_bp}.ver_implantacao", impl_id=implantacao_id))
 
     except ValidationError as e:
         if request.is_json:
             return jsonify({"error": str(e)}), 400
         flash(str(e), "error")
-        return redirect(url_for("main.ver_implantacao", impl_id=implantacao_id))
+        impl = planos_sucesso_service.query_db("SELECT contexto FROM implantacoes WHERE id = %s", (implantacao_id,), one=True)
+        context_bp = impl.get("contexto") if impl and impl.get("contexto") else "onboarding"
+        return redirect(url_for(f"{context_bp}.ver_implantacao", impl_id=implantacao_id))
 
     except Exception as e:
         planos_logger.error(f"Erro ao aplicar plano {plano_id} à implantação {implantacao_id}: {str(e)}", exc_info=True)
         if request.is_json:
             return jsonify({"error": str(e)}), 500
         flash(f"Erro ao aplicar plano: {str(e)}", "error")
-        return redirect(url_for("main.ver_implantacao", impl_id=implantacao_id))
+        impl = planos_sucesso_service.query_db("SELECT contexto FROM implantacoes WHERE id = %s", (implantacao_id,), one=True)
+        context_bp = impl.get("contexto") if impl and impl.get("contexto") else "onboarding"
+        return redirect(url_for(f"{context_bp}.ver_implantacao", impl_id=implantacao_id))
 
 
 @planos_bp.route("/implantacao/<int:implantacao_id>/plano", methods=["GET"])
@@ -449,16 +479,22 @@ def remover_plano_implantacao(implantacao_id):
             return jsonify({"success": True, "message": "Plano removido da implantação"}), 200
 
         flash("Plano removido da implantação!", "success")
-        return redirect(url_for("main.ver_implantacao", impl_id=implantacao_id))
+        impl = planos_sucesso_service.query_db("SELECT contexto FROM implantacoes WHERE id = %s", (implantacao_id,), one=True)
+        context_bp = impl.get("contexto") if impl and impl.get("contexto") else "onboarding"
+        return redirect(url_for(f"{context_bp}.ver_implantacao", impl_id=implantacao_id))
 
     except ValidationError as e:
         if request.is_json:
             return jsonify({"error": str(e)}), 400
         flash(str(e), "error")
-        return redirect(url_for("main.ver_implantacao", impl_id=implantacao_id))
+        impl = planos_sucesso_service.query_db("SELECT contexto FROM implantacoes WHERE id = %s", (implantacao_id,), one=True)
+        context_bp = impl.get("contexto") if impl and impl.get("contexto") else "onboarding"
+        return redirect(url_for(f"{context_bp}.ver_implantacao", impl_id=implantacao_id))
 
     except Exception as e:
         if request.is_json:
             return jsonify({"error": str(e)}), 500
         flash(f"Erro ao remover plano: {str(e)}", "error")
-        return redirect(url_for("main.ver_implantacao", impl_id=implantacao_id))
+        impl = planos_sucesso_service.query_db("SELECT contexto FROM implantacoes WHERE id = %s", (implantacao_id,), one=True)
+        context_bp = impl.get("contexto") if impl and impl.get("contexto") else "onboarding"
+        return redirect(url_for(f"{context_bp}.ver_implantacao", impl_id=implantacao_id))

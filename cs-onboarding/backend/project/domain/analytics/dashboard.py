@@ -24,6 +24,7 @@ def get_analytics_data(
     task_start_date=None,
     task_end_date=None,
     sort_impl_date=None,
+    context=None,
 ):
     """Busca e processa dados de TODA a carteira (ou filtrada) para o módulo Gerencial."""
 
@@ -43,6 +44,13 @@ def get_analytics_data(
     if target_cs_email:
         query_impl += " AND i.usuario_cs = %s "
         args_impl.append(target_cs_email)
+    
+    if context:
+        if context == "onboarding":
+            query_impl += " AND (i.contexto IS NULL OR i.contexto = 'onboarding') "
+        else:
+            query_impl += " AND i.contexto = %s "
+            args_impl.append(context)
 
     if target_status and target_status != "todas":
         if target_status == "nova":
@@ -114,6 +122,13 @@ def get_analytics_data(
     if target_cs_email:
         query_modules += " AND i.usuario_cs = %s "
         args_modules.append(target_cs_email)
+
+    if context:
+        if context == "onboarding":
+            query_modules += " AND (i.contexto IS NULL OR i.contexto = 'onboarding') "
+        else:
+            query_modules += " AND i.contexto = %s "
+            args_modules.append(context)
     modules_rows = query_db(query_modules, tuple(args_modules)) or []
 
     for impl in modules_rows:
@@ -199,6 +214,13 @@ def get_analytics_data(
         query_tasks += " AND i.usuario_cs = %s "
         args_tasks.append(task_cs_email)
 
+    if context:
+        if context == "onboarding":
+            query_tasks += " AND (i.contexto IS NULL OR i.contexto = 'onboarding') "
+        else:
+            query_tasks += " AND i.contexto = %s "
+            args_tasks.append(context)
+
     task_start_op, task_start_date_val = _format_date_for_query(task_start_date_to_query, is_sqlite=is_sqlite)
     if task_start_op:
         query_tasks += f" AND {date_col_expr('ci.data_conclusao')} {task_start_op} {date_param_expr()} "
@@ -258,6 +280,13 @@ def get_analytics_data(
     if target_cs_email:
         query_impl_ano += " AND i.usuario_cs = %s "
         args_impl_ano.append(target_cs_email)
+
+    if context:
+        if context == "onboarding":
+            query_impl_ano += " AND (i.contexto IS NULL OR i.contexto = 'onboarding') "
+        else:
+            query_impl_ano += " AND i.contexto = %s "
+            args_impl_ano.append(context)
 
     impl_finalizadas_ano_corrente = query_db(query_impl_ano, tuple(args_impl_ano))
     impl_finalizadas_ano_corrente = impl_finalizadas_ano_corrente if impl_finalizadas_ano_corrente is not None else []
@@ -473,7 +502,10 @@ def get_analytics_data(
     from ..tags_analytics import get_tags_by_user_chart_data
 
     tags_chart_data = get_tags_by_user_chart_data(
-        cs_email=task_cs_email, start_date=task_start_date_to_query, end_date=task_end_date_to_query
+        cs_email=task_cs_email,
+        start_date=task_start_date_to_query,
+        end_date=task_end_date_to_query,
+        context=context,
     )
 
     return {

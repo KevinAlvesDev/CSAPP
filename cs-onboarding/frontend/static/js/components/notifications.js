@@ -103,7 +103,8 @@ document.addEventListener('DOMContentLoaded', function () {
         showLoading();
 
         try {
-            const data = await window.apiFetch('/api/notifications');
+            const context = window.currentContext || 'onboarding';
+            const data = await window.apiFetch(`/api/notifications?context=${context}`);
 
             // apiFetch já verifica response.ok
 
@@ -197,11 +198,15 @@ document.addEventListener('DOMContentLoaded', function () {
         html += `</div>`; // fecha notification-list
 
         // Footer com ações (futuro)
+        const context = window.currentContext || 'onboarding';
+        const dashboardUrl = context === 'grandes_contas' ? '/grandes-contas/dashboard' :
+            context === 'ongoing' ? '/ongoing/dashboard' : '/onboarding/dashboard';
         html += `
              <div class="text-center py-2 bg-light bg-opacity-25" style="border-top: 1px solid var(--border-color); border-radius: 0 0 12px 12px;">
-                <a href="/dashboard" class="text-decoration-none" style="font-size: 0.8rem; fw-medium;">Ver Dashboard Completo</a>
+                <a href="${dashboardUrl}" class="text-decoration-none" style="font-size: 0.8rem; fw-medium;">Ver Dashboard Completo</a>
              </div>
         `;
+
 
         notificationDropdown.innerHTML = html;
 
@@ -222,8 +227,9 @@ document.addEventListener('DOMContentLoaded', function () {
     // Buscar contagem de notificações novas
     async function fetchNotificationCount() {
         try {
+            const context = window.currentContext || 'onboarding';
             // Background poll: suppress error toasts
-            const data = await window.apiFetch('/api/notifications', { showErrorToast: false });
+            const data = await window.apiFetch(`/api/notifications?context=${context}`, { showErrorToast: false });
 
             if (data.ok) {
                 const notifications = data.notifications || [];

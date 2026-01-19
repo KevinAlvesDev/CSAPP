@@ -79,7 +79,7 @@ def get_dashboard_data(
     offset = None
 
     if page is not None:
-        total = get_implantacoes_count(usuario_cs=count_usuario_filtro)
+        total = get_implantacoes_count(usuario_cs=count_usuario_filtro, context=context)
         from ...database import Pagination
 
         pagination = Pagination(page=page, per_page=per_page, total=total)
@@ -319,9 +319,9 @@ def get_dashboard_data(
     return result
 
 
-def get_tags_metrics(start_date=None, end_date=None, user_email=None):
+def get_tags_metrics(start_date=None, end_date=None, user_email=None, context=None):
     """
-    Busca métricas de tags de comentários (mantido da versão original).
+    Busca métricas de tags de comentários com suporte a isolamento por contexto.
     """
     from ..db import query_db
 
@@ -334,9 +334,18 @@ def get_tags_metrics(start_date=None, end_date=None, user_email=None):
             COUNT(*) as qtd
         FROM comentarios_h ch
         LEFT JOIN perfil_usuario p ON ch.usuario_cs = p.usuario
+        LEFT JOIN checklist_items ci ON ch.checklist_item_id = ci.id
+        JOIN implantacoes i ON ci.implantacao_id = i.id
         WHERE 1=1
     """
     args = []
+
+    if context:
+        if context == "onboarding":
+            query_sql += " AND (i.contexto IS NULL OR i.contexto = 'onboarding') "
+        else:
+            query_sql += " AND i.contexto = %s "
+            args.append(context)
 
     if start_date:
         query_sql += " AND date(ch.data_criacao) >= %s"
