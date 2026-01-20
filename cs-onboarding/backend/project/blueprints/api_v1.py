@@ -61,6 +61,7 @@ def list_implantacoes():
         - status: Filtrar por status (opcional)
         - page: Número da página (opcional, padrão 1)
         - per_page: Itens por página (opcional, padrão 50)
+        - context: Filtrar por contexto (onboarding, ongoing, grandes_contas) (opcional)
 
     Returns:
         JSON com lista de implantações
@@ -70,9 +71,15 @@ def list_implantacoes():
         status_filter = request.args.get("status")
         page = request.args.get("page", 1)
         per_page = request.args.get("per_page", 50)
+        context = request.args.get("context")
+
+        # Validar valores aceitos para context
+        valid_contexts = ("onboarding", "ongoing", "grandes_contas")
+        if context and context not in valid_contexts:
+            context = None  # Ignorar valores inválidos
 
         result = listar_implantacoes(
-            user_email=user_email, status_filter=status_filter, page=page, per_page=per_page, is_admin=False
+            user_email=user_email, status_filter=status_filter, page=page, per_page=per_page, is_admin=False, context=context
         )
 
         return jsonify({"ok": True, **result})

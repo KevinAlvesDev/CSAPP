@@ -13,10 +13,17 @@ from .metrics import _get_gamification_automatic_data_bulk
 from .rules import _get_gamification_rules_as_dict
 
 
-def get_gamification_report_data(mes, ano, target_cs_email=None, all_cs_users_list=None):
+def get_gamification_report_data(mes, ano, target_cs_email=None, all_cs_users_list=None, context=None):
     """
     Função principal para buscar e calcular o relatório de gamificação.
     Resolve o problema N+1 ao buscar todos os dados em massa.
+    
+    Args:
+        mes: Mês de referência
+        ano: Ano de referência
+        target_cs_email: Email específico de um CS (opcional)
+        all_cs_users_list: Lista de todos os usuários CS (opcional)
+        context: Contexto para filtrar (onboarding, ongoing, grandes_contas) (opcional)
     """
     from flask import current_app
 
@@ -80,7 +87,7 @@ def get_gamification_report_data(mes, ano, target_cs_email=None, all_cs_users_li
                 metricas_manuais_map[metrica["usuario_cs"]] = metrica
 
     tma_data_map, iniciadas_map, tarefas_map = _get_gamification_automatic_data_bulk(
-        mes, ano, primeiro_dia_str, fim_ultimo_dia_str, target_cs_email
+        mes, ano, primeiro_dia_str, fim_ultimo_dia_str, target_cs_email, context=context
     )
 
     report_data = []
