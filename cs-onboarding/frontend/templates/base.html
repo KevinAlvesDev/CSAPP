@@ -18,6 +18,10 @@
 {% set current_dashboard = 'grandes_contas.dashboard' %}
 {% elif request.blueprint == 'onboarding' %}
 {% set current_dashboard = 'onboarding.dashboard' %}
+{% elif g.modulo_atual == 'grandes_contas' %}
+{% set current_dashboard = 'grandes_contas.dashboard' %}
+{% elif g.modulo_atual == 'ongoing' %}
+{% set current_dashboard = 'ongoing.dashboard' %}
 {% endif %}
 
 {% set current_context = 'onboarding' %}

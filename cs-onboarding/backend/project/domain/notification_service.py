@@ -44,52 +44,95 @@ def get_user_notifications(user_email, context=None):
     notifications = []
 
     try:
+        api_logger.info(f"Iniciando busca de notificações para {user_email}, contexto: {context}")
+        
         hoje = datetime.now()
         inicio_semana = hoje - timedelta(days=hoje.weekday())
         inicio_semana = inicio_semana.replace(hour=0, minute=0, second=0, microsecond=0)
         fim_hoje = hoje.replace(hour=23, minute=59, second=59)
 
         # 1. TAREFAS CRÍTICAS (atrasadas + vence hoje)
-        notifications.extend(_get_critical_tasks(user_email, hoje, fim_hoje, context))
+        try:
+            notifications.extend(_get_critical_tasks(user_email, hoje, fim_hoje, context))
+        except Exception as e:
+            api_logger.error(f"Erro em _get_critical_tasks: {e}", exc_info=True)
 
         # 2. IMPLANTAÇÕES PARADAS (a cada 7 dias)
-        notifications.extend(_get_stopped_implementations(user_email, hoje, context))
+        try:
+            notifications.extend(_get_stopped_implementations(user_email, hoje, context))
+        except Exception as e:
+            api_logger.error(f"Erro em _get_stopped_implementations: {e}", exc_info=True)
 
         # 3. TAREFAS URGENTES (vence em 1-2 dias)
-        notifications.extend(_get_urgent_tasks(user_email, hoje, fim_hoje, context))
+        try:
+            notifications.extend(_get_urgent_tasks(user_email, hoje, fim_hoje, context))
+        except Exception as e:
+            api_logger.error(f"Erro em _get_urgent_tasks: {e}", exc_info=True)
 
         # 4. Implantações futuras (7 dias)
-        notifications.extend(_get_upcoming_future(user_email, hoje, context))
+        try:
+            notifications.extend(_get_upcoming_future(user_email, hoje, context))
+        except Exception as e:
+            api_logger.error(f"Erro em _get_upcoming_future: {e}", exc_info=True)
 
         # 5. Largada Falsa (NOVO)
-        notifications.extend(_get_false_start(user_email, hoje, context))
+        try:
+            notifications.extend(_get_false_start(user_email, hoje, context))
+        except Exception as e:
+            api_logger.error(f"Erro em _get_false_start: {e}", exc_info=True)
 
         # 6. Estagnação Silenciosa (NOVO)
-        notifications.extend(_get_silent_stagnation(user_email, hoje, context))
+        try:
+            notifications.extend(_get_silent_stagnation(user_email, hoje, context))
+        except Exception as e:
+            api_logger.error(f"Erro em _get_silent_stagnation: {e}", exc_info=True)
 
         # 7. Ritmo Lento (NOVO)
-        notifications.extend(_get_slow_pace(user_email, hoje, context))
+        try:
+            notifications.extend(_get_slow_pace(user_email, hoje, context))
+        except Exception as e:
+            api_logger.error(f"Erro em _get_slow_pace: {e}", exc_info=True)
 
         # 8. Sem previsão
-        notifications.extend(_get_no_forecast(user_email, hoje, context))
+        try:
+            notifications.extend(_get_no_forecast(user_email, hoje, context))
+        except Exception as e:
+            api_logger.error(f"Erro em _get_no_forecast: {e}", exc_info=True)
 
         # 9. Reta Final / Sprint (NOVO)
-        notifications.extend(_get_final_sprint(user_email, context))
+        try:
+            notifications.extend(_get_final_sprint(user_email, context))
+        except Exception as e:
+            api_logger.error(f"Erro em _get_final_sprint: {e}", exc_info=True)
 
         # 10. Tarefas próximas
-        notifications.extend(_get_upcoming_tasks(user_email, hoje, context))
+        try:
+            notifications.extend(_get_upcoming_tasks(user_email, hoje, context))
+        except Exception as e:
+            api_logger.error(f"Erro em _get_upcoming_tasks: {e}", exc_info=True)
 
         # 11. Novas aguardando
-        notifications.extend(_get_new_waiting(user_email, context))
+        try:
+            notifications.extend(_get_new_waiting(user_email, context))
+        except Exception as e:
+            api_logger.error(f"Erro em _get_new_waiting: {e}", exc_info=True)
 
         # 12. Resumo Semanal
-        notifications.extend(_get_weekly_summary(user_email, hoje, context))
+        try:
+            notifications.extend(_get_weekly_summary(user_email, hoje, context))
+        except Exception as e:
+            api_logger.error(f"Erro em _get_weekly_summary: {e}", exc_info=True)
 
         # 13. Concluídas na semana
-        notifications.extend(_get_completed_this_week(user_email, inicio_semana, context))
+        try:
+            notifications.extend(_get_completed_this_week(user_email, inicio_semana, context))
+        except Exception as e:
+            api_logger.error(f"Erro em _get_completed_this_week: {e}", exc_info=True)
 
         # Ordenar por prioridade e limitar
         notifications.sort(key=lambda x: x["priority"])
+        
+        api_logger.info(f"Notificações encontradas: {len(notifications)}")
 
         return {
             "ok": True,
@@ -100,7 +143,7 @@ def get_user_notifications(user_email, context=None):
 
     except Exception as e:
         api_logger.error(f"Erro ao buscar notificações: {e}", exc_info=True)
-        return {"ok": False, "error": "Erro ao buscar notificações", "notifications": []}
+        return {"ok": False, "error": str(e), "notifications": []}
 
 
 def _get_false_start(user_email, hoje, context):

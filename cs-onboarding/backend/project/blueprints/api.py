@@ -153,16 +153,35 @@ def get_notifications():
     Sistema completo de notificações para o implantador.
     Refatorado: Usa notification_service para a lógica de negócio.
     """
-    from ..domain.notification_service import get_user_notifications
+    try:
+        from ..domain.notification_service import get_user_notifications
 
-    user_email = g.user_email
-    context = request.args.get("context")
-    result = get_user_notifications(user_email, context=context)
+        user_email = g.user_email
+        context = request.args.get("context")
+        
+        api_logger.info(f"Buscando notificações para {user_email} no contexto {context}")
+        
+        # TEMPORÁRIO: Retornar dados mockados para debug
+        # return jsonify({
+        #     "ok": True,
+        #     "notifications": [
+        #         {"type": "info", "title": "Teste", "message": "Notificação de teste", "priority": 1, "action_url": "#"}
+        #     ],
+        #     "total": 1,
+        #     "timestamp": datetime.now().isoformat()
+        # })
+        
+        result = get_user_notifications(user_email, context=context)
 
-    if not result.get("ok"):
-        return jsonify(result), 500
+        if not result.get("ok"):
+            api_logger.error(f"Erro ao buscar notificações: {result.get('error')}")
+            return jsonify(result), 500
 
-    return jsonify(result)
+        api_logger.info(f"Notificações retornadas com sucesso: {result.get('total', 0)} notificações")
+        return jsonify(result)
+    except Exception as e:
+        api_logger.error(f"Erro crítico ao buscar notificações: {e}", exc_info=True)
+        return jsonify({"ok": False, "error": str(e), "notifications": []}), 500
 
 
 @api_bp.route("/notifications/test", methods=["GET"])
