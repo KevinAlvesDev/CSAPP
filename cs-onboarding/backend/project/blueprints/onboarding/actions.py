@@ -48,7 +48,10 @@ def criar_implantacao():
 
         from ...domain.implantacao_service import criar_implantacao_service
 
-        implantacao_id = criar_implantacao_service(nome_empresa, usuario_atribuido, usuario_criador, id_favorecido)
+        # Passando contexto explícito para Onboarding
+        implantacao_id = criar_implantacao_service(
+            nome_empresa, usuario_atribuido, usuario_criador, id_favorecido, contexto="onboarding"
+        )
 
         flash(
             f'Implantação "{nome_empresa}" criada com sucesso. Aplique um plano de sucesso para criar as tarefas.',
@@ -98,8 +101,9 @@ def criar_implantacao_modulo():
 
         from ...domain.implantacao_service import criar_implantacao_modulo_service
 
+        # Passando contexto explícito para Onboarding
         implantacao_id = criar_implantacao_modulo_service(
-            nome_empresa, usuario_atribuido, usuario_criador, modulo_tipo, id_favorecido
+            nome_empresa, usuario_atribuido, usuario_criador, modulo_tipo, id_favorecido, contexto="onboarding"
         )
 
         try:

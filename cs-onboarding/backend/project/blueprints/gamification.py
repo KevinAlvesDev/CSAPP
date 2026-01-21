@@ -95,6 +95,12 @@ def manage_gamification_metrics():
     if target_cs_email:
         metricas_atuais = obter_metricas_mensais(target_cs_email, target_mes, target_ano)
 
+        # Obter contexto do request
+        context = request.args.get("context")
+        valid_contexts = ("onboarding", "ongoing", "grandes_contas")
+        if context and context not in valid_contexts:
+            context = None  # Ignorar valores inválidos
+
         try:
             primeiro_dia = datetime(target_ano, target_mes, 1)
             dias_no_mes = calendar.monthrange(target_ano, target_mes)[1]
@@ -105,7 +111,7 @@ def manage_gamification_metrics():
             fim_ultimo_dia_str = fim_ultimo_dia.isoformat()
 
             tma_data_map, iniciadas_map, tarefas_map = _get_gamification_automatic_data_bulk(
-                target_mes, target_ano, primeiro_dia_str, fim_ultimo_dia_str, target_cs_email
+                target_mes, target_ano, primeiro_dia_str, fim_ultimo_dia_str, target_cs_email, context=context
             )
 
             dados_tma = tma_data_map.get(target_cs_email, {})
@@ -325,11 +331,17 @@ def gamification_report():
             flash("Email inválido no filtro do relatório.", "warning")
             target_cs_email = None
 
+    # Obter contexto do request
+    context = request.args.get("context")
+    valid_contexts = ("onboarding", "ongoing", "grandes_contas")
+    if context and context not in valid_contexts:
+        context = None  # Ignorar valores inválidos
+
     try:
         # Limpar cache antes de gerar relatório para garantir dados atualizados
         clear_gamification_cache()
         report_data_sorted = get_gamification_report_data(
-            selected_month, selected_year, target_cs_email, all_cs_users_list=all_cs_users
+            selected_month, selected_year, target_cs_email, all_cs_users_list=all_cs_users, context=context
         )
     except Exception as e:
         current_app.logger.error(f"ERRO CRÍTICO ao gerar relatório de gamificação: {e}", exc_info=True)

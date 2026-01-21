@@ -9,15 +9,35 @@ from datetime import date, datetime
 from ...db import execute_db, query_db
 
 
-def _get_gamification_automatic_data_bulk(mes, ano, primeiro_dia_str, fim_ultimo_dia_str, target_cs_email=None):
-    """Busca todos os dados automáticos de todos os usuários de uma vez."""
+def _get_gamification_automatic_data_bulk(mes, ano, primeiro_dia_str, fim_ultimo_dia_str, target_cs_email=None, context=None):
+    """Busca todos os dados automáticos de todos os usuários de uma vez.
+    
+    Args:
+        mes: Mês de referência
+        ano: Ano de referência
+        primeiro_dia_str: Data inicial no formato ISO
+        fim_ultimo_dia_str: Data final no formato ISO
+        target_cs_email: Email específico de um CS (opcional)
+        context: Contexto para filtrar (onboarding, ongoing, grandes_contas) (opcional)
+    """
 
-    sql_finalizadas = """
+    # Construir filtro de contexto
+    context_filter = ""
+    if context:
+        if context == "onboarding":
+            context_filter = " AND (contexto IS NULL OR contexto = 'onboarding')"
+        else:
+            context_filter = " AND contexto = %s"
+
+    sql_finalizadas = f"""
         SELECT usuario_cs, data_criacao, data_finalizacao FROM implantacoes
         WHERE status = 'finalizada'
         AND data_finalizacao >= %s AND data_finalizacao <= %s
+        {context_filter}
     """
     args_finalizadas = [primeiro_dia_str, fim_ultimo_dia_str]
+    if context and context != "onboarding":
+        args_finalizadas.append(context)
     if target_cs_email:
         sql_finalizadas += " AND usuario_cs = %s"
         args_finalizadas.append(target_cs_email)
@@ -88,8 +108,10 @@ def _get_gamification_automatic_data_bulk(mes, ano, primeiro_dia_str, fim_ultimo
             except TypeError:
                 pass
 
-    sql_iniciadas = "SELECT usuario_cs, COUNT(*) as total FROM implantacoes WHERE data_inicio_efetivo >= %s AND data_inicio_efetivo <= %s"
+    sql_iniciadas = f"SELECT usuario_cs, COUNT(*) as total FROM implantacoes WHERE data_inicio_efetivo >= %s AND data_inicio_efetivo <= %s {context_filter}"
     args_iniciadas = [primeiro_dia_str, fim_ultimo_dia_str]
+    if context and context != "onboarding":
+        args_iniciadas.append(context)
     if target_cs_email:
         sql_iniciadas += " AND usuario_cs = %s"
         args_iniciadas.append(target_cs_email)
@@ -99,7 +121,15 @@ def _get_gamification_automatic_data_bulk(mes, ano, primeiro_dia_str, fim_ultimo
     impl_iniciadas_raw = impl_iniciadas_raw if impl_iniciadas_raw is not None else []
     iniciadas_map = {row["usuario_cs"]: row["total"] for row in impl_iniciadas_raw if isinstance(row, dict)}
 
-    sql_tarefas = """
+    # Construir filtro de contexto para checklist_items (via implantacoes)
+    context_filter_items = ""
+    if context:
+        if context == "onboarding":
+            context_filter_items = " AND (i.contexto IS NULL OR i.contexto = 'onboarding')"
+        else:
+            context_filter_items = " AND i.contexto = %s"
+
+    sql_tarefas = f"""
         SELECT i.usuario_cs, COALESCE(ci.tag, 'Ação interna') as tag, COUNT(DISTINCT ci.id) as total
         FROM checklist_items ci
         JOIN implantacoes i ON ci.implantacao_id = i.id
@@ -107,8 +137,11 @@ def _get_gamification_automatic_data_bulk(mes, ano, primeiro_dia_str, fim_ultimo
         AND ci.completed = TRUE 
         AND ci.tag IN ('Ação interna', 'Reunião')
         AND ci.data_conclusao >= %s AND ci.data_conclusao <= %s
+        {context_filter_items}
     """
     args_tarefas = [primeiro_dia_str, fim_ultimo_dia_str]
+    if context and context != "onboarding":
+        args_tarefas.append(context)
     if target_cs_email:
         sql_tarefas += " AND i.usuario_cs = %s"
         args_tarefas.append(target_cs_email)
