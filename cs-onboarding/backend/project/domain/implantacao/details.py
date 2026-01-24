@@ -114,6 +114,7 @@ def atualizar_detalhes_empresa_service(implantacao_id, usuario_cs_email, user_pe
         "data_previsao_termino",
         "id_favorecido",
         "nivel_receita",
+        "valor_atribuido",  # Nível de Receita (MRR)
         "chave_oamd",
         "tela_apoio_link",
         "informacao_infra",

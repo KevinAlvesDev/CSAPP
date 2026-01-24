@@ -560,7 +560,7 @@
                     safeSet('#modal-id_favorecido', getData('id-favorecido'), modal);
                     safeSet('#modal-chave_oamd', getData('chave-oamd'), modal);
                     safeSet('#modal-tela_apoio_link', getData('tela-apoio-link'), modal);
-                    safeSet('#modal-nivel_receita', getData('nivel-receita'), modal);
+                    safeSet('#modal-valor_atribuido', getData('nivel-receita'), modal);
 
                     initializeMultiTagInput('#modal-modalidades', getData('modalidades'));
                     initializeMultiTagInput('#modal-horarios_func', getData('horarios-func'));
@@ -791,7 +791,7 @@
                                 lastTriggerEl.setAttribute('data-id-favorecido', getVal('#modal-id_favorecido'));
                                 lastTriggerEl.setAttribute('data-chave-oamd', getVal('#modal-chave_oamd'));
                                 lastTriggerEl.setAttribute('data-tela-apoio-link', getVal('#modal-tela_apoio_link'));
-                                lastTriggerEl.setAttribute('data-nivel-receita', getVal('#modal-nivel_receita'));
+                                lastTriggerEl.setAttribute('data-nivel-receita', getVal('#modal-valor_atribuido'));
                                 lastTriggerEl.setAttribute('data-modalidades', getVal('#modal-modalidades'));
                                 lastTriggerEl.setAttribute('data-horarios-func', getVal('#modal-horarios_func'));
                                 lastTriggerEl.setAttribute('data-formas-pagamento', getVal('#modal-formas_pagamento'));
@@ -1094,6 +1094,8 @@
                     setIfEmpty('#modal-cnpj', d.persistibles.cnpj);
                     setIfEmpty('#modal-status_implantacao', d.persistibles.status_implantacao);
                     setIfEmpty('#modal-nivel_atendimento', d.persistibles.nivel_atendimento);
+                    // Preencher Nível de Receita (MRR) se disponível
+                    setIfEmpty('#modal-valor_atribuido', d.persistibles.nivel_receita_do_cliente);
                     const dc = toBr(d.persistibles.data_cadastro);
                     if (dc) setIfEmpty('#modal-data_cadastro', dc);
 

@@ -173,6 +173,7 @@ def build_detalhes_campos():
     # Processar campos simples
     cargo_responsavel_val = get_form_value("cargo_responsavel")
     nivel_receita_val = get_form_value("nivel_receita")
+    valor_atribuido_val = get_form_value("valor_atribuido")  # Nível de Receita (MRR) no modal
     sistema_anterior_val = get_form_value("sistema_anterior")
     recorrencia_usa_val = get_form_value("recorrencia_usa")
 
@@ -190,6 +191,7 @@ def build_detalhes_campos():
         "data_inicio_efetivo": data_inicio_efetivo,
         "id_favorecido": get_form_value("id_favorecido"),
         "nivel_receita": nivel_receita_val,
+        "valor_atribuido": valor_atribuido_val,  # Nível de Receita (MRR)
         "chave_oamd": get_form_value("chave_oamd"),
         "tela_apoio_link": get_form_value("tela_apoio_link"),
         "informacao_infra": get_form_value("informacao_infra"),
