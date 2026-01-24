@@ -19,6 +19,7 @@ from ..config.logging_config import api_logger
 from ..core.extensions import limiter
 from ..domain.implantacao_service import _get_progress
 from ..security.api_security import validate_api_origin
+from ..security.context_validator import validate_context_access
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
 
@@ -46,8 +47,9 @@ def progresso_implantacao(impl_id):
 @api_bp.route("/implantacao/<int:impl_id>/timeline", methods=["GET"])
 @login_required
 @validate_api_origin
+@validate_context_access(id_param='impl_id', entity_type='implantacao')
 @limiter.limit("200 per minute", key_func=lambda: g.user_email or get_remote_address())
-def get_timeline(impl_id):
+def get_timeline(impl_id: int):
     try:
         impl_id = validate_integer(impl_id, min_value=1)
     except ValidationError as e:
@@ -83,8 +85,9 @@ def get_timeline(impl_id):
 @api_bp.route("/implantacao/<int:impl_id>/timeline/export", methods=["GET"])
 @login_required
 @validate_api_origin
+@validate_context_access(id_param='impl_id', entity_type='implantacao')
 @limiter.limit("30 per minute", key_func=lambda: g.user_email or get_remote_address())
-def export_timeline(impl_id):
+def export_timeline(impl_id: int):
     try:
         impl_id = validate_integer(impl_id, min_value=1)
     except ValidationError as e:

@@ -180,7 +180,8 @@ def login():
 
 
 @auth_bp.route("/check_user_external", methods=["POST"])
-def check_user_external():
+@limiter.limit("10 per minute")  # Prevenir enumeração de usuários
+def check_user_external() -> tuple[dict, int]:
     """
     Endpoint para verificar se o usuário existe no banco externo.
     Retorna JSON para uso via AJAX na tela de login.

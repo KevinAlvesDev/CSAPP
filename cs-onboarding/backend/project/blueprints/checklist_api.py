@@ -32,6 +32,7 @@ from ..domain.checklist_service import (
     update_item_responsavel,
 )
 from ..security.api_security import validate_api_origin
+from ..security.context_validator import validate_context_access
 
 checklist_bp = Blueprint("checklist", __name__, url_prefix="/api/checklist")
 
@@ -57,8 +58,9 @@ def _checklist_api_guard():
 @checklist_bp.route("/toggle/<int:item_id>", methods=["POST"])
 @login_required
 @validate_api_origin
+@validate_context_access(id_param='item_id', entity_type='checklist_item')
 @limiter.limit("1000 per minute", key_func=lambda: g.user_email or get_remote_address())
-def toggle_item(item_id):
+def toggle_item(item_id: int):
     """
     Alterna o status de um item do checklist (completo/pendente).
     Propaga mudanças para toda a hierarquia (cascata e bolha).
@@ -144,8 +146,9 @@ def toggle_item(item_id):
 @checklist_bp.route("/comment/<int:item_id>", methods=["POST"])
 @login_required
 @validate_api_origin
+@validate_context_access(id_param='item_id', entity_type='checklist_item')
 @limiter.limit("1000 per minute", key_func=lambda: g.user_email or get_remote_address())
-def add_comment(item_id):
+def add_comment(item_id: int):
     """
     Adiciona um novo comentário ao histórico de um item.
     """
@@ -237,7 +240,8 @@ def add_comment(item_id):
 @checklist_bp.route("/implantacao/<int:impl_id>/comments", methods=["GET"])
 @login_required
 @validate_api_origin
-def get_implantacao_comments(impl_id):
+@validate_context_access(id_param='impl_id', entity_type='implantacao')
+def get_implantacao_comments(impl_id: int):
     """
     Retorna todos os comentários das tarefas de uma implantação.
     """
@@ -278,7 +282,8 @@ def get_implantacao_comments(impl_id):
 @checklist_bp.route("/comments/<int:item_id>", methods=["GET"])
 @login_required
 @validate_api_origin
-def get_comments(item_id):
+@validate_context_access(id_param='item_id', entity_type='checklist_item')
+def get_comments(item_id: int):
     """
     Retorna o histórico de comentários de um item.
     """
@@ -435,8 +440,9 @@ def delete_comment(comentario_id):
 @checklist_bp.route("/delete/<int:item_id>", methods=["POST"])
 @login_required
 @validate_api_origin
+@validate_context_access(id_param='item_id', entity_type='checklist_item')
 @limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
-def delete_item(item_id):
+def delete_item(item_id: int):
     """
     Exclui um item do checklist e toda a sua hierarquia (apenas gestores ou dono da implantação).
     """
@@ -556,8 +562,9 @@ def get_item_progress(item_id):
 @checklist_bp.route("/item/<int:item_id>/responsavel", methods=["PATCH"])
 @login_required
 @validate_api_origin
+@validate_context_access(id_param='item_id', entity_type='checklist_item')
 @limiter.limit("200 per minute", key_func=lambda: g.user_email or get_remote_address())
-def update_responsavel(item_id):
+def update_responsavel(item_id: int):
     try:
         item_id = validate_integer(item_id, min_value=1)
     except ValidationError as e:
@@ -587,8 +594,9 @@ def update_responsavel(item_id):
 @checklist_bp.route("/item/<int:item_id>/prazos", methods=["PATCH", "POST"])
 @login_required
 @validate_api_origin
+@validate_context_access(id_param='item_id', entity_type='checklist_item')
 @limiter.limit("200 per minute", key_func=lambda: g.user_email or get_remote_address())
-def update_prazos(item_id):
+def update_prazos(item_id: int):
     try:
         item_id = validate_integer(item_id, min_value=1)
     except ValidationError as e:
@@ -647,8 +655,9 @@ def get_prazos_history(item_id):
 @checklist_bp.route("/item/<int:item_id>/move", methods=["PATCH", "POST"])
 @login_required
 @validate_api_origin
+@validate_context_access(id_param='item_id', entity_type='checklist_item')
 @limiter.limit("100 per minute", key_func=lambda: g.user_email or get_remote_address())
-def move_item_endpoint(item_id):
+def move_item_endpoint(item_id: int):
     """
     Move um item do checklist para uma nova posição.
 

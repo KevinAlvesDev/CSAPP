@@ -44,7 +44,8 @@ def query_db(query, args=(), one=False, raise_on_error=False):
         from .performance_monitoring import track_query
 
         track_query()
-    except:
+    except ImportError:
+        # Módulo de monitoramento não disponível - ok continuar
         pass
 
     conn, db_type = None, None
@@ -89,7 +90,8 @@ def execute_db(query, args=(), raise_on_error=False):
         from .performance_monitoring import track_query
 
         track_query()
-    except:
+    except ImportError:
+        # Módulo de monitoramento não disponível - ok continuar
         pass
 
     conn, db_type = None, None

@@ -112,19 +112,32 @@
             let context = 'onboarding'; // default
             const path = window.location.pathname;
 
+            console.log('🔍 [DEBUG] Detecção de Contexto - URL atual:', path);
+
             if (path.includes('/grandes_contas/')) {
                 context = 'grandes_contas';
+                console.log('✅ [DEBUG] Contexto detectado pelo URL: grandes_contas');
             } else if (path.includes('/onboarding/')) {
                 context = 'onboarding';
+                console.log('✅ [DEBUG] Contexto detectado pelo URL: onboarding');
+            } else {
+                console.log('⚠️ [DEBUG] URL não contém /grandes_contas/ nem /onboarding/, usando default: onboarding');
             }
 
             // Também pode tentar pegar de um atributo data no DOM se existir
             const mainContent = document.getElementById('main-content');
             if (mainContent && mainContent.dataset.context) {
-                context = mainContent.dataset.context;
+                const dataContext = mainContent.dataset.context;
+                console.log('📋 [DEBUG] Atributo data-context encontrado:', dataContext);
+                if (dataContext !== context) {
+                    console.log('🔄 [DEBUG] Sobrescrevendo contexto de', context, 'para', dataContext);
+                }
+                context = dataContext;
+            } else {
+                console.log('⚠️ [DEBUG] Elemento #main-content ou data-context não encontrado');
             }
 
-            console.log('Carregando planos para contexto:', context);
+            console.log('🎯 [DEBUG] Contexto FINAL que será enviado para API:', context);
 
             window.apiFetch(`/planos/?ativo=true&context=${context}`)
                 .then(data => {

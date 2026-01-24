@@ -1,5 +1,20 @@
+"""
+Serviço de Implantação - Módulo Principal.
+
+Este módulo coordena operações de implantação, delegando para submódulos:
+- crud: Operações CRUD básicas
+- details: Formatação e detalhes
+- listing: Listagem e busca
+- status: Transições de status
+- progress: Cálculo de progresso
+- oamd_integration: Integração com sistema externo
+"""
+
+from __future__ import annotations
+
 from collections import OrderedDict
 from datetime import datetime
+from typing import TYPE_CHECKING, Any, Optional
 
 from flask import g
 
@@ -21,6 +36,14 @@ from ..constants import (
 from ..db import execute_db, logar_timeline, query_db
 from ..domain.hierarquia_service import get_hierarquia_implantacao
 from ..domain.task_definitions import MODULO_OBRIGATORIO, MODULO_PENDENCIAS, TASK_TIPS
+
+if TYPE_CHECKING:
+    from collections import OrderedDict as OrderedDictType
+
+# Type aliases para melhor legibilidade
+ImplantacaoDict = dict[str, Any]
+UserProfile = dict[str, Any]
+TimelineLog = dict[str, Any]
 
 # ============================================================================
 # REFATORAÇÃO SOLID - Importações do novo módulo de CRUD
@@ -88,7 +111,10 @@ except ImportError:
 # ============================================================================
 
 
-def auto_finalizar_implantacao(impl_id, usuario_cs_email):
+def auto_finalizar_implantacao(
+    impl_id: int, 
+    usuario_cs_email: str
+) -> tuple[bool, Optional[TimelineLog]]:
     """
     Verifica se todas as tarefas hierárquicas estão concluídas
     e, em caso afirmativo, finaliza a implantação.

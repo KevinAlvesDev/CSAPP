@@ -121,13 +121,20 @@ def create_app(test_config=None):
     from .database import close_db_connection, init_connection_pool
     from .database.schema import ensure_implantacoes_status_constraint
 
-    if not app.config.get("USE_SQLITE_LOCALLY", False):
-        init_connection_pool(app)
+    # Inicializar pool de conexões (com retry logic para conexões instáveis)
+    db_initialized = init_connection_pool(app)
+    
+    if db_initialized and not app.config.get("USE_SQLITE_LOCALLY", False):
         try:
             with app.app_context():
                 ensure_implantacoes_status_constraint()
-        except Exception:
-            pass
+        except Exception as e:
+            app.logger.warning(f"⚠️  Não foi possível verificar constraints: {e}")
+    elif not db_initialized and not app.config.get("USE_SQLITE_LOCALLY", False):
+        app.logger.warning(
+            "⚠️  Aplicação iniciando SEM conexão com banco de dados. "
+            "Algumas funcionalidades podem não estar disponíveis."
+        )
 
     app.teardown_appcontext(close_db_connection)
 
