@@ -88,3 +88,7 @@ alembic/versions/__pycache__/
 node_modules/
 npm-debug.log
 yarn-error.log
+
+# Agent Configuration (Local Only)
+.agent/
+.temp_ag_kit/
