@@ -170,23 +170,32 @@
           if (paginationEl) paginationEl.classList.add('d-none');
         }
 
-    } catch (error) {
-      console.error('Erro ao carregar comentÃ¡rios gerais:', error);
-      showToast('Erro ao carregar comentÃ¡rios. Tente novamente.', 'error');
-      if (!append && loadingEl) loadingEl.classList.add('d-none');
-    } finally {
-      globalCommentsState.isLoading = false;
+      } catch (error) {
+        console.error('Erro ao carregar comentÃ¡rios gerais:', error);
+        showToast('Erro ao carregar comentÃ¡rios. Tente novamente.', 'error');
+        if (!append && loadingEl) loadingEl.classList.add('d-none');
+      } finally {
+        globalCommentsState.isLoading = false;
+      }
     }
-  }
 
     function renderGlobalComments(comentarios, container, append, tagsMap = {}) {
       if (!container) return;
       const html = comentarios.map(c => {
         const canEdit = (CONFIG.userEmail && c.usuario_cs === CONFIG.userEmail) || CONFIG.isManager;
-        // Task reference link (scroll to task)
-        const taskLink = `<a href="#" class="text-decoration-none fw-bold ms-1 small text-primary task-scroll-link" data-task-id="${c.item_id}">
-           <i class="bi bi-check2-square me-1"></i>${escapeHtml(c.item_title || 'Tarefa #' + c.item_id)}
-        </a>`;
+
+        // Task reference logic
+        let taskLink = '';
+        if (c.item_id) {
+          taskLink = `<a href="#" class="text-decoration-none fw-bold ms-1 small text-primary task-scroll-link" data-task-id="${c.item_id}">
+               <i class="bi bi-check2-square me-1"></i>${escapeHtml(c.item_title || 'Tarefa #' + c.item_id)}
+            </a>`;
+        } else {
+          // Comentário órfão (tarefa removida)
+          taskLink = `<span class="fw-bold ms-1 small text-muted">
+               <i class="bi bi-trash me-1"></i>${escapeHtml(c.item_title || '(Tarefa removida)')}
+            </span>`;
+        }
 
         let tagBadge = '';
         if (c.tag && tagsMap[c.tag]) {
@@ -295,545 +304,545 @@
     }
 
     if (window.flatpickr) {
-    document.querySelectorAll('.custom-datepicker').forEach(input => {
-      const config = Object.assign({}, baseConfig);
+      document.querySelectorAll('.custom-datepicker').forEach(input => {
+        const config = Object.assign({}, baseConfig);
 
-      // Integrar IMask se a classe date-mask estiver presente
-      if (input.classList.contains('date-mask') && window.IMask) {
-        config.onReady = function (selectedDates, dateStr, instance) {
-          if (instance.altInput) {
-            // Aplica a mÃ¡scara ao input visÃ­vel (altInput)
-            const mask = IMask(instance.altInput, {
-              mask: Date,
-              pattern: 'd/`m/`Y',
-              lazy: false,
-              format: function (date) {
-                var day = date.getDate();
-                var month = date.getMonth() + 1;
-                var year = date.getFullYear();
-                if (day < 10) day = "0" + day;
-                if (month < 10) month = "0" + month;
-                return [day, month, year].join('/');
-              },
-              parse: function (str) {
-                var yearMonthDay = str.split('/');
-                return new Date(yearMonthDay[2], yearMonthDay[1] - 1, yearMonthDay[0]);
-              },
-              blocks: {
-                d: { mask: IMask.MaskedRange, from: 1, to: 31, maxLength: 2 },
-                m: { mask: IMask.MaskedRange, from: 1, to: 12, maxLength: 2 },
-                Y: { mask: IMask.MaskedRange, from: 1900, to: 2100 }
-              }
-            });
+        // Integrar IMask se a classe date-mask estiver presente
+        if (input.classList.contains('date-mask') && window.IMask) {
+          config.onReady = function (selectedDates, dateStr, instance) {
+            if (instance.altInput) {
+              // Aplica a mÃ¡scara ao input visÃ­vel (altInput)
+              const mask = IMask(instance.altInput, {
+                mask: Date,
+                pattern: 'd/`m/`Y',
+                lazy: false,
+                format: function (date) {
+                  var day = date.getDate();
+                  var month = date.getMonth() + 1;
+                  var year = date.getFullYear();
+                  if (day < 10) day = "0" + day;
+                  if (month < 10) month = "0" + month;
+                  return [day, month, year].join('/');
+                },
+                parse: function (str) {
+                  var yearMonthDay = str.split('/');
+                  return new Date(yearMonthDay[2], yearMonthDay[1] - 1, yearMonthDay[0]);
+                },
+                blocks: {
+                  d: { mask: IMask.MaskedRange, from: 1, to: 31, maxLength: 2 },
+                  m: { mask: IMask.MaskedRange, from: 1, to: 12, maxLength: 2 },
+                  Y: { mask: IMask.MaskedRange, from: 1900, to: 2100 }
+                }
+              });
 
-            // Sincronizar alteraÃ§Ãµes manuais na mÃ¡scara com o Flatpickr
-            mask.on('accept', function () {
-              if (mask.masked.isComplete) {
-                instance.setDate(mask.value, true, 'd/m/Y');
-              }
-            });
+              // Sincronizar alteraÃ§Ãµes manuais na mÃ¡scara com o Flatpickr
+              mask.on('accept', function () {
+                if (mask.masked.isComplete) {
+                  instance.setDate(mask.value, true, 'd/m/Y');
+                }
+              });
+            }
+          };
+        }
+
+        const fp = window.flatpickr(input, config);
+        if (input.hasAttribute('required')) {
+          input.addEventListener('change', function () {
+            if (this._flatpickr && this._flatpickr.selectedDates.length > 0) {
+              const date = this._flatpickr.selectedDates[0];
+              this._flatpickr.setDate(date, false);
+            }
+          });
+        }
+      });
+
+      document.querySelectorAll('button[id^="btn_cal_"], button[id^="btn-cal-"], button[id*="cal-"], button[data-toggle]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const target = btn.previousElementSibling; // Assumindo que o input estÃ¡ imediatamente antes do botÃ£o (estrutura input-group)
+          // No DOM final do flatpickr (com altInput), a estrutura Ã©:
+          // input[hidden], input[text].form-control, button
+          // Portanto, previousElementSibling do botÃ£o Ã© o altInput.
+          // Mas o target para inicializar flatpickr deve ser o input original.
+
+          // Se o flatpickr jÃ¡ estiver inicializado no input original (que pode estar oculto antes do altInput)
+          // O input original geralmente Ã© acessÃ­vel.
+          // Vamos verificar se o elemento anterior tem a instÃ¢ncia _flatpickr.
+
+          // Caso altInput esteja presente, o DOM Ã©:
+          // <input type="hidden" ...> (original)
+          // <input type="text" ...> (altInput)
+          // <button ...>
+
+          // O previousElementSibling do botÃ£o Ã© o altInput.
+          // O altInput nÃ£o tem a propriedade _flatpickr, mas podemos acessÃ¡-lo?
+          // NÃ£o diretamente.
+
+          // Mas se jÃ¡ foi inicializado, podemos buscar a instÃ¢ncia flatpickr associada.
+
+          // Se target for o altInput, precisamos achar o original?
+          // Na verdade, se jÃ¡ estÃ¡ inicializado, podemos apenas chamar open() na instÃ¢ncia.
+
+          // Vamos tentar encontrar o input original.
+          let inputOriginal = target;
+
+          // Se o target for o altInput (nÃ£o tem a classe original custom-datepicker se o flatpickr moveu as classes, mas geralmente copia)
+          // Mas o _flatpickr fica no elemento original.
+
+          // Melhor abordagem: procurar o input com a classe custom-datepicker dentro do mesmo parent node.
+          const parent = btn.parentElement;
+          const originalInput = parent.querySelector('.custom-datepicker');
+
+          if (originalInput && originalInput._flatpickr) {
+            originalInput._flatpickr.open();
+          } else if (target && target.classList.contains('custom-datepicker')) {
+            // Fallback se nÃ£o estiver inicializado (ex: dinamicamente)
+            const fp = window.flatpickr(target, Object.assign({}, baseConfig));
+            fp.open();
           }
-        };
-      }
+        });
+      });
 
-      const fp = window.flatpickr(input, config);
-      if (input.hasAttribute('required')) {
-        input.addEventListener('change', function () {
-          if (this._flatpickr && this._flatpickr.selectedDates.length > 0) {
-            const date = this._flatpickr.selectedDates[0];
-            this._flatpickr.setDate(date, false);
+      const modalParar = document.getElementById('modalParar');
+      if (modalParar) {
+        modalParar.addEventListener('shown.bs.modal', function () {
+          const dataParadaInput = document.getElementById('data_parada');
+          const btnCal = document.getElementById('btn_cal_data_parada');
+          if (dataParadaInput && !dataParadaInput._flatpickr) {
+            const fp = window.flatpickr(dataParadaInput, Object.assign({}, baseConfig, {
+              altInput: true,
+              appendTo: modalParar.querySelector('.modal-body'),
+              static: true,
+              onChange: function (selectedDates, dateStr, instance) {
+                // Garantir que o valor seja preenchido no input original
+                if (selectedDates.length > 0) {
+                  dataParadaInput.value = dateStr;
+                  // Remover mensagem de erro se existir
+                  const errorMsg = document.getElementById('data_parada_error');
+                  if (errorMsg) {
+                    errorMsg.classList.add('d-none');
+                  }
+                }
+              }
+            }));
+            if (btnCal) {
+              btnCal.addEventListener('click', function (e) {
+                e.preventDefault();
+                fp.open();
+              });
+            }
           }
         });
       }
-    });
 
-    document.querySelectorAll('button[id^="btn_cal_"], button[id^="btn-cal-"], button[id*="cal-"], button[data-toggle]').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        const target = btn.previousElementSibling; // Assumindo que o input estÃ¡ imediatamente antes do botÃ£o (estrutura input-group)
-        // No DOM final do flatpickr (com altInput), a estrutura Ã©:
-        // input[hidden], input[text].form-control, button
-        // Portanto, previousElementSibling do botÃ£o Ã© o altInput.
-        // Mas o target para inicializar flatpickr deve ser o input original.
-
-        // Se o flatpickr jÃ¡ estiver inicializado no input original (que pode estar oculto antes do altInput)
-        // O input original geralmente Ã© acessÃ­vel.
-        // Vamos verificar se o elemento anterior tem a instÃ¢ncia _flatpickr.
-
-        // Caso altInput esteja presente, o DOM Ã©:
-        // <input type="hidden" ...> (original)
-        // <input type="text" ...> (altInput)
-        // <button ...>
-
-        // O previousElementSibling do botÃ£o Ã© o altInput.
-        // O altInput nÃ£o tem a propriedade _flatpickr, mas podemos acessÃ¡-lo?
-        // NÃ£o diretamente.
-
-        // Mas se jÃ¡ foi inicializado, podemos buscar a instÃ¢ncia flatpickr associada.
-
-        // Se target for o altInput, precisamos achar o original?
-        // Na verdade, se jÃ¡ estÃ¡ inicializado, podemos apenas chamar open() na instÃ¢ncia.
-
-        // Vamos tentar encontrar o input original.
-        let inputOriginal = target;
-
-        // Se o target for o altInput (nÃ£o tem a classe original custom-datepicker se o flatpickr moveu as classes, mas geralmente copia)
-        // Mas o _flatpickr fica no elemento original.
-
-        // Melhor abordagem: procurar o input com a classe custom-datepicker dentro do mesmo parent node.
-        const parent = btn.parentElement;
-        const originalInput = parent.querySelector('.custom-datepicker');
-
-        if (originalInput && originalInput._flatpickr) {
-          originalInput._flatpickr.open();
-        } else if (target && target.classList.contains('custom-datepicker')) {
-          // Fallback se nÃ£o estiver inicializado (ex: dinamicamente)
-          const fp = window.flatpickr(target, Object.assign({}, baseConfig));
-          fp.open();
-        }
-      });
-    });
-
-    const modalParar = document.getElementById('modalParar');
-    if (modalParar) {
-      modalParar.addEventListener('shown.bs.modal', function () {
-        const dataParadaInput = document.getElementById('data_parada');
-        const btnCal = document.getElementById('btn_cal_data_parada');
-        if (dataParadaInput && !dataParadaInput._flatpickr) {
-          const fp = window.flatpickr(dataParadaInput, Object.assign({}, baseConfig, {
-            altInput: true,
-            appendTo: modalParar.querySelector('.modal-body'),
-            static: true,
-            onChange: function (selectedDates, dateStr, instance) {
-              // Garantir que o valor seja preenchido no input original
-              if (selectedDates.length > 0) {
-                dataParadaInput.value = dateStr;
-                // Remover mensagem de erro se existir
-                const errorMsg = document.getElementById('data_parada_error');
-                if (errorMsg) {
-                  errorMsg.classList.add('d-none');
+      const modalCancelar = document.getElementById('modalCancelar');
+      if (modalCancelar) {
+        modalCancelar.addEventListener('shown.bs.modal', function () {
+          const dataCancelamentoInput = document.getElementById('data_cancelamento');
+          const btnCal = document.getElementById('btn_cal_data_cancelamento');
+          if (dataCancelamentoInput && !dataCancelamentoInput._flatpickr) {
+            const fp = window.flatpickr(dataCancelamentoInput, Object.assign({}, baseConfig, {
+              altInput: true,
+              appendTo: modalCancelar.querySelector('.modal-body'),
+              static: true,
+              onChange: function (selectedDates, dateStr, instance) {
+                // Garantir que o valor seja preenchido no input original
+                if (selectedDates.length > 0) {
+                  dataCancelamentoInput.value = dateStr;
+                  // Remover mensagem de erro se existir
+                  const errorMsg = document.getElementById('data_cancelamento_error');
+                  if (errorMsg) {
+                    errorMsg.classList.add('d-none');
+                  }
                 }
               }
+            }));
+            if (btnCal) {
+              btnCal.addEventListener('click', function (e) {
+                e.preventDefault();
+                fp.open();
+              });
             }
-          }));
-          if (btnCal) {
-            btnCal.addEventListener('click', function (e) {
-              e.preventDefault();
-              fp.open();
-            });
           }
-        }
-      });
-    }
+        });
+      }
 
-    const modalCancelar = document.getElementById('modalCancelar');
-    if (modalCancelar) {
-      modalCancelar.addEventListener('shown.bs.modal', function () {
-        const dataCancelamentoInput = document.getElementById('data_cancelamento');
-        const btnCal = document.getElementById('btn_cal_data_cancelamento');
-        if (dataCancelamentoInput && !dataCancelamentoInput._flatpickr) {
-          const fp = window.flatpickr(dataCancelamentoInput, Object.assign({}, baseConfig, {
-            altInput: true,
-            appendTo: modalCancelar.querySelector('.modal-body'),
-            static: true,
-            onChange: function (selectedDates, dateStr, instance) {
-              // Garantir que o valor seja preenchido no input original
-              if (selectedDates.length > 0) {
-                dataCancelamentoInput.value = dateStr;
-                // Remover mensagem de erro se existir
-                const errorMsg = document.getElementById('data_cancelamento_error');
-                if (errorMsg) {
-                  errorMsg.classList.add('d-none');
+      const modalFinalizar = document.getElementById('modalFinalizar');
+      if (modalFinalizar) {
+        modalFinalizar.addEventListener('shown.bs.modal', function () {
+          const dataFinalizacaoInput = document.getElementById('data_finalizacao');
+          const btnCal = document.getElementById('btn_cal_data_finalizacao');
+          if (dataFinalizacaoInput && !dataFinalizacaoInput._flatpickr) {
+            const parent = dataFinalizacaoInput.closest('.input-group') || modalFinalizar.querySelector('.modal-body');
+            if (parent && parent.style.position !== 'relative') { parent.style.position = 'relative'; }
+            const fp = window.flatpickr(dataFinalizacaoInput, Object.assign({}, baseConfig, {
+              appendTo: modalFinalizar.querySelector('.modal-body'),
+              positionElement: dataFinalizacaoInput,
+              static: true,
+              onChange: function (selectedDates, dateStr, instance) {
+                if (selectedDates.length > 0) {
+                  dataFinalizacaoInput.value = dateStr;
                 }
               }
+            }));
+            if (btnCal) {
+              btnCal.addEventListener('click', function (e) {
+                e.preventDefault();
+                fp.open();
+              });
             }
-          }));
-          if (btnCal) {
-            btnCal.addEventListener('click', function (e) {
-              e.preventDefault();
-              fp.open();
-            });
           }
-        }
-      });
-    }
+        });
+      }
 
-    const modalFinalizar = document.getElementById('modalFinalizar');
-    if (modalFinalizar) {
-      modalFinalizar.addEventListener('shown.bs.modal', function () {
-        const dataFinalizacaoInput = document.getElementById('data_finalizacao');
-        const btnCal = document.getElementById('btn_cal_data_finalizacao');
-        if (dataFinalizacaoInput && !dataFinalizacaoInput._flatpickr) {
-          const parent = dataFinalizacaoInput.closest('.input-group') || modalFinalizar.querySelector('.modal-body');
-          if (parent && parent.style.position !== 'relative') { parent.style.position = 'relative'; }
-          const fp = window.flatpickr(dataFinalizacaoInput, Object.assign({}, baseConfig, {
-            appendTo: modalFinalizar.querySelector('.modal-body'),
-            positionElement: dataFinalizacaoInput,
-            static: true,
-            onChange: function (selectedDates, dateStr, instance) {
-              if (selectedDates.length > 0) {
-                dataFinalizacaoInput.value = dateStr;
+      const formParar = document.getElementById('formPararImplantacao');
+      if (formParar) {
+        formParar.addEventListener('submit', function (e) {
+          const dataParadaInput = document.getElementById('data_parada');
+          const errorMsg = document.getElementById('data_parada_error');
+
+          if (dataParadaInput) {
+            let dataValida = false;
+
+            if (dataParadaInput._flatpickr && dataParadaInput._flatpickr.selectedDates.length > 0) {
+              dataValida = true;
+            } else if (dataParadaInput.value && dataParadaInput.value.trim() !== '') {
+              const datePatternYmd = /^\d{4}-\d{2}-\d{2}$/;
+              const datePatternDmy = /^\d{2}\/\d{2}\/\d{4}$/;
+              if (datePatternYmd.test(dataParadaInput.value.trim()) || datePatternDmy.test(dataParadaInput.value.trim())) {
+                dataValida = true;
               }
             }
-          }));
-          if (btnCal) {
-            btnCal.addEventListener('click', function (e) {
+
+            if (!dataValida) {
               e.preventDefault();
-              fp.open();
-            });
-          }
-        }
-      });
-    }
-
-    const formParar = document.getElementById('formPararImplantacao');
-    if (formParar) {
-      formParar.addEventListener('submit', function (e) {
-        const dataParadaInput = document.getElementById('data_parada');
-        const errorMsg = document.getElementById('data_parada_error');
-
-        if (dataParadaInput) {
-          let dataValida = false;
-
-          if (dataParadaInput._flatpickr && dataParadaInput._flatpickr.selectedDates.length > 0) {
-            dataValida = true;
-          } else if (dataParadaInput.value && dataParadaInput.value.trim() !== '') {
-            const datePatternYmd = /^\d{4}-\d{2}-\d{2}$/;
-            const datePatternDmy = /^\d{2}\/\d{2}\/\d{4}$/;
-            if (datePatternYmd.test(dataParadaInput.value.trim()) || datePatternDmy.test(dataParadaInput.value.trim())) {
-              dataValida = true;
-            }
-          }
-
-          if (!dataValida) {
-            e.preventDefault();
-            if (errorMsg) {
-              errorMsg.classList.remove('d-none');
-            }
-            dataParadaInput.focus();
-            return false;
-          } else {
-            if (errorMsg) {
-              errorMsg.classList.add('d-none');
-            }
-          }
-        }
-      });
-    }
-
-    const formCancelar = document.getElementById('formCancelarImplantacao');
-    if (formCancelar) {
-      formCancelar.addEventListener('submit', function (e) {
-        const dataCancelamentoInput = document.getElementById('data_cancelamento');
-        const errorMsg = document.getElementById('data_cancelamento_error');
-
-        if (dataCancelamentoInput) {
-          let dataValida = false;
-
-          if (dataCancelamentoInput._flatpickr && dataCancelamentoInput._flatpickr.selectedDates.length > 0) {
-            dataValida = true;
-          } else if (dataCancelamentoInput.value && dataCancelamentoInput.value.trim() !== '') {
-            const datePatternYmd = /^\d{4}-\d{2}-\d{2}$/;
-            const datePatternDmy = /^\d{2}\/\d{2}\/\d{4}$/;
-            if (datePatternYmd.test(dataCancelamentoInput.value.trim()) || datePatternDmy.test(dataCancelamentoInput.value.trim())) {
-              dataValida = true;
-            }
-          }
-
-          if (!dataValida) {
-            e.preventDefault();
-            if (errorMsg) {
-              errorMsg.classList.remove('d-none');
-            }
-            dataCancelamentoInput.focus();
-            return false;
-          } else {
-            if (errorMsg) {
-              errorMsg.classList.add('d-none');
-            }
-          }
-        }
-      });
-    }
-
-    const btnConfirmarDesfazerInicio = document.getElementById('btn-confirmar-desfazer-inicio');
-    if (btnConfirmarDesfazerInicio) {
-      btnConfirmarDesfazerInicio.addEventListener('click', function (e) {
-        e.preventDefault();
-
-        // Close modal
-        const modal = document.getElementById('modalDesfazerInicio');
-        if (modal && window.bootstrap) {
-          const bsModal = bootstrap.Modal.getInstance(modal);
-          if (bsModal) bsModal.hide();
-        }
-
-        fetch('/desfazer_inicio_implantacao', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': CONFIG.csrfToken
-          },
-          body: JSON.stringify({ implantacao_id: CONFIG.implantacaoId })
-        })
-          .then(response => response.json())
-          .then(data => {
-            if (data.error) {
-              showToast(data.error, 'error');
+              if (errorMsg) {
+                errorMsg.classList.remove('d-none');
+              }
+              dataParadaInput.focus();
+              return false;
             } else {
-              showToast(data.message || 'InÃ­cio desfeito com sucesso!', 'success');
-              setTimeout(() => location.reload(), 1000);
-            }
-          })
-          .catch(err => {
-            console.error(err);
-            showToast('Erro ao desfazer inÃ­cio.', 'error');
-          });
-      });
-    }
-  }
-
-
-
-  // NavegaÃ§Ã£o entre abas (Timeline -> ComentÃ¡rios / Plano)
-  function activateTab(targetId) {
-    if (!window.bootstrap) return;
-    const triggerEl = document.querySelector(`[data-bs-target="${targetId}"]`);
-    if (triggerEl) {
-      const tab = new bootstrap.Tab(triggerEl);
-      tab.show();
-    }
-  }
-
-  document.addEventListener('click', function (e) {
-    const btnComments = e.target.closest('.timeline-action-comments');
-    if (btnComments) {
-      const itemId = parseInt(btnComments.dataset.itemId);
-      activateTab('#plano-content');
-      if (window.checklistRenderer && Number.isFinite(itemId)) {
-        try { window.checklistRenderer.ensureItemVisible(itemId); } catch (_) { }
-      }
-      setTimeout(() => {
-        const taskElement = document.getElementById(`checklist-item-${itemId}`) || document.querySelector(`.checklist-item[data-item-id="${itemId}"]`);
-        if (taskElement) {
-          taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          const commentsSection = document.getElementById(`comments-${itemId}`);
-          if (commentsSection && window.bootstrap && bootstrap.Collapse) {
-            try {
-              const inst = bootstrap.Collapse.getInstance(commentsSection) || new bootstrap.Collapse(commentsSection, { toggle: false });
-              inst.show();
-              if (window.checklistRenderer && typeof window.checklistRenderer.loadComments === 'function') {
-                try { window.checklistRenderer.loadComments(itemId); } catch (_) { }
+              if (errorMsg) {
+                errorMsg.classList.add('d-none');
               }
-            } catch (_) { }
+            }
           }
-        }
-      }, 200);
-      e.preventDefault();
-      return;
-    }
-    const btnTask = e.target.closest('.timeline-action-task');
-    if (btnTask) {
-      const itemId = parseInt(btnTask.dataset.itemId);
-      activateTab('#plano-content');
-      if (window.checklistRenderer && itemId) {
-        try { window.checklistRenderer.ensureItemVisible(itemId); } catch (_) { }
+        });
       }
-      e.preventDefault();
+
+      const formCancelar = document.getElementById('formCancelarImplantacao');
+      if (formCancelar) {
+        formCancelar.addEventListener('submit', function (e) {
+          const dataCancelamentoInput = document.getElementById('data_cancelamento');
+          const errorMsg = document.getElementById('data_cancelamento_error');
+
+          if (dataCancelamentoInput) {
+            let dataValida = false;
+
+            if (dataCancelamentoInput._flatpickr && dataCancelamentoInput._flatpickr.selectedDates.length > 0) {
+              dataValida = true;
+            } else if (dataCancelamentoInput.value && dataCancelamentoInput.value.trim() !== '') {
+              const datePatternYmd = /^\d{4}-\d{2}-\d{2}$/;
+              const datePatternDmy = /^\d{2}\/\d{2}\/\d{4}$/;
+              if (datePatternYmd.test(dataCancelamentoInput.value.trim()) || datePatternDmy.test(dataCancelamentoInput.value.trim())) {
+                dataValida = true;
+              }
+            }
+
+            if (!dataValida) {
+              e.preventDefault();
+              if (errorMsg) {
+                errorMsg.classList.remove('d-none');
+              }
+              dataCancelamentoInput.focus();
+              return false;
+            } else {
+              if (errorMsg) {
+                errorMsg.classList.add('d-none');
+              }
+            }
+          }
+        });
+      }
+
+      const btnConfirmarDesfazerInicio = document.getElementById('btn-confirmar-desfazer-inicio');
+      if (btnConfirmarDesfazerInicio) {
+        btnConfirmarDesfazerInicio.addEventListener('click', function (e) {
+          e.preventDefault();
+
+          // Close modal
+          const modal = document.getElementById('modalDesfazerInicio');
+          if (modal && window.bootstrap) {
+            const bsModal = bootstrap.Modal.getInstance(modal);
+            if (bsModal) bsModal.hide();
+          }
+
+          fetch('/desfazer_inicio_implantacao', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': CONFIG.csrfToken
+            },
+            body: JSON.stringify({ implantacao_id: CONFIG.implantacaoId })
+          })
+            .then(response => response.json())
+            .then(data => {
+              if (data.error) {
+                showToast(data.error, 'error');
+              } else {
+                showToast(data.message || 'InÃ­cio desfeito com sucesso!', 'success');
+                setTimeout(() => location.reload(), 1000);
+              }
+            })
+            .catch(err => {
+              console.error(err);
+              showToast('Erro ao desfazer inÃ­cio.', 'error');
+            });
+        });
+      }
     }
-  });
 
 
 
-
-
-
-  function atualizarVisibilidadeBotaoEmail(tarefaId) {
-    const tagAtiva = document.querySelector(`.comentario-tipo-tag.active[data-tarefa-id="${tarefaId}"]`);
-    if (!tagAtiva) {
-      return;
+    // NavegaÃ§Ã£o entre abas (Timeline -> ComentÃ¡rios / Plano)
+    function activateTab(targetId) {
+      if (!window.bootstrap) return;
+      const triggerEl = document.querySelector(`[data-bs-target="${targetId}"]`);
+      if (triggerEl) {
+        const tab = new bootstrap.Tab(triggerEl);
+        tab.show();
+      }
     }
 
-    const tipo = tagAtiva.getAttribute('data-tipo') || tagAtiva.dataset.tipo;
-    const btnEmail = document.getElementById(`btn-email-${tarefaId}`);
-    const alertaEmail = document.getElementById(`alerta-email-${tarefaId}`);
+    document.addEventListener('click', function (e) {
+      const btnComments = e.target.closest('.timeline-action-comments');
+      if (btnComments) {
+        const itemId = parseInt(btnComments.dataset.itemId);
+        activateTab('#plano-content');
+        if (window.checklistRenderer && Number.isFinite(itemId)) {
+          try { window.checklistRenderer.ensureItemVisible(itemId); } catch (_) { }
+        }
+        setTimeout(() => {
+          const taskElement = document.getElementById(`checklist-item-${itemId}`) || document.querySelector(`.checklist-item[data-item-id="${itemId}"]`);
+          if (taskElement) {
+            taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const commentsSection = document.getElementById(`comments-${itemId}`);
+            if (commentsSection && window.bootstrap && bootstrap.Collapse) {
+              try {
+                const inst = bootstrap.Collapse.getInstance(commentsSection) || new bootstrap.Collapse(commentsSection, { toggle: false });
+                inst.show();
+                if (window.checklistRenderer && typeof window.checklistRenderer.loadComments === 'function') {
+                  try { window.checklistRenderer.loadComments(itemId); } catch (_) { }
+                }
+              } catch (_) { }
+            }
+          }
+        }, 200);
+        e.preventDefault();
+        return;
+      }
+      const btnTask = e.target.closest('.timeline-action-task');
+      if (btnTask) {
+        const itemId = parseInt(btnTask.dataset.itemId);
+        activateTab('#plano-content');
+        if (window.checklistRenderer && itemId) {
+          try { window.checklistRenderer.ensureItemVisible(itemId); } catch (_) { }
+        }
+        e.preventDefault();
+      }
+    });
 
-    const temEmail = CONFIG.emailResponsavel && CONFIG.emailResponsavel.trim() !== '';
 
-    if (btnEmail) {
-      const deveMostrar = tipo === 'externo';
 
-      // Checkbox logic
-      const divCheckbox = document.getElementById(`div-check-email-${tarefaId}`);
-      const checkbox = document.getElementById(`check-email-${tarefaId}`);
 
-      if (divCheckbox && checkbox) {
-        if (deveMostrar) {
-          divCheckbox.classList.remove('d-none');
-          if (!temEmail) {
-            checkbox.disabled = true;
-            checkbox.checked = false;
-            divCheckbox.setAttribute('title', 'Email do responsável não cadastrado');
+
+
+    function atualizarVisibilidadeBotaoEmail(tarefaId) {
+      const tagAtiva = document.querySelector(`.comentario-tipo-tag.active[data-tarefa-id="${tarefaId}"]`);
+      if (!tagAtiva) {
+        return;
+      }
+
+      const tipo = tagAtiva.getAttribute('data-tipo') || tagAtiva.dataset.tipo;
+      const btnEmail = document.getElementById(`btn-email-${tarefaId}`);
+      const alertaEmail = document.getElementById(`alerta-email-${tarefaId}`);
+
+      const temEmail = CONFIG.emailResponsavel && CONFIG.emailResponsavel.trim() !== '';
+
+      if (btnEmail) {
+        const deveMostrar = tipo === 'externo';
+
+        // Checkbox logic
+        const divCheckbox = document.getElementById(`div-check-email-${tarefaId}`);
+        const checkbox = document.getElementById(`check-email-${tarefaId}`);
+
+        if (divCheckbox && checkbox) {
+          if (deveMostrar) {
+            divCheckbox.classList.remove('d-none');
+            if (!temEmail) {
+              checkbox.disabled = true;
+              checkbox.checked = false;
+              divCheckbox.setAttribute('title', 'Email do responsável não cadastrado');
+            } else {
+              checkbox.disabled = false;
+              divCheckbox.removeAttribute('title');
+            }
           } else {
-            checkbox.disabled = false;
-            divCheckbox.removeAttribute('title');
+            divCheckbox.classList.add('d-none');
+            checkbox.checked = false;
           }
-        } else {
-          divCheckbox.classList.add('d-none');
-          checkbox.checked = false;
         }
-      }
 
-      if (deveMostrar) {
-        btnEmail.classList.remove('d-none');
+        if (deveMostrar) {
+          btnEmail.classList.remove('d-none');
 
-        if (!temEmail) {
-          btnEmail.disabled = true;
-          btnEmail.classList.add('btn-secondary');
-          btnEmail.classList.remove('btn-primary');
-          btnEmail.title = 'Email do responsÃ¡vel nÃ£o cadastrado. Acesse "Editar Detalhes" para adicionar.';
-          btnEmail.setAttribute('data-bs-toggle', 'tooltip');
-          btnEmail.setAttribute('data-bs-placement', 'top');
+          if (!temEmail) {
+            btnEmail.disabled = true;
+            btnEmail.classList.add('btn-secondary');
+            btnEmail.classList.remove('btn-primary');
+            btnEmail.title = 'Email do responsÃ¡vel nÃ£o cadastrado. Acesse "Editar Detalhes" para adicionar.';
+            btnEmail.setAttribute('data-bs-toggle', 'tooltip');
+            btnEmail.setAttribute('data-bs-placement', 'top');
 
-          if (alertaEmail) {
-            alertaEmail.classList.remove('d-none');
+            if (alertaEmail) {
+              alertaEmail.classList.remove('d-none');
+            }
+          } else {
+            btnEmail.disabled = false;
+            btnEmail.classList.remove('btn-secondary');
+            btnEmail.classList.add('btn-primary');
+            btnEmail.removeAttribute('title');
+            btnEmail.removeAttribute('data-bs-toggle');
+            btnEmail.removeAttribute('data-bs-placement');
+
+            if (alertaEmail) {
+              alertaEmail.classList.add('d-none');
+            }
+          }
+
+          if (window.bootstrap && window.bootstrap.Tooltip) {
+            const tooltipInstance = bootstrap.Tooltip.getInstance(btnEmail);
+            if (tooltipInstance) {
+              tooltipInstance.dispose();
+            }
+            if (!temEmail) {
+              new bootstrap.Tooltip(btnEmail);
+            }
           }
         } else {
-          btnEmail.disabled = false;
-          btnEmail.classList.remove('btn-secondary');
-          btnEmail.classList.add('btn-primary');
-          btnEmail.removeAttribute('title');
-          btnEmail.removeAttribute('data-bs-toggle');
-          btnEmail.removeAttribute('data-bs-placement');
-
+          btnEmail.classList.add('d-none');
           if (alertaEmail) {
             alertaEmail.classList.add('d-none');
           }
         }
-
-        if (window.bootstrap && window.bootstrap.Tooltip) {
-          const tooltipInstance = bootstrap.Tooltip.getInstance(btnEmail);
-          if (tooltipInstance) {
-            tooltipInstance.dispose();
-          }
-          if (!temEmail) {
-            new bootstrap.Tooltip(btnEmail);
-          }
-        }
-      } else {
-        btnEmail.classList.add('d-none');
-        if (alertaEmail) {
-          alertaEmail.classList.add('d-none');
-        }
       }
     }
-  }
 
-  function inicializarTagsComentario() {
-    document.querySelectorAll('.comentario-tipo-tag').forEach(tag => {
+    function inicializarTagsComentario() {
+      document.querySelectorAll('.comentario-tipo-tag').forEach(tag => {
+        const tarefaId = tag.getAttribute('data-tarefa-id') || tag.dataset.tarefaId;
+        if (tarefaId && tag.classList.contains('active')) {
+          atualizarVisibilidadeBotaoEmail(tarefaId);
+        }
+      });
+    }
+
+    document.body.addEventListener('click', function (e) {
+      const tag = e.target.closest('.comentario-tipo-tag');
+      if (!tag) return;
+
       const tarefaId = tag.getAttribute('data-tarefa-id') || tag.dataset.tarefaId;
-      if (tarefaId && tag.classList.contains('active')) {
+      if (!tarefaId) return;
+
+      const tipo = tag.getAttribute('data-tipo') || tag.dataset.tipo;
+      if (!tipo) return;
+
+      const container = tag.closest('.d-flex');
+      if (container) {
+        container.querySelectorAll('.comentario-tipo-tag').forEach(t => t.classList.remove('active'));
+      }
+      tag.classList.add('active');
+
+      setTimeout(() => {
+        atualizarVisibilidadeBotaoEmail(tarefaId);
+      }, 10);
+    });
+
+    inicializarTagsComentario();
+
+    const observer = new MutationObserver(function (mutations) {
+      mutations.forEach(function (mutation) {
+        if (mutation.type === 'childList') {
+          mutation.addedNodes.forEach(function (node) {
+            if (node.nodeType === 1) {
+              const tags = node.querySelectorAll ? node.querySelectorAll('.comentario-tipo-tag') : [];
+              tags.forEach(tag => {
+                const tarefaId = tag.getAttribute('data-tarefa-id') || tag.dataset.tarefaId;
+                if (tarefaId && tag.classList.contains('active')) {
+                  atualizarVisibilidadeBotaoEmail(tarefaId);
+                }
+              });
+            }
+          });
+        }
+      });
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+
+    document.querySelectorAll('.comentario-tipo-tag.active').forEach(tag => {
+      const tarefaId = tag.dataset.tarefaId;
+      if (tarefaId) {
         atualizarVisibilidadeBotaoEmail(tarefaId);
       }
     });
-  }
 
-  document.body.addEventListener('click', function (e) {
-    const tag = e.target.closest('.comentario-tipo-tag');
-    if (!tag) return;
-
-    const tarefaId = tag.getAttribute('data-tarefa-id') || tag.dataset.tarefaId;
-    if (!tarefaId) return;
-
-    const tipo = tag.getAttribute('data-tipo') || tag.dataset.tipo;
-    if (!tipo) return;
-
-    const container = tag.closest('.d-flex');
-    if (container) {
-      container.querySelectorAll('.comentario-tipo-tag').forEach(t => t.classList.remove('active'));
-    }
-    tag.classList.add('active');
-
-    setTimeout(() => {
-      atualizarVisibilidadeBotaoEmail(tarefaId);
-    }, 10);
-  });
-
-  inicializarTagsComentario();
-
-  const observer = new MutationObserver(function (mutations) {
-    mutations.forEach(function (mutation) {
-      if (mutation.type === 'childList') {
-        mutation.addedNodes.forEach(function (node) {
-          if (node.nodeType === 1) {
-            const tags = node.querySelectorAll ? node.querySelectorAll('.comentario-tipo-tag') : [];
-            tags.forEach(tag => {
-              const tarefaId = tag.getAttribute('data-tarefa-id') || tag.dataset.tarefaId;
-              if (tarefaId && tag.classList.contains('active')) {
-                atualizarVisibilidadeBotaoEmail(tarefaId);
-              }
-            });
-          }
+    async function reloadTimeline() {
+      try {
+        const tab = document.getElementById('timeline-content');
+        if (!tab) return;
+        const implId = tab.getAttribute('data-impl-id');
+        if (!implId) return;
+        const resp = await fetch(`/api/implantacao/${implId}/timeline?per_page=100`, {
+          headers: { 'Accept': 'application/json', 'X-CSRFToken': (window.CONFIG && window.CONFIG.csrfToken) ? window.CONFIG.csrfToken : '' },
+          credentials: 'same-origin'
         });
-      }
-    });
-  });
-
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true
-  });
-
-  document.querySelectorAll('.comentario-tipo-tag.active').forEach(tag => {
-    const tarefaId = tag.dataset.tarefaId;
-    if (tarefaId) {
-      atualizarVisibilidadeBotaoEmail(tarefaId);
+        const data = await resp.json();
+        if (data && data.ok) {
+          const serverLogs = data.logs || [];
+          const merged = mergeWithBufferedEvents(serverLogs);
+          renderTimelineList(merged);
+        } else {
+          const merged = mergeWithBufferedEvents([]);
+          renderTimelineList(merged);
+        }
+      } catch (_) { }
     }
-  });
 
-  async function reloadTimeline() {
-    try {
-      const tab = document.getElementById('timeline-content');
-      if (!tab) return;
-      const implId = tab.getAttribute('data-impl-id');
-      if (!implId) return;
-      const resp = await fetch(`/api/implantacao/${implId}/timeline?per_page=100`, {
-        headers: { 'Accept': 'application/json', 'X-CSRFToken': (window.CONFIG && window.CONFIG.csrfToken) ? window.CONFIG.csrfToken : '' },
-        credentials: 'same-origin'
-      });
-      const data = await resp.json();
-      if (data && data.ok) {
-        const serverLogs = data.logs || [];
-        const merged = mergeWithBufferedEvents(serverLogs);
-        renderTimelineList(merged);
-      } else {
-        const merged = mergeWithBufferedEvents([]);
-        renderTimelineList(merged);
+    function renderTimelineList(items) {
+      const ul = document.getElementById('timeline-list') || document.querySelector('.timeline-list');
+      if (!ul) return;
+      ul.innerHTML = '';
+      if (!items.length) {
+        ul.innerHTML = '<li class="alert alert-light text-center small py-2">Nenhum evento registrado.</li>';
+        return;
       }
-    } catch (_) { }
-  }
-
-  function renderTimelineList(items) {
-    const ul = document.getElementById('timeline-list') || document.querySelector('.timeline-list');
-    if (!ul) return;
-    ul.innerHTML = '';
-    if (!items.length) {
-      ul.innerHTML = '<li class="alert alert-light text-center small py-2">Nenhum evento registrado.</li>';
-      return;
-    }
-    const html = items.map(log => {
-      const t = log.tipo_evento || '';
-      let icon = 'bi-info-circle-fill';
-      if (t === 'novo_comentario') icon = 'bi-chat-left-text-fill';
-      else if (t.includes('tarefa')) icon = 'bi-check-circle-fill';
-      else if (t.includes('status')) icon = 'bi-flag-fill';
-      const dt = (window.formatDate ? window.formatDate(log.data_criacao, true) : (log.data_criacao || ''));
-      const detalhes = (log.detalhes || '').replace(/\n/g, '<br>');
-      let actions = '';
-      const m = /Item\s+(\d+)/.exec(log.detalhes || '');
-      const itemId = m ? parseInt(m[1], 10) : null;
-      if (t === 'novo_comentario' && itemId) actions += `<button class="btn btn-sm btn-outline-primary timeline-action-comments" data-item-id="${itemId}">Ver comentÃ¡rios</button>`;
-      return `
+      const html = items.map(log => {
+        const t = log.tipo_evento || '';
+        let icon = 'bi-info-circle-fill';
+        if (t === 'novo_comentario') icon = 'bi-chat-left-text-fill';
+        else if (t.includes('tarefa')) icon = 'bi-check-circle-fill';
+        else if (t.includes('status')) icon = 'bi-flag-fill';
+        const dt = (window.formatDate ? window.formatDate(log.data_criacao, true) : (log.data_criacao || ''));
+        const detalhes = (log.detalhes || '').replace(/\n/g, '<br>');
+        let actions = '';
+        const m = /Item\s+(\d+)/.exec(log.detalhes || '');
+        const itemId = m ? parseInt(m[1], 10) : null;
+        if (t === 'novo_comentario' && itemId) actions += `<button class="btn btn-sm btn-outline-primary timeline-action-comments" data-item-id="${itemId}">Ver comentÃ¡rios</button>`;
+        return `
           <li class="timeline-item">
             <div class="timeline-icon"><i class="bi ${icon}"></i></div>
             <div class="timeline-content shadow-sm">
@@ -845,74 +854,74 @@
               <div class="mt-2 d-flex gap-2">${actions}</div>
             </div>
           </li>`;
-    }).join('');
-    ul.innerHTML = html;
-  }
+      }).join('');
+      ul.innerHTML = html;
+    }
 
-  function getImplId() {
-    const tab = document.getElementById('timeline-content');
-    return tab ? tab.getAttribute('data-impl-id') : null;
-  }
+    function getImplId() {
+      const tab = document.getElementById('timeline-content');
+      return tab ? tab.getAttribute('data-impl-id') : null;
+    }
 
-  function readTimelineBuffer() {
-    try {
-      const implId = getImplId();
-      if (!implId) return [];
-      const raw = localStorage.getItem(`timelineBuffer:${implId}`);
-      const arr = raw ? JSON.parse(raw) : [];
-      return Array.isArray(arr) ? arr : [];
-    } catch (_) { return []; }
-  }
+    function readTimelineBuffer() {
+      try {
+        const implId = getImplId();
+        if (!implId) return [];
+        const raw = localStorage.getItem(`timelineBuffer:${implId}`);
+        const arr = raw ? JSON.parse(raw) : [];
+        return Array.isArray(arr) ? arr : [];
+      } catch (_) { return []; }
+    }
 
-  function writeTimelineBuffer(items) {
-    try {
-      const implId = getImplId();
-      if (!implId) return;
-      const capped = (items || []).slice(-100);
-      localStorage.setItem(`timelineBuffer:${implId}`, JSON.stringify(capped));
-    } catch (_) { }
-  }
+    function writeTimelineBuffer(items) {
+      try {
+        const implId = getImplId();
+        if (!implId) return;
+        const capped = (items || []).slice(-100);
+        localStorage.setItem(`timelineBuffer:${implId}`, JSON.stringify(capped));
+      } catch (_) { }
+    }
 
-  function mergeWithBufferedEvents(serverLogs) {
-    const buf = readTimelineBuffer();
-    const byKey = new Map();
-    const push = (log) => {
-      if (!log) return;
-      const k = `${log.tipo_evento || ''}|${log.detalhes || ''}|${log.data_criacao || ''}`;
-      if (!byKey.has(k)) byKey.set(k, log);
-    };
-    (serverLogs || []).forEach(push);
-    buf.forEach(push);
-    // Return newest first by data_criacao if possible
-    const arr = Array.from(byKey.values());
-    arr.sort((a, b) => {
-      const da = new Date(a.data_criacao || 0).getTime();
-      const db = new Date(b.data_criacao || 0).getTime();
-      return db - da;
-    });
-    return arr;
-  }
+    function mergeWithBufferedEvents(serverLogs) {
+      const buf = readTimelineBuffer();
+      const byKey = new Map();
+      const push = (log) => {
+        if (!log) return;
+        const k = `${log.tipo_evento || ''}|${log.detalhes || ''}|${log.data_criacao || ''}`;
+        if (!byKey.has(k)) byKey.set(k, log);
+      };
+      (serverLogs || []).forEach(push);
+      buf.forEach(push);
+      // Return newest first by data_criacao if possible
+      const arr = Array.from(byKey.values());
+      arr.sort((a, b) => {
+        const da = new Date(a.data_criacao || 0).getTime();
+        const db = new Date(b.data_criacao || 0).getTime();
+        return db - da;
+      });
+      return arr;
+    }
 
-  window.reloadTimeline = reloadTimeline;
-  window.appendTimelineEvent = function (type, detalhes) {
-    const ul = document.getElementById('timeline-list') || document.querySelector('.timeline-list');
-    if (!ul) return;
-    const t = type || '';
-    let icon = 'bi-info-circle-fill';
-    if (t === 'novo_comentario') icon = 'bi-chat-left-text-fill';
-    else if (t.indexOf('tarefa') >= 0) icon = 'bi-check-circle-fill';
-    else if (t.indexOf('status') >= 0) icon = 'bi-flag-fill';
-    const now = new Date().toISOString();
-    const dt = window.formatDate ? window.formatDate(now, true) : now;
-    const text = (detalhes || '').replace(/\n/g, '<br>');
-    let actions = '';
-    const m = /Item\s+(\d+)/.exec(detalhes || '');
-    const itemId = m ? parseInt(m[1], 10) : null;
-    if (t === 'novo_comentario' && itemId) actions += `<button class="btn btn-sm btn-outline-primary timeline-action-comments" data-item-id="${itemId}">Ver comentÃ¡rios</button>`;
-    const usuario = (window.CONFIG && window.CONFIG.emailUsuarioLogado) ? window.CONFIG.emailUsuarioLogado : '';
-    const li = document.createElement('li');
-    li.className = 'timeline-item';
-    li.innerHTML = `
+    window.reloadTimeline = reloadTimeline;
+    window.appendTimelineEvent = function (type, detalhes) {
+      const ul = document.getElementById('timeline-list') || document.querySelector('.timeline-list');
+      if (!ul) return;
+      const t = type || '';
+      let icon = 'bi-info-circle-fill';
+      if (t === 'novo_comentario') icon = 'bi-chat-left-text-fill';
+      else if (t.indexOf('tarefa') >= 0) icon = 'bi-check-circle-fill';
+      else if (t.indexOf('status') >= 0) icon = 'bi-flag-fill';
+      const now = new Date().toISOString();
+      const dt = window.formatDate ? window.formatDate(now, true) : now;
+      const text = (detalhes || '').replace(/\n/g, '<br>');
+      let actions = '';
+      const m = /Item\s+(\d+)/.exec(detalhes || '');
+      const itemId = m ? parseInt(m[1], 10) : null;
+      if (t === 'novo_comentario' && itemId) actions += `<button class="btn btn-sm btn-outline-primary timeline-action-comments" data-item-id="${itemId}">Ver comentÃ¡rios</button>`;
+      const usuario = (window.CONFIG && window.CONFIG.emailUsuarioLogado) ? window.CONFIG.emailUsuarioLogado : '';
+      const li = document.createElement('li');
+      li.className = 'timeline-item';
+      li.innerHTML = `
         <div class="timeline-icon"><i class="bi ${icon}"></i></div>
         <div class="timeline-content shadow-sm">
           <div class="d-flex justify-content-between mb-2">
@@ -923,344 +932,344 @@
           <div class="mt-2 d-flex gap-2">${actions}</div>
         </div>
       `;
-    ul.prepend(li);
+      ul.prepend(li);
 
-    // Persist optimistic event to buffer
-    const buf = readTimelineBuffer();
-    buf.push({ tipo_evento: t, detalhes: detalhes || '', usuario_nome: usuario, data_criacao: now });
-    writeTimelineBuffer(buf);
-  };
-
-  try {
-    const timelineTabBtn = document.getElementById('timeline-tab');
-    if (timelineTabBtn) {
-      timelineTabBtn.addEventListener('shown.bs.tab', function () { try { window.reloadTimeline(); } catch (_) { } });
-    }
-  } catch (_) { }
-
-  try {
-    document.addEventListener('DOMContentLoaded', function () {
-      try {
-        const planoTabBtn = document.getElementById('plano-tab');
-        const timelineTabBtn = document.getElementById('timeline-tab');
-        const commentsTabBtn = document.getElementById('comments-tab');
-        const planoPane = document.getElementById('plano-content');
-        const timelinePane = document.getElementById('timeline-content');
-        const commentsPane = document.getElementById('comments-content');
-
-        try {
-          if (window.location && window.location.hash && (window.location.hash === '#timeline-content' || window.location.hash === '#comments-content')) {
-            if (history && history.replaceState) {
-              history.replaceState(null, document.title, window.location.pathname + window.location.search);
-            } else {
-              window.location.hash = '';
-            }
-          }
-        } catch (_) { }
-
-        // Reset panes
-        [timelinePane, commentsPane].forEach(p => {
-          if (!p) return;
-          p.classList.remove('show');
-          p.classList.remove('active');
-        });
-        if (planoPane) {
-          planoPane.classList.add('show');
-          planoPane.classList.add('active');
-        }
-
-        // Reset tabs
-        [timelineTabBtn, commentsTabBtn].forEach(b => { if (b) b.classList.remove('active'); });
-        if (planoTabBtn) planoTabBtn.classList.add('active');
-
-        // Ensure bootstrap tab API reflects the state
-        if (window.bootstrap && bootstrap.Tab && planoTabBtn) {
-          const inst = bootstrap.Tab.getOrCreateInstance(planoTabBtn);
-          inst.show();
-        }
-
-        // Defensive: keep only one pane active at any time
-        const tabContent = document.querySelector('.tab-content');
-        const enforceSingleActive = () => {
-          const panes = document.querySelectorAll('.tab-content .tab-pane');
-          let foundActive = false;
-          panes.forEach(p => {
-            const isActive = p.classList.contains('active');
-            if (isActive && !foundActive) {
-              foundActive = true;
-              p.classList.add('show');
-              p.style.display = 'block';
-              p.classList.remove('d-none');
-            } else {
-              p.classList.remove('show');
-              p.classList.remove('active');
-              p.style.display = 'none';
-              p.classList.add('d-none');
-            }
-          });
-          if (!foundActive && planoPane) {
-            planoPane.classList.add('active');
-            planoPane.classList.add('show');
-            planoPane.style.display = 'block';
-            planoPane.classList.remove('d-none');
-          }
-        };
-        enforceSingleActive();
-        try {
-          if (tabContent) {
-            const mo = new MutationObserver(() => enforceSingleActive());
-            mo.observe(tabContent, { attributes: true, subtree: true, attributeFilter: ['class'] });
-          }
-        } catch (_) { }
-
-        // Tab click handlers to toggle d-none properly
-        try {
-          const allTabBtns = document.querySelectorAll('[data-bs-toggle="tab"]');
-          allTabBtns.forEach(btn => {
-            btn.addEventListener('shown.bs.tab', function (ev) {
-              const target = ev.target.getAttribute('data-bs-target');
-              const panes = document.querySelectorAll('.tab-content .tab-pane');
-              panes.forEach(p => {
-                if ('#' + p.id === target) {
-                  p.classList.remove('d-none');
-                  p.classList.add('active');
-                  p.classList.add('show');
-                  p.style.display = 'block';
-                } else {
-                  p.classList.remove('show');
-                  p.classList.remove('active');
-                  p.classList.add('d-none');
-                  p.style.display = 'none';
-                }
-              });
-            });
-          });
-        } catch (_) { }
-      } catch (_) { }
-    });
-  } catch (_) { }
-
-  // DISABLED: Duplicate submit handler - already handled by modal_detalhes_empresa.js
-  /*
-  try {
-    document.body.addEventListener('submit', async function (e) {
-      const form = e.target;
-      const modal = form.closest('#modalDetalhesEmpresa');
-      if (!modal) return;
-      e.preventDefault();
-      e.stopPropagation();
-      try {
-        const fd = new FormData(form);
-        fd.set('redirect_to', 'modal');
-        const resp = await fetch('/atualizar_detalhes_empresa', {
-          method: 'POST',
-          headers: { 'Accept': 'application/json', 'X-CSRFToken': (window.CONFIG && window.CONFIG.csrfToken) ? window.CONFIG.csrfToken : '' },
-          body: fd,
-          credentials: 'same-origin'
-        });
-        const data = await resp.json();
-        if (data && data.ok) {
-          showToast('Detalhes atualizados', 'success');
-          // permanece no modal; opcionalmente, reativar botÃ£o salvar
-        } else {
-          showToast('Erro ao salvar detalhes', 'error');
-        }
-      } catch (err) {
-        showToast('Falha ao comunicar com o servidor', 'error');
-      }
-    });
-  } catch (_) { }
-  */
-
-  document.body.addEventListener('click', async function (e) {
-    const targetBtn = e.target.closest('.btn-excluir-comentario');
-    if (!targetBtn) return;
-
-    const comentarioId = targetBtn.dataset.comentarioId;
-    const confirmed = await showConfirm({
-      title: 'Excluir ComentÃ¡rio',
-      message: 'Tem certeza que deseja excluir este comentÃ¡rio? Esta aÃ§Ã£o nÃ£o pode ser desfeita.',
-      confirmText: 'Excluir',
-      cancelText: 'Cancelar',
-      type: 'danger',
-      icon: 'bi-trash-fill'
-    });
-
-    if (!confirmed) return;
+      // Persist optimistic event to buffer
+      const buf = readTimelineBuffer();
+      buf.push({ tipo_evento: t, detalhes: detalhes || '', usuario_nome: usuario, data_criacao: now });
+      writeTimelineBuffer(buf);
+    };
 
     try {
-      const response = await fetch(`/api/checklist/comment/${comentarioId}`, {
-        method: 'DELETE',
-        headers: {
-          'Accept': 'application/json',
-          'X-CSRFToken': CONFIG.csrfToken
+      const timelineTabBtn = document.getElementById('timeline-tab');
+      if (timelineTabBtn) {
+        timelineTabBtn.addEventListener('shown.bs.tab', function () { try { window.reloadTimeline(); } catch (_) { } });
+      }
+    } catch (_) { }
+
+    try {
+      document.addEventListener('DOMContentLoaded', function () {
+        try {
+          const planoTabBtn = document.getElementById('plano-tab');
+          const timelineTabBtn = document.getElementById('timeline-tab');
+          const commentsTabBtn = document.getElementById('comments-tab');
+          const planoPane = document.getElementById('plano-content');
+          const timelinePane = document.getElementById('timeline-content');
+          const commentsPane = document.getElementById('comments-content');
+
+          try {
+            if (window.location && window.location.hash && (window.location.hash === '#timeline-content' || window.location.hash === '#comments-content')) {
+              if (history && history.replaceState) {
+                history.replaceState(null, document.title, window.location.pathname + window.location.search);
+              } else {
+                window.location.hash = '';
+              }
+            }
+          } catch (_) { }
+
+          // Reset panes
+          [timelinePane, commentsPane].forEach(p => {
+            if (!p) return;
+            p.classList.remove('show');
+            p.classList.remove('active');
+          });
+          if (planoPane) {
+            planoPane.classList.add('show');
+            planoPane.classList.add('active');
+          }
+
+          // Reset tabs
+          [timelineTabBtn, commentsTabBtn].forEach(b => { if (b) b.classList.remove('active'); });
+          if (planoTabBtn) planoTabBtn.classList.add('active');
+
+          // Ensure bootstrap tab API reflects the state
+          if (window.bootstrap && bootstrap.Tab && planoTabBtn) {
+            const inst = bootstrap.Tab.getOrCreateInstance(planoTabBtn);
+            inst.show();
+          }
+
+          // Defensive: keep only one pane active at any time
+          const tabContent = document.querySelector('.tab-content');
+          const enforceSingleActive = () => {
+            const panes = document.querySelectorAll('.tab-content .tab-pane');
+            let foundActive = false;
+            panes.forEach(p => {
+              const isActive = p.classList.contains('active');
+              if (isActive && !foundActive) {
+                foundActive = true;
+                p.classList.add('show');
+                p.style.display = 'block';
+                p.classList.remove('d-none');
+              } else {
+                p.classList.remove('show');
+                p.classList.remove('active');
+                p.style.display = 'none';
+                p.classList.add('d-none');
+              }
+            });
+            if (!foundActive && planoPane) {
+              planoPane.classList.add('active');
+              planoPane.classList.add('show');
+              planoPane.style.display = 'block';
+              planoPane.classList.remove('d-none');
+            }
+          };
+          enforceSingleActive();
+          try {
+            if (tabContent) {
+              const mo = new MutationObserver(() => enforceSingleActive());
+              mo.observe(tabContent, { attributes: true, subtree: true, attributeFilter: ['class'] });
+            }
+          } catch (_) { }
+
+          // Tab click handlers to toggle d-none properly
+          try {
+            const allTabBtns = document.querySelectorAll('[data-bs-toggle="tab"]');
+            allTabBtns.forEach(btn => {
+              btn.addEventListener('shown.bs.tab', function (ev) {
+                const target = ev.target.getAttribute('data-bs-target');
+                const panes = document.querySelectorAll('.tab-content .tab-pane');
+                panes.forEach(p => {
+                  if ('#' + p.id === target) {
+                    p.classList.remove('d-none');
+                    p.classList.add('active');
+                    p.classList.add('show');
+                    p.style.display = 'block';
+                  } else {
+                    p.classList.remove('show');
+                    p.classList.remove('active');
+                    p.classList.add('d-none');
+                    p.style.display = 'none';
+                  }
+                });
+              });
+            });
+          } catch (_) { }
+        } catch (_) { }
+      });
+    } catch (_) { }
+
+    // DISABLED: Duplicate submit handler - already handled by modal_detalhes_empresa.js
+    /*
+    try {
+      document.body.addEventListener('submit', async function (e) {
+        const form = e.target;
+        const modal = form.closest('#modalDetalhesEmpresa');
+        if (!modal) return;
+        e.preventDefault();
+        e.stopPropagation();
+        try {
+          const fd = new FormData(form);
+          fd.set('redirect_to', 'modal');
+          const resp = await fetch('/atualizar_detalhes_empresa', {
+            method: 'POST',
+            headers: { 'Accept': 'application/json', 'X-CSRFToken': (window.CONFIG && window.CONFIG.csrfToken) ? window.CONFIG.csrfToken : '' },
+            body: fd,
+            credentials: 'same-origin'
+          });
+          const data = await resp.json();
+          if (data && data.ok) {
+            showToast('Detalhes atualizados', 'success');
+            // permanece no modal; opcionalmente, reativar botÃ£o salvar
+          } else {
+            showToast('Erro ao salvar detalhes', 'error');
+          }
+        } catch (err) {
+          showToast('Falha ao comunicar com o servidor', 'error');
         }
       });
+    } catch (_) { }
+    */
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        showToast('Erro ao excluir comentÃ¡rio: ' + (errorText || `Status ${response.status}`), 'error');
-        return;
-      }
+    document.body.addEventListener('click', async function (e) {
+      const targetBtn = e.target.closest('.btn-excluir-comentario');
+      if (!targetBtn) return;
 
-      const contentType = response.headers.get('content-type') || '';
-      if (contentType.includes('application/json')) {
-        const data = await response.json();
-        if (!data.ok && !data.success) {
-          showToast('Erro ao excluir comentÃ¡rio: ' + (data.error || 'Erro desconhecido'), 'error');
+      const comentarioId = targetBtn.dataset.comentarioId;
+      const confirmed = await showConfirm({
+        title: 'Excluir ComentÃ¡rio',
+        message: 'Tem certeza que deseja excluir este comentÃ¡rio? Esta aÃ§Ã£o nÃ£o pode ser desfeita.',
+        confirmText: 'Excluir',
+        cancelText: 'Cancelar',
+        type: 'danger',
+        icon: 'bi-trash-fill'
+      });
+
+      if (!confirmed) return;
+
+      try {
+        const response = await fetch(`/api/checklist/comment/${comentarioId}`, {
+          method: 'DELETE',
+          headers: {
+            'Accept': 'application/json',
+            'X-CSRFToken': CONFIG.csrfToken
+          }
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          showToast('Erro ao excluir comentÃ¡rio: ' + (errorText || `Status ${response.status}`), 'error');
           return;
         }
-      } else if (!contentType.includes('text/html')) {
-        try {
-          const text = await response.text();
-          const data = JSON.parse(text);
+
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          const data = await response.json();
           if (!data.ok && !data.success) {
             showToast('Erro ao excluir comentÃ¡rio: ' + (data.error || 'Erro desconhecido'), 'error');
             return;
           }
-        } catch (err) {
+        } else if (!contentType.includes('text/html')) {
+          try {
+            const text = await response.text();
+            const data = JSON.parse(text);
+            if (!data.ok && !data.success) {
+              showToast('Erro ao excluir comentÃ¡rio: ' + (data.error || 'Erro desconhecido'), 'error');
+              return;
+            }
+          } catch (err) {
+          }
         }
+
+        const comentarioItem = targetBtn.closest('.comentario-item');
+        const historico = comentarioItem ? comentarioItem.closest('[id^="historico-tarefa-"]') : null;
+        const itemId = historico ? historico.id.replace('historico-tarefa-', '') : null;
+
+        if (comentarioItem) comentarioItem.remove();
+        if (itemId) await carregarComentarios(itemId);
+
+        showToast('ComentÃ¡rio excluÃ­do com sucesso', 'success');
+        try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) { }
+      } catch (error) {
+        showToast('Erro ao comunicar com o servidor: ' + error.message, 'error');
       }
-
-      const comentarioItem = targetBtn.closest('.comentario-item');
-      const historico = comentarioItem ? comentarioItem.closest('[id^="historico-tarefa-"]') : null;
-      const itemId = historico ? historico.id.replace('historico-tarefa-', '') : null;
-
-      if (comentarioItem) comentarioItem.remove();
-      if (itemId) await carregarComentarios(itemId);
-
-      showToast('ComentÃ¡rio excluÃ­do com sucesso', 'success');
-      try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) { }
-    } catch (error) {
-      showToast('Erro ao comunicar com o servidor: ' + error.message, 'error');
-    }
-  });
-
-
-
-
-
-  // =========================================================================
-  // MODAL DETALHES EMPRESA - LÃ³gica movida para modal_detalhes_empresa.js
-  // Este arquivo NÃƒO deve ter lÃ³gica do modal para evitar conflitos
-  // =========================================================================
-  // }); // Removed to maintain CONFIG scope for functions below
-
-
-  function isValidURL(string) {
-    try {
-      new URL(string);
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  function validateCNPJ(cnpj) {
-    cnpj = cnpj.replace(/[^\d]+/g, '');
-    if (cnpj == '') return false;
-    if (cnpj.length != 14) return false;
-    if (/^(\d)\1+$/.test(cnpj)) return false;
-
-    let tamanho = cnpj.length - 2
-    let numeros = cnpj.substring(0, tamanho);
-    let digitos = cnpj.substring(tamanho);
-    let soma = 0;
-    let pos = tamanho - 7;
-    for (let i = tamanho; i >= 1; i--) {
-      soma += numeros.charAt(tamanho - i) * pos--;
-      if (pos < 2) pos = 9;
-    }
-    let resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
-    if (resultado != digitos.charAt(0)) return false;
-
-    tamanho = tamanho + 1;
-    numeros = cnpj.substring(0, tamanho);
-    soma = 0;
-    pos = tamanho - 7;
-    for (let i = tamanho; i >= 1; i--) {
-      soma += numeros.charAt(tamanho - i) * pos--;
-      if (pos < 2) pos = 9;
-    }
-    resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
-    if (resultado != digitos.charAt(1)) return false;
-
-    return true;
-  }
-  // =========================================================================
-
-  // =========================================================================
-  // Jira Integration Logic (Enhanced)
-  // =========================================================================
-  const jiraTabBtn = document.getElementById('jira-tab');
-  const btnNovoTicket = document.getElementById('btn-novo-ticket-jira');
-  const btnRefreshJira = document.getElementById('btn-refresh-jira');
-  const modalNovoTicket = document.getElementById('modalNovoTicketJira');
-  const formNovoTicket = document.getElementById('formNovoTicketJira');
-
-  // Elementos Consulta
-  const btnConsultaJira = document.getElementById('btn-consulta-jira');
-  const modalConsultaTicket = document.getElementById('modalConsultarTicketJira');
-  const formConsultaTicket = document.getElementById('formConsultarTicketJira');
-
-  let jiraLoaded = false;
-  let jiraIsSubmitting = false;
-
-  // --- Lógica Consulta Jira ---
-  if (btnConsultaJira) {
-    btnConsultaJira.addEventListener('click', () => {
-      const modal = new bootstrap.Modal(modalConsultaTicket);
-      modal.show();
-      setTimeout(() => {
-        const input = document.getElementById('jira-consulta-key');
-        if (input) input.focus();
-      }, 500);
     });
-  }
 
-  if (formConsultaTicket) {
-    formConsultaTicket.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const keyInput = document.getElementById('jira-consulta-key');
-      const btnSubmit = formConsultaTicket.querySelector('button[type="submit"]');
-      const spinner = document.getElementById('btn-consulta-jira-spinner');
 
-      const key = keyInput.value.trim().toUpperCase();
-      if (!key) return;
 
+
+
+    // =========================================================================
+    // MODAL DETALHES EMPRESA - LÃ³gica movida para modal_detalhes_empresa.js
+    // Este arquivo NÃƒO deve ter lÃ³gica do modal para evitar conflitos
+    // =========================================================================
+    // }); // Removed to maintain CONFIG scope for functions below
+
+
+    function isValidURL(string) {
       try {
-        btnSubmit.disabled = true;
-        if (spinner) spinner.classList.remove('d-none');
+        new URL(string);
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
 
-        const res = await fetch(`/api/implantacao/${CONFIG.implantacaoId}/jira-issues/fetch`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': CONFIG.csrfToken || ''
-          },
-          body: JSON.stringify({ key: key })
-        });
+    function validateCNPJ(cnpj) {
+      cnpj = cnpj.replace(/[^\d]+/g, '');
+      if (cnpj == '') return false;
+      if (cnpj.length != 14) return false;
+      if (/^(\d)\1+$/.test(cnpj)) return false;
 
-        const data = await res.json();
+      let tamanho = cnpj.length - 2
+      let numeros = cnpj.substring(0, tamanho);
+      let digitos = cnpj.substring(tamanho);
+      let soma = 0;
+      let pos = tamanho - 7;
+      for (let i = tamanho; i >= 1; i--) {
+        soma += numeros.charAt(tamanho - i) * pos--;
+        if (pos < 2) pos = 9;
+      }
+      let resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
+      if (resultado != digitos.charAt(0)) return false;
 
-        if (!res.ok) throw new Error(data.error || 'Erro ao buscar ticket');
+      tamanho = tamanho + 1;
+      numeros = cnpj.substring(0, tamanho);
+      soma = 0;
+      pos = tamanho - 7;
+      for (let i = tamanho; i >= 1; i--) {
+        soma += numeros.charAt(tamanho - i) * pos--;
+        if (pos < 2) pos = 9;
+      }
+      resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
+      if (resultado != digitos.charAt(1)) return false;
 
-        if (data.issue) {
-          const cardsContainer = document.getElementById('jira-cards-container');
-          const emptyEl = document.getElementById('jira-empty');
-          const listContainer = document.getElementById('jira-list-container');
+      return true;
+    }
+    // =========================================================================
 
-          if (emptyEl) emptyEl.classList.add('d-none');
-          if (listContainer) listContainer.classList.remove('d-none');
+    // =========================================================================
+    // Jira Integration Logic (Enhanced)
+    // =========================================================================
+    const jiraTabBtn = document.getElementById('jira-tab');
+    const btnNovoTicket = document.getElementById('btn-novo-ticket-jira');
+    const btnRefreshJira = document.getElementById('btn-refresh-jira');
+    const modalNovoTicket = document.getElementById('modalNovoTicketJira');
+    const formNovoTicket = document.getElementById('formNovoTicketJira');
 
-          const issue = data.issue;
-          // Badge Logic Check
-          let badgeClass = 'bg-secondary';
-          const st = (issue.status || '').toLowerCase();
-          if (st.includes('done') || st.includes('concluído') || st.includes('resolvido')) badgeClass = 'bg-success';
-          else if (st.includes('progress') || st.includes('andamento')) badgeClass = 'bg-primary';
+    // Elementos Consulta
+    const btnConsultaJira = document.getElementById('btn-consulta-jira');
+    const modalConsultaTicket = document.getElementById('modalConsultarTicketJira');
+    const formConsultaTicket = document.getElementById('formConsultarTicketJira');
 
-          const cardHtml = `
+    let jiraLoaded = false;
+    let jiraIsSubmitting = false;
+
+    // --- Lógica Consulta Jira ---
+    if (btnConsultaJira) {
+      btnConsultaJira.addEventListener('click', () => {
+        const modal = new bootstrap.Modal(modalConsultaTicket);
+        modal.show();
+        setTimeout(() => {
+          const input = document.getElementById('jira-consulta-key');
+          if (input) input.focus();
+        }, 500);
+      });
+    }
+
+    if (formConsultaTicket) {
+      formConsultaTicket.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const keyInput = document.getElementById('jira-consulta-key');
+        const btnSubmit = formConsultaTicket.querySelector('button[type="submit"]');
+        const spinner = document.getElementById('btn-consulta-jira-spinner');
+
+        const key = keyInput.value.trim().toUpperCase();
+        if (!key) return;
+
+        try {
+          btnSubmit.disabled = true;
+          if (spinner) spinner.classList.remove('d-none');
+
+          const res = await fetch(`/api/implantacao/${CONFIG.implantacaoId}/jira-issues/fetch`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': CONFIG.csrfToken || ''
+            },
+            body: JSON.stringify({ key: key })
+          });
+
+          const data = await res.json();
+
+          if (!res.ok) throw new Error(data.error || 'Erro ao buscar ticket');
+
+          if (data.issue) {
+            const cardsContainer = document.getElementById('jira-cards-container');
+            const emptyEl = document.getElementById('jira-empty');
+            const listContainer = document.getElementById('jira-list-container');
+
+            if (emptyEl) emptyEl.classList.add('d-none');
+            if (listContainer) listContainer.classList.remove('d-none');
+
+            const issue = data.issue;
+            // Badge Logic Check
+            let badgeClass = 'bg-secondary';
+            const st = (issue.status || '').toLowerCase();
+            if (st.includes('done') || st.includes('concluído') || st.includes('resolvido')) badgeClass = 'bg-success';
+            else if (st.includes('progress') || st.includes('andamento')) badgeClass = 'bg-primary';
+
+            const cardHtml = `
               <div class="col-12 col-md-6 col-lg-4 animate__animated animate__fadeIn">
                   <div class="jira-card h-100 shadow-sm" style="border: 2px solid #4F46E5 !important;" onclick="(function(link) { if (!link || link === '#' || link === 'https:/#') { showToast('Este ticket não está disponível ou foi arquivado', 'warning'); return; } const url = link.startsWith('http') ? link : 'https://' + link; try { window.open(url, '_blank'); } catch(e) { showToast('Erro ao abrir link do Jira', 'error'); } })('${issue.link}')">
                        <div class="card-body d-flex flex-column h-100">
@@ -1291,238 +1300,238 @@
                   </div>
               </div>`;
 
-          if (cardsContainer) {
-            cardsContainer.insertAdjacentHTML('afterbegin', cardHtml);
+            if (cardsContainer) {
+              cardsContainer.insertAdjacentHTML('afterbegin', cardHtml);
 
-            // Bind Unlink Event for this new card
-            const newBtn = cardsContainer.querySelector(`.unlink-jira-btn[data-key="${issue.key}"]`);
-            if (newBtn) {
-              newBtn.addEventListener('click', async (e) => {
-                e.preventDefault();
-                e.stopPropagation();
+              // Bind Unlink Event for this new card
+              const newBtn = cardsContainer.querySelector(`.unlink-jira-btn[data-key="${issue.key}"]`);
+              if (newBtn) {
+                newBtn.addEventListener('click', async (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
 
-                const key = newBtn.dataset.key;
-                const confirmed = await showConfirm({
-                  title: 'Desvincular Ticket',
-                  message: `Deseja realmente desvincular o ticket <strong>${key}</strong> desta implantação?`,
-                  confirmText: 'Desvincular',
-                  cancelText: 'Cancelar',
-                  type: 'danger',
-                  icon: 'bi-link-45deg'
-                });
-
-                if (!confirmed) return;
-
-                try {
-                  const resp = await fetch(`/api/implantacao/${CONFIG.implantacaoId}/jira-issues/${key}`, {
-                    method: 'DELETE',
-                    headers: { 'X-CSRFToken': CONFIG.csrfToken }
+                  const key = newBtn.dataset.key;
+                  const confirmed = await showConfirm({
+                    title: 'Desvincular Ticket',
+                    message: `Deseja realmente desvincular o ticket <strong>${key}</strong> desta implantação?`,
+                    confirmText: 'Desvincular',
+                    cancelText: 'Cancelar',
+                    type: 'danger',
+                    icon: 'bi-link-45deg'
                   });
 
-                  if (resp.ok) {
-                    showToast('Vínculo removido com sucesso!', 'success');
-                    loadJiraIssues(true);
-                  } else {
-                    const data = await resp.json();
-                    showToast(data.error || 'Erro ao desvincular', 'error');
+                  if (!confirmed) return;
+
+                  try {
+                    const resp = await fetch(`/api/implantacao/${CONFIG.implantacaoId}/jira-issues/${key}`, {
+                      method: 'DELETE',
+                      headers: { 'X-CSRFToken': CONFIG.csrfToken }
+                    });
+
+                    if (resp.ok) {
+                      showToast('Vínculo removido com sucesso!', 'success');
+                      loadJiraIssues(true);
+                    } else {
+                      const data = await resp.json();
+                      showToast(data.error || 'Erro ao desvincular', 'error');
+                    }
+                  } catch (err) {
+                    console.error(err);
+                    showToast('Erro de conexão ao desvincular', 'error');
                   }
-                } catch (err) {
-                  console.error(err);
-                  showToast('Erro de conexão ao desvincular', 'error');
-                }
-              });
+                });
+              }
             }
+
+            const bsModal = bootstrap.Modal.getInstance(modalConsultaTicket);
+            bsModal.hide();
+            formConsultaTicket.reset();
           }
 
-          const bsModal = bootstrap.Modal.getInstance(modalConsultaTicket);
-          bsModal.hide();
-          formConsultaTicket.reset();
+        } catch (err) {
+          console.error(err);
+          showToast(err.message, 'error');
+        } finally {
+          if (btnSubmit) btnSubmit.disabled = false;
+          if (spinner) spinner.classList.add('d-none');
+        }
+      });
+    }
+
+    // Init Jira Listeners
+    // Init Jira Listeners
+    if (jiraTabBtn) {
+      jiraTabBtn.addEventListener('shown.bs.tab', function () {
+        if (!jiraLoaded) loadJiraIssues();
+      });
+    }
+
+    if (btnNovoTicket) {
+      btnNovoTicket.addEventListener('click', () => {
+        const modal = new bootstrap.Modal(modalNovoTicket);
+
+        // Pre-fill fields if empty
+        const companyName = document.querySelector('.page-title-header h2')?.innerText?.trim() || '';
+        const systemKey = companyName.split('-')[0]?.trim(); // Ex: M1 from "M1 - ..."
+
+        // Tentar inferir projeto
+        const projectMap = {
+          'M1': 'M1', 'MJ': 'MJ', 'M5': 'M5', 'GC': 'GC',
+          'PAY': 'PAY', 'TW': 'TW', 'IN': 'IN', 'APPS': 'APPS', 'E2': 'E2'
+        };
+        const projSelect = document.getElementById('jira-projeto');
+        if (projSelect && systemKey && projectMap[systemKey]) {
+          projSelect.value = projectMap[systemKey];
         }
 
-      } catch (err) {
-        console.error(err);
-        showToast(err.message, 'error');
-      } finally {
-        if (btnSubmit) btnSubmit.disabled = false;
-        if (spinner) spinner.classList.add('d-none');
-      }
-    });
-  }
+        modal.show();
+      });
+    }
 
-  // Init Jira Listeners
-  // Init Jira Listeners
-  if (jiraTabBtn) {
-    jiraTabBtn.addEventListener('shown.bs.tab', function () {
-      if (!jiraLoaded) loadJiraIssues();
-    });
-  }
+    if (btnRefreshJira) {
+      btnRefreshJira.addEventListener('click', () => {
+        loadJiraIssues(true);
+      });
+    }
 
-  if (btnNovoTicket) {
-    btnNovoTicket.addEventListener('click', () => {
-      const modal = new bootstrap.Modal(modalNovoTicket);
+    if (formNovoTicket) {
+      formNovoTicket.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (jiraIsSubmitting) return;
 
-      // Pre-fill fields if empty
-      const companyName = document.querySelector('.page-title-header h2')?.innerText?.trim() || '';
-      const systemKey = companyName.split('-')[0]?.trim(); // Ex: M1 from "M1 - ..."
+        // O botão está fora do form (no footer do modal), vinculado pelo atributo form="..."
+        const btnSave = document.querySelector(`button[form="${formNovoTicket.id}"]`);
+        const spinner = document.getElementById('btn-save-jira-spinner');
 
-      // Tentar inferir projeto
-      const projectMap = {
-        'M1': 'M1', 'MJ': 'MJ', 'M5': 'M5', 'GC': 'GC',
-        'PAY': 'PAY', 'TW': 'TW', 'IN': 'IN', 'APPS': 'APPS', 'E2': 'E2'
-      };
-      const projSelect = document.getElementById('jira-projeto');
-      if (projSelect && systemKey && projectMap[systemKey]) {
-        projSelect.value = projectMap[systemKey];
-      }
+        try {
+          if (btnSave) btnSave.disabled = true;
+          jiraIsSubmitting = true;
+          if (spinner) spinner.classList.remove('d-none');
 
-      modal.show();
-    });
-  }
+          const formData = new FormData();
 
-  if (btnRefreshJira) {
-    btnRefreshJira.addEventListener('click', () => {
-      loadJiraIssues(true);
-    });
-  }
+          formData.append('summary', document.getElementById('jira-titulo').value);
+          formData.append('description', document.getElementById('jira-descricao').value);
+          formData.append('project', document.getElementById('jira-projeto').value);
+          formData.append('issuetype', document.getElementById('jira-tipo').value);
+          formData.append('priority', document.getElementById('jira-sla').value);
 
-  if (formNovoTicket) {
-    formNovoTicket.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      if (jiraIsSubmitting) return;
+          formData.append('custom_contact', document.getElementById('jira-contatos').value);
+          formData.append('custom_origin', document.getElementById('jira-origem').value);
+          formData.append('custom_enotas_link', document.getElementById('jira-link-enotas').value);
 
-      // O botão está fora do form (no footer do modal), vinculado pelo atributo form="..."
-      const btnSave = document.querySelector(`button[form="${formNovoTicket.id}"]`);
-      const spinner = document.getElementById('btn-save-jira-spinner');
+          // Validação extra (Project is mandatory)
+          if (!formData.get('project')) {
+            throw new Error("Selecione um Projeto Jira.");
+          }
+
+          // Handle Files
+          const fileInput = document.getElementById('jira-arquivos');
+          if (fileInput && fileInput.files && fileInput.files.length > 0) {
+            Array.from(fileInput.files).forEach(file => {
+              formData.append('files', file);
+            });
+          }
+
+          const res = await fetch(`/api/implantacao/${CONFIG.implantacaoId}/jira-issues`, {
+            method: 'POST',
+            headers: {
+              'X-CSRFToken': CONFIG.csrfToken
+            },
+            body: formData
+          });
+
+          const data = await res.json();
+
+          if (!res.ok) throw new Error(data.error || 'Erro ao criar ticket');
+
+          // Sucesso
+          const modal = bootstrap.Modal.getInstance(modalNovoTicket);
+          modal.hide();
+          formNovoTicket.reset();
+
+          // Toast ou Alerta Sucesso
+          showToast(`Ticket ${data.key} criado com sucesso!`, 'success');
+
+          // Recarrega lista
+          loadJiraIssues(true);
+
+        } catch (err) {
+          console.error(err);
+          showToast(err.message, 'error');
+        } finally {
+          jiraIsSubmitting = false;
+          if (btnSave) btnSave.disabled = false;
+          if (spinner) spinner.classList.add('d-none');
+        }
+      });
+    }
+
+    async function loadJiraIssues(force = false) {
+      const loadingEl = document.getElementById('jira-loading');
+      const listContainer = document.getElementById('jira-list-container');
+      const cardsContainer = document.getElementById('jira-cards-container');
+      const errorEl = document.getElementById('jira-error');
+      const emptyEl = document.getElementById('jira-empty');
+
+      if (!loadingEl) return;
+
+      loadingEl.classList.remove('d-none');
+      listContainer.classList.add('d-none');
+      errorEl.classList.add('d-none');
+      emptyEl.classList.add('d-none');
 
       try {
-        if (btnSave) btnSave.disabled = true;
-        jiraIsSubmitting = true;
-        if (spinner) spinner.classList.remove('d-none');
+        // Add timestamp to prevent caching if forced
+        const url = `/api/implantacao/${CONFIG.implantacaoId}/jira-issues` + (force ? `?t=${Date.now()}` : '');
+        const resp = await fetch(url);
+        const data = await resp.json();
 
-        const formData = new FormData();
+        loadingEl.classList.add('d-none');
 
-        formData.append('summary', document.getElementById('jira-titulo').value);
-        formData.append('description', document.getElementById('jira-descricao').value);
-        formData.append('project', document.getElementById('jira-projeto').value);
-        formData.append('issuetype', document.getElementById('jira-tipo').value);
-        formData.append('priority', document.getElementById('jira-sla').value);
-
-        formData.append('custom_contact', document.getElementById('jira-contatos').value);
-        formData.append('custom_origin', document.getElementById('jira-origem').value);
-        formData.append('custom_enotas_link', document.getElementById('jira-link-enotas').value);
-
-        // Validação extra (Project is mandatory)
-        if (!formData.get('project')) {
-          throw new Error("Selecione um Projeto Jira.");
+        if (data.error) {
+          if (data.error.includes('não configurado') || data.error.includes('Jira credentials')) {
+            errorEl.innerHTML = `<strong>Integração não ativa.</strong> Configure as variáveis de ambiente JIRA_URL e Token.`;
+          } else {
+            errorEl.innerText = `Erro: ${data.error}`;
+          }
+          errorEl.classList.remove('d-none');
+          return;
         }
 
-        // Handle Files
-        const fileInput = document.getElementById('jira-arquivos');
-        if (fileInput && fileInput.files && fileInput.files.length > 0) {
-          Array.from(fileInput.files).forEach(file => {
-            formData.append('files', file);
-          });
+        const issues = data.issues || [];
+
+        if (issues.length === 0) {
+          emptyEl.classList.remove('d-none');
+          listContainer.classList.add('d-none');
+        } else {
+          renderJiraCards(issues, cardsContainer);
+          listContainer.classList.remove('d-none');
         }
-
-        const res = await fetch(`/api/implantacao/${CONFIG.implantacaoId}/jira-issues`, {
-          method: 'POST',
-          headers: {
-            'X-CSRFToken': CONFIG.csrfToken
-          },
-          body: formData
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) throw new Error(data.error || 'Erro ao criar ticket');
-
-        // Sucesso
-        const modal = bootstrap.Modal.getInstance(modalNovoTicket);
-        modal.hide();
-        formNovoTicket.reset();
-
-        // Toast ou Alerta Sucesso
-        showToast(`Ticket ${data.key} criado com sucesso!`, 'success');
-
-        // Recarrega lista
-        loadJiraIssues(true);
+        jiraLoaded = true;
 
       } catch (err) {
-        console.error(err);
-        showToast(err.message, 'error');
-      } finally {
-        jiraIsSubmitting = false;
-        if (btnSave) btnSave.disabled = false;
-        if (spinner) spinner.classList.add('d-none');
-      }
-    });
-  }
-
-  async function loadJiraIssues(force = false) {
-    const loadingEl = document.getElementById('jira-loading');
-    const listContainer = document.getElementById('jira-list-container');
-    const cardsContainer = document.getElementById('jira-cards-container');
-    const errorEl = document.getElementById('jira-error');
-    const emptyEl = document.getElementById('jira-empty');
-
-    if (!loadingEl) return;
-
-    loadingEl.classList.remove('d-none');
-    listContainer.classList.add('d-none');
-    errorEl.classList.add('d-none');
-    emptyEl.classList.add('d-none');
-
-    try {
-      // Add timestamp to prevent caching if forced
-      const url = `/api/implantacao/${CONFIG.implantacaoId}/jira-issues` + (force ? `?t=${Date.now()}` : '');
-      const resp = await fetch(url);
-      const data = await resp.json();
-
-      loadingEl.classList.add('d-none');
-
-      if (data.error) {
-        if (data.error.includes('não configurado') || data.error.includes('Jira credentials')) {
-          errorEl.innerHTML = `<strong>Integração não ativa.</strong> Configure as variáveis de ambiente JIRA_URL e Token.`;
-        } else {
-          errorEl.innerText = `Erro: ${data.error}`;
-        }
+        loadingEl.classList.add('d-none');
+        errorEl.innerHTML = `<strong>Erro de conexão:</strong> <br/>${err.message}`;
         errorEl.classList.remove('d-none');
-        return;
+        console.error(err);
       }
-
-      const issues = data.issues || [];
-
-      if (issues.length === 0) {
-        emptyEl.classList.remove('d-none');
-        listContainer.classList.add('d-none');
-      } else {
-        renderJiraCards(issues, cardsContainer);
-        listContainer.classList.remove('d-none');
-      }
-      jiraLoaded = true;
-
-    } catch (err) {
-      loadingEl.classList.add('d-none');
-      errorEl.innerHTML = `<strong>Erro de conexão:</strong> <br/>${err.message}`;
-      errorEl.classList.remove('d-none');
-      console.error(err);
     }
-  }
 
-  function renderJiraCards(issues, container) {
-    if (!container) return;
+    function renderJiraCards(issues, container) {
+      if (!container) return;
 
-    container.innerHTML = issues.map(issue => {
-      // Status Color Mapping (Simplificado)
-      // Blue-gray vem do backend default, mas vamos normalizar se possível
-      // Vamos usar classes do Bootstrap para badges
-      let badgeClass = 'bg-secondary';
-      const st = (issue.status || '').toLowerCase();
-      if (st.includes('done') || st.includes('concluído') || st.includes('resolvido')) badgeClass = 'bg-success';
-      else if (st.includes('progress') || st.includes('andamento')) badgeClass = 'bg-primary';
-      else if (st.includes('todo') || st.includes('fazer') || st.includes('aberto')) badgeClass = 'bg-secondary';
+      container.innerHTML = issues.map(issue => {
+        // Status Color Mapping (Simplificado)
+        // Blue-gray vem do backend default, mas vamos normalizar se possível
+        // Vamos usar classes do Bootstrap para badges
+        let badgeClass = 'bg-secondary';
+        const st = (issue.status || '').toLowerCase();
+        if (st.includes('done') || st.includes('concluído') || st.includes('resolvido')) badgeClass = 'bg-success';
+        else if (st.includes('progress') || st.includes('andamento')) badgeClass = 'bg-primary';
+        else if (st.includes('todo') || st.includes('fazer') || st.includes('aberto')) badgeClass = 'bg-secondary';
 
-      return `
+        return `
         <div class="col-12 col-md-6 col-lg-4 animate__animated animate__fadeIn">
             <div class="jira-card h-100 position-relative" style="cursor: pointer;" onclick="(function(link) { if (!link || link === '#' || link === 'https:/#') { showToast('Este ticket não está disponível ou foi arquivado', 'warning'); return; } const url = link.startsWith('http') ? link : 'https://' + link; try { window.open(url, '_blank'); } catch(e) { showToast('Erro ao abrir link do Jira', 'error'); } })('${issue.link}')">
                 <div class="card-body d-flex flex-column h-100">
@@ -1558,51 +1567,51 @@
             </div>
         </div>
         `;
-    }).join('');
+      }).join('');
 
-    // Bind Unlink Events
-    container.querySelectorAll('.unlink-jira-btn').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        e.preventDefault();
-        e.stopPropagation(); // Não abrir o link do card
+      // Bind Unlink Events
+      container.querySelectorAll('.unlink-jira-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          e.stopPropagation(); // Não abrir o link do card
 
-        const key = btn.dataset.key;
+          const key = btn.dataset.key;
 
-        const confirmed = await showConfirm({
-          title: 'Desvincular Ticket',
-          message: `Deseja realmente desvincular o ticket <strong>${key}</strong> desta implantação?`,
-          confirmText: 'Desvincular',
-          cancelText: 'Cancelar',
-          type: 'danger',
-          icon: 'bi-link-45deg'
-        });
-
-        if (!confirmed) return;
-
-        try {
-          const resp = await fetch(`/api/implantacao/${CONFIG.implantacaoId}/jira-issues/${key}`, {
-            method: 'DELETE',
-            headers: {
-              'X-CSRFToken': CONFIG.csrfToken
-            }
+          const confirmed = await showConfirm({
+            title: 'Desvincular Ticket',
+            message: `Deseja realmente desvincular o ticket <strong>${key}</strong> desta implantação?`,
+            confirmText: 'Desvincular',
+            cancelText: 'Cancelar',
+            type: 'danger',
+            icon: 'bi-link-45deg'
           });
 
-          if (resp.ok) {
-            showToast('Vínculo removido com sucesso!', 'success');
-            loadJiraIssues(true); // Recarrega a lista
-          } else {
-            const data = await resp.json();
-            showToast(data.error || 'Erro ao desvincular', 'error');
-          }
-        } catch (err) {
-          console.error(err);
-          showToast('Erro de conexão ao desvincular', 'error');
-        }
-      });
-    });
-  }
-});
+          if (!confirmed) return;
 
-}) ();
+          try {
+            const resp = await fetch(`/api/implantacao/${CONFIG.implantacaoId}/jira-issues/${key}`, {
+              method: 'DELETE',
+              headers: {
+                'X-CSRFToken': CONFIG.csrfToken
+              }
+            });
+
+            if (resp.ok) {
+              showToast('Vínculo removido com sucesso!', 'success');
+              loadJiraIssues(true); // Recarrega a lista
+            } else {
+              const data = await resp.json();
+              showToast(data.error || 'Erro ao desvincular', 'error');
+            }
+          } catch (err) {
+            console.error(err);
+            showToast('Erro de conexão ao desvincular', 'error');
+          }
+        });
+      });
+    }
+  });
+
+})();
 
 

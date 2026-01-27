@@ -14,6 +14,7 @@ Estrutura:
 # Importações de comments.py
 from .comments import (
     add_comment_to_item,
+    contar_comentarios_implantacao,
     excluir_comentario_service,
     listar_comentarios_implantacao,
     listar_comentarios_item,
@@ -56,6 +57,7 @@ __all__ = [
     "atualizar_prazo_item",
     "move_item",
     "add_comment_to_item",
+    "contar_comentarios_implantacao",
     "listar_comentarios_implantacao",
     "listar_comentarios_item",
     "obter_comentario_para_email",

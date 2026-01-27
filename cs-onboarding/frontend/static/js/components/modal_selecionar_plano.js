@@ -393,6 +393,7 @@
         }
 
         async function aplicarPlano(planoId, planoNome, btnElement) {
+            // Primeira confirmação: deseja aplicar o plano?
             let confirmed = false;
 
             if (window.showConfirm) {
@@ -414,28 +415,61 @@
 
             const originalText = btnElement.innerHTML;
             btnElement.disabled = true;
-            btnElement.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Aplicando...';
+            btnElement.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Verificando...';
 
-            window.apiFetch(`/planos/implantacao/${implantacaoId}/aplicar`, {
-                method: 'POST',
-                body: JSON.stringify({ plano_id: planoId })
-            })
-                .then(data => {
-                    if (data.success) {
-                        if (window.showToast) window.showToast('Plano aplicado com sucesso!', 'success');
-                        else alert('Plano aplicado com sucesso!'); // Fallback caso showToast falhe (raro)
+            try {
+                // Verificar se há comentários existentes
+                const checkResponse = await window.apiFetch(`/api/checklist/implantacao/${implantacaoId}/comments/count`);
 
-                        window.location.reload();
-                    } else {
-                        // Erro de lógica (ex: validação) - apiFetch lança exceção para http errors, mas success=false pode ser 200 OK
-                        throw new Error(data.error || 'Erro desconhecido ao aplicar plano');
-                    }
-                })
-                .catch(error => {
-                    // apiFetch já exibe toast de erro
-                    btnElement.disabled = false;
+                let manterComentarios = false;
+
+                if (checkResponse.ok && checkResponse.has_comments) {
+                    // Há comentários - perguntar ao usuário o que fazer
                     btnElement.innerHTML = originalText;
+                    btnElement.disabled = false;
+
+                    const manterConfirmado = await window.showConfirm({
+                        title: 'Comentários Existentes',
+                        message: `Esta implantação possui ${checkResponse.count} comentário(s) vinculado(s) às tarefas atuais.\n\nDeseja preservar esses comentários? Eles continuarão visíveis na aba "Comentários", mas não estarão mais associados a tarefas específicas.`,
+                        confirmText: 'Manter Comentários',
+                        cancelText: 'Excluir Comentários',
+                        type: 'info'
+                    });
+
+                    manterComentarios = manterConfirmado;
+
+                    // Desabilitar botão novamente para a operação de aplicação
+                    btnElement.disabled = true;
+                    btnElement.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Aplicando...';
+                } else {
+                    btnElement.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Aplicando...';
+                }
+
+                // Aplicar o plano com a escolha do usuário
+                const response = await window.apiFetch(`/planos/implantacao/${implantacaoId}/aplicar`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        plano_id: planoId,
+                        manter_comentarios: manterComentarios
+                    })
                 });
+
+                if (response.success) {
+                    if (window.showToast) {
+                        const msg = manterComentarios
+                            ? 'Plano aplicado com sucesso! Comentários preservados.'
+                            : 'Plano aplicado com sucesso!';
+                        window.showToast(msg, 'success');
+                    }
+                    window.location.reload();
+                } else {
+                    throw new Error(response.error || 'Erro desconhecido ao aplicar plano');
+                }
+            } catch (error) {
+                btnElement.disabled = false;
+                btnElement.innerHTML = originalText;
+                // apiFetch já exibe toast de erro
+            }
         }
 
         function escapeHtml(text) { return window.escapeHtml(text); }

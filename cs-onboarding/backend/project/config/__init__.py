@@ -1,6 +1,7 @@
 from .cache_config import (
     cache,
     clear_all_cache,
+    clear_filtered_dashboard_cache,
     clear_implantacao_cache,
     clear_user_cache,
     init_cache,

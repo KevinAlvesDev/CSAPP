@@ -68,7 +68,7 @@ def add_comment_to_item(
             implantacao_id = item[1]
             item_title = item[2]
 
-        # 2. Garantir coluna checklist_item_id e tag em comentarios_h (Self-healing)
+        # 2. Garantir coluna checklist_item_id, tag e implantacao_id em comentarios_h (Self-healing)
         if db_type == "postgres":
             try:
                 cursor.execute(
@@ -88,6 +88,12 @@ def add_comment_to_item(
                 )
                 if not cursor.fetchone():
                     cursor.execute("ALTER TABLE comentarios_h ADD COLUMN IF NOT EXISTS tag VARCHAR(50)")
+                # Garantir coluna implantacao_id (para permitir busca de comentários órfãos)
+                cursor.execute(
+                    "SELECT column_name FROM information_schema.columns WHERE table_name='comentarios_h' AND column_name='implantacao_id'"
+                )
+                if not cursor.fetchone():
+                    cursor.execute("ALTER TABLE comentarios_h ADD COLUMN IF NOT EXISTS implantacao_id INTEGER")
             except Exception:
                 pass
         elif db_type == "sqlite":
@@ -98,6 +104,8 @@ def add_comment_to_item(
                     cursor.execute("ALTER TABLE comentarios_h ADD COLUMN checklist_item_id INTEGER")
                 if "tag" not in cols:
                     cursor.execute("ALTER TABLE comentarios_h ADD COLUMN tag TEXT")
+                if "implantacao_id" not in cols:
+                    cursor.execute("ALTER TABLE comentarios_h ADD COLUMN implantacao_id INTEGER")
             except Exception:
                 pass
 
@@ -107,15 +115,15 @@ def add_comment_to_item(
         now = datetime.now(tz_brasilia)
         noshow_val = noshow if db_type == "postgres" else (1 if noshow else 0)
         insert_sql = """
-            INSERT INTO comentarios_h (checklist_item_id, usuario_cs, texto, data_criacao, visibilidade, noshow, tag, imagem_url)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO comentarios_h (checklist_item_id, implantacao_id, usuario_cs, texto, data_criacao, visibilidade, noshow, tag, imagem_url)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         if db_type == "postgres":
             insert_sql += " RETURNING id"
 
         if db_type == "sqlite":
             insert_sql = insert_sql.replace("%s", "?")
-        cursor.execute(insert_sql, (item_id, usuario_email, text, now, visibilidade, noshow_val, tag, imagem_url))
+        cursor.execute(insert_sql, (item_id, implantacao_id, usuario_email, text, now, visibilidade, noshow_val, tag, imagem_url))
 
         if db_type == "postgres":
             res_id = cursor.fetchone()
@@ -163,31 +171,34 @@ def add_comment_to_item(
 def listar_comentarios_implantacao(impl_id, page=1, per_page=20):
     """
     Lista todos os comentários de uma implantação com paginação.
+    Inclui comentários órfãos (onde checklist_item_id é NULL mas implantacao_id é válido).
     """
     offset = (page - 1) * per_page
 
+    # Count inclui comentários via checklist_items e comentários órfãos via implantacao_id direto
     count_query = """
         SELECT COUNT(*) as total
         FROM comentarios_h c
-        JOIN checklist_items ci ON c.checklist_item_id = ci.id
-        WHERE ci.implantacao_id = %s
+        LEFT JOIN checklist_items ci ON c.checklist_item_id = ci.id
+        WHERE ci.implantacao_id = %s OR c.implantacao_id = %s
     """
-    total_res = query_db(count_query, (impl_id,), one=True)
+    total_res = query_db(count_query, (impl_id, impl_id), one=True)
     total = total_res["total"] if total_res else 0
 
+    # Buscar comentários via checklist_items ou via implantacao_id direto (para órfãos)
     comments_query = """
         SELECT
         c.id, c.texto, c.usuario_cs, c.data_criacao, c.visibilidade, c.noshow, c.imagem_url, c.tag,
         ci.id as item_id, ci.title as item_title,
         COALESCE(p.nome, c.usuario_cs) as usuario_nome
         FROM comentarios_h c
-        JOIN checklist_items ci ON c.checklist_item_id = ci.id
+        LEFT JOIN checklist_items ci ON c.checklist_item_id = ci.id
         LEFT JOIN perfil_usuario p ON c.usuario_cs = p.usuario
-        WHERE ci.implantacao_id = %s
+        WHERE ci.implantacao_id = %s OR c.implantacao_id = %s
         ORDER BY c.data_criacao DESC
         LIMIT %s OFFSET %s
     """
-    comments = query_db(comments_query, (impl_id, per_page, offset))
+    comments = query_db(comments_query, (impl_id, impl_id, per_page, offset))
 
     formatted_comments = []
     for c in comments:
@@ -200,9 +211,30 @@ def listar_comentarios_implantacao(impl_id, page=1, per_page=20):
             c_dict["created_at_iso"] = raw_date  # Assuming it's already a string if not datetime
 
         c_dict["data_criacao"] = _format_datetime(raw_date)
+        
+        # Marcar comentários órfãos (sem checklist_item associado)
+        if not c_dict.get("item_id"):
+            c_dict["is_orphan"] = True
+            c_dict["item_title"] = "(Tarefa removida)"
+        
         formatted_comments.append(c_dict)
 
     return {"comments": formatted_comments, "total": total, "page": page, "per_page": per_page}
+
+
+def contar_comentarios_implantacao(impl_id):
+    """
+    Conta o número de comentários associados a uma implantação.
+    Conta comentários vinculados via checklist_items (que serão desassociados ao trocar plano).
+    """
+    count_query = """
+        SELECT COUNT(*) as total
+        FROM comentarios_h c
+        JOIN checklist_items ci ON c.checklist_item_id = ci.id
+        WHERE ci.implantacao_id = %s
+    """
+    result = query_db(count_query, (impl_id,), one=True)
+    return result["total"] if result else 0
 
 
 def listar_comentarios_item(item_id):

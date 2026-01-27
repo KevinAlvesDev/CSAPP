@@ -54,6 +54,16 @@ def criar_plano_sucesso(
                     cursor.execute("ALTER TABLE planos_sucesso ADD COLUMN dias_duracao INTEGER")
                     conn.commit()
                     current_app.logger.info("Coluna dias_duracao adicionada à tabela planos_sucesso")
+
+                if "permite_excluir_tarefas" not in colunas_existentes:
+                    cursor.execute("ALTER TABLE planos_sucesso ADD COLUMN permite_excluir_tarefas BOOLEAN DEFAULT 0")
+                    conn.commit()
+                    current_app.logger.info("Coluna permite_excluir_tarefas adicionada à tabela planos_sucesso")
+
+                if "contexto" not in colunas_existentes:
+                    cursor.execute("ALTER TABLE planos_sucesso ADD COLUMN contexto TEXT DEFAULT 'onboarding'")
+                    conn.commit()
+                    current_app.logger.info("Coluna contexto adicionada à tabela planos_sucesso")
             except Exception as mig_error:
                 current_app.logger.warning(f"Erro ao verificar/migrar colunas de planos_sucesso: {mig_error}")
 
@@ -141,6 +151,16 @@ def criar_plano_sucesso_checklist(
                     cursor.execute("ALTER TABLE planos_sucesso ADD COLUMN dias_duracao INTEGER")
                     conn.commit()
                     current_app.logger.info("Coluna dias_duracao adicionada à tabela planos_sucesso")
+
+                if "permite_excluir_tarefas" not in colunas_existentes:
+                    cursor.execute("ALTER TABLE planos_sucesso ADD COLUMN permite_excluir_tarefas BOOLEAN DEFAULT 0")
+                    conn.commit()
+                    current_app.logger.info("Coluna permite_excluir_tarefas adicionada à tabela planos_sucesso")
+
+                if "contexto" not in colunas_existentes:
+                    cursor.execute("ALTER TABLE planos_sucesso ADD COLUMN contexto TEXT DEFAULT 'onboarding'")
+                    conn.commit()
+                    current_app.logger.info("Coluna contexto adicionada à tabela planos_sucesso")
             except Exception as mig_error:
                 current_app.logger.warning(f"Erro ao verificar/migrar colunas de planos_sucesso: {mig_error}")
 
@@ -218,6 +238,16 @@ def atualizar_plano_sucesso(plano_id: int, dados: Dict) -> bool:
                     cursor.execute("ALTER TABLE planos_sucesso ADD COLUMN dias_duracao INTEGER")
                     conn.commit()
                     current_app.logger.info("Coluna dias_duracao adicionada à tabela planos_sucesso")
+
+                if "permite_excluir_tarefas" not in colunas_existentes:
+                    cursor.execute("ALTER TABLE planos_sucesso ADD COLUMN permite_excluir_tarefas BOOLEAN DEFAULT 0")
+                    conn.commit()
+                    current_app.logger.info("Coluna permite_excluir_tarefas adicionada à tabela planos_sucesso")
+
+                if "contexto" not in colunas_existentes:
+                    cursor.execute("ALTER TABLE planos_sucesso ADD COLUMN contexto TEXT DEFAULT 'onboarding'")
+                    conn.commit()
+                    current_app.logger.info("Coluna contexto adicionada à tabela planos_sucesso")
             except Exception as mig_error:
                 current_app.logger.warning(f"Erro ao verificar/migrar colunas de planos_sucesso: {mig_error}")
 
@@ -243,6 +273,10 @@ def atualizar_plano_sucesso(plano_id: int, dados: Dict) -> bool:
     if "permite_excluir_tarefas" in dados:
         campos_atualizaveis.append("permite_excluir_tarefas = %s")
         valores.append(bool(dados["permite_excluir_tarefas"]))
+
+    if "contexto" in dados:
+        campos_atualizaveis.append("contexto = %s")
+        valores.append(dados["contexto"])
 
     if not campos_atualizaveis:
         return True

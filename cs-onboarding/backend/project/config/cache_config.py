@@ -42,19 +42,79 @@ def clear_user_cache(user_email):
     """
     Limpa o cache relacionado a um usuário específico.
     Útil quando dados do usuário são atualizados.
+    
+    IMPORTANTE: Também limpa o cache de gestores que podem estar
+    filtrando por este usuário no dashboard.
     """
     if cache:
-        cache.delete(f"user_profile_{user_email}")  # Cache de perfil
+        cache.delete(f"user_profile_{user_email}")
         cache.delete(f"user_implantacoes_{user_email}")
         
         # Limpar variações de dashboard_data (com e sem contexto)
         contexts = ["onboarding", "grandes_contas", "ongoing", "all"]
+        pages = [None, 1, 2, 3, 4, 5]  # Páginas comuns
+        per_pages = [None, 25, 50, 100]  # Tamanhos de página comuns
+        
         for ctx in contexts:
-            cache.delete(f"dashboard_data_{user_email}_all_{ctx}_pNone_ppNone")
-            # Caso o usuário esteja filtrando outro CS (gestores)
-            # Nota: Isso lida apenas com o filtro 'all', mas é o caso mais comum.
-            # Limpar o prefixo seria melhor se o backend suportasse delete_matched
-            cache.delete(f"dashboard_data_{user_email}") # Legado
+            for page in pages:
+                for per_page in per_pages:
+                    # Cache do próprio usuário (sem filtro de CS)
+                    cache.delete(f"dashboard_data_{user_email}_all_{ctx}_p{page}_pp{per_page}")
+        
+        # Limpar cache de gestores que podem estar filtrando por este CS
+        clear_filtered_dashboard_cache(user_email)
+
+
+def clear_filtered_dashboard_cache(cs_email):
+    """
+    Limpa o cache de dashboard de gestores que estão filtrando por um CS específico.
+    
+    Quando os dados de um CS são alterados, precisamos invalidar não apenas
+    o cache dele, mas também o cache de qualquer gestor que esteja
+    visualizando o dashboard filtrado por aquele CS.
+    
+    Args:
+        cs_email: Email do CS cujos dados foram alterados
+    """
+    if not cache:
+        return
+    
+    # Buscar todos os gestores (Admin, Gerente, Coordenador)
+    try:
+        from ..db import query_db
+        from ..constants import PERFIS_COM_GESTAO
+        
+        # Query para buscar todos os gestores
+        placeholders = ",".join(["%s"] * len(PERFIS_COM_GESTAO))
+        managers = query_db(
+            f"SELECT usuario FROM perfil_usuario WHERE perfil_acesso IN ({placeholders})",
+            tuple(PERFIS_COM_GESTAO)
+        )
+        
+        if not managers:
+            return
+        
+        # Contextos e paginações a limpar
+        contexts = ["onboarding", "grandes_contas", "ongoing", "all"]
+        pages = [None, 1, 2, 3, 4, 5]
+        per_pages = [None, 25, 50, 100]
+        
+        # Para cada gestor, limpar o cache do dashboard filtrado por este CS
+        for manager in managers:
+            manager_email = manager.get("usuario") if isinstance(manager, dict) else manager[0]
+            if not manager_email:
+                continue
+                
+            for ctx in contexts:
+                for page in pages:
+                    for per_page in per_pages:
+                        # Cache key: dashboard_data_{gestor}_{cs_filtrado}_{contexto}_p{page}_pp{per_page}
+                        cache.delete(f"dashboard_data_{manager_email}_{cs_email}_{ctx}_p{page}_pp{per_page}")
+                        
+    except Exception as e:
+        # Log mas não falha - cache é otimização, não pode quebrar a aplicação
+        import logging
+        logging.getLogger(__name__).warning(f"Erro ao limpar cache de gestores: {e}")
 
 
 def clear_implantacao_cache(implantacao_id):

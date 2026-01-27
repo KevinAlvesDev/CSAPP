@@ -400,11 +400,17 @@ def aplicar_plano_implantacao(implantacao_id):
     try:
         data = request.get_json() if request.is_json else request.form.to_dict()
         plano_id = data.get("plano_id")
+        manter_comentarios = data.get("manter_comentarios", False)
 
         if not plano_id:
             raise ValidationError("ID do plano é obrigatório")
 
         plano_id = int(plano_id)
+        # Converter para boolean de forma segura (aceita True, "true", 1, etc.)
+        if isinstance(manter_comentarios, str):
+            manter_comentarios = manter_comentarios.lower() in ("true", "1", "yes", "sim")
+        else:
+            manter_comentarios = bool(manter_comentarios)
 
         user = get_current_user()
         usuario = user.get("usuario") if user else "sistema"
@@ -418,7 +424,11 @@ def aplicar_plano_implantacao(implantacao_id):
                 pass
 
         planos_sucesso_service.aplicar_plano_a_implantacao_checklist(
-            implantacao_id=implantacao_id, plano_id=plano_id, usuario=usuario, responsavel_nome=responsavel_nome
+            implantacao_id=implantacao_id, 
+            plano_id=plano_id, 
+            usuario=usuario, 
+            responsavel_nome=responsavel_nome,
+            manter_comentarios=manter_comentarios
         )
 
         if request.is_json:
