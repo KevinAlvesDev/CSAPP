@@ -106,8 +106,9 @@ request.args.get('context') == 'grandes_contas') or (request.blueprint == 'perfi
             href="{{ url_for(ver_impl_blueprint + '.ver_implantacao', impl_id=implantacao.id) }}"><i
               class="bi bi-kanban me-2"></i><span class="nav-link-text"> Detalhes da Implantação</span></a></li>
         {% endif %}
-        <li class="nav-item"><a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#modalPerfil"><i
-              class="bi bi-person-circle me-2"></i><span class="nav-link-text"> Perfil</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if request.endpoint == 'profile.profile' %}active{% endif %}"
+            href="{{ url_for('profile.profile') }}"><i class="bi bi-person-circle me-2"></i><span class="nav-link-text">
+              Perfil</span></a></li>
 
         {# Acesso restrito: Coordenador, Gerente e Administrador #}
         {% if g.perfil and g.perfil.perfil_acesso in g.PERFIS_COM_GESTAO %}
@@ -120,8 +121,9 @@ request.args.get('context') == 'grandes_contas') or (request.blueprint == 'perfi
             href="{{ url_for('planos.listar_planos', context=current_context) }}"><i
               class="bi bi-diagram-3 me-2"></i><span class="nav-link-text"> Planos de Sucesso</span></a></li>
 
-        <li class="nav-item"><a class="nav-link" href="#" data-bs-toggle="modal"
-            data-bs-target="#modalGerenciarUsuarios"><i class="bi bi-people-fill me-2"></i><span class="nav-link-text">
+        <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.manage_users' %}active{% endif %}"
+            href="{{ url_for('management.manage_users') }}"><i class="bi bi-people-fill me-2"></i><span
+              class="nav-link-text">
               Usuários</span></a></li>
         <li class="nav-item"><a
             class="nav-link {% if request.endpoint and request.endpoint.startswith('perfis.') %}active{% endif %}"
@@ -188,8 +190,6 @@ request.args.get('context') == 'grandes_contas') or (request.blueprint == 'perfi
 
   {% include 'modals/_detalhes_empresa.html' %}
   {% include 'modals/_gamificacao_regras.html' %}
-  {% include 'modals/_gerenciar_usuarios.html' %}
-  {% include 'modals/_perfil.html' %}
 
   <!-- Toast Container -->
   <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;" id="toastContainer">

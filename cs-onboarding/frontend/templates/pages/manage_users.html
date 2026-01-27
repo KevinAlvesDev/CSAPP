@@ -5,7 +5,7 @@
 {% block content %}
 <div class="container-fluid p-0">
     <header class="header-bg p-3 d-flex align-items-center position-relative rounded-3">
-        <h1 class="main-title mb-0 fs-4 w-100 text-center">CS ONBOARDING Gerenciar Usuários</h1>
+        <h1 class="main-title mb-0 fs-4 w-100 text-center">Gerenciar Usuários</h1>
         <div class="d-flex align-items-center position-absolute end-0 top-50 translate-middle-y">
             <a href="{{ url_for('onboarding.dashboard') }}" class="btn btn-sm btn-outline-secondary">
                 <i class="bi bi-house me-1"></i> Dashboard
@@ -15,92 +15,94 @@
     <main class="p-4">
 
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
         {% for category, message in messages %}
         <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
             {{ message }}
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
         {% endfor %}
-    {% endif %}
-    {% endwith %}
+        {% endif %}
+        {% endwith %}
 
-    <div class="table-responsive">
-        <table class="table table-hover align-middle">
-            <thead>
-                <tr class="table-light">
-                    <th>Usuário (E-mail)</th>
-                    <th>Nome / Cargo (Função)</th>
-                    <th>Perfil de Acesso Atual</th>
-                    <th>Implantações</th>
-                    <th>Alterar Perfil de Acesso</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for user in users %}
-                <tr id="user-row-{{ loop.index }}" class="
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr class="table-light">
+                        <th>Usuário (E-mail)</th>
+                        <th>Nome / Cargo (Função)</th>
+                        <th>Perfil de Acesso Atual</th>
+                        <th>Implantações</th>
+                        <th>Alterar Perfil de Acesso</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr id="user-row-{{ loop.index }}" class="
                     {% if user.perfil_acesso == 'Administrador' %}table-danger
                     {% elif user.perfil_acesso == 'Gerente' or user.perfil_acesso == 'Coordenador' %}table-warning
                     {% elif user.perfil_acesso == None %}table-info
                     {% endif %}
                 ">
-                    <td>
-                        {{ user.usuario }}
-                        {% if user.usuario == g.user_email %}
-                        <span class="badge bg-success ms-1">Você</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {{ user.nome or 'N/A' }}
-                        {% if user.cargo %}
-                        <small class="text-muted d-block">({{ user.cargo }})</small>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <span class="badge bg-secondary">
-                        {{ user.perfil_acesso or 'Nenhum' }}
-                        </span>
-                    </td>
-                    <td>
-                        <span class="badge bg-primary me-2" title="Implantações em Andamento">
-                            <i class="fas fa-hourglass-half"></i> {{ user.impl_andamento_total or 0 }}
-                        </span>
-                        <span class="badge bg-success" title="Implantações Finalizadas">
-                            <i class="fas fa-check-circle"></i> {{ user.impl_finalizadas or 0 }}
-                        </span>
-                    </td>
-                    <td>
-                        <form method="POST" action="{{ url_for('management.update_user_perfil') }}" class="d-flex" 
-                              onsubmit="return confirm('Tem certeza que deseja alterar o Perfil de Acesso de {{ user.usuario }}?');">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <input type="hidden" name="usuario_email" value="{{ user.usuario }}">
-                            
-                            <select name="new_perfil" class="form-select form-select-sm me-2" style="width: 170px;">
-                                <option value="" {% if user.perfil_acesso == None %}selected{% endif %}>Nenhum</option>
-                                {% for perfil in perfis_list %}
-                                    <option value="{{ perfil }}" {% if user.perfil_acesso == perfil %}selected{% endif %}>
+                        <td>
+                            {{ user.usuario }}
+                            {% if user.usuario == g.user_email %}
+                            <span class="badge bg-success ms-1">Você</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {{ user.nome or 'N/A' }}
+                            {% if user.cargo %}
+                            <small class="text-muted d-block">({{ user.cargo }})</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">
+                                {{ user.perfil_acesso or 'Nenhum' }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-primary me-2" title="Implantações em Andamento">
+                                <i class="fas fa-hourglass-half"></i> {{ user.impl_andamento_total or 0 }}
+                            </span>
+                            <span class="badge bg-success" title="Implantações Finalizadas">
+                                <i class="fas fa-check-circle"></i> {{ user.impl_finalizadas or 0 }}
+                            </span>
+                        </td>
+                        <td>
+                            <form method="POST" action="{{ url_for('management.update_user_perfil') }}" class="d-flex"
+                                onsubmit="return confirm('Tem certeza que deseja alterar o Perfil de Acesso de {{ user.usuario }}?');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="usuario_email" value="{{ user.usuario }}">
+
+                                <select name="new_perfil" class="form-select form-select-sm me-2" style="width: 170px;">
+                                    <option value="" {% if user.perfil_acesso==None %}selected{% endif %}>Nenhum
+                                    </option>
+                                    {% for perfil in perfis_list %}
+                                    <option value="{{ perfil }}" {% if user.perfil_acesso==perfil %}selected{% endif %}>
                                         {{ perfil }}
                                     </option>
-                                {% endfor %}
-                            </select>
-                            
-                            <button type="submit" class="btn btn-primary btn-sm" 
-                                {% if user.usuario == g.user_email and g.perfil.perfil_acesso == 'Administrador' %}disabled title="Use o banco de dados para revogar seu próprio acesso de Admin"{% endif %}>
-                                Salvar
-                            </button>
-                        </form>
-                    </td>
-                </tr>
-                {% endfor %}
-                {% if not users %}
-                <tr>
-                    <td colspan="5" class="text-center text-muted">Nenhum usuário encontrado no sistema.</td>
-                </tr>
-                {% endif %}
-            </tbody>
-        </table>
-    </div>
+                                    {% endfor %}
+                                </select>
+
+                                <button type="submit" class="btn btn-primary btn-sm" {% if user.usuario==g.user_email
+                                    and g.perfil.perfil_acesso=='Administrador' %}disabled
+                                    title="Use o banco de dados para revogar seu próprio acesso de Admin" {% endif %}>
+                                    Salvar
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% if not users %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">Nenhum usuário encontrado no sistema.</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
 
 </div>
 {% endblock %}

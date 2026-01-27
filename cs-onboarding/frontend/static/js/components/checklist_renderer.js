@@ -220,14 +220,6 @@ class ChecklistRenderer {
 
                         <span class="col-spacer"></span>
 
-                        <span class="col-tag d-flex align-items-center" style="overflow:hidden; white-space:nowrap;">
-                            ${item.tag ? `
-                                <span class="badge badge-truncate ${this.getTagClass(item.tag)} js-edit-tag" id="badge-tag-${item.id}" data-item-id="${item.id}" title="Editar tag">${escape(item.tag)}</span>
-                            ` : `
-                                <span class="badge badge-truncate bg-light text-dark js-edit-tag" id="badge-tag-${item.id}" data-item-id="${item.id}" title="Definir tag">Definir tag</span>
-                            `}
-                        </span>
-
                         <span class="col-qtd d-flex align-items-center justify-content-center">
                             ${progressLabel ? `<span class="checklist-progress-badge badge badge-truncate bg-light text-dark">${progressLabel}</span>` : ''}
                         </span>
