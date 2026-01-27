@@ -14,7 +14,6 @@ from ..domain.checklist_service import (
     add_comment_to_item,
     atualizar_prazo_item,
     build_nested_tree,
-    contar_comentarios_implantacao,
     delete_checklist_item,
     excluir_comentario_service,
     get_checklist_tree,
@@ -278,27 +277,6 @@ def get_implantacao_comments(impl_id: int):
     except Exception as e:
         api_logger.error(f"Erro ao buscar comentários da implantação {impl_id}: {e}", exc_info=True)
         return jsonify({"ok": False, "error": "Erro interno ao buscar comentários"}), 500
-
-
-@checklist_bp.route("/implantacao/<int:impl_id>/comments/count", methods=["GET"])
-@login_required
-@validate_api_origin
-@validate_context_access(id_param='impl_id', entity_type='implantacao')
-def get_implantacao_comments_count(impl_id: int):
-    """
-    Retorna a contagem de comentários vinculados a uma implantação.
-    Usado para verificar se há comentários antes de aplicar um novo plano.
-    """
-    try:
-        count = contar_comentarios_implantacao(impl_id)
-        return jsonify({
-            "ok": True,
-            "count": count,
-            "has_comments": count > 0
-        })
-    except Exception as e:
-        api_logger.error(f"Erro ao contar comentários da implantação {impl_id}: {e}", exc_info=True)
-        return jsonify({"ok": False, "error": "Erro interno ao contar comentários"}), 500
 
 
 @checklist_bp.route("/comments/<int:item_id>", methods=["GET"])
