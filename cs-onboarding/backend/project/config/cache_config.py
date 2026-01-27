@@ -50,10 +50,13 @@ def clear_user_cache(user_email):
         # Limpar variações de dashboard_data (com e sem contexto)
         contexts = ["onboarding", "grandes_contas", "ongoing", "all"]
         for ctx in contexts:
+            # Compatibilidade com chaves antigas
             cache.delete(f"dashboard_data_{user_email}_all_{ctx}_pNone_ppNone")
-            # Caso o usuário esteja filtrando outro CS (gestores)
-            # Nota: Isso lida apenas com o filtro 'all', mas é o caso mais comum.
-            # Limpar o prefixo seria melhor se o backend suportasse delete_matched
+            # Nova chave com filtros (assumindo view padrão sem filtros)
+            cache.delete(f"dashboard_data_{user_email}_all_{ctx}_pNone_ppNone_all_all_all_all")
+            # Tentar limpar também p1 (primeira página explícita)
+            cache.delete(f"dashboard_data_{user_email}_all_{ctx}_p1_pp100_all_all_all_all")
+
             cache.delete(f"dashboard_data_{user_email}") # Legado
 
 

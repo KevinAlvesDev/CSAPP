@@ -49,6 +49,15 @@ def dashboard():
         current_cs_filter = None
         sort_days = None
 
+    # Novos Filtros (Busca e Tipo)
+    search_term = request.args.get("search", None)
+    if search_term:
+        search_term = sanitize_string(search_term, max_length=100)
+    
+    tipo_filter = request.args.get("tipo", None)
+    if tipo_filter:
+        tipo_filter = sanitize_string(tipo_filter, max_length=20)
+
     # Filtros de data para relatório de tags
     start_date = request.args.get("start_date")
     end_date = request.args.get("end_date")
@@ -64,8 +73,16 @@ def dashboard():
 
     try:
         # Usar versão otimizada do dashboard (consolidada)
+        # Usar versão otimizada do dashboard (consolidada)
         dashboard_data, metrics = get_dashboard_data(
-            user_email, filtered_cs_email=current_cs_filter, use_cache=True, context='onboarding'
+            user_email, 
+            filtered_cs_email=current_cs_filter, 
+            use_cache=True, 
+            context='onboarding',
+            search_term=search_term,
+            tipo=tipo_filter,
+            start_date=start_date,
+            end_date=end_date
         )
 
         if sort_days in ["asc", "desc"]:
@@ -127,6 +144,9 @@ def dashboard():
             is_manager=is_manager,
             current_cs_filter=current_cs_filter,
             sort_days=sort_days,
+            current_search=search_term,
+            current_tipo=tipo_filter,
+            dashboard_data=dashboard_data,
         )
 
     except Exception as e:
@@ -139,6 +159,12 @@ def dashboard():
             metrics={},
             implantacoes_andamento=[],
             implantacoes_novas=[],
+            implantacoes_futuras=[],
+            implantacoes_sem_previsao=[],
+            implantacoes_finalizadas=[],
+            implantacoes_paradas=[],
+            implantacoes_canceladas=[],
+            dashboard_data={"total_ativos": [], "novas": [], "andamento": [], "paradas": [], "futuras": [], "sem_previsao": [], "finalizadas": [], "canceladas": []},
             error="Falha.",
         )
 

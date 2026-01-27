@@ -17,6 +17,10 @@ def get_implantacoes_with_progress(
     offset: Optional[int] = None,
     sort_by_status: bool = False,
     context: Optional[str] = None,
+    search_term: Optional[str] = None,
+    tipo: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """
     Busca implantações com progresso calculado (SEM N+1).
@@ -111,6 +115,29 @@ def get_implantacoes_with_progress(
         else:
             query += f" AND i.contexto = {placeholder}"
             args.append(context)
+
+    if search_term:
+        term = f"%{search_term}%"
+        # Search in company name, ID, or favored ID
+        query += f" AND (i.nome_empresa LIKE {placeholder} OR CAST(i.id AS CHAR) LIKE {placeholder} OR CAST(i.id_favorecido AS CHAR) LIKE {placeholder})"
+        args.extend([term, term, term])
+
+    if tipo:
+        tipo_lower = tipo.lower()
+        if tipo_lower == 'sistema':
+            # 'completa' is the DB value for 'Sistema' badge
+            query += f" AND (LOWER(i.tipo) = 'sistema' OR LOWER(i.tipo) = 'completa' OR i.tipo IS NULL OR i.tipo = '')"
+        else:
+            query += f" AND LOWER(i.tipo) = {placeholder}"
+            args.append(tipo_lower)
+
+    if start_date:
+        query += f" AND date(i.data_criacao) >= {placeholder}"
+        args.append(start_date)
+
+    if end_date:
+        query += f" AND date(i.data_criacao) <= {placeholder}"
+        args.append(end_date)
 
     if sort_by_status:
         query += """
@@ -218,7 +245,15 @@ def get_checklist_tree_optimized(implantacao_id: int) -> List[Dict[str, Any]]:
     return query_db(query, (implantacao_id,)) or []
 
 
-def get_implantacoes_count(usuario_cs: Optional[str] = None, status: Optional[str] = None, context: Optional[str] = None) -> int:
+def get_implantacoes_count(
+    usuario_cs: Optional[str] = None, 
+    status: Optional[str] = None, 
+    context: Optional[str] = None,
+    search_term: Optional[str] = None,
+    tipo: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None
+) -> int:
     """
     Conta total de implantações para paginação.
 
@@ -251,6 +286,27 @@ def get_implantacoes_count(usuario_cs: Optional[str] = None, status: Optional[st
         else:
             query += f" AND i.contexto = {placeholder}"
             args.append(context)
+
+    if search_term:
+        term = f"%{search_term}%"
+        query += f" AND (i.nome_empresa LIKE {placeholder} OR CAST(i.id AS CHAR) LIKE {placeholder} OR CAST(i.id_favorecido AS CHAR) LIKE {placeholder})"
+        args.extend([term, term, term])
+
+    if tipo:
+        tipo_lower = tipo.lower()
+        if tipo_lower == 'sistema':
+            query += f" AND (LOWER(i.tipo) = 'sistema' OR LOWER(i.tipo) = 'completa' OR i.tipo IS NULL OR i.tipo = '')"
+        else:
+            query += f" AND LOWER(i.tipo) = {placeholder}"
+            args.append(tipo_lower)
+
+    if start_date:
+        query += f" AND date(i.data_criacao) >= {placeholder}"
+        args.append(start_date)
+
+    if end_date:
+        query += f" AND date(i.data_criacao) <= {placeholder}"
+        args.append(end_date)
 
     res = query_db(query, tuple(args), one=True)
     return res.get("total", 0) if res else 0

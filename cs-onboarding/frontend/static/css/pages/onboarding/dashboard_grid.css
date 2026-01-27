@@ -1,0 +1,13 @@
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Responsive columns */
+    gap: 1rem;
+    align-items: stretch; /* Stretch cards to same height */
+}
+
+/* Ensure cards inside the grid take full height */
+.metrics-grid .card {
+    height: 100%;
+    margin-bottom: 0 !important; /* Remove individual margins in grid */
+}

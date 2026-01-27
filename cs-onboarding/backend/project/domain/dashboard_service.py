@@ -26,6 +26,10 @@ def get_dashboard_data(
     per_page: int = None,
     use_cache: bool = True,
     context: str = None,
+    search_term: str = None,
+    tipo: str = None,
+    start_date: str = None,
+    end_date: str = None,
 ) -> Tuple[Dict, Dict]:
     """
     Busca dados do dashboard de forma otimizada (SEM N+1).
@@ -48,7 +52,7 @@ def get_dashboard_data(
 
     # Cache
     # Cache
-    cache_key = f"dashboard_data_{user_email}_{filtered_cs_email or 'all'}_{context or 'all'}_p{page}_pp{per_page}"
+    cache_key = f"dashboard_data_{user_email}_{filtered_cs_email or 'all'}_{context or 'all'}_p{page}_pp{per_page}_{search_term or 'all'}_{tipo or 'all'}_{start_date or 'all'}_{end_date or 'all'}"
 
     from ..config.cache_config import cache
 
@@ -79,7 +83,14 @@ def get_dashboard_data(
     offset = None
 
     if page is not None:
-        total = get_implantacoes_count(usuario_cs=count_usuario_filtro, context=context)
+        total = get_implantacoes_count(
+            usuario_cs=count_usuario_filtro, 
+            context=context,
+            search_term=search_term,
+            tipo=tipo,
+            start_date=start_date,
+            end_date=end_date
+        )
         from ...database import Pagination
 
         pagination = Pagination(page=page, per_page=per_page, total=total)
@@ -93,6 +104,10 @@ def get_dashboard_data(
         offset=offset,
         sort_by_status=True,  # Paridade com original: ordenar por status
         context=context,
+        search_term=search_term,
+        tipo=tipo,
+        start_date=start_date,
+        end_date=end_date,
     )
 
     # Estruturas de dados
@@ -123,6 +138,8 @@ def get_dashboard_data(
         "total_valor_novas": 0.0,
         "total_valor_canceladas": 0.0,
         "total_valor_modulos": 0.0,
+        "total_ativos": 0,
+        "total_valor_ativos": 0.0,
     }
 
     # Processar implantações (SEM queries adicionais!)
@@ -285,6 +302,17 @@ def get_dashboard_data(
             if isinstance(item, dict) and "dias_passados" not in item:
                 item["dias_passados"] = 0
 
+    # Popular lista de "Total Ativos" para a aba "Total"
+    dashboard_data["total_ativos"] = (
+        dashboard_data["novas"]
+        + dashboard_data["andamento"]
+        + dashboard_data["paradas"]
+        + dashboard_data["futuras"]
+        + dashboard_data["sem_previsao"]
+    )
+    # Ordenar por nome da empresa para facilitar a busca visual
+    dashboard_data["total_ativos"].sort(key=lambda x: x.get("nome_empresa", "").lower())
+
     # Atualizar métricas no perfil do usuário (apenas para não-gestores)
     if not is_manager_view and not filtered_cs_email and impl_list:
         try:
@@ -302,6 +330,22 @@ def get_dashboard_data(
             )
         except Exception as update_err:
             current_app.logger.error(f"Failed to update metrics for user {user_email}: {update_err}")
+
+    # Calcular totais ativos (Novas + Andamento + Paradas + Futuras + Sem Previsão)
+    metrics["total_ativos"] = (
+        metrics["impl_novas"]
+        + metrics["impl_andamento_total"]
+        + metrics["impl_paradas"]
+        + metrics["implantacoes_futuras"]
+        + metrics["implantacoes_sem_previsao"]
+    )
+    metrics["total_valor_ativos"] = (
+        metrics["total_valor_novas"]
+        + metrics["total_valor_andamento"]
+        + metrics["total_valor_paradas"]
+        + metrics["total_valor_futuras"]
+        + metrics["total_valor_sem_previsao"]
+    )
 
     # Salvar no cache
     if pagination:

@@ -6,29 +6,56 @@
 {% from 'macros/dashboard.html' import empresa_link, empresa_cell, implantador_cell, status_badge, tipo_badge,
 ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
 
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/onboarding/dashboard_grid.css') }}">
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid p-0">
     <header class="header-bg py-2 px-3 rounded-3" style="z-index: 1000;">
         <div class="d-flex align-items-center justify-content-between">
             <!-- Seção Esquerda: Busca centralizada no espaço -->
-            <div class="d-flex align-items-center justify-content-center" style="flex: 1;">
-                <div style="width: 300px; position: relative;">
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text bg-white border-end-0">
-                            <i class="bi bi-search text-muted"></i>
-                        </span>
-                        <input type="text" class="form-control border-start-0 ps-0" id="searchEmpresa"
-                            placeholder="Buscar empresa..." style="background-color: white;">
-                        <button class="btn btn-outline-secondary" type="button" id="clearSearch" style="display: none;">
-                            <i class="bi bi-x-lg"></i>
-                        </button>
+            <!-- Seção Esquerda: Busca e Filtros -->
+            <div class="d-flex align-items-center justify-content-start" style="flex: 1; gap: 10px;">
+                <form method="GET" action="{{ url_for('onboarding.dashboard') }}"
+                    class="d-flex align-items-center gap-2" id="search-form">
+                    <!-- Preservar filtros existentes -->
+                    {% if current_cs_filter %}
+                    <input type="hidden" name="cs_filter" value="{{ current_cs_filter }}">
+                    {% endif %}
+                    {% if sort_days %}
+                    <input type="hidden" name="sort_days" value="{{ sort_days }}">
+                    {% endif %}
+
+                    <!-- Filtro de Tipo -->
+                    <select class="form-select form-select-sm" name="tipo" style="width: 110px;"
+                        onchange="this.form.submit()">
+                        <option value="">Todos</option>
+                        <option value="sistema" {% if current_tipo=='sistema' %}selected{% endif %}>Sistema</option>
+                        <option value="modulo" {% if current_tipo=='modulo' %}selected{% endif %}>Módulo</option>
+                    </select>
+
+                    <div style="width: 250px; position: relative;">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white border-end-0">
+                                <i class="bi bi-search text-muted"></i>
+                            </span>
+                            <input type="text" class="form-control border-start-0 ps-0" name="search"
+                                value="{{ current_search or '' }}" placeholder="Buscar empresa..."
+                                style="background-color: white;">
+                            {% if current_search or current_tipo %}
+                            <a href="{{ url_for('onboarding.dashboard') }}" class="btn btn-outline-secondary"
+                                title="Limpar Filtros">
+                                <i class="bi bi-x-lg"></i>
+                            </a>
+                            {% else %}
+                            <button class="btn btn-outline-secondary" type="submit">
+                                <i class="bi bi-arrow-right"></i>
+                            </button>
+                            {% endif %}
+                        </div>
                     </div>
-                    <small class="text-white-50" id="searchCounter"
-                        style="display: none; position: absolute; top: 100%; left: 0; margin-top: 2px; white-space: nowrap;">
-                        <i class="bi bi-info-circle me-1"></i><span id="searchResults">0</span> resultado(s)
-                        encontrado(s)
-                    </small>
-                </div>
+                </form>
             </div>
 
             <!-- Título (Centro) -->
@@ -90,11 +117,12 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
             </form>
         </div>
         {% endif %}
-        <h2 class="h5 mb-3 text-center">Resumo Rápido {% if current_cs_filter and is_manager %}(Filtrado){% endif %}
-        </h2>
+
         {% from 'macros/cards.html' import card_stats %}
         {% set m = metrics or {} %}
         <div class="metrics-grid mb-4">
+            {{ card_stats('Total', m.total_ativos | default(0), 'secondary', monetary_value=metrics.total_valor_ativos)
+            }}
             {{ card_stats('Novas', m.impl_novas | default(0), 'dark', monetary_value=metrics.total_valor_novas) }}
             {{ card_stats('Em Andamento', implantacoes_andamento|length if implantacoes_andamento else
             (m.impl_andamento_total | default(0)), 'primary', monetary_value=metrics.total_valor_andamento) }}
@@ -115,7 +143,9 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
         <div class="card">
             <div class="card-header">
                 <ul class="nav nav-pills card-header-pills" id="myTab" role="tablist">
-                    <li class="nav-item" role="presentation"><button class="nav-link active" id="novas-tab"
+                    <li class="nav-item" role="presentation"><button class="nav-link active" id="total-tab"
+                            data-bs-toggle="tab" data-bs-target="#total" type="button" role="tab">Total</button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" id="novas-tab"
                             data-bs-toggle="tab" data-bs-target="#novas" type="button" role="tab">Novas</button></li>
                     <li class="nav-item" role="presentation"><button class="nav-link" id="andamento-tab"
                             data-bs-toggle="tab" data-bs-target="#andamento" type="button" role="tab">Em
@@ -140,7 +170,72 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
 
             <div class="card-body">
                 <div class="tab-content" id="myTabContent">
-                    <div class="tab-pane fade show active" id="novas" role="tabpanel" aria-labelledby="novas-tab">
+                    <div class="tab-pane fade show active" id="total" role="tabpanel" aria-labelledby="total-tab">
+                        <h2 class="h5 mb-3">Total de Implantações Ativas</h2>
+                        {% if not dashboard_data.total_ativos %}
+                        <div class="alert alert-info text-center" role="alert"> Nenhuma implantação ativa encontrada.
+                        </div>
+                        {% else %}
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover table-sm align-middle">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">ID</th>
+                                        <th scope="col">Empresa</th>
+                                        <th scope="col">Implantador</th>
+                                        <th scope="col">Tipo</th>
+                                        <th scope="col">Status</th>
+                                        <th scope="col">Progresso</th>
+                                        <th scope="col">Valor (Total: R$ {{
+                                            "%.2f"|format(metrics.total_valor_ativos|float) if
+                                            metrics.total_valor_ativos else '0.00' }})</th>
+                                        <th scope="col">Ações</th>
+                                        <th scope="col">Último Comentário</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for impl in dashboard_data.total_ativos %}
+                                    <tr>
+                                        <td class="text-nowrap">{{ impl.id }}</td>
+                                        <td class="text-truncate" style="max-width: 350px;">
+                                            {{ empresa_link(impl) }}
+                                        </td>
+                                        <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or
+                                            impl.usuario_cs }}</td>
+                                        <td>{{ tipo_badge(impl.tipo) }}</td>
+                                        <td>
+                                            {% if impl.status == 'andamento' %}
+                                            <span class="badge bg-primary">Em Andamento</span>
+                                            {% elif impl.status == 'nova' %}
+                                            <span class="badge bg-dark">Nova</span>
+                                            {% elif impl.status == 'parada' %}
+                                            <span class="badge bg-danger">Parada</span>
+                                            {% elif impl.status == 'futura' %}
+                                            <span class="badge bg-info text-dark">Futura</span>
+                                            {% elif impl.status == 'sem_previsao' %}
+                                            <span class="badge bg-warning text-dark">Sem Previsão</span>
+                                            {% else %}
+                                            {{ status_badge(impl.status) }}
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ progress_bar(impl) }}</td>
+                                        <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_monetario|float) if
+                                            impl.valor_monetario else 'N/A' }}</td>
+                                        <td class="text-nowrap">
+                                            <a href="{{ url_for('onboarding.ver_implantacao', impl_id=impl.id) }}"
+                                                class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i>
+                                                Detalhes</a>
+                                        </td>
+                                        {{ ultima_atividade_cell(impl) }}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="tab-pane fade" id="novas" role="tabpanel" aria-labelledby="novas-tab">
                         <h2 class="h5 mb-3">Implantações Novas (Aguardando Início)</h2>
                         {% if not implantacoes_novas %}
                         <div class="alert alert-info text-center" role="alert"> Nenhuma nova implantação aguardando
@@ -436,7 +531,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                                         <th scope="col">Implantador</th>
                                         <th scope="col">Tipo</th>
                                         <th scope="col">Dias</th>
-                                        <th scope="col">Motivo</th>
+                                        <th scope="col" style="width: 20%;">Progresso</th>
                                         <th scope="col">Valor (Total: R$ {{
                                             "%.2f"|format(metrics.total_valor_paradas|float) if
                                             metrics.total_valor_paradas else '0.00' }})</th>
@@ -453,11 +548,8 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                                         <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or
                                             impl.usuario_cs }}</td>
                                         <td>{{ tipo_badge(impl.tipo) }}</td>
-                                        <td><span class="badge bg-danger js-dias-badge" data-impl-id="{{ impl.id }}"
-                                                data-start-iso="{{ impl.data_finalizacao | default('') }}"
-                                                data-status="parada">{{ impl.dias_parada | int }} dias</span></td>
-                                        <td class="text-truncate" style="max-width: 200px;">{{ impl.motivo_parada |
-                                            default('N/A') }}</td>
+                                        <td><span class="badge bg-danger">{{ impl.dias_parada | int }} dias</span></td>
+                                        <td>{{ progress_bar(impl) }}</td>
                                         <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_monetario|float) if
                                             impl.valor_monetario else 'N/A' }}</td>
                                         <td class="text-nowrap">
@@ -775,7 +867,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
         });
 
         const abaAtivaId = localStorage.getItem(tabStorageKey);
-        const defaultTabEl = document.getElementById('novas-tab');
+        const defaultTabEl = document.getElementById('total-tab');
 
         if (abaAtivaId) {
             const tabEl = document.getElementById(abaAtivaId);
@@ -967,33 +1059,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
 </script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        function parseISODate(iso) {
-            if (!iso) return null;
-            var s = String(iso).split('T')[0];
-            var parts = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-            if (!parts) return null;
-            return new Date(parts[1] + '-' + parts[2] + '-' + parts[3] + 'T00:00:00');
-        }
-        function diffDays(start) {
-            if (!start) return 0;
-            var now = new Date();
-            var ms = now.getTime() - start.getTime();
-            var d = Math.floor(ms / 86400000);
-            return d < 0 ? 0 : d;
-        }
-        function updateBadges() {
-            var els = document.querySelectorAll('.js-dias-badge');
-            els.forEach(function (el) {
-                var iso = el.getAttribute('data-start-iso');
-                var id = el.getAttribute('data-impl-id');
-                var status = el.getAttribute('data-status');
-                var dt = parseISODate(iso);
-                var d = diffDays(dt);
-                el.textContent = d + ' dias';
-            });
-        }
-        updateBadges();
-        setInterval(updateBadges, 60000);
+        // Funções de atualização de badges removidas pois o cálculo agora é feito no backend
     });
 </script>
 <script>
