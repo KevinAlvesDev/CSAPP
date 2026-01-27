@@ -88,3 +88,6 @@ alembic/versions/__pycache__/
 node_modules/
 npm-debug.log
 yarn-error.log
+
+# AI Agent Config (ag-kit)
+.agent/
