@@ -208,10 +208,8 @@ def _get_implantacao_and_validate_access(impl_id, usuario_cs_email, user_perfil)
         else:
             raise ValueError("Implantação não encontrada ou não pertence a você.")
 
-    if implantacao.get("status") == "nova" and is_owner and not is_manager:
-        raise ValueError(
-            'Esta implantação está aguardando início. Use os botões "Iniciar" ou "Início Futuro" no dashboard.'
-        )
+    # Regra removida: permitir acesso a detalhes mesmo sem iniciar a implantação
+    # (anteriormente bloqueava implantações com status "nova" para o dono)
 
     return implantacao, is_manager
 
