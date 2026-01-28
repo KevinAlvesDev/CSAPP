@@ -142,8 +142,13 @@ def get_dashboard_data(
         "total_valor_ativos": 0.0,
     }
 
-    # Processar implantações (SEM queries adicionais!)
+    # Processar implantações (OTIMIZADO: calcular dias em batch)
     agora = datetime.now()
+    
+    # OTIMIZAÇÃO: Calcular dias_passados e dias_parada em BATCH (2 queries ao invés de 2*N)
+    impl_ids = [impl.get("id") for impl in impl_list if impl and impl.get("id")]
+    from ..domain.time_calculator import calculate_days_bulk
+    days_data = calculate_days_bulk(impl_ids) if impl_ids else {}
 
     for impl in impl_list:
         if not impl or not isinstance(impl, dict):
@@ -183,16 +188,9 @@ def get_dashboard_data(
             impl_valor = 0.0
         impl["valor_monetario_float"] = impl_valor
 
-        # Dias passados (usar função original para compatibilidade)
-        from ..domain.time_calculator import calculate_days_parada, calculate_days_passed
-
-        try:
-            dias_passados = calculate_days_passed(impl_id)
-            if dias_passados is None:
-                dias_passados = 0
-        except Exception:
-            dias_passados = 0
-        impl["dias_passados"] = dias_passados
+        # Dias passados (usando cálculo em batch - OTIMIZADO)
+        impl_days = days_data.get(impl_id, {})
+        impl["dias_passados"] = impl_days.get("dias_passados", 0)
 
         # Última atividade (com tratamento robusto de erros)
         ultima_ativ = impl.get("ultima_atividade")
@@ -228,12 +226,8 @@ def get_dashboard_data(
             metrics["impl_canceladas"] += 1
             metrics["total_valor_canceladas"] += impl_valor
         elif status == "parada":
-            # Calcular dias parada
-            try:
-                dias_parada = calculate_days_parada(impl_id)
-            except Exception:
-                dias_parada = 0
-            impl["dias_parada"] = dias_parada
+            # Dias parada (usando cálculo em batch - OTIMIZADO)
+            impl["dias_parada"] = impl_days.get("dias_parada", 0)
 
             dashboard_data["paradas"].append(impl)
             metrics["impl_paradas"] += 1

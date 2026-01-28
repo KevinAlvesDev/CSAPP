@@ -102,11 +102,15 @@ def aplicar_plano_a_implantacao(implantacao_id: int, plano_id: int, usuario: str
 
 
 def aplicar_plano_a_implantacao_checklist(
-    implantacao_id: int, plano_id: int, usuario: str, responsavel_nome: str | None = None
+    implantacao_id: int, plano_id: int, usuario: str, responsavel_nome: str | None = None, preservar_comentarios: bool = False
 ) -> bool:
     """
     Aplica um plano de sucesso a uma implantação usando checklist_items.
     Clona a estrutura do plano (itens com implantacao_id = NULL) para a implantação.
+    
+    Args:
+        preservar_comentarios: Se True, preserva os comentários existentes desvinculando-os
+                               dos checklist_items antes de deletá-los.
     """
     if not implantacao_id or not plano_id:
         raise ValidationError("ID da implantação e do plano são obrigatórios")
@@ -141,16 +145,31 @@ def aplicar_plano_a_implantacao_checklist(
         cursor = conn.cursor()
 
         try:
-            # Deletar comentários primeiro para evitar violação de foreign key
-            sql_limpar_comentarios = """
-                DELETE FROM comentarios_h 
-                WHERE checklist_item_id IN (
-                    SELECT id FROM checklist_items WHERE implantacao_id = %s
-                )
-            """
-            if db_type == "sqlite":
-                sql_limpar_comentarios = sql_limpar_comentarios.replace("%s", "?")
-            cursor.execute(sql_limpar_comentarios, (implantacao_id,))
+            # Tratamento de comentários conforme escolha do usuário
+            if preservar_comentarios:
+                # Preservar comentários: desvincula-los dos itens antes de deletar
+                from ..checklist.comments import preservar_comentarios_implantacao
+                preservar_comentarios_implantacao(implantacao_id)
+            else:
+                # Deletar comentários vinculados a checklist_items desta implantação
+                sql_limpar_comentarios = """
+                    DELETE FROM comentarios_h 
+                    WHERE checklist_item_id IN (
+                        SELECT id FROM checklist_items WHERE implantacao_id = %s
+                    )
+                """
+                if db_type == "sqlite":
+                    sql_limpar_comentarios = sql_limpar_comentarios.replace("%s", "?")
+                cursor.execute(sql_limpar_comentarios, (implantacao_id,))
+                
+                # Deletar também comentários órfãos (com implantacao_id mas sem checklist_item_id)
+                sql_limpar_orfaos = """
+                    DELETE FROM comentarios_h 
+                    WHERE implantacao_id = %s
+                """
+                if db_type == "sqlite":
+                    sql_limpar_orfaos = sql_limpar_orfaos.replace("%s", "?")
+                cursor.execute(sql_limpar_orfaos, (implantacao_id,))
 
             # Agora deletar os itens do checklist
             sql_limpar = "DELETE FROM checklist_items WHERE implantacao_id = %s"

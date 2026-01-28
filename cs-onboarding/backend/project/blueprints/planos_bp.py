@@ -400,11 +400,16 @@ def aplicar_plano_implantacao(implantacao_id):
     try:
         data = request.get_json() if request.is_json else request.form.to_dict()
         plano_id = data.get("plano_id")
+        preservar_comentarios = data.get("preservar_comentarios", False)
 
         if not plano_id:
             raise ValidationError("ID do plano é obrigatório")
 
         plano_id = int(plano_id)
+        
+        # Converter para bool se vier como string
+        if isinstance(preservar_comentarios, str):
+            preservar_comentarios = preservar_comentarios.lower() in ("true", "1", "sim", "yes")
 
         user = get_current_user()
         usuario = user.get("usuario") if user else "sistema"
@@ -418,7 +423,11 @@ def aplicar_plano_implantacao(implantacao_id):
                 pass
 
         planos_sucesso_service.aplicar_plano_a_implantacao_checklist(
-            implantacao_id=implantacao_id, plano_id=plano_id, usuario=usuario, responsavel_nome=responsavel_nome
+            implantacao_id=implantacao_id, 
+            plano_id=plano_id, 
+            usuario=usuario, 
+            responsavel_nome=responsavel_nome,
+            preservar_comentarios=preservar_comentarios
         )
 
         if request.is_json:
@@ -445,6 +454,19 @@ def aplicar_plano_implantacao(implantacao_id):
         impl = planos_sucesso_service.query_db("SELECT contexto FROM implantacoes WHERE id = %s", (implantacao_id,), one=True)
         context_bp = impl.get("contexto") if impl and impl.get("contexto") else "onboarding"
         return redirect(url_for(f"{context_bp}.ver_implantacao", impl_id=implantacao_id))
+
+
+@planos_bp.route("/implantacao/<int:implantacao_id>/comentarios/count", methods=["GET"])
+@login_required
+def contar_comentarios_implantacao(implantacao_id):
+    """Retorna a contagem de comentários de uma implantação."""
+    try:
+        from ..domain.checklist.comments import contar_comentarios_implantacao as contar_comentarios
+        total = contar_comentarios(implantacao_id)
+        return jsonify({"success": True, "total": total}), 200
+    except Exception as e:
+        planos_logger.error(f"Erro ao contar comentários da implantação {implantacao_id}: {str(e)}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
 
 
 @planos_bp.route("/implantacao/<int:implantacao_id>/plano", methods=["GET"])

@@ -60,8 +60,24 @@ def init_db():
                         ) THEN
                             ALTER TABLE perfil_usuario ADD COLUMN ultimo_check_externo TIMESTAMP NULL;
                         END IF;
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns 
+                            WHERE table_name='comentarios_h' AND column_name='implantacao_id'
+                        ) THEN
+                            ALTER TABLE comentarios_h ADD COLUMN implantacao_id INTEGER REFERENCES implantacoes(id);
+                        END IF;
                     END
                     $$;
+                """)
+                
+                # Backfill: Preencher implantacao_id para comentários existentes
+                cursor.execute("""
+                    UPDATE comentarios_h 
+                    SET implantacao_id = ci.implantacao_id
+                    FROM checklist_items ci
+                    WHERE comentarios_h.checklist_item_id = ci.id
+                    AND comentarios_h.implantacao_id IS NULL
+                    AND comentarios_h.checklist_item_id IS NOT NULL
                 """)
             except Exception:
                 try:
@@ -140,6 +156,9 @@ def init_db():
             )
             cursor.execute(
                 "CREATE INDEX IF NOT EXISTS idx_comentarios_h_item_data ON comentarios_h (checklist_item_id, data_criacao)"
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_comentarios_h_implantacao_id ON comentarios_h (implantacao_id)"
             )
         except Exception as idx_err:
             try:
@@ -310,6 +329,7 @@ def _criar_tabelas_basicas_sqlite(cursor):
         CREATE TABLE IF NOT EXISTS comentarios_h (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             checklist_item_id INTEGER,
+            implantacao_id INTEGER,
             tarefa_h_id INTEGER,
             subtarefa_h_id INTEGER,
             usuario_cs TEXT NOT NULL,
@@ -320,7 +340,8 @@ def _criar_tabelas_basicas_sqlite(cursor):
             noshow BOOLEAN DEFAULT 0,
             tag TEXT,
             FOREIGN KEY (usuario_cs) REFERENCES usuarios(usuario),
-            FOREIGN KEY (checklist_item_id) REFERENCES checklist_items(id)
+            FOREIGN KEY (checklist_item_id) REFERENCES checklist_items(id),
+            FOREIGN KEY (implantacao_id) REFERENCES implantacoes(id)
         )
     """)
 
@@ -612,13 +633,28 @@ def _migrar_colunas_planos_sucesso(cursor):
 
 
 def _migrar_coluna_comentarios_checklist_item(cursor):
-    """Adiciona coluna checklist_item_id na tabela comentarios_h se não existir."""
+    """Adiciona colunas checklist_item_id e implantacao_id na tabela comentarios_h se não existirem."""
     try:
         cursor.execute("PRAGMA table_info(comentarios_h)")
         colunas_existentes = [row[1] for row in cursor.fetchall()]
 
         if "checklist_item_id" not in colunas_existentes:
             cursor.execute("ALTER TABLE comentarios_h ADD COLUMN checklist_item_id INTEGER")
+        
+        if "implantacao_id" not in colunas_existentes:
+            cursor.execute("ALTER TABLE comentarios_h ADD COLUMN implantacao_id INTEGER")
+        
+        # Backfill: Preencher implantacao_id para comentários existentes
+        cursor.execute("""
+            UPDATE comentarios_h 
+            SET implantacao_id = (
+                SELECT ci.implantacao_id 
+                FROM checklist_items ci 
+                WHERE ci.id = comentarios_h.checklist_item_id
+            )
+            WHERE implantacao_id IS NULL 
+            AND checklist_item_id IS NOT NULL
+        """)
     except Exception:
         pass
 

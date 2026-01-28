@@ -68,7 +68,7 @@ def add_comment_to_item(
             implantacao_id = item[1]
             item_title = item[2]
 
-        # 2. Garantir coluna checklist_item_id e tag em comentarios_h (Self-healing)
+        # 2. Garantir coluna checklist_item_id, implantacao_id e tag em comentarios_h (Self-healing)
         if db_type == "postgres":
             try:
                 cursor.execute(
@@ -82,6 +82,12 @@ def add_comment_to_item(
                         )
                     except Exception:
                         pass
+                # Garantir coluna implantacao_id
+                cursor.execute(
+                    "SELECT column_name FROM information_schema.columns WHERE table_name='comentarios_h' AND column_name='implantacao_id'"
+                )
+                if not cursor.fetchone():
+                    cursor.execute("ALTER TABLE comentarios_h ADD COLUMN IF NOT EXISTS implantacao_id INTEGER REFERENCES implantacoes(id)")
                 # Garantir coluna tag
                 cursor.execute(
                     "SELECT column_name FROM information_schema.columns WHERE table_name='comentarios_h' AND column_name='tag'"
@@ -96,6 +102,8 @@ def add_comment_to_item(
                 cols = [r[1] for r in cursor.fetchall()]
                 if "checklist_item_id" not in cols:
                     cursor.execute("ALTER TABLE comentarios_h ADD COLUMN checklist_item_id INTEGER")
+                if "implantacao_id" not in cols:
+                    cursor.execute("ALTER TABLE comentarios_h ADD COLUMN implantacao_id INTEGER")
                 if "tag" not in cols:
                     cursor.execute("ALTER TABLE comentarios_h ADD COLUMN tag TEXT")
             except Exception:
@@ -107,15 +115,15 @@ def add_comment_to_item(
         now = datetime.now(tz_brasilia)
         noshow_val = noshow if db_type == "postgres" else (1 if noshow else 0)
         insert_sql = """
-            INSERT INTO comentarios_h (checklist_item_id, usuario_cs, texto, data_criacao, visibilidade, noshow, tag, imagem_url)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO comentarios_h (checklist_item_id, implantacao_id, usuario_cs, texto, data_criacao, visibilidade, noshow, tag, imagem_url)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         if db_type == "postgres":
             insert_sql += " RETURNING id"
 
         if db_type == "sqlite":
             insert_sql = insert_sql.replace("%s", "?")
-        cursor.execute(insert_sql, (item_id, usuario_email, text, now, visibilidade, noshow_val, tag, imagem_url))
+        cursor.execute(insert_sql, (item_id, implantacao_id, usuario_email, text, now, visibilidade, noshow_val, tag, imagem_url))
 
         if db_type == "postgres":
             res_id = cursor.fetchone()
@@ -166,28 +174,30 @@ def listar_comentarios_implantacao(impl_id, page=1, per_page=20):
     """
     offset = (page - 1) * per_page
 
+    # Contagem inclui comentários vinculados a itens E comentários órfãos (sem item, mas com implantacao_id)
     count_query = """
         SELECT COUNT(*) as total
         FROM comentarios_h c
-        JOIN checklist_items ci ON c.checklist_item_id = ci.id
-        WHERE ci.implantacao_id = %s
+        LEFT JOIN checklist_items ci ON c.checklist_item_id = ci.id
+        WHERE ci.implantacao_id = %s OR c.implantacao_id = %s
     """
-    total_res = query_db(count_query, (impl_id,), one=True)
+    total_res = query_db(count_query, (impl_id, impl_id), one=True)
     total = total_res["total"] if total_res else 0
 
+    # Lista comentários vinculados a itens E comentários órfãos
     comments_query = """
         SELECT
         c.id, c.texto, c.usuario_cs, c.data_criacao, c.visibilidade, c.noshow, c.imagem_url, c.tag,
         ci.id as item_id, ci.title as item_title,
         COALESCE(p.nome, c.usuario_cs) as usuario_nome
         FROM comentarios_h c
-        JOIN checklist_items ci ON c.checklist_item_id = ci.id
+        LEFT JOIN checklist_items ci ON c.checklist_item_id = ci.id
         LEFT JOIN perfil_usuario p ON c.usuario_cs = p.usuario
-        WHERE ci.implantacao_id = %s
+        WHERE ci.implantacao_id = %s OR c.implantacao_id = %s
         ORDER BY c.data_criacao DESC
         LIMIT %s OFFSET %s
     """
-    comments = query_db(comments_query, (impl_id, per_page, offset))
+    comments = query_db(comments_query, (impl_id, impl_id, per_page, offset))
 
     formatted_comments = []
     for c in comments:
@@ -427,3 +437,54 @@ def excluir_comentario_service(comentario_id, usuario_email, is_manager):
             logar_timeline(item_info["implantacao_id"], usuario_email, "comentario_excluido", detalhe)
         except Exception:
             pass
+
+
+def contar_comentarios_implantacao(impl_id):
+    """
+    Conta o número total de comentários de uma implantação.
+    Usado para exibir confirmação antes de aplicar/trocar plano.
+    """
+    count_query = """
+        SELECT COUNT(*) as total
+        FROM comentarios_h c
+        LEFT JOIN checklist_items ci ON c.checklist_item_id = ci.id
+        WHERE ci.implantacao_id = %s OR c.implantacao_id = %s
+    """
+    result = query_db(count_query, (impl_id, impl_id), one=True)
+    return result["total"] if result else 0
+
+
+def preservar_comentarios_implantacao(impl_id):
+    """
+    Preserva os comentários de uma implantação desvinculando-os dos checklist_items.
+    Os comentários ficam 'órfãos' (checklist_item_id = NULL) mas mantém o implantacao_id.
+    Chamado antes de deletar os checklist_items ao aplicar novo plano.
+    """
+    # Primeiro, garantir que todos os comentários tenham implantacao_id preenchido
+    # (para comentários antigos que podem não ter)
+    update_impl_id_query = """
+        UPDATE comentarios_h 
+        SET implantacao_id = (
+            SELECT ci.implantacao_id 
+            FROM checklist_items ci 
+            WHERE ci.id = comentarios_h.checklist_item_id
+        )
+        WHERE checklist_item_id IS NOT NULL 
+        AND implantacao_id IS NULL
+        AND checklist_item_id IN (
+            SELECT id FROM checklist_items WHERE implantacao_id = %s
+        )
+    """
+    execute_db(update_impl_id_query, (impl_id,))
+
+    # Agora desvincular os comentários dos itens (torná-los órfãos)
+    desvincular_query = """
+        UPDATE comentarios_h 
+        SET checklist_item_id = NULL
+        WHERE checklist_item_id IN (
+            SELECT id FROM checklist_items WHERE implantacao_id = %s
+        )
+    """
+    execute_db(desvincular_query, (impl_id,))
+
+    logger.info(f"Comentários da implantação {impl_id} preservados (desvinculados dos itens)")

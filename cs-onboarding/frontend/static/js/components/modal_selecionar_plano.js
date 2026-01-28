@@ -393,46 +393,138 @@
         }
 
         async function aplicarPlano(planoId, planoNome, btnElement) {
-            let confirmed = false;
-
-            if (window.showConfirm) {
-                confirmed = await window.showConfirm({
-                    title: 'Aplicar Plano',
-                    message: `Tem certeza que deseja aplicar o plano "${planoNome}"?\n\nA estrutura atual será substituída.`,
-                    confirmText: 'Sim, aplicar plano',
-                    type: 'warning'
-                });
-            }
-
-            if (!confirmed) return;
-
             const implantacaoId = document.querySelector('#main-content')?.dataset?.implantacaoId;
             if (!implantacaoId) {
                 if (window.showToast) window.showToast('Erro: ID da implantação não encontrado.', 'error');
                 return;
             }
 
+            // 1. Verificar se existem comentários
+            let totalComentarios = 0;
+            try {
+                const contagem = await window.apiFetch(`/planos/implantacao/${implantacaoId}/comentarios/count`);
+                if (contagem.success) {
+                    totalComentarios = contagem.total || 0;
+                }
+            } catch (e) {
+                console.warn('Erro ao contar comentários:', e);
+            }
+
+            // 2. Definir variável de preservação
+            let preservarComentarios = false;
+
+            // 3. Se houver comentários, perguntar se quer preservar
+            if (totalComentarios > 0) {
+                const modalOptionsHTML = `
+                    <div class="modal fade" id="modalConfirmComentarios" tabindex="-1" data-bs-backdrop="static">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header bg-warning text-dark">
+                                    <h5 class="modal-title">
+                                        <i class="bi bi-chat-left-text me-2"></i>Comentários Existentes
+                                    </h5>
+                                </div>
+                                <div class="modal-body">
+                                    <p class="mb-3">
+                                        Esta implantação possui <strong>${totalComentarios} comentário(s)</strong> registrado(s).
+                                    </p>
+                                    <p class="text-muted">
+                                        Ao aplicar o plano <strong>"${escapeHtml(planoNome)}"</strong>, as tarefas atuais serão substituídas.
+                                    </p>
+                                    <div class="alert alert-info mb-0">
+                                        <i class="bi bi-info-circle me-2"></i>
+                                        Os comentários aparecerão na aba "Comentários", mas não estarão vinculados às novas tarefas.
+                                    </div>
+                                </div>
+                                <div class="modal-footer justify-content-center gap-3">
+                                    <button type="button" class="btn btn-outline-secondary" data-action="cancel">
+                                        <i class="bi bi-x-lg me-1"></i>Cancelar
+                                    </button>
+                                    <button type="button" class="btn btn-danger" data-action="delete">
+                                        <i class="bi bi-trash me-1"></i>Excluir Comentários
+                                    </button>
+                                    <button type="button" class="btn btn-success" data-action="preserve">
+                                        <i class="bi bi-check-lg me-1"></i>Manter Comentários
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Inserir modal no DOM
+                let existingModal = document.getElementById('modalConfirmComentarios');
+                if (existingModal) existingModal.remove();
+                document.body.insertAdjacentHTML('beforeend', modalOptionsHTML);
+
+                const modalEl = document.getElementById('modalConfirmComentarios');
+                const bsModal = new bootstrap.Modal(modalEl);
+                bsModal.show(); // IMPORTANTE: Mostrar o modal
+
+                // Aguardar escolha do usuário
+                const userChoice = await new Promise(resolve => {
+                    modalEl.querySelectorAll('[data-action]').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            bsModal.hide();
+                            resolve(btn.dataset.action);
+                        });
+                    });
+                    modalEl.addEventListener('hidden.bs.modal', () => {
+                        resolve('cancel');
+                    }, { once: true });
+                });
+
+                bsModal.hide();
+                modalEl.remove();
+
+                if (userChoice === 'cancel') {
+                    return; // Usuário cancelou
+                }
+
+                preservarComentarios = (userChoice === 'preserve');
+            } else {
+                // Sem comentários: confirmação padrão
+                let confirmed = false;
+                if (window.showConfirm) {
+                    confirmed = await window.showConfirm({
+                        title: 'Aplicar Plano',
+                        message: `Tem certeza que deseja aplicar o plano "${planoNome}"?\n\nA estrutura atual será substituída.`,
+                        confirmText: 'Sim, aplicar plano',
+                        type: 'warning'
+                    });
+                } else {
+                    // Fallback se showConfirm não estiver disponível
+                    confirmed = confirm(`Tem certeza que deseja aplicar o plano "${planoNome}"?\n\nA estrutura atual será substituída.`);
+                }
+                if (!confirmed) return;
+            }
+
+            // 4. Aplicar plano com a opção de preservar comentários
             const originalText = btnElement.innerHTML;
             btnElement.disabled = true;
             btnElement.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Aplicando...';
 
             window.apiFetch(`/planos/implantacao/${implantacaoId}/aplicar`, {
                 method: 'POST',
-                body: JSON.stringify({ plano_id: planoId })
+                body: JSON.stringify({
+                    plano_id: planoId,
+                    preservar_comentarios: preservarComentarios
+                })
             })
                 .then(data => {
                     if (data.success) {
-                        if (window.showToast) window.showToast('Plano aplicado com sucesso!', 'success');
-                        else alert('Plano aplicado com sucesso!'); // Fallback caso showToast falhe (raro)
+                        const msg = preservarComentarios
+                            ? 'Plano aplicado! Comentários anteriores preservados na aba "Comentários".'
+                            : 'Plano aplicado com sucesso!';
+                        if (window.showToast) window.showToast(msg, 'success');
+                        else alert(msg);
 
                         window.location.reload();
                     } else {
-                        // Erro de lógica (ex: validação) - apiFetch lança exceção para http errors, mas success=false pode ser 200 OK
                         throw new Error(data.error || 'Erro desconhecido ao aplicar plano');
                     }
                 })
                 .catch(error => {
-                    // apiFetch já exibe toast de erro
                     btnElement.disabled = false;
                     btnElement.innerHTML = originalText;
                 });

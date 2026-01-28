@@ -73,11 +73,13 @@ def dashboard():
 
     try:
         # Usar versão otimizada do dashboard (consolidada)
-        # Usar versão otimizada do dashboard (consolidada)
+        # Desabilitar cache quando filtros estão ativos para resposta imediata
+        has_active_filters = bool(search_term or tipo_filter)
+        
         dashboard_data, metrics = get_dashboard_data(
             user_email, 
             filtered_cs_email=current_cs_filter, 
-            use_cache=True, 
+            use_cache=not has_active_filters,  # Sem cache quando filtrando
             context='onboarding',
             search_term=search_term,
             tipo=tipo_filter,
