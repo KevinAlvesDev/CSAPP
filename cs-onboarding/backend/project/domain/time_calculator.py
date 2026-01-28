@@ -146,7 +146,10 @@ def calculate_total_days_in_status(impl_id, target_status="andamento"):
     # Adicionar período atual se estiver no status alvo
     if current_status == target_status:
         if target_status == "parada":
-            parada_inicio = parse_datetime(impl.get("data_finalizacao"))
+            # Se tem histórico, o período começa na última mudança (current_start)
+            # Se não tem, usa data_finalizacao como fallback
+            parada_inicio = current_start if status_history else parse_datetime(impl.get("data_finalizacao"))
+            
             if parada_inicio:
                 if agora > parada_inicio:
                     periods.append((parada_inicio, agora))

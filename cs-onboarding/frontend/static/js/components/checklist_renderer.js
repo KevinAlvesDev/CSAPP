@@ -224,7 +224,7 @@ class ChecklistRenderer {
                             ${progressLabel ? `<span class="checklist-progress-badge badge badge-truncate bg-light text-dark">${progressLabel}</span>` : ''}
                         </span>
 
-                        <span class="col-responsavel d-flex align-items-center">
+                        <span class="col-responsavel">
                             ${item.responsavel ?
                 `<span class="badge bg-primary js-edit-resp badge-resp-ellipsis badge-truncate" data-item-id="${item.id}" title="${escape(item.responsavel)}">${escape(this.abbrevResponsavel(item.responsavel))}</span>` :
                 `<span class="badge bg-primary js-edit-resp badge-resp-ellipsis badge-truncate" data-item-id="${item.id}">Definir responsável</span>`
@@ -616,7 +616,7 @@ class ChecklistRenderer {
         const headerEl = this.container.querySelector('.checklist-grid .col-conclusao');
         if (headerEl) {
             const hasConclusion = Object.values(this.flatData).some(i => !!i.data_conclusao);
-            if (hasConclusion) headerEl.classList.remove('d-none'); else headerEl.classList.add('d-none');
+            if (hasConclusion) headerEl.style.visibility = 'visible'; else headerEl.style.visibility = 'hidden';
         }
     }
 
