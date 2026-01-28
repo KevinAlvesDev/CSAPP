@@ -174,31 +174,43 @@ def listar_comentarios_implantacao(impl_id, page=1, per_page=20):
     """
     offset = (page - 1) * per_page
 
-    # Contagem inclui:
-    # 1. Comentários vinculados a checklist_items desta implantação
-    # 2. Comentários órfãos com implantacao_id preenchido
+    # Contagem: comentários vinculados a checklist_items desta implantação
+    # + comentários órfãos (se existirem)
     count_query = """
-        SELECT COUNT(*) as total
-        FROM comentarios_h c
-        LEFT JOIN checklist_items ci ON c.checklist_item_id = ci.id
-        WHERE (ci.implantacao_id = %s) 
-           OR (c.implantacao_id = %s AND c.checklist_item_id IS NULL)
+        SELECT (
+            SELECT COUNT(*) FROM comentarios_h c
+            INNER JOIN checklist_items ci ON c.checklist_item_id = ci.id
+            WHERE ci.implantacao_id = %s
+        ) + (
+            SELECT COUNT(*) FROM comentarios_h 
+            WHERE implantacao_id = %s AND checklist_item_id IS NULL
+        ) as total
     """
     total_res = query_db(count_query, (impl_id, impl_id), one=True)
     total = total_res["total"] if total_res else 0
 
-    # Lista comentários vinculados a itens E comentários órfãos
+    # Lista comentários: primeiro os vinculados a itens, depois os órfãos
     comments_query = """
         SELECT
-        c.id, c.texto, c.usuario_cs, c.data_criacao, c.visibilidade, c.noshow, c.imagem_url, c.tag,
-        ci.id as item_id, ci.title as item_title,
-        COALESCE(p.nome, c.usuario_cs) as usuario_nome
+            c.id, c.texto, c.usuario_cs, c.data_criacao, c.visibilidade, c.noshow, c.imagem_url, c.tag,
+            ci.id as item_id, ci.title as item_title,
+            COALESCE(p.nome, c.usuario_cs) as usuario_nome
         FROM comentarios_h c
-        LEFT JOIN checklist_items ci ON c.checklist_item_id = ci.id
+        INNER JOIN checklist_items ci ON c.checklist_item_id = ci.id
         LEFT JOIN perfil_usuario p ON c.usuario_cs = p.usuario
-        WHERE (ci.implantacao_id = %s) 
-           OR (c.implantacao_id = %s AND c.checklist_item_id IS NULL)
-        ORDER BY c.data_criacao DESC
+        WHERE ci.implantacao_id = %s
+        
+        UNION ALL
+        
+        SELECT
+            c.id, c.texto, c.usuario_cs, c.data_criacao, c.visibilidade, c.noshow, c.imagem_url, c.tag,
+            NULL as item_id, '(Comentário preservado)' as item_title,
+            COALESCE(p.nome, c.usuario_cs) as usuario_nome
+        FROM comentarios_h c
+        LEFT JOIN perfil_usuario p ON c.usuario_cs = p.usuario
+        WHERE c.implantacao_id = %s AND c.checklist_item_id IS NULL
+        
+        ORDER BY data_criacao DESC
         LIMIT %s OFFSET %s
     """
     comments = query_db(comments_query, (impl_id, impl_id, per_page, offset))
