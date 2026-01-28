@@ -33,7 +33,7 @@
                         <th>Usuário (E-mail)</th>
                         <th>Nome / Cargo (Função)</th>
                         <th>Perfil de Acesso Atual</th>
-                        <th>Implantações</th>
+
                         <th>Alterar Perfil de Acesso</th>
                     </tr>
                 </thead>
@@ -58,17 +58,17 @@
                             {% endif %}
                         </td>
                         <td>
-                            <span class="badge bg-secondary">
-                                {{ user.perfil_acesso or 'Nenhum' }}
-                            </span>
-                        </td>
-                        <td>
-                            <span class="badge bg-primary me-2" title="Implantações em Andamento">
-                                <i class="fas fa-hourglass-half"></i> {{ user.impl_andamento_total or 0 }}
-                            </span>
-                            <span class="badge bg-success" title="Implantações Finalizadas">
-                                <i class="fas fa-check-circle"></i> {{ user.impl_finalizadas or 0 }}
-                            </span>
+                            {% if user.perfil_acesso == 'Administrador' %}
+                            <span class="badge bg-danger">{{ user.perfil_acesso }}</span>
+                            {% elif user.perfil_acesso == 'Gerente' %}
+                            <span class="badge bg-warning text-dark">{{ user.perfil_acesso }}</span>
+                            {% elif user.perfil_acesso == 'Coordenador' %}
+                            <span class="badge bg-info text-dark">{{ user.perfil_acesso }}</span>
+                            {% elif user.perfil_acesso == 'Implantador' %}
+                            <span class="badge bg-primary">{{ user.perfil_acesso }}</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Nenhum</span>
+                            {% endif %}
                         </td>
                         <td>
                             <form method="POST" action="{{ url_for('management.update_user_perfil') }}" class="d-flex"
@@ -97,7 +97,7 @@
                     {% endfor %}
                     {% if not users %}
                     <tr>
-                        <td colspan="5" class="text-center text-muted">Nenhum usuário encontrado no sistema.</td>
+                        <td colspan="4" class="text-center text-muted">Nenhum usuário encontrado no sistema.</td>
                     </tr>
                     {% endif %}
                 </tbody>
