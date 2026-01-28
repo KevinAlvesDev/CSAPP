@@ -119,7 +119,11 @@ def get_implantacoes_with_progress(
     if search_term:
         term = f"%{search_term}%"
         # Search in company name, ID, or favored ID
-        query += f" AND (i.nome_empresa LIKE {placeholder} OR CAST(i.id AS CHAR) LIKE {placeholder} OR CAST(i.id_favorecido AS CHAR) LIKE {placeholder})"
+        # Use TEXT instead of CHAR for PostgreSQL compatibility
+        if use_sqlite:
+            query += f" AND (i.nome_empresa LIKE {placeholder} OR CAST(i.id AS TEXT) LIKE {placeholder} OR CAST(i.id_favorecido AS TEXT) LIKE {placeholder})"
+        else:
+            query += f" AND (i.nome_empresa ILIKE {placeholder} OR i.id::TEXT LIKE {placeholder} OR i.id_favorecido::TEXT LIKE {placeholder})"
         args.extend([term, term, term])
 
     if tipo:
@@ -289,7 +293,11 @@ def get_implantacoes_count(
 
     if search_term:
         term = f"%{search_term}%"
-        query += f" AND (i.nome_empresa LIKE {placeholder} OR CAST(i.id AS CHAR) LIKE {placeholder} OR CAST(i.id_favorecido AS CHAR) LIKE {placeholder})"
+        # Use TEXT instead of CHAR for PostgreSQL compatibility
+        if use_sqlite:
+            query += f" AND (i.nome_empresa LIKE {placeholder} OR CAST(i.id AS TEXT) LIKE {placeholder} OR CAST(i.id_favorecido AS TEXT) LIKE {placeholder})"
+        else:
+            query += f" AND (i.nome_empresa ILIKE {placeholder} OR i.id::TEXT LIKE {placeholder} OR i.id_favorecido::TEXT LIKE {placeholder})"
         args.extend([term, term, term])
 
     if tipo:
