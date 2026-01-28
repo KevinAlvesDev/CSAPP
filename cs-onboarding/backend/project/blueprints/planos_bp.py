@@ -494,11 +494,30 @@ def remover_plano_implantacao(implantacao_id):
     try:
         user = get_current_user()
         usuario = user.get("usuario") if user else "sistema"
+        
+        # Obter parâmetro excluir_comentarios do body JSON ou query string
+        excluir_comentarios = False
+        if request.is_json:
+            data = request.get_json() or {}
+            excluir_comentarios = data.get("excluir_comentarios", False)
+        else:
+            excluir_comentarios = request.args.get("excluir_comentarios", "false").lower() in ("true", "1", "sim", "yes")
+        
+        # Converter para bool se vier como string
+        if isinstance(excluir_comentarios, str):
+            excluir_comentarios = excluir_comentarios.lower() in ("true", "1", "sim", "yes")
 
-        planos_sucesso_service.remover_plano_de_implantacao(implantacao_id=implantacao_id, usuario=usuario)
+        planos_sucesso_service.remover_plano_de_implantacao(
+            implantacao_id=implantacao_id, 
+            usuario=usuario,
+            excluir_comentarios=excluir_comentarios
+        )
 
         if request.is_json:
-            return jsonify({"success": True, "message": "Plano removido da implantação"}), 200
+            msg = "Plano removido da implantação"
+            if not excluir_comentarios:
+                msg += ". Comentários preservados na aba 'Comentários'."
+            return jsonify({"success": True, "message": msg}), 200
 
         flash("Plano removido da implantação!", "success")
         impl = planos_sucesso_service.query_db("SELECT contexto FROM implantacoes WHERE id = %s", (implantacao_id,), one=True)

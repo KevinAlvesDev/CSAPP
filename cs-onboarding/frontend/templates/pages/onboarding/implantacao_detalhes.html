@@ -1070,33 +1070,130 @@ Sim - Academia XYZ
 
 <!-- Modais Originais (Preservados para manter funcionalidade) -->
 <!-- Modal Detalhes Empresa -->
-<!-- Modal Remover Plano -->
-<div class="modal fade" id="modalRemoverPlano" tabindex="-1">
+<!-- Modal Remover Plano (com opção de comentários) -->
+<div class="modal fade" id="modalRemoverPlano" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-danger text-white">
                 <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2"></i>Remover Plano</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ url_for('onboarding_actions.remover_plano_implantacao') }}" method="POST">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
-                <div class="modal-body">
-                    <p>Tem certeza que deseja remover o plano <strong>{{ plano_sucesso.nome if plano_sucesso else ''
-                            }}</strong> desta implantação?</p>
-                    <p class="text-danger small mb-0">
-                        <i class="bi bi-info-circle me-1"></i>
-                        Esta ação irá remover todas as fases, ações e tarefas associadas a este plano nesta implantação.
-                    </p>
+            <div class="modal-body">
+                <p>Tem certeza que deseja remover o plano <strong>{{ plano_sucesso.nome if plano_sucesso else ''
+                        }}</strong> desta implantação?</p>
+                <p class="text-muted small mb-3">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Esta ação irá remover todas as fases, ações e tarefas associadas a este plano.
+                </p>
+
+                <!-- Seção de comentários (aparece apenas se houver comentários) -->
+                <div id="remover-plano-comentarios-section" class="d-none">
+                    <hr>
+                    <div class="alert alert-warning mb-3">
+                        <i class="bi bi-chat-left-text me-2"></i>
+                        <strong>Atenção:</strong> Esta implantação possui <span id="remover-plano-count"></span>
+                        comentário(s).
+                    </div>
+                    <p class="mb-2"><strong>O que deseja fazer com os comentários?</strong></p>
+                    <div class="d-flex flex-column gap-2">
+                        <div class="form-check border rounded p-3">
+                            <input class="form-check-input" type="radio" name="acao_comentarios" id="manter_comentarios"
+                                value="manter" checked>
+                            <label class="form-check-label" for="manter_comentarios">
+                                <strong><i class="bi bi-check-circle text-success me-1"></i> Manter comentários</strong>
+                                <br><small class="text-muted">Os comentários serão preservados na aba
+                                    "Comentários"</small>
+                            </label>
+                        </div>
+                        <div class="form-check border rounded p-3">
+                            <input class="form-check-input" type="radio" name="acao_comentarios"
+                                id="excluir_comentarios" value="excluir">
+                            <label class="form-check-label" for="excluir_comentarios">
+                                <strong><i class="bi bi-trash text-danger me-1"></i> Excluir comentários</strong>
+                                <br><small class="text-muted">Todos os comentários serão removidos
+                                    permanentemente</small>
+                            </label>
+                        </div>
+                    </div>
                 </div>
-                <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-danger">Confirmar Remoção</button>
-                </div>
-            </form>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmarRemoverPlano"
+                    data-implantacao-id="{{ implantacao.id }}">
+                    <i class="bi bi-trash me-1"></i>Confirmar Remoção
+                </button>
+            </div>
         </div>
     </div>
 </div>
+
+<script>
+    (function () {
+        'use strict';
+
+        const modalRemoverPlano = document.getElementById('modalRemoverPlano');
+        if (!modalRemoverPlano) return;
+
+        const comentariosSection = document.getElementById('remover-plano-comentarios-section');
+        const comentariosCount = document.getElementById('remover-plano-count');
+        const btnConfirmar = document.getElementById('btnConfirmarRemoverPlano');
+
+        // Quando o modal abrir, verificar se há comentários
+        modalRemoverPlano.addEventListener('show.bs.modal', async function () {
+            const implantacaoId = btnConfirmar.dataset.implantacaoId;
+
+            try {
+                const contagem = await window.apiFetch(`/planos/implantacao/${implantacaoId}/comentarios/count`);
+                if (contagem.success && contagem.total > 0) {
+                    comentariosCount.textContent = contagem.total;
+                    comentariosSection.classList.remove('d-none');
+                } else {
+                    comentariosSection.classList.add('d-none');
+                }
+            } catch (e) {
+                console.warn('Erro ao contar comentários:', e);
+                comentariosSection.classList.add('d-none');
+            }
+        });
+
+        // Ao confirmar remoção
+        btnConfirmar.addEventListener('click', async function () {
+            const implantacaoId = this.dataset.implantacaoId;
+            const originalText = this.innerHTML;
+
+            // Verificar ação selecionada para os comentários
+            const radioExcluir = document.getElementById('excluir_comentarios');
+            const excluirComentarios = radioExcluir && radioExcluir.checked;
+
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Removendo...';
+
+            try {
+                const response = await window.apiFetch(`/planos/implantacao/${implantacaoId}/plano`, {
+                    method: 'DELETE',
+                    body: JSON.stringify({
+                        excluir_comentarios: excluirComentarios
+                    })
+                });
+
+                if (response.success) {
+                    const msg = excluirComentarios
+                        ? 'Plano removido e comentários excluídos.'
+                        : 'Plano removido. Comentários preservados na aba "Comentários".';
+                    if (window.showToast) window.showToast(msg, 'success');
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    throw new Error(response.error || 'Erro ao remover plano');
+                }
+            } catch (error) {
+                this.disabled = false;
+                this.innerHTML = originalText;
+                // apiFetch já mostra toast de erro
+            }
+        });
+    })();
+</script>
 
 
 

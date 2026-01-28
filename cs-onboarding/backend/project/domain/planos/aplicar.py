@@ -59,7 +59,8 @@ def aplicar_plano_a_implantacao(implantacao_id: int, plano_id: int, usuario: str
         cursor = conn.cursor()
 
         try:
-            # Deletar comentários primeiro para evitar violação de foreign key
+            # Deletar apenas comentários vinculados a checklist_items desta implantação
+            # NÃO deletar comentários órfãos - eles são comentários preservados de planos anteriores
             sql_limpar_comentarios = """
                 DELETE FROM comentarios_h 
                 WHERE checklist_item_id IN (
@@ -151,7 +152,8 @@ def aplicar_plano_a_implantacao_checklist(
                 from ..checklist.comments import preservar_comentarios_implantacao
                 preservar_comentarios_implantacao(implantacao_id)
             else:
-                # Deletar comentários vinculados a checklist_items desta implantação
+                # Deletar apenas comentários vinculados a checklist_items desta implantação
+                # NÃO deletar comentários órfãos - eles são comentários preservados de planos anteriores
                 sql_limpar_comentarios = """
                     DELETE FROM comentarios_h 
                     WHERE checklist_item_id IN (
@@ -161,15 +163,6 @@ def aplicar_plano_a_implantacao_checklist(
                 if db_type == "sqlite":
                     sql_limpar_comentarios = sql_limpar_comentarios.replace("%s", "?")
                 cursor.execute(sql_limpar_comentarios, (implantacao_id,))
-                
-                # Deletar também comentários órfãos (com implantacao_id mas sem checklist_item_id)
-                sql_limpar_orfaos = """
-                    DELETE FROM comentarios_h 
-                    WHERE implantacao_id = %s
-                """
-                if db_type == "sqlite":
-                    sql_limpar_orfaos = sql_limpar_orfaos.replace("%s", "?")
-                cursor.execute(sql_limpar_orfaos, (implantacao_id,))
 
             # Agora deletar os itens do checklist
             sql_limpar = "DELETE FROM checklist_items WHERE implantacao_id = %s"
@@ -246,9 +239,15 @@ def aplicar_plano_a_implantacao_checklist(
             raise DatabaseError(f"Erro ao aplicar plano: {e}") from e
 
 
-def remover_plano_de_implantacao(implantacao_id: int, usuario: str) -> bool:
+def remover_plano_de_implantacao(implantacao_id: int, usuario: str, excluir_comentarios: bool = False) -> bool:
     """
     Remove o plano de sucesso de uma implantação.
+    
+    Args:
+        implantacao_id: ID da implantação
+        usuario: Usuário que está removendo o plano
+        excluir_comentarios: Se True, exclui os comentários junto com o plano.
+                            Se False (padrão), preserva os comentários na aba "Comentários".
     """
     if not implantacao_id:
         raise ValidationError("ID da implantação é obrigatório")
@@ -261,26 +260,68 @@ def remover_plano_de_implantacao(implantacao_id: int, usuario: str) -> bool:
     if not implantacao.get("plano_sucesso_id"):
         return True
 
-    sql = """
-        UPDATE implantacoes
-        SET plano_sucesso_id = NULL, data_atribuicao_plano = NULL
-        WHERE id = %s
-    """
+    with db_connection() as (conn, db_type):
+        cursor = conn.cursor()
+        
+        try:
+            if excluir_comentarios:
+                # Excluir todos os comentários da implantação
+                sql_excluir_comentarios = """
+                    DELETE FROM comentarios_h 
+                    WHERE checklist_item_id IN (
+                        SELECT id FROM checklist_items WHERE implantacao_id = %s
+                    )
+                    OR implantacao_id = %s
+                """
+                if db_type == "sqlite":
+                    sql_excluir_comentarios = sql_excluir_comentarios.replace("%s", "?")
+                cursor.execute(sql_excluir_comentarios, (implantacao_id, implantacao_id))
+                current_app.logger.info(f"Comentários da implantação {implantacao_id} excluídos por {usuario}")
+            else:
+                # Preservar comentários: desvincular dos itens antes de deletar
+                from ..checklist.comments import preservar_comentarios_implantacao
+                preservar_comentarios_implantacao(implantacao_id, cursor=cursor, db_type=db_type)
+                current_app.logger.info(f"Comentários da implantação {implantacao_id} preservados por {usuario}")
 
-    result = execute_db(sql, (implantacao_id,), raise_on_error=True)
+            # Deletar os itens do checklist
+            sql_limpar = "DELETE FROM checklist_items WHERE implantacao_id = %s"
+            if db_type == "sqlite":
+                sql_limpar = sql_limpar.replace("%s", "?")
+            cursor.execute(sql_limpar, (implantacao_id,))
 
-    current_app.logger.info(f"Plano removido da implantação {implantacao_id} por {usuario}")
+            # Atualizar implantação para remover referência ao plano
+            sql_update = """
+                UPDATE implantacoes
+                SET plano_sucesso_id = NULL, data_atribuicao_plano = NULL
+                WHERE id = %s
+            """
+            if db_type == "sqlite":
+                sql_update = sql_update.replace("%s", "?")
+            cursor.execute(sql_update, (implantacao_id,))
+            
+            conn.commit()
 
-    try:
-        from ...db import logar_timeline
+            current_app.logger.info(f"Plano removido da implantação {implantacao_id} por {usuario}")
 
-        logar_timeline(
-            implantacao_id, usuario, "plano_removido", f"Plano de sucesso removido da implantação por {usuario}."
-        )
-    except Exception:
-        pass
+            try:
+                from ...db import logar_timeline
 
-    return result is not None
+                acao = "plano_removido"
+                detalhe = f"Plano de sucesso removido da implantação por {usuario}."
+                if excluir_comentarios:
+                    detalhe += " Comentários excluídos."
+                else:
+                    detalhe += " Comentários preservados."
+                logar_timeline(implantacao_id, usuario, acao, detalhe)
+            except Exception:
+                pass
+
+            return True
+            
+        except Exception as e:
+            conn.rollback()
+            current_app.logger.error(f"Erro ao remover plano: {e}", exc_info=True)
+            raise DatabaseError(f"Erro ao remover plano: {e}") from e
 
 
 def _clonar_plano_para_implantacao(cursor, db_type: str, plano: Dict, implantacao_id: int, responsavel: str = None):

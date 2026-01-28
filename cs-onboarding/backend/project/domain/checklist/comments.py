@@ -471,12 +471,21 @@ def contar_comentarios_implantacao(impl_id):
     return result["total"] if result else 0
 
 
-def preservar_comentarios_implantacao(impl_id):
+def preservar_comentarios_implantacao(impl_id, cursor=None, db_type=None):
     """
     Preserva os comentários de uma implantação desvinculando-os dos checklist_items.
     Os comentários ficam 'órfãos' (checklist_item_id = NULL) mas mantém o implantacao_id.
     Chamado antes de deletar os checklist_items ao aplicar novo plano.
+    
+    Args:
+        impl_id: ID da implantação
+        cursor: Cursor opcional para usar transação existente
+        db_type: Tipo do banco (postgres/sqlite) - obrigatório se cursor for passado
     """
+    # Se cursor foi passado, usar ele diretamente (dentro de transação existente)
+    # Senão, usar execute_db que cria sua própria transação
+    use_external_cursor = cursor is not None
+    
     # Primeiro, garantir que todos os comentários tenham implantacao_id preenchido
     # (para comentários antigos que podem não ter)
     update_impl_id_query = """
@@ -492,7 +501,13 @@ def preservar_comentarios_implantacao(impl_id):
             SELECT id FROM checklist_items WHERE implantacao_id = %s
         )
     """
-    execute_db(update_impl_id_query, (impl_id,))
+    
+    if use_external_cursor:
+        if db_type == "sqlite":
+            update_impl_id_query = update_impl_id_query.replace("%s", "?")
+        cursor.execute(update_impl_id_query, (impl_id,))
+    else:
+        execute_db(update_impl_id_query, (impl_id,))
 
     # Agora desvincular os comentários dos itens (torná-los órfãos)
     desvincular_query = """
@@ -502,6 +517,12 @@ def preservar_comentarios_implantacao(impl_id):
             SELECT id FROM checklist_items WHERE implantacao_id = %s
         )
     """
-    execute_db(desvincular_query, (impl_id,))
+    
+    if use_external_cursor:
+        if db_type == "sqlite":
+            desvincular_query = desvincular_query.replace("%s", "?")
+        cursor.execute(desvincular_query, (impl_id,))
+    else:
+        execute_db(desvincular_query, (impl_id,))
 
     logger.info(f"Comentários da implantação {impl_id} preservados (desvinculados dos itens)")
