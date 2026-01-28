@@ -174,12 +174,15 @@ def listar_comentarios_implantacao(impl_id, page=1, per_page=20):
     """
     offset = (page - 1) * per_page
 
-    # Contagem inclui comentários vinculados a itens E comentários órfãos (sem item, mas com implantacao_id)
+    # Contagem inclui:
+    # 1. Comentários vinculados a checklist_items desta implantação
+    # 2. Comentários órfãos com implantacao_id preenchido
     count_query = """
         SELECT COUNT(*) as total
         FROM comentarios_h c
         LEFT JOIN checklist_items ci ON c.checklist_item_id = ci.id
-        WHERE ci.implantacao_id = %s OR c.implantacao_id = %s
+        WHERE (ci.implantacao_id = %s) 
+           OR (c.implantacao_id = %s AND c.checklist_item_id IS NULL)
     """
     total_res = query_db(count_query, (impl_id, impl_id), one=True)
     total = total_res["total"] if total_res else 0
@@ -193,7 +196,8 @@ def listar_comentarios_implantacao(impl_id, page=1, per_page=20):
         FROM comentarios_h c
         LEFT JOIN checklist_items ci ON c.checklist_item_id = ci.id
         LEFT JOIN perfil_usuario p ON c.usuario_cs = p.usuario
-        WHERE ci.implantacao_id = %s OR c.implantacao_id = %s
+        WHERE (ci.implantacao_id = %s) 
+           OR (c.implantacao_id = %s AND c.checklist_item_id IS NULL)
         ORDER BY c.data_criacao DESC
         LIMIT %s OFFSET %s
     """
@@ -448,7 +452,8 @@ def contar_comentarios_implantacao(impl_id):
         SELECT COUNT(*) as total
         FROM comentarios_h c
         LEFT JOIN checklist_items ci ON c.checklist_item_id = ci.id
-        WHERE ci.implantacao_id = %s OR c.implantacao_id = %s
+        WHERE (ci.implantacao_id = %s) 
+           OR (c.implantacao_id = %s AND c.checklist_item_id IS NULL)
     """
     result = query_db(count_query, (impl_id, impl_id), one=True)
     return result["total"] if result else 0
