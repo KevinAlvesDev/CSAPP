@@ -11,6 +11,7 @@ from flask import current_app
 from ...common.utils import format_date_br
 from ...constants import MODULO_OPCOES, PERFIS_COM_GESTAO
 from ...db import execute_and_fetch_one, execute_db, logar_timeline, query_db
+from ...config.cache_config import clear_implantacao_cache, clear_user_cache
 
 
 def criar_implantacao_service(
@@ -77,6 +78,12 @@ def criar_implantacao_service(
             f"Não foi possível criar checklist de finalização para implantação {implantacao_id}: {e}"
         )
 
+    # Limpar cache do usuário atribuído
+    try:
+        clear_user_cache(usuario_atribuido)
+    except Exception:
+        pass
+
     return implantacao_id
 
 
@@ -100,25 +107,8 @@ def criar_implantacao_modulo_service(
     if modulo_tipo not in modulo_opcoes:
         raise ValueError("Módulo inválido.")
 
-    # Verifica se já existe um MÓDULO ativo para esta empresa (permite Sistema + Módulo simultaneamente)
-    existente = query_db(
-        """
-        SELECT id, status
-        FROM implantacoes
-        WHERE LOWER(nome_empresa) = LOWER(%s)
-          AND tipo = 'modulo'
-          AND contexto = %s
-          AND status IN ('nova','futura','andamento','parada')
-        LIMIT 1
-        """,
-        (nome_empresa, contexto),
-        one=True,
-    )
-    if existente:
-        status_existente = existente.get("status")
-        raise ValueError(
-            f'Já existe uma implantação de módulo ativa para "{nome_empresa}" neste contexto (status: {status_existente}).'
-        )
+    # Permite criação de múltiplos módulos simultâneos para a mesma empresa.
+    # Validação de unicidade removida em 29/01/2026 para permitir N módulos ativos.
 
     tipo = "modulo"
     status = "nova"
@@ -155,6 +145,12 @@ def criar_implantacao_modulo_service(
             f"Não foi possível criar checklist de finalização para implantação de módulo {implantacao_id}: {e}"
         )
 
+    # Limpar cache do usuário atribuído
+    try:
+        clear_user_cache(usuario_atribuido)
+    except Exception:
+        pass
+
     return implantacao_id
 
 
@@ -178,6 +174,16 @@ def transferir_implantacao_service(implantacao_id, usuario_cs_email, novo_usuari
         "detalhes_alterados",
         f'Implantação "{impl.get("nome_empresa")}" transferida de {antigo_usuario_cs} para {novo_usuario_cs} por {usuario_cs_email}.',
     )
+
+    # Limpar caches
+    try:
+        clear_implantacao_cache(implantacao_id)
+        clear_user_cache(antigo_usuario_cs)
+        clear_user_cache(novo_usuario_cs)
+        if usuario_cs_email not in [antigo_usuario_cs, novo_usuario_cs]:
+            clear_user_cache(usuario_cs_email)
+    except Exception:
+        pass
 
     return antigo_usuario_cs
 
@@ -224,6 +230,16 @@ def excluir_implantacao_service(implantacao_id, usuario_cs_email, user_perfil_ac
 
     execute_db("DELETE FROM implantacoes WHERE id = %s", (implantacao_id,))
 
+    # Limpar caches
+    try:
+        if impl:
+            clear_user_cache(impl.get("usuario_cs"))
+        clear_implantacao_cache(implantacao_id)
+        if usuario_cs_email != (impl.get("usuario_cs") if impl else None):
+            clear_user_cache(usuario_cs_email)
+    except Exception:
+        pass
+
 
 def cancelar_implantacao_service(
     implantacao_id, usuario_cs_email, user_perfil_acesso, data_cancelamento_iso, motivo, comprovante_url
@@ -260,3 +276,12 @@ def cancelar_implantacao_service(
         "status_alterado",
         f"Implantação CANCELADA.\nMotivo: {motivo}\nData inf.: {format_date_br(data_cancelamento_iso)}",
     )
+
+    # Limpar caches
+    try:
+        clear_implantacao_cache(implantacao_id)
+        clear_user_cache(impl.get("usuario_cs"))
+        if usuario_cs_email != impl.get("usuario_cs"):
+            clear_user_cache(usuario_cs_email)
+    except Exception:
+        pass
