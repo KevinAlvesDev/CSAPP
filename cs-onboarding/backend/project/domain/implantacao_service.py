@@ -90,6 +90,7 @@ from .implantacao.progress import (
 # ============================================================================
 from .implantacao.status import (
     agendar_implantacao_service,
+    desfazer_cancelamento_implantacao_service,
     desfazer_inicio_implantacao_service,
     finalizar_implantacao_service,
     iniciar_implantacao_service,
@@ -111,84 +112,11 @@ except ImportError:
 # ============================================================================
 
 
-def auto_finalizar_implantacao(
-    impl_id: int, 
-    usuario_cs_email: str
-) -> tuple[bool, Optional[TimelineLog]]:
+# Auto-finalização removida a pedido do usuário
+def auto_finalizar_implantacao(impl_id: int, usuario_cs_email: str) -> tuple[bool, Optional[TimelineLog]]:
     """
-    Verifica se todas as tarefas hierárquicas estão concluídas
-    e, em caso afirmativo, finaliza a implantação.
-    Agora usa checklist_items (estrutura consolidada).
+    Função desativada. Finalizações agora devem ser manuais.
     """
-    items_exist = query_db("SELECT id FROM checklist_items WHERE implantacao_id = %s LIMIT 1", (impl_id,), one=True)
-
-    if not items_exist:
-        return False, None
-
-    subtarefas_pendentes = (
-        query_db(
-            """
-        SELECT COUNT(*) as total
-        FROM checklist_items
-        WHERE implantacao_id = %s 
-        AND tipo_item = 'subtarefa' 
-        AND completed = false
-        """,
-            (impl_id,),
-            one=True,
-        )
-        or {}
-    )
-
-    tarefas_pendentes = (
-        query_db(
-            """
-        SELECT COUNT(*) as total
-        FROM checklist_items ci
-        WHERE ci.implantacao_id = %s
-        AND ci.tipo_item = 'tarefa'
-        AND ci.completed = false
-        AND NOT EXISTS (
-            SELECT 1 FROM checklist_items s 
-            WHERE s.parent_id = ci.id 
-            AND s.tipo_item = 'subtarefa'
-        )
-        """,
-            (impl_id,),
-            one=True,
-        )
-        or {}
-    )
-
-    total_pendentes = int(subtarefas_pendentes.get("total", 0) or 0) + int(tarefas_pendentes.get("total", 0) or 0)
-
-    if total_pendentes == 0:
-        impl_status = query_db("SELECT status, nome_empresa FROM implantacoes WHERE id = %s", (impl_id,), one=True)
-        if impl_status and impl_status.get("status") == "andamento":
-            agora = datetime.now()
-            execute_db(
-                "UPDATE implantacoes SET status = 'finalizada', data_finalizacao = %s WHERE id = %s", (agora, impl_id)
-            )
-            detalhe = f'Implantação "{impl_status.get("nome_empresa", "N/A")}" auto-finalizada.'
-            logar_timeline(impl_id, usuario_cs_email, "auto_finalizada", detalhe)
-
-            perfil = query_db("SELECT nome FROM perfil_usuario WHERE usuario = %s", (usuario_cs_email,), one=True)
-            nome = perfil.get("nome") if perfil else usuario_cs_email
-
-            log_final = query_db(
-                "SELECT *, %s as usuario_nome FROM timeline_log "
-                "WHERE implantacao_id = %s AND tipo_evento = 'auto_finalizada' "
-                "ORDER BY id DESC LIMIT 1",
-                (nome, impl_id),
-                one=True,
-            )
-            if log_final:
-                if not isinstance(log_final, dict):
-                    log_final = dict(log_final)
-                log_final["data_criacao"] = format_date_iso_for_json(log_final.get("data_criacao"))
-                return True, log_final
-            else:
-                return True, None
     return False, None
 
 

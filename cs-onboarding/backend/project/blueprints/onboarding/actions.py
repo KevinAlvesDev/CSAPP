@@ -201,6 +201,42 @@ def desfazer_inicio_implantacao():
         return jsonify({"error": "Erro interno ao desfazer início."}), 500
 
 
+@onboarding_actions_bp.route("/desfazer_cancelamento_implantacao", methods=["POST"])
+@login_required
+def desfazer_cancelamento_implantacao():
+    data = request.get_json()
+    if not data:
+        return jsonify({"ok": False, "error": "Dados inválidos"}), 400
+
+    implantacao_id = data.get("implantacao_id")
+    usuario_cs_email = g.user_email
+    user_perfil_acesso = g.perfil.get("perfil_acesso") if g.perfil else None
+
+    if not implantacao_id:
+        return jsonify({"ok": False, "error": "ID da implantação é obrigatório"}), 400
+
+    try:
+        from ...domain.implantacao.status import desfazer_cancelamento_implantacao_service
+
+        desfazer_cancelamento_implantacao_service(implantacao_id, usuario_cs_email, user_perfil_acesso)
+
+        try:
+            clear_implantacao_cache(implantacao_id)
+            clear_user_cache(usuario_cs_email)
+        except Exception:
+            pass
+
+        return jsonify({"ok": True, "message": "Cancelamento desfeito com sucesso! A implantação retornou para 'Em Andamento'."}), 200
+
+    except ValueError as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
+    except Exception:
+        import traceback
+
+        traceback.print_exc()
+        return jsonify({"ok": False, "error": "Erro interno ao desfazer cancelamento."}), 500
+
+
 @onboarding_actions_bp.route("/agendar_implantacao", methods=["POST"])
 @login_required
 @limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())

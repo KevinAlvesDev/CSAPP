@@ -1,0 +1,94 @@
+/* Checklist Drag & Drop Improvements */
+
+/* Placeholder visual completo que ocupa espaço real */
+.drop-placeholder {
+    display: none;
+    min-height: 60px;
+    background: linear-gradient(135deg, rgba(13, 110, 253, 0.08) 0%, rgba(13, 110, 253, 0.12) 100%);
+    border: 2px dashed #0d6efd;
+    border-radius: 8px;
+    margin: 4px 0;
+    position: relative;
+    transition: all 0.2s ease;
+    animation: placeholderPulse 1.5s ease-in-out infinite;
+}
+
+.drop-placeholder::before {
+    content: '↓ Soltar aqui';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #0d6efd;
+    font-weight: 600;
+    font-size: 0.9rem;
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+@keyframes placeholderPulse {
+
+    0%,
+    100% {
+        background: linear-gradient(135deg, rgba(13, 110, 253, 0.08) 0%, rgba(13, 110, 253, 0.12) 100%);
+    }
+
+    50% {
+        background: linear-gradient(135deg, rgba(13, 110, 253, 0.12) 0%, rgba(13, 110, 253, 0.18) 100%);
+    }
+}
+
+.drop-hint-tooltip {
+    position: fixed;
+    background-color: #212529;
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    z-index: 9999;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    max-width: 300px;
+    white-space: normal;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.drop-hint-tooltip strong {
+    color: #6ea8fe;
+}
+
+.drag-over-inside>.checklist-item-header {
+    background-color: rgba(13, 110, 253, 0.15) !important;
+    border: 2px dashed #0d6efd !important;
+    border-radius: 6px;
+}
+
+.checklist-item.dragging {
+    opacity: 0.4;
+    transform: scale(0.98);
+}
+
+.drag-handle {
+    cursor: grab;
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+/* Checklist Item Styles for Flicker Prevention */
+.checklist-item {
+    transition: background-color 0.2s ease;
+}
+
+/* Ensure comments section doesn't cause jump */
+.checklist-comments-section {
+    min-height: 0;
+    transition: height 0.35s ease;
+}
+
+.comment-section-open>.checklist-item-header {
+    background-color: rgba(0, 0, 0, 0.03);
+    border-radius: 4px;
+}

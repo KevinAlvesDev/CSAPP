@@ -712,6 +712,48 @@ def cancelar_implantacao():
         return redirect(url_for("grandes_contas.ver_implantacao", impl_id=implantacao_id))
 
 
+@grandes_contas_actions_bp.route("/desfazer_cancelamento_implantacao", methods=["POST"])
+@login_required
+@audit(action="UNDO_CANCEL_IMPLANTACAO_GC", target_type="implantacao")
+def desfazer_cancelamento_implantacao():
+    """
+    Endpoint para desfazer o cancelamento de uma implantação em Grandes Contas.
+    """
+    usuario_cs_email = g.user_email
+    data = request.get_json()
+    if not data:
+        return jsonify({"ok": False, "error": "Dados inválidos"}), 400
+
+    implantacao_id = data.get("implantacao_id")
+    user_perfil_acesso = g.perfil.get("perfil_acesso") if g.perfil else None
+
+    if not implantacao_id:
+        return jsonify({"ok": False, "error": "ID da implantação é obrigatório"}), 400
+
+    try:
+        from ...domain.implantacao.status import desfazer_cancelamento_implantacao_service
+
+        desfazer_cancelamento_implantacao_service(implantacao_id, usuario_cs_email, user_perfil_acesso)
+
+        # Limpar caches
+        try:
+            clear_implantacao_cache(implantacao_id)
+            clear_user_cache(usuario_cs_email)
+        except Exception:
+            pass
+
+        return (
+            jsonify({"ok": True, "message": "Cancelamento desfeito com sucesso! A implantação retornou para 'Em Andamento'."}),
+            200,
+        )
+
+    except ValueError as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
+    except Exception as e:
+        app_logger.error(f"Erro ao desfazer cancelamento GC (ID {implantacao_id}): {e}")
+        return jsonify({"ok": False, "error": "Erro interno ao desfazer cancelamento."}), 500
+
+
 # Rotas 'Jira' também mantidas mas cuidado com URLs de API. 
 # Se o JS de frontend chama /api/implantacao/... talvez não precise de mudança se for rota API genérica.
 # Mas aqui elas dependem de login_required e parecem ser específicas do blueprint?

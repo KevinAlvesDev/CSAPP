@@ -10,6 +10,7 @@ from flask import current_app
 
 from ...constants import PERFIS_COM_GESTAO
 from ...db import execute_db, logar_timeline, query_db
+from ...config.cache_config import clear_implantacao_cache, clear_user_cache
 
 
 def iniciar_implantacao_service(implantacao_id, usuario_cs_email):
@@ -51,6 +52,15 @@ def iniciar_implantacao_service(implantacao_id, usuario_cs_email):
         f'Implantação "{impl.get("nome_empresa", "N/A")}" iniciada.',
     )
 
+    # Limpar caches
+    try:
+        clear_implantacao_cache(implantacao_id)
+        clear_user_cache(usuario_cs_email)
+        if impl.get("usuario_cs") != usuario_cs_email:
+            clear_user_cache(impl.get("usuario_cs"))
+    except Exception:
+        pass
+
     return True
 
 
@@ -89,6 +99,15 @@ def desfazer_inicio_implantacao_service(implantacao_id, usuario_cs_email):
         "status_alterado",
         f'Início da implantação "{impl.get("nome_empresa", "N/A")}" desfeito (cancelar início).',
     )
+
+    # Limpar caches
+    try:
+        clear_implantacao_cache(implantacao_id)
+        clear_user_cache(usuario_cs_email)
+        if impl.get("usuario_cs") != usuario_cs_email:
+            clear_user_cache(impl.get("usuario_cs"))
+    except Exception:
+        pass
 
     return True
 
@@ -134,8 +153,17 @@ def agendar_implantacao_service(implantacao_id, usuario_cs_email, data_prevista_
         implantacao_id,
         usuario_cs_email,
         "status_alterado",
-        f'Início da implantação "{impl.get("nome_empresa")}" agendado para {data_prevista_iso}.',
+        f'Início da implantação "{impl.get("nome_empresa", "N/A")}" agendado para {data_prevista_iso}.',
     )
+
+    # Limpar caches
+    try:
+        clear_implantacao_cache(implantacao_id)
+        clear_user_cache(usuario_cs_email)
+        if impl.get("usuario_cs") != usuario_cs_email:
+            clear_user_cache(impl.get("usuario_cs"))
+    except Exception:
+        pass
 
     return impl.get("nome_empresa")
 
@@ -167,8 +195,17 @@ def marcar_sem_previsao_service(implantacao_id, usuario_cs_email):
         implantacao_id,
         usuario_cs_email,
         "status_alterado",
-        f'Implantação "{impl.get("nome_empresa")}" marcada como "Sem previsão".',
+        f'Implantação "{impl.get("nome_empresa", "N/A")}" marcada como "Sem previsão".',
     )
+
+    # Limpar caches
+    try:
+        clear_implantacao_cache(implantacao_id)
+        clear_user_cache(usuario_cs_email)
+        if impl.get("usuario_cs") != usuario_cs_email:
+            clear_user_cache(impl.get("usuario_cs"))
+    except Exception:
+        pass
 
     return impl.get("nome_empresa")
 
@@ -282,6 +319,15 @@ def finalizar_implantacao_service(implantacao_id, usuario_cs_email, data_final_i
         f'Implantação "{impl.get("nome_empresa", "N/A")}" finalizada.',
     )
 
+    # Limpar caches
+    try:
+        clear_implantacao_cache(implantacao_id)
+        clear_user_cache(usuario_cs_email)
+        if impl.get("usuario_cs") != usuario_cs_email:
+            clear_user_cache(impl.get("usuario_cs"))
+    except Exception:
+        pass
+
     return True
 
 
@@ -315,6 +361,15 @@ def parar_implantacao_service(implantacao_id, usuario_cs_email, user_perfil_aces
         "status_alterado",
         f'Implantação "{impl.get("nome_empresa", "N/A")}" parada retroativamente em {data_parada_iso}. Motivo: {motivo}',
     )
+
+    # Limpar caches
+    try:
+        clear_implantacao_cache(implantacao_id)
+        clear_user_cache(usuario_cs_email)
+        if impl.get("usuario_cs") != usuario_cs_email:
+            clear_user_cache(impl.get("usuario_cs"))
+    except Exception:
+        pass
 
     return True
 
@@ -350,6 +405,15 @@ def retomar_implantacao_service(implantacao_id, usuario_cs_email, user_perfil_ac
         f'Implantação "{impl.get("nome_empresa", "N/A")}" retomada.',
     )
 
+    # Limpar caches
+    try:
+        clear_implantacao_cache(implantacao_id)
+        clear_user_cache(usuario_cs_email)
+        if impl.get("usuario_cs") != usuario_cs_email:
+            clear_user_cache(impl.get("usuario_cs"))
+    except Exception:
+        pass
+
     return True
 
 
@@ -377,5 +441,68 @@ def reabrir_implantacao_service(implantacao_id, usuario_cs_email):
         "status_alterado",
         f'Implantação "{impl.get("nome_empresa", "N/A")}" reaberta.',
     )
+
+    # Limpar caches
+    try:
+        clear_implantacao_cache(implantacao_id)
+        clear_user_cache(usuario_cs_email)
+        if impl.get("usuario_cs") != usuario_cs_email:
+            clear_user_cache(impl.get("usuario_cs"))
+    except Exception:
+        pass
+
+    return True
+
+
+def desfazer_cancelamento_implantacao_service(implantacao_id, usuario_cs_email, user_perfil_acesso):
+    """
+    Desfaz o cancelamento de uma implantação (volta status para 'andamento').
+    """
+    from ...constants import PERFIS_COM_GESTAO
+    from ...db import execute_db, logar_timeline, query_db
+
+    impl = query_db(
+        "SELECT usuario_cs, nome_empresa, status, contexto FROM implantacoes WHERE id = %s", (implantacao_id,), one=True
+    )
+
+    if not impl:
+        raise ValueError("Implantação não encontrada.")
+
+    is_owner = impl.get("usuario_cs") == usuario_cs_email
+    is_manager = user_perfil_acesso in PERFIS_COM_GESTAO
+
+    if not (is_owner or is_manager):
+        raise ValueError("Permissão negada para esta ação.")
+
+    if impl.get("status") != "cancelada":
+        raise ValueError(
+            f'Apenas implantações "Canceladas" podem ter o cancelamento desfeito. Status atual: {impl.get("status")}'
+        )
+
+    # Volta para 'andamento', limpa campos de cancelamento
+    execute_db(
+        "UPDATE implantacoes SET status = 'andamento', data_cancelamento = NULL, motivo_cancelamento = NULL, comprovante_cancelamento_url = NULL, data_finalizacao = NULL WHERE id = %s",
+        (implantacao_id,),
+    )
+
+    # Identificar contexto para log mais preciso
+    contexto = impl.get("contexto") or "onboarding"
+    logar_timeline(
+        implantacao_id,
+        usuario_cs_email,
+        "status_alterado",
+        f'Cancelamento da implantação "{impl.get("nome_empresa", "N/A")}" desfeito. Status retornou para "Em Andamento" (Contexto: {contexto}).',
+    )
+
+    # Limpar caches
+    try:
+        from ...config.cache_config import clear_implantacao_cache, clear_user_cache
+
+        clear_implantacao_cache(implantacao_id)
+        clear_user_cache(impl.get("usuario_cs"))
+        if usuario_cs_email != impl.get("usuario_cs"):
+            clear_user_cache(usuario_cs_email)
+    except Exception:
+        pass
 
     return True

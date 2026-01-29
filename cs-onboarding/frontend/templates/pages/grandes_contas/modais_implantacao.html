@@ -277,6 +277,28 @@
     </div>
 </div>
 
+<!-- Modal Desfazer Cancelamento -->
+<div class="modal fade" id="modalDesfazerCancelamento" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title">Desfazer Cancelamento (GC)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja desfazer o cancelamento desta implantação de Grandes Contas?</p>
+                <p class="text-muted small">O status retornará para <strong>Em Andamento</strong> e os dados de
+                    cancelamento serão removidos.</p>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Voltar</button>
+                <button type="button" class="btn btn-primary"
+                    id="btn-confirmar-desfazer-cancelamento">Confirmar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal Remover Plano (com opção de comentários) -->
 <div class="modal fade" id="modalRemoverPlano" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog">

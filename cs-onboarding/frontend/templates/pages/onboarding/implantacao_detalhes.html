@@ -157,6 +157,16 @@
                             <h6 class="mb-0 fw-bold text-dark">Cancelar Implantação</h6>
                         </div>
                     </button>
+                    {% else %}
+                    <button class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-3"
+                        data-bs-toggle="modal" data-bs-target="#modalDesfazerCancelamento">
+                        <div class="bg-primary bg-opacity-10 p-2 rounded text-primary"><i
+                                class="bi bi-arrow-counterclockwise"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 fw-bold text-dark">Desfazer cancelamento</h6>
+                        </div>
+                    </button>
                     {% endif %}
 
                     <button class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-3"
@@ -1487,6 +1497,28 @@ Sim - Academia XYZ
                     <button type="submit" class="btn btn-danger">Confirmar Cancelamento</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Desfazer Cancelamento -->
+<div class="modal fade" id="modalDesfazerCancelamento" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title">Desfazer Cancelamento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja desfazer o cancelamento desta implantação?</p>
+                <p class="text-muted small">O status retornará para <strong>Em Andamento</strong> e os dados de
+                    cancelamento serão removidos.</p>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Voltar</button>
+                <button type="button" class="btn btn-primary"
+                    id="btn-confirmar-desfazer-cancelamento">Confirmar</button>
+            </div>
         </div>
     </div>
 </div>

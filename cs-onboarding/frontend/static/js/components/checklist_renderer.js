@@ -44,8 +44,63 @@ class ChecklistRenderer {
 
         this.tagsMap = {};
         this.tagsList = [];
+        this.openComments = new Set(); // Track open comment sections
 
         this.init();
+    }
+
+    /**
+     * Called by ChecklistComments when a section is toggled
+     */
+    handleCommentToggle(itemId, isOpen) {
+        console.log(`[ChecklistRenderer] handleCommentToggle: ${itemId} (${typeof itemId}), isOpen: ${isOpen}`);
+        if (isOpen) {
+            this.openComments.add(itemId);
+            // Highlight item
+            const item = this.container.querySelector(`#checklist-item-${itemId}`);
+            if (item) item.classList.add('comment-section-open');
+        } else {
+            this.openComments.delete(itemId);
+            // Remove highlight
+            const item = this.container.querySelector(`#checklist-item-${itemId}`);
+            if (item) item.classList.remove('comment-section-open');
+        }
+        console.log(`[ChecklistRenderer] openComments size after toggle: ${this.openComments.size}`);
+        this.updateCommentsBadge();
+    }
+
+    updateCommentsBadge() {
+        const count = this.openComments.size;
+        let badge = document.getElementById('comments-open-badge');
+
+        if (count > 0) {
+            if (!badge) {
+                badge = document.createElement('div');
+                badge.id = 'comments-open-badge';
+                badge.className = 'comments-open-badge visible';
+                document.body.appendChild(badge);
+            }
+            badge.innerHTML = `
+                <i class="bi bi-chat-dots-fill"></i>
+                <span><span class="badge-count">${count}</span> caixas de comentários abertas</span>
+                <button class="btn btn-sm btn-light ms-2" id="btn-close-all-comments" title="Fechar todas (ESC)">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            `;
+            // Add listener to the new button
+            const btn = badge.querySelector('#btn-close-all-comments');
+            if (btn) btn.onclick = () => this.closeAllComments();
+        } else {
+            if (badge) badge.remove();
+        }
+    }
+
+    closeAllComments() {
+        // Create copy of set to iterate safely
+        const toClose = Array.from(this.openComments);
+        toClose.forEach(itemId => {
+            if (this.comments) this.comments.toggleComments(itemId);
+        });
     }
 
     /**
@@ -95,6 +150,13 @@ class ChecklistRenderer {
         // Initial updates
         this.updateProgressFromLocalData();
         this.updateAllItemsUI();
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.openComments.size > 0) {
+                this.closeAllComments();
+            }
+        });
     }
 
     async loadTags() {
@@ -120,9 +182,7 @@ class ChecklistRenderer {
             });
             // Re-render tree to show dynamic tags in forms
             if (this.data && this.data.length > 0) {
-                this.render();
-                // We also need to re-attach listeners because render() replaces innerHTML
-                this.attachEventListeners();
+                this.updateTagsUI();
                 this.updateAllItemsUI();
             }
         } catch (e) {
@@ -145,6 +205,20 @@ class ChecklistRenderer {
     }
 
     render() {
+        if (this.openComments.size > 0) {
+            console.log('[ChecklistRenderer] render() blocked because comments are open');
+            return;
+        }
+        if (this.isInteracting) {
+            console.log('[ChecklistRenderer] render() blocked because isInteracting=true');
+            return;
+        }
+        if (this.container.contains(document.activeElement)) {
+            console.log('[ChecklistRenderer] render() blocked because user has focus inside container');
+            return;
+        }
+
+        console.log('[ChecklistRenderer] render() called');
         const treeRoot = this.container.querySelector('#checklist-tree-root');
         if (!treeRoot) return;
         treeRoot.innerHTML = this.renderTree(this.data);
@@ -180,6 +254,26 @@ class ChecklistRenderer {
             .join('');
     }
 
+    updateTagsUI() {
+        if (!this.flatData) return;
+        Object.keys(this.flatData).forEach(id => {
+            const container = this.container.querySelector(`.tag-options-container[data-item-id="${id}"]`);
+            if (container) {
+                // Capture active tag if any
+                const activeTag = container.querySelector('.comentario-tipo-tag.active');
+                const activeTagName = activeTag ? activeTag.dataset.tag : null;
+
+                container.innerHTML = this.renderTagOptions(parseInt(id));
+
+                // Restore active state
+                if (activeTagName) {
+                    const newTag = container.querySelector(`.comentario-tipo-tag[data-tag="${activeTagName}"]`);
+                    if (newTag) newTag.classList.add('active');
+                }
+            }
+        });
+    }
+
     renderItem(item) {
         const hasChildren = item.children && item.children.length > 0;
         const isExpanded = this.expandedItems.has(item.id);
@@ -196,11 +290,11 @@ class ChecklistRenderer {
         const formatDate = window.DateUtils ? window.DateUtils.formatDate : this.formatDate.bind(this);
 
         return `
-            <div id="checklist-item-${item.id}" class="checklist-item animate-fade-in" data-item-id="${item.id}" data-level="${item.level || 0}" data-parent-id="${item.parent_id || ''}" style="animation-duration: 0.3s;">
+            <div id="checklist-item-${item.id}" class="checklist-item animate-fade-in ${this.openComments.has(item.id) ? 'comment-section-open' : ''}" data-item-id="${item.id}" data-level="${item.level || 0}" data-parent-id="${item.parent_id || ''}" style="animation-duration: 0.3s;">
                 <div class="checklist-item-header position-relative level-${item.level || 0}" style="padding-left: 0;">
                     ${hasChildren ? `<div class="position-absolute bottom-0 left-0 h-1 progress-bar-item" style="width: 0%; background-color: #28a745; opacity: 0; transition: all 0.3s;" id="progress-bar-${item.id}"></div>` : ''}
                     
-                    <div class="checklist-item-grid py-1 px-2 hover-bg" style="cursor: pointer;" onclick="if(event.target.closest('.btn-expand, .btn-comment-toggle, .checklist-checkbox')) return; if(window.checklistRenderer && ${hasChildren}) { window.checklistRenderer.toggleExpand(${item.id}); }">
+                    <div class="checklist-item-grid py-1 px-2 hover-bg">
                         <span class="col-empty d-flex align-items-center justify-content-center">
                             ${hasChildren ? `
                                 <button class="btn-icon btn-expand p-1 border-0 bg-transparent" data-item-id="${item.id}" title="${isExpanded ? 'Colapsar' : 'Expandir'}" style="cursor: pointer; z-index: 10;">
@@ -213,7 +307,7 @@ class ChecklistRenderer {
                         </span>
                         <span class="col-title d-flex align-items-center gap-2">
                             <span class="indent-spacer" style="display:inline-block; width: ${indentPx}px;"></span>
-                            <span class="checklist-item-title mb-0" style="${item.completed ? 'text-decoration: line-through; color: #6c757d;' : ''}">
+                            <span class="checklist-item-title mb-0 js-toggle-comments-text" data-item-id="${item.id}" style="cursor: pointer; ${item.completed ? 'text-decoration: line-through; color: #6c757d;' : ''}">
                                 ${escape(item.title)}
                             </span>
                         </span>
@@ -272,8 +366,16 @@ class ChecklistRenderer {
                 
                 ${hasChildren ? `<div class="checklist-item-children ${isExpanded ? '' : 'd-none'}" data-item-id="${item.id}" style="${isExpanded ? 'display: block;' : 'display: none;'}">${this.renderTree(item.children)}</div>` : ''}
                 
-                <div class="checklist-comments-section collapse" id="comments-${item.id}">
+                <div class="checklist-comments-section collapse ${this.openComments.has(item.id) ? 'show' : ''}" id="comments-${item.id}">
                     <div class="checklist-comment-form p-3 bg-light border-top">
+                        <div class="comment-task-header mb-3 pb-2">
+                            <div class="task-title-label">
+                                <i class="bi bi-chat-left-text text-primary"></i>
+                                <strong>Comentários da tarefa:</strong>
+                            </div>
+                            <div class="task-title-text">${escape(item.title)}</div>
+                        </div>
+
                         <label class="form-label small text-muted mb-1">Adicionar Comentário</label>
                         <textarea class="form-control form-control-sm" id="comment-input-${item.id}" rows="2" placeholder="Escreva um comentário..."></textarea>
                         
@@ -288,7 +390,9 @@ class ChecklistRenderer {
                              <div class="d-flex align-items-center gap-2 flex-wrap">
                                 <span class="comentario-tipo-tag interno active" data-tipo="interno" data-item-id="${item.id}"><i class="bi bi-lock-fill"></i> Interno</span>
                                 <span class="comentario-tipo-tag externo" data-tipo="externo" data-item-id="${item.id}"><i class="bi bi-globe"></i> Externo</span>
-                                ${this.renderTagOptions(item.id)}
+                                <span class="tag-options-container d-flex gap-2" data-item-id="${item.id}">
+                                    ${this.renderTagOptions(item.id)}
+                                </span>
                              </div>
                              <div class="d-flex gap-2 align-items-center">
                                 <label class="btn btn-sm btn-outline-secondary mb-0"><i class="bi bi-paperclip"></i><input type="file" class="d-none comentario-imagem-input" data-item-id="${item.id}" accept="image/*"></label>
@@ -302,7 +406,10 @@ class ChecklistRenderer {
                                 <button class="btn btn-sm btn-primary btn-save-comment" data-item-id="${item.id}"><i class="bi bi-send me-1"></i>Salvar</button>
                              </div>
                         </div>
-                        <div class="comments-history mt-3" id="comments-history-${item.id}"></div>
+                        <div class="mt-3">
+                            <label class="form-label small text-muted mb-2">Histórico de Comentários</label>
+                            <div class="comments-history" id="comments-history-${item.id}" style="min-height: 40px;"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -345,6 +452,10 @@ class ChecklistRenderer {
                 if (!this.comments) return;
                 if (e.target.closest('.btn-comment-toggle')) {
                     const itemId = parseInt(e.target.closest('.btn-comment-toggle').dataset.itemId);
+                    this.comments.toggleComments(itemId);
+                } else if (e.target.closest('.js-toggle-comments-text')) {
+                    e.preventDefault(); e.stopPropagation();
+                    const itemId = parseInt(e.target.closest('.js-toggle-comments-text').dataset.itemId);
                     this.comments.toggleComments(itemId);
                 } else if (e.target.closest('.btn-save-comment')) {
                     const itemId = parseInt(e.target.closest('.btn-save-comment').dataset.itemId);
@@ -592,7 +703,23 @@ class ChecklistRenderer {
 
         // Tags, Responsavel, Previsoes... (Simplified for brevity, similar to original)
         // ... (Re-implement specific badge updates here if needed, or rely on full re-render if complex)
-        // For now, keeping core status update which is most critical
+
+        // Update QTD (Progress Label)
+        const qtdCol = itemEl.querySelector('.col-qtd');
+        if (qtdCol) {
+            if (node.childrenIds && node.childrenIds.length > 0) {
+                const total = node.childrenIds.length;
+                const completedCount = node.childrenIds.filter(cid => this.flatData[cid] && this.flatData[cid].completed).length;
+                const progressLabel = `${completedCount}/${total}`;
+
+                // Update flatData for consistency
+                node.progress_label = progressLabel;
+
+                qtdCol.innerHTML = `<span class="checklist-progress-badge badge badge-truncate bg-light text-dark">${progressLabel}</span>`;
+            } else {
+                qtdCol.innerHTML = '';
+            }
+        }
     }
 
     updateProgressFromLocalData() {
@@ -829,6 +956,7 @@ class ChecklistRenderer {
     }
 
     async reloadChecklist() {
+        console.log('[ChecklistRenderer] reloadChecklist called');
         if (!this.service) return;
         try {
             const result = await this.service.getTree(this.implantacaoId, 'nested');

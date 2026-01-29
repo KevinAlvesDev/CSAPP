@@ -111,6 +111,9 @@ def obter_plano(plano_id):
             modo_req = "visualizar"
 
         context = request.args.get("context")
+        if context and "?" in context:
+            context = context.split("?")[0]
+
         return render_template(
             "pages/plano_sucesso_editor.html", plano=plano, modo=modo_req, pode_editar=pode_editar, context=context
         )
