@@ -92,12 +92,15 @@ def manage_gamification_metrics():
     metricas_atuais = None
     metricas_automaticas = {}
 
+    # Obter contexto do request
+    context = request.args.get("context")
+    valid_contexts = ("onboarding", "ongoing", "grandes_contas")
+    if context and context not in valid_contexts:
+        context = None  # Ignorar valores inválidos
+
     if target_cs_email:
         metricas_atuais = obter_metricas_mensais(target_cs_email, target_mes, target_ano)
 
-        # Obter contexto do request
-        context = request.args.get("context")
-        valid_contexts = ("onboarding", "ongoing", "grandes_contas")
         if context and context not in valid_contexts:
             context = None  # Ignorar valores inválidos
 
@@ -146,7 +149,7 @@ def manage_gamification_metrics():
     if request.method == "POST":
         if not target_cs_email:
             flash("É necessário selecionar um usuário para salvar as métricas.", "error")
-            return redirect(url_for("gamification.manage_gamification_metrics"))
+            return redirect(url_for("gamification.manage_gamification_metrics", context=context))
 
         try:
             data_to_save = {
@@ -216,6 +219,7 @@ def manage_gamification_metrics():
                             cs_email=target_cs_email,
                             mes=target_mes,
                             ano=target_ano,
+                            context=context,
                         )
                     )
 
@@ -257,6 +261,7 @@ def manage_gamification_metrics():
                                 cs_email=target_cs_email,
                                 mes=target_mes,
                                 ano=target_ano,
+                                context=context,
                             )
                         )
                     if v > 1000:
@@ -269,6 +274,7 @@ def manage_gamification_metrics():
                                 cs_email=target_cs_email,
                                 mes=target_mes,
                                 ano=target_ano,
+                                context=context,
                             )
                         )
 
@@ -284,7 +290,7 @@ def manage_gamification_metrics():
             )
             return redirect(
                 url_for(
-                    "gamification.manage_gamification_metrics", cs_email=target_cs_email, mes=target_mes, ano=target_ano
+                    "gamification.manage_gamification_metrics", cs_email=target_cs_email, mes=target_mes, ano=target_ano, context=context
                 )
             )
 

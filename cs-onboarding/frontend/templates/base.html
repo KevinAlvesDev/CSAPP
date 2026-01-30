@@ -136,21 +136,20 @@ request.args.get('context') == 'grandes_contas') or (request.blueprint == 'perfi
         <!-- <li class="nav-item"><a
           class="nav-link {% if request.endpoint == 'analytics.cancelamentos_dashboard' %}active{% endif %}"
           href="{{ url_for('analytics.cancelamentos_dashboard') }}"><i class="bi bi-x-circle me-2"></i><span class="nav-link-text"> Cancelamentos</span></a></li> -->
-        <!-- TEMPORARIAMENTE DESATIVADO - EM MELHORIA -->
-        <!-- <li class="nav-item nav-item-divider">
+        <li class="nav-item nav-item-divider">
           <hr>
         </li>
         <li class="nav-item"><span class="nav-link disabled nav-link-text">Gamificação</span></li>
         <li class="nav-item"><a
             class="nav-link {% if request.endpoint == 'gamification.manage_gamification_metrics' %}active{% endif %}"
-            href="{{ url_for('gamification.manage_gamification_metrics') }}"><i
+            href="{{ url_for('gamification.manage_gamification_metrics', context=current_context) }}"><i
               class="bi bi-pencil-square me-2"></i><span class="nav-link-text"> Métricas</span></a></li>
         <li class="nav-item"><a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#modalGamificacao"><i
               class="bi bi-list-check me-2"></i><span class="nav-link-text"> Critérios da Gamificação</span></a></li>
         <li class="nav-item"><a
             class="nav-link {% if request.endpoint == 'gamification.gamification_report' %}active{% endif %}"
-            href="{{ url_for('gamification.gamification_report') }}"><i class="bi bi-clipboard-data me-2"></i><span
-              class="nav-link-text"> Relatório</span></a></li> -->
+            href="{{ url_for('gamification.gamification_report', context=current_context) }}"><i class="bi bi-clipboard-data me-2"></i><span
+              class="nav-link-text"> Relatório</span></a></li>
         {% endif %}
         <li class="nav-item nav-item-divider">
           <hr>
