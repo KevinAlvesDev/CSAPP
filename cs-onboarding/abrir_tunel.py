@@ -34,8 +34,11 @@ def abrir_tunel():
     print("=" * 60)
     
     # Comando SSH para criar o túnel
+    # Usar caminho absoluto do SSH do Git pois não está no PATH
+    ssh_cmd = r"C:\Program Files\Git\usr\bin\ssh.exe"
+    
     cmd = [
-        "ssh",
+        ssh_cmd,
         "-N",  # Não executar comando remoto
         "-L", f"{LOCAL_PORT}:{REMOTE_HOST}:{REMOTE_PORT}",  # Port forwarding
         f"{SSH_USER}@{SSH_HOST}",
