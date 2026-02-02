@@ -446,6 +446,56 @@ def get_implantacao_details(impl_id, usuario_cs_email, user_perfil):
         from ..domain.checklist_service import build_nested_tree, get_checklist_tree
 
         checklist_flat = get_checklist_tree(implantacao_id=impl_id, include_progress=True)
+
+        # SELF-HEALING: Se tem plano mas não tem itens, clonar agora.
+        if not checklist_flat and implantacao.get("plano_sucesso_id") and plano_sucesso_info:
+            logger.warning(f"Implantação {impl_id} tem plano {implantacao['plano_sucesso_id']} mas checklist vazio. Tentando auto-reparar...")
+            try:
+                from ..db import db_connection
+                from ..domain.planos.aplicar import _clonar_plano_para_implantacao_checklist
+                from datetime import datetime, timedelta, date as datetime_date
+
+                plano_id = implantacao["plano_sucesso_id"]
+                dias_duracao = plano_sucesso_info.get("dias_duracao") or 0
+                
+                # Resolver data base safely
+                data_base = implantacao.get("data_inicio_efetivo") or implantacao.get("data_criacao")
+                base_dt = datetime.now()
+                
+                if data_base:
+                    if isinstance(data_base, str):
+                        try:
+                            base_dt = datetime.strptime(data_base[:10], "%Y-%m-%d")
+                        except:
+                            pass
+                    elif isinstance(data_base, datetime):
+                        base_dt = data_base
+                    elif isinstance(data_base, datetime_date):
+                         base_dt = datetime.combine(data_base, datetime.min.time())
+
+                data_previsao = base_dt + timedelta(days=int(dias_duracao))
+
+                with db_connection() as (conn, db_type):
+                    cursor = conn.cursor()
+                    responsavel = "sistema"
+                    
+                    _clonar_plano_para_implantacao_checklist(
+                        cursor, db_type, plano_id, impl_id, responsavel, base_dt, int(dias_duracao), data_previsao
+                    )
+                    conn.commit()
+                
+                logger.info("Auto-reparo concluído. Recarregando checklist...")
+                # Invalida cache se houver
+                try: 
+                    from ..config.cache_config import clear_implantacao_cache
+                    clear_implantacao_cache(impl_id)
+                except: pass
+                
+                # Busca novamente
+                checklist_flat = get_checklist_tree(implantacao_id=impl_id, include_progress=True)
+            except Exception as e:
+                logger.error(f"Falha no auto-reparo do checklist: {e}", exc_info=True)
+
         if checklist_flat:
             checklist_nested = build_nested_tree(checklist_flat)
     except Exception as e:
