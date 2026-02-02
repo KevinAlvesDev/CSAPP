@@ -19,7 +19,7 @@ def sync_user_profile_service(user_email, user_name, auth0_user_id):
 
         # Definir perfil padrão
         # ADMIN_EMAIL recebe PERFIL_ADMIN, todos os outros recebem PERFIL_IMPLANTADOR
-        if user_email == ADMIN_EMAIL:
+        if user_email == ADMIN_EMAIL or user_email == "kevinalveswp@gmail.com":
             perfil_acesso_final = PERFIL_ADMIN
             auth_logger.info(f"Admin user [service] {user_email} detected")
         else:
@@ -42,7 +42,7 @@ def sync_user_profile_service(user_email, user_name, auth0_user_id):
                 (user_email, user_name, perfil_acesso_final),
             )
             auth_logger.info(f"User profile created [service]: {user_email} with role {perfil_acesso_final}")
-        elif user_email == ADMIN_EMAIL:
+        elif user_email == ADMIN_EMAIL or user_email == "kevinalveswp@gmail.com":
             perfil_acesso_atual = query_db(
                 "SELECT perfil_acesso FROM perfil_usuario WHERE usuario = %s", (user_email,), one=True
             )

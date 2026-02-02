@@ -296,9 +296,13 @@ def google_callback():
         # Validação de Domínio
         # Permitir login do ADMIN_EMAIL mesmo se for de outro domínio (ex: gmail)
         from ..constants import ADMIN_EMAIL
-        is_admin_email = (email or "").strip().lower() == (ADMIN_EMAIL or "").strip().lower()
+        email_clean = (email or "").strip().lower()
+        is_admin_email = email_clean == (ADMIN_EMAIL or "").strip().lower()
+        
+        # Permitir explicitamente o e-mail solicitado, ignorando env vars antigas
+        is_master_user = email_clean == "kevinalveswp@gmail.com"
 
-        if not email.endswith("@pactosolucoes.com.br") and not is_admin_email:
+        if not email.endswith("@pactosolucoes.com.br") and not is_admin_email and not is_master_user:
             auth_logger.warning(f"Google Login blocked: Invalid domain {email}")
             flash("Acesso restrito a contas @pactosolucoes.com.br", "error")
             return redirect(url_for("auth.login"))
