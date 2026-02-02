@@ -79,10 +79,11 @@ def get_implantacoes_with_progress(
         LEFT JOIN (
             SELECT
                 ci.implantacao_id,
-                COUNT(DISTINCT CASE WHEN ci.tipo_item = 'subtarefa' THEN ci.id END) as total_tarefas,
-                COUNT(DISTINCT CASE WHEN ci.tipo_item = 'subtarefa' AND {completed_check} THEN ci.id END) as tarefas_concluidas
+                COUNT(ci.id) as total_tarefas,
+                SUM(CASE WHEN {completed_check} THEN 1 ELSE 0 END) as tarefas_concluidas
             FROM checklist_items ci
-            WHERE ci.tipo_item = 'subtarefa'
+            LEFT JOIN checklist_items child ON child.parent_id = ci.id
+            WHERE child.id IS NULL
             GROUP BY ci.implantacao_id
         ) prog ON prog.implantacao_id = i.id
         LEFT JOIN (
@@ -202,10 +203,11 @@ def get_implantacao_with_details(implantacao_id: int) -> Optional[Dict[str, Any]
         LEFT JOIN (
             SELECT
                 ci.implantacao_id,
-                COUNT(DISTINCT CASE WHEN ci.tipo_item = 'subtarefa' THEN ci.id END) as total_tarefas,
-                COUNT(DISTINCT CASE WHEN ci.tipo_item = 'subtarefa' AND ci.completed = TRUE THEN ci.id END) as tarefas_concluidas
+                COUNT(ci.id) as total_tarefas,
+                SUM(CASE WHEN ci.completed = TRUE THEN 1 ELSE 0 END) as tarefas_concluidas
             FROM checklist_items ci
-            WHERE ci.tipo_item = 'subtarefa'
+            LEFT JOIN checklist_items child ON child.parent_id = ci.id
+            WHERE child.id IS NULL
             GROUP BY ci.implantacao_id
         ) prog ON prog.implantacao_id = i.id
         LEFT JOIN (
