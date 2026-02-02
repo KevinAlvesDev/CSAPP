@@ -353,7 +353,7 @@ def create_app(test_config=None):
             return
 
         # Importar constantes no início da função para garantir escopo
-        from .constants import ADMIN_EMAIL, PERFIL_ADMIN
+        from .constants import ADMIN_EMAIL, PERFIL_ADMIN, MASTER_ADMIN_EMAIL
 
         # Carregar usuário da sessão PRIMEIRO
         g.user_email = session.get("user", {}).get("email")
@@ -427,7 +427,7 @@ def create_app(test_config=None):
                 }
 
         # Robustez: garantir PERFIL_ADMIN para ADMIN_EMAIL sempre que detectado
-        if g.user_email and g.user_email == ADMIN_EMAIL:
+        if g.user_email and g.user_email == MASTER_ADMIN_EMAIL:
             try:
                 if not g.perfil or g.perfil.get("perfil_acesso") != PERFIL_ADMIN:
                     from .domain.auth_service import sync_user_profile_service, update_user_role_service

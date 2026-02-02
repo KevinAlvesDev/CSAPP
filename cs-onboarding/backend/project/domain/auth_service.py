@@ -7,7 +7,7 @@ from psycopg2 import IntegrityError as Psycopg2IntegrityError
 from werkzeug.security import generate_password_hash
 
 from ..config.logging_config import auth_logger
-from ..constants import ADMIN_EMAIL, PERFIL_ADMIN, PERFIL_IMPLANTADOR
+from ..constants import ADMIN_EMAIL, MASTER_ADMIN_EMAIL, PERFIL_ADMIN, PERFIL_IMPLANTADOR
 from ..db import execute_db, query_db
 
 
@@ -19,8 +19,7 @@ def sync_user_profile_service(user_email, user_name, auth0_user_id):
 
         # Definir perfil padrão
         # ADMIN_EMAIL recebe PERFIL_ADMIN, todos os outros recebem PERFIL_IMPLANTADOR
-        if user_email == ADMIN_EMAIL or user_email == "kevinalveswp@gmail.com":
-            perfil_acesso_final = PERFIL_ADMIN
+        if user_email == MASTER_ADMIN_EMAIL:
             auth_logger.info(f"Admin user [service] {user_email} detected")
         else:
             perfil_acesso_final = PERFIL_IMPLANTADOR
@@ -42,7 +41,7 @@ def sync_user_profile_service(user_email, user_name, auth0_user_id):
                 (user_email, user_name, perfil_acesso_final),
             )
             auth_logger.info(f"User profile created [service]: {user_email} with role {perfil_acesso_final}")
-        elif user_email == ADMIN_EMAIL or user_email == "kevinalveswp@gmail.com":
+        elif user_email == MASTER_ADMIN_EMAIL:
             perfil_acesso_atual = query_db(
                 "SELECT perfil_acesso FROM perfil_usuario WHERE usuario = %s", (user_email,), one=True
             )

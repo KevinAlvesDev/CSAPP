@@ -26,82 +26,8 @@
         {% endif %}
         {% endwith %}
 
-        <div class="table-responsive">
-            <table class="table table-hover align-middle">
-                <thead>
-                    <tr class="table-light">
-                        <th>Usuário (E-mail)</th>
-                        <th>Nome / Cargo (Função)</th>
-                        <th>Perfil de Acesso Atual</th>
-
-                        <th>Alterar Perfil de Acesso</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for user in users %}
-                    <tr id="user-row-{{ loop.index }}" class="
-                    {% if user.perfil_acesso == 'Administrador' %}table-danger
-                    {% elif user.perfil_acesso == 'Gerente' or user.perfil_acesso == 'Coordenador' %}table-warning
-                    {% elif user.perfil_acesso == None %}table-info
-                    {% endif %}
-                ">
-                        <td>
-                            {{ user.usuario }}
-                            {% if user.usuario == g.user_email %}
-                            <span class="badge bg-success ms-1">Você</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {{ user.nome or 'N/A' }}
-                            {% if user.cargo %}
-                            <small class="text-muted d-block">({{ user.cargo }})</small>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if user.perfil_acesso == 'Administrador' %}
-                            <span class="badge bg-danger">{{ user.perfil_acesso }}</span>
-                            {% elif user.perfil_acesso == 'Gerente' %}
-                            <span class="badge bg-warning text-dark">{{ user.perfil_acesso }}</span>
-                            {% elif user.perfil_acesso == 'Coordenador' %}
-                            <span class="badge bg-info text-dark">{{ user.perfil_acesso }}</span>
-                            {% elif user.perfil_acesso == 'Implantador' %}
-                            <span class="badge bg-primary">{{ user.perfil_acesso }}</span>
-                            {% else %}
-                            <span class="badge bg-secondary">Nenhum</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <form method="POST" action="{{ url_for('management.update_user_perfil') }}" class="d-flex"
-                                onsubmit="return confirm('Tem certeza que deseja alterar o Perfil de Acesso de {{ user.usuario }}?');">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <input type="hidden" name="usuario_email" value="{{ user.usuario }}">
-
-                                <select name="new_perfil" class="form-select form-select-sm me-2" style="width: 170px;">
-                                    <option value="" {% if user.perfil_acesso==None %}selected{% endif %}>Nenhum
-                                    </option>
-                                    {% for perfil in perfis_list %}
-                                    <option value="{{ perfil }}" {% if user.perfil_acesso==perfil %}selected{% endif %}>
-                                        {{ perfil }}
-                                    </option>
-                                    {% endfor %}
-                                </select>
-
-                                <button type="submit" class="btn btn-primary btn-sm" {% if user.usuario==g.user_email
-                                    and g.perfil.perfil_acesso=='Administrador' %}disabled
-                                    title="Use o banco de dados para revogar seu próprio acesso de Admin" {% endif %}>
-                                    Salvar
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                    {% if not users %}
-                    <tr>
-                        <td colspan="4" class="text-center text-muted">Nenhum usuário encontrado no sistema.</td>
-                    </tr>
-                    {% endif %}
-                </tbody>
-            </table>
+        <div id="users-management-content">
+            {% include '_manage_users_content.html' %}
         </div>
 
 </div>
