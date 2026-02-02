@@ -181,7 +181,7 @@ def listar_comentarios_implantacao(impl_id, page=1, per_page=20):
         FROM comentarios_h c
         LEFT JOIN checklist_items ci ON c.checklist_item_id = ci.id
         WHERE (ci.implantacao_id = %s)
-           OR (c.implantacao_id = %s AND (c.checklist_item_id IS NULL OR ci.id IS NULL))
+           OR (c.implantacao_id = %s)
     """
     total_res = query_db(count_query, (impl_id, impl_id), one=True)
     total = total_res["total"] if total_res else 0
@@ -196,11 +196,11 @@ def listar_comentarios_implantacao(impl_id, page=1, per_page=20):
         LEFT JOIN checklist_items ci ON c.checklist_item_id = ci.id
         LEFT JOIN perfil_usuario p ON c.usuario_cs = p.usuario
         WHERE 
-            -- Caso 1: Vinculado a item existente desta implantação
-            (ci.implantacao_id = %s)
+            -- Robustez máxima: considera vinculado se o item pertencer à implantação 
+            -- OU se o próprio comentário apontar para a implantação (mesmo que item deletado/nulo)
+            ci.implantacao_id = %s
             OR 
-            -- Caso 2: Órfão (preservado) ou Fantasma (link quebrado), mas pertence à implantação
-            (c.implantacao_id = %s AND (c.checklist_item_id IS NULL OR ci.id IS NULL))
+            c.implantacao_id = %s
         
         ORDER BY data_criacao DESC
         LIMIT %s OFFSET %s
@@ -457,7 +457,7 @@ def contar_comentarios_implantacao(impl_id):
         FROM comentarios_h c
         LEFT JOIN checklist_items ci ON c.checklist_item_id = ci.id
         WHERE (ci.implantacao_id = %s) 
-           OR (c.implantacao_id = %s AND c.checklist_item_id IS NULL)
+           OR (c.implantacao_id = %s)
     """
     result = query_db(count_query, (impl_id, impl_id), one=True)
     return result["total"] if result else 0
