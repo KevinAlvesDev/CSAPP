@@ -36,63 +36,50 @@
                 icon = 'bi-exclamation-triangle-fill'
             } = options || {};
 
-            const modalId = 'confirmModal-' + Date.now();
+            // Mapeamento de type para icons do SweetAlert2
+            // warning, error, success, info, question
+            const swalType = type === 'danger' ? 'error' : (type === 'primary' ? 'question' : type);
 
-            // Determine button color based on type
-            const btnClass = type === 'danger' ? 'btn-danger' : 'btn-primary';
-
-            const modalHTML = `
-            <div class="modal fade" id="${modalId}" tabindex="-1" aria-labelledby="${modalId}Label" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header border-0 pb-0">
-                            <h5 class="modal-title" id="${modalId}Label">
-                                <i class="bi ${icon} text-${type} me-2"></i>${title}
-                            </h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            <p>${message}</p>
-                        </div>
-                        <div class="modal-footer border-0">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">${cancelText}</button>
-                            <button type="button" class="btn ${btnClass}" id="${modalId}Confirm">${confirmText}</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            `;
-
-            document.body.insertAdjacentHTML('beforeend', modalHTML);
-            const modalElement = document.getElementById(modalId);
-
-            // Check if Bootstrap is available
-            if (typeof bootstrap === 'undefined' || !bootstrap.Modal) {
-                console.error('Bootstrap Modal not available');
-                modalElement.remove();
-                resolve(false);
-                return;
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: title,
+                    text: message,
+                    icon: swalType,
+                    showCancelButton: true,
+                    confirmButtonText: confirmText,
+                    cancelButtonText: cancelText,
+                    confirmButtonColor: type === 'danger' ? '#dc3545' : '#0d6efd',
+                    cancelButtonColor: '#6c757d',
+                    reverseButtons: true
+                }).then((result) => {
+                    resolve(result.isConfirmed);
+                });
+            } else {
+                // Fallback para native confirm se Swal falhar
+                const confirmed = confirm(message);
+                resolve(confirmed);
             }
-
-            const modal = new bootstrap.Modal(modalElement);
-            let resolved = false;
-
-            // Handle confirm button click
-            const confirmBtn = document.getElementById(modalId + 'Confirm');
-            confirmBtn.addEventListener('click', () => {
-                resolved = true;
-                modal.hide();
-            });
-
-            // Handle modal hidden event (close, cancel, or confirm)
-            modalElement.addEventListener('hidden.bs.modal', () => {
-                modalElement.remove();
-                resolve(resolved);
-            }, { once: true });
-
-            modal.show();
         });
     }
+
+    // Interceptar confirmações do HTMX para usar o modal bonito
+    document.addEventListener('htmx:load', function () {
+        if (!document.body.dataset.htmxConfirmAttached) {
+            document.body.addEventListener('htmx:confirm', function (evt) {
+                evt.preventDefault();
+                showConfirm({
+                    message: evt.detail.question,
+                    title: 'Confirmação',
+                    type: 'warning',
+                    confirmText: 'Sim',
+                    cancelText: 'Não'
+                }).then(confirmed => {
+                    if (confirmed) evt.detail.issueRequest();
+                });
+            });
+            document.body.dataset.htmxConfirmAttached = 'true';
+        }
+    });
 
     /**
      * Shows a delete confirmation dialog.
