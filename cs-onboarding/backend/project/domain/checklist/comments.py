@@ -177,14 +177,11 @@ def listar_comentarios_implantacao(impl_id, page=1, per_page=20):
     # Contagem: comentários vinculados a checklist_items desta implantação
     # + comentários órfãos (se existirem)
     count_query = """
-        SELECT (
-            SELECT COUNT(*) FROM comentarios_h c
-            INNER JOIN checklist_items ci ON c.checklist_item_id = ci.id
-            WHERE ci.implantacao_id = %s
-        ) + (
-            SELECT COUNT(*) FROM comentarios_h 
-            WHERE implantacao_id = %s AND checklist_item_id IS NULL
-        ) as total
+        SELECT COUNT(*) as total
+        FROM comentarios_h c
+        LEFT JOIN checklist_items ci ON c.checklist_item_id = ci.id
+        WHERE (ci.implantacao_id = %s)
+           OR (c.implantacao_id = %s AND (c.checklist_item_id IS NULL OR ci.id IS NULL))
     """
     total_res = query_db(count_query, (impl_id, impl_id), one=True)
     total = total_res["total"] if total_res else 0
@@ -196,19 +193,14 @@ def listar_comentarios_implantacao(impl_id, page=1, per_page=20):
             ci.id as item_id, ci.title as item_title,
             COALESCE(p.nome, c.usuario_cs) as usuario_nome
         FROM comentarios_h c
-        INNER JOIN checklist_items ci ON c.checklist_item_id = ci.id
+        LEFT JOIN checklist_items ci ON c.checklist_item_id = ci.id
         LEFT JOIN perfil_usuario p ON c.usuario_cs = p.usuario
-        WHERE ci.implantacao_id = %s
-        
-        UNION ALL
-        
-        SELECT
-            c.id, c.texto, c.usuario_cs, c.data_criacao, c.visibilidade, c.noshow, c.imagem_url, c.tag,
-            NULL as item_id, '(Comentário preservado)' as item_title,
-            COALESCE(p.nome, c.usuario_cs) as usuario_nome
-        FROM comentarios_h c
-        LEFT JOIN perfil_usuario p ON c.usuario_cs = p.usuario
-        WHERE c.implantacao_id = %s AND c.checklist_item_id IS NULL
+        WHERE 
+            -- Caso 1: Vinculado a item existente desta implantação
+            (ci.implantacao_id = %s)
+            OR 
+            -- Caso 2: Órfão (preservado) ou Fantasma (link quebrado), mas pertence à implantação
+            (c.implantacao_id = %s AND (c.checklist_item_id IS NULL OR ci.id IS NULL))
         
         ORDER BY data_criacao DESC
         LIMIT %s OFFSET %s
