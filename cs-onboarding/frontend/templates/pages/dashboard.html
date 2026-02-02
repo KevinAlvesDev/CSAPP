@@ -994,7 +994,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
 </script>
 <script>
     document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') { updateDashboardProgress(); } });
-    document.addEventListener('DOMContentLoaded', function () { updateDashboardProgress(); });
+
     function updateDashboardProgress() {
         var bars = document.querySelectorAll('.js-progress-bar[data-progress-url]');
         bars.forEach(function (bar) {

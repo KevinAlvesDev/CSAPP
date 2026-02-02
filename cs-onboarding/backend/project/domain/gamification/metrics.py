@@ -9,6 +9,22 @@ from datetime import date, datetime
 from ...db import execute_db, query_db
 
 
+def _parse_date_safe(date_str):
+    """Auxiliar para parsear datas de strings sujas/variadas."""
+    if not date_str:
+        return None
+    try:
+        return datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+    except ValueError:
+        try:
+            if "." in date_str:
+                return datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S.%f")
+            else:
+                return datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            return None
+
+
 def _get_gamification_automatic_data_bulk(mes, ano, primeiro_dia_str, fim_ultimo_dia_str, target_cs_email=None, context=None):
     """Busca todos os dados automáticos de todos os usuários de uma vez.
     
@@ -61,32 +77,14 @@ def _get_gamification_automatic_data_bulk(mes, ano, primeiro_dia_str, fim_ultimo
         dt_criacao_datetime = None
         dt_finalizacao_datetime = None
         if isinstance(dt_criacao, str):
-            try:
-                dt_criacao_datetime = datetime.fromisoformat(dt_criacao.replace("Z", "+00:00"))
-            except ValueError:
-                try:
-                    if "." in dt_criacao:
-                        dt_criacao_datetime = datetime.strptime(dt_criacao, "%Y-%m-%d %H:%M:%S.%f")
-                    else:
-                        dt_criacao_datetime = datetime.strptime(dt_criacao, "%Y-%m-%d %H:%M:%S")
-                except ValueError:
-                    pass
+            dt_criacao_datetime = _parse_date_safe(dt_criacao)
         elif isinstance(dt_criacao, date) and not isinstance(dt_criacao, datetime):
             dt_criacao_datetime = datetime.combine(dt_criacao, datetime.min.time())
         elif isinstance(dt_criacao, datetime):
             dt_criacao_datetime = dt_criacao
 
         if isinstance(dt_finalizacao, str):
-            try:
-                dt_finalizacao_datetime = datetime.fromisoformat(dt_finalizacao.replace("Z", "+00:00"))
-            except ValueError:
-                try:
-                    if "." in dt_finalizacao:
-                        dt_finalizacao_datetime = datetime.strptime(dt_finalizacao, "%Y-%m-%d %H:%M:%S.%f")
-                    else:
-                        dt_finalizacao_datetime = datetime.strptime(dt_finalizacao, "%Y-%m-%d %H:%M:%S")
-                except ValueError:
-                    pass
+            dt_finalizacao_datetime = _parse_date_safe(dt_finalizacao)
         elif isinstance(dt_finalizacao, date) and not isinstance(dt_finalizacao, datetime):
             dt_finalizacao_datetime = datetime.combine(dt_finalizacao, datetime.min.time())
         elif isinstance(dt_finalizacao, datetime):
@@ -193,22 +191,31 @@ def salvar_metricas_mensais(data_to_save, existing_record_id=None):
     """
     if existing_record_id:
         # Atualizar registro existente
-        set_clauses = [f"{key} = %s" for key in data_to_save.keys() if key not in ["usuario_cs", "mes", "ano"]]
+        # Removendo chaves que não devem ser atualizadas/duplicadas no SET
+        keys_to_exclude = {"usuario_cs", "mes", "ano"}
+        update_data = {k: v for k, v in data_to_save.items() if k not in keys_to_exclude}
+        
+        if not update_data:
+            return True # Nada para atualizar
+
+        set_clauses = [f"{key} = %s" for key in update_data.keys()]
         sql_update = f"""
             UPDATE gamificacao_metricas_mensais
             SET {", ".join(set_clauses)}
             WHERE id = %s
         """
-        args = list(data_to_save.values())[3:] + [existing_record_id]
+        # Garante que os valores correspondem à ordem das chaves em set_clauses + ID no final
+        args = list(update_data.values()) + [existing_record_id]
         execute_db(sql_update, tuple(args))
     else:
         # Inserir novo registro
-        columns = data_to_save.keys()
+        columns = list(data_to_save.keys())
         values_placeholders = ["%s"] * len(columns)
         sql_insert = (
             f"INSERT INTO gamificacao_metricas_mensais ({', '.join(columns)}) VALUES ({', '.join(values_placeholders)})"
         )
-        args = list(data_to_save.values())
+        # Garante a ordem dos valores alinhada com as colunas
+        args = [data_to_save[col] for col in columns]
         execute_db(sql_insert, tuple(args))
 
     return True

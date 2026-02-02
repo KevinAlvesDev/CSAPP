@@ -31,6 +31,7 @@ def _api_origin_guard():
 
 @api_bp.route("/progresso_implantacao/<int:impl_id>", methods=["GET"])
 @validate_api_origin
+@limiter.limit("2000 per minute")
 def progresso_implantacao(impl_id):
     try:
         impl_id = validate_integer(impl_id, min_value=1)

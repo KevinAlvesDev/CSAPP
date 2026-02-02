@@ -233,8 +233,8 @@ class ChecklistComments {
      * Saves a new comment.
      */
     async saveComment(itemId) {
-        const textarea = this.container.querySelector(`#comment - input - ${itemId} `);
-        const commentsSection = this.container.querySelector(`#comments - ${itemId} `);
+        const textarea = this.container.querySelector(`#comment-input-${itemId}`);
+        const commentsSection = this.container.querySelector(`#comments-${itemId}`);
         if (!textarea) return;
 
         const texto = textarea.value.trim();
@@ -249,11 +249,11 @@ class ChecklistComments {
         const noshow = tag === 'No Show';
 
         // Get image
-        const fileInput = commentsSection?.querySelector(`.comentario - imagem - input`);
+        const fileInput = commentsSection?.querySelector(`.comentario-imagem-input`);
         const imageFile = fileInput?.files?.[0] || null;
 
         // Get email notification
-        const checkboxEmail = commentsSection?.querySelector(`#check - email - ${itemId} `);
+        const checkboxEmail = commentsSection?.querySelector(`#check-email-${itemId}`);
         const send_email = checkboxEmail ? checkboxEmail.checked : false;
 
         if (!texto && !imageFile) {
@@ -296,11 +296,11 @@ class ChecklistComments {
     }
 
     cancelComment(itemId) {
-        const textarea = this.container.querySelector(`#comment - input - ${itemId} `);
+        const textarea = this.container.querySelector(`#comment-input-${itemId}`);
         if (textarea) textarea.value = ''; // Or restore original if editing
         this.removeImagePreview(itemId);
 
-        const commentsSection = this.container.querySelector(`#comments - ${itemId} `);
+        const commentsSection = this.container.querySelector(`#comments-${itemId}`);
         if (commentsSection && window.bootstrap && window.bootstrap.Collapse) {
             const bsCollapse = window.bootstrap.Collapse.getInstance(commentsSection);
             if (bsCollapse) bsCollapse.hide();
@@ -315,7 +315,7 @@ class ChecklistComments {
         if (result.success) {
             await this.loadComments(itemId);
             // Check if there are any comments left to update indicator
-            const historyContainer = this.container.querySelector(`#comments - history - ${itemId} `);
+            const historyContainer = this.container.querySelector(`#comments-history-${itemId}`);
             const hasComments = historyContainer && historyContainer.querySelectorAll('.comment-item').length > 0;
             this.updateCommentIndicator(itemId, hasComments);
         } else {
@@ -328,7 +328,7 @@ class ChecklistComments {
     }
 
     updateCommentIndicator(itemId, hasComments) {
-        const button = this.container.querySelector(`.btn - comment - toggle[data - item - id="${itemId}"]`);
+        const button = this.container.querySelector(`.btn-comment-toggle[data-item-id="${itemId}"]`);
         if (!button) return;
 
         const icon = button.querySelector('i');
@@ -413,7 +413,7 @@ class ChecklistComments {
 
         const reader = new FileReader();
         reader.onload = (event) => {
-            const previewContainer = document.getElementById(`image - preview - ${itemId} `);
+            const previewContainer = document.getElementById(`image-preview-${itemId}`);
             if (previewContainer) {
                 const img = previewContainer.querySelector('.image-preview');
                 if (img) {
@@ -423,7 +423,7 @@ class ChecklistComments {
             }
 
             // Update file input if it wasn't the source (e.g. pasted)
-            const fileInput = document.querySelector(`.comentario - imagem - input[data - item - id="${itemId}"]`);
+            const fileInput = document.querySelector(`.comentario-imagem-input[data-item-id="${itemId}"]`);
             if (fileInput && fileInput.files[0] !== file) {
                 const dataTransfer = new DataTransfer();
                 dataTransfer.items.add(file);
@@ -434,8 +434,8 @@ class ChecklistComments {
     }
 
     removeImagePreview(itemId) {
-        const previewContainer = document.getElementById(`image - preview - ${itemId} `);
-        const fileInput = document.querySelector(`.comentario - imagem - input[data - item - id="${itemId}"]`);
+        const previewContainer = document.getElementById(`image-preview-${itemId}`);
+        const fileInput = document.querySelector(`.comentario-imagem-input[data-item-id="${itemId}"]`);
 
         if (previewContainer) {
             previewContainer.classList.add('d-none');
@@ -453,7 +453,7 @@ class ChecklistComments {
         if (!modal) {
             // Create modal if missing
             const modalHtml = `
-            < div class="modal fade" id = "imageModal" tabindex = "-1" >
+            <div class="modal fade" id="imageModal" tabindex="-1">
                 <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 90vw;">
                     <div class="modal-content">
                         <div class="modal-header">
@@ -465,7 +465,7 @@ class ChecklistComments {
                         </div>
                     </div>
                 </div>
-                </div >
+            </div>
             `;
             document.body.insertAdjacentHTML('beforeend', modalHtml);
             modal = document.getElementById('imageModal');
@@ -481,7 +481,7 @@ class ChecklistComments {
     }
 
     startEditComment(commentId, itemId) {
-        const commentEl = this.container.querySelector(`.comment - item[data - comment - id="${commentId}"]`);
+        const commentEl = this.container.querySelector(`.comment-item[data-comment-id="${commentId}"]`);
         if (!commentEl) return;
 
         // Save current HTML to restore on cancel
@@ -496,18 +496,18 @@ class ChecklistComments {
         // We use innerHTML but be careful not to break event delegation.
         // The delegation is on the container, so replacing innerHTML of a child is fine.
         commentEl.innerHTML = `
-            < div class="edit-mode-wrapper p-1" >
+            <div class="edit-mode-wrapper p-1">
                 <textarea class="form-control form-control-sm mb-2" rows="3">${this.escapeHtml(currentText)}</textarea>
                 <div class="d-flex justify-content-end gap-2">
                     <button class="btn btn-sm btn-secondary btn-cancel-edit" data-comment-id="${commentId}" data-item-id="${itemId}">Cancelar</button>
                     <button class="btn btn-sm btn-primary btn-save-edit" data-comment-id="${commentId}" data-item-id="${itemId}">Salvar</button>
                 </div>
-            </div >
+            </div>
             `;
     }
 
     cancelEditComment(commentId, itemId) {
-        const commentEl = this.container.querySelector(`.comment - item[data - comment - id="${commentId}"]`);
+        const commentEl = this.container.querySelector(`.comment-item[data-comment-id="${commentId}"]`);
         if (commentEl && commentEl.dataset.originalHtml) {
             commentEl.innerHTML = commentEl.dataset.originalHtml;
             delete commentEl.dataset.originalHtml;
@@ -515,7 +515,7 @@ class ChecklistComments {
     }
 
     async saveEditedComment(commentId, itemId) {
-        const commentEl = this.container.querySelector(`.comment - item[data - comment - id="${commentId}"]`);
+        const commentEl = this.container.querySelector(`.comment-item[data-comment-id="${commentId}"]`);
         const textarea = commentEl.querySelector('textarea');
         const newText = textarea.value.trim();
 
