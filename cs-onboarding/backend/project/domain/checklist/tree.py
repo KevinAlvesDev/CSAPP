@@ -408,5 +408,5 @@ def obter_progresso_global_service(implantacao_id):
         if total > 0:
             return round((completed / total) * 100, 2)
         else:
-            return 100.0
+            return 0.0
     return 0.0

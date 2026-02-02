@@ -257,7 +257,7 @@ def toggle_item_status(item_id, new_status, usuario_email=None):
             if p_total > 0:
                 progress = round((p_compl / p_total) * 100, 2)
             else:
-                progress = 100.0 if p_compl > 0 else 0.0
+                progress = 0.0
 
         logger.info(
             f"Toggle item {item_id}: status={new_status}, "
@@ -565,7 +565,7 @@ def delete_checklist_item(item_id, usuario_email=None, is_manager=False):
                 if total > 0:
                     progress = round((completos / total) * 100, 2)
                 else:
-                    progress = 100.0 if items_deleted > 0 else 0.0
+                    progress = 0.0
 
                 _invalidar_cache_progresso_local(implantacao_id)
 

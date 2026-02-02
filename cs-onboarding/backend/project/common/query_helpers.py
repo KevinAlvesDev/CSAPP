@@ -45,7 +45,7 @@ def get_implantacoes_with_progress(
             CASE 
                 WHEN COALESCE(prog.total_tarefas, 0) > 0 
                 THEN ROUND((CAST(COALESCE(prog.tarefas_concluidas, 0) AS REAL) / CAST(prog.total_tarefas AS REAL)) * 100)
-                ELSE 100
+                ELSE 0
             END as progresso_percent
         """
         completed_check = "ci.completed = 1"
@@ -55,7 +55,7 @@ def get_implantacoes_with_progress(
             CASE 
                 WHEN COALESCE(prog.total_tarefas, 0) > 0 
                 THEN ROUND((COALESCE(prog.tarefas_concluidas, 0)::NUMERIC / prog.total_tarefas::NUMERIC) * 100)
-                ELSE 100
+                ELSE 0
             END as progresso_percent
         """
         completed_check = "ci.completed = TRUE"
