@@ -36,12 +36,12 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
     if page is not None and per_page is None:
         per_page = 100
 
-    cache_key = f"dashboard_data_{user_email}_{filtered_cs_email or 'all'}_p{page}_pp{per_page}"
-
-    if cache and use_cache:
-        cached_data = cache.get(cache_key)
-        if cached_data:
-            return cached_data
+    # Cache desabilitado para garantir dados em tempo real
+    # cache_key = f"dashboard_data_{user_email}_{filtered_cs_email or 'all'}_p{page}_pp{per_page}"
+    # if cache and use_cache:
+    #     cached_data = cache.get(cache_key)
+    #     if cached_data:
+    #         return cached_data
 
     perfil_acesso = g.perfil.get("perfil_acesso") if g.get("perfil") else None
     manager_profiles = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
@@ -355,8 +355,9 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
     else:
         result = (dashboard_data, metrics)
 
-    if cache and use_cache:
-        cache.set(cache_key, result, timeout=300)
+    # Cache desabilitado para garantir dados em tempo real
+    # if cache and use_cache:
+    #     cache.set(cache_key, result, timeout=300)
 
     return result
 

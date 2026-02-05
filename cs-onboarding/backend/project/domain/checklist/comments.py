@@ -10,6 +10,7 @@ from datetime import datetime, timedelta, timezone
 from flask import g
 
 from ...common.validation import sanitize_string
+from ...config.cache_config import clear_dashboard_cache, clear_implantacao_cache, clear_user_cache
 from ...db import db_transaction_with_lock, execute_db, logar_timeline, query_db
 from .utils import _format_datetime
 
@@ -150,6 +151,13 @@ def add_comment_to_item(
             logger.warning(f"Erro ao logar timeline: {e}")
 
         conn.commit()
+
+        # Invalidar cache do dashboard para refletir novo comentário
+        try:
+            clear_implantacao_cache(implantacao_id)
+            clear_dashboard_cache()  # Limpa cache de todos dashboards
+        except Exception as e:
+            logger.warning(f"Erro ao invalidar cache após criar comentário: {e}")
 
         return {
             "ok": True,
@@ -391,6 +399,20 @@ def update_comment_service(comentario_id, novo_texto, usuario_email, is_manager)
 
         conn.commit()
 
+    # Invalidar cache após edição
+    try:
+        # Buscar implantacao_id para invalidar cache
+        item_info = query_db(
+            "SELECT implantacao_id FROM checklist_items WHERE id = %s",
+            (item_id,),
+            one=True,
+        )
+        if item_info:
+            clear_implantacao_cache(item_info["implantacao_id"])
+        clear_dashboard_cache()  # Limpa cache de todos dashboards
+    except Exception as e:
+        logger.warning(f"Erro ao invalidar cache após editar comentário: {e}")
+
     return {"ok": True, "message": "Comentário atualizado", "novo_texto": novo_texto}
 
 
@@ -445,6 +467,13 @@ def excluir_comentario_service(comentario_id, usuario_email, is_manager):
             logar_timeline(item_info["implantacao_id"], usuario_email, "comentario_excluido", detalhe)
         except Exception:
             pass
+
+        # Invalidar cache após exclusão
+        try:
+            clear_implantacao_cache(item_info["implantacao_id"])
+            clear_dashboard_cache()  # Limpa cache de todos dashboards
+        except Exception as e:
+            logger.warning(f"Erro ao invalidar cache após excluir comentário: {e}")
 
 
 def contar_comentarios_implantacao(impl_id):
