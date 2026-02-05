@@ -434,17 +434,8 @@ def create_app(test_config=None):
         g.perfil = None
         if g.user_email:
             try:
-                # Cachear perfil do usuário para evitar query em toda requisição
-                from .config.cache_config import cache
-
-                cache_key = f"user_profile_{g.user_email}"
-                g.perfil = cache.get(cache_key) if cache else None
-
-                if not g.perfil:
-                    g.perfil = query_db("SELECT * FROM perfil_usuario WHERE usuario = %s", (g.user_email,), one=True)
-                    # Cachear por 5 minutos
-                    if cache and g.perfil:
-                        cache.set(cache_key, g.perfil, timeout=300)
+                # SEM CACHE - sempre buscar dados frescos do banco
+                g.perfil = query_db("SELECT * FROM perfil_usuario WHERE usuario = %s", (g.user_email,), one=True)
             except Exception as e:
                 # Se a tabela não existir ainda, criar perfil básico
                 app.logger.warning(f"Falha ao buscar perfil para {g.user_email}: {e}")

@@ -58,6 +58,16 @@ def atualizar_perfil_usuario_service(usuario_alvo, novo_perfil, usuario_admin):
     # Executar atualização
     execute_db("UPDATE perfil_usuario SET perfil_acesso = %s WHERE usuario = %s", (novo_perfil, usuario_alvo))
 
+    # Invalidar cache do perfil do usuário para refletir mudanças imediatamente
+    try:
+        from ...config.cache_config import cache
+        if cache:
+            cache_key = f"user_profile_{usuario_alvo}"
+            cache.delete(cache_key)
+            management_logger.debug(f"Cache de perfil invalidado para {usuario_alvo}")
+    except Exception as e:
+        management_logger.warning(f"Falha ao invalidar cache de perfil para {usuario_alvo}: {e}")
+
     management_logger.info(f"Admin {usuario_admin} atualizou o perfil de {usuario_alvo} para {novo_perfil}")
     return True
 
@@ -98,6 +108,15 @@ def excluir_usuario_service(usuario_alvo, usuario_admin):
     # Excluir perfil e usuário
     execute_db("DELETE FROM perfil_usuario WHERE usuario = %s", (usuario_alvo,))
     execute_db("DELETE FROM usuarios WHERE usuario = %s", (usuario_alvo,))
+
+    # Invalidar cache do perfil do usuário excluído
+    try:
+        from ...config.cache_config import cache
+        if cache:
+            cache_key = f"user_profile_{usuario_alvo}"
+            cache.delete(cache_key)
+    except Exception:
+        pass  # Ignorar erros de cache na exclusão
 
     management_logger.info(
         f"Usuário {usuario_alvo} excluído por {usuario_admin} "

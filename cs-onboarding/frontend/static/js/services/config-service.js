@@ -13,7 +13,7 @@ class ConfigService {
             eventos: null,
             lastFetch: {}
         };
-        this.CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
+        this.CACHE_DURATION = 0; // CACHE DESABILITADO - sempre buscar dados frescos
     }
 
     /**
@@ -25,9 +25,9 @@ class ConfigService {
     async getTags(tipo = 'ambos', forceRefresh = false) {
         const now = Date.now();
         const cacheKey = tipo || 'all';
-        
+
         // Verificar cache
-        if (!forceRefresh && 
+        if (!forceRefresh &&
             this.cache.tags[cacheKey] &&
             this.cache.lastFetch.tags &&
             (now - this.cache.lastFetch.tags) < this.CACHE_DURATION) {
@@ -35,18 +35,18 @@ class ConfigService {
         }
 
         try {
-            const url = tipo 
+            const url = tipo
                 ? `/api/config/tags?tipo=${encodeURIComponent(tipo)}`
                 : '/api/config/tags';
-            
+
             const response = await fetch(url);
             const data = await response.json();
-            
+
             if (data.ok) {
                 // Atualizar cache
                 this.cache.tags[cacheKey] = data.tags;
                 this.cache.lastFetch.tags = now;
-                
+
                 return data.tags;
             } else {
                 console.error('Erro ao carregar tags:', data.error);
@@ -89,7 +89,7 @@ class ConfigService {
      */
     async renderTagSelector(itemId, tipo = 'ambos') {
         const tags = await this.getTags(tipo);
-        
+
         let html = '<div class="tag-selector d-flex flex-wrap gap-2">';
         tags.forEach(tag => {
             html += `
@@ -102,7 +102,7 @@ class ConfigService {
             `;
         });
         html += '</div>';
-        
+
         return html;
     }
 
@@ -113,8 +113,8 @@ class ConfigService {
      */
     async getStatus(forceRefresh = false) {
         const now = Date.now();
-        
-        if (!forceRefresh && 
+
+        if (!forceRefresh &&
             this.cache.status &&
             this.cache.lastFetch.status &&
             (now - this.cache.lastFetch.status) < this.CACHE_DURATION) {
@@ -124,7 +124,7 @@ class ConfigService {
         try {
             const response = await fetch('/api/config/status');
             const data = await response.json();
-            
+
             if (data.ok) {
                 this.cache.status = data.status;
                 this.cache.lastFetch.status = now;
@@ -133,7 +133,7 @@ class ConfigService {
         } catch (error) {
             console.error('Erro ao carregar status:', error);
         }
-        
+
         return [];
     }
 
@@ -144,8 +144,8 @@ class ConfigService {
      */
     async getNiveis(forceRefresh = false) {
         const now = Date.now();
-        
-        if (!forceRefresh && 
+
+        if (!forceRefresh &&
             this.cache.niveis &&
             this.cache.lastFetch.niveis &&
             (now - this.cache.lastFetch.niveis) < this.CACHE_DURATION) {
@@ -155,7 +155,7 @@ class ConfigService {
         try {
             const response = await fetch('/api/config/niveis');
             const data = await response.json();
-            
+
             if (data.ok) {
                 this.cache.niveis = data.niveis;
                 this.cache.lastFetch.niveis = now;
@@ -164,7 +164,7 @@ class ConfigService {
         } catch (error) {
             console.error('Erro ao carregar níveis:', error);
         }
-        
+
         return [];
     }
 

@@ -50,17 +50,14 @@ def get_dashboard_data(
     if page is not None and per_page is None:
         per_page = 100
 
-    # Cache
-    # Cache
-    cache_key = f"dashboard_data_{user_email}_{filtered_cs_email or 'all'}_{context or 'all'}_p{page}_pp{per_page}_{search_term or 'all'}_{tipo or 'all'}_{start_date or 'all'}_{end_date or 'all'}"
-
-    from ..config.cache_config import cache
-
-    if cache and use_cache:
-        cached_data = cache.get(cache_key)
-        if cached_data:
-            current_app.logger.info(f"Dashboard cache HIT para {user_email}")
-            return cached_data
+    # CACHE DESABILITADO - sempre buscar dados frescos
+    # cache_key = f"dashboard_data_{user_email}_{filtered_cs_email or 'all'}_{context or 'all'}_p{page}_pp{per_page}_{search_term or 'all'}_{tipo or 'all'}_{start_date or 'all'}_{end_date or 'all'}"
+    # from ..config.cache_config import cache
+    # if cache and use_cache:
+    #     cached_data = cache.get(cache_key)
+    #     if cached_data:
+    #         current_app.logger.info(f"Dashboard cache HIT para {user_email}")
+    #         return cached_data
 
     perfil_acesso = g.perfil.get("perfil_acesso") if g.get("perfil") else None
     manager_profiles = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
@@ -347,12 +344,13 @@ def get_dashboard_data(
     else:
         result = (dashboard_data, metrics)
 
-    if cache and use_cache:
-        try:
-            cache.set(cache_key, result, timeout=300)  # 5 minutos
-            current_app.logger.info(f"Dashboard cache SAVED para {user_email}")
-        except Exception as e:
-            current_app.logger.warning(f"Erro ao salvar cache do dashboard: {e}")
+    # CACHE DESABILITADO - não salvar cache
+    # if cache and use_cache:
+    #     try:
+    #         cache.set(cache_key, result, timeout=30)
+    #         current_app.logger.info(f"Dashboard cache SAVED para {user_email}")
+    #     except Exception as e:
+    #         current_app.logger.warning(f"Erro ao salvar cache do dashboard: {e}")
 
     return result
 

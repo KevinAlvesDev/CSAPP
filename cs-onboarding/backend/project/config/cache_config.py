@@ -25,12 +25,12 @@ def init_cache(app):
         cache_config = {
             "CACHE_TYPE": "redis",
             "CACHE_REDIS_URL": redis_url,
-            "CACHE_DEFAULT_TIMEOUT": 300,
+            "CACHE_DEFAULT_TIMEOUT": 30,  # 30 segundos - cache curto para dados frescos
             "CACHE_KEY_PREFIX": "csapp_",
         }
         app.logger.info("Cache initialized with Redis backend")
     else:
-        cache_config = {"CACHE_TYPE": "SimpleCache", "CACHE_DEFAULT_TIMEOUT": 300, "CACHE_THRESHOLD": 500}
+        cache_config = {"CACHE_TYPE": "SimpleCache", "CACHE_DEFAULT_TIMEOUT": 30, "CACHE_THRESHOLD": 500}
         app.logger.info("Cache initialized with SimpleCache backend (development)")
 
     cache = Cache(app, config=cache_config)

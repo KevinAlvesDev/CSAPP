@@ -171,8 +171,9 @@
         });
     }
 
-    // Interceptar confirmações do HTMX para usar o modal
-    document.addEventListener('htmx:load', function () {
+    // Interceptar confirmações do HTMX para usar o modal Bootstrap
+    // IMPORTANTE: Registrar no DOMContentLoaded para garantir que seja antes de qualquer ação HTMX
+    function attachHtmxConfirmListener() {
         if (!document.body.dataset.htmxConfirmAttached) {
             document.body.addEventListener('htmx:confirm', function (evt) {
                 evt.preventDefault();
@@ -188,7 +189,15 @@
             });
             document.body.dataset.htmxConfirmAttached = 'true';
         }
-    });
+    }
+
+    // Registrar imediatamente no DOMContentLoaded (antes de qualquer htmx:load)
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', attachHtmxConfirmListener);
+    } else {
+        // DOM já carregado
+        attachHtmxConfirmListener();
+    }
 
     /**
      * Shows a delete confirmation dialog.
