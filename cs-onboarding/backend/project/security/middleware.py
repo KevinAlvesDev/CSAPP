@@ -39,7 +39,26 @@ def init_security_headers(app):
         if is_production:
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
 
-        if any(path in request.path for path in ["/login", "/perfil", "/management"]):
+        # Configurar Cache-Control baseado no tipo de conteúdo/rota
+        if request.path.startswith("/static/"):
+            # Arquivos estáticos: cache longo com revalidação (1 ano)
+            # O cache-busting é feito via query string (?v=timestamp)
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        elif request.path.startswith("/api/") or request.path.startswith("/checklist/"):
+            # Rotas de API: NUNCA cachear
+            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, private, max-age=0"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+            # Adicionar timestamp para debugging de cache
+            from datetime import datetime, timezone
+            response.headers["X-Response-Time"] = datetime.now(timezone.utc).isoformat()
+        elif response.content_type and "text/html" in response.content_type:
+            # Páginas HTML dinâmicas: não cachear para garantir dados frescos
+            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, private"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+        elif any(path in request.path for path in ["/login", "/perfil", "/management"]):
+            # Rotas sensíveis específicas: garantir no-cache
             response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, private"
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"

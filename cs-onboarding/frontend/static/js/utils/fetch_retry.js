@@ -21,10 +21,17 @@ async function fetchWithRetry(url, options = {}, maxRetries = 2, timeoutMs = 800
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-            // Add signal to options
+            // Add anti-cache headers and signal to options
             const fetchOptions = {
                 ...options,
-                signal: controller.signal
+                signal: controller.signal,
+                // Forçar requisições frescas (sem cache)
+                cache: 'no-store',
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache',
+                    ...options.headers
+                }
             };
 
             // Attempt fetch

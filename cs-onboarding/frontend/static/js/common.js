@@ -234,8 +234,15 @@
             NProgress.start();
         }
 
+        // ================================================
+        // ANTI-CACHE: Forçar requisições frescas
+        // ================================================
         const defaultHeaders = {
-            'X-Requested-With': 'XMLHttpRequest'
+            'X-Requested-With': 'XMLHttpRequest',
+            // Headers anti-cache para garantir dados sempre frescos
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
         };
 
         // Only set Content-Type to JSON if body is NOT FormData
@@ -253,6 +260,8 @@
 
         const config = {
             ...options,
+            // Forçar cache: 'no-store' para garantir requisições frescas
+            cache: 'no-store',
             headers: {
                 ...defaultHeaders,
                 ...options.headers

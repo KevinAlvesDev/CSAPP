@@ -87,6 +87,41 @@ def create_app(test_config=None):
     app.jinja_env.filters["format_date_br"] = format_date_br
     app.jinja_env.filters["format_date_iso"] = format_date_iso_for_json
 
+    # ================================================
+    # CACHE-BUSTING: Versão global para arquivos estáticos
+    # ================================================
+    import time
+    from pathlib import Path
+
+    # Gerar versão única por deploy (timestamp de início da aplicação)
+    APP_VERSION = str(int(time.time()))
+
+    # Função para obter versão do arquivo (mtime) ou fallback para APP_VERSION
+    def get_static_version(filename):
+        """Retorna a versão do arquivo estático para cache-busting."""
+        try:
+            static_folder = Path(app.static_folder)
+            file_path = static_folder / filename
+            if file_path.exists():
+                return str(int(file_path.stat().st_mtime))
+        except Exception:
+            pass
+        return APP_VERSION
+
+    # Filtro Jinja para adicionar versão ao URL de arquivos estáticos
+    def static_versioned(filename):
+        """Retorna URL do arquivo estático com parâmetro de versão para cache-busting."""
+        from flask import url_for
+        version = get_static_version(filename)
+        return url_for('static', filename=filename) + f"?v={version}"
+
+    app.jinja_env.filters["static_versioned"] = static_versioned
+
+    # Expor versão da aplicação globalmente nos templates
+    @app.context_processor
+    def inject_app_version():
+        return {"APP_VERSION": APP_VERSION}
+
     oauth.init_app(app)
 
     init_r2(app)
