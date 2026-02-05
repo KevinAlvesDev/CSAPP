@@ -166,7 +166,13 @@
             if (!(el.tagName === 'BUTTON' || el.tagName === 'A')) return;
             ev.preventDefault();
             var confirmMsg = el.getAttribute('hx-confirm');
-            if (confirmMsg && !window.confirm(confirmMsg)) return;
+            // NOTA: NÃO usar window.confirm aqui - o confirm-dialog.js intercepta htmx:confirm
+            // e exibe o modal Bootstrap. Se o HTMX real estiver carregado, ele cuida disso.
+            // Este polyfill só roda quando HTMX não carrega, então deixamos passar sem confirm.
+            if (confirmMsg && !window.htmx) {
+                // Fallback apenas quando HTMX não está disponível
+                if (!window.confirm(confirmMsg)) return;
+            }
             var postUrl = el.getAttribute('hx-post');
             var targetSel = el.getAttribute('hx-target');
             var swapMode = (el.getAttribute('hx-swap') || 'innerHTML').toLowerCase();
