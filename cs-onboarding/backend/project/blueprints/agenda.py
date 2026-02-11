@@ -1,3 +1,4 @@
+import contextlib
 import uuid
 from datetime import date, timedelta
 
@@ -29,10 +30,8 @@ def _google_oauth_configured():
 @agenda_bp.route("/agenda")
 @login_required
 def agenda_home():
-    try:
+    with contextlib.suppress(Exception):
         agenda_logger.debug(f"Google OAuth configurado: {_google_oauth_configured()}")
-    except Exception:
-        pass
     if not _google_oauth_configured():
         flash(
             "Integração com Google Agenda não está configurada. Defina GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET e GOOGLE_REDIRECT_URI no .env.",
@@ -49,19 +48,15 @@ def agenda_home():
         agenda_logger.error(f"Erro ao obter token válido: {e}")
         token = None
 
-    try:
+    with contextlib.suppress(Exception):
         agenda_logger.debug(f"Token válido obtido: {bool(token)}")
-    except Exception:
-        pass
 
     if not token:
         return render_template("pages/agenda.html", events=[], google_connected=False)
 
     access_token = token.get("access_token")
-    try:
+    with contextlib.suppress(Exception):
         agenda_logger.debug(f"Access token presente: {bool(access_token)}")
-    except Exception:
-        pass
     if not access_token:
         return render_template("pages/agenda.html", events=[], google_connected=False)
 
@@ -109,10 +104,8 @@ def agenda_home():
         resp.raise_for_status()
         data = resp.json()
         events = data.get("items", [])
-        try:
+        with contextlib.suppress(Exception):
             agenda_logger.info(f"Eventos carregados: {len(events)} para {g.user_email}")
-        except Exception:
-            pass
         week_days = [(week_start + timedelta(days=i)).isoformat() for i in range(7)]
         return render_template(
             "agenda.html",
@@ -127,10 +120,8 @@ def agenda_home():
         )
     except Exception as e:
         agenda_logger.error(f"Erro ao buscar eventos do Google Calendar para {g.user_email}: {e}", exc_info=True)
-        try:
+        with contextlib.suppress(Exception):
             agenda_logger.debug(f"Corpo erro/resposta: {getattr(resp, 'text', None)}")
-        except Exception:
-            pass
         flash("Falha ao carregar eventos da Agenda do Google.", "error")
         return render_template("pages/agenda.html", events=[], google_connected=False, view=view)
 

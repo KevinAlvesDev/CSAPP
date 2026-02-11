@@ -110,10 +110,10 @@ def save_profile():
     if not nome or not cargo:
         flash("Nome e Cargo são obrigatórios.", "error")
         # Redirect to current context dashboard
-        referer = request.headers.get('Referer', '')
-        if '/grandes-contas/' in referer:
+        referer = request.headers.get("Referer", "")
+        if "/grandes-contas/" in referer:
             return redirect(url_for("grandes_contas.dashboard"))
-        elif '/ongoing/' in referer:
+        elif "/ongoing/" in referer:
             return redirect(url_for("ongoing.dashboard"))
         else:
             return redirect(url_for("onboarding.dashboard"))
@@ -162,10 +162,10 @@ def save_profile():
         return response
 
     # Redirect to current context dashboard
-    referer = request.headers.get('Referer', '')
-    if '/grandes-contas/' in referer:
+    referer = request.headers.get("Referer", "")
+    if "/grandes-contas/" in referer:
         return redirect(url_for("grandes_contas.dashboard"))
-    elif '/ongoing/' in referer:
+    elif "/ongoing/" in referer:
         return redirect(url_for("ongoing.dashboard"))
     else:
         return redirect(url_for("onboarding.dashboard"))

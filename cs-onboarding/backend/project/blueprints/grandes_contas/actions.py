@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+import contextlib
 import os
 import re
 import time
@@ -135,7 +135,7 @@ def iniciar_implantacao():
     try:
         implantacao_id = validate_integer(request.form.get("implantacao_id"), min_value=1)
     except ValidationError as e:
-        flash(f"ID de implantação inválido: {str(e)}", "error")
+        flash(f"ID de implantação inválido: {e!s}", "error")
         return redirect(url_for("grandes_contas.dashboard"))
 
     redirect_to_fallback = request.form.get("redirect_to", "dashboard")
@@ -144,7 +144,7 @@ def iniciar_implantacao():
         dest_url_fallback = url_for("grandes_contas.ver_implantacao", impl_id=implantacao_id)
 
     try:
-        from ...domain.implantacao_service import iniciar_implantacao_service
+        from ...domain.implantacao.status import iniciar_implantacao_service
 
         iniciar_implantacao_service(implantacao_id, usuario_cs_email)
 
@@ -219,7 +219,7 @@ def agendar_implantacao():
         return redirect(url_for("grandes_contas.dashboard"))
 
     try:
-        from ...domain.implantacao_service import agendar_implantacao_service
+        from ...domain.implantacao.status import agendar_implantacao_service
 
         nome_empresa = agendar_implantacao_service(implantacao_id, usuario_cs_email, data_prevista_iso)
 
@@ -252,7 +252,7 @@ def marcar_sem_previsao():
         return redirect(url_for("grandes_contas.dashboard", refresh="1"))
 
     try:
-        from ...domain.implantacao_service import marcar_sem_previsao_service
+        from ...domain.implantacao.status import marcar_sem_previsao_service
 
         nome_empresa = marcar_sem_previsao_service(implantacao_id, usuario_cs_email)
 
@@ -294,7 +294,7 @@ def finalizar_implantacao():
             flash("Data da finalização inválida. Formatos aceitos: DD/MM/AAAA, MM/DD/AAAA, AAAA-MM-DD.", "error")
             return redirect(dest_url)
 
-        from ...domain.implantacao_service import finalizar_implantacao_service
+        from ...domain.implantacao.status import finalizar_implantacao_service
 
         finalizar_implantacao_service(implantacao_id, usuario_cs_email, data_final_iso)
 
@@ -339,7 +339,7 @@ def parar_implantacao():
     try:
         user_perfil_acesso = g.perfil.get("perfil_acesso") if getattr(g, "perfil", None) else None
 
-        from ...domain.implantacao_service import parar_implantacao_service
+        from ...domain.implantacao.status import parar_implantacao_service
 
         parar_implantacao_service(implantacao_id, usuario_cs_email, user_perfil_acesso, data_parada_iso, motivo)
 
@@ -373,7 +373,7 @@ def retomar_implantacao():
     try:
         user_perfil_acesso = g.perfil.get("perfil_acesso") if getattr(g, "perfil", None) else None
 
-        from ...domain.implantacao_service import retomar_implantacao_service
+        from ...domain.implantacao.status import retomar_implantacao_service
 
         retomar_implantacao_service(implantacao_id, usuario_cs_email, user_perfil_acesso)
 
@@ -406,7 +406,7 @@ def reabrir_implantacao():
         dest_url = url_for("grandes_contas.ver_implantacao", impl_id=implantacao_id)
 
     try:
-        from ...domain.implantacao_service import reabrir_implantacao_service
+        from ...domain.implantacao.status import reabrir_implantacao_service
 
         reabrir_implantacao_service(implantacao_id, usuario_cs_email)
 
@@ -455,7 +455,7 @@ def atualizar_detalhes_empresa():
             flash(error, "warning")
             return redirect(dest_url)
 
-        from ...domain.implantacao_service import atualizar_detalhes_empresa_service
+        from ...domain.implantacao.details import atualizar_detalhes_empresa_service
 
         atualizar_detalhes_empresa_service(implantacao_id, usuario_cs_email, user_perfil_acesso, final_campos)
 
@@ -578,7 +578,7 @@ def transferir_implantacao():
     dest_url = url_for("grandes_contas.ver_implantacao", impl_id=implantacao_id)
 
     try:
-        from ...domain.implantacao_service import transferir_implantacao_service
+        from ...domain.implantacao.crud import transferir_implantacao_service
 
         antigo_usuario_cs = transferir_implantacao_service(implantacao_id, usuario_cs_email, novo_usuario_cs)
 
@@ -605,7 +605,7 @@ def excluir_implantacao():
     user_perfil_acesso = g.perfil.get("perfil_acesso") if g.perfil else None
 
     try:
-        from ...domain.implantacao_service import excluir_implantacao_service
+        from ...domain.implantacao.crud import excluir_implantacao_service
 
         excluir_implantacao_service(implantacao_id, usuario_cs_email, user_perfil_acesso)
 
@@ -681,10 +681,8 @@ def cancelar_implantacao():
                 # Fallback local
                 base_dir = os.path.join(os.path.dirname(current_app.root_path), "uploads")
                 target_dir = os.path.join(base_dir, "comprovantes_cancelamento")
-                try:
+                with contextlib.suppress(Exception):
                     os.makedirs(target_dir, exist_ok=True)
-                except Exception:
-                    pass
                 local_path = os.path.join(target_dir, nome_unico)
                 file.stream.seek(0)
                 with open(local_path, "wb") as f_out:
@@ -694,7 +692,7 @@ def cancelar_implantacao():
             flash("Tipo de arquivo inválido para o comprovante.", "error")
             return redirect(url_for("grandes_contas.ver_implantacao", impl_id=implantacao_id))
 
-        from ...domain.implantacao_service import cancelar_implantacao_service
+        from ...domain.implantacao.crud import cancelar_implantacao_service
 
         cancelar_implantacao_service(
             implantacao_id, usuario_cs_email, user_perfil_acesso, data_cancel_iso, motivo, comprovante_url
@@ -743,7 +741,12 @@ def desfazer_cancelamento_implantacao():
             pass
 
         return (
-            jsonify({"ok": True, "message": "Cancelamento desfeito com sucesso! A implantação retornou para 'Em Andamento'."}),
+            jsonify(
+                {
+                    "ok": True,
+                    "message": "Cancelamento desfeito com sucesso! A implantação retornou para 'Em Andamento'.",
+                }
+            ),
             200,
         )
 
@@ -754,13 +757,14 @@ def desfazer_cancelamento_implantacao():
         return jsonify({"ok": False, "error": "Erro interno ao desfazer cancelamento."}), 500
 
 
-# Rotas 'Jira' também mantidas mas cuidado com URLs de API. 
+# Rotas 'Jira' também mantidas mas cuidado com URLs de API.
 # Se o JS de frontend chama /api/implantacao/... talvez não precise de mudança se for rota API genérica.
 # Mas aqui elas dependem de login_required e parecem ser específicas do blueprint?
 # No onboarding.actions a rota é @onboarding_actions_bp.route("/api/implantacao/...")
 # Se o frontend usa a URL gerada por 'url_for', eu preciso replicar e atualizar.
 # Se o frontend usa URL hardcoded /api/..., terei colisão.
 # Verifiquei os JS: 'js/pages/implantacao_detalhes.js' ou similar provavelmente chama isso.
+
 
 @grandes_contas_actions_bp.route("/api/implantacao/<int:implantacao_id>/jira-issues", methods=["GET"])
 @login_required
@@ -776,7 +780,7 @@ def get_jira_issues(implantacao_id):
         result = search_issues_by_context(implantacao, extra_keys=extra_keys)
 
         if extra_keys and "issues" in result:
-            returned_keys = set(i.get("key") for i in result["issues"])
+            returned_keys = {i.get("key") for i in result["issues"]}
             for k in extra_keys:
                 if k not in returned_keys:
                     result["issues"].insert(
@@ -869,7 +873,7 @@ def fetch_jira_issue_action(implantacao_id):
             save_jira_link(implantacao_id, key, g.user_email)
         except Exception as e_save:
             app_logger.error(f"Erro ao salvar link Jira: {e_save}")
-            return jsonify({"error": f"Erro de persistência: {str(e_save)}", "issue": result.get("issue")}), 500
+            return jsonify({"error": f"Erro de persistência: {e_save!s}", "issue": result.get("issue")}), 500
 
         if "issue" in result:
             result["issue"]["is_linked"] = True
@@ -881,7 +885,9 @@ def fetch_jira_issue_action(implantacao_id):
         return jsonify({"error": str(e)}), 500
 
 
-@grandes_contas_actions_bp.route("/api/implantacao/<int:implantacao_id>/jira-issues/<path:jira_key>", methods=["DELETE"])
+@grandes_contas_actions_bp.route(
+    "/api/implantacao/<int:implantacao_id>/jira-issues/<path:jira_key>", methods=["DELETE"]
+)
 @login_required
 def delete_jira_link_action(implantacao_id, jira_key):
     try:

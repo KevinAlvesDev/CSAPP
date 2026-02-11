@@ -11,7 +11,6 @@ Este módulo implementa:
 
 import json
 from datetime import datetime
-from typing import Dict, Optional
 
 import jwt
 import requests
@@ -36,7 +35,7 @@ EVENT_CREDENTIAL_CHANGE = "https://schemas.openid.net/secevent/risc/event-type/a
 EVENT_VERIFICATION = "https://schemas.openid.net/secevent/risc/event-type/verification"
 
 
-def get_google_public_keys() -> Dict:
+def get_google_public_keys() -> dict:
     """
     Obtém as chaves públicas do Google para validar tokens JWT.
 
@@ -52,7 +51,7 @@ def get_google_public_keys() -> Dict:
         return {}
 
 
-def validate_security_event_token(token: str) -> Optional[Dict]:
+def validate_security_event_token(token: str) -> dict | None:
     """
     Valida um token de evento de segurança do Google.
 
@@ -108,7 +107,7 @@ def validate_security_event_token(token: str) -> Optional[Dict]:
         return None
 
 
-def log_security_event(event_type: str, user_id: str, payload: Dict, action_taken: str) -> bool:
+def log_security_event(event_type: str, user_id: str, payload: dict, action_taken: str) -> bool:
     """
     Registra um evento de segurança no banco de dados para auditoria.
 
@@ -135,7 +134,7 @@ def log_security_event(event_type: str, user_id: str, payload: Dict, action_take
         return False
 
 
-def get_user_by_google_sub(google_sub: str) -> Optional[Dict]:
+def get_user_by_google_sub(google_sub: str) -> dict | None:
     """
     Busca usuário pelo ID do Google (sub).
 
@@ -206,7 +205,7 @@ def revoke_user_tokens(user_email: str, reason: str = "security_event") -> bool:
         return False
 
 
-def process_sessions_revoked_event(payload: Dict) -> str:
+def process_sessions_revoked_event(payload: dict) -> str:
     """
     Processa evento de sessões revogadas.
 
@@ -238,7 +237,7 @@ def process_sessions_revoked_event(payload: Dict) -> str:
     return f"Sessões e tokens revogados para {user_email}"
 
 
-def process_tokens_revoked_event(payload: Dict) -> str:
+def process_tokens_revoked_event(payload: dict) -> str:
     """
     Processa evento de todos os tokens revogados.
 
@@ -267,7 +266,7 @@ def process_tokens_revoked_event(payload: Dict) -> str:
     return f"Tokens OAuth revogados para {user_email}"
 
 
-def process_token_revoked_event(payload: Dict) -> str:
+def process_token_revoked_event(payload: dict) -> str:
     """
     Processa evento de token específico revogado.
 
@@ -296,7 +295,7 @@ def process_token_revoked_event(payload: Dict) -> str:
     return f"Token específico revogado para {user_email}"
 
 
-def process_account_disabled_event(payload: Dict) -> str:
+def process_account_disabled_event(payload: dict) -> str:
     """
     Processa evento de conta desabilitada.
 
@@ -343,7 +342,7 @@ def process_account_disabled_event(payload: Dict) -> str:
         return f"Conta desabilitada: {user_email}"
 
 
-def process_account_enabled_event(payload: Dict) -> str:
+def process_account_enabled_event(payload: dict) -> str:
     """
     Processa evento de conta reativada.
 
@@ -371,7 +370,7 @@ def process_account_enabled_event(payload: Dict) -> str:
     return f"Conta reativada: {user_email}"
 
 
-def process_credential_change_event(payload: Dict) -> str:
+def process_credential_change_event(payload: dict) -> str:
     """
     Processa evento de mudança de credencial necessária.
 
@@ -401,7 +400,7 @@ def process_credential_change_event(payload: Dict) -> str:
     return f"Mudança de credencial necessária para {user_email}"
 
 
-def process_verification_event(payload: Dict) -> str:
+def process_verification_event(payload: dict) -> str:
     """
     Processa evento de verificação (teste).
 
@@ -415,7 +414,7 @@ def process_verification_event(payload: Dict) -> str:
     return "Evento de verificação processado com sucesso"
 
 
-def process_security_event(token: str) -> Dict:
+def process_security_event(token: str) -> dict:
     """
     Processa um evento de segurança do Google.
 
@@ -470,7 +469,7 @@ def process_security_event(token: str) -> Dict:
         return {"status": "error", "message": "Tipo de evento desconhecido"}
 
     # Extrair user_id do subject
-    subject = list(events.values())[0].get("subject", {})
+    subject = next(iter(events.values())).get("subject", {})
     user_id = subject.get("sub", "unknown")
 
     # Registrar evento para auditoria

@@ -59,8 +59,8 @@ def _get_timeline_logs(impl_id):
     import re
 
     logs_timeline = query_db(
-        """ SELECT tl.*, COALESCE(p.nome, tl.usuario_cs) as usuario_nome 
-            FROM timeline_log tl LEFT JOIN perfil_usuario p ON tl.usuario_cs = p.usuario 
+        """ SELECT tl.*, COALESCE(p.nome, tl.usuario_cs) as usuario_nome
+            FROM timeline_log tl LEFT JOIN perfil_usuario p ON tl.usuario_cs = p.usuario
             WHERE tl.implantacao_id = %s ORDER BY tl.data_criacao DESC """,
         (impl_id,),
     )
@@ -149,14 +149,14 @@ def atualizar_detalhes_empresa_service(implantacao_id, usuario_cs_email, user_pe
     }
 
     # Recalcular previsão se data_inicio_efetivo mudou
-    if "data_inicio_efetivo" in campos and campos["data_inicio_efetivo"]:
+    if campos.get("data_inicio_efetivo"):
         try:
             # Buscar info do plano atual
             info_plano = query_db(
                 """
-                SELECT p.dias_duracao 
-                FROM implantacoes i 
-                JOIN planos_sucesso p ON i.plano_sucesso_id = p.id 
+                SELECT p.dias_duracao
+                FROM implantacoes i
+                JOIN planos_sucesso p ON i.plano_sucesso_id = p.id
                 WHERE i.id = %s
                 """,
                 (implantacao_id,),

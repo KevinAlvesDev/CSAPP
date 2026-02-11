@@ -1,5 +1,5 @@
 class CSAPPException(Exception):
-    def __init__(self, message: str, details: dict = None):
+    def __init__(self, message: str, details: dict | None = None):
         self.message = message
         self.details = details or {}
         super().__init__(self.message)
@@ -36,7 +36,7 @@ class DuplicateResourceError(CSAPPException):
 
 
 class ExternalServiceError(CSAPPException):
-    def __init__(self, service_name: str, original_error: Exception = None):
+    def __init__(self, service_name: str, original_error: Exception | None = None):
         message = f"Erro ao comunicar com {service_name}"
         details = {"service_name": service_name, "original_error": str(original_error) if original_error else None}
         super().__init__(message, details)
@@ -54,7 +54,7 @@ class ConfigurationError(CSAPPException):
 
 
 class RateLimitExceededError(CSAPPException):
-    def __init__(self, limit: str, retry_after: int = None):
+    def __init__(self, limit: str, retry_after: int | None = None):
         message = f"Limite de requisições excedido: {limit}"
         details = {"limit": limit, "retry_after": retry_after}
         super().__init__(message, details)

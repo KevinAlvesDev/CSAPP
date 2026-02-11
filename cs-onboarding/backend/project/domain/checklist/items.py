@@ -114,7 +114,7 @@ def toggle_item_status(item_id, new_status, usuario_email=None):
                     data_conclusao = {"%s" if db_type == "postgres" else "?"}
                 WHERE id IN ({placeholders})
             """
-            params = [status_str, completed_val, data_conclusao] + descendant_ids
+            params = [status_str, completed_val, data_conclusao, *descendant_ids]
             cursor.execute(update_sql, params)
             items_updated_downstream = cursor.rowcount
 
@@ -254,16 +254,27 @@ def toggle_item_status(item_id, new_status, usuario_email=None):
             p_total = p_res[0] or 0
             p_compl = p_res[1] or 0
 
-            if p_total > 0:
-                progress = round((p_compl / p_total) * 100, 2)
-            else:
-                progress = 0.0
+            progress = round(p_compl / p_total * 100, 2) if p_total > 0 else 0.0
 
         logger.info(
             f"Toggle item {item_id}: status={new_status}, "
             f"downstream={items_updated_downstream}, upstream={items_updated_upstream}, "
             f"progress={progress}%, user={usuario_email}"
         )
+
+        # Emitir evento quando item é concluído
+        if new_status:
+            try:
+                from ...core.events import ChecklistItemConcluido, event_bus
+
+                event_bus.emit(ChecklistItemConcluido(
+                    item_id=item_id,
+                    implantacao_id=implantacao_id,
+                    usuario=usuario_email or "",
+                    progresso_atual=progress,
+                ))
+            except Exception:
+                pass
 
         return {
             "ok": True,
@@ -353,7 +364,7 @@ def delete_checklist_item(item_id, usuario_email=None, is_manager=False):
 
     usuario_email = usuario_email or (g.user_email if hasattr(g, "user_email") else None)
 
-    with db_transaction_with_lock() as (conn, cursor, db_type):
+    with db_transaction_with_lock() as (_conn, cursor, db_type):
         try:
             # 1. Buscar informações do item antes de excluir
             if db_type == "postgres":
@@ -426,7 +437,7 @@ def delete_checklist_item(item_id, usuario_email=None, is_manager=False):
                         ids_to_delete = [int(id_val) for id_val in ids_to_delete]
                     except (ValueError, TypeError) as e:
                         raise ValueError(f"IDs inválidos detectados: {e}") from e
-                    
+
                     # Construir query com placeholders validados
                     placeholders = ",".join(["?"] * len(ids_to_delete))
                     cursor.execute(f"DELETE FROM checklist_items WHERE id IN ({placeholders})", ids_to_delete)
@@ -562,10 +573,7 @@ def delete_checklist_item(item_id, usuario_email=None, is_manager=False):
                         total = row[0] or 0
                         completos = row[1] or 0
 
-                if total > 0:
-                    progress = round((completos / total) * 100, 2)
-                else:
-                    progress = 0.0
+                progress = round(completos / total * 100, 2) if total > 0 else 0.0
 
                 _invalidar_cache_progresso_local(implantacao_id)
 

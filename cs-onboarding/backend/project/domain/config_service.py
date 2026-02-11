@@ -1,15 +1,13 @@
-from typing import Dict, List
-
 from ..db import query_db
 
 
-def listar_tags(tipo: str = "ambos") -> List[Dict]:
+def listar_tags(tipo: str = "ambos") -> list[dict]:
     sql = """
         SELECT id, nome, icone, cor_badge, ordem, tipo
         FROM tags_sistema
-        WHERE ativo = true
+        WHERE ativo = %s
     """
-    params = []
+    params = [True]
     if tipo != "ambos":
         sql += " AND (tipo = %s OR tipo = 'ambos')"
         params.append(tipo)
@@ -28,14 +26,14 @@ def listar_tags(tipo: str = "ambos") -> List[Dict]:
     ]
 
 
-def listar_status_implantacao() -> List[Dict]:
+def listar_status_implantacao() -> list[dict]:
     sql = """
         SELECT id, codigo, nome, cor, ordem
         FROM status_implantacao
-        WHERE ativo = true
+        WHERE ativo = %s
         ORDER BY ordem ASC
     """
-    rows = query_db(sql)
+    rows = query_db(sql, [True])
     return [
         {
             "id": r["id"],
@@ -48,14 +46,14 @@ def listar_status_implantacao() -> List[Dict]:
     ]
 
 
-def listar_niveis_atendimento() -> List[Dict]:
+def listar_niveis_atendimento() -> list[dict]:
     sql = """
         SELECT id, codigo, descricao, ordem
         FROM niveis_atendimento
-        WHERE ativo = true
+        WHERE ativo = %s
         ORDER BY ordem ASC
     """
-    rows = query_db(sql)
+    rows = query_db(sql, [True])
     return [
         {
             "id": r["id"],
@@ -67,14 +65,14 @@ def listar_niveis_atendimento() -> List[Dict]:
     ]
 
 
-def listar_tipos_evento() -> List[Dict]:
+def listar_tipos_evento() -> list[dict]:
     sql = """
         SELECT id, codigo, nome, icone, cor
         FROM tipos_evento
-        WHERE ativo = true
+        WHERE ativo = %s
         ORDER BY id ASC
     """
-    rows = query_db(sql)
+    rows = query_db(sql, [True])
     return [
         {
             "id": r["id"],
@@ -87,14 +85,14 @@ def listar_tipos_evento() -> List[Dict]:
     ]
 
 
-def listar_motivos_parada() -> List[Dict]:
+def listar_motivos_parada() -> list[dict]:
     sql = """
         SELECT id, descricao
         FROM motivos_parada
-        WHERE ativo = true
+        WHERE ativo = %s
         ORDER BY id ASC
     """
-    rows = query_db(sql)
+    rows = query_db(sql, [True])
     return [
         {
             "id": r["id"],
@@ -104,14 +102,14 @@ def listar_motivos_parada() -> List[Dict]:
     ]
 
 
-def listar_motivos_cancelamento() -> List[Dict]:
+def listar_motivos_cancelamento() -> list[dict]:
     sql = """
         SELECT id, descricao
         FROM motivos_cancelamento
-        WHERE ativo = true
+        WHERE ativo = %s
         ORDER BY id ASC
     """
-    rows = query_db(sql)
+    rows = query_db(sql, [True])
     return [
         {
             "id": r["id"],

@@ -9,8 +9,8 @@ Melhorias:
 - 10x mais rápido que a versão anterior
 """
 
+import contextlib
 from datetime import datetime
-from typing import Dict, Tuple
 
 from flask import current_app, g
 
@@ -21,16 +21,16 @@ from ..constants import PERFIL_ADMIN, PERFIL_COORDENADOR, PERFIL_GERENTE
 
 def get_dashboard_data(
     user_email: str,
-    filtered_cs_email: str = None,
-    page: int = None,
-    per_page: int = None,
+    filtered_cs_email: str | None = None,
+    page: int | None = None,
+    per_page: int | None = None,
     use_cache: bool = True,
-    context: str = None,
-    search_term: str = None,
-    tipo: str = None,
-    start_date: str = None,
-    end_date: str = None,
-) -> Tuple[Dict, Dict]:
+    context: str | None = None,
+    search_term: str | None = None,
+    tipo: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> tuple[dict, dict]:
     """
     Busca dados do dashboard de forma otimizada (SEM N+1).
     Agora 100% compatível com original (Paginação + Sort por Status).
@@ -81,12 +81,12 @@ def get_dashboard_data(
 
     if page is not None:
         total = get_implantacoes_count(
-            usuario_cs=count_usuario_filtro, 
+            usuario_cs=count_usuario_filtro,
             context=context,
             search_term=search_term,
             tipo=tipo,
             start_date=start_date,
-            end_date=end_date
+            end_date=end_date,
         )
         from ...database import Pagination
 
@@ -141,10 +141,11 @@ def get_dashboard_data(
 
     # Processar implantações (OTIMIZADO: calcular dias em batch)
     agora = datetime.now()
-    
+
     # OTIMIZAÇÃO: Calcular dias_passados e dias_parada em BATCH (2 queries ao invés de 2*N)
     impl_ids = [impl.get("id") for impl in impl_list if impl and impl.get("id")]
     from ..domain.time_calculator import calculate_days_bulk
+
     days_data = calculate_days_bulk(impl_ids) if impl_ids else {}
 
     for impl in impl_list:
@@ -237,10 +238,8 @@ def get_dashboard_data(
             data_prevista_obj = None
 
             if data_prevista_str and isinstance(data_prevista_str, str):
-                try:
+                with contextlib.suppress(ValueError):
                     data_prevista_obj = datetime.strptime(data_prevista_str, "%Y-%m-%d").date()
-                except ValueError:
-                    pass
             elif isinstance(data_prevista_str, date):
                 data_prevista_obj = data_prevista_str
 
@@ -313,7 +312,7 @@ def get_dashboard_data(
                 """
                 UPDATE perfil_usuario
                 SET impl_andamento_total = %s,
-                    impl_finalizadas = %s, 
+                    impl_finalizadas = %s,
                     impl_paradas = %s
                 WHERE usuario = %s
                 """,
@@ -339,10 +338,7 @@ def get_dashboard_data(
     )
 
     # Salvar no cache
-    if pagination:
-        result = (dashboard_data, metrics, pagination)
-    else:
-        result = (dashboard_data, metrics)
+    result = (dashboard_data, metrics, pagination) if pagination else (dashboard_data, metrics)
 
     # CACHE DESABILITADO - não salvar cache
     # if cache and use_cache:
@@ -362,7 +358,7 @@ def get_tags_metrics(start_date=None, end_date=None, user_email=None, context=No
     from ..db import query_db
 
     query_sql = """
-        SELECT 
+        SELECT
             ch.usuario_cs,
             p.nome as user_name,
             ch.visibilidade,

@@ -19,7 +19,7 @@ def upgrade_postgres(cursor):
             metadata JSONB,              -- Dados extras (razão, contexto)
             ip_address VARCHAR(45),
             user_agent TEXT,
-            
+
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
@@ -47,7 +47,7 @@ def upgrade_sqlite(cursor):
             metadata TEXT,               -- JSON armazenado como texto
             ip_address VARCHAR(45),
             user_agent TEXT,
-            
+
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)

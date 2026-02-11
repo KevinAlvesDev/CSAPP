@@ -4,6 +4,7 @@ Funções auxiliares para serialização e extração de códigos.
 Princípio SOLID: Single Responsibility
 """
 
+import contextlib
 import json
 import re
 from decimal import Decimal
@@ -133,10 +134,8 @@ def extract_infra_code(empresa, id_favorecido=None):
 
     # 5. Fallback: usar codigofinanceiro (ID Favorecido)
     if not digits_pref and id_favorecido:
-        try:
+        with contextlib.suppress(Exception):
             digits_pref = str(int(id_favorecido))
-        except Exception:
-            pass
 
     # Formatar resultado
     if digits_pref and len(digits_pref) >= 2:

@@ -46,19 +46,19 @@ def clear_user_cache(user_email):
     if cache:
         cache.delete(f"user_profile_{user_email}")  # Cache de perfil
         cache.delete(f"user_implantacoes_{user_email}")
-        
+
         # Limpar variações de dashboard_data
         # Padrão: dashboard_data_{user_email}_{filtered_cs_email or 'all'}_p{page}_pp{per_page}
         pages = [None, 1, 2, 3]
         per_pages = [None, 20, 50, 100]
-        filtered_cs = ['all', None]
-        
+        filtered_cs = ["all", None]
+
         for page in pages:
             for per_page in per_pages:
                 for cs in filtered_cs:
-                    cs_str = cs if cs else 'all'
+                    cs_str = cs if cs else "all"
                     cache.delete(f"dashboard_data_{user_email}_{cs_str}_p{page}_pp{per_page}")
-        
+
         # Legado
         cache.delete(f"dashboard_data_{user_email}")
 

@@ -49,6 +49,22 @@ def create_app(test_config=None):
 
     app.config.from_object(Config)
 
+    # ================================================
+    # VALIDAÇÃO DE SECRETS (fail-fast em produção)
+    # ================================================
+    try:
+        from .config.secrets_validator import validate_secrets
+
+        secrets_result = validate_secrets(app)
+        if secrets_result["warnings"]:
+            app.logger.warning(f"⚠️  Validação de secrets: {len(secrets_result['warnings'])} avisos")
+    except Exception as e:
+        # Em produção, SecretsValidationError já foi lançada
+        # Em dev, apenas logar
+        if not app.config.get("USE_SQLITE_LOCALLY", False):
+            raise
+        app.logger.warning(f"Validação de secrets ignorada em dev: {e}")
+
     # CSRF nunca expira (evita erro de token expirado em sessões longas)
     app.config["WTF_CSRF_TIME_LIMIT"] = None
 
@@ -112,8 +128,9 @@ def create_app(test_config=None):
     def static_versioned(filename):
         """Retorna URL do arquivo estático com parâmetro de versão para cache-busting."""
         from flask import url_for
+
         version = get_static_version(filename)
-        return url_for('static', filename=filename) + f"?v={version}"
+        return url_for("static", filename=filename) + f"?v={version}"
 
     app.jinja_env.filters["static_versioned"] = static_versioned
 
@@ -158,7 +175,7 @@ def create_app(test_config=None):
 
     # Inicializar pool de conexões (com retry logic para conexões instáveis)
     db_initialized = init_connection_pool(app)
-    
+
     if db_initialized and not app.config.get("USE_SQLITE_LOCALLY", False):
         try:
             with app.app_context():
@@ -179,6 +196,19 @@ def create_app(test_config=None):
 
     setup_logging(app)
 
+    # ================================================
+    # SANITIZAÇÃO DE LOGS (proteger dados sensíveis)
+    # ================================================
+    try:
+        from .config.log_sanitizer import SensitiveDataFilter
+
+        sanitize_filter = SensitiveDataFilter()
+        for handler in app.logger.handlers:
+            handler.addFilter(sanitize_filter)
+        app.logger.info("🔒 Sanitização de logs ativada")
+    except Exception as e:
+        app.logger.warning(f"Sanitização de logs não ativada: {e}")
+
     from .security.middleware import configure_cors, init_security_headers
 
     init_security_headers(app)
@@ -186,7 +216,41 @@ def create_app(test_config=None):
 
     from .config.cache_config import init_cache
 
-    init_cache(app)
+    cache_instance = init_cache(app)
+
+    # ================================================
+    # CACHE MANAGER APRIMORADO (TTL por recurso)
+    # ================================================
+    try:
+        from .config.cache_manager import cache_manager
+
+        cache_manager.init_app(app, cache_instance=cache_instance)
+        app.logger.info("📦 Cache Manager com TTL por recurso inicializado")
+    except Exception as e:
+        app.logger.warning(f"Cache Manager não inicializado: {e}")
+
+    # ================================================
+    # SERVICE CONTAINER (Dependency Injection)
+    # ================================================
+    try:
+        from .core.container import ServiceContainer
+        from .core.service_registry import register_all_services
+
+        container = ServiceContainer(app)
+        register_all_services(app, container)
+    except Exception as e:
+        app.logger.warning(f"ServiceContainer não inicializado: {e}")
+
+    # ================================================
+    # EVENT HANDLERS (reações a eventos de domínio)
+    # ================================================
+    try:
+        from .core.event_handlers import register_event_handlers
+        from .core.events import event_bus
+
+        register_event_handlers(event_bus)
+    except Exception as e:
+        app.logger.warning(f"Event Handlers não registrados: {e}")
 
     # Monitoramento de performance
     from .monitoring.performance_middleware import init_performance_monitoring
@@ -206,7 +270,7 @@ def create_app(test_config=None):
                 try:
                     from .database import get_db_connection
 
-                    conn, db_type = get_db_connection()
+                    conn, _db_type = get_db_connection()
                     if conn:
                         conn.close()
                 except Exception as e:
@@ -233,6 +297,17 @@ def create_app(test_config=None):
                     app.logger.warning(f"Falha ao garantir usuário admin: {e_seed}")
     except Exception as e_dbinit:
         app.logger.warning(f"Falha na inicialização do banco (dev): {e_dbinit}")
+
+    # ================================================
+    # CACHE WARMING (moved after DB init)
+    # ================================================
+    try:
+        from .config.cache_warming import warm_cache
+
+        with app.app_context():
+            warm_cache(app)
+    except Exception as e:
+        app.logger.warning(f"Cache Warming falhou: {e}")
 
     if app.config.get("AUTH0_ENABLED", True):
         raw_domain = (app.config.get("AUTH0_DOMAIN") or "").strip().strip("`").strip()
@@ -388,7 +463,7 @@ def create_app(test_config=None):
             return
 
         # Importar constantes no início da função para garantir escopo
-        from .constants import ADMIN_EMAIL, PERFIL_ADMIN, MASTER_ADMIN_EMAIL
+        from .constants import ADMIN_EMAIL, MASTER_ADMIN_EMAIL, PERFIL_ADMIN
 
         # Carregar usuário da sessão PRIMEIRO
         g.user_email = session.get("user", {}).get("email")

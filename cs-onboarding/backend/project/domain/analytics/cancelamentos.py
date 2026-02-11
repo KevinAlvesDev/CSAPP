@@ -161,7 +161,7 @@ def get_cancelamentos_data(cs_email=None, start_date=None, end_date=None, contex
     def pct(p):
         if not tempos_sorted:
             return None
-        idx = max(0, min(len(tempos_sorted) - 1, int(round(p * (len(tempos_sorted) - 1)))))
+        idx = max(0, min(len(tempos_sorted) - 1, round(p * (len(tempos_sorted) - 1))))
         return tempos_sorted[idx]
 
     dist = {"p50": pct(0.5), "p75": pct(0.75), "p90": pct(0.9)}

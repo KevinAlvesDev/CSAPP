@@ -8,9 +8,9 @@ from datetime import datetime
 
 from flask import current_app
 
+from ...config.cache_config import clear_implantacao_cache, clear_user_cache
 from ...constants import PERFIS_COM_GESTAO
 from ...db import execute_db, logar_timeline, query_db
-from ...config.cache_config import clear_implantacao_cache, clear_user_cache
 
 
 def iniciar_implantacao_service(implantacao_id, usuario_cs_email):
@@ -58,6 +58,18 @@ def iniciar_implantacao_service(implantacao_id, usuario_cs_email):
         clear_user_cache(usuario_cs_email)
         if impl.get("usuario_cs") != usuario_cs_email:
             clear_user_cache(impl.get("usuario_cs"))
+    except Exception:
+        pass
+
+    # Emitir evento de domínio
+    try:
+        from ...core.events import ImplantacaoIniciada, event_bus
+
+        event_bus.emit(ImplantacaoIniciada(
+            implantacao_id=implantacao_id,
+            usuario_cs=usuario_cs_email,
+            nome_empresa=impl.get("nome_empresa", ""),
+        ))
     except Exception:
         pass
 
@@ -325,6 +337,19 @@ def finalizar_implantacao_service(implantacao_id, usuario_cs_email, data_final_i
         clear_user_cache(usuario_cs_email)
         if impl.get("usuario_cs") != usuario_cs_email:
             clear_user_cache(impl.get("usuario_cs"))
+    except Exception:
+        pass
+
+    # Emitir evento de domínio
+    try:
+        from ...core.events import ImplantacaoFinalizada, event_bus
+
+        event_bus.emit(ImplantacaoFinalizada(
+            implantacao_id=implantacao_id,
+            usuario_cs=usuario_cs_email,
+            nome_empresa=impl.get("nome_empresa", ""),
+            progresso_final=100.0,
+        ))
     except Exception:
         pass
 

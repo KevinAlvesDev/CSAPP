@@ -1,0 +1,41 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+
+    "strict": false,
+    "allowJs": true,
+    "checkJs": false,
+
+    "noEmit": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["static/js/*"],
+      "@services/*": ["static/js/services/*"],
+      "@utils/*": ["static/js/utils/*"],
+      "@components/*": ["static/js/components/*"],
+      "@ui/*": ["static/js/ui/*"]
+    },
+
+    "outDir": "dist",
+    "declaration": true,
+    "declarationDir": "dist/types"
+  },
+  "include": [
+    "static/js/**/*.ts",
+    "static/js/**/*.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "static/js/tests"
+  ]
+}

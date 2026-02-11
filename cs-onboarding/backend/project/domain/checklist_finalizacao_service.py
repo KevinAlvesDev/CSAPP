@@ -4,7 +4,6 @@ Gerencia os itens do checklist que devem ser completados antes de finalizar uma 
 """
 
 from datetime import datetime
-from typing import Dict, List, Optional
 
 from flask import current_app
 
@@ -51,7 +50,7 @@ def criar_checklist_para_implantacao(implantacao_id: int) -> bool:
                 if db_type == "postgres":
                     cursor.execute(
                         """
-                        INSERT INTO checklist_finalizacao_items 
+                        INSERT INTO checklist_finalizacao_items
                         (implantacao_id, template_id, titulo, descricao, obrigatorio, ordem, evidencia_tipo)
                         VALUES (%s, %s, %s, %s, %s, %s, %s)
                     """,
@@ -68,7 +67,7 @@ def criar_checklist_para_implantacao(implantacao_id: int) -> bool:
                 else:  # SQLite
                     cursor.execute(
                         """
-                        INSERT INTO checklist_finalizacao_items 
+                        INSERT INTO checklist_finalizacao_items
                         (implantacao_id, template_id, titulo, descricao, obrigatorio, ordem, evidencia_tipo)
                         VALUES (?, ?, ?, ?, ?, ?, ?)
                     """,
@@ -93,7 +92,7 @@ def criar_checklist_para_implantacao(implantacao_id: int) -> bool:
         return False
 
 
-def obter_checklist_implantacao(implantacao_id: int) -> Dict:
+def obter_checklist_implantacao(implantacao_id: int) -> dict:
     """
     Retorna o checklist de finalização de uma implantação com estatísticas.
     """
@@ -152,10 +151,10 @@ def marcar_item_checklist(
     item_id: int,
     concluido: bool,
     usuario: str,
-    evidencia_tipo: Optional[str] = None,
-    evidencia_conteudo: Optional[str] = None,
-    evidencia_url: Optional[str] = None,
-    observacoes: Optional[str] = None,
+    evidencia_tipo: str | None = None,
+    evidencia_conteudo: str | None = None,
+    evidencia_url: str | None = None,
+    observacoes: str | None = None,
 ) -> bool:
     """
     Marca um item do checklist como concluído ou pendente.
@@ -269,10 +268,10 @@ def validar_checklist_completo(implantacao_id: int) -> tuple[bool, str]:
 
     except Exception as e:
         current_app.logger.error(f"Erro ao validar checklist da implantação {implantacao_id}: {e}", exc_info=True)
-        return False, f"Erro ao validar checklist: {str(e)}"
+        return False, f"Erro ao validar checklist: {e!s}"
 
 
-def obter_templates_checklist() -> List[Dict]:
+def obter_templates_checklist() -> list[dict]:
     """
     Retorna todos os templates de checklist ativos.
     """

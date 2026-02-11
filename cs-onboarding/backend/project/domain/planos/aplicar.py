@@ -5,12 +5,11 @@ Princípio SOLID: Single Responsibility
 """
 
 from datetime import date, datetime, timedelta
-from typing import Dict
 
 from flask import current_app
 
 from ...common.exceptions import DatabaseError, ValidationError
-from ...db import db_connection, execute_db, query_db
+from ...db import db_connection, query_db
 from .crud import obter_plano_completo
 
 
@@ -62,7 +61,7 @@ def aplicar_plano_a_implantacao(implantacao_id: int, plano_id: int, usuario: str
             # Deletar apenas comentários vinculados a checklist_items desta implantação
             # NÃO deletar comentários órfãos - eles são comentários preservados de planos anteriores
             sql_limpar_comentarios = """
-                DELETE FROM comentarios_h 
+                DELETE FROM comentarios_h
                 WHERE checklist_item_id IN (
                     SELECT id FROM checklist_items WHERE implantacao_id = %s
                 )
@@ -80,7 +79,7 @@ def aplicar_plano_a_implantacao(implantacao_id: int, plano_id: int, usuario: str
             _clonar_plano_para_implantacao(cursor, db_type, plano, implantacao_id, usuario)
 
             sql_update = """
-                UPDATE implantacoes 
+                UPDATE implantacoes
                 SET plano_sucesso_id = %s, data_atribuicao_plano = %s, data_previsao_termino = %s
                 WHERE id = %s
             """
@@ -103,12 +102,16 @@ def aplicar_plano_a_implantacao(implantacao_id: int, plano_id: int, usuario: str
 
 
 def aplicar_plano_a_implantacao_checklist(
-    implantacao_id: int, plano_id: int, usuario: str, responsavel_nome: str | None = None, preservar_comentarios: bool = False
+    implantacao_id: int,
+    plano_id: int,
+    usuario: str,
+    responsavel_nome: str | None = None,
+    preservar_comentarios: bool = False,
 ) -> bool:
     """
     Aplica um plano de sucesso a uma implantação usando checklist_items.
     Clona a estrutura do plano (itens com implantacao_id = NULL) para a implantação.
-    
+
     Args:
         preservar_comentarios: Se True, preserva os comentários existentes desvinculando-os
                                dos checklist_items antes de deletá-los.
@@ -150,12 +153,13 @@ def aplicar_plano_a_implantacao_checklist(
             if preservar_comentarios:
                 # Preservar comentários: desvincula-los dos itens antes de deletar
                 from ..checklist.comments import preservar_comentarios_implantacao
+
                 preservar_comentarios_implantacao(implantacao_id)
             else:
                 # Deletar apenas comentários vinculados a checklist_items desta implantação
                 # NÃO deletar comentários órfãos - eles são comentários preservados de planos anteriores
                 sql_limpar_comentarios = """
-                    DELETE FROM comentarios_h 
+                    DELETE FROM comentarios_h
                     WHERE checklist_item_id IN (
                         SELECT id FROM checklist_items WHERE implantacao_id = %s
                     )
@@ -242,7 +246,7 @@ def aplicar_plano_a_implantacao_checklist(
 def remover_plano_de_implantacao(implantacao_id: int, usuario: str, excluir_comentarios: bool = False) -> bool:
     """
     Remove o plano de sucesso de uma implantação.
-    
+
     Args:
         implantacao_id: ID da implantação
         usuario: Usuário que está removendo o plano
@@ -262,12 +266,12 @@ def remover_plano_de_implantacao(implantacao_id: int, usuario: str, excluir_come
 
     with db_connection() as (conn, db_type):
         cursor = conn.cursor()
-        
+
         try:
             if excluir_comentarios:
                 # Excluir todos os comentários da implantação
                 sql_excluir_comentarios = """
-                    DELETE FROM comentarios_h 
+                    DELETE FROM comentarios_h
                     WHERE checklist_item_id IN (
                         SELECT id FROM checklist_items WHERE implantacao_id = %s
                     )
@@ -280,6 +284,7 @@ def remover_plano_de_implantacao(implantacao_id: int, usuario: str, excluir_come
             else:
                 # Preservar comentários: desvincular dos itens antes de deletar
                 from ..checklist.comments import preservar_comentarios_implantacao
+
                 preservar_comentarios_implantacao(implantacao_id, cursor=cursor, db_type=db_type)
                 current_app.logger.info(f"Comentários da implantação {implantacao_id} preservados por {usuario}")
 
@@ -298,7 +303,7 @@ def remover_plano_de_implantacao(implantacao_id: int, usuario: str, excluir_come
             if db_type == "sqlite":
                 sql_update = sql_update.replace("%s", "?")
             cursor.execute(sql_update, (implantacao_id,))
-            
+
             conn.commit()
 
             current_app.logger.info(f"Plano removido da implantação {implantacao_id} por {usuario}")
@@ -317,14 +322,16 @@ def remover_plano_de_implantacao(implantacao_id: int, usuario: str, excluir_come
                 pass
 
             return True
-            
+
         except Exception as e:
             conn.rollback()
             current_app.logger.error(f"Erro ao remover plano: {e}", exc_info=True)
             raise DatabaseError(f"Erro ao remover plano: {e}") from e
 
 
-def _clonar_plano_para_implantacao(cursor, db_type: str, plano: Dict, implantacao_id: int, responsavel: str = None):
+def _clonar_plano_para_implantacao(
+    cursor, db_type: str, plano: dict, implantacao_id: int, responsavel: str | None = None
+):
     """
     Clona a estrutura do plano para a implantação usando checklist_items.
     Converte itens do plano (tipo_item='plano_*') para itens de implantação (tipo_item='fase'/'grupo'/'tarefa'/'subtarefa').
@@ -337,7 +344,7 @@ def _clonar_plano_para_implantacao(cursor, db_type: str, plano: Dict, implantaca
         cursor.execute(
             """
             SELECT id, parent_id, title, completed, comment, level, ordem, tipo_item, descricao, obrigatoria, status, tag
-            FROM checklist_items 
+            FROM checklist_items
             WHERE plano_id = %s
             ORDER BY ordem, id
         """,
@@ -347,7 +354,7 @@ def _clonar_plano_para_implantacao(cursor, db_type: str, plano: Dict, implantaca
         cursor.execute(
             """
             SELECT id, parent_id, title, completed, comment, level, ordem, tipo_item, descricao, obrigatoria, status, tag
-            FROM checklist_items 
+            FROM checklist_items
             WHERE plano_id = ?
             ORDER BY ordem, id
         """,
@@ -363,7 +370,7 @@ def _clonar_plano_para_implantacao(cursor, db_type: str, plano: Dict, implantaca
 
     def clonar_item(item_plano, parent_id_implantacao):
         item_id_plano = item_plano[0] if isinstance(item_plano, tuple) else item_plano["id"]
-        parent_id_plano = item_plano[1] if isinstance(item_plano, tuple) else item_plano.get("parent_id")
+        item_plano[1] if isinstance(item_plano, tuple) else item_plano.get("parent_id")
         title = item_plano[2] if isinstance(item_plano, tuple) else item_plano["title"]
         completed = item_plano[3] if isinstance(item_plano, tuple) else item_plano.get("completed", False)
         comment = item_plano[4] if isinstance(item_plano, tuple) else item_plano.get("comment", "")
@@ -381,7 +388,7 @@ def _clonar_plano_para_implantacao(cursor, db_type: str, plano: Dict, implantaca
 
         if db_type == "postgres":
             sql_insert = """
-                INSERT INTO checklist_items 
+                INSERT INTO checklist_items
                 (parent_id, title, completed, comment, level, ordem, implantacao_id, tipo_item, descricao, obrigatoria, status, responsavel, tag, created_at, updated_at)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 RETURNING id
@@ -407,7 +414,7 @@ def _clonar_plano_para_implantacao(cursor, db_type: str, plano: Dict, implantaca
             novo_id = cursor.fetchone()[0]
         else:
             sql_insert = """
-                INSERT INTO checklist_items 
+                INSERT INTO checklist_items
                 (parent_id, title, completed, comment, level, ordem, implantacao_id, tipo_item, descricao, obrigatoria, status, responsavel, tag, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             """

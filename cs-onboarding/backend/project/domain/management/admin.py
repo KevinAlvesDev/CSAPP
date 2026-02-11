@@ -29,12 +29,13 @@ def atualizar_perfil_usuario_service(usuario_alvo, novo_perfil, usuario_admin):
         raise ValueError("Não pode alterar o seu próprio perfil por esta interface.")
 
     from ...constants import MASTER_ADMIN_EMAIL
+
     if usuario_alvo == MASTER_ADMIN_EMAIL and novo_perfil != PERFIL_ADMIN:
         raise ValueError("Não é permitido alterar o perfil do Master Admin.")
-    
+
     # Se for o ADMIN_EMAIL antigo (env), permitir alteração desde que exista o Master garantindo acesso
     if usuario_alvo == ADMIN_EMAIL and novo_perfil != PERFIL_ADMIN and usuario_alvo != MASTER_ADMIN_EMAIL:
-        pass # Permitido pois temos backup
+        pass  # Permitido pois temos backup
 
     # Verificar se usuário existe
     if not verificar_usuario_existe(usuario_alvo):
@@ -61,6 +62,7 @@ def atualizar_perfil_usuario_service(usuario_alvo, novo_perfil, usuario_admin):
     # Invalidar cache do perfil do usuário para refletir mudanças imediatamente
     try:
         from ...config.cache_config import cache
+
         if cache:
             cache_key = f"user_profile_{usuario_alvo}"
             cache.delete(cache_key)
@@ -112,6 +114,7 @@ def excluir_usuario_service(usuario_alvo, usuario_admin):
     # Invalidar cache do perfil do usuário excluído
     try:
         from ...config.cache_config import cache
+
         if cache:
             cache_key = f"user_profile_{usuario_alvo}"
             cache.delete(cache_key)

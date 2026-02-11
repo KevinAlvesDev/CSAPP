@@ -20,7 +20,7 @@ from .utils import (
 
 # Exports públicos
 __all__ = [
+    "format_relative_time",
     "get_dashboard_data",
     "get_tags_metrics",
-    "format_relative_time",
 ]

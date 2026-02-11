@@ -4,8 +4,6 @@ Validações de estrutura hierárquica e checklist.
 Princípio SOLID: Single Responsibility
 """
 
-from typing import Dict, List
-
 from ...common.exceptions import ValidationError
 from ...db import query_db
 
@@ -17,20 +15,20 @@ def get_valid_tags():
     """
     try:
         tags = query_db("""
-            SELECT nome FROM tags_sistema 
+            SELECT nome FROM tags_sistema
             WHERE ativo = true
         """)
         if tags:
-            return {tag['nome'] for tag in tags}
+            return {tag["nome"] for tag in tags}
     except Exception:
         # Fallback para tags hardcoded se tabela não existir ainda
         pass
-    
+
     # Fallback (compatibilidade com versões antigas)
     return {"Ação interna", "Reunião", "Simples registro", "No Show", "Cliente", "Rede"}
 
 
-def validar_estrutura_hierarquica(estrutura: Dict) -> bool:
+def validar_estrutura_hierarquica(estrutura: dict) -> bool:
     """
     Valida estrutura hierárquica no formato fases/grupos/tarefas/subtarefas.
     """
@@ -110,7 +108,7 @@ def validar_estrutura_hierarquica(estrutura: Dict) -> bool:
     return True
 
 
-def validar_estrutura_checklist(estrutura: Dict) -> bool:
+def validar_estrutura_checklist(estrutura: dict) -> bool:
     """
     Valida estrutura de checklist_items (hierarquia infinita).
     Aceita estrutura aninhada ou plana com parent_id.
@@ -132,7 +130,7 @@ def validar_estrutura_checklist(estrutura: Dict) -> bool:
         raise ValidationError("Estrutura deve conter 'items' ou 'fases'")
 
 
-def _validar_items_recursivo(items: List[Dict], titles_set: set, depth: int, max_depth: int = 100):
+def _validar_items_recursivo(items: list[dict], titles_set: set, depth: int, max_depth: int = 100):
     """
     Valida itens recursivamente, verificando loops e profundidade máxima.
     """

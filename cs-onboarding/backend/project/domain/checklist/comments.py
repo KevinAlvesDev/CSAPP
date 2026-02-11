@@ -4,13 +4,14 @@ Adicionar, listar e excluir comentários.
 Princípio SOLID: Single Responsibility
 """
 
+import contextlib
 import logging
 from datetime import datetime, timedelta, timezone
 
 from flask import g
 
 from ...common.validation import sanitize_string
-from ...config.cache_config import clear_dashboard_cache, clear_implantacao_cache, clear_user_cache
+from ...config.cache_config import clear_dashboard_cache, clear_implantacao_cache
 from ...db import db_transaction_with_lock, execute_db, logar_timeline, query_db
 from .utils import _format_datetime
 
@@ -77,18 +78,18 @@ def add_comment_to_item(
                 )
                 if not cursor.fetchone():
                     cursor.execute("ALTER TABLE comentarios_h ADD COLUMN IF NOT EXISTS checklist_item_id INTEGER")
-                    try:
+                    with contextlib.suppress(Exception):
                         cursor.execute(
                             "ALTER TABLE comentarios_h ADD CONSTRAINT fk_comentarios_checklist_item FOREIGN KEY (checklist_item_id) REFERENCES checklist_items(id)"
                         )
-                    except Exception:
-                        pass
                 # Garantir coluna implantacao_id
                 cursor.execute(
                     "SELECT column_name FROM information_schema.columns WHERE table_name='comentarios_h' AND column_name='implantacao_id'"
                 )
                 if not cursor.fetchone():
-                    cursor.execute("ALTER TABLE comentarios_h ADD COLUMN IF NOT EXISTS implantacao_id INTEGER REFERENCES implantacoes(id)")
+                    cursor.execute(
+                        "ALTER TABLE comentarios_h ADD COLUMN IF NOT EXISTS implantacao_id INTEGER REFERENCES implantacoes(id)"
+                    )
                 # Garantir coluna tag
                 cursor.execute(
                     "SELECT column_name FROM information_schema.columns WHERE table_name='comentarios_h' AND column_name='tag'"
@@ -124,7 +125,9 @@ def add_comment_to_item(
 
         if db_type == "sqlite":
             insert_sql = insert_sql.replace("%s", "?")
-        cursor.execute(insert_sql, (item_id, implantacao_id, usuario_email, text, now, visibilidade, noshow_val, tag, imagem_url))
+        cursor.execute(
+            insert_sql, (item_id, implantacao_id, usuario_email, text, now, visibilidade, noshow_val, tag, imagem_url)
+        )
 
         if db_type == "postgres":
             res_id = cursor.fetchone()
@@ -158,6 +161,19 @@ def add_comment_to_item(
             clear_dashboard_cache()  # Limpa cache de todos dashboards
         except Exception as e:
             logger.warning(f"Erro ao invalidar cache após criar comentário: {e}")
+
+        # Emitir evento de domínio
+        try:
+            from ...core.events import ChecklistComentarioAdicionado, event_bus
+
+            event_bus.emit(ChecklistComentarioAdicionado(
+                item_id=item_id,
+                implantacao_id=implantacao_id,
+                autor=usuario_email or "",
+                tag=tag or "",
+            ))
+        except Exception:
+            pass
 
         return {
             "ok": True,
@@ -203,13 +219,13 @@ def listar_comentarios_implantacao(impl_id, page=1, per_page=20):
         FROM comentarios_h c
         LEFT JOIN checklist_items ci ON c.checklist_item_id = ci.id
         LEFT JOIN perfil_usuario p ON c.usuario_cs = p.usuario
-        WHERE 
-            -- Robustez máxima: considera vinculado se o item pertencer à implantação 
+        WHERE
+            -- Robustez máxima: considera vinculado se o item pertencer à implantação
             -- OU se o próprio comentário apontar para a implantação (mesmo que item deletado/nulo)
             ci.implantacao_id = %s
-            OR 
+            OR
             c.implantacao_id = %s
-        
+
         ORDER BY data_criacao DESC
         LIMIT %s OFFSET %s
     """
@@ -300,10 +316,8 @@ def obter_comentario_para_email(comentario_id):
 
 
 def registrar_envio_email_comentario(implantacao_id, usuario_email, detalhe):
-    try:
+    with contextlib.suppress(Exception):
         logar_timeline(implantacao_id, usuario_email, "email_comentario_enviado", detalhe)
-    except Exception:
-        pass
 
 
 def _check_edit_permission(comentario, usuario_email, is_manager):
@@ -331,10 +345,8 @@ def _check_edit_permission(comentario, usuario_email, is_manager):
 
     # Se data_criacao for string (SQLite as vezes), converter
     if isinstance(data_criacao, str):
-        try:
+        with contextlib.suppress(ValueError):
             data_criacao = datetime.fromisoformat(data_criacao)
-        except ValueError:
-            pass
 
     # Se for naive, assumir que é do mesmo TZ que salvamos (Brasília)
     if data_criacao.tzinfo is None:
@@ -485,7 +497,7 @@ def contar_comentarios_implantacao(impl_id):
         SELECT COUNT(*) as total
         FROM comentarios_h c
         LEFT JOIN checklist_items ci ON c.checklist_item_id = ci.id
-        WHERE (ci.implantacao_id = %s) 
+        WHERE (ci.implantacao_id = %s)
            OR (c.implantacao_id = %s)
     """
     result = query_db(count_query, (impl_id, impl_id), one=True)
@@ -497,7 +509,7 @@ def preservar_comentarios_implantacao(impl_id, cursor=None, db_type=None):
     Preserva os comentários de uma implantação desvinculando-os dos checklist_items.
     Os comentários ficam 'órfãos' (checklist_item_id = NULL) mas mantém o implantacao_id.
     Chamado antes de deletar os checklist_items ao aplicar novo plano.
-    
+
     Args:
         impl_id: ID da implantação
         cursor: Cursor opcional para usar transação existente
@@ -506,23 +518,23 @@ def preservar_comentarios_implantacao(impl_id, cursor=None, db_type=None):
     # Se cursor foi passado, usar ele diretamente (dentro de transação existente)
     # Senão, usar execute_db que cria sua própria transação
     use_external_cursor = cursor is not None
-    
+
     # Primeiro, garantir que todos os comentários tenham implantacao_id preenchido
     # (para comentários antigos que podem não ter)
     update_impl_id_query = """
-        UPDATE comentarios_h 
+        UPDATE comentarios_h
         SET implantacao_id = (
-            SELECT ci.implantacao_id 
-            FROM checklist_items ci 
+            SELECT ci.implantacao_id
+            FROM checklist_items ci
             WHERE ci.id = comentarios_h.checklist_item_id
         )
-        WHERE checklist_item_id IS NOT NULL 
+        WHERE checklist_item_id IS NOT NULL
         AND implantacao_id IS NULL
         AND checklist_item_id IN (
             SELECT id FROM checklist_items WHERE implantacao_id = %s
         )
     """
-    
+
     if use_external_cursor:
         if db_type == "sqlite":
             update_impl_id_query = update_impl_id_query.replace("%s", "?")
@@ -532,13 +544,13 @@ def preservar_comentarios_implantacao(impl_id, cursor=None, db_type=None):
 
     # Agora desvincular os comentários dos itens (torná-los órfãos)
     desvincular_query = """
-        UPDATE comentarios_h 
+        UPDATE comentarios_h
         SET checklist_item_id = NULL
         WHERE checklist_item_id IN (
             SELECT id FROM checklist_items WHERE implantacao_id = %s
         )
     """
-    
+
     if use_external_cursor:
         if db_type == "sqlite":
             desvincular_query = desvincular_query.replace("%s", "?")

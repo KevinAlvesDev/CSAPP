@@ -5,7 +5,7 @@ Princípio SOLID: Single Responsibility
 """
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from flask import current_app
 
@@ -28,7 +28,7 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, include_progress=
     except (ValueError, TypeError):
         raise ValueError("IDs devem ser inteiros válidos") from None
 
-    with db_transaction_with_lock() as (conn, cursor, db_type):
+    with db_transaction_with_lock() as (_conn, cursor, db_type):
         try:
             query = ""
             params = []
@@ -204,23 +204,19 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, include_progress=
                     "tag": item.get("tag") if isinstance(item, dict) else item["tag"],
                     "responsavel": item.get("responsavel") if isinstance(item, dict) else item.get("responsavel", None),
                     "previsao_original": _format_datetime(
-                        (
-                            item.get("previsao_original")
-                            if isinstance(item, dict)
-                            else item.get("previsao_original", None)
-                        )
+                        item.get("previsao_original") if isinstance(item, dict) else item.get("previsao_original", None)
                     ),
                     "nova_previsao": _format_datetime(
-                        (item.get("nova_previsao") if isinstance(item, dict) else item.get("nova_previsao", None))
+                        item.get("nova_previsao") if isinstance(item, dict) else item.get("nova_previsao", None)
                     ),
                     "data_conclusao": _format_datetime(
-                        (item.get("data_conclusao") if isinstance(item, dict) else item.get("data_conclusao", None))
+                        item.get("data_conclusao") if isinstance(item, dict) else item.get("data_conclusao", None)
                     ),
                     "created_at": _format_datetime(
-                        (item.get("created_at") if isinstance(item, dict) else item.get("created_at", None))
+                        item.get("created_at") if isinstance(item, dict) else item.get("created_at", None)
                     ),
                     "updated_at": _format_datetime(
-                        (item.get("updated_at") if isinstance(item, dict) else item.get("updated_at", None))
+                        item.get("updated_at") if isinstance(item, dict) else item.get("updated_at", None)
                     ),
                 }
 
@@ -231,7 +227,7 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, include_progress=
 
                 ref_dt = item_dict["nova_previsao"] or item_dict["previsao_original"]
                 item_dict["atrasada"] = bool(
-                    ref_dt and not item_dict["completed"] and ref_dt < _format_datetime(datetime.now(timezone.utc))
+                    ref_dt and not item_dict["completed"] and ref_dt < _format_datetime(datetime.now(UTC))
                 )
 
                 if include_progress:

@@ -1,3 +1,4 @@
+import contextlib
 import os
 from functools import wraps
 
@@ -25,10 +26,8 @@ def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not g.user_email:
-            try:
+            with contextlib.suppress(Exception):
                 auth_logger.info(f"Login required: anonymous access to {request.path}")
-            except Exception:
-                pass
 
             if request.is_json or request.headers.get("Accept", "").startswith("application/json"):
                 from flask import jsonify
@@ -165,10 +164,7 @@ def login():
                             if "25" in lower or "anos" in lower:
                                 chosen = fname
                                 break
-                    if chosen:
-                        login_bg_file = f"imagens/{chosen}"
-                    else:
-                        login_bg_file = "imagens/teladelogin.jpg"
+                    login_bg_file = f"imagens/{chosen}" if chosen else "imagens/teladelogin.jpg"
                 except Exception:
                     login_bg_file = "imagens/teladelogin.jpg"
     except Exception:
@@ -242,10 +238,9 @@ def google_login():
     # Se não estivermos rodando localmente (SQLite/Debug), forçar HTTPS na URI de retorno.
     # Isso resolve problemas onde o servidor está atrás de um proxy HTTP mas o Google espera HTTPS.
     is_local = current_app.config.get("USE_SQLITE_LOCALLY", False) or current_app.config.get("DEBUG", False)
-    if not is_local:
-        if redirect_uri.startswith("http://"):
-            redirect_uri = redirect_uri.replace("http://", "https://", 1)
-            auth_logger.info(f"Forçando HTTPS na redirect_uri: {redirect_uri}")
+    if not is_local and redirect_uri.startswith("http://"):
+        redirect_uri = redirect_uri.replace("http://", "https://", 1)
+        auth_logger.info(f"Forçando HTTPS na redirect_uri: {redirect_uri}")
 
     auth_logger.info(f"Redirecionando para Google com callback (FINAL): {redirect_uri}")
     # prompt='select_account' força o Google a mostrar a tela de escolha de conta
@@ -296,9 +291,10 @@ def google_callback():
         # Validação de Domínio
         # Permitir login do ADMIN_EMAIL mesmo se for de outro domínio (ex: gmail)
         from ..constants import ADMIN_EMAIL
+
         email_clean = (email or "").strip().lower()
         is_admin_email = email_clean == (ADMIN_EMAIL or "").strip().lower()
-        
+
         # Permitir explicitamente o e-mail solicitado, ignorando env vars antigas
         is_master_user = email_clean == "kevinalveswp@gmail.com"
 
@@ -428,10 +424,8 @@ def dev_login_as():
         return redirect(url_for("auth.login"))
 
     if request.method == "GET":
-        try:
+        with contextlib.suppress(Exception):
             session.pop("_flashes", None)
-        except Exception:
-            pass
         return render_template("auth/dev_login.html", auth0_enabled=False)
 
     email = (request.form.get("email") or "").strip()

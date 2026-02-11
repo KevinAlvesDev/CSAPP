@@ -5,7 +5,6 @@ Princípio SOLID: Single Responsibility
 """
 
 from datetime import datetime
-from typing import Dict, List, Optional
 
 from flask import current_app
 
@@ -19,8 +18,8 @@ def criar_plano_sucesso(
     nome: str,
     descricao: str,
     criado_por: str,
-    estrutura: Dict,
-    dias_duracao: int = None,
+    estrutura: dict,
+    dias_duracao: int | None = None,
     context: str = "onboarding",
 ) -> int:
     """
@@ -104,8 +103,8 @@ def criar_plano_sucesso_checklist(
     nome: str,
     descricao: str,
     criado_por: str,
-    estrutura: Dict,
-    dias_duracao: int = None,
+    estrutura: dict,
+    dias_duracao: int | None = None,
     context: str = "onboarding",
 ) -> int:
     """
@@ -189,7 +188,7 @@ def criar_plano_sucesso_checklist(
             raise DatabaseError(f"Erro ao criar plano de sucesso: {e}") from e
 
 
-def atualizar_plano_sucesso(plano_id: int, dados: Dict) -> bool:
+def atualizar_plano_sucesso(plano_id: int, dados: dict) -> bool:
     """
     Atualiza dados básicos de um plano de sucesso.
     """
@@ -224,7 +223,7 @@ def atualizar_plano_sucesso(plano_id: int, dados: Dict) -> bool:
     campos_atualizaveis = []
     valores = []
 
-    if "nome" in dados and dados["nome"]:
+    if dados.get("nome"):
         campos_atualizaveis.append("nome = %s")
         valores.append(dados["nome"].strip())
 
@@ -286,8 +285,8 @@ def excluir_plano_sucesso(plano_id: int) -> bool:
 
 
 def listar_planos_sucesso(
-    ativo_apenas: bool = True, busca: str = None, context: str = None
-) -> List[Dict]:
+    ativo_apenas: bool = True, busca: str | None = None, context: str | None = None
+) -> list[dict]:
     """
     Lista todos os planos de sucesso.
     """
@@ -316,7 +315,7 @@ def listar_planos_sucesso(
     return planos or []
 
 
-def obter_plano_completo(plano_id: int) -> Optional[Dict]:
+def obter_plano_completo(plano_id: int) -> dict | None:
     """
     Retorna plano completo usando checklist_items (estrutura consolidada).
     Retorna no formato 'items' para compatibilidade com o editor moderno.
@@ -433,7 +432,7 @@ def obter_plano_completo(plano_id: int) -> Optional[Dict]:
     return plano
 
 
-def obter_plano_completo_checklist(plano_id: int) -> Optional[Dict]:
+def obter_plano_completo_checklist(plano_id: int) -> dict | None:
     """
     Retorna plano completo usando checklist_items (hierarquia infinita).
     Retorna estrutura aninhada para compatibilidade com frontend.
@@ -485,7 +484,7 @@ def obter_plano_completo_checklist(plano_id: int) -> Optional[Dict]:
     return plano
 
 
-def obter_plano_da_implantacao(implantacao_id: int) -> Optional[Dict]:
+def obter_plano_da_implantacao(implantacao_id: int) -> dict | None:
     """
     Retorna o plano associado a uma implantação.
     """
@@ -510,8 +509,8 @@ def clonar_plano_sucesso(
     plano_id: int,
     novo_nome: str,
     criado_por: str,
-    nova_descricao: str = None,
-    context: str = None,
+    nova_descricao: str | None = None,
+    context: str | None = None,
 ) -> int:
     """
     Clona um plano de sucesso existente com todas as suas tarefas.

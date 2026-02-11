@@ -17,7 +17,7 @@ def get_gamification_report_data(mes, ano, target_cs_email=None, all_cs_users_li
     """
     Função principal para buscar e calcular o relatório de gamificação.
     Resolve o problema N+1 ao buscar todos os dados em massa.
-    
+
     Args:
         mes: Mês de referência
         ano: Ano de referência
@@ -77,7 +77,7 @@ def get_gamification_report_data(mes, ano, target_cs_email=None, all_cs_users_li
         sql_metricas = (
             f"SELECT * FROM gamificacao_metricas_mensais WHERE mes = %s AND ano = %s AND usuario_cs IN ({placeholders})"
         )
-        args_metricas = [mes, ano] + usuarios_filtrados
+        args_metricas = [mes, ano, *usuarios_filtrados]
 
         metricas_manuais_raw = query_db(sql_metricas, tuple(args_metricas))
         metricas_manuais_raw = metricas_manuais_raw if metricas_manuais_raw is not None else []
@@ -131,13 +131,13 @@ def get_gamification_report_data(mes, ano, target_cs_email=None, all_cs_users_li
                 existing_record_id = metricas_manuais.get("id")
 
                 if existing_record_id:
-                    set_clauses_calc = [f"{key} = %s" for key in dados_para_salvar.keys()]
+                    set_clauses_calc = [f"{key} = %s" for key in dados_para_salvar]
 
                     if set_clauses_calc:
                         sql_update_calc = (
                             f"UPDATE gamificacao_metricas_mensais SET {', '.join(set_clauses_calc)} WHERE id = %s"
                         )
-                        args_update_calc = list(dados_para_salvar.values()) + [existing_record_id]
+                        args_update_calc = [*list(dados_para_salvar.values()), existing_record_id]
                         execute_db(sql_update_calc, tuple(args_update_calc))
 
             except Exception:

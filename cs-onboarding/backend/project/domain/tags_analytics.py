@@ -4,15 +4,15 @@ This provides insights into comment tag patterns by user.
 """
 
 from datetime import date, datetime
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 def get_tags_by_user_chart_data(
-    cs_email: Optional[str] = None,
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None,
-    context: Optional[str] = None,
-) -> Dict[str, Any]:
+    cs_email: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    context: str | None = None,
+) -> dict[str, Any]:
     """
     Retrieves comment tag statistics grouped by user.
     Tags are stored in comentarios_h table:
@@ -83,7 +83,7 @@ def get_tags_by_user_chart_data(
 
         query += f" AND {date_col_expr('ch.data_criacao')} <= {date_param_expr()}"
         args.append(end_date)
-    
+
     if context:
         if context == "onboarding":
             query += " AND (i.contexto IS NULL OR i.contexto = 'onboarding') "

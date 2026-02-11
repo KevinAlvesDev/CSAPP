@@ -4,11 +4,10 @@ Elimina duplicação de lógica de datas em todo o projeto
 """
 
 from datetime import date, datetime, timedelta
-from typing import Optional, Tuple
 
 
 def calculate_days_between(
-    start_date: Optional[datetime | date | str], end_date: Optional[datetime | date | str] = None
+    start_date: datetime | date | str | None, end_date: datetime | date | str | None = None
 ) -> int:
     """
     Calcula dias entre duas datas.
@@ -48,7 +47,7 @@ def calculate_days_between(
     return abs(delta.days)
 
 
-def format_relative_time_simple(dt: Optional[datetime | date | str]) -> Tuple[str, int, str]:
+def format_relative_time_simple(dt: datetime | date | str | None) -> tuple[str, int, str]:
     """
     Formata tempo relativo de forma simples.
 
@@ -101,7 +100,7 @@ def format_relative_time_simple(dt: Optional[datetime | date | str]) -> Tuple[st
     return (texto, dias, status)
 
 
-def is_date_in_past(dt: Optional[datetime | date | str]) -> bool:
+def is_date_in_past(dt: datetime | date | str | None) -> bool:
     """
     Verifica se data está no passado.
 
@@ -149,7 +148,7 @@ def add_business_days(start_date: date, days: int) -> date:
     return current
 
 
-def get_quarter(dt: Optional[datetime | date] = None) -> int:
+def get_quarter(dt: datetime | date | None = None) -> int:
     """
     Retorna o trimestre de uma data.
 

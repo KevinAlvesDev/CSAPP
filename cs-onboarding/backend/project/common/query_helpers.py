@@ -3,7 +3,7 @@ Query Helpers - Funções reutilizáveis para queries comuns
 Elimina duplicação de código em todo o projeto
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from flask import current_app
 
@@ -11,17 +11,17 @@ from ..db import query_db
 
 
 def get_implantacoes_with_progress(
-    usuario_cs: Optional[str] = None,
-    status: Optional[str] = None,
-    limit: Optional[int] = None,
-    offset: Optional[int] = None,
+    usuario_cs: str | None = None,
+    status: str | None = None,
+    limit: int | None = None,
+    offset: int | None = None,
     sort_by_status: bool = False,
-    context: Optional[str] = None,
-    search_term: Optional[str] = None,
-    tipo: Optional[str] = None,
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None,
-) -> List[Dict[str, Any]]:
+    context: str | None = None,
+    search_term: str | None = None,
+    tipo: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> list[dict[str, Any]]:
     """
     Busca implantações com progresso calculado (SEM N+1).
 
@@ -42,8 +42,8 @@ def get_implantacoes_with_progress(
     # Sintaxe de cast diferente para SQLite vs PostgreSQL
     if use_sqlite:
         progress_calc = """
-            CASE 
-                WHEN COALESCE(prog.total_tarefas, 0) > 0 
+            CASE
+                WHEN COALESCE(prog.total_tarefas, 0) > 0
                 THEN ROUND((CAST(COALESCE(prog.tarefas_concluidas, 0) AS REAL) / CAST(prog.total_tarefas AS REAL)) * 100)
                 ELSE 0
             END as progresso_percent
@@ -52,8 +52,8 @@ def get_implantacoes_with_progress(
         placeholder = "?"
     else:
         progress_calc = """
-            CASE 
-                WHEN COALESCE(prog.total_tarefas, 0) > 0 
+            CASE
+                WHEN COALESCE(prog.total_tarefas, 0) > 0
                 THEN ROUND((COALESCE(prog.tarefas_concluidas, 0)::NUMERIC / prog.total_tarefas::NUMERIC) * 100)
                 ELSE 0
             END as progresso_percent
@@ -65,15 +65,15 @@ def get_implantacoes_with_progress(
         SELECT
             i.*,
             p.nome as cs_nome,
-            
+
             -- Progresso calculado no SQL (evita N+1)
             COALESCE(prog.total_tarefas, 0) as total_tarefas,
             COALESCE(prog.tarefas_concluidas, 0) as tarefas_concluidas,
             {progress_calc},
-            
+
             -- Última atividade (comentários)
             last_activity.ultima_atividade as ultima_atividade
-            
+
         FROM implantacoes i
         LEFT JOIN perfil_usuario p ON i.usuario_cs = p.usuario
         LEFT JOIN (
@@ -108,7 +108,7 @@ def get_implantacoes_with_progress(
         args.append(status)
 
     if context:
-        if context == 'onboarding':
+        if context == "onboarding":
             if use_sqlite:
                 query += " AND (i.contexto IS NULL OR i.contexto = 'onboarding')"
             else:
@@ -129,9 +129,9 @@ def get_implantacoes_with_progress(
 
     if tipo:
         tipo_lower = tipo.lower()
-        if tipo_lower == 'sistema':
+        if tipo_lower == "sistema":
             # 'completa' is the DB value for 'Sistema' badge
-            query += f" AND (LOWER(i.tipo) = 'sistema' OR LOWER(i.tipo) = 'completa' OR i.tipo IS NULL OR i.tipo = '')"
+            query += " AND (LOWER(i.tipo) = 'sistema' OR LOWER(i.tipo) = 'completa' OR i.tipo IS NULL OR i.tipo = '')"
         else:
             query += f" AND LOWER(i.tipo) = {placeholder}"
             args.append(tipo_lower)
@@ -170,7 +170,7 @@ def get_implantacoes_with_progress(
     return query_db(query, tuple(args)) or []
 
 
-def get_implantacao_with_details(implantacao_id: int) -> Optional[Dict[str, Any]]:
+def get_implantacao_with_details(implantacao_id: int) -> dict[str, Any] | None:
     """
     Busca uma implantação com todos os detalhes (SEM N+1).
 
@@ -187,17 +187,17 @@ def get_implantacao_with_details(implantacao_id: int) -> Optional[Dict[str, Any]
             p.nome as cs_nome,
             p.cargo as cs_cargo,
             p.foto_url as cs_foto,
-            
+
             -- Progresso
             COALESCE(prog.total_tarefas, 0) as total_tarefas,
             COALESCE(prog.tarefas_concluidas, 0) as tarefas_concluidas,
-            
+
             -- Última atividade
             last_activity.ultima_atividade as ultima_atividade,
-            
+
             -- Plano
             pl.nome as plano_nome
-            
+
         FROM implantacoes i
         LEFT JOIN perfil_usuario p ON i.usuario_cs = p.usuario
         LEFT JOIN (
@@ -225,7 +225,7 @@ def get_implantacao_with_details(implantacao_id: int) -> Optional[Dict[str, Any]
     return query_db(query, (implantacao_id,), one=True)
 
 
-def get_checklist_tree_optimized(implantacao_id: int) -> List[Dict[str, Any]]:
+def get_checklist_tree_optimized(implantacao_id: int) -> list[dict[str, Any]]:
     """
     Busca árvore de checklist otimizada (SEM subqueries correlacionadas).
 
@@ -252,13 +252,13 @@ def get_checklist_tree_optimized(implantacao_id: int) -> List[Dict[str, Any]]:
 
 
 def get_implantacoes_count(
-    usuario_cs: Optional[str] = None, 
-    status: Optional[str] = None, 
-    context: Optional[str] = None,
-    search_term: Optional[str] = None,
-    tipo: Optional[str] = None,
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None
+    usuario_cs: str | None = None,
+    status: str | None = None,
+    context: str | None = None,
+    search_term: str | None = None,
+    tipo: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
 ) -> int:
     """
     Conta total de implantações para paginação.
@@ -287,7 +287,7 @@ def get_implantacoes_count(
         args.append(status)
 
     if context:
-        if context == 'onboarding':
+        if context == "onboarding":
             query += " AND (i.contexto IS NULL OR i.contexto = 'onboarding')"
         else:
             query += f" AND i.contexto = {placeholder}"
@@ -304,8 +304,8 @@ def get_implantacoes_count(
 
     if tipo:
         tipo_lower = tipo.lower()
-        if tipo_lower == 'sistema':
-            query += f" AND (LOWER(i.tipo) = 'sistema' OR LOWER(i.tipo) = 'completa' OR i.tipo IS NULL OR i.tipo = '')"
+        if tipo_lower == "sistema":
+            query += " AND (LOWER(i.tipo) = 'sistema' OR LOWER(i.tipo) = 'completa' OR i.tipo IS NULL OR i.tipo = '')"
         else:
             query += f" AND LOWER(i.tipo) = {placeholder}"
             args.append(tipo_lower)

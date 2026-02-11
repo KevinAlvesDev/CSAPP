@@ -1,4 +1,4 @@
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from datetime import datetime
 
 from flask import current_app
@@ -180,24 +180,18 @@ def db_transaction_with_lock():
         yield conn, cursor, db_type
 
         if conn:
-            try:
+            with suppress(Exception):
                 conn.commit()
-            except Exception:
-                pass
 
     except Exception:
         if conn:
-            try:
+            with suppress(Exception):
                 conn.rollback()
-            except Exception:
-                pass
         raise
     finally:
         if use_sqlite and conn:
-            try:
+            with suppress(Exception):
                 conn.close()
-            except Exception:
-                pass
 
 
 def logar_timeline(implantacao_id, usuario_cs, tipo_evento, detalhe):

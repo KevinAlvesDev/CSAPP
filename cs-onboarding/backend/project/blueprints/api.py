@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 from flask import Blueprint, g, jsonify, make_response, request
 
 from ..blueprints.auth import login_required
@@ -36,7 +33,7 @@ def progresso_implantacao(impl_id):
     try:
         impl_id = validate_integer(impl_id, min_value=1)
     except ValidationError as e:
-        return jsonify({"ok": False, "error": f"ID inválido: {str(e)}"}), 400
+        return jsonify({"ok": False, "error": f"ID inválido: {e!s}"}), 400
     try:
         pct, total, done = _get_progress(impl_id)
         return jsonify({"ok": True, "progresso": pct, "total": total, "concluidas": done})
@@ -48,13 +45,13 @@ def progresso_implantacao(impl_id):
 @api_bp.route("/implantacao/<int:impl_id>/timeline", methods=["GET"])
 @login_required
 @validate_api_origin
-@validate_context_access(id_param='impl_id', entity_type='implantacao')
+@validate_context_access(id_param="impl_id", entity_type="implantacao")
 @limiter.limit("200 per minute", key_func=lambda: g.user_email or get_remote_address())
 def get_timeline(impl_id: int):
     try:
         impl_id = validate_integer(impl_id, min_value=1)
     except ValidationError as e:
-        return jsonify({"ok": False, "error": f"ID inválido: {str(e)}"}), 400
+        return jsonify({"ok": False, "error": f"ID inválido: {e!s}"}), 400
 
     page = request.args.get("page", type=int) or 1
     per_page = request.args.get("per_page", type=int) or 50
@@ -86,13 +83,13 @@ def get_timeline(impl_id: int):
 @api_bp.route("/implantacao/<int:impl_id>/timeline/export", methods=["GET"])
 @login_required
 @validate_api_origin
-@validate_context_access(id_param='impl_id', entity_type='implantacao')
+@validate_context_access(id_param="impl_id", entity_type="implantacao")
 @limiter.limit("30 per minute", key_func=lambda: g.user_email or get_remote_address())
 def export_timeline(impl_id: int):
     try:
         impl_id = validate_integer(impl_id, min_value=1)
     except ValidationError as e:
-        return jsonify({"ok": False, "error": f"ID inválido: {str(e)}"}), 400
+        return jsonify({"ok": False, "error": f"ID inválido: {e!s}"}), 400
 
     types_param = request.args.get("types", "")
     q = request.args.get("q", "")
@@ -162,9 +159,9 @@ def get_notifications():
 
         user_email = g.user_email
         context = request.args.get("context")
-        
+
         api_logger.info(f"Buscando notificações para {user_email} no contexto {context}")
-        
+
         # TEMPORÁRIO: Retornar dados mockados para debug
         # return jsonify({
         #     "ok": True,
@@ -174,7 +171,7 @@ def get_notifications():
         #     "total": 1,
         #     "timestamp": datetime.now().isoformat()
         # })
-        
+
         result = get_user_notifications(user_email, context=context)
 
         if not result.get("ok"):

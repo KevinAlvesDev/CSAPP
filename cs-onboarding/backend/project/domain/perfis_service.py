@@ -4,7 +4,6 @@ Gerencia perfis de acesso e suas permissões no sistema.
 """
 
 from datetime import datetime
-from typing import Dict, List, Optional
 
 from flask import current_app
 
@@ -12,12 +11,12 @@ from ..common.exceptions import DatabaseError, ValidationError
 from ..db import db_connection, execute_db, query_db
 
 
-def listar_perfis(incluir_inativos: bool = False) -> List[Dict]:
+def listar_perfis(incluir_inativos: bool = False) -> list[dict]:
     """
     Lista todos os perfis de acesso com resumo de permissões.
     """
     sql = """
-        SELECT 
+        SELECT
             p.id,
             p.nome,
             p.descricao,
@@ -41,7 +40,7 @@ def listar_perfis(incluir_inativos: bool = False) -> List[Dict]:
     return perfis or []
 
 
-def obter_perfil(perfil_id: int) -> Optional[Dict]:
+def obter_perfil(perfil_id: int) -> dict | None:
     """
     Obtém detalhes de um perfil específico.
     """
@@ -49,7 +48,7 @@ def obter_perfil(perfil_id: int) -> Optional[Dict]:
     return perfil
 
 
-def obter_perfil_completo(perfil_id: int) -> Optional[Dict]:
+def obter_perfil_completo(perfil_id: int) -> dict | None:
     """
     Obtém perfil com todas as suas permissões organizadas por categoria.
     """
@@ -60,7 +59,7 @@ def obter_perfil_completo(perfil_id: int) -> Optional[Dict]:
     # Buscar todos os recursos agrupados por categoria
     recursos = query_db(
         """
-        SELECT 
+        SELECT
             r.id,
             r.codigo,
             r.nome,
@@ -97,7 +96,11 @@ def obter_perfil_completo(perfil_id: int) -> Optional[Dict]:
 
 
 def criar_perfil(
-    nome: str, descricao: str = None, cor: str = "#667eea", icone: str = "bi-person-badge", criado_por: str = "Sistema"
+    nome: str,
+    descricao: str | None = None,
+    cor: str = "#667eea",
+    icone: str = "bi-person-badge",
+    criado_por: str = "Sistema",
 ) -> int:
     """
     Cria um novo perfil de acesso.
@@ -138,7 +141,7 @@ def criar_perfil(
     return perfil_id
 
 
-def atualizar_perfil(perfil_id: int, dados: Dict) -> bool:
+def atualizar_perfil(perfil_id: int, dados: dict) -> bool:
     """
     Atualiza dados básicos de um perfil.
     """
@@ -149,7 +152,7 @@ def atualizar_perfil(perfil_id: int, dados: Dict) -> bool:
     campos = []
     valores = []
 
-    if "nome" in dados and dados["nome"]:
+    if dados.get("nome"):
         campos.append("nome = %s")
         valores.append(dados["nome"].strip())
 
@@ -209,7 +212,7 @@ def excluir_perfil(perfil_id: int) -> bool:
     return True
 
 
-def atualizar_permissoes(perfil_id: int, permissoes: List[int]) -> bool:
+def atualizar_permissoes(perfil_id: int, permissoes: list[int]) -> bool:
     """
     Atualiza as permissões de um perfil.
 
@@ -257,7 +260,7 @@ def atualizar_permissoes(perfil_id: int, permissoes: List[int]) -> bool:
             raise DatabaseError(f"Erro ao atualizar permissões: {e}") from e
 
 
-def listar_recursos(categoria: str = None) -> List[Dict]:
+def listar_recursos(categoria: str | None = None) -> list[dict]:
     """
     Lista todos os recursos disponíveis, opcionalmente filtrados por categoria.
     """
@@ -274,7 +277,7 @@ def listar_recursos(categoria: str = None) -> List[Dict]:
     return recursos or []
 
 
-def obter_categorias() -> List[str]:
+def obter_categorias() -> list[str]:
     """
     Retorna lista de categorias únicas de recursos.
     """
@@ -294,8 +297,8 @@ def verificar_permissao(perfil_id: int, recurso_codigo: str) -> bool:
         SELECT COUNT(*) as count
         FROM permissoes perm
         JOIN recursos r ON r.id = perm.recurso_id
-        WHERE perm.perfil_id = %s 
-        AND r.codigo = %s 
+        WHERE perm.perfil_id = %s
+        AND r.codigo = %s
         AND perm.concedida = TRUE
         AND r.ativo = TRUE
     """,
@@ -326,8 +329,8 @@ def clonar_perfil(perfil_id: int, novo_nome: str, criado_por: str = "Sistema") -
     # Copiar permissões
     permissoes_originais = query_db(
         """
-        SELECT recurso_id 
-        FROM permissoes 
+        SELECT recurso_id
+        FROM permissoes
         WHERE perfil_id = %s AND concedida = TRUE
     """,
         (perfil_id,),

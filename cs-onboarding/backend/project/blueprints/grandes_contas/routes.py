@@ -30,10 +30,7 @@ def dashboard():
     perfil_acesso = g.perfil.get("perfil_acesso") if g.get("perfil") else None
 
     # Garantia explícita: Implantador visualiza apenas sua carteira (sem filtro de dashboard)
-    if perfil_acesso == "Implantador":
-        is_manager = False
-    else:
-        is_manager = perfil_acesso in PERFIS_COM_GESTAO
+    is_manager = False if perfil_acesso == "Implantador" else perfil_acesso in PERFIS_COM_GESTAO
 
     current_cs_filter = None
     sort_days = None
@@ -45,7 +42,7 @@ def dashboard():
         if sort_days_param:
             sort_days = sanitize_string(sort_days_param, max_length=4)
     except ValidationError as e:
-        flash(f"Filtro inválido: {str(e)}", "warning")
+        flash(f"Filtro inválido: {e!s}", "warning")
         current_cs_filter = None
         sort_days = None
 
@@ -58,7 +55,7 @@ def dashboard():
 
     tags_report = {}
     try:
-        tags_report = get_tags_metrics(start_date, end_date, tags_report_email, context='grandes_contas')
+        tags_report = get_tags_metrics(start_date, end_date, tags_report_email, context="grandes_contas")
     except Exception as e:
         current_app.logger.error(f"Erro ao buscar tags metrics: {e}")
 
@@ -66,7 +63,7 @@ def dashboard():
         # Usar versão otimizada do dashboard (consolidada)
         # Passando context='grandes_contas' para filtrar apenas este módulo
         dashboard_data, metrics = get_dashboard_data(
-            user_email, filtered_cs_email=current_cs_filter, use_cache=True, context='grandes_contas'
+            user_email, filtered_cs_email=current_cs_filter, use_cache=True, context="grandes_contas"
         )
 
         if sort_days in ["asc", "desc"]:
@@ -156,8 +153,8 @@ def ver_implantacao(impl_id):
         impl_id = validate_integer(impl_id, min_value=1)
         logger.info(f"ID validado: {impl_id}")
     except ValidationError as e:
-        logger.error(f"ID de implantação inválido: {str(e)}")
-        flash(f"ID de implantação inválido: {str(e)}", "error")
+        logger.error(f"ID de implantação inválido: {e!s}")
+        flash(f"ID de implantação inválido: {e!s}", "error")
         return redirect(url_for("grandes_contas.dashboard"))
 
     try:
@@ -169,7 +166,7 @@ def ver_implantacao(impl_id):
         return render_template("pages/grandes_contas/implantacao_detalhes.html", **context_data)
 
     except ValueError as e:
-        logger.warning(f"Acesso negado à implantação {impl_id}: {str(e)}")
+        logger.warning(f"Acesso negado à implantação {impl_id}: {e!s}")
         flash(str(e), "error")
         return redirect(url_for("grandes_contas.dashboard"))
 
@@ -178,5 +175,5 @@ def ver_implantacao(impl_id):
 
         error_trace = traceback.format_exc()
         logger.error(f"Erro ao carregar detalhes da implantação ID {impl_id}: {e}\n{error_trace}")
-        flash(f"Erro ao carregar detalhes da implantação: {str(e)}", "error")
+        flash(f"Erro ao carregar detalhes da implantação: {e!s}", "error")
         return redirect(url_for("grandes_contas.dashboard"))

@@ -137,9 +137,8 @@ def calculate_total_days_in_status(impl_id, target_status="andamento"):
     # Processar histórico
     for hist_date, _old_status, new_status, _ in status_history:
         # Se o status antes desta mudança era o alvo, adicionar período
-        if status_before_history == target_status:
-            if hist_date > current_start:
-                periods.append((current_start, hist_date))
+        if status_before_history == target_status and hist_date > current_start:
+            periods.append((current_start, hist_date))
         status_before_history = new_status
         current_start = hist_date
 
@@ -149,10 +148,9 @@ def calculate_total_days_in_status(impl_id, target_status="andamento"):
             # Se tem histórico, o período começa na última mudança (current_start)
             # Se não tem, usa data_finalizacao como fallback
             parada_inicio = current_start if status_history else parse_datetime(impl.get("data_finalizacao"))
-            
-            if parada_inicio:
-                if agora > parada_inicio:
-                    periods.append((parada_inicio, agora))
+
+            if parada_inicio and agora > parada_inicio:
+                periods.append((parada_inicio, agora))
         elif target_status == "andamento":
             if current_status == "andamento":
                 # Se está em andamento, o período atual começa na última mudança ou no início efetivo
@@ -188,19 +186,19 @@ def calculate_days_bulk(impl_ids: list) -> dict:
     """
     Calcula dias_passados e dias_parada para múltiplas implantações em BATCH.
     Otimizado para evitar N+1 queries no dashboard.
-    
+
     Args:
         impl_ids: Lista de IDs de implantações
-        
+
     Returns:
         Dict com {impl_id: {"dias_passados": X, "dias_parada": Y}}
     """
     if not impl_ids:
         return {}
-    
+
     # Inicializar resultado com valores default
     result = {impl_id: {"dias_passados": 0, "dias_parada": 0} for impl_id in impl_ids}
-    
+
     # Buscar todas as implantações de uma vez
     placeholders = ", ".join(["%s"] * len(impl_ids))
     impl_query = f"""
@@ -209,13 +207,13 @@ def calculate_days_bulk(impl_ids: list) -> dict:
         WHERE id IN ({placeholders})
     """
     impls = query_db(impl_query, tuple(impl_ids))
-    
+
     if not impls:
         return result
-    
+
     # Mapear implantações por ID
     impl_map = {impl["id"]: impl for impl in impls}
-    
+
     # Buscar todos os históricos de status de uma vez
     history_query = f"""
         SELECT implantacao_id, data_criacao, detalhes
@@ -225,17 +223,18 @@ def calculate_days_bulk(impl_ids: list) -> dict:
         ORDER BY implantacao_id, data_criacao ASC
     """
     all_history = query_db(history_query, tuple(impl_ids))
-    
+
     # Agrupar histórico por implantação
     import re
     from collections import defaultdict
+
     history_by_impl = defaultdict(list)
-    
+
     for log in all_history or []:
         impl_id = log.get("implantacao_id")
         dt = parse_datetime(log.get("data_criacao"))
         detalhes = log.get("detalhes", "").lower()
-        
+
         if dt and impl_id:
             if "parada" in detalhes or "retroativamente" in detalhes:
                 date_match = re.search(r"(\d{4}-\d{2}-\d{2})", log.get("detalhes", ""))
@@ -249,19 +248,19 @@ def calculate_days_bulk(impl_ids: list) -> dict:
                 history_by_impl[impl_id].append((dt, "parada", "andamento"))
             elif "finalizada" in detalhes:
                 history_by_impl[impl_id].append((dt, "andamento", "finalizada"))
-    
+
     # Calcular dias para cada implantação
     agora = datetime.now()
-    
+
     for impl_id, impl in impl_map.items():
         current_status = impl.get("status")
         inicio_efetivo = parse_datetime(impl.get("data_inicio_efetivo"))
-        
+
         if not inicio_efetivo:
             continue
-        
+
         status_history = history_by_impl.get(impl_id, [])
-        
+
         # Calcular dias em andamento
         if not status_history:
             if current_status == "andamento":
@@ -277,11 +276,11 @@ def calculate_days_bulk(impl_ids: list) -> dict:
             # Calcular com histórico
             dias_andamento = 0
             dias_parada = 0
-            
+
             status_history.sort(key=lambda x: x[0])
             current_start = inicio_efetivo
             current_tracking_status = "andamento"
-            
+
             for hist_date, _old_status, new_status in status_history:
                 if hist_date > current_start:
                     days_in_period = (hist_date - current_start).days
@@ -289,17 +288,17 @@ def calculate_days_bulk(impl_ids: list) -> dict:
                         dias_andamento += max(0, days_in_period)
                     elif current_tracking_status == "parada":
                         dias_parada += max(0, days_in_period)
-                
+
                 current_tracking_status = new_status
                 current_start = hist_date
-            
+
             # Período atual
             if current_status == "andamento" and current_start < agora:
                 dias_andamento += max(0, (agora - current_start).days)
             elif current_status == "parada" and current_start < agora:
                 dias_parada += max(0, (agora - current_start).days)
-            
+
             result[impl_id]["dias_passados"] = dias_andamento
             result[impl_id]["dias_parada"] = dias_parada
-    
+
     return result

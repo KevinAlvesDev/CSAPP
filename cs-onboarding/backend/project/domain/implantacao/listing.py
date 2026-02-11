@@ -65,7 +65,7 @@ def listar_implantacoes(user_email, status_filter=None, page=1, per_page=50, is_
     """
 
     # query param arguments
-    query_args = params + [per_page, offset]
+    query_args = [*params, per_page, offset]
 
     try:
         implantacoes = query_db(query, tuple(query_args)) or []

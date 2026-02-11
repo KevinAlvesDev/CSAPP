@@ -11,7 +11,7 @@ from ...database.external_db import query_external_db
 
 # Query base com todos os JOINs necessários
 OAMD_BASE_QUERY = """
-    SELECT 
+    SELECT
         ef.codigo,
         ef.codigofinanceiro,
         ef.nomefantasia,
@@ -27,7 +27,7 @@ OAMD_BASE_QUERY = """
         ef.tipogrupofavorecido,
         ef.nicho,
         ef.detalheempresa_codigo,
-        
+
         de.inicioimplantacao,
         de.finalimplantacao,
         de.inicioproducao,
@@ -37,7 +37,7 @@ OAMD_BASE_QUERY = """
         de.tipocliente,
         de.categoria,
         de.condicaoespecial,
-        
+
         ps.datainicio as plano_datainicio,
         ps.datafinal as plano_datafinal,
         ps.dataconclusao as plano_dataconclusao,
@@ -45,7 +45,7 @@ OAMD_BASE_QUERY = """
         ps.porcentagemconcluida as plano_porcentagem,
         ps.nomeresponsavel as plano_responsavel,
         ps.nome as plano_nome
-        
+
     FROM empresafinanceiro ef
     LEFT JOIN detalheempresa de ON de.codigo = ef.detalheempresa_codigo
     LEFT JOIN planosucesso ps ON ps.empresafinanceiro_codigo = ef.codigo

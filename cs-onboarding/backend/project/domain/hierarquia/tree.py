@@ -53,9 +53,9 @@ def get_hierarquia_implantacao(implantacao_id):
     try:
         items = query_db(
             """
-            SELECT id, parent_id, title, completed, comment, level, ordem, tipo_item, 
+            SELECT id, parent_id, title, completed, comment, level, ordem, tipo_item,
                    status, percentual_conclusao, responsavel, tag, data_conclusao, descricao
-            FROM checklist_items 
+            FROM checklist_items
             WHERE implantacao_id = %s
             ORDER BY ordem, id
             """,
@@ -68,7 +68,7 @@ def get_hierarquia_implantacao(implantacao_id):
     if not items:
         return {"fases": []}
 
-    items_map = {item["id"]: item for item in items}
+    {item["id"]: item for item in items}
 
     fases_items = [item for item in items if item["tipo_item"] == "fase" and item["parent_id"] is None]
     grupos_items = {}

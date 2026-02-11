@@ -62,10 +62,10 @@ def analytics_dashboard():
             except ValidationError:
                 end_date = None
                 flash("Erro nos filtros: Data final inválida — ignorada", "warning")
-        
+
         context = request.args.get("context", "onboarding")
     except Exception as e:
-        flash(f"Erro nos filtros: {str(e)}", "warning")
+        flash(f"Erro nos filtros: {e!s}", "warning")
         cs_email = None
         status_filter = "todas"
         start_date = None
@@ -107,9 +107,9 @@ def analytics_dashboard():
     try:
         # CACHE: Gerar chave única baseada nos filtros
         from ..config.cache_config import cache
-        
+
         cache_key = f"analytics_dash_{cs_email}_{status_filter}_{start_date}_{end_date}_{task_cs_email}_{task_start_date}_{task_end_date}_{sort_impl_date}_{context}"
-        
+
         # Tentar buscar do cache (2 minutos)
         analytics_data = cache.get(cache_key)
 
@@ -167,7 +167,6 @@ def analytics_dashboard():
             current_end_date=end_date,
             current_sort_impl_date=sort_impl_date,
             user_info=g.user,
-
             user_perfil=user_perfil,
             context=context,
         )
@@ -206,9 +205,9 @@ def api_implants_by_day():
         payload = get_implants_by_day(start_date=start_date, end_date=end_date, cs_email=cs_email, context=context)
         return jsonify({"ok": True, **payload})
     except ValidationError as e:
-        return jsonify({"ok": False, "error": f"Parâmetro inválido: {str(e)}"}), 400
+        return jsonify({"ok": False, "error": f"Parâmetro inválido: {e!s}"}), 400
     except Exception as e:
-        return jsonify({"ok": False, "error": f"Erro interno: {str(e)}"}), 500
+        return jsonify({"ok": False, "error": f"Erro interno: {e!s}"}), 500
 
 
 @analytics_bp.route("/cancelamentos")
@@ -327,9 +326,9 @@ def api_funnel():
         payload = get_funnel_counts(start_date=start_date, end_date=end_date, cs_email=cs_email, context=context)
         return jsonify({"ok": True, **payload})
     except ValidationError as e:
-        return jsonify({"ok": False, "error": f"Parâmetro inválido: {str(e)}"}), 400
+        return jsonify({"ok": False, "error": f"Parâmetro inválido: {e!s}"}), 400
     except Exception as e:
-        return jsonify({"ok": False, "error": f"Erro interno: {str(e)}"}), 500
+        return jsonify({"ok": False, "error": f"Erro interno: {e!s}"}), 500
 
 
 @analytics_bp.route("/analytics/gamification_rank")
@@ -350,4 +349,4 @@ def api_gamification_rank():
     except ValueError:
         return jsonify({"ok": False, "error": "Parâmetros month/year devem ser inteiros."}), 400
     except Exception as e:
-        return jsonify({"ok": False, "error": f"Erro interno: {str(e)}"}), 500
+        return jsonify({"ok": False, "error": f"Erro interno: {e!s}"}), 500

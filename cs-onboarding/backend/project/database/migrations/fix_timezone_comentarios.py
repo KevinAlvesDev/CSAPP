@@ -29,9 +29,9 @@ def migrate_comentarios_timezone(conn):
 
             # 1. Verificar se a coluna já está com timezone
             cursor.execute("""
-                SELECT data_type 
-                FROM information_schema.columns 
-                WHERE table_name = 'comentarios_h' 
+                SELECT data_type
+                FROM information_schema.columns
+                WHERE table_name = 'comentarios_h'
                 AND column_name = 'data_criacao'
             """)
             result = cursor.fetchone()
@@ -45,7 +45,7 @@ def migrate_comentarios_timezone(conn):
             # 2. Adicionar coluna temporária com timezone
             print("[2/6] Criando coluna temporaria data_criacao_tz...")
             cursor.execute("""
-                ALTER TABLE comentarios_h 
+                ALTER TABLE comentarios_h
                 ADD COLUMN IF NOT EXISTS data_criacao_tz TIMESTAMP WITH TIME ZONE
             """)
 
@@ -53,7 +53,7 @@ def migrate_comentarios_timezone(conn):
             # Assumimos que os dados existentes estão em 'America/Sao_Paulo'
             print("[3/6] Copiando dados e convertendo timezone...")
             cursor.execute("""
-                UPDATE comentarios_h 
+                UPDATE comentarios_h
                 SET data_criacao_tz = timezone('America/Sao_Paulo', data_criacao)
                 WHERE data_criacao_tz IS NULL
             """)
@@ -64,14 +64,14 @@ def migrate_comentarios_timezone(conn):
             # 4. Remover coluna antiga
             print("[4/6] Removendo coluna antiga...")
             cursor.execute("""
-                ALTER TABLE comentarios_h 
+                ALTER TABLE comentarios_h
                 DROP COLUMN data_criacao
             """)
 
             # 5. Renomear coluna nova
             print("[5/6] Renomeando coluna nova...")
             cursor.execute("""
-                ALTER TABLE comentarios_h 
+                ALTER TABLE comentarios_h
                 RENAME COLUMN data_criacao_tz TO data_criacao
             """)
 
@@ -81,14 +81,14 @@ def migrate_comentarios_timezone(conn):
                 DROP INDEX IF EXISTS idx_comentarios_h_data_criacao
             """)
             cursor.execute("""
-                CREATE INDEX idx_comentarios_h_data_criacao 
+                CREATE INDEX idx_comentarios_h_data_criacao
                 ON comentarios_h (data_criacao)
             """)
             cursor.execute("""
                 DROP INDEX IF EXISTS idx_comentarios_h_item_data
             """)
             cursor.execute("""
-                CREATE INDEX idx_comentarios_h_item_data 
+                CREATE INDEX idx_comentarios_h_item_data
                 ON comentarios_h (checklist_item_id, data_criacao)
             """)
 

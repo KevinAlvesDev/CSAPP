@@ -1,5 +1,3 @@
-from typing import Dict, List, Tuple
-
 from ..db import query_db
 
 
@@ -9,9 +7,9 @@ def _build_timeline_filters(
     q: str,
     dt_from: str,
     dt_to: str,
-) -> Tuple[str, List]:
+) -> tuple[str, list]:
     where = ["tl.implantacao_id = %s"]
-    params: List = [impl_id]
+    params: list = [impl_id]
     if types_param:
         types = [t.strip() for t in types_param.split(",") if t.strip()]
         if types:
@@ -37,7 +35,7 @@ def get_timeline_logs(
     q: str = "",
     dt_from: str = "",
     dt_to: str = "",
-) -> Dict:
+) -> dict:
     from ..common.utils import format_date_br
 
     where_clause, params = _build_timeline_filters(
@@ -64,10 +62,10 @@ def get_timeline_logs(
         ORDER BY tl.data_criacao DESC
         LIMIT %s OFFSET %s
     """
-    params_with_pagination = params + [per_page, offset]
+    params_with_pagination = [*params, per_page, offset]
 
     rows = query_db(sql, tuple(params_with_pagination)) or []
-    items: List[Dict] = []
+    items: list[dict] = []
     for r in rows:
         d = dict(r)
         dt = d.get("data_criacao")

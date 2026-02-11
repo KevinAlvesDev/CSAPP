@@ -74,7 +74,7 @@ def manage_gamification_metrics():
         if cs_email_param:
             target_cs_email = validate_email(cs_email_param)
     except ValidationError as e:
-        flash(f"Email inválido no filtro: {str(e)}", "warning")
+        flash(f"Email inválido no filtro: {e!s}", "warning")
         target_cs_email = None
 
     hoje = datetime.now()
@@ -290,7 +290,11 @@ def manage_gamification_metrics():
             )
             return redirect(
                 url_for(
-                    "gamification.manage_gamification_metrics", cs_email=target_cs_email, mes=target_mes, ano=target_ano, context=context
+                    "gamification.manage_gamification_metrics",
+                    cs_email=target_cs_email,
+                    mes=target_mes,
+                    ano=target_ano,
+                    context=context,
                 )
             )
 

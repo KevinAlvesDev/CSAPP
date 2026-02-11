@@ -25,9 +25,11 @@ def _parse_date_safe(date_str):
             return None
 
 
-def _get_gamification_automatic_data_bulk(mes, ano, primeiro_dia_str, fim_ultimo_dia_str, target_cs_email=None, context=None):
+def _get_gamification_automatic_data_bulk(
+    mes, ano, primeiro_dia_str, fim_ultimo_dia_str, target_cs_email=None, context=None
+):
     """Busca todos os dados automáticos de todos os usuários de uma vez.
-    
+
     Args:
         mes: Mês de referência
         ano: Ano de referência
@@ -132,7 +134,7 @@ def _get_gamification_automatic_data_bulk(mes, ano, primeiro_dia_str, fim_ultimo
         FROM checklist_items ci
         JOIN implantacoes i ON ci.implantacao_id = i.id
         WHERE ci.tipo_item = 'subtarefa'
-        AND ci.completed = TRUE 
+        AND ci.completed = TRUE
         AND ci.tag IN ('Ação interna', 'Reunião')
         AND ci.data_conclusao >= %s AND ci.data_conclusao <= %s
         {context_filter_items}
@@ -194,18 +196,18 @@ def salvar_metricas_mensais(data_to_save, existing_record_id=None):
         # Removendo chaves que não devem ser atualizadas/duplicadas no SET
         keys_to_exclude = {"usuario_cs", "mes", "ano"}
         update_data = {k: v for k, v in data_to_save.items() if k not in keys_to_exclude}
-        
-        if not update_data:
-            return True # Nada para atualizar
 
-        set_clauses = [f"{key} = %s" for key in update_data.keys()]
+        if not update_data:
+            return True  # Nada para atualizar
+
+        set_clauses = [f"{key} = %s" for key in update_data]
         sql_update = f"""
             UPDATE gamificacao_metricas_mensais
             SET {", ".join(set_clauses)}
             WHERE id = %s
         """
         # Garante que os valores correspondem à ordem das chaves em set_clauses + ID no final
-        args = list(update_data.values()) + [existing_record_id]
+        args = [*list(update_data.values()), existing_record_id]
         execute_db(sql_update, tuple(args))
     else:
         # Inserir novo registro

@@ -1,3 +1,5 @@
+import contextlib
+
 from flask import Blueprint, current_app, flash, g, jsonify, redirect, render_template, request, url_for
 
 from ..blueprints.auth import permission_required
@@ -153,10 +155,8 @@ def delete_user():
             bucket = current_app.config.get("CLOUDFLARE_BUCKET_NAME")
             if public_base and bucket and r2_client and foto_url.startswith(public_base):
                 key = foto_url[len(public_base) :].lstrip("/")
-                try:
+                with contextlib.suppress(Exception):
                     r2_client.delete_object(Bucket=bucket, Key=key)
-                except Exception:
-                    pass
 
         flash(f"Usuário e {result['implantacoes_excluidas']} implantações vinculadas excluídos.", "success")
         if request.headers.get("HX-Request") == "true":

@@ -49,7 +49,7 @@ def toggle_subtarefa(subtarefa_id):
 
     stats = query_db(
         """
-        SELECT 
+        SELECT
             COUNT(*) as total,
             SUM(CASE WHEN completed = true THEN 1 ELSE 0 END) as concluidas
         FROM checklist_items
@@ -59,10 +59,7 @@ def toggle_subtarefa(subtarefa_id):
         one=True,
     )
 
-    if stats and stats["total"] > 0:
-        percentual = int((stats["concluidas"] / stats["total"]) * 100)
-    else:
-        percentual = 0
+    percentual = int(stats["concluidas"] / stats["total"] * 100) if stats and stats["total"] > 0 else 0
 
     novo_status = "concluida" if percentual == 100 else ("em_andamento" if percentual > 0 else "pendente")
 
@@ -107,7 +104,7 @@ def calcular_progresso_implantacao(implantacao_id):
 
     stats = query_db(
         """
-        SELECT 
+        SELECT
             COUNT(*) as total_subtarefas,
             SUM(CASE WHEN completed = true THEN 1 ELSE 0 END) as subtarefas_concluidas
         FROM checklist_items

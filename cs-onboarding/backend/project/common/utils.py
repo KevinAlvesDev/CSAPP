@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta, timezone
 
 # Timezone de Brasília (UTC-3)
 TZ_BRASILIA = timezone(timedelta(hours=-3))
@@ -34,7 +34,7 @@ def format_date_br(dt_obj, include_time=False):
     if include_time and isinstance(dt_obj, datetime):
         # Se não tiver timezone (naive), assumir que está em UTC
         if dt_obj.tzinfo is None:
-            dt_obj = dt_obj.replace(tzinfo=timezone.utc)
+            dt_obj = dt_obj.replace(tzinfo=UTC)
         # Converter para horário de Brasília
         dt_obj = dt_obj.astimezone(TZ_BRASILIA)
         output_fmt = "%d/%m/%Y às %H:%M"

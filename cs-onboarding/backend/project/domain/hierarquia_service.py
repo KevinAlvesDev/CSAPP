@@ -23,9 +23,9 @@ from .hierarquia import (
 
 # Manter __all__ para compatibilidade com imports *
 __all__ = [
+    "adicionar_comentario_tarefa",
+    "calcular_progresso_implantacao",
+    "get_comentarios_tarefa",
     "get_hierarquia_implantacao",
     "toggle_subtarefa",
-    "calcular_progresso_implantacao",
-    "adicionar_comentario_tarefa",
-    "get_comentarios_tarefa",
 ]

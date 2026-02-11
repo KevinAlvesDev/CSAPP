@@ -35,7 +35,7 @@ def run_migration():
                 cursor.execute(
                     """
                     SELECT EXISTS (
-                        SELECT FROM information_schema.tables 
+                        SELECT FROM information_schema.tables
                         WHERE table_name = %s
                     )
                 """,
@@ -45,7 +45,7 @@ def run_migration():
             else:
                 cursor.execute(
                     """
-                    SELECT name FROM sqlite_master 
+                    SELECT name FROM sqlite_master
                     WHERE type='table' AND name=?
                 """,
                     (table_name,),
@@ -56,7 +56,7 @@ def run_migration():
         if table_exists("checklist_items"):
             logger.info("Criando idx_checklist_impl_completed...")
             cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_checklist_impl_completed 
+                CREATE INDEX IF NOT EXISTS idx_checklist_impl_completed
                 ON checklist_items(implantacao_id, completed)
             """)
 
@@ -65,13 +65,13 @@ def run_migration():
             logger.info("Criando idx_checklist_parent_ordem...")
             if db_type == "postgres":
                 cursor.execute("""
-                    CREATE INDEX IF NOT EXISTS idx_checklist_parent_ordem 
-                    ON checklist_items(parent_id, ordem, id) 
+                    CREATE INDEX IF NOT EXISTS idx_checklist_parent_ordem
+                    ON checklist_items(parent_id, ordem, id)
                     WHERE parent_id IS NOT NULL
                 """)
             else:
                 cursor.execute("""
-                    CREATE INDEX IF NOT EXISTS idx_checklist_parent_ordem 
+                    CREATE INDEX IF NOT EXISTS idx_checklist_parent_ordem
                     ON checklist_items(parent_id, ordem, id)
                 """)
 
@@ -79,7 +79,7 @@ def run_migration():
         if table_exists("implantacoes"):
             logger.info("Criando idx_implantacoes_user_status...")
             cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_implantacoes_user_status 
+                CREATE INDEX IF NOT EXISTS idx_implantacoes_user_status
                 ON implantacoes(usuario_cs, status, data_criacao)
             """)
 
@@ -87,7 +87,7 @@ def run_migration():
         if table_exists("comentarios_h"):
             logger.info("Criando idx_comentarios_item_data...")
             cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_comentarios_item_data 
+                CREATE INDEX IF NOT EXISTS idx_comentarios_item_data
                 ON comentarios_h(checklist_item_id, data_criacao DESC)
             """)
 
@@ -95,7 +95,7 @@ def run_migration():
         if table_exists("timeline_log"):
             logger.info("Criando idx_timeline_impl_data...")
             cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_timeline_impl_data 
+                CREATE INDEX IF NOT EXISTS idx_timeline_impl_data
                 ON timeline_log(implantacao_id, data_criacao DESC)
             """)
         else:
@@ -105,7 +105,7 @@ def run_migration():
         if table_exists("perfil_usuario"):
             logger.info("Criando idx_perfil_usuario...")
             cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_perfil_usuario 
+                CREATE INDEX IF NOT EXISTS idx_perfil_usuario
                 ON perfil_usuario(usuario)
             """)
 
@@ -114,13 +114,13 @@ def run_migration():
             logger.info("Criando idx_checklist_tipo...")
             if db_type == "postgres":
                 cursor.execute("""
-                    CREATE INDEX IF NOT EXISTS idx_checklist_tipo 
-                    ON checklist_items(tipo_item, implantacao_id, completed) 
+                    CREATE INDEX IF NOT EXISTS idx_checklist_tipo
+                    ON checklist_items(tipo_item, implantacao_id, completed)
                     WHERE tipo_item IS NOT NULL
                 """)
             else:
                 cursor.execute("""
-                    CREATE INDEX IF NOT EXISTS idx_checklist_tipo 
+                    CREATE INDEX IF NOT EXISTS idx_checklist_tipo
                     ON checklist_items(tipo_item, implantacao_id, completed)
                 """)
 
@@ -130,7 +130,7 @@ def run_migration():
         # Estatísticas dos índices criados
         if db_type == "postgres":
             cursor.execute("""
-                SELECT 
+                SELECT
                     schemaname,
                     tablename,
                     indexname,
@@ -160,7 +160,7 @@ def rollback_migration():
     """
     Reverte a migration removendo os índices.
     """
-    conn, db_type = get_db_connection()
+    conn, _db_type = get_db_connection()
     cursor = conn.cursor()
 
     try:

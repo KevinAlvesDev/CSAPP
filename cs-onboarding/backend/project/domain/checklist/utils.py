@@ -5,7 +5,7 @@ Princípio SOLID: Single Responsibility
 """
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 
 from ...db import query_db
 
@@ -52,7 +52,7 @@ def _format_datetime(dt_value):
     if hasattr(dt_value, "strftime"):
         # Se não tiver timezone (naive), assumir que está em UTC
         if dt_value.tzinfo is None:
-            dt_value = dt_value.replace(tzinfo=timezone.utc)
+            dt_value = dt_value.replace(tzinfo=UTC)
         # Converter para horário de Brasília
         dt_brasilia = dt_value.astimezone(TZ_BRASILIA)
         return dt_brasilia.strftime("%d/%m/%Y às %H:%M")

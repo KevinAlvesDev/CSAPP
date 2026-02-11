@@ -27,6 +27,8 @@ def normalize_text(text):
     return unicodedata.normalize("NFKD", text).encode("ASCII", "ignore").decode("utf-8").lower()
 
 
+import builtins
+import contextlib
 import os
 import time
 from functools import wraps
@@ -135,10 +137,8 @@ def get_external_engine():
                     ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
                     ssl_context.check_hostname = False
                     ssl_context.verify_mode = ssl.CERT_NONE
-                    try:
+                    with contextlib.suppress(builtins.BaseException):
                         ssl_context.set_ciphers("DEFAULT@SECLEVEL=0")
-                    except:
-                        pass
                     ssl_context.options |= 0x4
 
                     # 2. Monkey-patch TEMPORÁRIO do socket global
@@ -237,7 +237,7 @@ def query_external_db(query_str, params=None):
         with engine.connect() as conn:
             result = conn.execute(text(query_str), params)
             keys = result.keys()
-            return [dict(zip(keys, row)) for row in result]
+            return [dict(zip(keys, row, strict=False)) for row in result]
 
     except (OperationalError, InterfaceError) as e:
         # Esses erros costumam ser transitórios (rede, VPN caindo, etc)
@@ -292,9 +292,9 @@ def find_cs_user_by_email(email):
     first_name = name_parts[0]
 
     query = """
-        SELECT codigo, nome, ativo, url 
-        FROM customersuccess 
-        WHERE ativo = true 
+        SELECT codigo, nome, ativo, url
+        FROM customersuccess
+        WHERE ativo = true
         AND retira_acentuacao(lower(nome)) LIKE retira_acentuacao(lower(:name_pattern))
     """
 

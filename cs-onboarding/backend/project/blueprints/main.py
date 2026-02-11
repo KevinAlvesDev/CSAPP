@@ -1,3 +1,4 @@
+import contextlib
 import os
 
 from flask import (
@@ -20,10 +21,8 @@ def home():
     if "user" in session:
         return redirect(url_for("core.modules_selection"))
     auth0_enabled = current_app.config.get("AUTH0_ENABLED", True)
-    try:
+    with contextlib.suppress(Exception):
         session.pop("_flashes", None)
-    except Exception:
-        pass
     return render_template("auth/login.html", auth0_enabled=auth0_enabled, use_custom_auth=not auth0_enabled)
 
 

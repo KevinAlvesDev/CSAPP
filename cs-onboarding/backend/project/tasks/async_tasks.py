@@ -1,5 +1,6 @@
 import threading
-from typing import Any, Callable, Dict, Optional
+from collections.abc import Callable
+from typing import Any
 
 from flask import current_app
 
@@ -76,9 +77,9 @@ def send_email_async(
     subject: str,
     body_html: str,
     recipients: list,
-    reply_to: Optional[str] = None,
-    from_name: Optional[str] = None,
-    body_text: Optional[str] = None,
+    reply_to: str | None = None,
+    from_name: str | None = None,
+    body_text: str | None = None,
 ) -> threading.Thread:
     """
     Envia email de forma assíncrona (não bloqueante).
@@ -123,7 +124,7 @@ def send_email_async(
     return BackgroundTask.run(_send)
 
 
-def send_notification_async(user_email: str, notification_type: str, data: Dict[str, Any]) -> threading.Thread:
+def send_notification_async(user_email: str, notification_type: str, data: dict[str, Any]) -> threading.Thread:
     """
     Envia notificação assíncrona (email, webhook, etc).
 

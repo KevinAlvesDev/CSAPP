@@ -9,7 +9,6 @@ Ganho: 10-50x mais rápido
 """
 
 from datetime import date, datetime
-from typing import Dict, List
 
 from flask import current_app
 
@@ -18,7 +17,7 @@ from ...db import query_db
 from .utils import _format_date_for_query, date_col_expr, date_param_expr
 
 
-def calculate_all_days_batch(impl_ids: List[int], db_type: str = "postgres") -> Dict[int, Dict[str, int]]:
+def calculate_all_days_batch(impl_ids: list[int], db_type: str = "postgres") -> dict[int, dict[str, int]]:
     """
     Calcula dias passados e dias parada para TODAS as implantações de uma vez.
 
@@ -33,19 +32,19 @@ def calculate_all_days_batch(impl_ids: List[int], db_type: str = "postgres") -> 
     # Query para calcular TODOS os dias de uma vez
     if db_type == "postgres":
         query = """
-            SELECT 
+            SELECT
                 i.id,
                 i.status,
                 i.data_inicio_efetivo,
                 i.data_criacao,
-                CASE 
+                CASE
                     WHEN i.status = 'andamento' AND i.data_inicio_efetivo IS NOT NULL THEN
                         EXTRACT(DAY FROM (CURRENT_TIMESTAMP - i.data_inicio_efetivo))::INTEGER
                     WHEN i.data_criacao IS NOT NULL THEN
                         EXTRACT(DAY FROM (CURRENT_TIMESTAMP - i.data_criacao))::INTEGER
                     ELSE 0
                 END as dias_passados,
-                CASE 
+                CASE
                     WHEN i.status = 'parada' AND i.data_criacao IS NOT NULL THEN
                         EXTRACT(DAY FROM (CURRENT_TIMESTAMP - i.data_criacao))::INTEGER
                     ELSE 0
@@ -57,19 +56,19 @@ def calculate_all_days_batch(impl_ids: List[int], db_type: str = "postgres") -> 
     else:  # SQLite
         placeholders = ",".join(["?"] * len(impl_ids))
         query = f"""
-            SELECT 
+            SELECT
                 i.id,
                 i.status,
                 i.data_inicio_efetivo,
                 i.data_criacao,
-                CASE 
+                CASE
                     WHEN i.status = 'andamento' AND i.data_inicio_efetivo IS NOT NULL THEN
                         CAST((julianday('now') - julianday(i.data_inicio_efetivo)) AS INTEGER)
                     WHEN i.data_criacao IS NOT NULL THEN
                         CAST((julianday('now') - julianday(i.data_criacao)) AS INTEGER)
                     ELSE 0
                 END as dias_passados,
-                CASE 
+                CASE
                     WHEN i.status = 'parada' AND i.data_criacao IS NOT NULL THEN
                         CAST((julianday('now') - julianday(i.data_criacao)) AS INTEGER)
                     ELSE 0
@@ -86,7 +85,6 @@ def calculate_all_days_batch(impl_ids: List[int], db_type: str = "postgres") -> 
         }
 
     return result
-
 
 
 def get_analytics_data_v2(
@@ -169,7 +167,7 @@ def get_analytics_data_v2(
         WHERE i.tipo = 'modulo'
     """
     args_modules = []
-    
+
     if context:
         if context == "onboarding":
             query_modules += " AND (i.contexto IS NULL OR i.contexto = 'onboarding') "
@@ -217,7 +215,7 @@ def get_analytics_data_v2(
         )
 
     # QUERY 3: Perfis CS
-    all_cs_profiles = query_db("SELECT usuario, nome, cargo, perfil_acesso FROM perfil_usuario") or []
+    query_db("SELECT usuario, nome, cargo, perfil_acesso FROM perfil_usuario") or []
 
     # QUERY 4: Tarefas
     primeiro_dia_mes = agora.replace(day=1)
@@ -307,7 +305,7 @@ def get_analytics_data_v2(
         WHERE i.status = 'finalizada' AND i.tipo = 'completa'
     """
     args_impl_ano = []
-    
+
     if context:
         if context == "onboarding":
             query_impl_ano += " AND (i.contexto IS NULL OR i.contexto = 'onboarding') "
@@ -328,7 +326,7 @@ def get_analytics_data_v2(
 
     impl_finalizadas_ano_corrente = query_db(query_impl_ano, tuple(args_impl_ano)) or []
 
-    chart_data_ranking_periodo = {i: 0 for i in range(1, 13)}
+    chart_data_ranking_periodo = dict.fromkeys(range(1, 13), 0)
 
     for impl in impl_finalizadas_ano_corrente:
         if not impl or not isinstance(impl, dict):
@@ -359,7 +357,7 @@ def get_analytics_data_v2(
     # Processar métricas SEM queries individuais
     chart_data_ranking_colab = {}
     chart_data_ranking_periodo = {}
-    chart_data_nivel_receita = {k: 0 for k in NIVEIS_RECEITA}
+    chart_data_nivel_receita = dict.fromkeys(NIVEIS_RECEITA, 0)
 
     # Novas estruturas para os gráficos otimizados
     gargalos_parada = {}  # {motivo: count}
@@ -377,7 +375,7 @@ def get_analytics_data_v2(
     implantacoes_paradas_detalhadas = []
     implantacoes_canceladas_detalhadas = []
 
-    chart_data_nivel_receita = {label: 0 for label in NIVEIS_RECEITA}
+    chart_data_nivel_receita = dict.fromkeys(NIVEIS_RECEITA, 0)
     chart_data_nivel_receita["Não Definido"] = 0
 
     chart_data_ranking_colab = {}
@@ -556,8 +554,8 @@ def get_analytics_data_v2(
         "gargalos_parada": {"labels": list(gargalos_parada.keys()), "data": list(gargalos_parada.values())},
         "velocidade_entrega": {"labels": list(velocidade_entrega.keys()), "data": list(velocidade_entrega.values())},
         "previsao_receita": {
-            "labels": sorted(list(previsao_receita.keys())),
-            "data": [previsao_receita[k] for k in sorted(list(previsao_receita.keys()))],
+            "labels": sorted(previsao_receita.keys()),
+            "data": [previsao_receita[k] for k in sorted(previsao_receita.keys())],
         },
     }
 
@@ -583,4 +581,3 @@ def get_analytics_data_v2(
         "default_task_start_date": default_task_start_date_str,
         "default_task_end_date": default_task_end_date_str,
     }
-

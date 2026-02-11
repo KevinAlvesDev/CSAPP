@@ -4,8 +4,6 @@ Criação e atualização da estrutura hierárquica de planos.
 Princípio SOLID: Single Responsibility
 """
 
-from typing import Dict, List, Optional
-
 from flask import current_app
 
 from ...common.exceptions import DatabaseError, ValidationError
@@ -13,7 +11,7 @@ from ...db import db_connection
 from .validacao import validar_estrutura_checklist
 
 
-def atualizar_estrutura_plano(plano_id: int, estrutura: Dict) -> bool:
+def atualizar_estrutura_plano(plano_id: int, estrutura: dict) -> bool:
     """
     Atualiza a estrutura do plano (itens) removendo os antigos e criando os novos.
     """
@@ -44,7 +42,7 @@ def atualizar_estrutura_plano(plano_id: int, estrutura: Dict) -> bool:
             raise DatabaseError(f"Erro ao atualizar estrutura do plano: {e}") from e
 
 
-def _criar_estrutura_plano(cursor, db_type: str, plano_id: int, estrutura: Dict):
+def _criar_estrutura_plano(cursor, db_type: str, plano_id: int, estrutura: dict):
     """
     Cria estrutura do plano usando checklist_items (consolidado).
     """
@@ -170,7 +168,7 @@ def _criar_estrutura_plano(cursor, db_type: str, plano_id: int, estrutura: Dict)
                     )
 
 
-def _criar_estrutura_plano_checklist(cursor, db_type: str, plano_id: int, estrutura: Dict):
+def _criar_estrutura_plano_checklist(cursor, db_type: str, plano_id: int, estrutura: dict):
     """
     Cria a estrutura do plano na tabela checklist_items.
     Usa campo 'plano_id' para vincular itens ao plano.
@@ -283,7 +281,7 @@ def _criar_estrutura_plano_checklist(cursor, db_type: str, plano_id: int, estrut
 
 
 def _criar_items_recursivo(
-    cursor, db_type: str, plano_id: int, items: List[Dict], parent_id: Optional[int], current_level: int
+    cursor, db_type: str, plano_id: int, items: list[dict], parent_id: int | None, current_level: int
 ):
     """
     Cria itens recursivamente para suportar hierarquia infinita.
@@ -337,7 +335,7 @@ def _criar_items_recursivo(
             _criar_items_recursivo(cursor, db_type, plano_id, children, item_id, current_level + 1)
 
 
-def converter_estrutura_editor_para_checklist(estrutura_editor: Dict) -> List[Dict]:
+def converter_estrutura_editor_para_checklist(estrutura_editor: dict) -> list[dict]:
     """
     Converte estrutura do editor (fases/grupos OU items aninhados) para formato plano de checklist_items.
     Retorna lista plana com parent_id, level, ordem.
@@ -404,7 +402,7 @@ def converter_estrutura_editor_para_checklist(estrutura_editor: Dict) -> List[Di
 
 
 def _converter_items_para_plano(
-    items: List[Dict], parent_id: Optional[int], current_level: int, ordem_start: int, resultado: List[Dict]
+    items: list[dict], parent_id: int | None, current_level: int, ordem_start: int, resultado: list[dict]
 ):
     """
     Converte items aninhados para formato plano recursivamente.

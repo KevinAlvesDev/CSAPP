@@ -4,7 +4,7 @@ Módulo de validação e sanitização de inputs.
 
 import html
 import re
-from typing import Any, Optional
+from typing import Any
 
 
 class ValidationError(Exception):
@@ -98,10 +98,10 @@ def validate_password_strength(password: str, min_length: int = 8, max_length: i
 
 def sanitize_string(
     value: str,
-    max_length: int = None,
+    max_length: int | None = None,
     min_length: int = 0,
     allow_html: bool = False,
-    allowed_chars: str = None,
+    allowed_chars: str | None = None,
     allow_empty: bool = False,
 ) -> str:
     if not isinstance(value, str):
@@ -122,9 +122,8 @@ def sanitize_string(
         for tag in allowed_tags:
             value = value.replace(tag, tag.lower())
         value = re.sub(r"<[^>]*>", "", value)
-    if allowed_chars:
-        if not re.match(f"^[a-zA-Z0-9\\s{allowed_chars}]+$", value):
-            raise ValidationError(f"Caracteres inválidos detectados. Use apenas: {allowed_chars}")
+    if allowed_chars and not re.match(f"^[a-zA-Z0-9\\s{allowed_chars}]+$", value):
+        raise ValidationError(f"Caracteres inválidos detectados. Use apenas: {allowed_chars}")
     return value
 
 
@@ -156,8 +155,8 @@ def validate_date(value: str) -> str:
 
 
 def validate_integer(
-    value: Any, min_value: int = None, max_value: int = None, allow_none: bool = False
-) -> Optional[int]:
+    value: Any, min_value: int | None = None, max_value: int | None = None, allow_none: bool = False
+) -> int | None:
     if value is None and allow_none:
         return None
     try:
@@ -172,8 +171,12 @@ def validate_integer(
 
 
 def validate_float(
-    value: Any, min_value: float = None, max_value: float = None, allow_none: bool = False, decimal_places: int = None
-) -> Optional[float]:
+    value: Any,
+    min_value: float | None = None,
+    max_value: float | None = None,
+    allow_none: bool = False,
+    decimal_places: int | None = None,
+) -> float | None:
     if value is None and allow_none:
         return None
     try:

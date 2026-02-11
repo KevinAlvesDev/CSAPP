@@ -13,12 +13,11 @@ Este módulo coordena operações de implantação, delegando para submódulos:
 from __future__ import annotations
 
 from collections import OrderedDict
-from datetime import datetime
-from typing import TYPE_CHECKING, Any, Optional
+from typing import Any
 
 from flask import g
 
-from ..common.utils import format_date_br, format_date_iso_for_json
+from ..common.utils import format_date_br
 from ..constants import (
     CARGOS_RESPONSAVEL,
     FORMAS_PAGAMENTO,
@@ -37,9 +36,6 @@ from ..db import execute_db, logar_timeline, query_db
 from ..domain.hierarquia_service import get_hierarquia_implantacao
 from ..domain.task_definitions import MODULO_OBRIGATORIO, MODULO_PENDENCIAS, TASK_TIPS
 
-if TYPE_CHECKING:
-    from collections import OrderedDict as OrderedDictType
-
 # Type aliases para melhor legibilidade
 ImplantacaoDict = dict[str, Any]
 UserProfile = dict[str, Any]
@@ -48,36 +44,22 @@ TimelineLog = dict[str, Any]
 # ============================================================================
 # REFATORAÇÃO SOLID - Importações do novo módulo de CRUD
 # ============================================================================
-from .implantacao.crud import (
-    cancelar_implantacao_service,
-    criar_implantacao_modulo_service,
-    criar_implantacao_service,
-    excluir_implantacao_service,
-    transferir_implantacao_service,
-)
 # ============================================================================
 # REFATORAÇÃO SOLID - Importações do novo módulo de detalhes
 # ============================================================================
+import contextlib
+
 from .implantacao.details import (
     _format_implantacao_dates,
     _get_timeline_logs,
-    atualizar_detalhes_empresa_service,
 )
 
 # ============================================================================
 # REFATORAÇÃO SOLID - Importações do novo módulo de listagem
 # ============================================================================
-from .implantacao.listing import (
-    listar_implantacoes,
-    obter_implantacao_basica,
-)
 # ============================================================================
 # REFATORAÇÃO SOLID - Importações do novo módulo de integração OAMD
 # ============================================================================
-from .implantacao.oamd_integration import (
-    aplicar_dados_oamd,
-    consultar_dados_oamd,
-)
 # ============================================================================
 # REFATORAÇÃO SOLID - Importações do novo módulo de progresso
 # ============================================================================
@@ -88,17 +70,6 @@ from .implantacao.progress import (
 # ============================================================================
 # REFATORAÇÃO SOLID - Importações do novo módulo de status
 # ============================================================================
-from .implantacao.status import (
-    agendar_implantacao_service,
-    desfazer_cancelamento_implantacao_service,
-    desfazer_inicio_implantacao_service,
-    finalizar_implantacao_service,
-    iniciar_implantacao_service,
-    marcar_sem_previsao_service,
-    parar_implantacao_service,
-    reabrir_implantacao_service,
-    retomar_implantacao_service,
-)
 
 try:
     from ..config.cache_config import cache
@@ -113,14 +84,16 @@ except ImportError:
 
 
 # Auto-finalização removida a pedido do usuário
-def auto_finalizar_implantacao(impl_id: int, usuario_cs_email: str) -> tuple[bool, Optional[TimelineLog]]:
+def auto_finalizar_implantacao(impl_id: int, usuario_cs_email: str) -> tuple[bool, TimelineLog | None]:
     """
     Função desativada. Finalizações agora devem ser manuais.
     """
     return False, None
 
 
-def _get_implantacao_and_validate_access(impl_id, usuario_cs_email, user_perfil):
+def _get_implantacao_and_validate_access(
+    impl_id: int, usuario_cs_email: str, user_perfil: UserProfile | None
+) -> tuple[ImplantacaoDict, bool]:
     user_perfil_acesso = user_perfil.get("perfil_acesso") if user_perfil else None
     implantacao = query_db("SELECT * FROM implantacoes WHERE id = %s", (impl_id,), one=True)
 
@@ -142,7 +115,9 @@ def _get_implantacao_and_validate_access(impl_id, usuario_cs_email, user_perfil)
     return implantacao, is_manager
 
 
-def _get_comentarios_bulk(impl_id, is_owner=False, is_manager=False):
+def _get_comentarios_bulk(
+    impl_id: int, is_owner: bool = False, is_manager: bool = False
+) -> dict[str, list[dict[str, Any]]]:
     """
     Busca TODOS os comentários de uma implantação em uma única query (ou poucas queries).
     Retorna dicionário indexado por item_id para acesso rápido.
@@ -153,7 +128,7 @@ def _get_comentarios_bulk(impl_id, is_owner=False, is_manager=False):
         comentarios_h_raw = (
             query_db(
                 """
-            SELECT c.*, 
+            SELECT c.*,
                    COALESCE(p.nome, c.usuario_cs) as usuario_nome,
                    c.data_criacao as data_criacao_raw,
                    c.checklist_item_id
@@ -185,9 +160,8 @@ def _get_comentarios_bulk(impl_id, is_owner=False, is_manager=False):
         else:
             continue
 
-        if not (is_owner or is_manager):
-            if c.get("visibilidade") == "interno":
-                continue
+        if not (is_owner or is_manager) and c.get("visibilidade") == "interno":
+            continue
 
         c_formatado = {**c, "data_criacao_fmt_d": format_date_br(c.get("data_criacao_raw"))}
         c_formatado["delete_url"] = f"/api/checklist/comment/{c['id']}"
@@ -200,85 +174,59 @@ def _get_comentarios_bulk(impl_id, is_owner=False, is_manager=False):
     return comentarios_map
 
 
-def _get_tarefas_and_comentarios(impl_id, is_owner=False, is_manager=False):
+def _get_tarefas_and_comentarios(
+    impl_id: int, is_owner: bool = False, is_manager: bool = False
+) -> tuple[OrderedDict, OrderedDict, OrderedDict, list[str]]:
+    """
+    Carrega tarefas e comentários de uma implantação.
+
+    OTIMIZADO: Usa DataLoader para carregar TODOS os items em 1 query
+    + 1 query para comentários (antes: 50+ queries N+1).
+
+    Args:
+        impl_id: ID da implantação
+        is_owner: Se o usuário é dono da implantação
+        is_manager: Se o usuário tem perfil de gestão
+
+    Returns:
+        Tupla com (obrigatorio, treinamento, pendencias, modulos)
+    """
+    from ..common.dataloader import ChecklistDataLoader
+
     comentarios_map = _get_comentarios_bulk(impl_id, is_owner, is_manager)
 
-    tarefas_agrupadas_treinamento = OrderedDict()
-    tarefas_agrupadas_obrigatorio = OrderedDict()
-    tarefas_agrupadas_pendencias = OrderedDict()
-    todos_modulos_temp = set()
+    tarefas_agrupadas_treinamento: OrderedDict[str, list[dict[str, Any]]] = OrderedDict()
+    tarefas_agrupadas_obrigatorio: OrderedDict[str, list[dict[str, Any]]] = OrderedDict()
+    tarefas_agrupadas_pendencias: OrderedDict[str, list[dict[str, Any]]] = OrderedDict()
+    todos_modulos_temp: set[str] = set()
+
+    # ── DataLoader: 1 query para TODOS os items ──
+    loader = ChecklistDataLoader(impl_id)
 
     try:
-        fases_raw = (
-            query_db(
-                "SELECT id, title as nome, ordem FROM checklist_items WHERE implantacao_id = %s AND tipo_item = 'fase' AND parent_id IS NULL ORDER BY ordem DESC",
-                (impl_id,),
-            )
-            or []
-        )
+        fases = loader.get_fases()
     except Exception as e:
-        import traceback
-
-        error_trace = traceback.format_exc()
         from ..config.logging_config import get_logger
 
         logger = get_logger("implantacao")
-        logger.warning(f"Erro ao buscar fases para implantação {impl_id}: {e}\n{error_trace}")
-        fases_raw = []
-    if fases_raw:
-        tarefas_agrupadas_treinamento = OrderedDict()
-        todos_modulos_temp = set()
-        for fase in fases_raw:
-            try:
-                grupos_raw = (
-                    query_db(
-                        "SELECT id, title as nome FROM checklist_items WHERE parent_id = %s AND tipo_item = 'grupo'",
-                        (fase["id"],),
-                    )
-                    or []
-                )
-            except Exception as e:
-                from ..config.logging_config import get_logger
+        logger.warning(f"Erro ao carregar fases para implantação {impl_id}: {e}")
+        fases = []
 
-                logger = get_logger("implantacao")
-                logger.warning(f"Erro ao buscar grupos para fase {fase.get('id')}: {e}")
-                grupos_raw = []
+    if fases:
+        for fase in fases:
+            grupos = loader.get_grupos(fase["id"])
 
-            for grupo in grupos_raw:
-                modulo_nome = grupo.get("nome") or f"Grupo {grupo.get('id')}"
+            for grupo in grupos:
+                modulo_nome = grupo.get("title") or grupo.get("nome") or f"Grupo {grupo.get('id')}"
                 todos_modulos_temp.add(modulo_nome)
-                try:
-                    tarefas_h_raw = (
-                        query_db(
-                            "SELECT * FROM checklist_items WHERE parent_id = %s AND tipo_item = 'tarefa'",
-                            (grupo["id"],),
-                        )
-                        or []
-                    )
-                except Exception as e:
-                    from ..config.logging_config import get_logger
+                tarefas = loader.get_tarefas(grupo["id"])
 
-                    logger = get_logger("implantacao")
-                    logger.warning(f"Erro ao buscar tarefas para grupo {grupo.get('id')}: {e}")
-                    tarefas_h_raw = []
                 ordem_c = 1
-                for th in tarefas_h_raw:
-                    try:
-                        subs_raw = (
-                            query_db(
-                                "SELECT * FROM checklist_items WHERE parent_id = %s AND tipo_item = 'subtarefa'",
-                                (th["id"],),
-                            )
-                            or []
-                        )
-                    except Exception as e:
-                        from ..config.logging_config import get_logger
+                for th in tarefas:
+                    subtarefas = loader.get_subtarefas(th["id"])
 
-                        logger = get_logger("implantacao")
-                        logger.warning(f"Erro ao buscar subtarefas para tarefa {th.get('id')}: {e}")
-                        subs_raw = []
-                    if subs_raw:
-                        for sub in subs_raw:
+                    if subtarefas:
+                        for sub in subtarefas:
                             comentarios_sub = comentarios_map.get(f"subtarefa_h_{sub['id']}", [])
 
                             tarefas_agrupadas_treinamento.setdefault(modulo_nome, []).append(
@@ -291,16 +239,12 @@ def _get_tarefas_and_comentarios(impl_id, is_owner=False, is_manager=False):
                                     "comentarios": comentarios_sub,
                                     "toggle_url": f"/api/checklist/toggle/{sub['id']}",
                                     "comment_url": f"/api/checklist/comment/{sub['id']}",
+                                    "delete_url": f"/api/checklist/delete/{sub['id']}",
                                 }
-                            )
-                            tarefas_agrupadas_treinamento[modulo_nome].sort(key=lambda x: x.get("ordem", 0))
-                            tarefas_agrupadas_treinamento[modulo_nome][-1]["delete_url"] = (
-                                f"/api/checklist/delete/{sub['id']}"
                             )
                             ordem_c += 1
                     else:
                         concl = bool(th.get("completed", False))
-
                         comentarios_th = comentarios_map.get(f"tarefa_h_{th['id']}", [])
 
                         tarefas_agrupadas_treinamento.setdefault(modulo_nome, []).append(
@@ -313,44 +257,51 @@ def _get_tarefas_and_comentarios(impl_id, is_owner=False, is_manager=False):
                                 "comentarios": comentarios_th,
                                 "toggle_url": f"/api/checklist/toggle/{th['id']}",
                                 "comment_url": f"/api/checklist/comment/{th['id']}",
+                                "delete_url": f"/api/checklist/delete/{th['id']}",
                             }
-                        )
-                        tarefas_agrupadas_treinamento[modulo_nome].sort(key=lambda x: x.get("ordem", 0))
-                        tarefas_agrupadas_treinamento[modulo_nome][-1]["delete_url"] = (
-                            f"/api/checklist/delete/{th['id']}"
                         )
                         ordem_c += 1
 
-    ordered_treinamento = OrderedDict()
-    modulo_ordem_map = {}
+                # Ordenar tarefas por ordem (uma vez por grupo, não a cada iteração)
+                if modulo_nome in tarefas_agrupadas_treinamento:
+                    tarefas_agrupadas_treinamento[modulo_nome].sort(key=lambda x: x.get("ordem", 0))
+
+    # ── Ordenar módulos ──
+    ordered_treinamento: OrderedDict[str, list[dict[str, Any]]] = OrderedDict()
+    modulo_ordem_map: dict[str, int] = {}
     for modulo, lista in tarefas_agrupadas_treinamento.items():
         try:
-            modulo_ordem_map[modulo] = min([t.get("ordem") or 0 for t in (lista or [])])
+            modulo_ordem_map[modulo] = min(t.get("ordem") or 0 for t in (lista or []))
         except Exception:
             modulo_ordem_map[modulo] = 0
     for modulo in [k for k, _ in sorted(modulo_ordem_map.items(), key=lambda x: (x[1], x[0]), reverse=True)]:
         ordered_treinamento[modulo] = tarefas_agrupadas_treinamento.get(modulo, [])
 
     if MODULO_OBRIGATORIO in todos_modulos_temp:
-        try:
-            todos_modulos_temp.remove(MODULO_OBRIGATORIO)
-        except Exception:
-            pass
-    todos_modulos_lista = sorted(list(todos_modulos_temp))
-    if MODULO_PENDENCIAS not in todos_modulos_lista:
-        todos_modulos_lista.append(MODULO_PENDENCIAS)
+        todos_modulos_temp.discard(MODULO_OBRIGATORIO)
 
-    todos_modulos_lista = sorted(list(todos_modulos_temp), key=lambda m: modulo_ordem_map.get(m, 0), reverse=True)
+    todos_modulos_lista: list[str] = sorted(todos_modulos_temp, key=lambda m: modulo_ordem_map.get(m, 0), reverse=True)
     if MODULO_PENDENCIAS not in todos_modulos_lista:
         todos_modulos_lista.append(MODULO_PENDENCIAS)
 
     return tarefas_agrupadas_obrigatorio, ordered_treinamento, tarefas_agrupadas_pendencias, todos_modulos_lista
 
 
-def get_implantacao_details(impl_id, usuario_cs_email, user_perfil):
+def get_implantacao_details(impl_id: int, usuario_cs_email: str, user_perfil: UserProfile | None) -> dict[str, Any]:
     """
     Busca, processa e valida todos os dados para a página de detalhes da implantação.
     Levanta um ValueError se o acesso for negado.
+
+    Args:
+        impl_id: ID da implantação
+        usuario_cs_email: Email do usuário CS logado
+        user_perfil: Perfil do usuário (pode ser None)
+
+    Returns:
+        Dicionário com todos os dados necessários para renderizar a página
+
+    Raises:
+        ValueError: Se acesso for negado ou implantação não encontrada
     """
     from ..config.logging_config import get_logger
 
@@ -370,7 +321,7 @@ def get_implantacao_details(impl_id, usuario_cs_email, user_perfil):
     try:
         implantacao, is_manager = _get_implantacao_and_validate_access(impl_id, usuario_cs_email, user_perfil)
     except ValueError as e:
-        logger.warning(f"Acesso negado à implantação {impl_id}: {str(e)}")
+        logger.warning(f"Acesso negado à implantação {impl_id}: {e!s}")
         raise
     except Exception as e:
         logger.error(f"Erro ao validar acesso à implantação {impl_id}: {e}", exc_info=True)
@@ -440,7 +391,6 @@ def get_implantacao_details(impl_id, usuario_cs_email, user_perfil):
         logger.warning(f"Erro ao buscar plano de sucesso: {e}")
         pass
 
-    checklist_tree = None
     checklist_nested = None
     try:
         from ..domain.checklist_service import build_nested_tree, get_checklist_tree
@@ -449,48 +399,55 @@ def get_implantacao_details(impl_id, usuario_cs_email, user_perfil):
 
         # SELF-HEALING: Se tem plano mas não tem itens, clonar agora.
         if not checklist_flat and implantacao.get("plano_sucesso_id") and plano_sucesso_info:
-            logger.warning(f"Implantação {impl_id} tem plano {implantacao['plano_sucesso_id']} mas checklist vazio. Tentando auto-reparar...")
+            logger.warning(
+                f"Implantação {impl_id} tem plano {implantacao['plano_sucesso_id']} mas checklist vazio. Tentando auto-reparar..."
+            )
             try:
+                from datetime import (
+                    date as datetime_date,
+                    datetime,
+                    timedelta,
+                )
+
                 from ..db import db_connection
                 from ..domain.planos.aplicar import _clonar_plano_para_implantacao_checklist
-                from datetime import datetime, timedelta, date as datetime_date
 
                 plano_id = implantacao["plano_sucesso_id"]
                 dias_duracao = plano_sucesso_info.get("dias_duracao") or 0
-                
+
                 # Resolver data base safely
                 data_base = implantacao.get("data_inicio_efetivo") or implantacao.get("data_criacao")
                 base_dt = datetime.now()
-                
+
                 if data_base:
                     if isinstance(data_base, str):
-                        try:
+                        with contextlib.suppress(ValueError, TypeError):
                             base_dt = datetime.strptime(data_base[:10], "%Y-%m-%d")
-                        except:
-                            pass
                     elif isinstance(data_base, datetime):
                         base_dt = data_base
                     elif isinstance(data_base, datetime_date):
-                         base_dt = datetime.combine(data_base, datetime.min.time())
+                        base_dt = datetime.combine(data_base, datetime.min.time())
 
                 data_previsao = base_dt + timedelta(days=int(dias_duracao))
 
                 with db_connection() as (conn, db_type):
                     cursor = conn.cursor()
                     responsavel = "sistema"
-                    
+
                     _clonar_plano_para_implantacao_checklist(
                         cursor, db_type, plano_id, impl_id, responsavel, base_dt, int(dias_duracao), data_previsao
                     )
                     conn.commit()
-                
+
                 logger.info("Auto-reparo concluído. Recarregando checklist...")
                 # Invalida cache se houver
-                try: 
+                try:
                     from ..config.cache_config import clear_implantacao_cache
+
                     clear_implantacao_cache(impl_id)
-                except: pass
-                
+                except Exception:
+                    pass
+
                 # Busca novamente
                 checklist_flat = get_checklist_tree(implantacao_id=impl_id, include_progress=True)
             except Exception as e:
@@ -563,9 +520,17 @@ def get_implantacao_details(impl_id, usuario_cs_email, user_perfil):
 # ============================================================================
 
 
-def remover_plano_implantacao_service(implantacao_id, usuario_cs_email, user_perfil_acesso):
+def remover_plano_implantacao_service(implantacao_id: int, usuario_cs_email: str, user_perfil_acesso: str) -> None:
     """
     Remove o plano de sucesso de uma implantação, limpando todas as fases/ações/tarefas associadas.
+
+    Args:
+        implantacao_id: ID da implantação
+        usuario_cs_email: Email do CS que está removendo
+        user_perfil_acesso: Perfil de acesso do usuário
+
+    Raises:
+        ValueError: Se implantação não encontrada ou permissão negada
     """
     impl = query_db("SELECT id, usuario_cs, nome_empresa FROM implantacoes WHERE id = %s", (implantacao_id,), one=True)
     if not impl:

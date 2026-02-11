@@ -4,14 +4,15 @@ Responsável por criar, excluir, transferir e cancelar implantações.
 Princípio SOLID: Single Responsibility
 """
 
+import contextlib
 from datetime import datetime
 
 from flask import current_app
 
 from ...common.utils import format_date_br
+from ...config.cache_config import clear_implantacao_cache, clear_user_cache
 from ...constants import MODULO_OPCOES, PERFIS_COM_GESTAO
 from ...db import execute_and_fetch_one, execute_db, logar_timeline, query_db
-from ...config.cache_config import clear_implantacao_cache, clear_user_cache
 
 
 def criar_implantacao_service(
@@ -79,8 +80,18 @@ def criar_implantacao_service(
         )
 
     # Limpar cache do usuário atribuído
-    try:
+    with contextlib.suppress(Exception):
         clear_user_cache(usuario_atribuido)
+
+    # Emitir evento de domínio
+    try:
+        from ..core.events import ImplantacaoCriada, event_bus
+
+        event_bus.emit(ImplantacaoCriada(
+            implantacao_id=implantacao_id,
+            usuario_cs=usuario_criador,
+            nome_empresa=nome_empresa,
+        ))
     except Exception:
         pass
 
@@ -146,10 +157,8 @@ def criar_implantacao_modulo_service(
         )
 
     # Limpar cache do usuário atribuído
-    try:
+    with contextlib.suppress(Exception):
         clear_user_cache(usuario_atribuido)
-    except Exception:
-        pass
 
     return implantacao_id
 
@@ -185,6 +194,18 @@ def transferir_implantacao_service(implantacao_id, usuario_cs_email, novo_usuari
     except Exception:
         pass
 
+    # Emitir evento de domínio
+    try:
+        from ..core.events import ImplantacaoTransferida, event_bus
+
+        event_bus.emit(ImplantacaoTransferida(
+            implantacao_id=implantacao_id,
+            de_usuario=antigo_usuario_cs,
+            para_usuario=novo_usuario_cs,
+        ))
+    except Exception:
+        pass
+
     return antigo_usuario_cs
 
 
@@ -201,10 +222,10 @@ def excluir_implantacao_service(implantacao_id, usuario_cs_email, user_perfil_ac
 
     # Buscar imagens de comentários para exclusão (R2)
     comentarios_img = query_db(
-        """ SELECT DISTINCT c.imagem_url 
-            FROM comentarios_h c 
+        """ SELECT DISTINCT c.imagem_url
+            FROM comentarios_h c
             WHERE EXISTS (
-                SELECT 1 FROM checklist_items ci 
+                SELECT 1 FROM checklist_items ci
                 WHERE c.checklist_item_id = ci.id
                 AND ci.implantacao_id = %s
             )

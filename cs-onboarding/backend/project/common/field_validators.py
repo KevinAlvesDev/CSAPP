@@ -4,10 +4,9 @@ Prevents invalid data from being saved to database
 """
 
 import re
-from typing import Optional, Tuple
 
 
-def validate_email(email: Optional[str]) -> Tuple[bool, Optional[str]]:
+def validate_email(email: str | None) -> tuple[bool, str | None]:
     """
     Validate email format.
 
@@ -32,7 +31,7 @@ def validate_email(email: Optional[str]) -> Tuple[bool, Optional[str]]:
     if len(email) > 254:
         return False, "E-mail muito longo (máximo 254 caracteres)"
 
-    local, domain = email.rsplit("@", 1)
+    local, _domain = email.rsplit("@", 1)
 
     if len(local) > 64:
         return False, "Parte local do e-mail muito longa (máximo 64 caracteres)"
@@ -43,7 +42,7 @@ def validate_email(email: Optional[str]) -> Tuple[bool, Optional[str]]:
     return True, None
 
 
-def validate_telefone(telefone: Optional[str]) -> Tuple[bool, Optional[str]]:
+def validate_telefone(telefone: str | None) -> tuple[bool, str | None]:
     """
     Validate Brazilian phone number format.
 
@@ -82,7 +81,7 @@ def validate_telefone(telefone: Optional[str]) -> Tuple[bool, Optional[str]]:
     return True, None
 
 
-def validate_cnpj(cnpj: Optional[str]) -> Tuple[bool, Optional[str]]:
+def validate_cnpj(cnpj: str | None) -> tuple[bool, str | None]:
     """
     Validate Brazilian CNPJ (company tax ID).
 
@@ -111,7 +110,7 @@ def validate_cnpj(cnpj: Optional[str]) -> Tuple[bool, Optional[str]]:
 
     # Validate check digits
     def calculate_digit(cnpj_base, weights):
-        total = sum(int(digit) * weight for digit, weight in zip(cnpj_base, weights))
+        total = sum(int(digit) * weight for digit, weight in zip(cnpj_base, weights, strict=False))
         remainder = total % 11
         return 0 if remainder < 2 else 11 - remainder
 
@@ -132,7 +131,7 @@ def validate_cnpj(cnpj: Optional[str]) -> Tuple[bool, Optional[str]]:
     return True, None
 
 
-def validate_alunos_ativos(alunos: Optional[int]) -> Tuple[bool, Optional[str]]:
+def validate_alunos_ativos(alunos: int | None) -> tuple[bool, str | None]:
     """
     Validate number of active students.
 
@@ -160,7 +159,7 @@ def validate_alunos_ativos(alunos: Optional[int]) -> Tuple[bool, Optional[str]]:
     return True, None
 
 
-def validate_valor_monetario(valor: Optional[str]) -> Tuple[bool, Optional[str]]:
+def validate_valor_monetario(valor: str | None) -> tuple[bool, str | None]:
     """
     Validate monetary value.
 
@@ -187,7 +186,7 @@ def validate_valor_monetario(valor: Optional[str]) -> Tuple[bool, Optional[str]]
     return True, None
 
 
-def validate_detalhes_empresa(campos: dict) -> Tuple[bool, list]:
+def validate_detalhes_empresa(campos: dict) -> tuple[bool, list]:
     """
     Validate all company details fields.
 

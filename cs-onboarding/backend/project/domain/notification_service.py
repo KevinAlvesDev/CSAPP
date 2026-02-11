@@ -17,11 +17,11 @@ def _get_context_url(path, context):
         prefix = "/grandes-contas"
     elif context == "ongoing":
         prefix = "/ongoing"
-    
+
     # Se o caminho já tem o prefixo (improvável aqui), não duplica
     if path.startswith(prefix):
         return path
-        
+
     return f"{prefix}{path}"
 
 
@@ -45,7 +45,7 @@ def get_user_notifications(user_email, context=None):
 
     try:
         api_logger.info(f"Iniciando busca de notificações para {user_email}, contexto: {context}")
-        
+
         hoje = datetime.now()
         inicio_semana = hoje - timedelta(days=hoje.weekday())
         inicio_semana = inicio_semana.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -131,7 +131,7 @@ def get_user_notifications(user_email, context=None):
 
         # Ordenar por prioridade e limitar
         notifications.sort(key=lambda x: x["priority"])
-        
+
         api_logger.info(f"Notificações encontradas: {len(notifications)}")
 
         return {
@@ -164,15 +164,15 @@ def _get_false_start(user_email, hoje, context):
             params.append(context)
 
     sql = f"""
-        SELECT id, nome_empresa, data_criacao 
-        FROM implantacoes 
-        WHERE usuario_cs = %s 
+        SELECT id, nome_empresa, data_criacao
+        FROM implantacoes
+        WHERE usuario_cs = %s
         AND status IN ('nova', 'andamento')
         AND data_criacao < %s
         {where_context}
         AND (
-            SELECT COUNT(*) FROM checklist_items 
-            WHERE implantacao_id = implantacoes.id 
+            SELECT COUNT(*) FROM checklist_items
+            WHERE implantacao_id = implantacoes.id
             AND completed = TRUE
         ) = 0
     """
@@ -209,7 +209,7 @@ def _get_silent_stagnation(user_email, hoje, context):
         else:
             where_context = "AND i.contexto = %s"
             params.append(context)
-    
+
     params.append(limite)
 
     sql = f"""
@@ -227,10 +227,7 @@ def _get_silent_stagnation(user_email, hoje, context):
     for row in results:
         if isinstance(row, dict):
             ultima_interacao = row.get("ultima_interacao")
-            if ultima_interacao:
-                dias = (hoje - _parse_datetime(ultima_interacao)).days
-            else:
-                dias = "vários"
+            dias = (hoje - _parse_datetime(ultima_interacao)).days if ultima_interacao else "vários"
 
             notifications.append(
                 {
@@ -260,7 +257,7 @@ def _get_slow_pace(user_email, hoje, context):
         else:
             where_context = "AND i.contexto = %s"
             params.append(context)
-    
+
     params.append(limite)
 
     sql = f"""
@@ -349,12 +346,12 @@ def _get_critical_tasks(user_email, hoje, fim_hoje, context):
         else:
             where_context = "AND i.contexto = %s"
             params.append(context)
-    
+
     params.extend([fim_hoje, hoje])
 
     sql_criticas = f"""
-        SELECT 
-            i.id, 
+        SELECT
+            i.id,
             i.nome_empresa,
             COUNT(CASE WHEN ci.previsao_original < %s THEN 1 END) as atrasadas,
             COUNT(CASE WHEN DATE(ci.previsao_original) = DATE(%s) THEN 1 END) as vence_hoje
@@ -416,7 +413,7 @@ def _get_stopped_implementations(user_email, hoje, context):
             params.append(context)
 
     sql_paradas = f"""
-        SELECT 
+        SELECT
             i.id,
             i.nome_empresa,
             i.motivo_parada,
@@ -476,11 +473,11 @@ def _get_urgent_tasks(user_email, hoje, fim_hoje, context):
         else:
             where_context = "AND i.contexto = %s"
             params.append(context)
-    
+
     params.extend([fim_hoje, depois_amanha])
 
     sql_urgentes = f"""
-        SELECT 
+        SELECT
             i.id,
             i.nome_empresa,
             COUNT(ci.id) as total
@@ -533,11 +530,11 @@ def _get_upcoming_future(user_email, hoje, context):
         else:
             where_context = "AND contexto = %s"
             params.append(context)
-    
+
     params.append(daqui_7_dias)
 
     sql_futuras = f"""
-        SELECT 
+        SELECT
             id,
             nome_empresa,
             data_inicio_previsto
@@ -582,7 +579,7 @@ def _get_no_forecast(user_email, hoje, context):
             params.append(context)
 
     sql_sem_previsao = f"""
-        SELECT 
+        SELECT
             id,
             nome_empresa,
             data_criacao
@@ -635,11 +632,11 @@ def _get_upcoming_tasks(user_email, hoje, context):
         else:
             where_context = "AND i.contexto = %s"
             params.append(context)
-    
+
     params.extend([depois_amanha, daqui_7_dias])
 
     sql_proximas = f"""
-        SELECT 
+        SELECT
             i.id,
             i.nome_empresa,
             COUNT(ci.id) as total
@@ -731,7 +728,7 @@ def _get_weekly_summary(user_email, hoje, context):
                 params.append(context)
 
         sql_pendentes = f"""
-            SELECT 
+            SELECT
                 COUNT(DISTINCT i.id) as implantacoes,
                 COUNT(ci.id) as tarefas
             FROM checklist_items ci

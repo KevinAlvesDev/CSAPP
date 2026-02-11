@@ -103,7 +103,7 @@ def _get_progress_optimized(impl_id):
                 FROM checklist_items ci
                 WHERE ci.implantacao_id = ?
                 AND NOT EXISTS (
-                    SELECT 1 FROM checklist_items filho 
+                    SELECT 1 FROM checklist_items filho
                     WHERE filho.parent_id = ci.id
                     AND filho.implantacao_id = ?
                 )
@@ -120,7 +120,7 @@ def _get_progress_optimized(impl_id):
                 FROM checklist_items ci
                 WHERE ci.implantacao_id = %s
                 AND NOT EXISTS (
-                    SELECT 1 FROM checklist_items filho 
+                    SELECT 1 FROM checklist_items filho
                     WHERE filho.parent_id = ci.id
                     AND filho.implantacao_id = %s
                 )
@@ -157,7 +157,7 @@ def _get_progress_optimized(impl_id):
                 total = int(fallback_result.get("total", 0) or 0)
                 done = int(fallback_result.get("done", 0) or 0)
 
-        return int(round((done / total) * 100)) if total > 0 else 100, total, done
+        return round((done / total) * 100) if total > 0 else 100, total, done
 
     except Exception as e:
         current_app.logger.error(f"Erro ao calcular progresso otimizado para impl_id {impl_id}: {e}", exc_info=True)
@@ -194,11 +194,11 @@ def _get_progress_legacy(impl_id):
             SELECT COUNT(*) as total,
                    SUM(CASE WHEN completed THEN 1 ELSE 0 END) as done
             FROM checklist_items ci
-            WHERE ci.implantacao_id = %s 
+            WHERE ci.implantacao_id = %s
             AND ci.tipo_item = 'tarefa'
             AND NOT EXISTS (
-                SELECT 1 FROM checklist_items s 
-                WHERE s.parent_id = ci.id 
+                SELECT 1 FROM checklist_items s
+                WHERE s.parent_id = ci.id
                 AND s.tipo_item = 'subtarefa'
             )
             """,
@@ -210,7 +210,7 @@ def _get_progress_legacy(impl_id):
 
         total = int(sub.get("total", 0) or 0) + int(th_no.get("total", 0) or 0)
         done = int(sub.get("done", 0) or 0) + int(th_no.get("done", 0) or 0)
-        return int(round((done / total) * 100)) if total > 0 else 100, total, done
+        return round((done / total) * 100) if total > 0 else 100, total, done
 
     return 0, 0, 0
 

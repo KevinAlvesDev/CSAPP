@@ -1,0 +1,100 @@
+repos:
+  # ==============================================
+  # PYTHON: Linting e Formatação
+  # ==============================================
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.6
+    hooks:
+      # Linter
+      - id: ruff
+        name: "🔍 Ruff Linter"
+        args: [--fix, --exit-non-zero-on-fix]
+        types_or: [python, pyi]
+      # Formatter
+      - id: ruff-format
+        name: "🎨 Ruff Formatter"
+        types_or: [python, pyi]
+
+  # ==============================================
+  # PYTHON: Type Checking (opcional, pode ser lento)
+  # ==============================================
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.8.0
+  #   hooks:
+  #     - id: mypy
+  #       name: "🔒 Mypy Type Check"
+  #       args: [--ignore-missing-imports, --check-untyped-defs]
+  #       additional_dependencies: [types-requests]
+  #       pass_filenames: false
+  #       entry: mypy backend/project
+
+  # ==============================================
+  # GERAL: Verificações básicas
+  # ==============================================
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      # Segurança: previne commit de secrets
+      - id: detect-private-key
+        name: "🔑 Detectar chaves privadas"
+      
+      # Qualidade
+      - id: trailing-whitespace
+        name: "✂️ Remover espaços no final"
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+        name: "📄 EOF newline"
+      - id: check-yaml
+        name: "📋 Validar YAML"
+      - id: check-json
+        name: "📋 Validar JSON"
+        exclude: ".vscode/"
+      - id: check-merge-conflict
+        name: "⚠️ Conflitos de merge"
+      - id: check-added-large-files
+        name: "📦 Arquivos grandes (>500KB)"
+        args: ["--maxkb=500"]
+      
+      # Python
+      - id: check-ast
+        name: "🐍 Sintaxe Python"
+      - id: debug-statements
+        name: "🐛 Debug statements (pdb, breakpoint)"
+
+  # ==============================================
+  # SEGURANÇA: Análise de segurança do código
+  # ==============================================
+  - repo: https://github.com/PyCQA/bandit
+    rev: "1.7.7"
+    hooks:
+      - id: bandit
+        name: "🛡️ Bandit Security Check"
+        args: ["-c", "pyproject.toml", "--quiet"]
+        additional_dependencies: ["bandit[toml]"]
+
+  # ==============================================
+  # SECRETS: Prevenir vazamento de credenciais
+  # ==============================================
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        name: "🔐 Detectar secrets no código"
+        args: ["--baseline", ".secrets.baseline"]
+        exclude: "(package-lock.json|.env.example)"
+
+# ==============================================
+# CONFIGURAÇÃO GLOBAL
+# ==============================================
+default_language_version:
+  python: python3.11
+
+# Excluir arquivos que não devem ser verificados
+exclude: |
+  (?x)^(
+    migrations/versions/.*|
+    frontend/static/vendor/.*|
+    node_modules/.*|
+    \.venv/.*|
+    venv/.*
+  )$

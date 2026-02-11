@@ -37,9 +37,9 @@ def run_postgres_migration():
 
         # Verificar se a coluna já existe
         cur.execute("""
-            SELECT column_name 
-            FROM information_schema.columns 
-            WHERE table_name='implantacoes' 
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_name='implantacoes'
             AND column_name='definicao_carteira'
         """)
 
@@ -49,7 +49,7 @@ def run_postgres_migration():
 
         # Adicionar coluna
         cur.execute("""
-            ALTER TABLE implantacoes 
+            ALTER TABLE implantacoes
             ADD COLUMN definicao_carteira TEXT
         """)
 
@@ -105,7 +105,7 @@ def run_sqlite_migration():
         # Adicionar coluna
         print("Adicionando coluna definicao_carteira...")
         cur.execute("""
-            ALTER TABLE implantacoes 
+            ALTER TABLE implantacoes
             ADD COLUMN definicao_carteira TEXT
         """)
 

@@ -31,18 +31,18 @@ from .analytics import (
 
 # Manter __all__ para compatibilidade com imports *
 __all__ = [
+    "_format_date_for_query",
+    # Utils
+    "calculate_time_in_status",
+    "date_col_expr",
+    "date_param_expr",
     # Dashboard
     "get_analytics_data",
-    # Charts
-    "get_implants_by_day",
+    # Cancelamentos
+    "get_cancelamentos_data",
     "get_funnel_counts",
     # Gamification
     "get_gamification_rank",
-    # Cancelamentos
-    "get_cancelamentos_data",
-    # Utils
-    "calculate_time_in_status",
-    "_format_date_for_query",
-    "date_col_expr",
-    "date_param_expr",
+    # Charts
+    "get_implants_by_day",
 ]

@@ -79,10 +79,10 @@ def listar_planos():
         )
 
     except Exception as e:
-        planos_logger.error(f"Erro ao listar planos: {str(e)}", exc_info=True)
+        planos_logger.error(f"Erro ao listar planos: {e!s}", exc_info=True)
         if request.is_json:
             return jsonify({"error": str(e)}), 500
-        flash(f"Erro ao listar planos: {str(e)}", "error")
+        flash(f"Erro ao listar planos: {e!s}", "error")
         return redirect(url_for("onboarding.dashboard"))
 
 
@@ -119,11 +119,11 @@ def obter_plano(plano_id):
         )
 
     except Exception as e:
-        planos_logger.error(f"Erro ao obter plano {plano_id}: {str(e)}", exc_info=True)
+        planos_logger.error(f"Erro ao obter plano {plano_id}: {e!s}", exc_info=True)
         wants_json = request.is_json or request.headers.get("Accept", "").startswith("application/json")
         if wants_json:
             return jsonify({"error": str(e)}), 500
-        flash(f"Erro ao obter plano: {str(e)}", "error")
+        flash(f"Erro ao obter plano: {e!s}", "error")
         return redirect(url_for("planos.listar_planos"))
 
 
@@ -193,10 +193,10 @@ def criar_plano():
         return redirect(url_for("planos.novo_plano"))
 
     except Exception as e:
-        planos_logger.error(f"Erro ao criar plano: {str(e)}", exc_info=True)
+        planos_logger.error(f"Erro ao criar plano: {e!s}", exc_info=True)
         if request.is_json:
             return jsonify({"error": str(e)}), 500
-        flash(f"Erro ao criar plano: {str(e)}", "error")
+        flash(f"Erro ao criar plano: {e!s}", "error")
         return redirect(url_for("planos.novo_plano"))
 
 
@@ -215,9 +215,8 @@ def atualizar_plano(plano_id):
             else:
                 data["ativo"] = False
 
-        if request.method == "POST" and "_method" in data:
-            if data["_method"].upper() != "PUT":
-                return jsonify({"error": "Método não permitido"}), 405
+        if request.method == "POST" and "_method" in data and data["_method"].upper() != "PUT":
+            return jsonify({"error": "Método não permitido"}), 405
 
         dados_atualizacao = {}
 
@@ -273,10 +272,10 @@ def atualizar_plano(plano_id):
         return redirect(url_for("planos.obter_plano", plano_id=plano_id))
 
     except Exception as e:
-        planos_logger.error(f"Erro ao atualizar plano {plano_id}: {str(e)}", exc_info=True)
+        planos_logger.error(f"Erro ao atualizar plano {plano_id}: {e!s}", exc_info=True)
         if request.is_json:
             return jsonify({"error": str(e)}), 500
-        flash(f"Erro ao atualizar plano: {str(e)}", "error")
+        flash(f"Erro ao atualizar plano: {e!s}", "error")
         return redirect(url_for("planos.obter_plano", plano_id=plano_id))
 
 
@@ -301,7 +300,7 @@ def excluir_plano(plano_id):
     except Exception as e:
         if request.is_json:
             return jsonify({"error": str(e)}), 500
-        flash(f"Erro ao excluir plano: {str(e)}", "error")
+        flash(f"Erro ao excluir plano: {e!s}", "error")
         return redirect(url_for("planos.listar_planos"))
 
 
@@ -360,7 +359,7 @@ def clonar_plano(plano_id):
 
     except Exception as e:
         planos_logger.error(f"Erro ao clonar plano {plano_id}: {e}", exc_info=True)
-        return jsonify({"error": f"Erro ao clonar plano: {str(e)}"}), 500
+        return jsonify({"error": f"Erro ao clonar plano: {e!s}"}), 500
 
 
 @planos_bp.route("/<int:plano_id>/preview", methods=["GET"])
@@ -392,7 +391,7 @@ def preview_plano(plano_id):
 
     except Exception as e:
         # Import traceback para log completo se necessário, mas logging.exception já faz isso
-        planos_logger.error(f"Erro ao buscar preview do plano {plano_id}: {str(e)}", exc_info=True)
+        planos_logger.error(f"Erro ao buscar preview do plano {plano_id}: {e!s}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -409,7 +408,7 @@ def aplicar_plano_implantacao(implantacao_id):
             raise ValidationError("ID do plano é obrigatório")
 
         plano_id = int(plano_id)
-        
+
         # Converter para bool se vier como string
         if isinstance(preservar_comentarios, str):
             preservar_comentarios = preservar_comentarios.lower() in ("true", "1", "sim", "yes")
@@ -426,18 +425,20 @@ def aplicar_plano_implantacao(implantacao_id):
                 pass
 
         planos_sucesso_service.aplicar_plano_a_implantacao_checklist(
-            implantacao_id=implantacao_id, 
-            plano_id=plano_id, 
-            usuario=usuario, 
+            implantacao_id=implantacao_id,
+            plano_id=plano_id,
+            usuario=usuario,
             responsavel_nome=responsavel_nome,
-            preservar_comentarios=preservar_comentarios
+            preservar_comentarios=preservar_comentarios,
         )
 
         if request.is_json:
             return jsonify({"success": True, "message": "Plano aplicado com sucesso à implantação"}), 200
 
         flash("Plano aplicado com sucesso!", "success")
-        impl = planos_sucesso_service.query_db("SELECT contexto FROM implantacoes WHERE id = %s", (implantacao_id,), one=True)
+        impl = planos_sucesso_service.query_db(
+            "SELECT contexto FROM implantacoes WHERE id = %s", (implantacao_id,), one=True
+        )
         context_bp = impl.get("contexto") if impl and impl.get("contexto") else "onboarding"
         return redirect(url_for(f"{context_bp}.ver_implantacao", impl_id=implantacao_id))
 
@@ -445,16 +446,20 @@ def aplicar_plano_implantacao(implantacao_id):
         if request.is_json:
             return jsonify({"error": str(e)}), 400
         flash(str(e), "error")
-        impl = planos_sucesso_service.query_db("SELECT contexto FROM implantacoes WHERE id = %s", (implantacao_id,), one=True)
+        impl = planos_sucesso_service.query_db(
+            "SELECT contexto FROM implantacoes WHERE id = %s", (implantacao_id,), one=True
+        )
         context_bp = impl.get("contexto") if impl and impl.get("contexto") else "onboarding"
         return redirect(url_for(f"{context_bp}.ver_implantacao", impl_id=implantacao_id))
 
     except Exception as e:
-        planos_logger.error(f"Erro ao aplicar plano {plano_id} à implantação {implantacao_id}: {str(e)}", exc_info=True)
+        planos_logger.error(f"Erro ao aplicar plano {plano_id} à implantação {implantacao_id}: {e!s}", exc_info=True)
         if request.is_json:
             return jsonify({"error": str(e)}), 500
-        flash(f"Erro ao aplicar plano: {str(e)}", "error")
-        impl = planos_sucesso_service.query_db("SELECT contexto FROM implantacoes WHERE id = %s", (implantacao_id,), one=True)
+        flash(f"Erro ao aplicar plano: {e!s}", "error")
+        impl = planos_sucesso_service.query_db(
+            "SELECT contexto FROM implantacoes WHERE id = %s", (implantacao_id,), one=True
+        )
         context_bp = impl.get("contexto") if impl and impl.get("contexto") else "onboarding"
         return redirect(url_for(f"{context_bp}.ver_implantacao", impl_id=implantacao_id))
 
@@ -465,10 +470,11 @@ def contar_comentarios_implantacao(implantacao_id):
     """Retorna a contagem de comentários de uma implantação."""
     try:
         from ..domain.checklist.comments import contar_comentarios_implantacao as contar_comentarios
+
         total = contar_comentarios(implantacao_id)
         return jsonify({"success": True, "total": total}), 200
     except Exception as e:
-        planos_logger.error(f"Erro ao contar comentários da implantação {implantacao_id}: {str(e)}", exc_info=True)
+        planos_logger.error(f"Erro ao contar comentários da implantação {implantacao_id}: {e!s}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -497,23 +503,26 @@ def remover_plano_implantacao(implantacao_id):
     try:
         user = get_current_user()
         usuario = user.get("usuario") if user else "sistema"
-        
+
         # Obter parâmetro excluir_comentarios do body JSON ou query string
         excluir_comentarios = False
         if request.is_json:
             data = request.get_json() or {}
             excluir_comentarios = data.get("excluir_comentarios", False)
         else:
-            excluir_comentarios = request.args.get("excluir_comentarios", "false").lower() in ("true", "1", "sim", "yes")
-        
+            excluir_comentarios = request.args.get("excluir_comentarios", "false").lower() in (
+                "true",
+                "1",
+                "sim",
+                "yes",
+            )
+
         # Converter para bool se vier como string
         if isinstance(excluir_comentarios, str):
             excluir_comentarios = excluir_comentarios.lower() in ("true", "1", "sim", "yes")
 
         planos_sucesso_service.remover_plano_de_implantacao(
-            implantacao_id=implantacao_id, 
-            usuario=usuario,
-            excluir_comentarios=excluir_comentarios
+            implantacao_id=implantacao_id, usuario=usuario, excluir_comentarios=excluir_comentarios
         )
 
         if request.is_json:
@@ -523,7 +532,9 @@ def remover_plano_implantacao(implantacao_id):
             return jsonify({"success": True, "message": msg}), 200
 
         flash("Plano removido da implantação!", "success")
-        impl = planos_sucesso_service.query_db("SELECT contexto FROM implantacoes WHERE id = %s", (implantacao_id,), one=True)
+        impl = planos_sucesso_service.query_db(
+            "SELECT contexto FROM implantacoes WHERE id = %s", (implantacao_id,), one=True
+        )
         context_bp = impl.get("contexto") if impl and impl.get("contexto") else "onboarding"
         return redirect(url_for(f"{context_bp}.ver_implantacao", impl_id=implantacao_id))
 
@@ -531,14 +542,18 @@ def remover_plano_implantacao(implantacao_id):
         if request.is_json:
             return jsonify({"error": str(e)}), 400
         flash(str(e), "error")
-        impl = planos_sucesso_service.query_db("SELECT contexto FROM implantacoes WHERE id = %s", (implantacao_id,), one=True)
+        impl = planos_sucesso_service.query_db(
+            "SELECT contexto FROM implantacoes WHERE id = %s", (implantacao_id,), one=True
+        )
         context_bp = impl.get("contexto") if impl and impl.get("contexto") else "onboarding"
         return redirect(url_for(f"{context_bp}.ver_implantacao", impl_id=implantacao_id))
 
     except Exception as e:
         if request.is_json:
             return jsonify({"error": str(e)}), 500
-        flash(f"Erro ao remover plano: {str(e)}", "error")
-        impl = planos_sucesso_service.query_db("SELECT contexto FROM implantacoes WHERE id = %s", (implantacao_id,), one=True)
+        flash(f"Erro ao remover plano: {e!s}", "error")
+        impl = planos_sucesso_service.query_db(
+            "SELECT contexto FROM implantacoes WHERE id = %s", (implantacao_id,), one=True
+        )
         context_bp = impl.get("contexto") if impl and impl.get("contexto") else "onboarding"
         return redirect(url_for(f"{context_bp}.ver_implantacao", impl_id=implantacao_id))

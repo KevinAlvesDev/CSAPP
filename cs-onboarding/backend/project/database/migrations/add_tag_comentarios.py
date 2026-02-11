@@ -24,8 +24,8 @@ def run_migration():
         # Verificar se a coluna já existe
         if db_type == "postgres":
             cursor.execute("""
-                SELECT column_name 
-                FROM information_schema.columns 
+                SELECT column_name
+                FROM information_schema.columns
                 WHERE table_name='comentarios_h' AND column_name='tag'
             """)
             exists = cursor.fetchone() is not None

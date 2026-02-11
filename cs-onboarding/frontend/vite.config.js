@@ -18,15 +18,15 @@ import viteCompression from 'vite-plugin-compression';
  * - Preview build: npm run preview
  */
 
-// Encontrar todos os arquivos JS de entrada
-const jsEntries = glob.sync('static/js/**/*.js', {
-    ignore: ['static/js/dist/**', 'static/js/tests/**', 'static/js/**/*.min.js'],
+// Encontrar todos os arquivos JS e TS de entrada
+const jsEntries = glob.sync('static/js/**/*.{js,ts}', {
+    ignore: ['static/js/dist/**', 'static/js/tests/**', 'static/js/**/*.min.js', 'static/js/**/*.d.ts'],
 });
 
 // Criar mapa de entradas para build
 const input = {};
 jsEntries.forEach((file) => {
-    const name = file.replace('static/js/', '').replace('.js', '');
+    const name = file.replace('static/js/', '').replace(/\.(js|ts)$/, '');
     input[name] = resolve(__dirname, file);
 });
 

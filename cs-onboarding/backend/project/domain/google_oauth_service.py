@@ -9,7 +9,6 @@ Este módulo implementa:
 """
 
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
 
 from flask import current_app, session
 
@@ -34,7 +33,7 @@ FEATURE_SCOPES = {
 }
 
 
-def get_user_google_token(user_email: str) -> Optional[Dict]:
+def get_user_google_token(user_email: str) -> dict | None:
     """
     Recupera o token do Google armazenado para um usuário.
 
@@ -70,7 +69,7 @@ def get_user_google_token(user_email: str) -> Optional[Dict]:
         return None
 
 
-def save_user_google_token(user_email: str, token: Dict) -> bool:
+def save_user_google_token(user_email: str, token: dict) -> bool:
     """
     Salva ou atualiza o token do Google para um usuário.
 
@@ -116,7 +115,7 @@ def save_user_google_token(user_email: str, token: Dict) -> bool:
         return False
 
 
-def token_is_expired(token: Dict) -> bool:
+def token_is_expired(token: dict) -> bool:
     """
     Verifica se um token está expirado.
 
@@ -140,7 +139,7 @@ def token_is_expired(token: Dict) -> bool:
     return datetime.utcnow() >= expires_at - timedelta(minutes=5)
 
 
-def refresh_google_token(user_email: str, refresh_token: str) -> Optional[Dict]:
+def refresh_google_token(user_email: str, refresh_token: str) -> dict | None:
     """
     Atualiza um token do Google usando o refresh_token.
 
@@ -190,7 +189,7 @@ def refresh_google_token(user_email: str, refresh_token: str) -> Optional[Dict]:
         return None
 
 
-def get_valid_token(user_email: str) -> Optional[Dict]:
+def get_valid_token(user_email: str) -> dict | None:
     """
     Obtém um token válido do Google, atualizando se necessário.
 
@@ -250,7 +249,7 @@ def user_has_scope(user_email: str, required_scope: str) -> bool:
     return required_scope in scopes
 
 
-def get_authorization_url_with_scopes(scopes: List[str], user_email: str = None) -> str:
+def get_authorization_url_with_scopes(scopes: list[str], user_email: str | None = None) -> str:
     """
     Gera URL de autorização do Google com escopos específicos.
     Implementa autorização incremental se o usuário já tiver alguns escopos.
@@ -313,7 +312,7 @@ def revoke_google_token(user_email: str) -> bool:
             return False
 
         # Revogar no Google
-        response = requests.post(
+        requests.post(
             "https://oauth2.googleapis.com/revoke",
             params={"token": access_token},
             headers={"content-type": "application/x-www-form-urlencoded"},

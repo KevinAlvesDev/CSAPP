@@ -1,122 +1,113 @@
-# 📋 SISTEMA DE MIGRATIONS - DOCUMENTAÇÃO CONSOLIDADA
+# Migrations Guide
 
-## Visão Geral
+## Configuração
 
-Este projeto tinha **3 sistemas de migrations paralelos** que foram consolidados:
-
-1. ~~`alembic/`~~ → **Descontinuado** - Mantido apenas para referência histórica
-2. ~~`backend/migrations/`~~ → **Descontinuado** - Scripts Python legados
-3. **`migrations/`** → **SISTEMA OFICIAL** - SQL direto com versionamento
-
-## 🎯 Sistema Oficial: `migrations/`
+As migrations são gerenciadas com **Alembic** e seguem o padrão de versionamento incremental.
 
 ### Estrutura
 
 ```
 migrations/
-├── env.py                              # Configuração Alembic (não usar diretamente)
-├── versions/                           # Arquivos de versão Alembic (legado)
-├── create_all_config_tables.sql        # ✅ Schema completo de configuração
-├── create_google_tokens_table.sql      # ✅ Tabela de tokens Google OAuth
-├── create_permissions_table.sql        # ✅ Sistema de permissões
-├── create_risc_events_table.sql        # ✅ Eventos RISC (segurança)
-├── create_tags_sistema.sql             # ✅ Tags do sistema
-├── producao_melhorias_2025-12-22.sql   # ✅ Melhorias de produção
-└── producao_melhorias_SIMPLES.sql      # ✅ Melhorias simplificadas
+├── alembic.ini          # Configuração do Alembic
+├── env.py               # Script de execução
+├── README.md            # Este arquivo
+├── versions/            # Migrations versionadas (Alembic)
+│   ├── 001_consolidated_base.py
+│   └── 002_add_performance_indexes.py
+├── *.sql                # Scripts SQL legados (referência)
+└── COMANDOS_PRODUCAO.sql
 ```
 
-### Como Executar Migrations
+## Comandos
 
-#### Desenvolvimento Local (SQLite)
-Migrations são aplicadas automaticamente pelo `schema.py` na inicialização.
+### Criar nova migration
 
-#### Produção (PostgreSQL)
+```bash
+# Gerar migration vazia
+alembic revision -m "descricao_da_migration"
 
-1. **Conectar ao banco de produção**:
-   ```bash
-   # Via Render Dashboard ou pgAdmin
-   psql $DATABASE_URL
-   ```
-
-2. **Executar SQL**:
-   ```bash
-   \i migrations/create_all_config_tables.sql
-   ```
-
-3. **Verificar**:
-   ```sql
-   SELECT table_name FROM information_schema.tables 
-   WHERE table_schema = 'public';
-   ```
-
-### Como Criar Nova Migration
-
-1. Criar arquivo SQL em `migrations/`:
-   ```
-   migrations/YYYY-MM-DD_descricao_da_mudanca.sql
-   ```
-
-2. Incluir header padrão:
-   ```sql
-   -- =====================================================
-   -- Migration: descricao_da_mudanca
-   -- Data: YYYY-MM-DD
-   -- Autor: seu_nome
-   -- =====================================================
-   -- Descrição:
-   -- [Descrever o que a migration faz]
-   -- =====================================================
-   
-   -- UP: Aplicar mudanças
-   BEGIN;
-   
-   -- Suas alterações aqui
-   
-   COMMIT;
-   
-   -- DOWN: Reverter mudanças (comentado, usar manualmente se necessário)
-   -- BEGIN;
-   -- DROP TABLE IF EXISTS sua_tabela;
-   -- COMMIT;
-   ```
-
-3. Documentar no CHANGELOG ou README
-
-## ⚠️ Sistemas Legados (NÃO USAR)
-
-### `backend/migrations/` (Descontinuado)
-Scripts Python que foram usados para migrations específicas.
-Mantido apenas para referência histórica.
-
-### `alembic/` config (Descontinuado)
-Configuração Alembic que não deve ser usada.
-O arquivo `alembic.ini` na raiz é mantido para compatibilidade,
-mas não é o método preferido.
-
-## 🔄 Fluxo de Trabalho Recomendado
-
-```mermaid
-graph LR
-    A[Desenvolvimento Local] -->|Testar| B[SQLite]
-    B -->|Funciona| C[Criar SQL Migration]
-    C -->|Review| D[Commit + PR]
-    D -->|Merge| E[Aplicar em Produção]
-    E -->|Verificar| F[Monitorar Logs]
+# Gerar migration com autogenerate (requer modelos SQLAlchemy)
+alembic revision --autogenerate -m "descricao_da_migration"
 ```
 
-## 📝 Convenções
+### Aplicar migrations
 
-1. **Nomes de arquivo**: `YYYY-MM-DD_descricao.sql`
-2. **Sempre usar transações**: `BEGIN; ... COMMIT;`
-3. **Incluir DOWN migration**: Comentada, para rollback manual
-4. **Testar localmente**: Antes de aplicar em produção
-5. **Backup**: Sempre fazer backup antes de migrations destrutivas
+```bash
+# Aplicar todas as migrations pendentes
+alembic upgrade head
 
-## 🚨 Checklist de Deploy
+# Aplicar uma migration específica
+alembic upgrade 001_consolidated_base
 
-- [ ] Migration testada localmente
-- [ ] Backup do banco de produção realizado
-- [ ] SQL revisado por outro desenvolvedor
-- [ ] Migration aplicada em staging (se disponível)
-- [ ] Monitoramento de erros ativo
-- [ ] Rollback plan documentado
+# Verificar migration atual
+alembic current
+
+# Ver histórico
+alembic history
+```
+
+### Reverter migrations
+
+```bash
+# Reverter última migration
+alembic downgrade -1
+
+# Reverter para uma revisão específica
+alembic downgrade 001_consolidated_base
+
+# Reverter todas
+alembic downgrade base
+```
+
+### Marcar como aplicada (banco existente)
+
+Para bancos de produção que já possuem o schema:
+
+```bash
+# Marcar a migration base como já aplicada
+alembic stamp 001_consolidated_base
+
+# Marcar todas como aplicadas
+alembic stamp head
+```
+
+## Convenções
+
+### Nomenclatura
+
+Formato: `{numero}_{descricao}.py`
+
+- `001_consolidated_base.py` — Schema base
+- `002_add_performance_indexes.py` — Índices de performance
+- `003_add_novo_campo.py` — Exemplo de adição de campo
+
+### Regras
+
+1. **Nunca edite** migrations já aplicadas em produção  
+2. **Sempre teste** localmente antes de aplicar em produção
+3. **Inclua downgrade** — Toda migration deve ser reversível
+4. **Uma responsabilidade** — Cada migration deve ter um único propósito
+5. **Nomeie descritivamente** — O nome deve explicar a mudança
+
+### Scripts SQL Legados
+
+Os scripts `.sql` no diretório `migrations/` são **referência histórica**.  
+Novas mudanças devem sempre usar Alembic.
+
+| Script Legado | Coberto por |
+|---------------|-------------|
+| `create_all_config_tables.sql` | `001_consolidated_base.py` |
+| `create_tags_sistema.sql` | `001_consolidated_base.py` |
+| `create_permissions_table.sql` | `001_consolidated_base.py` |
+| `create_google_tokens_table.sql` | `001_consolidated_base.py` |
+| `create_risc_events_table.sql` | `001_consolidated_base.py` |
+| `add_performance_indexes.*` | `002_add_performance_indexes.py` |
+
+## Workflow de Desenvolvimento
+
+1. **Desenvolva** a feature com as mudanças de schema necessárias
+2. **Crie** a migration: `alembic revision -m "add_campo_xyz"`
+3. **Teste** localmente: `alembic upgrade head`
+4. **Reverta** para validar: `alembic downgrade -1`
+5. **Aplique** novamente: `alembic upgrade head`
+6. **Commit** a migration junto com o código

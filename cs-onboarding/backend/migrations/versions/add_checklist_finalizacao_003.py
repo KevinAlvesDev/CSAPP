@@ -48,12 +48,12 @@ def upgrade_postgres(cursor):
 
     # Índices para performance
     cursor.execute("""
-        CREATE INDEX IF NOT EXISTS idx_checklist_fin_items_impl 
+        CREATE INDEX IF NOT EXISTS idx_checklist_fin_items_impl
         ON checklist_finalizacao_items(implantacao_id)
     """)
 
     cursor.execute("""
-        CREATE INDEX IF NOT EXISTS idx_checklist_fin_items_concluido 
+        CREATE INDEX IF NOT EXISTS idx_checklist_fin_items_concluido
         ON checklist_finalizacao_items(implantacao_id, concluido)
     """)
 
@@ -104,7 +104,7 @@ def upgrade_postgres(cursor):
     for titulo, descricao, obrigatorio, ordem, requer_evidencia in templates_padrao:
         cursor.execute(
             """
-            INSERT INTO checklist_finalizacao_templates 
+            INSERT INTO checklist_finalizacao_templates
             (titulo, descricao, obrigatorio, ordem, requer_evidencia, tipo_evidencia)
             VALUES (%s, %s, %s, %s, %s, %s)
         """,
@@ -155,12 +155,12 @@ def upgrade_sqlite(cursor):
 
     # Índices
     cursor.execute("""
-        CREATE INDEX IF NOT EXISTS idx_checklist_fin_items_impl 
+        CREATE INDEX IF NOT EXISTS idx_checklist_fin_items_impl
         ON checklist_finalizacao_items(implantacao_id)
     """)
 
     cursor.execute("""
-        CREATE INDEX IF NOT EXISTS idx_checklist_fin_items_concluido 
+        CREATE INDEX IF NOT EXISTS idx_checklist_fin_items_concluido
         ON checklist_finalizacao_items(implantacao_id, concluido)
     """)
 
@@ -205,7 +205,7 @@ def upgrade_sqlite(cursor):
     for titulo, descricao, obrigatorio, ordem, requer_evidencia in templates_padrao:
         cursor.execute(
             """
-            INSERT INTO checklist_finalizacao_templates 
+            INSERT INTO checklist_finalizacao_templates
             (titulo, descricao, obrigatorio, ordem, requer_evidencia, tipo_evidencia)
             VALUES (?, ?, ?, ?, ?, ?)
         """,

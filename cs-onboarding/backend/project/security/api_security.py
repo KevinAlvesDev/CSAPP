@@ -74,10 +74,7 @@ def _is_origin_allowed(origin, allowed_origins):
     if not origin:
         return False
     origin = origin.rstrip("/")
-    for allowed in allowed_origins:
-        if origin == allowed.rstrip("/"):
-            return True
-    return False
+    return any(origin == allowed.rstrip("/") for allowed in allowed_origins)
 
 
 def _extract_origin_from_referer(referer):

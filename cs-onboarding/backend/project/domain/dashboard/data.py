@@ -9,7 +9,6 @@ from datetime import date, datetime
 from flask import current_app, g
 
 from ...common.utils import format_date_br, format_date_iso_for_json
-from ...config.cache_config import cache
 from ...constants import PERFIL_ADMIN, PERFIL_COORDENADOR, PERFIL_GERENTE
 from ...db import execute_db, query_db
 from ..implantacao_service import _get_progress
@@ -197,7 +196,7 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
         except Exception:
             total_tasks = impl.get("total_tarefas", 0) or 0
             done_tasks = impl.get("tarefas_concluidas", 0) or 0
-            prog_percent = int(round((done_tasks / total_tasks) * 100)) if total_tasks > 0 else 100
+            prog_percent = round((done_tasks / total_tasks) * 100) if total_tasks > 0 else 100
         impl["progresso"] = prog_percent
 
         try:
@@ -350,10 +349,7 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
         except Exception as update_err:
             current_app.logger.error(f"Failed to update metrics for user {user_email}: {update_err}")
 
-    if pagination:
-        result = (dashboard_data, metrics, pagination)
-    else:
-        result = (dashboard_data, metrics)
+    result = (dashboard_data, metrics, pagination) if pagination else (dashboard_data, metrics)
 
     # Cache desabilitado para garantir dados em tempo real
     # if cache and use_cache:
@@ -367,7 +363,7 @@ def get_tags_metrics(start_date=None, end_date=None, user_email=None):
     Busca métricas de tags de comentários (Interno/Externo e Tipos).
     """
     query_sql = """
-        SELECT 
+        SELECT
             ch.usuario_cs,
             p.nome as user_name,
             ch.visibilidade,

@@ -37,8 +37,8 @@ def run_postgres_migration():
 
         # Verificar se a tabela já existe
         cur.execute("""
-            SELECT table_name 
-            FROM information_schema.tables 
+            SELECT table_name
+            FROM information_schema.tables
             WHERE table_name='avisos_implantacao'
         """)
 
@@ -62,7 +62,7 @@ def run_postgres_migration():
 
         # Criar índice para busca rápida
         cur.execute("""
-            CREATE INDEX idx_avisos_implantacao_id 
+            CREATE INDEX idx_avisos_implantacao_id
             ON avisos_implantacao(implantacao_id)
         """)
 
@@ -125,7 +125,7 @@ def run_sqlite_migration():
 
         # Criar índice para busca rápida
         cur.execute("""
-            CREATE INDEX idx_avisos_implantacao_id 
+            CREATE INDEX idx_avisos_implantacao_id
             ON avisos_implantacao(implantacao_id)
         """)
 

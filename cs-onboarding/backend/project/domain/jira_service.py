@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import os
 
 import requests
@@ -113,7 +112,7 @@ def search_issues_by_context(implantacao_data, max_results=50, extra_keys=None):
     # 3. Process Result
     final_issues = []
     # Normalizar chaves para uppercase para is_linked check
-    extra_keys_set = set(str(k).strip().upper() for k in extra_keys) if extra_keys else set()
+    extra_keys_set = {str(k).strip().upper() for k in extra_keys} if extra_keys else set()
 
     # Sort distinct values by created date descending?
     # Converting map values to list
@@ -355,7 +354,7 @@ def get_issue_details(issue_key):
 
     except Exception as e:
         logger.error(f"Erro ao buscar issue {issue_key}: {e}")
-        return {"error": f"Erro ao buscar ticket: {str(e)}"}
+        return {"error": f"Erro ao buscar ticket: {e!s}"}
 
 
 # ==========================================
@@ -468,7 +467,7 @@ def remove_jira_link(implantacao_id, jira_key):
     Remove o vínculo entre implantação e ticket Jira.
     Retorna True se removido ou se já não existia.
     """
-    conn, db_type = _get_db_conn()
+    conn, _db_type = _get_db_conn()
     if not conn:
         raise Exception("Falha de conexão com banco de dados")
 

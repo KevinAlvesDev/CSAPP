@@ -4,6 +4,7 @@ Função principal para consulta de empresas no banco externo OAMD.
 Princípio SOLID: Single Responsibility (orquestração)
 """
 
+import contextlib
 import json
 
 from sqlalchemy.exc import OperationalError
@@ -53,10 +54,8 @@ def consultar_empresa_oamd(id_favorecido=None, infra_req=None):
         empresa, tipos = sanitize_empresa_data(empresa_raw)
 
         # Logar tipos para debugging
-        try:
+        with contextlib.suppress(Exception):
             api_logger.info(f"consulta_oamd_tipos: {tipos}")
-        except Exception:
-            pass
 
         # Mapear campos para o frontend
         mapped = map_oamd_to_frontend(empresa, id_favorecido)

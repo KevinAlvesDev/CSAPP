@@ -21,31 +21,31 @@ def handle_api_errors(f):
             return f(*args, **kwargs)
         except ValueError as e:
             # Erros de validação de negócio
-            api_logger.warning(f"Validation error in {f.__name__}: {str(e)}")
+            api_logger.warning(f"Validation error in {f.__name__}: {e!s}")
             return jsonify({"ok": False, "error": str(e), "error_type": "validation_error"}), 400
         except PermissionError as e:
             # Erros de permissão
-            api_logger.warning(f"Permission denied in {f.__name__}: {str(e)}")
+            api_logger.warning(f"Permission denied in {f.__name__}: {e!s}")
             return jsonify({"ok": False, "error": str(e) or "Permissão negada", "error_type": "permission_error"}), 403
         except FileNotFoundError as e:
             # Recurso não encontrado
-            api_logger.warning(f"Resource not found in {f.__name__}: {str(e)}")
+            api_logger.warning(f"Resource not found in {f.__name__}: {e!s}")
             return jsonify({"ok": False, "error": str(e) or "Recurso não encontrado", "error_type": "not_found"}), 404
         except ConnectionError as e:
             # Erros de conexão (banco, APIs externas)
-            api_logger.error(f"Connection error in {f.__name__}: {str(e)}")
+            api_logger.error(f"Connection error in {f.__name__}: {e!s}")
             return jsonify(
                 {"ok": False, "error": "Erro de conexão. Tente novamente.", "error_type": "connection_error"}
             ), 503
         except TimeoutError as e:
             # Timeout
-            api_logger.error(f"Timeout in {f.__name__}: {str(e)}")
+            api_logger.error(f"Timeout in {f.__name__}: {e!s}")
             return jsonify(
                 {"ok": False, "error": "Operação demorou muito. Tente novamente.", "error_type": "timeout_error"}
             ), 504
         except Exception as e:
             # Erro inesperado
-            api_logger.error(f"Unexpected error in {f.__name__}: {str(e)}", exc_info=True)
+            api_logger.error(f"Unexpected error in {f.__name__}: {e!s}", exc_info=True)
 
             # Em desenvolvimento, mostrar erro completo
             if current_app.config.get("DEBUG"):
@@ -86,7 +86,7 @@ def handle_view_errors(f):
             flash(str(e) or "Recurso não encontrado", "error")
             return redirect(url_for("onboarding.dashboard"))
         except Exception as e:
-            api_logger.error(f"Error in view {f.__name__}: {str(e)}", exc_info=True)
+            api_logger.error(f"Error in view {f.__name__}: {e!s}", exc_info=True)
 
             if current_app.config.get("DEBUG"):
                 # Em desenvolvimento, mostrar erro

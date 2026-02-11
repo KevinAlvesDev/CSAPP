@@ -58,7 +58,7 @@ def _checklist_api_guard():
 @checklist_bp.route("/toggle/<int:item_id>", methods=["POST"])
 @login_required
 @validate_api_origin
-@validate_context_access(id_param='item_id', entity_type='checklist_item')
+@validate_context_access(id_param="item_id", entity_type="checklist_item")
 @limiter.limit("1000 per minute", key_func=lambda: g.user_email or get_remote_address())
 def toggle_item(item_id: int):
     """
@@ -75,7 +75,7 @@ def toggle_item(item_id: int):
     try:
         item_id = validate_integer(item_id, min_value=1)
     except ValidationError as e:
-        return jsonify({"ok": False, "error": f"ID inválido: {str(e)}"}), 400
+        return jsonify({"ok": False, "error": f"ID inválido: {e!s}"}), 400
 
     usuario_email = g.user_email if hasattr(g, "user_email") else None
 
@@ -146,7 +146,7 @@ def toggle_item(item_id: int):
 @checklist_bp.route("/comment/<int:item_id>", methods=["POST"])
 @login_required
 @validate_api_origin
-@validate_context_access(id_param='item_id', entity_type='checklist_item')
+@validate_context_access(id_param="item_id", entity_type="checklist_item")
 @limiter.limit("1000 per minute", key_func=lambda: g.user_email or get_remote_address())
 def add_comment(item_id: int):
     """
@@ -155,7 +155,7 @@ def add_comment(item_id: int):
     try:
         item_id = validate_integer(item_id, min_value=1)
     except ValidationError as e:
-        return jsonify({"ok": False, "error": f"ID inválido: {str(e)}"}), 400
+        return jsonify({"ok": False, "error": f"ID inválido: {e!s}"}), 400
 
     if not request.is_json:
         return jsonify({"ok": False, "error": "Content-Type deve ser application/json"}), 400
@@ -240,7 +240,7 @@ def add_comment(item_id: int):
 @checklist_bp.route("/implantacao/<int:impl_id>/comments", methods=["GET"])
 @login_required
 @validate_api_origin
-@validate_context_access(id_param='impl_id', entity_type='implantacao')
+@validate_context_access(id_param="impl_id", entity_type="implantacao")
 def get_implantacao_comments(impl_id: int):
     """
     Retorna todos os comentários das tarefas de uma implantação.
@@ -282,7 +282,7 @@ def get_implantacao_comments(impl_id: int):
 @checklist_bp.route("/comments/<int:item_id>", methods=["GET"])
 @login_required
 @validate_api_origin
-@validate_context_access(id_param='item_id', entity_type='checklist_item')
+@validate_context_access(id_param="item_id", entity_type="checklist_item")
 def get_comments(item_id: int):
     """
     Retorna o histórico de comentários de um item.
@@ -290,7 +290,7 @@ def get_comments(item_id: int):
     try:
         item_id = validate_integer(item_id, min_value=1)
     except ValidationError as e:
-        return jsonify({"ok": False, "error": f"ID inválido: {str(e)}"}), 400
+        return jsonify({"ok": False, "error": f"ID inválido: {e!s}"}), 400
 
     try:
         result = listar_comentarios_item(item_id)
@@ -320,7 +320,7 @@ def send_comment_email(comentario_id):
     try:
         comentario_id = validate_integer(comentario_id, min_value=1)
     except ValidationError as e:
-        return jsonify({"ok": False, "error": f"ID inválido: {str(e)}"}), 400
+        return jsonify({"ok": False, "error": f"ID inválido: {e!s}"}), 400
 
     try:
         dados = obter_comentario_para_email(comentario_id)
@@ -384,7 +384,7 @@ def update_comment(comentario_id):
     try:
         comentario_id = validate_integer(comentario_id, min_value=1)
     except ValidationError as e:
-        return jsonify({"ok": False, "error": f"ID inválido: {str(e)}"}), 400
+        return jsonify({"ok": False, "error": f"ID inválido: {e!s}"}), 400
 
     if not request.is_json:
         return jsonify({"ok": False, "error": "Content-Type deve ser application/json"}), 400
@@ -420,7 +420,7 @@ def delete_comment(comentario_id):
     try:
         comentario_id = validate_integer(comentario_id, min_value=1)
     except ValidationError as e:
-        return jsonify({"ok": False, "error": f"ID inválido: {str(e)}"}), 400
+        return jsonify({"ok": False, "error": f"ID inválido: {e!s}"}), 400
 
     usuario_email = g.user_email if hasattr(g, "user_email") else None
 
@@ -440,7 +440,7 @@ def delete_comment(comentario_id):
 @checklist_bp.route("/delete/<int:item_id>", methods=["POST"])
 @login_required
 @validate_api_origin
-@validate_context_access(id_param='item_id', entity_type='checklist_item')
+@validate_context_access(id_param="item_id", entity_type="checklist_item")
 @limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 def delete_item(item_id: int):
     """
@@ -542,7 +542,7 @@ def get_item_progress(item_id):
     try:
         item_id = validate_integer(item_id, min_value=1)
     except ValidationError as e:
-        return jsonify({"ok": False, "error": f"ID inválido: {str(e)}"}), 400
+        return jsonify({"ok": False, "error": f"ID inválido: {e!s}"}), 400
 
     try:
         stats = get_item_progress_stats(item_id)
@@ -562,13 +562,13 @@ def get_item_progress(item_id):
 @checklist_bp.route("/item/<int:item_id>/responsavel", methods=["PATCH"])
 @login_required
 @validate_api_origin
-@validate_context_access(id_param='item_id', entity_type='checklist_item')
+@validate_context_access(id_param="item_id", entity_type="checklist_item")
 @limiter.limit("200 per minute", key_func=lambda: g.user_email or get_remote_address())
 def update_responsavel(item_id: int):
     try:
         item_id = validate_integer(item_id, min_value=1)
     except ValidationError as e:
-        return jsonify({"ok": False, "error": f"ID inválido: {str(e)}"}), 400
+        return jsonify({"ok": False, "error": f"ID inválido: {e!s}"}), 400
 
     if not request.is_json:
         return jsonify({"ok": False, "error": "Content-Type deve ser application/json"}), 400
@@ -594,13 +594,13 @@ def update_responsavel(item_id: int):
 @checklist_bp.route("/item/<int:item_id>/prazos", methods=["PATCH", "POST"])
 @login_required
 @validate_api_origin
-@validate_context_access(id_param='item_id', entity_type='checklist_item')
+@validate_context_access(id_param="item_id", entity_type="checklist_item")
 @limiter.limit("200 per minute", key_func=lambda: g.user_email or get_remote_address())
 def update_prazos(item_id: int):
     try:
         item_id = validate_integer(item_id, min_value=1)
     except ValidationError as e:
-        return jsonify({"ok": False, "error": f"ID inválido: {str(e)}"}), 400
+        return jsonify({"ok": False, "error": f"ID inválido: {e!s}"}), 400
     if not request.is_json:
         return jsonify({"ok": False, "error": "Content-Type deve ser application/json"}), 400
     data = request.get_json() or {}
@@ -627,7 +627,7 @@ def get_responsavel_history(item_id):
     try:
         item_id = validate_integer(item_id, min_value=1)
     except ValidationError as e:
-        return jsonify({"ok": False, "error": f"ID inválido: {str(e)}"}), 400
+        return jsonify({"ok": False, "error": f"ID inválido: {e!s}"}), 400
     try:
         entries = obter_historico_responsavel(item_id)
         return jsonify({"ok": True, "item_id": item_id, "history": entries})
@@ -643,7 +643,7 @@ def get_prazos_history(item_id):
     try:
         item_id = validate_integer(item_id, min_value=1)
     except ValidationError as e:
-        return jsonify({"ok": False, "error": f"ID inválido: {str(e)}"}), 400
+        return jsonify({"ok": False, "error": f"ID inválido: {e!s}"}), 400
     try:
         entries = obter_historico_prazos(item_id)
         return jsonify({"ok": True, "history": entries})
@@ -655,7 +655,7 @@ def get_prazos_history(item_id):
 @checklist_bp.route("/item/<int:item_id>/move", methods=["PATCH", "POST"])
 @login_required
 @validate_api_origin
-@validate_context_access(id_param='item_id', entity_type='checklist_item')
+@validate_context_access(id_param="item_id", entity_type="checklist_item")
 @limiter.limit("100 per minute", key_func=lambda: g.user_email or get_remote_address())
 def move_item_endpoint(item_id: int):
     """
@@ -670,7 +670,7 @@ def move_item_endpoint(item_id: int):
     try:
         item_id = validate_integer(item_id, min_value=1)
     except ValidationError as e:
-        return jsonify({"ok": False, "error": f"ID inválido: {str(e)}"}), 400
+        return jsonify({"ok": False, "error": f"ID inválido: {e!s}"}), 400
 
     if not request.is_json:
         return jsonify({"ok": False, "error": "Content-Type deve ser application/json"}), 400

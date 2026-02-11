@@ -7,7 +7,7 @@ from psycopg2 import IntegrityError as Psycopg2IntegrityError
 from werkzeug.security import generate_password_hash
 
 from ..config.logging_config import auth_logger
-from ..constants import ADMIN_EMAIL, MASTER_ADMIN_EMAIL, PERFIL_ADMIN, PERFIL_IMPLANTADOR
+from ..constants import MASTER_ADMIN_EMAIL, PERFIL_ADMIN, PERFIL_IMPLANTADOR
 from ..db import execute_db, query_db
 
 
@@ -54,7 +54,7 @@ def sync_user_profile_service(user_email, user_name, auth0_user_id):
     except ValueError as ve:
         raise ve
     except Exception as db_error:
-        auth_logger.error(f"Critical error syncing user profile {user_email}: {str(db_error)}")
+        auth_logger.error(f"Critical error syncing user profile {user_email}: {db_error!s}")
         raise db_error
 
 

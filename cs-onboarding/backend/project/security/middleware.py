@@ -1,3 +1,5 @@
+from datetime import UTC
+
 from flask import request
 
 
@@ -50,8 +52,9 @@ def init_security_headers(app):
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
             # Adicionar timestamp para debugging de cache
-            from datetime import datetime, timezone
-            response.headers["X-Response-Time"] = datetime.now(timezone.utc).isoformat()
+            from datetime import datetime
+
+            response.headers["X-Response-Time"] = datetime.now(UTC).isoformat()
         elif response.content_type and "text/html" in response.content_type:
             # Páginas HTML dinâmicas: não cachear para garantir dados frescos
             response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, private"

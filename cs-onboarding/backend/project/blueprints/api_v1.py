@@ -12,6 +12,9 @@ Endpoints disponíveis:
 - POST /api/v1/oamd/implantacoes/<id>/aplicar - Aplica dados externos
 """
 
+import contextlib
+from datetime import UTC
+
 from flask import Blueprint, g, jsonify, request
 from flask_limiter.util import get_remote_address
 
@@ -79,7 +82,12 @@ def list_implantacoes():
             context = None  # Ignorar valores inválidos
 
         result = listar_implantacoes(
-            user_email=user_email, status_filter=status_filter, page=page, per_page=per_page, is_admin=False, context=context
+            user_email=user_email,
+            status_filter=status_filter,
+            page=page,
+            per_page=per_page,
+            is_admin=False,
+            context=context,
         )
 
         return jsonify({"ok": True, **result})
@@ -375,9 +383,7 @@ def list_avisos(impl_id):
 
                     # Se o datetime não tem timezone, assumir que é UTC
                     if data_criacao.tzinfo is None:
-                        from datetime import timezone as tz
-
-                        data_criacao = data_criacao.replace(tzinfo=tz.utc)
+                        data_criacao = data_criacao.replace(tzinfo=UTC)
 
                     # Converter para Brasília
                     data_brasilia = data_criacao.astimezone(tz_brasilia)
@@ -469,9 +475,7 @@ def get_aviso(impl_id, aviso_id):
 
                 # Se o datetime não tem timezone, assumir que é UTC
                 if data_criacao.tzinfo is None:
-                    from datetime import timezone as tz
-
-                    data_criacao = data_criacao.replace(tzinfo=tz.utc)
+                    data_criacao = data_criacao.replace(tzinfo=UTC)
 
                 # Converter para Brasília
                 data_brasilia = data_criacao.astimezone(tz_brasilia)
@@ -550,7 +554,7 @@ def create_aviso(impl_id):
             cur.execute(
                 _adapt_query(
                     """
-                INSERT INTO avisos_implantacao 
+                INSERT INTO avisos_implantacao
                 (implantacao_id, tipo, titulo, mensagem, criado_por, data_criacao)
                 VALUES (%s, %s, %s, %s, %s, %s)
             """,
@@ -563,7 +567,7 @@ def create_aviso(impl_id):
             cur.execute(
                 _adapt_query(
                     """
-                INSERT INTO avisos_implantacao 
+                INSERT INTO avisos_implantacao
                 (implantacao_id, tipo, titulo, mensagem, criado_por, data_criacao)
                 VALUES (%s, %s, %s, %s, %s, %s)
                 RETURNING id
@@ -579,10 +583,8 @@ def create_aviso(impl_id):
         conn.close()
 
         # Registrar na Timeline
-        try:
+        with contextlib.suppress(Exception):
             logar_timeline(impl_id, user_email, "aviso_criado", f'Aviso "{titulo}" foi criado.')
-        except Exception:
-            pass
 
         return jsonify({"ok": True, "message": "Aviso criado com sucesso", "aviso_id": aviso_id}), 201
 
@@ -641,7 +643,7 @@ def update_aviso(impl_id, aviso_id):
                     """
                 SELECT a.id FROM avisos_implantacao a
                 JOIN implantacoes i ON a.implantacao_id = i.id
-                WHERE a.id = %s AND a.implantacao_id = %s 
+                WHERE a.id = %s AND a.implantacao_id = %s
                 AND (a.criado_por = %s OR i.usuario_cs = %s)
             """,
                     db_type,
@@ -672,10 +674,8 @@ def update_aviso(impl_id, aviso_id):
         conn.close()
 
         # Registrar na Timeline
-        try:
+        with contextlib.suppress(Exception):
             logar_timeline(impl_id, user_email, "aviso_atualizado", f'Aviso "{titulo}" foi atualizado.')
-        except Exception:
-            pass
 
         return jsonify({"ok": True, "message": "Aviso atualizado com sucesso"})
 
@@ -720,7 +720,7 @@ def delete_aviso(impl_id, aviso_id):
                     """
                 SELECT a.id FROM avisos_implantacao a
                 JOIN implantacoes i ON a.implantacao_id = i.id
-                WHERE a.id = %s AND a.implantacao_id = %s 
+                WHERE a.id = %s AND a.implantacao_id = %s
                 AND (a.criado_por = %s OR i.usuario_cs = %s)
             """,
                     db_type,
@@ -741,10 +741,8 @@ def delete_aviso(impl_id, aviso_id):
         conn.close()
 
         # Registrar na Timeline
-        try:
+        with contextlib.suppress(Exception):
             logar_timeline(impl_id, user_email, "aviso_excluido", "Aviso foi excluído.")
-        except Exception:
-            pass
 
         return jsonify({"ok": True, "message": "Aviso excluído com sucesso"})
 

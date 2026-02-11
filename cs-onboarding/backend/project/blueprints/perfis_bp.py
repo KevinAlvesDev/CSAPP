@@ -18,19 +18,19 @@ logger = get_logger("perfis")
 def _get_dashboard_redirect():
     """Detecta o contexto atual e retorna o redirect apropriado para o dashboard."""
     # Primeiro tenta pegar do g.modulo_atual (se disponível)
-    if hasattr(g, 'modulo_atual'):
-        if g.modulo_atual == 'grandes_contas':
+    if hasattr(g, "modulo_atual"):
+        if g.modulo_atual == "grandes_contas":
             return redirect(url_for("grandes_contas.dashboard"))
-        elif g.modulo_atual == 'ongoing':
+        elif g.modulo_atual == "ongoing":
             return redirect(url_for("ongoing.dashboard"))
-    
+
     # Fallback: verifica o referer
-    referer = request.headers.get('Referer', '')
-    if '/grandes-contas/' in referer:
+    referer = request.headers.get("Referer", "")
+    if "/grandes-contas/" in referer:
         return redirect(url_for("grandes_contas.dashboard"))
-    elif '/ongoing/' in referer:
+    elif "/ongoing/" in referer:
         return redirect(url_for("ongoing.dashboard"))
-    
+
     # Default: onboarding
     return redirect(url_for("onboarding.dashboard"))
 
@@ -38,14 +38,14 @@ def _get_dashboard_redirect():
 @perfis_bp.before_request
 def set_module_context():
     """Define o contexto do módulo atual baseado no referer."""
-    referer = request.headers.get('Referer', '')
-    
-    if '/grandes-contas/' in referer:
-        g.modulo_atual = 'grandes_contas'
-    elif '/ongoing/' in referer:
-        g.modulo_atual = 'ongoing'
+    referer = request.headers.get("Referer", "")
+
+    if "/grandes-contas/" in referer:
+        g.modulo_atual = "grandes_contas"
+    elif "/ongoing/" in referer:
+        g.modulo_atual = "ongoing"
     else:
-        g.modulo_atual = 'onboarding'
+        g.modulo_atual = "onboarding"
 
 
 @perfis_bp.route("/", methods=["GET"])
@@ -57,7 +57,7 @@ def listar_perfis():
         return render_template("pages/perfis_lista.html", perfis=perfis)
     except Exception as e:
         logger.error(f"Erro ao listar perfis: {e}", exc_info=True)
-        flash(f"Erro ao carregar perfis: {str(e)}", "error")
+        flash(f"Erro ao carregar perfis: {e!s}", "error")
         return _get_dashboard_redirect()
 
 
@@ -86,7 +86,7 @@ def novo_perfil():
         )
     except Exception as e:
         logger.error(f"Erro ao abrir formulário de novo perfil: {e}", exc_info=True)
-        flash(f"Erro: {str(e)}", "error")
+        flash(f"Erro: {e!s}", "error")
         return redirect(url_for("perfis.listar_perfis"))
 
 
@@ -105,7 +105,7 @@ def editar_perfil(perfil_id):
         return render_template("pages/perfis_editor.html", perfil=perfil, categorias=categorias, modo="editar")
     except Exception as e:
         logger.error(f"Erro ao editar perfil {perfil_id}: {e}", exc_info=True)
-        flash(f"Erro: {str(e)}", "error")
+        flash(f"Erro: {e!s}", "error")
         return redirect(url_for("perfis.listar_perfis"))
 
 
@@ -149,7 +149,7 @@ def criar_perfil():
         logger.error(f"Erro ao criar perfil: {e}", exc_info=True)
         if request.is_json:
             return jsonify({"error": str(e)}), 500
-        flash(f"Erro ao criar perfil: {str(e)}", "error")
+        flash(f"Erro ao criar perfil: {e!s}", "error")
         return redirect(url_for("perfis.novo_perfil"))
 
 
@@ -178,7 +178,7 @@ def atualizar_perfil(perfil_id):
         logger.error(f"Erro ao atualizar perfil {perfil_id}: {e}", exc_info=True)
         if request.is_json:
             return jsonify({"error": str(e)}), 500
-        flash(f"Erro: {str(e)}", "error")
+        flash(f"Erro: {e!s}", "error")
         return redirect(url_for("perfis.editar_perfil", perfil_id=perfil_id))
 
 
@@ -210,7 +210,7 @@ def atualizar_permissoes(perfil_id):
         logger.error(f"Erro ao atualizar permissões do perfil {perfil_id}: {e}", exc_info=True)
         if request.is_json:
             return jsonify({"error": str(e)}), 500
-        flash(f"Erro: {str(e)}", "error")
+        flash(f"Erro: {e!s}", "error")
         return redirect(url_for("perfis.editar_perfil", perfil_id=perfil_id))
 
 
@@ -236,7 +236,7 @@ def excluir_perfil(perfil_id):
         logger.error(f"Erro ao excluir perfil {perfil_id}: {e}", exc_info=True)
         if request.is_json:
             return jsonify({"error": str(e)}), 500
-        flash(f"Erro: {str(e)}", "error")
+        flash(f"Erro: {e!s}", "error")
         return redirect(url_for("perfis.listar_perfis"))
 
 
@@ -269,7 +269,7 @@ def clonar_perfil(perfil_id):
         logger.error(f"Erro ao clonar perfil {perfil_id}: {e}", exc_info=True)
         if request.is_json:
             return jsonify({"error": str(e)}), 500
-        flash(f"Erro: {str(e)}", "error")
+        flash(f"Erro: {e!s}", "error")
         return redirect(url_for("perfis.listar_perfis"))
 
 

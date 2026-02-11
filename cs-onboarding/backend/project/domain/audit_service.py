@@ -4,7 +4,7 @@ Responsável por registrar logs detalhados de ações no sistema.
 """
 
 import json
-from typing import Any, Dict, Optional
+from typing import Any
 
 from flask import current_app, has_request_context, request
 
@@ -15,9 +15,9 @@ def log_action(
     action: str,
     target_type: str,
     target_id: str,
-    changes: Optional[Dict[str, Any]] = None,
-    metadata: Optional[Dict[str, Any]] = None,
-    user_email: Optional[str] = None,
+    changes: dict[str, Any] | None = None,
+    metadata: dict[str, Any] | None = None,
+    user_email: str | None = None,
 ) -> bool:
     """
     Registra uma ação no log de auditoria.
@@ -56,7 +56,7 @@ def log_action(
             if db_type == "postgres":
                 cursor.execute(
                     """
-                    INSERT INTO audit_logs 
+                    INSERT INTO audit_logs
                     (user_email, action, target_type, target_id, changes, metadata, ip_address, user_agent)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """,
@@ -74,7 +74,7 @@ def log_action(
             else:  # SQLite
                 cursor.execute(
                     """
-                    INSERT INTO audit_logs 
+                    INSERT INTO audit_logs
                     (user_email, action, target_type, target_id, changes, metadata, ip_address, user_agent)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
@@ -101,7 +101,7 @@ def log_action(
         return False
 
 
-def get_diff(old_obj: Dict, new_obj: Dict, ignore_keys: list = None) -> Dict:
+def get_diff(old_obj: dict, new_obj: dict, ignore_keys: list | None = None) -> dict:
     """
     Gera um diff entre dois dicionários (antes e depois).
     Útil para gerar o payload de 'changes'.

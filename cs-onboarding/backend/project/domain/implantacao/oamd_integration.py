@@ -58,10 +58,7 @@ def consultar_dados_oamd(impl_id=None, user_email=None, id_favorecido_direto=Non
 
     if not result.get("ok") or not result.get("mapped"):
         # Construir link de apoio
-        if id_favorecido:
-            link = f"https://app.pactosolucoes.com.br/apoio/apoio/{id_favorecido}"
-        else:
-            link = ""
+        link = f"https://app.pactosolucoes.com.br/apoio/apoio/{id_favorecido}" if id_favorecido else ""
 
         return {"persistibles": {}, "extras": {}, "derived": {"tela_apoio_link": link}, "found": False}
 

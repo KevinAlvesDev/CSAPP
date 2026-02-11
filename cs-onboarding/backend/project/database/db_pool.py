@@ -11,11 +11,12 @@ Inclui:
 
 from __future__ import annotations
 
+import contextlib
 import os
 import sqlite3
 import time
 from threading import Lock
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from flask import current_app, g
 
@@ -24,8 +25,12 @@ if TYPE_CHECKING:
 
 # Imports condicionais para PostgreSQL
 try:
-    from psycopg2 import pool, OperationalError as PgOperationalError
+    from psycopg2 import (
+        OperationalError as PgOperationalError,
+        pool,
+    )
     from psycopg2.extras import DictCursor
+
     PSYCOPG2_AVAILABLE = True
 except ImportError:
     pool = None  # type: ignore
@@ -33,7 +38,7 @@ except ImportError:
     DictCursor = None  # type: ignore
     PSYCOPG2_AVAILABLE = False
 
-_pg_pool: Optional[Any] = None
+_pg_pool: Any | None = None
 _pool_lock = Lock()
 
 # Configurações do pool (podem ser sobrescritas via env vars)
@@ -48,7 +53,7 @@ def init_connection_pool(app: Flask) -> bool:
     """
     Inicializa o pool de conexões PostgreSQL com retry logic.
     Chamado durante a inicialização da aplicação.
-    
+
     Returns:
         bool: True se inicializado com sucesso, False caso contrário
     """
@@ -57,7 +62,7 @@ def init_connection_pool(app: Flask) -> bool:
     if app.config.get("USE_SQLITE_LOCALLY", False):
         app.logger.info("🗄️  Usando SQLite - pool de conexões não necessário")
         return True
-    
+
     if not PSYCOPG2_AVAILABLE:
         app.logger.warning("⚠️  psycopg2 não disponível - usando fallback")
         return False
@@ -80,29 +85,26 @@ def init_connection_pool(app: Flask) -> bool:
                     app.logger.info(
                         f"🔄 Tentando inicializar pool de conexões (tentativa {attempt}/{POOL_RETRY_ATTEMPTS})..."
                     )
-                    
+
                     _pg_pool = pool.ThreadedConnectionPool(
                         minconn=POOL_MIN_CONN,
                         maxconn=POOL_MAX_CONN,
                         dsn=database_url,
                         cursor_factory=DictCursor,
                     )
-                    
+
                     app.logger.info(
-                        f"✅ Pool de conexões PostgreSQL inicializado "
-                        f"({POOL_MIN_CONN}-{POOL_MAX_CONN} conexões)"
+                        f"✅ Pool de conexões PostgreSQL inicializado ({POOL_MIN_CONN}-{POOL_MAX_CONN} conexões)"
                     )
                     return True
                 else:
                     # Pool já inicializado
                     return True
-                    
+
         except PgOperationalError as e:
             error_msg = str(e)
-            app.logger.warning(
-                f"⚠️  Tentativa {attempt}/{POOL_RETRY_ATTEMPTS} falhou: {error_msg}"
-            )
-            
+            app.logger.warning(f"⚠️  Tentativa {attempt}/{POOL_RETRY_ATTEMPTS} falhou: {error_msg}")
+
             if attempt < POOL_RETRY_ATTEMPTS:
                 app.logger.info(f"⏳ Aguardando {POOL_RETRY_DELAY}s antes de tentar novamente...")
                 time.sleep(POOL_RETRY_DELAY)
@@ -114,13 +116,13 @@ def init_connection_pool(app: Flask) -> bool:
                 # Não levantar exceção - permitir que a app inicie mesmo sem DB
                 # Isso permite health checks e outras rotas funcionarem
                 return False
-                
+
         except Exception as e:
             app.logger.error(f"❌ Erro inesperado ao inicializar pool: {e}")
             if attempt >= POOL_RETRY_ATTEMPTS:
                 return False
             time.sleep(POOL_RETRY_DELAY)
-    
+
     return False
 
 
@@ -128,10 +130,10 @@ def get_db_connection() -> tuple[Any, str]:
     """
     Retorna uma conexão do pool (PostgreSQL) ou cria nova (SQLite).
     Para PostgreSQL, a conexão é armazenada em g.db e reutilizada durante a requisição.
-    
+
     Returns:
         tuple: (connection, db_type) onde db_type é 'postgres' ou 'sqlite'
-        
+
     Raises:
         RuntimeError: Se o pool não estiver inicializado e não for SQLite
     """
@@ -147,16 +149,14 @@ def _get_sqlite_connection() -> tuple[Any, str]:
     """Obtém conexão SQLite."""
     try:
         database_url = current_app.config.get("DATABASE_URL", "")
-        
+
         if database_url and database_url.startswith("sqlite"):
             db_path = database_url.replace("sqlite:///", "")
-            
+
             if db_path == ":memory:":
                 pass
             elif not os.path.isabs(db_path):
-                base_dir = os.path.abspath(
-                    os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-                )
+                base_dir = os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
                 db_path = os.path.join(base_dir, db_path)
         else:
             base_dir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
@@ -167,7 +167,7 @@ def _get_sqlite_connection() -> tuple[Any, str]:
         conn = sqlite3.connect(db_path, isolation_level=None, timeout=30.0)
         conn.row_factory = sqlite3.Row
         return conn, "sqlite"
-        
+
     except sqlite3.Error as e:
         current_app.logger.error(f"SQLite connection error: {e}")
         raise
@@ -180,7 +180,7 @@ def _get_postgres_connection() -> tuple[Any, str]:
             "Connection pool not initialized. "
             "Verifique se o banco de dados está online e DATABASE_URL está configurado."
         )
-    
+
     try:
         if "db_conn" not in g:
             g.db_conn = _pg_pool.getconn()
@@ -196,7 +196,7 @@ def _get_postgres_connection() -> tuple[Any, str]:
                 # Erro ao verificar, obter nova conexão
                 g.db_conn = _pg_pool.getconn()
                 g.db_type = "postgres"
-                
+
     except PgOperationalError as e:
         current_app.logger.error(f"Failed to get connection from pool: {e}")
         raise RuntimeError(f"Database connection error: {e}") from e
@@ -207,7 +207,7 @@ def _get_postgres_connection() -> tuple[Any, str]:
     return g.db_conn, g.db_type
 
 
-def close_db_connection(error: Optional[Exception] = None) -> None:
+def close_db_connection(error: Exception | None = None) -> None:
     """
     Retorna a conexão ao pool (PostgreSQL) ou fecha (SQLite).
     Deve ser chamado no teardown da requisição.
@@ -229,12 +229,10 @@ def close_db_connection(error: Optional[Exception] = None) -> None:
                 db_conn.close()
             except Exception:
                 pass
-                
+
     elif db_type == "sqlite":
-        try:
+        with contextlib.suppress(Exception):
             db_conn.close()
-        except Exception:
-            pass
 
 
 def close_all_connections() -> None:
@@ -266,7 +264,7 @@ def get_pool_stats() -> dict[str, Any]:
     """
     if _pg_pool is None:
         return {"initialized": False}
-    
+
     try:
         return {
             "initialized": True,
@@ -277,4 +275,3 @@ def get_pool_stats() -> dict[str, Any]:
         }
     except Exception:
         return {"initialized": True, "error": "Could not get stats"}
-

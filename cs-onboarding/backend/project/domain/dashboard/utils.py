@@ -4,7 +4,7 @@ Funções auxiliares de formatação de tempo.
 Princípio SOLID: Single Responsibility
 """
 
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 
 
 def format_relative_time(dt):
@@ -43,12 +43,7 @@ def format_relative_time(dt):
             dt = datetime.combine(dt, datetime.min.time())
 
         # Usar UTC para comparação se o datetime tiver timezone
-        if dt.tzinfo is not None:
-            from datetime import timezone
-
-            now = datetime.now(timezone.utc)
-        else:
-            now = datetime.now()
+        now = datetime.now(UTC) if dt.tzinfo is not None else datetime.now()
 
         # Validar que a data não é futura
         if dt > now:
@@ -73,10 +68,7 @@ def format_relative_time(dt):
         # Formatar texto
         if days == 0:
             if hours == 0:
-                if minutes < 5:
-                    text = "agora mesmo"
-                else:
-                    text = f"há {minutes} min"
+                text = "agora mesmo" if minutes < 5 else f"há {minutes} min"
             elif hours == 1:
                 text = "há 1 hora"
             else:

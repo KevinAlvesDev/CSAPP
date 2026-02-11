@@ -1,3 +1,5 @@
+import contextlib
+
 import click
 from flask import current_app
 from flask.cli import with_appcontext
@@ -43,25 +45,25 @@ def init_db():
                     DO $$
                     BEGIN
                         IF NOT EXISTS (
-                            SELECT 1 FROM information_schema.columns 
+                            SELECT 1 FROM information_schema.columns
                             WHERE table_name='checklist_items' AND column_name='previsao_original'
                         ) THEN
                             ALTER TABLE checklist_items ADD COLUMN previsao_original TIMESTAMP NULL;
                         END IF;
                         IF NOT EXISTS (
-                            SELECT 1 FROM information_schema.columns 
+                            SELECT 1 FROM information_schema.columns
                             WHERE table_name='checklist_items' AND column_name='nova_previsao'
                         ) THEN
                             ALTER TABLE checklist_items ADD COLUMN nova_previsao TIMESTAMP NULL;
                         END IF;
                         IF NOT EXISTS (
-                            SELECT 1 FROM information_schema.columns 
+                            SELECT 1 FROM information_schema.columns
                             WHERE table_name='perfil_usuario' AND column_name='ultimo_check_externo'
                         ) THEN
                             ALTER TABLE perfil_usuario ADD COLUMN ultimo_check_externo TIMESTAMP NULL;
                         END IF;
                         IF NOT EXISTS (
-                            SELECT 1 FROM information_schema.columns 
+                            SELECT 1 FROM information_schema.columns
                             WHERE table_name='comentarios_h' AND column_name='implantacao_id'
                         ) THEN
                             ALTER TABLE comentarios_h ADD COLUMN implantacao_id INTEGER REFERENCES implantacoes(id);
@@ -69,10 +71,10 @@ def init_db():
                     END
                     $$;
                 """)
-                
+
                 # Backfill: Preencher implantacao_id para comentários existentes
                 cursor.execute("""
-                    UPDATE comentarios_h 
+                    UPDATE comentarios_h
                     SET implantacao_id = ci.implantacao_id
                     FROM checklist_items ci
                     WHERE comentarios_h.checklist_item_id = ci.id
@@ -161,10 +163,8 @@ def init_db():
                 "CREATE INDEX IF NOT EXISTS idx_comentarios_h_implantacao_id ON comentarios_h (implantacao_id)"
             )
         except Exception as idx_err:
-            try:
+            with contextlib.suppress(Exception):
                 current_app.logger.warning(f"Falha ao criar índices: {idx_err}")
-            except Exception:
-                pass
 
         conn.commit()
 
@@ -370,6 +370,7 @@ def _criar_tabelas_basicas_sqlite(cursor):
             data_atualizacao DATETIME DEFAULT CURRENT_TIMESTAMP,
             dias_duracao INTEGER,
             ativo INTEGER DEFAULT 1,
+            contexto TEXT DEFAULT 'onboarding',
             permite_excluir_tarefas INTEGER DEFAULT 0,
             FOREIGN KEY (criado_por) REFERENCES usuarios(usuario)
         )
@@ -469,6 +470,121 @@ def _criar_tabelas_basicas_sqlite(cursor):
     # Inserir dados iniciais de perfis e recursos
     _popular_dados_iniciais_perfis(cursor)
 
+    # ========================================
+    # TABELAS DE CONFIGURAÇÃO (cache warming)
+    # ========================================
+
+    # Tabela tags_sistema
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tags_sistema (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome VARCHAR(100) NOT NULL,
+            icone VARCHAR(50) DEFAULT '',
+            cor_badge VARCHAR(30) DEFAULT '#6c757d',
+            ordem INTEGER DEFAULT 0,
+            tipo VARCHAR(20) DEFAULT 'ambos',
+            ativo INTEGER DEFAULT 1
+        )
+    """)
+
+    # Tabela status_implantacao
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS status_implantacao (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            codigo VARCHAR(50) NOT NULL UNIQUE,
+            nome VARCHAR(100) NOT NULL,
+            cor VARCHAR(30) DEFAULT '#6c757d',
+            ordem INTEGER DEFAULT 0,
+            ativo INTEGER DEFAULT 1
+        )
+    """)
+
+    # Tabela niveis_atendimento
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS niveis_atendimento (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            codigo VARCHAR(50) NOT NULL UNIQUE,
+            descricao VARCHAR(255) NOT NULL,
+            ordem INTEGER DEFAULT 0,
+            ativo INTEGER DEFAULT 1
+        )
+    """)
+
+    # Tabela tipos_evento
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tipos_evento (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            codigo VARCHAR(50) NOT NULL UNIQUE,
+            nome VARCHAR(100) NOT NULL,
+            icone VARCHAR(50) DEFAULT '',
+            cor VARCHAR(30) DEFAULT '#6c757d',
+            ativo INTEGER DEFAULT 1
+        )
+    """)
+
+    # Tabela motivos_parada
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS motivos_parada (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            descricao VARCHAR(255) NOT NULL,
+            ativo INTEGER DEFAULT 1
+        )
+    """)
+
+    # Tabela motivos_cancelamento
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS motivos_cancelamento (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            descricao VARCHAR(255) NOT NULL,
+            ativo INTEGER DEFAULT 1
+        )
+    """)
+
+    # Tabela checklist_finalizacao_templates (FIX: Adicionado para evitar erro 'no such table')
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS checklist_finalizacao_templates (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            titulo VARCHAR(500) NOT NULL,
+            descricao TEXT,
+            obrigatorio BOOLEAN DEFAULT 0,
+            ordem INTEGER DEFAULT 0,
+            ativo BOOLEAN DEFAULT 1,
+            requer_evidencia BOOLEAN DEFAULT 0,
+            tipo_evidencia VARCHAR(50),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # Tabela checklist_finalizacao_items (FIX: Adicionado para evitar erro 'no such table')
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS checklist_finalizacao_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            implantacao_id INTEGER NOT NULL REFERENCES implantacoes(id) ON DELETE CASCADE,
+            template_id INTEGER REFERENCES checklist_finalizacao_templates(id) ON DELETE SET NULL,
+            titulo VARCHAR(500) NOT NULL,
+            descricao TEXT,
+            obrigatorio BOOLEAN DEFAULT 0,
+            concluido BOOLEAN DEFAULT 0,
+            data_conclusao TIMESTAMP,
+            usuario_conclusao VARCHAR(200),
+            evidencia_tipo VARCHAR(50),
+            evidencia_conteudo TEXT,
+            evidencia_url VARCHAR(1000),
+            observacoes TEXT,
+            ordem INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # Índices para checklist_finalizacao
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_fin_items_impl ON checklist_finalizacao_items(implantacao_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_fin_items_concluido ON checklist_finalizacao_items(implantacao_id, concluido)")
+
+    # Seed dados de configuração
+    _popular_dados_configuracao(cursor)
+
     # Criar TODOS os índices necessários
     indices = [
         "CREATE INDEX IF NOT EXISTS idx_checklist_parent_id ON checklist_items(parent_id)",
@@ -487,10 +603,8 @@ def _criar_tabelas_basicas_sqlite(cursor):
     ]
 
     for idx_sql in indices:
-        try:
+        with contextlib.suppress(Exception):
             cursor.execute(idx_sql)
-        except Exception:
-            pass
 
 
 def _popular_dados_iniciais_perfis(cursor):
@@ -590,6 +704,137 @@ def _popular_dados_iniciais_perfis(cursor):
         pass
 
 
+def _popular_dados_configuracao(cursor):
+    """Insere dados iniciais nas tabelas de configuração (tags, status, motivos, etc.)."""
+    try:
+        # ── tags_sistema ──
+        cursor.execute("SELECT COUNT(*) FROM tags_sistema")
+        if cursor.fetchone()[0] == 0:
+            tags = [
+                ("Ação interna", "bi-chat-left-dots", "#0d6efd", 1, "comentario"),
+                ("Reunião", "bi-camera-video", "#198754", 2, "comentario"),
+                ("No Show", "bi-x-circle", "#dc3545", 3, "comentario"),
+                ("Treinamento", "bi-mortarboard", "#6f42c1", 4, "ambos"),
+                ("Migração", "bi-arrow-left-right", "#fd7e14", 5, "ambos"),
+                ("Suporte", "bi-headset", "#20c997", 6, "ambos"),
+            ]
+            for nome, icone, cor, ordem, tipo in tags:
+                cursor.execute(
+                    "INSERT OR IGNORE INTO tags_sistema (nome, icone, cor_badge, ordem, tipo) VALUES (?, ?, ?, ?, ?)",
+                    (nome, icone, cor, ordem, tipo),
+                )
+
+        # ── status_implantacao ──
+        cursor.execute("SELECT COUNT(*) FROM status_implantacao")
+        if cursor.fetchone()[0] == 0:
+            statuses = [
+                ("nova", "Nova", "#6c757d", 1),
+                ("futura", "Futura", "#0dcaf0", 2),
+                ("sem_previsao", "Sem Previsão", "#adb5bd", 3),
+                ("andamento", "Em Andamento", "#0d6efd", 4),
+                ("parada", "Parada", "#ffc107", 5),
+                ("finalizada", "Finalizada", "#198754", 6),
+                ("cancelada", "Cancelada", "#dc3545", 7),
+            ]
+            for codigo, nome, cor, ordem in statuses:
+                cursor.execute(
+                    "INSERT OR IGNORE INTO status_implantacao (codigo, nome, cor, ordem) VALUES (?, ?, ?, ?)",
+                    (codigo, nome, cor, ordem),
+                )
+
+        # ── niveis_atendimento ──
+        cursor.execute("SELECT COUNT(*) FROM niveis_atendimento")
+        if cursor.fetchone()[0] == 0:
+            niveis = [
+                ("basico", "Básico", 1),
+                ("intermediario", "Intermediário", 2),
+                ("avancado", "Avançado", 3),
+                ("premium", "Premium", 4),
+            ]
+            for codigo, descricao, ordem in niveis:
+                cursor.execute(
+                    "INSERT OR IGNORE INTO niveis_atendimento (codigo, descricao, ordem) VALUES (?, ?, ?)",
+                    (codigo, descricao, ordem),
+                )
+
+        # ── tipos_evento ──
+        cursor.execute("SELECT COUNT(*) FROM tipos_evento")
+        if cursor.fetchone()[0] == 0:
+            tipos = [
+                ("implantacao_criada", "Implantação Criada", "bi-plus-circle", "#198754"),
+                ("status_alterado", "Status Alterado", "bi-arrow-repeat", "#0d6efd"),
+                ("tarefa_alterada", "Tarefa Alterada", "bi-check2-square", "#6f42c1"),
+                ("novo_comentario", "Novo Comentário", "bi-chat-left-text", "#fd7e14"),
+                ("detalhes_alterados", "Detalhes Alterados", "bi-pencil-square", "#20c997"),
+                ("responsavel_alterado", "Responsável Alterado", "bi-person-lines-fill", "#0dcaf0"),
+                ("prazo_alterado", "Prazo Alterado", "bi-calendar-event", "#ffc107"),
+                ("plano_aplicado", "Plano Aplicado", "bi-diagram-3", "#6610f2"),
+                ("comentario_excluido", "Comentário Excluído", "bi-trash", "#dc3545"),
+            ]
+            for codigo, nome, icone, cor in tipos:
+                cursor.execute(
+                    "INSERT OR IGNORE INTO tipos_evento (codigo, nome, icone, cor) VALUES (?, ?, ?, ?)",
+                    (codigo, nome, icone, cor),
+                )
+
+        # ── checklist_finalizacao_templates (FIX: Seed para evitar warning) ──
+        cursor.execute("SELECT COUNT(*) FROM checklist_finalizacao_templates")
+        if cursor.fetchone()[0] == 0:
+            templates_padrao = [
+                ("Cliente confirmou go-live por email?", "Confirmação formal do cliente", 1, 1, 1),
+                ("Documentação técnica entregue?", "Manuais e guias enviados", 1, 2, 1),
+                ("Treinamento realizado e gravado?", "Sessão realizada e compartilhada", 1, 3, 1),
+                ("Contatos de suporte compartilhados?", "Informações de suporte enviadas", 1, 4, 1),
+                ("Pesquisa de satisfação enviada?", "Formulário de feedback enviado", 0, 5, 1),
+                ("Dados de acesso validados?", "Credenciais testadas", 1, 6, 0),
+                ("Integração com sistemas externos testada?", "Integrações validadas", 0, 7, 1),
+                ("Backup inicial realizado?", "Primeiro backup executado", 1, 8, 0),
+                ("Plano de contingência apresentado?", "Procedimentos de erro informados", 0, 9, 0),
+                ("Termo de aceite assinado?", "Documento assinado", 1, 10, 1),
+            ]
+            for titulo, descricao, obrigatorio, ordem, requer_evidencia in templates_padrao:
+                cursor.execute(
+                    """
+                    INSERT INTO checklist_finalizacao_templates
+                    (titulo, descricao, obrigatorio, ordem, requer_evidencia, tipo_evidencia)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (titulo, descricao, obrigatorio, ordem, requer_evidencia, "link" if requer_evidencia else None),
+                )
+
+
+        # ── motivos_parada ──
+        cursor.execute("SELECT COUNT(*) FROM motivos_parada")
+        if cursor.fetchone()[0] == 0:
+            motivos_p = [
+                "Cliente sem disponibilidade",
+                "Problemas técnicos do cliente",
+                "Pendência financeira",
+                "Férias/recesso",
+                "Aguardando decisão do cliente",
+                "Outros",
+            ]
+            for desc in motivos_p:
+                cursor.execute("INSERT OR IGNORE INTO motivos_parada (descricao) VALUES (?)", (desc,))
+
+        # ── motivos_cancelamento ──
+        cursor.execute("SELECT COUNT(*) FROM motivos_cancelamento")
+        if cursor.fetchone()[0] == 0:
+            motivos_c = [
+                "Desistência do cliente",
+                "Mudança de sistema",
+                "Encerramento de contrato",
+                "Inadimplência",
+                "Duplicidade",
+                "Outros",
+            ]
+            for desc in motivos_c:
+                cursor.execute("INSERT OR IGNORE INTO motivos_cancelamento (descricao) VALUES (?)", (desc,))
+
+    except Exception:
+        pass
+
+
 def _migrar_coluna_timeline_detalhes(cursor):
     """Adiciona coluna detalhes na tabela timeline_log se não existir."""
     try:
@@ -621,7 +866,7 @@ def _migrar_colunas_planos_sucesso(cursor):
                     # Validação: coluna deve estar na whitelist
                     if coluna not in colunas_para_adicionar:
                         raise ValueError(f"Coluna não permitida: {coluna}")
-                    
+
                     # Usar f-string apenas com valores validados da whitelist
                     cursor.execute(f"ALTER TABLE planos_sucesso ADD COLUMN {coluna} {tipo}")
                     colunas_adicionadas += 1
@@ -640,19 +885,19 @@ def _migrar_coluna_comentarios_checklist_item(cursor):
 
         if "checklist_item_id" not in colunas_existentes:
             cursor.execute("ALTER TABLE comentarios_h ADD COLUMN checklist_item_id INTEGER")
-        
+
         if "implantacao_id" not in colunas_existentes:
             cursor.execute("ALTER TABLE comentarios_h ADD COLUMN implantacao_id INTEGER")
-        
+
         # Backfill: Preencher implantacao_id para comentários existentes
         cursor.execute("""
-            UPDATE comentarios_h 
+            UPDATE comentarios_h
             SET implantacao_id = (
-                SELECT ci.implantacao_id 
-                FROM checklist_items ci 
+                SELECT ci.implantacao_id
+                FROM checklist_items ci
                 WHERE ci.id = comentarios_h.checklist_item_id
             )
-            WHERE implantacao_id IS NULL 
+            WHERE implantacao_id IS NULL
             AND checklist_item_id IS NOT NULL
         """)
     except Exception:
@@ -775,7 +1020,7 @@ def _migrar_colunas_implantacoes(cursor):
                     # Validação: coluna deve estar na whitelist
                     if coluna not in colunas_para_adicionar:
                         raise ValueError(f"Coluna não permitida: {coluna}")
-                    
+
                     # Usar f-string apenas com valores validados da whitelist
                     cursor.execute(f"ALTER TABLE implantacoes ADD COLUMN {coluna} {tipo}")
                     colunas_adicionadas += 1
@@ -797,17 +1042,15 @@ def _inserir_regras_gamificacao_padrao(cursor):
     ]
 
     for regra_id, categoria, descricao, valor_pontos, tipo_valor in regras:
-        try:
+        with contextlib.suppress(Exception):
             cursor.execute(
                 """
-                INSERT OR IGNORE INTO gamificacao_regras 
-                (regra_id, categoria, descricao, valor_pontos, tipo_valor) 
+                INSERT OR IGNORE INTO gamificacao_regras
+                (regra_id, categoria, descricao, valor_pontos, tipo_valor)
                 VALUES (?, ?, ?, ?, ?)
             """,
                 (regra_id, categoria, descricao, valor_pontos, tipo_valor),
             )
-        except Exception:
-            pass
 
 
 def init_app(app):
@@ -845,17 +1088,15 @@ def ensure_implantacoes_status_constraint():
                 # Validação: coluna deve estar na whitelist
                 if col_name not in check_cols:
                     raise ValueError(f"Coluna não permitida: {col_name}")
-                
+
                 # Usar f-string apenas com valores validados da whitelist
                 cursor.execute(f"ALTER TABLE implantacoes ADD COLUMN IF NOT EXISTS {col_name} {col_type}")
             except Exception:
                 pass
         conn.commit()
 
-        try:
+        with contextlib.suppress(Exception):
             cursor.execute("ALTER TABLE implantacoes DROP CONSTRAINT IF EXISTS implantacoes_status_check;")
-        except Exception:
-            pass
         try:
             cursor.execute(
                 """

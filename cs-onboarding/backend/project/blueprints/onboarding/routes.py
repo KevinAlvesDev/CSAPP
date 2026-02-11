@@ -30,10 +30,7 @@ def dashboard():
     perfil_acesso = g.perfil.get("perfil_acesso") if g.get("perfil") else None
 
     # Garantia explícita: Implantador visualiza apenas sua carteira (sem filtro de dashboard)
-    if perfil_acesso == "Implantador":
-        is_manager = False
-    else:
-        is_manager = perfil_acesso in PERFIS_COM_GESTAO
+    is_manager = False if perfil_acesso == "Implantador" else perfil_acesso in PERFIS_COM_GESTAO
 
     current_cs_filter = None
     sort_days = None
@@ -45,7 +42,7 @@ def dashboard():
         if sort_days_param:
             sort_days = sanitize_string(sort_days_param, max_length=4)
     except ValidationError as e:
-        flash(f"Filtro inválido: {str(e)}", "warning")
+        flash(f"Filtro inválido: {e!s}", "warning")
         current_cs_filter = None
         sort_days = None
 
@@ -53,7 +50,7 @@ def dashboard():
     search_term = request.args.get("search", None)
     if search_term:
         search_term = sanitize_string(search_term, max_length=100)
-    
+
     tipo_filter = request.args.get("tipo", None)
     if tipo_filter:
         tipo_filter = sanitize_string(tipo_filter, max_length=20)
@@ -67,7 +64,7 @@ def dashboard():
 
     tags_report = {}
     try:
-        tags_report = get_tags_metrics(start_date, end_date, tags_report_email, context='onboarding')
+        tags_report = get_tags_metrics(start_date, end_date, tags_report_email, context="onboarding")
     except Exception as e:
         current_app.logger.error(f"Erro ao buscar tags metrics: {e}")
 
@@ -75,16 +72,16 @@ def dashboard():
         # Usar versão otimizada do dashboard (consolidada)
         # Desabilitar cache quando filtros estão ativos para resposta imediata
         has_active_filters = bool(search_term or tipo_filter)
-        
+
         dashboard_data, metrics = get_dashboard_data(
-            user_email, 
-            filtered_cs_email=current_cs_filter, 
+            user_email,
+            filtered_cs_email=current_cs_filter,
             use_cache=not has_active_filters,  # Sem cache quando filtrando
-            context='onboarding',
+            context="onboarding",
             search_term=search_term,
             tipo=tipo_filter,
             start_date=start_date,
-            end_date=end_date
+            end_date=end_date,
         )
 
         if sort_days in ["asc", "desc"]:
@@ -167,7 +164,16 @@ def dashboard():
             implantacoes_finalizadas=[],
             implantacoes_paradas=[],
             implantacoes_canceladas=[],
-            dashboard_data={"total_ativos": [], "novas": [], "andamento": [], "paradas": [], "futuras": [], "sem_previsao": [], "finalizadas": [], "canceladas": []},
+            dashboard_data={
+                "total_ativos": [],
+                "novas": [],
+                "andamento": [],
+                "paradas": [],
+                "futuras": [],
+                "sem_previsao": [],
+                "finalizadas": [],
+                "canceladas": [],
+            },
             error="Falha.",
         )
 
@@ -186,8 +192,8 @@ def ver_implantacao(impl_id):
         impl_id = validate_integer(impl_id, min_value=1)
         logger.info(f"ID validado: {impl_id}")
     except ValidationError as e:
-        logger.error(f"ID de implantação inválido: {str(e)}")
-        flash(f"ID de implantação inválido: {str(e)}", "error")
+        logger.error(f"ID de implantação inválido: {e!s}")
+        flash(f"ID de implantação inválido: {e!s}", "error")
         return redirect(url_for("onboarding.dashboard"))
 
     try:
@@ -199,7 +205,7 @@ def ver_implantacao(impl_id):
         return render_template("pages/onboarding/implantacao_detalhes.html", **context_data)
 
     except ValueError as e:
-        logger.warning(f"Acesso negado à implantação {impl_id}: {str(e)}")
+        logger.warning(f"Acesso negado à implantação {impl_id}: {e!s}")
         flash(str(e), "error")
         return redirect(url_for("onboarding.dashboard"))
 
@@ -208,5 +214,5 @@ def ver_implantacao(impl_id):
 
         error_trace = traceback.format_exc()
         logger.error(f"Erro ao carregar detalhes da implantação ID {impl_id}: {e}\\n{error_trace}")
-        flash(f"Erro ao carregar detalhes da implantação: {str(e)}", "error")
+        flash(f"Erro ao carregar detalhes da implantação: {e!s}", "error")
         return redirect(url_for("onboarding.dashboard"))
