@@ -186,6 +186,17 @@ def validate_secrets(app: object | None = None) -> dict:
 
     # 1. Verificar secrets sempre obrigatórios
     missing_always = _check_required_secrets(ALWAYS_REQUIRED)
+    
+    # FIX: Fallback para SECRET_KEY para não quebrar deploy existente
+    if "SECRET_KEY" in missing_always:
+        import secrets
+        temp_key = secrets.token_hex(32)
+        os.environ["SECRET_KEY"] = temp_key
+        missing_always.remove("SECRET_KEY")
+        warnings.append("⚠️  SECRET_KEY ausente em PROD! Usando chave temporária aleatória (Sessões cairão ao reiniciar).")
+        _log = app.logger if app and hasattr(app, "logger") else logger
+        _log.critical("🚨 SECRET_KEY NÃO CONFIGURADA! APLICAÇÃO RODANDO COM CHAVE TEMPORÁRIA. CONFIGURE IMEDIATAMENTE!")
+
     if missing_always:
         errors.append(f"❌ Secrets obrigatórios ausentes: {', '.join(missing_always)}")
 
