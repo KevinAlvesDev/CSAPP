@@ -46,20 +46,12 @@
             container.addEventListener('click', function (e) {
                 const target = e.target;
 
-                // Handle "Preview" button
-                const previewBtn = target.closest('.btn-preview-plano');
-                if (previewBtn) {
-                    const id = previewBtn.dataset.id;
-                    if (id) visualizarPreviewPlano(id);
-                    return;
-                }
-
-                // Handle "Aplicar" button
+                // Agora o botão "Aplicar" abre o preview primeiro (tornando-o obrigatório)
                 const aplicarBtn = target.closest('.btn-aplicar-plano');
                 if (aplicarBtn) {
                     const id = aplicarBtn.dataset.id;
                     const nome = aplicarBtn.dataset.nome;
-                    if (id && nome) aplicarPlano(id, nome, aplicarBtn);
+                    if (id && nome) visualizarPreviewPlano(id, nome);
                     return;
                 }
 
@@ -206,16 +198,10 @@
                         <div class="plano-select-actions">
                             <button 
                                 type="button" 
-                                class="btn-preview-plano"
-                                data-id="${plano.id}"
-                            >
-                                <i class="bi bi-eye me-1"></i>Preview
-                            </button>
-                            <button 
-                                type="button" 
                                 class="btn-aplicar-plano"
                                 data-id="${plano.id}"
                                 data-nome="${escapeHtml(plano.nome)}"
+                                style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem;"
                             >
                                 <i class="bi bi-check-circle me-1"></i>Aplicar Este Plano
                             </button>
@@ -262,7 +248,7 @@
                         <!-- Seta de Toggle -->
                         <div style="width: 1rem; text-align: center;">
                             ${hasChildren ?
-                    `<i class="bi bi-chevron-down toggle-icon"></i>` :
+                    `<i class="bi bi-chevron-down toggle-icon" style="transform: rotate(-90deg);"></i>` :
                     ``
                 }
                         </div>
@@ -281,7 +267,7 @@
             }
 
             if (hasChildren) {
-                html += `<div id="${uniqueId}" class="children-container">`;
+                html += `<div id="${uniqueId}" class="children-container" style="display: none;">`;
                 children.forEach(child => {
                     html += renderItem(child, level + 1);
                 });
@@ -292,7 +278,7 @@
             return html;
         }
 
-        function visualizarPreviewPlano(planoId) {
+        function visualizarPreviewPlano(planoId, planoNome) {
             let modalPreview = document.getElementById('modalPreviewPlanoGlobal');
 
             if (!modalPreview) {
@@ -302,6 +288,7 @@
                             <div class="modal-content">
                                 <div class="modal-header preview-modal-header">
                                     <h5 class="modal-title">
+                                        <i class="bi bi-eye-fill me-2"></i>
                                         <span id="previewPlanoTitulo">Preview do Plano</span>
                                     </h5>
                                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -314,8 +301,13 @@
                                         <p class="mt-2 text-muted">Carregando preview...</p>
                                     </div>
                                 </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                                <div class="modal-footer d-flex justify-content-between">
+                                    <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">
+                                        <i class="bi bi-arrow-left me-1"></i>Voltar
+                                    </button>
+                                    <button type="button" class="btn btn-success px-4" id="btnConfirmarAplicacaoPlano">
+                                        <i class="bi bi-check-circle me-1"></i>Confirmar e Aplicar Plano
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -384,15 +376,28 @@
                     `;
                 });
 
+            // Configurar botão de confirmação
+            const btnConfirmar = document.getElementById('btnConfirmarAplicacaoPlano');
+            if (btnConfirmar) {
+                // Remover listeners antigos clonando o botão
+                const btnNovo = btnConfirmar.cloneNode(true);
+                btnConfirmar.parentNode.replaceChild(btnNovo, btnConfirmar);
+
+                btnNovo.addEventListener('click', async function () {
+                    // Chamamos a função de aplicar plano (passando o parâmetro para pular confirmação redundante)
+                    await aplicarPlano(planoId, planoNome, btnNovo, true);
+                });
+            }
+
             if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
-                const bsModal = new bootstrap.Modal(modalPreview);
+                const bsModal = bootstrap.Modal.getInstance(modalPreview) || new bootstrap.Modal(modalPreview);
                 bsModal.show();
             } else if (typeof $ !== 'undefined' && $.fn.modal) {
                 $(modalPreview).modal('show');
             }
         }
 
-        async function aplicarPlano(planoId, planoNome, btnElement) {
+        async function aplicarPlano(planoId, planoNome, btnElement, pularConfirmacao = false) {
             const implantacaoId = document.querySelector('#main-content')?.dataset?.implantacaoId;
             if (!implantacaoId) {
                 if (window.showToast) window.showToast('Erro: ID da implantação não encontrado.', 'error');
@@ -483,9 +488,11 @@
 
                 preservarComentarios = (userChoice === 'preserve');
             } else {
-                // Sem comentários: confirmação padrão
+                // Sem comentários: confirmação padrão (pula se já veio do preview)
                 let confirmed = false;
-                if (window.showConfirm) {
+                if (pularConfirmacao) {
+                    confirmed = true;
+                } else if (window.showConfirm) {
                     confirmed = await window.showConfirm({
                         title: 'Aplicar Plano',
                         message: `Tem certeza que deseja aplicar o plano "${planoNome}"?\n\nA estrutura atual será substituída.`,
