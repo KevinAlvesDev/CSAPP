@@ -80,6 +80,12 @@ def init_db():
                         ) THEN
                             ALTER TABLE checklist_items ADD COLUMN prazo_fim DATE NULL;
                         END IF;
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns
+                            WHERE table_name='checklist_items' AND column_name='dias_offset'
+                        ) THEN
+                            ALTER TABLE checklist_items ADD COLUMN dias_offset INTEGER NULL;
+                        END IF;
                     END
                     $$;
                 """)
@@ -330,6 +336,7 @@ def _criar_tabelas_basicas_sqlite(cursor):
             descricao TEXT,
             tag TEXT,
             data_conclusao DATETIME,
+            dias_offset INTEGER,
             FOREIGN KEY (parent_id) REFERENCES checklist_items(id) ON DELETE CASCADE,
             CHECK (LENGTH(TRIM(title)) > 0),
             CHECK (percentual_conclusao >= 0 AND percentual_conclusao <= 100)
@@ -929,6 +936,8 @@ def _migrar_colunas_prazos_checklist_items(cursor):
             cursor.execute("ALTER TABLE checklist_items ADD COLUMN prazo_inicio DATE")
         if "prazo_fim" not in names:
             cursor.execute("ALTER TABLE checklist_items ADD COLUMN prazo_fim DATE")
+        if "dias_offset" not in names:
+            cursor.execute("ALTER TABLE checklist_items ADD COLUMN dias_offset INTEGER")
     except Exception:
         pass
 

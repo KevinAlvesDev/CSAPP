@@ -56,6 +56,7 @@
       const comment = dados?.comment || dados?.descricao || '';
       const obrigatoria = dados?.obrigatoria || false;
       const tag = dados?.tag || '';
+      const diasOffset = dados?.dias_offset ?? '';
       const isExpanded = dados?.expanded !== false;
       const hasChildren = dados?.children && dados.children.length > 0;
       const showToggle = hasChildren || level >= 0;
@@ -83,6 +84,18 @@
                 <option value="Cliente" ${tag === 'Cliente' ? 'selected' : ''}>Cliente</option>
                 <option value="Rede" ${tag === 'Rede' ? 'selected' : ''}>Rede</option>
               </select>
+              <div class="input-group input-group-sm" style="max-width: 130px;">
+                <input 
+                  type="number" 
+                  class="form-control form-control-sm item-dias-offset-input" 
+                  placeholder="Dias"
+                  title="Prazo em dias a partir do início da implantação"
+                  min="0"
+                  max="365"
+                  value="${diasOffset}"
+                >
+                <span class="input-group-text" style="font-size: 0.75rem;">dias</span>
+              </div>
             </div>
             <div class="d-flex align-items-center gap-1">
                <button type="button" class="btn btn-sm btn-light border btn-move-item drag-handle" title="Mover">
@@ -301,6 +314,18 @@
         ordem: 0, // Será calculado no backend se necessário
         children: []
       };
+
+      // Coletar dias_offset
+      const diasOffsetInput = header ? header.querySelector('.item-dias-offset-input') : null;
+      const diasOffsetVal = diasOffsetInput ? diasOffsetInput.value.trim() : '';
+      if (diasOffsetVal !== '') {
+        item.dias_offset = parseInt(diasOffsetVal, 10);
+        if (isNaN(item.dias_offset)) {
+          item.dias_offset = null;
+        }
+      } else {
+        item.dias_offset = null;
+      }
 
       // Pegar container de filhos direto
       const childrenContainer = body ? body.querySelector(':scope > .item-children') : null;

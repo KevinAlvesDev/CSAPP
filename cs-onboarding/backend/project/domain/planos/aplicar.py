@@ -490,7 +490,7 @@ def _clonar_plano_para_implantacao_checklist(
 
     def clone_item_recursivo(plano_item_id, new_parent_id):
         if db_type == "postgres":
-            sql_item = "SELECT title, completed, comment, level, ordem, obrigatoria, tipo_item, descricao, status, responsavel, tag FROM checklist_items WHERE id = %s"
+            sql_item = "SELECT title, completed, comment, level, ordem, obrigatoria, tipo_item, descricao, status, responsavel, tag, dias_offset FROM checklist_items WHERE id = %s"
             cursor.execute(sql_item, (plano_item_id,))
             row = cursor.fetchone()
             if not row:
@@ -502,8 +502,9 @@ def _clonar_plano_para_implantacao_checklist(
             status = row[8] or "pendente"
             responsavel = row[9]
             tag = row[10]
+            item_dias_offset = row[11]
         else:
-            sql_item = "SELECT title, completed, comment, level, ordem, obrigatoria, tipo_item, descricao, status, responsavel, tag FROM checklist_items WHERE id = ?"
+            sql_item = "SELECT title, completed, comment, level, ordem, obrigatoria, tipo_item, descricao, status, responsavel, tag, dias_offset FROM checklist_items WHERE id = ?"
             cursor.execute(sql_item, (plano_item_id,))
             row = cursor.fetchone()
             if not row:
@@ -520,6 +521,7 @@ def _clonar_plano_para_implantacao_checklist(
             status = row[8] or "pendente"
             responsavel = row[9]
             tag = row[10]
+            item_dias_offset = row[11]
 
         tipo_item_implantacao = (
             tipo_item_plano.replace("plano_", "") if tipo_item_plano.startswith("plano_") else tipo_item_plano
@@ -536,7 +538,20 @@ def _clonar_plano_para_implantacao_checklist(
                 tipo_item_implantacao = "subtarefa"
 
         if db_type == "postgres":
-            previsao_original = data_previsao_termino
+            # Calcular previsao_original individual: se dias_offset definido, usar data_base + offset
+            if item_dias_offset is not None and data_base:
+                try:
+                    from datetime import timedelta as td
+                    base = data_base
+                    if isinstance(base, str):
+                        base = datetime.strptime(base[:10], "%Y-%m-%d")
+                    elif isinstance(base, date) and not isinstance(base, datetime):
+                        base = datetime.combine(base, datetime.min.time())
+                    previsao_original = base + td(days=int(item_dias_offset))
+                except Exception:
+                    previsao_original = data_previsao_termino
+            else:
+                previsao_original = data_previsao_termino
             responsavel = responsavel_padrao
             sql_insert = """
                 INSERT INTO checklist_items (parent_id, title, completed, comment, level, ordem, implantacao_id, obrigatoria, tipo_item, descricao, status, responsavel, tag, previsao_original, nova_previsao, created_at, updated_at)
@@ -566,7 +581,20 @@ def _clonar_plano_para_implantacao_checklist(
             result = cursor.fetchone()
             new_item_id = result[0] if result else None
         else:
-            previsao_original = data_previsao_termino
+            # Calcular previsao_original individual: se dias_offset definido, usar data_base + offset
+            if item_dias_offset is not None and data_base:
+                try:
+                    from datetime import timedelta as td
+                    base = data_base
+                    if isinstance(base, str):
+                        base = datetime.strptime(base[:10], "%Y-%m-%d")
+                    elif isinstance(base, date) and not isinstance(base, datetime):
+                        base = datetime.combine(base, datetime.min.time())
+                    previsao_original = base + td(days=int(item_dias_offset))
+                except Exception:
+                    previsao_original = data_previsao_termino
+            else:
+                previsao_original = data_previsao_termino
             responsavel = responsavel_padrao
             sql_insert = """
                 INSERT INTO checklist_items (parent_id, title, completed, comment, level, ordem, implantacao_id, obrigatoria, tipo_item, descricao, status, responsavel, tag, previsao_original, nova_previsao, created_at, updated_at)

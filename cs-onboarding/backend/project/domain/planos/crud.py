@@ -327,7 +327,7 @@ def obter_plano_completo(plano_id: int) -> dict | None:
 
     items = query_db(
         """
-        SELECT id, parent_id, title, completed, comment, level, ordem, tipo_item, descricao, obrigatoria, status, tag
+        SELECT id, parent_id, title, completed, comment, level, ordem, tipo_item, descricao, obrigatoria, status, tag, dias_offset
         FROM checklist_items
         WHERE plano_id = %s
         ORDER BY ordem, id
@@ -355,6 +355,7 @@ def obter_plano_completo(plano_id: int) -> dict | None:
                 "ordem": item.get("ordem", 0),
                 "obrigatoria": item.get("obrigatoria", False),
                 "tag": item.get("tag"),
+                "dias_offset": item.get("dias_offset"),
             }
         )
 

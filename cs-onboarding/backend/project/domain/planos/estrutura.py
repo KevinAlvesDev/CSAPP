@@ -300,9 +300,17 @@ def _criar_items_recursivo(
             else:
                 tipo_item = "plano_subtarefa"
 
+        # Extrair dias_offset (pode ser None se não definido)
+        dias_offset_val = item_data.get("dias_offset")
+        if dias_offset_val is not None:
+            try:
+                dias_offset_val = int(dias_offset_val)
+            except (ValueError, TypeError):
+                dias_offset_val = None
+
         sql_item = """
-            INSERT INTO checklist_items (parent_id, title, completed, comment, level, ordem, implantacao_id, plano_id, obrigatoria, tipo_item, tag)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO checklist_items (parent_id, title, completed, comment, level, ordem, implantacao_id, plano_id, obrigatoria, tipo_item, tag, dias_offset)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         if db_type == "sqlite":
             sql_item = sql_item.replace("%s", "?")
@@ -321,6 +329,7 @@ def _criar_items_recursivo(
                 item_data.get("obrigatoria", False),
                 tipo_item,
                 item_data.get("tag"),
+                dias_offset_val,
             ),
         )
 
