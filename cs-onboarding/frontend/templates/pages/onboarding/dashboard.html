@@ -26,14 +26,15 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                     {% if sort_days %}
                     <input type="hidden" name="sort_days" value="{{ sort_days }}">
                     {% endif %}
-
-                    <!-- Filtro de Tipo -->
-                    <select class="form-select form-select-sm" name="tipo" style="width: 110px;"
-                        onchange="this.form.submit()">
-                        <option value="">Todos</option>
-                        <option value="sistema" {% if current_tipo=='sistema' %}selected{% endif %}>Sistema</option>
-                        <option value="modulo" {% if current_tipo=='modulo' %}selected{% endif %}>Módulo</option>
-                    </select>
+                    {% if current_tipo %}
+                    <input type="hidden" name="tipo" value="{{ current_tipo }}">
+                    {% endif %}
+                    {% if current_periodo %}
+                    <input type="hidden" name="periodo" value="{{ current_periodo }}">
+                    {% endif %}
+                    {% if current_date_type %}
+                    <input type="hidden" name="date_type" value="{{ current_date_type }}">
+                    {% endif %}
 
                     <div style="width: 250px; position: relative;">
                         <div class="input-group input-group-sm">
@@ -43,9 +44,9 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                             <input type="text" class="form-control border-start-0 ps-0" name="search"
                                 value="{{ current_search or '' }}" placeholder="Buscar empresa..."
                                 style="background-color: white;">
-                            {% if current_search or current_tipo %}
-                            <a href="{{ url_for('onboarding.dashboard') }}" class="btn btn-outline-secondary"
-                                title="Limpar Filtros">
+                            {% if current_search %}
+                            <a href="{{ url_for('onboarding.dashboard') }}?{% if current_cs_filter %}cs_filter={{ current_cs_filter }}&{% endif %}{% if current_tipo %}tipo={{ current_tipo }}&{% endif %}{% if current_date_type %}date_type={{ current_date_type }}&{% endif %}{% if current_start_date %}start_date={{ current_start_date }}&{% endif %}{% if current_end_date %}end_date={{ current_end_date }}{% endif %}"
+                                class="btn btn-outline-secondary" title="Limpar Busca">
                                 <i class="bi bi-x-lg"></i>
                             </a>
                             {% else %}
@@ -91,32 +92,93 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
     </header>
     <main class="p-4" id="main-content" data-context="onboarding">
 
-        {% if is_manager %}
-        <div class="card p-3 mb-4">
-            <h6 class="text-secondary mb-3 border-bottom pb-2">Filtrar Dashboard</h6>
-            <form method="GET" action="{{ url_for('onboarding.dashboard') }}" id="cs-filter-form">
-                <div class="row g-3 align-items-end">
-                    <div class="col-md-10">
-                        <label for="cs_filter" class="form-label small text-secondary">Filtrar por Implantador</label>
-                        <select id="cs_filter" name="cs_filter" class="form-select" onchange="this.form.submit()">
-                            <option value="">-- Ver Todos os Implantadores --</option>
-                            {% if all_cs_users %}
-                            {% for cs in all_cs_users %}
-                            <option value="{{ cs.usuario }}" {% if cs.usuario==current_cs_filter %}selected{% endif %}>
-                                {{ cs.nome }} ({{ cs.usuario }})
-                            </option>
-                            {% endfor %}
-                            {% endif %}
-                        </select>
+        <div class="card p-2 px-3 mb-3">
+            <form method="GET" action="{{ url_for('onboarding.dashboard') }}" id="cs-filter-form"
+                class="d-flex align-items-center gap-2 flex-wrap">
+                {% if current_search %}
+                <input type="hidden" name="search" value="{{ current_search }}">
+                {% endif %}
+                {% if sort_days %}
+                <input type="hidden" name="sort_days" value="{{ sort_days }}">
+                {% endif %}
+                <span class="text-secondary small fw-semibold text-nowrap"><i
+                        class="bi bi-funnel me-1"></i>Filtros:</span>
+                {% if is_manager %}
+                <select id="cs_filter" name="cs_filter" class="form-select form-select-sm"
+                    style="width: auto; min-width: 220px;" onchange="this.form.submit()">
+                    <option value="">Todos os Implantadores</option>
+                    {% if all_cs_users %}
+                    {% for cs in all_cs_users %}
+                    <option value="{{ cs.usuario }}" {% if cs.usuario==current_cs_filter %}selected{% endif %}>
+                        {{ cs.nome }} ({{ cs.usuario }})
+                    </option>
+                    {% endfor %}
+                    {% endif %}
+                </select>
+                {% endif %}
+                <select name="tipo" class="form-select form-select-sm" style="width: auto; min-width: 160px;"
+                    onchange="this.form.submit()">
+                    <option value="">Todos os Tipos</option>
+                    <option value="sistema" {% if current_tipo=='sistema' %}selected{% endif %}>Sistema</option>
+                    <option value="modulo" {% if current_tipo=='modulo' %}selected{% endif %}>Módulo</option>
+                </select>
+                <!-- Bloco de Filtro de Data Unificado e Suave -->
+                <div class="form-control form-control-sm d-inline-flex align-items-center bg-white px-1"
+                    style="width: fit-content; padding-top: 6px; padding-bottom: 6px; height: auto;">
+                    <select name="date_type" class="form-select form-select-sm border-0 shadow-none bg-transparent py-0"
+                        style="width: auto; max-width: 140px; cursor: pointer;" onchange="this.form.submit()">
+                        <option value="criacao" {% if current_date_type=='criacao' %}selected{% endif %}>Criação
+                        </option>
+                        <option value="inicio" {% if current_date_type=='inicio' %}selected{% endif %}>Início
+                        </option>
+                        <option value="finalizacao" {% if current_date_type=='finalizacao' %}selected{% endif %}>
+                            Conclusão
+                        </option>
+                        <option value="parada" {% if current_date_type=='parada' %}selected{% endif %}>Parada (Atual)
+                        </option>
+                        <option value="cancelamento" {% if current_date_type=='cancelamento' %}selected{% endif %}>
+                            Cancelamento</option>
+                    </select>
+
+                    <div class="vr text-secondary opacity-25 mx-1" style="height: 16px;"></div>
+
+                    <div class="d-flex align-items-center px-2">
+                        <span class="small text-secondary fw-semibold me-1" style="white-space: nowrap;">De:</span>
+                        <input type="date" name="start_date"
+                            class="form-control form-control-sm border-0 p-0 shadow-none bg-transparent"
+                            value="{{ current_start_date or '' }}" style="width: 105px;">
                     </div>
-                    <div class="col-md-2">
-                        <a href="{{ url_for('onboarding.dashboard') }}" class="btn btn-outline-secondary w-100">Limpar
-                            Filtro</a>
+
+                    <div class="vr text-secondary opacity-25 mx-1" style="height: 16px;"></div>
+
+                    <div class="d-flex align-items-center px-2">
+                        <span class="small text-secondary fw-semibold me-1" style="white-space: nowrap;">Até:</span>
+                        <input type="date" name="end_date"
+                            class="form-control form-control-sm border-0 p-0 shadow-none bg-transparent"
+                            value="{{ current_end_date or '' }}" style="width: 105px;">
                     </div>
+
+                    <div class="vr text-secondary opacity-25 mx-1" style="height: 16px;"></div>
+
+                    <button type="submit"
+                        class="btn btn-sm btn-link text-primary border-0 p-0 px-2 h-100 d-flex align-items-center"
+                        title="Aplicar Filtros">
+                        <i class="bi bi-search"></i>
+                    </button>
                 </div>
+
+                {% if current_cs_filter or current_tipo or current_start_date or current_end_date or (current_date_type
+                and current_date_type != 'criacao') %}
+                <a href="{{ url_for('onboarding.dashboard') }}{% if current_search %}?search={{ current_search }}{% endif %}"
+                    class="btn btn-sm btn-outline-secondary" title="Limpar Filtros">
+                    <i class="bi bi-x-lg me-1"></i>Limpar
+                </a>
+                {% endif %}
+
+
+
             </form>
         </div>
-        {% endif %}
 
         {% from 'macros/cards.html' import card_stats %}
         {% set m = metrics or {} %}
