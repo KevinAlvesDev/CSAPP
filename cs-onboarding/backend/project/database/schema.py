@@ -1036,6 +1036,7 @@ def _migrar_colunas_implantacoes(cursor):
             "data_cadastro": "DATETIME",
             "contexto": 'VARCHAR(50) DEFAULT "onboarding"',
             "definicao_carteira": "TEXT",
+            "valor_monetario": "TEXT",
         }
 
         colunas_adicionadas = 0

@@ -864,7 +864,7 @@ class ChecklistRenderer {
                   </div>
                   <div class="mb-2">
                     <label class="form-label small">Nova Previsão</label>
-                    <input type="text" class="form-control" id="prev-edit-input" placeholder="YYYY-MM-DD" />
+                    <input type="text" class="form-control" id="prev-edit-input" placeholder="DD/MM/AAAA" />
                   </div>
                 </div>
                 <div class="modal-footer">
@@ -1025,6 +1025,11 @@ class ChecklistRenderer {
 
     formatDate(d) {
         if (!d) return '';
+        // Handle date-only ISO strings (YYYY-MM-DD) without timezone shift
+        if (/^\d{4}-\d{2}-\d{2}$/.test(String(d).trim())) {
+            const parts = String(d).trim().split('-');
+            return parts[2] + '/' + parts[1] + '/' + parts[0];
+        }
         try { return new Date(d).toLocaleDateString('pt-BR'); } catch (e) { return d; }
     }
 

@@ -554,8 +554,8 @@ def _clonar_plano_para_implantacao_checklist(
                 previsao_original = data_previsao_termino
             responsavel = responsavel_padrao
             sql_insert = """
-                INSERT INTO checklist_items (parent_id, title, completed, comment, level, ordem, implantacao_id, obrigatoria, tipo_item, descricao, status, responsavel, tag, previsao_original, nova_previsao, created_at, updated_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                INSERT INTO checklist_items (parent_id, title, completed, comment, level, ordem, implantacao_id, obrigatoria, tipo_item, descricao, status, responsavel, tag, previsao_original, nova_previsao, dias_offset, created_at, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 RETURNING id
             """
             cursor.execute(
@@ -576,6 +576,7 @@ def _clonar_plano_para_implantacao_checklist(
                     tag,
                     previsao_original,
                     None,
+                    item_dias_offset,
                 ),
             )
             result = cursor.fetchone()
@@ -597,8 +598,8 @@ def _clonar_plano_para_implantacao_checklist(
                 previsao_original = data_previsao_termino
             responsavel = responsavel_padrao
             sql_insert = """
-                INSERT INTO checklist_items (parent_id, title, completed, comment, level, ordem, implantacao_id, obrigatoria, tipo_item, descricao, status, responsavel, tag, previsao_original, nova_previsao, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                INSERT INTO checklist_items (parent_id, title, completed, comment, level, ordem, implantacao_id, obrigatoria, tipo_item, descricao, status, responsavel, tag, previsao_original, nova_previsao, dias_offset, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             """
             cursor.execute(
                 sql_insert,
@@ -618,6 +619,7 @@ def _clonar_plano_para_implantacao_checklist(
                     tag,
                     previsao_original,
                     None,
+                    item_dias_offset,
                 ),
             )
             new_item_id = cursor.lastrowid

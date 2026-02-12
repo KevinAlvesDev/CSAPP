@@ -175,6 +175,78 @@ def atualizar_detalhes_empresa_service(implantacao_id, usuario_cs_email, user_pe
                     f"Previsão recalculada para {campos['data_previsao_termino']} (Início: {dt_str}, Duração: {dias} dias)"
                 )
 
+                # Recalcular previsao_original dos checklist_items desta implantação
+                # Para itens com dias_offset: previsao_original = dt_inicio + dias_offset
+                # Para itens sem dias_offset: previsao_original = nova data_previsao_termino
+                try:
+                    from ...db import db_connection as _db_conn
+
+                    with _db_conn() as (_conn, _db_type):
+                        _cursor = _conn.cursor()
+
+                        # Atualizar itens COM dias_offset definido
+                        if _db_type == "postgres":
+                            _cursor.execute(
+                                """
+                                UPDATE checklist_items
+                                SET previsao_original = %s::timestamp + (dias_offset || ' days')::interval,
+                                    updated_at = CURRENT_TIMESTAMP
+                                WHERE implantacao_id = %s
+                                  AND dias_offset IS NOT NULL
+                                """,
+                                (dt_inicio, implantacao_id),
+                            )
+                        else:
+                            # SQLite: buscar e atualizar individualmente
+                            _cursor.execute(
+                                "SELECT id, dias_offset FROM checklist_items WHERE implantacao_id = ? AND dias_offset IS NOT NULL",
+                                (implantacao_id,),
+                            )
+                            items_com_offset = _cursor.fetchall()
+                            for item_row in items_com_offset:
+                                item_id = item_row[0] if isinstance(item_row, tuple) else item_row["id"]
+                                offset = item_row[1] if isinstance(item_row, tuple) else item_row["dias_offset"]
+                                nova_previsao_orig = dt_inicio + timedelta(days=int(offset))
+                                _cursor.execute(
+                                    "UPDATE checklist_items SET previsao_original = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                    (nova_previsao_orig, item_id),
+                                )
+
+                        # Atualizar itens SEM dias_offset (usam data_previsao_termino geral)
+                        if _db_type == "postgres":
+                            _cursor.execute(
+                                """
+                                UPDATE checklist_items
+                                SET previsao_original = %s,
+                                    updated_at = CURRENT_TIMESTAMP
+                                WHERE implantacao_id = %s
+                                  AND dias_offset IS NULL
+                                  AND previsao_original IS NOT NULL
+                                """,
+                                (nova_prev, implantacao_id),
+                            )
+                        else:
+                            _cursor.execute(
+                                """
+                                UPDATE checklist_items
+                                SET previsao_original = ?,
+                                    updated_at = CURRENT_TIMESTAMP
+                                WHERE implantacao_id = ?
+                                  AND dias_offset IS NULL
+                                  AND previsao_original IS NOT NULL
+                                """,
+                                (nova_prev, implantacao_id),
+                            )
+
+                        _conn.commit()
+                        current_app.logger.info(
+                            f"Previsão original dos checklist_items recalculada para implantação {implantacao_id} (novo início: {dt_str})"
+                        )
+                except Exception as recalc_err:
+                    current_app.logger.warning(
+                        f"Erro ao recalcular previsao_original dos checklist_items: {recalc_err}"
+                    )
+
         except Exception as e:
             current_app.logger.warning(f"Erro ao recalcular previsão de término: {e}")
 

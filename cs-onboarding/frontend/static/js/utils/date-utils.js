@@ -302,6 +302,15 @@
             return String(dateStr);
         }
 
+        // Check if it's a date-only ISO string (YYYY-MM-DD) to avoid timezone shift.
+        // new Date("2026-02-14") is parsed as UTC midnight, which in negative UTC
+        // offsets (e.g. Brazil UTC-3) becomes the previous day when using getDate().
+        var isoDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(String(dateStr).trim());
+        if (isoDateOnly) {
+            var parts = String(dateStr).trim().split('-');
+            return parts[2] + '/' + parts[1] + '/' + parts[0];
+        }
+
         var d = new Date(dateStr);
         if (isNaN(d.getTime())) return String(dateStr);
 
