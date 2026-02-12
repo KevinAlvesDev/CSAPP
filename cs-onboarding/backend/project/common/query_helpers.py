@@ -21,6 +21,7 @@ def get_implantacoes_with_progress(
     tipo: str | None = None,
     start_date: str | None = None,
     end_date: str | None = None,
+    date_type: str | None = "criacao",
 ) -> list[dict[str, Any]]:
     """
     Busca implantações com progresso calculado (SEM N+1).
@@ -31,9 +32,7 @@ def get_implantacoes_with_progress(
         limit: Limitar resultados
         offset: Pular resultados (paginação)
         sort_by_status: Ordenar por status (ordem específica do dashboard)
-
-    Returns:
-        Lista de implantações com progresso já calculado
+        date_type: Tipo de campo de data para filtrar (criacao, inicio, finalizacao, previsao)
     """
 
     # Detectar tipo de banco
@@ -136,13 +135,31 @@ def get_implantacoes_with_progress(
             query += f" AND LOWER(i.tipo) = {placeholder}"
             args.append(tipo_lower)
 
+    # Date filtering logic
+    date_column = "i.data_criacao"  # default
+    status_condition = None
+
+    if date_type == "inicio":
+        date_column = "i.data_inicio_efetivo"
+    elif date_type == "finalizacao":
+        date_column = "i.data_final_implantacao"
+    elif date_type == "parada":
+        date_column = "i.data_final_implantacao"
+        status_condition = "parada"
+    elif date_type == "cancelamento":
+        date_column = "i.data_cancelamento"
+
     if start_date:
-        query += f" AND date(i.data_criacao) >= {placeholder}"
+        query += f" AND date({date_column}) >= {placeholder}"
         args.append(start_date)
 
     if end_date:
-        query += f" AND date(i.data_criacao) <= {placeholder}"
+        query += f" AND date({date_column}) <= {placeholder}"
         args.append(end_date)
+    
+    if status_condition:
+        query += f" AND i.status = {placeholder}"
+        args.append(status_condition)
 
     if sort_by_status:
         query += """
@@ -259,6 +276,7 @@ def get_implantacoes_count(
     tipo: str | None = None,
     start_date: str | None = None,
     end_date: str | None = None,
+    date_type: str | None = "criacao",
 ) -> int:
     """
     Conta total de implantações para paginação.
@@ -267,6 +285,7 @@ def get_implantacoes_count(
         usuario_cs: Filtrar por usuário CS
         status: Filtrar por status
         context: Filtrar por contexto (ex: 'grandes_contas')
+        date_type: Tipo de campo de data para filtrar (criacao, inicio, finalizacao, previsao)
 
     Returns:
         Total de registros
@@ -310,13 +329,33 @@ def get_implantacoes_count(
             query += f" AND LOWER(i.tipo) = {placeholder}"
             args.append(tipo_lower)
 
+    # Date filtering logic
+    date_column = "i.data_criacao"  # default
+    status_condition = None
+
+    if date_type == "inicio":
+        date_column = "i.data_inicio_efetivo"
+    elif date_type == "finalizacao":
+        date_column = "i.data_final_implantacao"
+        # Opcional: garantir que status seja finalizada?
+        # status_condition = "finalizada" 
+    elif date_type == "parada":
+        date_column = "i.data_final_implantacao"
+        status_condition = "parada"
+    elif date_type == "cancelamento":
+        date_column = "i.data_cancelamento"
+
     if start_date:
-        query += f" AND date(i.data_criacao) >= {placeholder}"
+        query += f" AND date({date_column}) >= {placeholder}"
         args.append(start_date)
 
     if end_date:
-        query += f" AND date(i.data_criacao) <= {placeholder}"
+        query += f" AND date({date_column}) <= {placeholder}"
         args.append(end_date)
+    
+    if status_condition:
+        query += f" AND i.status = {placeholder}"
+        args.append(status_condition)
 
     res = query_db(query, tuple(args), one=True)
     return res.get("total", 0) if res else 0

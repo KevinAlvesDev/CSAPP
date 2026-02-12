@@ -65,29 +65,28 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
     <main class="p-4" id="main-content" data-context="grandes_contas">
 
         {% if is_manager %}
-        <div class="card p-3 mb-4">
-            <h6 class="text-secondary mb-3 border-bottom pb-2">Filtrar Dashboard</h6>
-            <form method="GET" action="{{ url_for('grandes_contas.dashboard') }}" id="cs-filter-form">
-                <div class="row g-3 align-items-end">
-                    <div class="col-md-10">
-                        <label for="cs_filter" class="form-label small text-secondary">Filtrar por Implantador</label>
-                        <select id="cs_filter" name="cs_filter" class="form-select" onchange="this.form.submit()">
-                            <option value="">-- Ver Todos --</option>
-                            {% if all_cs_users %}
-                            {% for cs in all_cs_users %}
-                            <option value="{{ cs.usuario }}" {% if cs.usuario==current_cs_filter %}selected{% endif %}>
-                                {{ cs.nome }} ({{ cs.usuario }})
-                            </option>
-                            {% endfor %}
-                            {% endif %}
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <a href="{{ url_for('grandes_contas.dashboard') }}"
-                            class="btn btn-outline-secondary w-100">Limpar
-                            Filtro</a>
-                    </div>
-                </div>
+        <div class="card p-2 px-3 mb-3">
+            <form method="GET" action="{{ url_for('grandes_contas.dashboard') }}" id="cs-filter-form"
+                class="d-flex align-items-center gap-2 flex-wrap">
+                <span class="text-secondary small fw-semibold text-nowrap"><i
+                        class="bi bi-funnel me-1"></i>Filtros:</span>
+                <select id="cs_filter" name="cs_filter" class="form-select form-select-sm"
+                    style="width: auto; min-width: 220px;" onchange="this.form.submit()">
+                    <option value="">Todos os Implantadores</option>
+                    {% if all_cs_users %}
+                    {% for cs in all_cs_users %}
+                    <option value="{{ cs.usuario }}" {% if cs.usuario==current_cs_filter %}selected{% endif %}>
+                        {{ cs.nome }} ({{ cs.usuario }})
+                    </option>
+                    {% endfor %}
+                    {% endif %}
+                </select>
+                {% if current_cs_filter %}
+                <a href="{{ url_for('grandes_contas.dashboard') }}" class="btn btn-sm btn-outline-secondary"
+                    title="Limpar Filtros">
+                    <i class="bi bi-x-lg me-1"></i>Limpar
+                </a>
+                {% endif %}
             </form>
         </div>
         {% endif %}

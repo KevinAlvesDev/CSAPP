@@ -30,6 +30,7 @@ def get_dashboard_data(
     tipo: str | None = None,
     start_date: str | None = None,
     end_date: str | None = None,
+    date_type: str | None = "criacao",
 ) -> tuple[dict, dict]:
     """
     Busca dados do dashboard de forma otimizada (SEM N+1).
@@ -49,15 +50,6 @@ def get_dashboard_data(
     # Configurar paginação
     if page is not None and per_page is None:
         per_page = 100
-
-    # CACHE DESABILITADO - sempre buscar dados frescos
-    # cache_key = f"dashboard_data_{user_email}_{filtered_cs_email or 'all'}_{context or 'all'}_p{page}_pp{per_page}_{search_term or 'all'}_{tipo or 'all'}_{start_date or 'all'}_{end_date or 'all'}"
-    # from ..config.cache_config import cache
-    # if cache and use_cache:
-    #     cached_data = cache.get(cache_key)
-    #     if cached_data:
-    #         current_app.logger.info(f"Dashboard cache HIT para {user_email}")
-    #         return cached_data
 
     perfil_acesso = g.perfil.get("perfil_acesso") if g.get("perfil") else None
     manager_profiles = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
@@ -87,6 +79,7 @@ def get_dashboard_data(
             tipo=tipo,
             start_date=start_date,
             end_date=end_date,
+            date_type=date_type,
         )
         from ...database import Pagination
 
@@ -105,6 +98,7 @@ def get_dashboard_data(
         tipo=tipo,
         start_date=start_date,
         end_date=end_date,
+        date_type=date_type,
     )
 
     # Estruturas de dados

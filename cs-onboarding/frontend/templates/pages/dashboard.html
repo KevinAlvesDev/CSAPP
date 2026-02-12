@@ -65,28 +65,28 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
     <main class="p-4" id="main-content">
 
         {% if is_manager %}
-        <div class="card p-3 mb-4">
-            <h6 class="text-secondary mb-3 border-bottom pb-2">Filtrar Dashboard</h6>
-            <form method="GET" action="{{ url_for('onboarding.dashboard') }}" id="cs-filter-form">
-                <div class="row g-3 align-items-end">
-                    <div class="col-md-10">
-                        <label for="cs_filter" class="form-label small text-secondary">Filtrar por Implantador</label>
-                        <select id="cs_filter" name="cs_filter" class="form-select" onchange="this.form.submit()">
-                            <option value="">-- Ver Todos os Implantadores --</option>
-                            {% if all_cs_users %}
-                            {% for cs in all_cs_users %}
-                            <option value="{{ cs.usuario }}" {% if cs.usuario==current_cs_filter %}selected{% endif %}>
-                                {{ cs.nome }} ({{ cs.usuario }})
-                            </option>
-                            {% endfor %}
-                            {% endif %}
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <a href="{{ url_for('onboarding.dashboard') }}" class="btn btn-outline-secondary w-100">Limpar
-                            Filtro</a>
-                    </div>
-                </div>
+        <div class="card p-2 px-3 mb-3">
+            <form method="GET" action="{{ url_for('onboarding.dashboard') }}" id="cs-filter-form"
+                class="d-flex align-items-center gap-2 flex-wrap">
+                <span class="text-secondary small fw-semibold text-nowrap"><i
+                        class="bi bi-funnel me-1"></i>Filtros:</span>
+                <select id="cs_filter" name="cs_filter" class="form-select form-select-sm"
+                    style="width: auto; min-width: 220px;" onchange="this.form.submit()">
+                    <option value="">Todos os Implantadores</option>
+                    {% if all_cs_users %}
+                    {% for cs in all_cs_users %}
+                    <option value="{{ cs.usuario }}" {% if cs.usuario==current_cs_filter %}selected{% endif %}>
+                        {{ cs.nome }} ({{ cs.usuario }})
+                    </option>
+                    {% endfor %}
+                    {% endif %}
+                </select>
+                {% if current_cs_filter %}
+                <a href="{{ url_for('onboarding.dashboard') }}" class="btn btn-sm btn-outline-secondary"
+                    title="Limpar Filtros">
+                    <i class="bi bi-x-lg me-1"></i>Limpar
+                </a>
+                {% endif %}
             </form>
         </div>
         {% endif %}
@@ -406,7 +406,8 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                                                 class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver
                                                 Histórico</a>
                                             {% if impl.usuario_cs == g.user_email %}
-                                            <form method="POST" action="{{ url_for('onboarding_actions.reabrir_implantacao') }}"
+                                            <form method="POST"
+                                                action="{{ url_for('onboarding_actions.reabrir_implantacao') }}"
                                                 style="display:inline;" onsubmit="return confirm('Tem certeza?');">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <input type="hidden" name="implantacao_id" value="{{ impl.id }}">
@@ -464,7 +465,8 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                                                 class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver
                                                 Detalhes</a>
                                             {% if impl.usuario_cs == g.user_email %}
-                                            <form method="POST" action="{{ url_for('onboarding_actions.retomar_implantacao') }}"
+                                            <form method="POST"
+                                                action="{{ url_for('onboarding_actions.retomar_implantacao') }}"
                                                 style="display:inline;" onsubmit="return confirm('Tem certeza?');">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <input type="hidden" name="implantacao_id" value="{{ impl.id }}">
@@ -683,7 +685,8 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                 <div class="modal-footer header-bg">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-outline-warning"
-                        formaction="{{ url_for('onboarding_actions.marcar_sem_previsao') }}" formmethod="POST" formnovalidate>Sem
+                        formaction="{{ url_for('onboarding_actions.marcar_sem_previsao') }}" formmethod="POST"
+                        formnovalidate>Sem
                         previsão</button>
                     <button type="submit" class="btn btn-primary">Agendar</button>
                 </div>
@@ -706,8 +709,8 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                         id="iniciarNomeEmpresa"></strong>:</p>
 
                 <!-- Opção 1: Iniciar Agora -->
-                <form method="POST" action="{{ url_for('onboarding_actions.iniciar_implantacao') }}" id="formIniciarAgora"
-                    class="mb-3">
+                <form method="POST" action="{{ url_for('onboarding_actions.iniciar_implantacao') }}"
+                    id="formIniciarAgora" class="mb-3">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="implantacao_id" id="iniciarImplId" value="">
                     <input type="hidden" name="redirect_to" value="dashboard">
@@ -717,8 +720,8 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                 </form>
 
                 <!-- Opção 2: Agendar Início Futuro -->
-                <form method="POST" action="{{ url_for('onboarding_actions.agendar_implantacao') }}" id="formAgendarFuturo"
-                    class="mb-3">
+                <form method="POST" action="{{ url_for('onboarding_actions.agendar_implantacao') }}"
+                    id="formAgendarFuturo" class="mb-3">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="implantacao_id" id="agendarImplId2" value="">
                     <div class="mb-2">
@@ -738,7 +741,8 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                 </form>
 
                 <!-- Opção 3: Sem Previsão -->
-                <form method="POST" action="{{ url_for('onboarding_actions.marcar_sem_previsao') }}" id="formSemPrevisao">
+                <form method="POST" action="{{ url_for('onboarding_actions.marcar_sem_previsao') }}"
+                    id="formSemPrevisao">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="implantacao_id" id="semPrevisaoImplId" value="">
                     <button type="submit" class="btn btn-warning w-100">

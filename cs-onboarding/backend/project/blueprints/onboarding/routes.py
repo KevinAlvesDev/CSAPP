@@ -1,3 +1,5 @@
+from datetime import date, timedelta
+
 from flask import current_app, flash, g, redirect, render_template, request, url_for
 
 from ...common.validation import ValidationError, sanitize_string, validate_integer
@@ -58,8 +60,9 @@ def dashboard():
     # Filtros de data para relatório de tags
     start_date = request.args.get("start_date")
     end_date = request.args.get("end_date")
-
-    # Buscar métricas de tags
+    date_type = request.args.get("date_type", "criacao")
+    if date_type not in ["criacao", "inicio", "finalizacao", "parada", "cancelamento"]:
+        date_type = "criacao"
     tags_report_email = current_cs_filter if is_manager else user_email
 
     tags_report = {}
@@ -71,7 +74,7 @@ def dashboard():
     try:
         # Usar versão otimizada do dashboard (consolidada)
         # Desabilitar cache quando filtros estão ativos para resposta imediata
-        has_active_filters = bool(search_term or tipo_filter)
+        has_active_filters = bool(search_term or tipo_filter or start_date or end_date)
 
         dashboard_data, metrics = get_dashboard_data(
             user_email,
@@ -82,6 +85,7 @@ def dashboard():
             tipo=tipo_filter,
             start_date=start_date,
             end_date=end_date,
+            date_type=date_type,
         )
 
         if sort_days in ["asc", "desc"]:
@@ -144,6 +148,7 @@ def dashboard():
             "sort_days": sort_days,
             "current_search": search_term,
             "current_tipo": tipo_filter,
+            "current_date_type": date_type,
             "dashboard_data": dashboard_data,
         }
 
