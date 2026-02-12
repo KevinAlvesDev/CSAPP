@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '008'
-down_revision = '007'
+down_revision = '007_add_checklist_item_id'
 branch_labels = None
 depends_on = None
 

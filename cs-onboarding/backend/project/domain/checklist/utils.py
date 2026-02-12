@@ -30,8 +30,12 @@ def _invalidar_cache_progresso_local(impl_id):
         logger.warning(f"Erro ao invalidar cache de progresso para impl_id {impl_id}: {e}")
 
 
-def _format_datetime(dt_value):
-    """Formata datetime para string no formato brasileiro: dd/mm/yyyy às HH:MM
+def _format_datetime(dt_value, only_date=False):
+    """Formata datetime para string no formato brasileiro.
+
+    Args:
+        dt_value: Valor datetime ou string ISO
+        only_date: Se True, retorna apenas dd/mm/yyyy
 
     SEMPRE converte para horário de Brasília (UTC-3) para garantir consistência.
     """
@@ -55,6 +59,8 @@ def _format_datetime(dt_value):
             dt_value = dt_value.replace(tzinfo=UTC)
         # Converter para horário de Brasília
         dt_brasilia = dt_value.astimezone(TZ_BRASILIA)
+        if only_date:
+            return dt_brasilia.strftime("%d/%m/%Y")
         return dt_brasilia.strftime("%d/%m/%Y às %H:%M")
 
     return str(dt_value)

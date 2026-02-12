@@ -51,6 +51,7 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, include_progress=
                         WITH RECURSIVE subtree AS (
                             SELECT id, parent_id, title, completed, comment,
                                    level, ordem, implantacao_id, obrigatoria, tag,
+                                   responsavel, previsao_original, nova_previsao, data_conclusao,
                                    created_at, updated_at
                             FROM checklist_items
                             WHERE id = %s
@@ -59,6 +60,7 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, include_progress=
 
                             SELECT ci.id, ci.parent_id, ci.title, ci.completed, ci.comment,
                                    ci.level, ci.ordem, ci.implantacao_id, ci.obrigatoria, ci.tag,
+                                   ci.responsavel, ci.previsao_original, ci.nova_previsao, ci.data_conclusao,
                                    ci.created_at, ci.updated_at
                             FROM checklist_items ci
                             INNER JOIN subtree st ON ci.parent_id = st.id
@@ -83,16 +85,22 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, include_progress=
                 elif root_item_id:
                     query = """
                         WITH RECURSIVE subtree(id, parent_id, title, completed, comment,
-                                               level, ordem, implantacao_id, obrigatoria, tag, created_at, updated_at) AS (
+                                               level, ordem, implantacao_id, obrigatoria, tag,
+                                               responsavel, previsao_original, nova_previsao, data_conclusao,
+                                               created_at, updated_at) AS (
                             SELECT id, parent_id, title, completed, comment,
-                                   level, ordem, implantacao_id, obrigatoria, tag, created_at, updated_at
+                                   level, ordem, implantacao_id, obrigatoria, tag,
+                                   responsavel, previsao_original, nova_previsao, data_conclusao,
+                                   created_at, updated_at
                             FROM checklist_items
                             WHERE id = ?
 
                             UNION ALL
 
                             SELECT ci.id, ci.parent_id, ci.title, ci.completed, ci.comment,
-                                   ci.level, ci.ordem, ci.implantacao_id, ci.obrigatoria, ci.tag, ci.created_at, ci.updated_at
+                                   ci.level, ci.ordem, ci.implantacao_id, ci.obrigatoria, ci.tag,
+                                   ci.responsavel, ci.previsao_original, ci.nova_previsao, ci.data_conclusao,
+                                   ci.created_at, ci.updated_at
                             FROM checklist_items ci
                             INNER JOIN subtree st ON ci.parent_id = st.id
                         )
@@ -204,13 +212,16 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, include_progress=
                     "tag": item.get("tag") if isinstance(item, dict) else item["tag"],
                     "responsavel": item.get("responsavel") if isinstance(item, dict) else item.get("responsavel", None),
                     "previsao_original": _format_datetime(
-                        item.get("previsao_original") if isinstance(item, dict) else item.get("previsao_original", None)
+                        item.get("previsao_original") if isinstance(item, dict) else item.get("previsao_original", None),
+                        only_date=True,
                     ),
                     "nova_previsao": _format_datetime(
-                        item.get("nova_previsao") if isinstance(item, dict) else item.get("nova_previsao", None)
+                        item.get("nova_previsao") if isinstance(item, dict) else item.get("nova_previsao", None),
+                        only_date=True,
                     ),
                     "data_conclusao": _format_datetime(
-                        item.get("data_conclusao") if isinstance(item, dict) else item.get("data_conclusao", None)
+                        item.get("data_conclusao") if isinstance(item, dict) else item.get("data_conclusao", None),
+                        only_date=True,
                     ),
                     "created_at": _format_datetime(
                         item.get("created_at") if isinstance(item, dict) else item.get("created_at", None)

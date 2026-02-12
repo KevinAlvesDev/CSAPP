@@ -68,6 +68,18 @@ def init_db():
                         ) THEN
                             ALTER TABLE comentarios_h ADD COLUMN implantacao_id INTEGER REFERENCES implantacoes(id);
                         END IF;
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns
+                            WHERE table_name='checklist_items' AND column_name='prazo_inicio'
+                        ) THEN
+                            ALTER TABLE checklist_items ADD COLUMN prazo_inicio DATE NULL;
+                        END IF;
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns
+                            WHERE table_name='checklist_items' AND column_name='prazo_fim'
+                        ) THEN
+                            ALTER TABLE checklist_items ADD COLUMN prazo_fim DATE NULL;
+                        END IF;
                     END
                     $$;
                 """)
@@ -913,6 +925,10 @@ def _migrar_colunas_prazos_checklist_items(cursor):
             cursor.execute("ALTER TABLE checklist_items ADD COLUMN previsao_original DATETIME")
         if "nova_previsao" not in names:
             cursor.execute("ALTER TABLE checklist_items ADD COLUMN nova_previsao DATETIME")
+        if "prazo_inicio" not in names:
+            cursor.execute("ALTER TABLE checklist_items ADD COLUMN prazo_inicio DATE")
+        if "prazo_fim" not in names:
+            cursor.execute("ALTER TABLE checklist_items ADD COLUMN prazo_fim DATE")
     except Exception:
         pass
 

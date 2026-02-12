@@ -642,8 +642,8 @@ def atualizar_prazo_item(item_id, nova_data_iso, usuario_email):
 
         return {
             "item_id": item_id,
-            "nova_previsao": _format_datetime(nova_dt),
-            "previsao_original": _format_datetime(prev_orig),
+            "nova_previsao": _format_datetime(nova_dt, only_date=True),
+            "previsao_original": _format_datetime(prev_orig, only_date=True),
         }
 
 

@@ -341,7 +341,10 @@ class ChecklistRenderer {
             }
                         </span>
                         <span class="col-conclusao">
-                            <span class="badge badge-truncate bg-success text-white d-none" id="badge-concl-${item.id}"></span>
+                            ${item.completed && item.data_conclusao ?
+                `<span class="badge badge-truncate bg-success text-white" id="badge-concl-${item.id}" title="Concluído em: ${item.data_conclusao}">${formatDate(item.data_conclusao)}</span>` :
+                `<span class="badge badge-truncate bg-success text-white d-none" id="badge-concl-${item.id}"></span>`
+            }
                         </span>
                         <span class="col-status">
                             <span class="badge badge-truncate ${statusClass}" id="status-badge-${item.id}" title="Status: ${statusText}">
@@ -699,6 +702,46 @@ class ChecklistRenderer {
         if (badge) {
             badge.className = `badge badge-truncate ${node.completed ? 'bg-success' : 'bg-warning'}`;
             badge.innerHTML = `<i class="bi ${node.completed ? 'bi-check-circle-fill' : 'bi-clock-fill'} me-1"></i>${node.completed ? 'Concluído' : 'Pendente'}`;
+        }
+
+        // Conclusion Badge
+        const conBadge = itemEl.querySelector(`#badge-concl-${itemId}`);
+        if (conBadge) {
+            if (node.completed && node.data_conclusao) {
+                const formatDate = window.DateUtils ? window.DateUtils.formatDate : this.formatDate.bind(this);
+                conBadge.textContent = formatDate(node.data_conclusao);
+                conBadge.title = `Concluído em: ${node.data_conclusao}`;
+                conBadge.classList.remove('d-none');
+            } else {
+                conBadge.classList.add('d-none');
+            }
+        }
+
+        // Prediction Badges
+        const prevOrigBadge = itemEl.querySelector(`#badge-prev-orig-${itemId}`);
+        if (prevOrigBadge) {
+            const formatDate = window.DateUtils ? window.DateUtils.formatDate : this.formatDate.bind(this);
+            if (node.previsao_original) {
+                prevOrigBadge.textContent = formatDate(node.previsao_original);
+                prevOrigBadge.title = `Previsão original: ${node.previsao_original}`;
+                prevOrigBadge.classList.remove('d-none');
+            } else {
+                prevOrigBadge.classList.add('d-none');
+            }
+        }
+
+        const prevNovaBadge = itemEl.querySelector(`#badge-prev-nova-${itemId}`);
+        if (prevNovaBadge) {
+            const formatDate = window.DateUtils ? window.DateUtils.formatDate : this.formatDate.bind(this);
+            const refVal = node.nova_previsao || node.previsao_original || this.previsaoTermino;
+            if (refVal) {
+                prevNovaBadge.textContent = formatDate(refVal);
+                prevNovaBadge.title = `Nova previsão: ${refVal}`;
+                prevNovaBadge.className = `badge badge-truncate js-edit-prev ${node.nova_previsao ? 'bg-danger text-white' : 'bg-warning text-dark'}`;
+            } else {
+                prevNovaBadge.textContent = 'Definir nova previsão';
+                prevNovaBadge.className = 'badge badge-truncate bg-warning text-dark js-edit-prev';
+            }
         }
 
         // Tags, Responsavel, Previsoes... (Simplified for brevity, similar to original)
