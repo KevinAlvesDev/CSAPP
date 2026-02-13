@@ -5,7 +5,7 @@ Princípio SOLID: Single Responsibility
 """
 
 import logging
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta, timezone
 
 from ...db import query_db
 
@@ -39,9 +39,35 @@ def _format_datetime(dt_value, only_date=False):
 
     SEMPRE converte para horário de Brasília (UTC-3) para garantir consistência.
     """
-    if not dt_value:
-        return None
+    # ESTRATÉGIA DEFINITIVA "BALA DE PRATA":
+    # Se queremos APENAS data (only_date=True), ignoramos qualquer timezone ou hora.
+    # Tratamos o valor como uma string de data local ou objeto data puro.
+    
+    if only_date:
+        if not dt_value:
+            return None
+            
+        str_val = str(dt_value)
+        
+        # Caso 1: String ISO ou similar (YYYY-MM-DD...)
+        # Pega apenas os primeiros 10 chars (YYYY-MM-DD) e inverte para DD/MM/YYYY
+        # Isso resolve datas como "2026-02-18 00:00:00" ou "2026-02-18T00:00:00Z"
+        # SEM tentar converter fuso (que transformaria dia 18 00h em dia 17 21h)
+        if len(str_val) >= 10:
+            # Tenta encontrar padrão YYYY-MM-DD no início da string
+            if str_val[4] == '-' and str_val[7] == '-':
+                parts = str_val[:10].split('-')
+                return f"{parts[2]}/{parts[1]}/{parts[0]}"
+        
+        # Caso 2: Objeto date ou datetime
+        if hasattr(dt_value, 'day'):
+            return dt_value.strftime("%d/%m/%Y")
+            
+        return str_val[:10] # Fallback bruto
 
+    # Lógica original APENAS para quando queremos HORA (only_date=False)
+    # Aqui a conversão de fuso é desejada para mostrar a hora correta no Brasil
+    
     # Se já for string, tentar parsear
     if isinstance(dt_value, str):
         try:
@@ -59,8 +85,6 @@ def _format_datetime(dt_value, only_date=False):
             dt_value = dt_value.replace(tzinfo=UTC)
         # Converter para horário de Brasília
         dt_brasilia = dt_value.astimezone(TZ_BRASILIA)
-        if only_date:
-            return dt_brasilia.strftime("%d/%m/%Y")
         return dt_brasilia.strftime("%d/%m/%Y às %H:%M")
 
     return str(dt_value)

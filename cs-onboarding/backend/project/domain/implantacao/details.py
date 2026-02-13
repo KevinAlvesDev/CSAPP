@@ -197,20 +197,49 @@ def atualizar_detalhes_empresa_service(implantacao_id, usuario_cs_email, user_pe
                                 (dt_inicio, implantacao_id),
                             )
                         else:
-                            # SQLite: buscar e atualizar individualmente
-                            _cursor.execute(
-                                "SELECT id, dias_offset FROM checklist_items WHERE implantacao_id = ? AND dias_offset IS NOT NULL",
-                                (implantacao_id,),
-                            )
-                            items_com_offset = _cursor.fetchall()
-                            for item_row in items_com_offset:
-                                item_id = item_row[0] if isinstance(item_row, tuple) else item_row["id"]
-                                offset = item_row[1] if isinstance(item_row, tuple) else item_row["dias_offset"]
-                                nova_previsao_orig = dt_inicio + timedelta(days=int(offset))
+                            # SQLite: buscar e atualizar individualmente (BUSINESS DAYS)
+                            try:
+                                from ...common.date_helpers import add_business_days
                                 _cursor.execute(
-                                    "UPDATE checklist_items SET previsao_original = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-                                    (nova_previsao_orig, item_id),
+                                    "SELECT id, dias_offset FROM checklist_items WHERE implantacao_id = ? AND dias_offset IS NOT NULL",
+                                    (implantacao_id,),
                                 )
+                                items_com_offset = _cursor.fetchall()
+                                for item_row in items_com_offset:
+                                    # Handle both tuple (sqlite) and dict (postgres driver sometimes) rows
+                                    if isinstance(item_row, (list, tuple)):
+                                        item_id = item_row[0]
+                                        offset = item_row[1]
+                                    else:
+                                        item_id = item_row["id"]
+                                        offset = item_row["dias_offset"]
+                                        
+                                    nova_previsao_orig = add_business_days(dt_inicio.date(), int(offset))
+                                    _cursor.execute(
+                                        "UPDATE checklist_items SET previsao_original = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                        (nova_previsao_orig.strftime("%Y-%m-%d"), item_id),
+                                    )
+                            except Exception as e:
+                                # Fallback simples
+                                current_app.logger.warning(f"Erro ao recalcular datas SQLite (Business Days): {e}. Usando Calendar Days.")
+                                _cursor.execute(
+                                    "SELECT id, dias_offset FROM checklist_items WHERE implantacao_id = ? AND dias_offset IS NOT NULL",
+                                    (implantacao_id,),
+                                )
+                                items_com_offset = _cursor.fetchall()
+                                for item_row in items_com_offset:
+                                    if isinstance(item_row, (list, tuple)):
+                                        item_id = item_row[0]
+                                        offset = item_row[1]
+                                    else:
+                                        item_id = item_row["id"]
+                                        offset = item_row["dias_offset"]
+                                    
+                                    nova_previsao_orig = dt_inicio + timedelta(days=int(offset))
+                                    _cursor.execute(
+                                        "UPDATE checklist_items SET previsao_original = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                        (nova_previsao_orig.strftime("%Y-%m-%d"), item_id),
+                                    )
 
                         # Atualizar itens SEM dias_offset (usam data_previsao_termino geral)
                         if _db_type == "postgres":

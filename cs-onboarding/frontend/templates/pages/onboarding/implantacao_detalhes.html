@@ -478,7 +478,8 @@
                                         plano_ativo_instancia.data_criacao_fmt }}</small>
 
                                     {% if (is_manager or is_owner) and not is_historico_view %}
-                                    <form id="formConcluirPlanoImplantacao" action="{{ url_for('onboarding_actions.concluir_plano_implantacao') }}"
+                                    <form id="formConcluirPlanoImplantacao"
+                                        action="{{ url_for('onboarding_actions.concluir_plano_implantacao') }}"
                                         method="POST">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
@@ -499,10 +500,13 @@
                                 Inicie um novo plano se necessário.
                             </div>
 
-                            {# Se checklist estiver 100% e usuário for manager, oferecer botão para concluir (cria instância se necessário) #}
-                            {% if (is_manager or is_owner) and not is_historico_view and progresso_porcentagem is defined and progresso_porcentagem >= 100 %}
+                            {# Se checklist estiver 100% e usuário for manager, oferecer botão para concluir (cria
+                            instância se necessário) #}
+                            {% if (is_manager or is_owner) and not is_historico_view and progresso_porcentagem is
+                            defined and progresso_porcentagem >= 100 %}
                             <div class="mt-2">
-                                <form action="{{ url_for('onboarding_actions.concluir_plano_implantacao') }}" method="POST">
+                                <form action="{{ url_for('onboarding_actions.concluir_plano_implantacao') }}"
+                                    method="POST">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
                                     <input type="hidden" name="plano_instancia_id" value="">
@@ -571,7 +575,8 @@
                                     class="list-group-item list-group-item-action flex-column align-items-start p-4 mb-2 border rounded shadow-sm">
                                     <div class="d-flex w-100 justify-content-between mb-2">
                                         <h5 class="mb-1 fw-bold text-success">
-                                            <i class="bi bi-check-circle-fill me-2"></i>{{ plano.nome.split(' (Concluído')[0] }}
+                                            <i class="bi bi-check-circle-fill me-2"></i>{{ plano.nome.split('
+                                            (Concluído')[0] }}
                                         </h5>
                                         <small class="text-muted">Concluído em: {{ plano.data_conclusao_fmt or
                                             'N/A' }}</small>
@@ -1486,7 +1491,8 @@ Sim - Academia XYZ
 
 <script src="{{ url_for('static', filename='js/components/checklist/checklist_drag_drop.js') }}"></script>
 <script src="{{ url_for('static', filename='js/components/checklist/checklist_comments.js') }}"></script>
-<script src="{{ url_for('static', filename='js/components/checklist_renderer.js') }}"></script>
+<script
+    src="{{ url_for('static', filename='js/components/checklist_renderer.js') }}?v={{ range(1, 10000) | random }}"></script>
 
 <script src="{{ url_for('static', filename='js/utils/checklist_comments_ui.js') }}"></script>
 <script src="{{ url_for('static', filename='js/utils/drag_drop_visual_patch.js') }}"></script>

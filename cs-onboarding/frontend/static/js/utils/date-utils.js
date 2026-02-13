@@ -295,20 +295,39 @@
      */
     function formatDate(dateStr, includeTime) {
         if (!dateStr) return '';
+        var s = String(dateStr).trim();
 
         // If already in Brazilian format, return as is
-        var brFormatRegex = /^\d{2}\/\d{2}\/\d{4}(\s+às\s+\d{2}:\d{2})?$/;
-        if (brFormatRegex.test(String(dateStr).trim())) {
-            return String(dateStr);
+        var brFormatRegex = /^\d{2}\/\d{2}\/\d{4}/;
+        if (brFormatRegex.test(s)) {
+            return s;
         }
 
-        // Check if it's a date-only ISO string (YYYY-MM-DD) to avoid timezone shift.
-        // new Date("2026-02-14") is parsed as UTC midnight, which in negative UTC
-        // offsets (e.g. Brazil UTC-3) becomes the previous day when using getDate().
-        var isoDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(String(dateStr).trim());
-        if (isoDateOnly) {
-            var parts = String(dateStr).trim().split('-');
-            return parts[2] + '/' + parts[1] + '/' + parts[0];
+        // Check if it starts with YYYY-MM-DD (ISO 8601-like)
+        // This handles "2026-02-16", "2026-02-16 00:00", "2026-02-16T00:00..."
+        if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+            var datePart = s.substring(0, 10);
+            var parts = datePart.split('-');
+            var out = parts[2] + '/' + parts[1] + '/' + parts[0];
+
+            if (includeTime) {
+                // Parse time manually to avoid timezone issues
+                // Look for HH:MM
+                var timeMatch = s.match(/[\sT](\d{2}):(\d{2})/);
+                if (timeMatch) {
+                    out += ' às ' + timeMatch[1] + ':' + timeMatch[2];
+                } else {
+                    // Fallback using Date object if time extraction fails but we want time
+                    // Be careful with this path, but usually inputs are clean
+                    var d = new Date(dateStr);
+                    if (!isNaN(d.getTime())) {
+                        var hours = String(d.getHours()).padStart(2, '0');
+                        var minutes = String(d.getMinutes()).padStart(2, '0');
+                        out += ' às ' + hours + ':' + minutes;
+                    }
+                }
+            }
+            return out;
         }
 
         var d = new Date(dateStr);

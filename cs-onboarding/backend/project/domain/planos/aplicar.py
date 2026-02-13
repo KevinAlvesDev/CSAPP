@@ -143,7 +143,8 @@ def aplicar_plano_a_implantacao_checklist(
                     data_inicio = datetime.strptime(data_inicio[:10], "%Y-%m-%d")
                 except:
                     data_inicio = datetime.now()
-            data_previsao_termino = data_inicio + timedelta(days=int(dias_duracao))
+            from ...common.date_helpers import add_business_days
+            data_previsao_termino = add_business_days(data_inicio.date() if hasattr(data_inicio, 'date') else data_inicio, int(dias_duracao))
 
     with db_connection() as (conn, db_type):
         cursor = conn.cursor()
@@ -490,7 +491,7 @@ def _clonar_plano_para_implantacao_checklist(
 
     def clone_item_recursivo(plano_item_id, new_parent_id):
         if db_type == "postgres":
-            sql_item = "SELECT title, completed, comment, level, ordem, obrigatoria, tipo_item, descricao, status, responsavel, tag, dias_offset FROM checklist_items WHERE id = %s"
+            sql_item = "SELECT title, completed, comment, level, ordem, obrigatoria, tipo_item, descricao, status, responsavel, tag, dias_offset, dias_uteis FROM checklist_items WHERE id = %s"
             cursor.execute(sql_item, (plano_item_id,))
             row = cursor.fetchone()
             if not row:
@@ -503,8 +504,9 @@ def _clonar_plano_para_implantacao_checklist(
             responsavel = row[9]
             tag = row[10]
             item_dias_offset = row[11]
+            item_dias_uteis = row[12]
         else:
-            sql_item = "SELECT title, completed, comment, level, ordem, obrigatoria, tipo_item, descricao, status, responsavel, tag, dias_offset FROM checklist_items WHERE id = ?"
+            sql_item = "SELECT title, completed, comment, level, ordem, obrigatoria, tipo_item, descricao, status, responsavel, tag, dias_offset, dias_uteis FROM checklist_items WHERE id = ?"
             cursor.execute(sql_item, (plano_item_id,))
             row = cursor.fetchone()
             if not row:
@@ -522,6 +524,7 @@ def _clonar_plano_para_implantacao_checklist(
             responsavel = row[9]
             tag = row[10]
             item_dias_offset = row[11]
+            item_dias_uteis = bool(row[12]) if row[12] is not None else False
 
         tipo_item_implantacao = (
             tipo_item_plano.replace("plano_", "") if tipo_item_plano.startswith("plano_") else tipo_item_plano
@@ -538,16 +541,17 @@ def _clonar_plano_para_implantacao_checklist(
                 tipo_item_implantacao = "subtarefa"
 
         if db_type == "postgres":
-            # Calcular previsao_original individual: se dias_offset definido, usar data_base + offset
+            # Calcular previsao_original individual: se dias_offset definido, usar data_base + offset (Sempre Dias Úteis)
             if item_dias_offset is not None and data_base:
                 try:
-                    from datetime import timedelta as td
+                    from ...common.date_helpers import add_business_days
                     base = data_base
                     if isinstance(base, str):
                         base = datetime.strptime(base[:10], "%Y-%m-%d")
                     elif isinstance(base, date) and not isinstance(base, datetime):
                         base = datetime.combine(base, datetime.min.time())
-                    previsao_original = base + td(days=int(item_dias_offset))
+                    
+                    previsao_original = add_business_days(base.date() if hasattr(base, 'date') else base, int(item_dias_offset))
                 except Exception:
                     previsao_original = data_previsao_termino
             else:
@@ -582,16 +586,18 @@ def _clonar_plano_para_implantacao_checklist(
             result = cursor.fetchone()
             new_item_id = result[0] if result else None
         else:
-            # Calcular previsao_original individual: se dias_offset definido, usar data_base + offset
+            # Calcular previsao_original individual: se dias_offset definido, usar data_base + offset (Sempre Dias Úteis)
             if item_dias_offset is not None and data_base:
                 try:
-                    from datetime import timedelta as td
+                    from ...common.date_helpers import add_business_days
                     base = data_base
                     if isinstance(base, str):
                         base = datetime.strptime(base[:10], "%Y-%m-%d")
                     elif isinstance(base, date) and not isinstance(base, datetime):
                         base = datetime.combine(base, datetime.min.time())
-                    previsao_original = base + td(days=int(item_dias_offset))
+                    
+                    # PULA FINS DE SEMANA (DIAS ÚTEIS)
+                    previsao_original = add_business_days(base.date() if hasattr(base, 'date') else base, int(item_dias_offset))
                 except Exception:
                     previsao_original = data_previsao_termino
             else:

@@ -1028,12 +1028,30 @@ class ChecklistRenderer {
 
     formatDate(d) {
         if (!d) return '';
-        // Handle date-only ISO strings (YYYY-MM-DD) without timezone shift
-        if (/^\d{4}-\d{2}-\d{2}$/.test(String(d).trim())) {
-            const parts = String(d).trim().split('-');
+        const s = String(d).trim();
+        // 1. Handle YYYY-MM-DD
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+            const parts = s.split('-');
             return parts[2] + '/' + parts[1] + '/' + parts[0];
         }
-        try { return new Date(d).toLocaleDateString('pt-BR'); } catch (e) { return d; }
+        // 2. Handle YYYY-MM-DD HH:MM:SS or T
+        if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/.test(s)) {
+            const datePart = s.substring(0, 10);
+            const parts = datePart.split('-');
+            return parts[2] + '/' + parts[1] + '/' + parts[0];
+        }
+        // 3. Handle DD/MM/YYYY
+        if (/^\d{2}\/\d{2}\/\d{4}/.test(s)) {
+            return s.substring(0, 10);
+        }
+
+        try {
+            const dateObj = new Date(d);
+            if (isNaN(dateObj.getTime())) return d;
+            return dateObj.toLocaleDateString('pt-BR');
+        } catch (e) {
+            return d;
+        }
     }
 
     escapeHtml(t) { return t || ''; } // Fallback
