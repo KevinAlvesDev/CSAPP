@@ -544,6 +544,7 @@ def get_implantacao_details(
         "SIM_NAO_OPTIONS": SIM_NAO_OPTIONS,
         "all_cs_users": all_cs_users,
         "is_manager": is_manager,
+        "is_owner": implantacao.get('usuario_cs') == usuario_cs_email,
         "tt": TASK_TIPS,
         "plano_sucesso": plano_sucesso_info,
         "checklist_tree": checklist_nested,
