@@ -923,3 +923,115 @@ def delete_jira_link_action(implantacao_id, jira_key):
     except Exception as e:
         app_logger.error(f"Erro na exclusão de vinculo Jira: {e}")
         return jsonify({"error": "Erro interno servidor"}), 500
+
+
+@onboarding_actions_bp.route("/concluir_plano_implantacao", methods=["POST"])
+@login_required
+def concluir_plano_implantacao():
+    """
+    Marca o plano de sucesso atual como concluído e arquiva no histórico.
+    """
+    implantacao_id = request.form.get("implantacao_id")
+    plano_instancia_id = request.form.get("plano_instancia_id")
+    usuario_email = g.user_email
+
+    if not implantacao_id:
+        flash("ID da implantação é obrigatório.", "error")
+        return redirect(url_for("onboarding.dashboard"))
+
+    try:
+        from ...db import query_db, execute_db
+        from ...domain.planos_sucesso_service import concluir_plano_sucesso
+
+        # 1. Validar se a instância informada realmente pertence a esta implantação
+        if plano_instancia_id:
+            check_instancia = query_db(
+                "SELECT id, processo_id FROM planos_sucesso WHERE id = %s", (plano_instancia_id,), one=True
+            )
+            # Se a instância for um template (processo_id é nulo) ou pertencer a outro processo,
+            # limpamos o ID para forçar a criação de uma nova instância específica para esta implantação.
+            if not check_instancia or check_instancia.get("processo_id") is None or str(check_instancia.get("processo_id")) != str(implantacao_id):
+                plano_instancia_id = None
+
+        # Fallback: Se ainda não temos ID, busca se já existe uma instância vinculada
+        if not plano_instancia_id:
+            instancia = query_db(
+                "SELECT id FROM planos_sucesso WHERE processo_id = %s AND status = 'em_andamento'",
+                (implantacao_id,),
+                one=True,
+            )
+            if instancia:
+                plano_instancia_id = instancia["id"]
+
+        # 2. Se não houver instância, criamos uma agora para representar o plano concluído
+        if not plano_instancia_id:
+            impl = query_db(
+                "SELECT plano_sucesso_id, nome_empresa FROM implantacoes WHERE id = %s", (implantacao_id,), one=True
+            )
+            if impl and impl["plano_sucesso_id"]:
+                plano_template = query_db(
+                    "SELECT nome, descricao FROM planos_sucesso WHERE id = %s", (impl["plano_sucesso_id"],), one=True
+                )
+                if plano_template:
+                    sql_insert = """
+                        INSERT INTO planos_sucesso (nome, descricao, criado_por, status, processo_id, contexto, data_atualizacao)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    """
+                    from ...db import db_connection
+
+                    with db_connection() as (conn, db_type):
+                        cursor = conn.cursor()
+                        if db_type == "sqlite":
+                            sql_insert = sql_insert.replace("%s", "?")
+
+                        cursor.execute(
+                            sql_insert,
+                            (
+                                f"{plano_template['nome']} (Concluído em {datetime.now().strftime('%d/%m/%Y')})",
+                                plano_template["descricao"],
+                                usuario_email,
+                                "em_andamento",  # Começa em andamento para concluir via service
+                                implantacao_id,
+                                "onboarding",
+                                datetime.now(),
+                            ),
+                        )
+                        if db_type == "postgres":
+                            cursor.execute("SELECT lastval()")
+                            plano_instancia_id = cursor.fetchone()[0]
+                        else:
+                            plano_instancia_id = cursor.lastrowid
+                        conn.commit()
+
+        # 3. Marcar como concluído se temos um ID
+        if plano_instancia_id:
+            concluir_plano_sucesso(plano_instancia_id)
+
+            # 4. Vincular os checklist_items atuais a esta instância de plano e desvinculá-los da implantação ativa
+            # Isso garante que eles apareçam no histórico mas sumam do "Em andamento"
+            execute_db(
+                "UPDATE checklist_items SET plano_id = %s, implantacao_id = NULL WHERE implantacao_id = %s",
+                (plano_instancia_id, implantacao_id),
+            )
+
+            # 5. Limpar a referência de plano ativo na implantação
+            execute_db("UPDATE implantacoes SET plano_sucesso_id = NULL WHERE id = %s", (implantacao_id,))
+
+            flash("Plano de sucesso concluído com sucesso! Ele foi movido para a aba de histórico.", "success")
+        else:
+            flash("Não foi possível localizar um plano ativo para concluir.", "warning")
+
+        try:
+            clear_implantacao_cache(implantacao_id)
+            logar_timeline(
+                implantacao_id, usuario_email, "plano_concluido", "O plano de sucesso foi finalizado e arquivado."
+            )
+        except Exception:
+            pass
+
+        return redirect(url_for("onboarding.ver_implantacao", impl_id=implantacao_id))
+
+    except Exception as e:
+        app_logger.error(f"Erro ao concluir plano para implantação {implantacao_id}: {e}", exc_info=True)
+        flash(f"Erro ao concluir plano: {e}", "error")
+        return redirect(url_for("onboarding.ver_implantacao", impl_id=implantacao_id))

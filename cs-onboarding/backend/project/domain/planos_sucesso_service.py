@@ -23,6 +23,10 @@ from .planos import (
     # Aplicar
     aplicar_plano_a_implantacao,
     aplicar_plano_a_implantacao_checklist,
+    # CRUD
+    concluir_plano_sucesso,
+    contar_planos_em_andamento,
+    contar_planos_por_status,
     # Estrutura
     atualizar_estrutura_plano,
     atualizar_plano_sucesso,
@@ -56,6 +60,10 @@ __all__ = [
     # Aplicar
     "aplicar_plano_a_implantacao",
     "aplicar_plano_a_implantacao_checklist",
+    # CRUD
+    "concluir_plano_sucesso",
+    "contar_planos_em_andamento",
+    "contar_planos_por_status",
     # Estrutura
     "atualizar_estrutura_plano",
     "atualizar_plano_sucesso",

@@ -6,6 +6,12 @@ if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
 
 try:
+    # If no DATABASE_URL is configured, assume local dev and use SQLite by default.
+    # This avoids 'Connection pool not initialized' errors when psycopg2 is not installed
+    # or a remote DB is not available during local testing.
+    if not os.environ.get('DATABASE_URL') and not os.environ.get('USE_SQLITE_LOCALLY'):
+        os.environ['USE_SQLITE_LOCALLY'] = 'True'
+
     from project import create_app
 except ImportError:
     print("\n--- ERRO DE IMPORTAÇÃO ---")

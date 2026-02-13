@@ -18,6 +18,7 @@ class ChecklistRenderer {
         this.expandedItems = new Set();
         this.flatData = {};
         this.isLoading = false;
+        this.isHistoricoView = window.IS_HISTORICO_VIEW || false;
         this.previsaoTermino = this.container?.dataset?.previsaoTermino || '';
         this._toggleThrottle = new Map();
 
@@ -115,6 +116,8 @@ class ChecklistRenderer {
      * Apenas gestores ou se o plano permitir explicitamente
      */
     canDeleteItems() {
+        if (this.isHistoricoView) return false;
+
         // Verificar se é gestor
         const mainContent = document.getElementById('main-content');
         const isManager = mainContent?.dataset?.isManager === 'true';
@@ -303,7 +306,7 @@ class ChecklistRenderer {
                             ` : '<span class="btn-icon-placeholder" style="width: 24px;"></span>'}
                         </span>
                         <span class="col-checkbox d-flex align-items-center justify-content-center">
-                            <input type="checkbox" class="checklist-checkbox form-check-input" id="checklist-${item.id}" data-item-id="${item.id}" ${item.completed ? 'checked' : ''} style="cursor: pointer; width: 18px; height: 18px;">
+                            <input type="checkbox" class="checklist-checkbox form-check-input" id="checklist-${item.id}" data-item-id="${item.id}" ${item.completed ? 'checked' : ''} ${this.isHistoricoView ? 'disabled' : ''} style="cursor: pointer; width: 18px; height: 18px;">
                         </span>
                         <span class="col-title d-flex align-items-center gap-2">
                             <span class="indent-spacer" style="display:inline-block; width: ${indentPx}px;"></span>
@@ -320,8 +323,8 @@ class ChecklistRenderer {
 
                         <span class="col-responsavel">
                             ${item.responsavel ?
-                `<span class="badge bg-primary js-edit-resp badge-resp-ellipsis badge-truncate" data-item-id="${item.id}" title="${escape(item.responsavel)}">${escape(this.abbrevResponsavel(item.responsavel))}</span>` :
-                `<span class="badge bg-primary js-edit-resp badge-resp-ellipsis badge-truncate" data-item-id="${item.id}">Definir responsável</span>`
+                `<span class="badge bg-primary ${this.isHistoricoView ? '' : 'js-edit-resp'} badge-resp-ellipsis badge-truncate" data-item-id="${item.id}" title="${escape(item.responsavel)}">${escape(this.abbrevResponsavel(item.responsavel))}</span>` :
+                `<span class="badge bg-primary ${this.isHistoricoView ? '' : 'js-edit-resp'} badge-resp-ellipsis badge-truncate" data-item-id="${item.id}">Definir responsável</span>`
             }
                         </span>
 
@@ -333,10 +336,10 @@ class ChecklistRenderer {
                         </span>
                         <span class="col-prev-atual">
                             ${item.nova_previsao ?
-                `<span class="badge badge-truncate bg-danger text-white js-edit-prev" id="badge-prev-nova-${item.id}" data-item-id="${item.id}" title="Nova previsão: ${item.nova_previsao}">${formatDate(item.nova_previsao)}</span>` :
+                `<span class="badge badge-truncate bg-danger text-white ${this.isHistoricoView ? '' : 'js-edit-prev'}" id="badge-prev-nova-${item.id}" data-item-id="${item.id}" title="Nova previsão: ${item.nova_previsao}">${formatDate(item.nova_previsao)}</span>` :
                 ((item.previsao_original || this.previsaoTermino) ?
-                    `<span class="badge badge-truncate bg-warning text-dark js-edit-prev" id="badge-prev-nova-${item.id}" data-item-id="${item.id}" title="Nova previsão: ${item.previsao_original || this.previsaoTermino}">${formatDate(item.previsao_original || this.previsaoTermino)}</span>` :
-                    `<span class="badge badge-truncate bg-warning text-dark js-edit-prev" id="badge-prev-nova-${item.id}" data-item-id="${item.id}">Definir nova previsão</span>`
+                    `<span class="badge badge-truncate bg-warning text-dark ${this.isHistoricoView ? '' : 'js-edit-prev'}" id="badge-prev-nova-${item.id}" data-item-id="${item.id}" title="Nova previsão: ${item.previsao_original || this.previsaoTermino}">${formatDate(item.previsao_original || this.previsaoTermino)}</span>` :
+                    `<span class="badge badge-truncate bg-warning text-dark ${this.isHistoricoView ? '' : 'js-edit-prev'}" id="badge-prev-nova-${item.id}" data-item-id="${item.id}">Definir nova previsão</span>`
                 )
             }
                         </span>

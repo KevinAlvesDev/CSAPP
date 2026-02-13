@@ -126,7 +126,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                 <div class="form-control form-control-sm d-inline-flex align-items-center bg-white px-1"
                     style="width: fit-content; padding-top: 6px; padding-bottom: 6px; height: auto;">
                     <select name="date_type" class="form-select form-select-sm border-0 shadow-none bg-transparent py-0"
-                        style="width: auto; max-width: 140px; cursor: pointer;" onchange="this.form.submit()">
+                        style="width: auto; cursor: pointer; padding-right: 2rem !important;">
                         <option value="criacao" {% if current_date_type=='criacao' %}selected{% endif %}>Criação
                         </option>
                         <option value="inicio" {% if current_date_type=='inicio' %}selected{% endif %}>Início

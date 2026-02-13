@@ -48,10 +48,36 @@ def listar_planos():
     try:
         ativo_apenas = request.args.get("ativo", "true").lower() == "true"
         busca = request.args.get("busca", "").strip()
-
         context = request.args.get("context")
+        status = request.args.get("status")
+        usuario_id = request.args.get("usuario_id")
+        processo_id = request.args.get("processo_id")
+
+        if processo_id:
+            try:
+                processo_id = int(processo_id)
+            except ValueError:
+                processo_id = None
+
+        # Se não especificou status mas quer apenas ativos, filtra por em_andamento
+        if not status and ativo_apenas:
+            status = "em_andamento"
+
+        user = get_current_user()
+        current_user_id = user.get("usuario") if user else None
+
         planos = planos_sucesso_service.listar_planos_sucesso(
-            ativo_apenas=ativo_apenas, busca=busca if busca else None, context=context
+            ativo_apenas=ativo_apenas,
+            busca=busca if busca else None,
+            context=context,
+            status=status,
+            usuario_id=usuario_id,
+            processo_id=processo_id,
+        )
+
+        # Buscar contagens para as abas
+        contagens = planos_sucesso_service.contar_planos_por_status(
+            usuario_id=current_user_id if context == "onboarding" else None, context=context
         )
 
         pode_editar = True
@@ -64,6 +90,7 @@ def listar_planos():
                 {
                     "success": True,
                     "planos": planos,
+                    "contagens": contagens,
                     "permissoes": {"pode_editar": pode_editar, "pode_excluir": pode_excluir},
                 }
             ), 200
@@ -71,11 +98,13 @@ def listar_planos():
         return render_template(
             "pages/planos_sucesso.html",
             planos=planos,
+            contagens=contagens,
             pode_editar=pode_editar,
             pode_excluir=pode_excluir,
             ativo_apenas=ativo_apenas,
             busca=busca,
             context=context,
+            status_atual=status,
         )
 
     except Exception as e:
@@ -171,6 +200,17 @@ def criar_plano():
         if not context or context == "None":
             context = request.args.get("context", "onboarding")
 
+        processo_id = data.get("processo_id")
+        if processo_id:
+            try:
+                processo_id = int(processo_id)
+            except ValueError:
+                processo_id = None
+
+        # Validação de limite de planos movida para o service/crud
+        # para aplicar regra correta (apenas limitar rascunhos, não planos de implantação)
+
+
         plano_id = planos_sucesso_service.criar_plano_sucesso_checklist(
             nome=nome,
             descricao=descricao,
@@ -178,6 +218,7 @@ def criar_plano():
             estrutura=estrutura,
             dias_duracao=dias_duracao,
             context=context,
+            processo_id=processo_id,
         )
 
         if request.is_json:
@@ -302,6 +343,47 @@ def excluir_plano(plano_id):
             return jsonify({"error": str(e)}), 500
         flash(f"Erro ao excluir plano: {e!s}", "error")
         return redirect(url_for("planos.listar_planos"))
+
+
+@planos_bp.route("/<int:plano_id>/concluir", methods=["PUT", "POST"])
+@login_required
+@csrf.exempt
+def concluir_plano(plano_id):
+    """
+    Marca um plano de sucesso como concluído.
+    """
+    try:
+        # Buscar plano antes de concluir para decidir se oferecer criar novo
+        plano = planos_sucesso_service.obter_plano_completo(plano_id)
+        processo_id = plano.get("processo_id") if plano else None
+
+        planos_sucesso_service.concluir_plano_sucesso(plano_id)
+
+        offer_new_plan = bool(processo_id)
+
+        if request.is_json:
+            return jsonify({
+                "success": True,
+                "message": "Plano concluído com sucesso",
+                "offer_new_plan": offer_new_plan,
+                "processo_id": processo_id,
+            }), 200
+
+        flash("Plano concluído com sucesso!", "success")
+        return redirect(url_for("planos.obter_plano", plano_id=plano_id))
+
+    except ValidationError as e:
+        if request.is_json:
+            return jsonify({"error": str(e)}), 400
+        flash(str(e), "error")
+        return redirect(url_for("planos.obter_plano", plano_id=plano_id))
+
+    except Exception as e:
+        planos_logger.error(f"Erro ao concluir plano {plano_id}: {e!s}", exc_info=True)
+        if request.is_json:
+            return jsonify({"error": str(e)}), 500
+        flash(f"Erro ao concluir plano: {e!s}", "error")
+        return redirect(url_for("planos.obter_plano", plano_id=plano_id))
 
 
 @planos_bp.route("/<int:plano_id>/clonar", methods=["POST"])

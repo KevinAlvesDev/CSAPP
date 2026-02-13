@@ -1,14 +1,14 @@
-<div class="plano-card {% if not plano.ativo %}inactive{% endif %}">
+<div class="plano-card {% if plano.status == 'concluido' %}inactive{% endif %}">
     <div class="plano-card-header">
         <div class="flex-grow-1">
             <h3 class="plano-card-title">
                 <i class="bi bi-diagram-3 me-2"></i>{{ plano.nome }}
             </h3>
-            <span class="plano-status-badge {% if plano.ativo %}active{% else %}inactive{% endif %}">
-                {% if plano.ativo %}
-                <i class="bi bi-check-circle-fill me-1"></i>Ativo
+            <span class="plano-status-badge {% if plano.status == 'concluido' %}active{% else %}inactive{% endif %}">
+                {% if plano.status == 'concluido' %}
+                <i class="bi bi-check-circle-fill me-1"></i>Concluído
                 {% else %}
-                <i class="bi bi-archive-fill me-1"></i>Inativo
+                <i class="bi bi-play-circle-fill me-1"></i>Em Andamento
                 {% endif %}
             </span>
         </div>
@@ -30,6 +30,13 @@
     </div>
 
     <div class="plano-actions">
+        {% if plano.status == 'em_andamento' %}
+        <button type="button" class="btn btn-plano btn-plano-primary btn-concluir-plano" data-plano-id="{{ plano.id }}"
+            data-plano-nome="{{ plano.nome }}" title="Marcar como concluído">
+            <i class="bi bi-check-lg"></i>Concluir
+        </button>
+        {% endif %}
+
         {% if pode_editar %}
         <a href="{{ url_for('planos.obter_plano', plano_id=plano.id, context=context) }}?modo=editar"
             class="btn btn-plano btn-plano-primary" title="Editar plano">

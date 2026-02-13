@@ -258,6 +258,21 @@ def finalizar_implantacao_service(implantacao_id, usuario_cs_email, data_final_i
         # Se houver erro na validação do checklist, logar mas não bloquear
         current_app.logger.error(f"Erro ao validar checklist de finalização: {e}", exc_info=True)
 
+    # NOVA REGRA: Precisa de ao menos um plano de sucesso concluído
+    planos_concluidos = (
+        query_db(
+            "SELECT COUNT(*) as total FROM planos_sucesso WHERE processo_id = %s AND status = 'concluido'",
+            (implantacao_id,),
+            one=True,
+        )
+        or {}
+    )
+
+    if int(planos_concluidos.get("total", 0)) == 0:
+        raise ValueError(
+            "Não é possível finalizar a implantação: é necessário que o Plano de Sucesso esteja concluído (arquivado no histórico) primeiro."
+        )
+
     # Validação de pendências do Plano de Sucesso
     plano_id = impl.get("plano_sucesso_id")
     if plano_id:

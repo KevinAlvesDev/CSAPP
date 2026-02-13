@@ -52,6 +52,25 @@
       });
     }
 
+    // Interceptar submissão do formulário de concluir (usar modal padrão em vez de confirm nativo)
+    const formConcluir = document.getElementById('formConcluirPlanoImplantacao');
+    if (formConcluir) {
+      formConcluir.addEventListener('submit', async function (ev) {
+        ev.preventDefault();
+        const confirmed = await showConfirm({
+          title: 'Confirmar ação',
+          message: 'Tem certeza que deseja concluir este plano?\n\nEle será movido para a aba Concluídos e as tarefas serão arquivadas.',
+          confirmText: 'Sim',
+          cancelText: 'Cancelar',
+          type: 'warning'
+        });
+        if (confirmed) {
+          // Submeter formulário normalmente
+          this.submit();
+        }
+      });
+    }
+
     if (!CONFIG.implantacaoId) {
       return;
     }
@@ -254,7 +273,7 @@
           }
           const taskElement = document.getElementById(`checklist-item-${taskId}`) || document.querySelector(`.checklist-item[data-item-id="${taskId}"]`);
           if (taskElement) {
-            const planoTabBtn = document.querySelector('button[data-bs-target="#plano-content"]');
+            const planoTabBtn = document.querySelector('button[data-bs-target="#plano-andamento-content"]');
             if (planoTabBtn) {
               const tabInstance = new bootstrap.Tab(planoTabBtn);
               tabInstance.show();
@@ -649,7 +668,7 @@
       const btnComments = e.target.closest('.timeline-action-comments');
       if (btnComments) {
         const itemId = parseInt(btnComments.dataset.itemId);
-        activateTab('#plano-content');
+        activateTab('#plano-andamento-content');
         if (window.checklistRenderer && Number.isFinite(itemId)) {
           try { window.checklistRenderer.ensureItemVisible(itemId); } catch (_) { }
         }
@@ -675,7 +694,7 @@
       const btnTask = e.target.closest('.timeline-action-task');
       if (btnTask) {
         const itemId = parseInt(btnTask.dataset.itemId);
-        activateTab('#plano-content');
+        activateTab('#plano-andamento-content');
         if (window.checklistRenderer && itemId) {
           try { window.checklistRenderer.ensureItemVisible(itemId); } catch (_) { }
         }
@@ -981,10 +1000,10 @@
     try {
       document.addEventListener('DOMContentLoaded', function () {
         try {
-          const planoTabBtn = document.getElementById('plano-tab');
+          const planoTabBtn = document.getElementById('plano-andamento-tab');
           const timelineTabBtn = document.getElementById('timeline-tab');
           const commentsTabBtn = document.getElementById('comments-tab');
-          const planoPane = document.getElementById('plano-content');
+          const planoPane = document.getElementById('plano-andamento-content');
           const timelinePane = document.getElementById('timeline-content');
           const commentsPane = document.getElementById('comments-content');
 

@@ -287,7 +287,9 @@ def _get_tarefas_and_comentarios(
     return tarefas_agrupadas_obrigatorio, ordered_treinamento, tarefas_agrupadas_pendencias, todos_modulos_lista
 
 
-def get_implantacao_details(impl_id: int, usuario_cs_email: str, user_perfil: UserProfile | None) -> dict[str, Any]:
+def get_implantacao_details(
+    impl_id: int, usuario_cs_email: str, user_perfil: dict = None, plano_historico_id: int = None
+) -> dict[str, Any]:
     """
     Busca, processa e valida todos os dados para a página de detalhes da implantação.
     Levanta um ValueError se o acesso for negado.
@@ -296,6 +298,7 @@ def get_implantacao_details(impl_id: int, usuario_cs_email: str, user_perfil: Us
         impl_id: ID da implantação
         usuario_cs_email: Email do usuário CS logado
         user_perfil: Perfil do usuário (pode ser None)
+        plano_historico_id: ID de um plano de sucesso histórico para visualização (opcional)
 
     Returns:
         Dicionário com todos os dados necessários para renderizar a página
@@ -377,28 +380,27 @@ def get_implantacao_details(impl_id: int, usuario_cs_email: str, user_perfil: Us
         logger.error(f"Erro ao carregar lista de CS users: {e}", exc_info=True)
         all_cs_users = []
 
+    # Se estiver visualizando um histórico, o ID do plano vem do parâmetro
+    success_plan_id = plano_historico_id or implantacao.get("plano_sucesso_id")
+
     plano_sucesso_info = None
     try:
-        if implantacao.get("plano_sucesso_id"):
-            plano_sucesso_info = query_db(
-                "SELECT * FROM planos_sucesso WHERE id = %s", (implantacao["plano_sucesso_id"],), one=True
-            )
-            if plano_sucesso_info:
-                logger.info(f"Plano de sucesso encontrado: {plano_sucesso_info.get('nome')}")
-            else:
-                logger.warning(f"Plano de sucesso ID {implantacao['plano_sucesso_id']} não encontrado")
+        if success_plan_id:
+            plano_sucesso_info = query_db("SELECT * FROM planos_sucesso WHERE id = %s", (success_plan_id,), one=True)
     except Exception as e:
-        logger.warning(f"Erro ao buscar plano de sucesso: {e}")
-        pass
+        logger.warning(f"Erro ao buscar plano de sucesso {success_plan_id}: {e}")
 
     checklist_nested = None
     try:
         from ..domain.checklist_service import build_nested_tree, get_checklist_tree
 
-        checklist_flat = get_checklist_tree(implantacao_id=impl_id, include_progress=True)
+        if plano_historico_id:
+            checklist_flat = get_checklist_tree(plano_id=plano_historico_id, include_progress=True)
+        else:
+            checklist_flat = get_checklist_tree(implantacao_id=impl_id, include_progress=True)
 
         # SELF-HEALING: Se tem plano mas não tem itens, clonar agora.
-        if not checklist_flat and implantacao.get("plano_sucesso_id") and plano_sucesso_info:
+        if not checklist_flat and implantacao.get("plano_sucesso_id") and plano_sucesso_info and not plano_historico_id:
             logger.warning(
                 f"Implantação {impl_id} tem plano {implantacao['plano_sucesso_id']} mas checklist vazio. Tentando auto-reparar..."
             )
@@ -475,6 +477,47 @@ def get_implantacao_details(impl_id: int, usuario_cs_email: str, user_perfil: Us
             "nome": user_perfil.get("nome", usuario_cs_email) if user_perfil else usuario_cs_email,
         }
 
+    # Buscar planos (instâncias) associados a esta implantação
+    planos_lista = []
+    plano_ativo_instancia = None
+    try:
+        planos_lista = (
+            query_db(
+                "SELECT * FROM planos_sucesso WHERE processo_id = %s ORDER BY data_criacao DESC", (impl_id,)
+            )
+            or []
+        )
+
+        # Determinar qual plano mostrar como "ativo" no contexto da página
+        if plano_historico_id:
+            # Se é visão de histórico, o plano ativo é o do histórico
+            plano_ativo_instancia = query_db("SELECT * FROM planos_sucesso WHERE id = %s", (plano_historico_id,), one=True)
+        else:
+            # Identificar a instância em andamento na lista de planos da implantação
+            plano_ativo_instancia = next((p for p in planos_lista if p.get("status") == "em_andamento"), None)
+
+            # Fallback de compatibilidade: se não há instância em andamento na lista, mas a implantação
+            # tem um plano_sucesso_id, usamos ele apenas se ele ainda estiver 'em_andamento'
+            if not plano_ativo_instancia and implantacao.get("plano_sucesso_id"):
+                temp_p = query_db("SELECT * FROM planos_sucesso WHERE id = %s", (implantacao["plano_sucesso_id"],), one=True)
+                if temp_p and temp_p.get("status") == "em_andamento":
+                    plano_ativo_instancia = temp_p
+
+        # Formatar datas para o template em todos os planos da lista
+        for p in planos_lista:
+            p["data_criacao_fmt"] = format_date_br(p.get("data_criacao"), False)
+            p["data_atualizacao_fmt"] = format_date_br(p.get("data_atualizacao"), p.get("status") != "concluido")
+            p["data_conclusao_fmt"] = format_date_br(p.get("data_atualizacao"), False)
+
+        # Formatar datas para o plano exibido
+        if plano_ativo_instancia:
+            plano_ativo_instancia["data_criacao_fmt"] = format_date_br(plano_ativo_instancia.get("data_criacao"), False)
+            plano_ativo_instancia["data_atualizacao_fmt"] = format_date_br(
+                plano_ativo_instancia.get("data_atualizacao"), plano_ativo_instancia.get("status") != "concluido"
+            )
+    except Exception as e:
+        logger.warning(f"Erro ao buscar lista de planos da implantação {impl_id}: {e}")
+
     return {
         "user_info": user_info,
         "implantacao": implantacao,
@@ -504,6 +547,10 @@ def get_implantacao_details(impl_id: int, usuario_cs_email: str, user_perfil: Us
         "tt": TASK_TIPS,
         "plano_sucesso": plano_sucesso_info,
         "checklist_tree": checklist_nested,
+        "planos_lista": planos_lista,
+        "plano_ativo_instancia": plano_ativo_instancia,
+        "is_historico_view": bool(plano_historico_id),
+        "plano_historico_id": plano_historico_id,
     }
 
 

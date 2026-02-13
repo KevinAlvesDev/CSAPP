@@ -505,15 +505,21 @@ def get_tree():
         root_item_id = request.args.get("root_item_id", type=int)
         format_type = request.args.get("format", "flat").lower()
 
+        plano_id = request.args.get("plano_id", type=int)
+
         if implantacao_id:
             implantacao_id = validate_integer(implantacao_id, min_value=1)
         if root_item_id:
             root_item_id = validate_integer(root_item_id, min_value=1)
+        if plano_id:
+            plano_id = validate_integer(plano_id, min_value=1)
 
         if format_type not in ["flat", "nested"]:
             return jsonify({"ok": False, "error": 'format deve ser "flat" ou "nested"'}), 400
 
-        flat_items = get_checklist_tree(implantacao_id=implantacao_id, root_item_id=root_item_id, include_progress=True)
+        flat_items = get_checklist_tree(
+            implantacao_id=implantacao_id, root_item_id=root_item_id, plano_id=plano_id, include_progress=True
+        )
 
         global_progress = None
         if implantacao_id:

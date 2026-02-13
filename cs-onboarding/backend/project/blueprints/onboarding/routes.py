@@ -186,6 +186,7 @@ def dashboard():
 @onboarding_bp.route("/implantacao/<int:impl_id>")
 @login_required
 def ver_implantacao(impl_id):
+    plano_historico_id = request.args.get("plano_historico_id", type=int)
     from ...config.logging_config import get_logger
     from ...domain.implantacao_service import get_implantacao_details
 
@@ -204,7 +205,12 @@ def ver_implantacao(impl_id):
     try:
         logger.info(f"Chamando get_implantacao_details para ID {impl_id}")
         user_perfil = g.perfil if hasattr(g, "perfil") and g.perfil else {}
-        context_data = get_implantacao_details(impl_id=impl_id, usuario_cs_email=g.user_email, user_perfil=user_perfil)
+        context_data = get_implantacao_details(
+            impl_id=impl_id,
+            usuario_cs_email=g.user_email,
+            user_perfil=user_perfil,
+            plano_historico_id=plano_historico_id,
+        )
         logger.info(f"Dados da implantação {impl_id} obtidos com sucesso")
 
         return render_template("pages/onboarding/implantacao_detalhes.html", **context_data)

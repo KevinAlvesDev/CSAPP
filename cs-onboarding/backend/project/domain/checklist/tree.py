@@ -16,7 +16,7 @@ from .utils import _format_datetime
 logger = logging.getLogger(__name__)
 
 
-def get_checklist_tree(implantacao_id=None, root_item_id=None, include_progress=True):
+def get_checklist_tree(implantacao_id=None, root_item_id=None, plano_id=None, include_progress=True):
     """
     Retorna a árvore completa do checklist.
     """
@@ -25,6 +25,8 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, include_progress=
             implantacao_id = int(implantacao_id)
         if root_item_id:
             root_item_id = int(root_item_id)
+        if plano_id:
+            plano_id = int(plano_id)
     except (ValueError, TypeError):
         raise ValueError("IDs devem ser inteiros válidos") from None
 
@@ -38,7 +40,7 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, include_progress=
                     query = """
                         SELECT
                             id, parent_id, title, completed, comment,
-                            level, ordem, implantacao_id, obrigatoria, tag,
+                            level, ordem, implantacao_id, plano_id, obrigatoria, tag,
                             responsavel, previsao_original, nova_previsao, data_conclusao,
                             created_at, updated_at
                         FROM checklist_items
@@ -46,11 +48,23 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, include_progress=
                         ORDER BY ordem ASC, id ASC
                     """
                     params = (implantacao_id,)
+                elif plano_id:
+                    query = """
+                        SELECT
+                            id, parent_id, title, completed, comment,
+                            level, ordem, implantacao_id, plano_id, obrigatoria, tag,
+                            responsavel, previsao_original, nova_previsao, data_conclusao,
+                            created_at, updated_at
+                        FROM checklist_items
+                        WHERE plano_id = %s
+                        ORDER BY ordem ASC, id ASC
+                    """
+                    params = (plano_id,)
                 elif root_item_id:
                     query = """
                         WITH RECURSIVE subtree AS (
                             SELECT id, parent_id, title, completed, comment,
-                                   level, ordem, implantacao_id, obrigatoria, tag,
+                                   level, ordem, implantacao_id, plano_id, obrigatoria, tag,
                                    responsavel, previsao_original, nova_previsao, data_conclusao,
                                    created_at, updated_at
                             FROM checklist_items
@@ -59,7 +73,7 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, include_progress=
                             UNION ALL
 
                             SELECT ci.id, ci.parent_id, ci.title, ci.completed, ci.comment,
-                                   ci.level, ci.ordem, ci.implantacao_id, ci.obrigatoria, ci.tag,
+                                   ci.level, ci.ordem, ci.implantacao_id, ci.plano_id, ci.obrigatoria, ci.tag,
                                    ci.responsavel, ci.previsao_original, ci.nova_previsao, ci.data_conclusao,
                                    ci.created_at, ci.updated_at
                             FROM checklist_items ci
@@ -74,7 +88,7 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, include_progress=
                     query = """
                         SELECT
                             id, parent_id, title, completed, comment,
-                            level, ordem, implantacao_id, obrigatoria, tag,
+                            level, ordem, implantacao_id, plano_id, obrigatoria, tag,
                             responsavel, previsao_original, nova_previsao, data_conclusao,
                             created_at, updated_at
                         FROM checklist_items
@@ -82,14 +96,26 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, include_progress=
                         ORDER BY ordem ASC, id ASC
                     """
                     params = (implantacao_id,)
+                elif plano_id:
+                    query = """
+                        SELECT
+                            id, parent_id, title, completed, comment,
+                            level, ordem, implantacao_id, plano_id, obrigatoria, tag,
+                            responsavel, previsao_original, nova_previsao, data_conclusao,
+                            created_at, updated_at
+                        FROM checklist_items
+                        WHERE plano_id = ?
+                        ORDER BY ordem ASC, id ASC
+                    """
+                    params = (plano_id,)
                 elif root_item_id:
                     query = """
                         WITH RECURSIVE subtree(id, parent_id, title, completed, comment,
-                                               level, ordem, implantacao_id, obrigatoria, tag,
+                                               level, ordem, implantacao_id, plano_id, obrigatoria, tag,
                                                responsavel, previsao_original, nova_previsao, data_conclusao,
                                                created_at, updated_at) AS (
                             SELECT id, parent_id, title, completed, comment,
-                                   level, ordem, implantacao_id, obrigatoria, tag,
+                                   level, ordem, implantacao_id, plano_id, obrigatoria, tag,
                                    responsavel, previsao_original, nova_previsao, data_conclusao,
                                    created_at, updated_at
                             FROM checklist_items
@@ -98,7 +124,7 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, include_progress=
                             UNION ALL
 
                             SELECT ci.id, ci.parent_id, ci.title, ci.completed, ci.comment,
-                                   ci.level, ci.ordem, ci.implantacao_id, ci.obrigatoria, ci.tag,
+                                   ci.level, ci.ordem, ci.implantacao_id, ci.plano_id, ci.obrigatoria, ci.tag,
                                    ci.responsavel, ci.previsao_original, ci.nova_previsao, ci.data_conclusao,
                                    ci.created_at, ci.updated_at
                             FROM checklist_items ci

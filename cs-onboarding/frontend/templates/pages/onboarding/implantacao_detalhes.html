@@ -5,9 +5,6 @@
 
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/implantacao_detalhes.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/checklist_comments_improvements.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/drag_drop_improvements.css') }}">
-
 {% endblock %}
 
 {% block content %}
@@ -400,9 +397,15 @@
                     <!-- Tabs de navegação -->
                     <ul class="nav tab-switcher" id="contentTabs" role="tablist">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="plano-tab" data-bs-toggle="tab"
-                                data-bs-target="#plano-content" type="button" role="tab">
-                                <i class="bi bi-diagram-3 me-1"></i>Plano de Sucesso
+                            <button class="nav-link active" id="plano-andamento-tab" data-bs-toggle="tab"
+                                data-bs-target="#plano-andamento-content" type="button" role="tab">
+                                <i class="bi bi-play-circle me-1"></i>Plano de sucesso em andamento
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="plano-concluido-tab" data-bs-toggle="tab"
+                                data-bs-target="#plano-concluido-content" type="button" role="tab">
+                                <i class="bi bi-check-circle me-1"></i>Plano de sucesso concluído
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
@@ -449,250 +452,157 @@
                             display: block !important;
                         }
                     </style>
-                    <!-- Tab: Plano de Sucesso -->
-                    <div class="tab-pane fade show active" id="plano-content" role="tabpanel">
-                        <div class="custom-card-body plano-sucesso-container" id="plano-hierarquia">
-                            {% if checklist_tree and checklist_tree|length > 0 %}
-                            <!-- Novo Checklist Hierárquico -->
-                            <div id="checklist-container" data-implantacao-id="{{ implantacao.id }}"
-                                data-previsao-termino="{{ implantacao.data_previsao_termino or '' }}">
-                                <!-- Progresso Global -->
-                                <div class="checklist-global-progress mb-4">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <span class="text-muted small">Progresso Global do Onboarding</span>
-                                        <span id="checklist-global-progress-percent"
-                                            class="fw-bold text-primary">0%</span>
-                                    </div>
-                                    <div class="progress-thick">
-                                        <div id="checklist-global-progress-bar" class="progress-bar" role="progressbar"
-                                            style="width: 0%; transition: width 0.25s ease-in-out;" aria-valuenow="0"
-                                            aria-valuemin="0" aria-valuemax="100"></div>
-                                    </div>
-                                </div>
-
-                                <!-- Checklist Tree será renderizado via JavaScript -->
-                                <div class="checklist-grid px-2 py-1 text-muted small"
-                                    style="border-bottom: 1px solid rgba(0,0,0,0.06);">
-                                    <span class="col-empty"></span>
-                                    <span class="col-checkbox"></span>
-                                    <span class="col-title">Tarefa</span>
-                                    <span class="col-spacer"></span>
-                                    <span class="col-qtd" style="text-align:center">QTD</span>
-                                    <span class="col-responsavel">Responsável</span>
-                                    <span class="col-prev-orig">Prev. orig</span>
-                                    <span class="col-prev-atual">Nova previsão</span>
-                                    <span class="col-conclusao" style="visibility: hidden;">Data de conclusão</span>
-                                    <span class="col-status">Status</span>
-                                    <span class="col-comment"></span>
-                                    <span class="col-delete"></span>
-                                </div>
-                                <div id="checklist-tree-root"></div>
+                    <!-- Tab: Plano de Sucesso em Andamento -->
+                    <div class="tab-pane fade show active" id="plano-andamento-content" role="tabpanel">
+                        <div class="custom-card-body">
+                            {% if plano_ativo_instancia %}
+                            {% if is_historico_view %}
+                            <div class="alert alert-secondary mb-3">
+                                <i class="bi bi-clock-history me-2"></i>Você está visualizando o histórico do plano:
+                                <strong>{{ plano_ativo_instancia.nome.split(' (Concluído')[0] }}</strong>.
+                                <a href="{{ url_for('onboarding.ver_implantacao', impl_id=implantacao.id) }}"
+                                    class="btn btn-sm btn-outline-dark ms-3">Voltar para Plano Atual</a>
                             </div>
-                            {% elif false %}
-                            <!-- Modelo Antigo (Compatibilidade) -->
-                            {% for fase in hierarquia.fases %}
-                            <div class="fase-card" data-fase-id="{{ fase.id }}">
-                                <div class="fase-header" data-bs-toggle="collapse" data-bs-target="#fase-{{ fase.id }}"
-                                    aria-expanded="false">
-                                    <h6 class="fase-title">
-                                        <i class="bi bi-layers-fill"></i>
-                                        {{ fase.nome }}
-                                        {% if fase.responsavel %}
-                                        <span class="badge bg-light text-dark ms-2"
-                                            style="font-size: 0.65rem; font-weight: 500;">
-                                            <i class="bi bi-person-fill me-1"></i>{{ fase.responsavel }}
-                                        </span>
-                                        {% endif %}
-                                    </h6>
-                                    <div class="d-flex align-items-center gap-3">
-                                        <span class="fase-progress">
-                                            <span class="fase-progresso-valor" data-fase-id="{{ fase.id }}">0</span>%
-                                        </span>
-                                    </div>
+                            {% endif %}
+
+                            <div
+                                class="alert alert-light border d-flex justify-content-between align-items-center mb-3 shadow-sm">
+                                <div>
+                                    <h5 class="alert-heading mb-1 text-primary fw-bold">{{
+                                        plano_ativo_instancia.nome.split(' (Concluído')[0] }}</h5>
+                                    <p class="mb-0 text-muted small">{{ plano_ativo_instancia.descricao or 'Sem
+                                        descrição' }}</p>
                                 </div>
-                                <div class="collapse" id="fase-{{ fase.id }}">
-                                    <div class="fase-content">
-                                        {% if fase.grupos %}
-                                        {% for grupo in fase.grupos %}
-                                        <div class="grupo-card" data-grupo-id="{{ grupo.id }}">
-                                            <div class="grupo-header" data-bs-toggle="collapse"
-                                                data-bs-target="#grupo-{{ grupo.id }}" aria-expanded="false">
-                                                <h6 class="grupo-title">
-                                                    <i class="bi bi-folder2 me-2"></i>{{ grupo.nome }}
-                                                    {% if grupo.responsavel %}
-                                                    <span class="badge bg-secondary bg-opacity-25 text-dark ms-2"
-                                                        style="font-size: 0.6rem; font-weight: 500;">
-                                                        <i class="bi bi-person me-1"></i>{{ grupo.responsavel }}
-                                                    </span>
-                                                    {% endif %}
-                                                </h6>
-                                                <div class="d-flex align-items-center gap-2">
-                                                    <span class="grupo-count">
-                                                        <span class="grupo-concluidas"
-                                                            data-grupo-id="{{ grupo.id }}">0</span>/{{
-                                                        grupo.tarefas|length }} tarefas
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div class="collapse" id="grupo-{{ grupo.id }}">
-                                                <div class="grupo-content">
-                                                    {% if grupo.tarefas %}
-                                                    {% for tarefa in grupo.tarefas %}
-                                                    {% set status_raw = tarefa.status or 'pendente' %}
-                                                    {% set status_lower = status_raw|lower %}
-                                                    {% if status_lower == 'concluida' %}
-                                                    {% set status_tarefa = 'concluida' %}
-                                                    {% set is_concluida = True %}
-                                                    {% elif status_lower == 'concluido' %}
-                                                    {% set status_tarefa = 'concluida' %}
-                                                    {% set is_concluida = True %}
-                                                    {% else %}
-                                                    {% set status_tarefa = 'pendente' %}
-                                                    {% set is_concluida = False %}
-                                                    {% endif %}
-                                                    <div class="tarefa-item {% if is_concluida %}concluida{% endif %}"
-                                                        data-tarefa-id="{{ tarefa.id }}"
-                                                        data-tarefa-status="{{ status_tarefa }}">
-                                                        <div class="tarefa-header">
-                                                            <input type="checkbox" class="tarefa-checkbox"
-                                                                id="tarefa-{{ tarefa.id }}"
-                                                                data-tarefa-id="{{ tarefa.id }}" {% if is_concluida
-                                                                %}checked{% endif %}>
-                                                            <label class="tarefa-nome" for="tarefa-{{ tarefa.id }}">
-                                                                {{ tarefa.nome }}
-                                                            </label>
-                                                            <div class="tarefa-actions">
-                                                                <button type="button"
-                                                                    class="btn-icon btn-toggle-comentarios"
-                                                                    data-tarefa-id="{{ tarefa.id }}"
-                                                                    title="Comentários">
-                                                                    <i class="bi bi-chat-left-text"></i>
-                                                                </button>
-                                                                <button type="button"
-                                                                    class="btn-icon btn-excluir-tarefa"
-                                                                    data-tarefa-id="{{ tarefa.id }}"
-                                                                    data-delete-url="/api/checklist/delete/{{ tarefa.id }}"
-                                                                    title="Excluir tarefa">
-                                                                    <i class="bi bi-trash text-danger"></i>
-                                                                </button>
-                                                            </div>
-                                                        </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <small class="text-muted me-2">Iniciado em: {{
+                                        plano_ativo_instancia.data_criacao_fmt }}</small>
 
-
-                                                        <!-- Comentários da Tarefa -->
-                                                        <div class="comentarios-section collapse"
-                                                            id="comentarios-tarefa-{{ tarefa.id }}">
-                                                            <div class="comentario-form">
-                                                                <textarea class="form-control mb-2"
-                                                                    placeholder="Escreva um comentário..." rows="2"
-                                                                    id="comentario-texto-{{ tarefa.id }}"></textarea>
-                                                                <div class="alert alert-warning alert-sm d-none mb-2 py-2"
-                                                                    id="alerta-email-{{ tarefa.id }}" role="alert">
-                                                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                                                                    <small>Email do responsável não cadastrado. <a
-                                                                            href="#" class="alert-link"
-                                                                            data-bs-toggle="modal"
-                                                                            data-bs-target="#modalDetalhesEmpresa">Acesse
-                                                                            "Editar Detalhes"</a> para adicionar o email
-                                                                        antes de enviar comentários externos.</small>
-                                                                </div>
-                                                                <div
-                                                                    class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                                                    <div class="d-flex gap-2 align-items-center">
-                                                                        <span class="comentario-tipo-tag interno active"
-                                                                            data-tipo="interno"
-                                                                            data-tarefa-id="{{ tarefa.id }}">
-                                                                            <i class="bi bi-lock-fill"></i> Interno
-                                                                        </span>
-                                                                        <span class="comentario-tipo-tag externo"
-                                                                            data-tipo="externo"
-                                                                            data-tarefa-id="{{ tarefa.id }}">
-                                                                            <i class="bi bi-globe"></i> Externo
-                                                                        </span>
-                                                                        <span class="comentario-tipo-tag noshow"
-                                                                            data-tarefa-id="{{ tarefa.id }}"
-                                                                            data-noshow="false">
-                                                                            <i class="bi bi-calendar-x"></i> No show
-                                                                        </span>
-                                                                        <label
-                                                                            class="btn btn-sm btn-outline-secondary mb-0">
-                                                                            <i class="bi bi-image"></i>
-                                                                            <input type="file"
-                                                                                class="d-none comentario-imagem-input"
-                                                                                accept="image/*"
-                                                                                data-tarefa-id="{{ tarefa.id }}">
-                                                                        </label>
-                                                                    </div>
-                                                                    <div class="d-flex gap-2">
-                                                                        <button type="button"
-                                                                            class="btn btn-sm btn-primary btn-salvar-comentario"
-                                                                            data-tarefa-id="{{ tarefa.id }}"
-                                                                            data-tipo="tarefa">
-                                                                            <i class="bi bi-send me-1"></i>Salvar
-                                                                        </button>
-                                                                        <div class="form-check form-check-inline d-none align-self-center ms-2"
-                                                                            id="div-check-email-{{ tarefa.id }}">
-                                                                            <input class="form-check-input"
-                                                                                type="checkbox"
-                                                                                id="check-email-{{ tarefa.id }}"
-                                                                                value="true">
-                                                                            <label class="form-check-label small"
-                                                                                for="check-email-{{ tarefa.id }}"
-                                                                                title="Enviar notificação por e-mail para o responsável">
-                                                                                <i class="bi bi-envelope"></i> Enviar
-                                                                            </label>
-                                                                        </div>
-                                                                        <button type="button"
-                                                                            class="btn btn-sm btn-primary btn-enviar-email d-none"
-                                                                            data-tarefa-id="{{ tarefa.id }}"
-                                                                            id="btn-email-{{ tarefa.id }}">
-                                                                            <i class="bi bi-envelope me-1"></i>Enviar
-                                                                            Email
-                                                                        </button>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            <div class="comentario-historico"
-                                                                id="historico-tarefa-{{ tarefa.id }}">
-                                                                <!-- Comentários carregados via JS -->
-                                                                <div class="text-center text-muted small py-2">
-                                                                    <i class="bi bi-chat-left-text"></i> Nenhum
-                                                                    comentário ainda
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    {% endfor %}
-                                                    {% else %}
-                                                    <div class="empty-state py-3">
-                                                        <i class="bi bi-inbox"></i>
-                                                        <p class="mb-0 small">Nenhuma tarefa neste grupo</p>
-                                                    </div>
-                                                    {% endif %}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        {% endfor %}
-                                        {% else %}
-                                        <div class="empty-state py-3">
-                                            <i class="bi bi-folder2-open"></i>
-                                            <p class="mb-0 small">Nenhum grupo nesta fase</p>
-                                        </div>
-                                        {% endif %}
-                                    </div>
+                                    {% if is_manager and not is_historico_view %}
+                                    <form id="formConcluirPlanoImplantacao" action="{{ url_for('onboarding_actions.concluir_plano_implantacao') }}"
+                                        method="POST">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
+                                        <input type="hidden" name="plano_instancia_id"
+                                            value="{{ plano_ativo_instancia.id }}">
+                                        <button type="submit" class="btn btn-success btn-sm fw-bold">
+                                            <i class="bi bi-check-lg me-1"></i>Concluir Plano
+                                        </button>
+                                    </form>
+                                    {% elif is_historico_view and plano_ativo_instancia.status == 'concluido' %}
+                                    <span class="badge bg-success">Concluído</span>
+                                    {% endif %}
                                 </div>
                             </div>
-                            {% endfor %}
+                            {% elif not plano_sucesso and planos_lista is defined and planos_lista|length > 0 %}
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-circle me-2"></i>Todos os planos foram concluídos.
+                                Inicie um novo plano se necessário.
+                            </div>
+                            {% endif %}
+
+                            <div class="plano-sucesso-container pt-0" id="plano-hierarquia">
+                                {% if checklist_tree and checklist_tree|length > 0 %}
+                                <!-- Novo Checklist Hierárquico -->
+                                <div id="checklist-container" data-implantacao-id="{{ implantacao.id }}"
+                                    data-previsao-termino="{{ implantacao.data_previsao_termino or '' }}">
+                                    <!-- Progresso Global -->
+                                    <div class="checklist-global-progress mb-4">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <span class="text-muted small">Progresso Global do Onboarding</span>
+                                            <span id="checklist-global-progress-percent"
+                                                class="fw-bold text-primary">0%</span>
+                                        </div>
+                                        <div class="progress-thick">
+                                            <div id="checklist-global-progress-bar" class="progress-bar"
+                                                role="progressbar"
+                                                style="width: 0%; transition: width 0.25s ease-in-out;"
+                                                aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Checklist Tree será renderizado via JavaScript -->
+                                    <div class="checklist-grid px-2 py-1 text-muted small"
+                                        style="border-bottom: 1px solid rgba(0,0,0,0.06);">
+                                        <span class="col-empty"></span>
+                                        <span class="col-checkbox"></span>
+                                        <span class="col-title">Tarefa</span>
+                                        <span class="col-spacer"></span>
+                                        <span class="col-qtd" style="text-align:center">QTD</span>
+                                        <span class="col-responsavel">Responsável</span>
+                                        <span class="col-prev-orig">Prev. orig</span>
+                                        <span class="col-prev-atual">Nova previsão</span>
+                                        <span class="col-conclusao" style="visibility: hidden;">Data de
+                                            conclusão</span>
+                                        <span class="col-status">Status</span>
+                                        <span class="col-comment"></span>
+                                        <span class="col-delete"></span>
+                                    </div>
+                                    <div id="checklist-tree-root"></div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Plano de Sucesso Concluído -->
+                    <div class="tab-pane fade" id="plano-concluido-content" role="tabpanel">
+                        <div class="custom-card-body">
+                            {% if planos_lista %}
+                            {% set ns = namespace(tem_concluidos=false) %}
+                            <div class="list-group">
+                                {% for plano in planos_lista %}
+                                {% if plano.status == 'concluido' %}
+                                {% set ns.tem_concluidos = true %}
+                                <div
+                                    class="list-group-item list-group-item-action flex-column align-items-start p-4 mb-2 border rounded shadow-sm">
+                                    <div class="d-flex w-100 justify-content-between mb-2">
+                                        <h5 class="mb-1 fw-bold text-success">
+                                            <i class="bi bi-check-circle-fill me-2"></i>{{ plano.nome.split(' (Concluído')[0] }}
+                                        </h5>
+                                        <small class="text-muted">Concluído em: {{ plano.data_conclusao_fmt or
+                                            'N/A' }}</small>
+                                    </div>
+                                    <p class="mb-2 text-secondary">{{ plano.descricao or 'Sem descrição' }}</p>
+
+                                    <div class="d-flex justify-content-between align-items-center mt-3">
+                                        <small class="text-muted">
+                                            <i class="bi bi-calendar-event me-1"></i>Início: {{
+                                            plano.data_criacao_fmt }}
+                                            {% if plano.concluido_por %}
+                                            <span class="ms-3"><i class="bi bi-person-check me-1"></i>Por: {{
+                                                plano.concluido_por }}</span>
+                                            {% endif %}
+                                        </small>
+
+                                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                            onclick="abrirModalHistoricoPlano({{ plano.id }}, '{{ plano.nome|replace('\'', '\\\'') }}')">
+                                            <i class="bi bi-eye me-1"></i>Visualizar Itens
+                                        </button>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                {% endfor %}
+                            </div>
+
+                            {% if not ns.tem_concluidos %}
+                            <div class="text-center py-5 text-muted">
+                                <i class="bi bi-clipboard-x display-4 mb-3 d-block opacity-50"></i>
+                                <h5>Nenhum plano concluído ainda</h5>
+                                <p>Os planos finalizados aparecerão aqui.</p>
+                            </div>
+                            {% endif %}
                             {% else %}
-                            <div class="empty-state">
-                                <!-- Ícone removido conforme solicitação -->
+                            <div class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox display-4 mb-3 d-block opacity-50"></i>
+                                <h5>Histórico vazio</h5>
+                                <p>Nenhum plano foi registrado nesta implantação ainda.</p>
                             </div>
                             {% endif %}
                         </div>
                     </div>
 
                     <!-- Tab: Linha do Tempo -->
-                    <div class="tab-pane fade d-none" id="timeline-content" role="tabpanel"
+                    <div class="tab-pane fade" id="timeline-content" role="tabpanel"
                         data-impl-id="{{ implantacao.id }}">
                         <div class="custom-card-body" style="max-height: calc(100vh - 350px); overflow-y: auto;">
                             <ul class="timeline-list" id="timeline-list">
@@ -733,7 +643,7 @@
                     </div>
 
                     <!-- Tab: Comentários -->
-                    <div class="tab-pane fade d-none" id="comments-content" role="tabpanel">
+                    <div class="tab-pane fade" id="comments-content" role="tabpanel">
                         <div class="custom-card-body">
                             <div id="comments-list-container" class="d-flex flex-column gap-3"
                                 style="max-height: calc(100vh - 350px); overflow-y: auto;">
@@ -758,7 +668,7 @@
                     </div>
 
                     <!-- Tab: Jira -->
-                    <div class="tab-pane fade d-none" id="jira-content" role="tabpanel">
+                    <div class="tab-pane fade" id="jira-content" role="tabpanel">
                         <div class="custom-card-body">
                             <!-- Header da Aba -->
                             <div class="d-flex justify-content-between align-items-center mb-4">
@@ -814,7 +724,7 @@
                     </div>
 
                     <!-- Tab: Definição de Carteira -->
-                    <div class="tab-pane fade d-none" id="carteira-content" role="tabpanel">
+                    <div class="tab-pane fade" id="carteira-content" role="tabpanel">
                         <div class="custom-card-body">
                             <div class="alert alert-info mb-4">
                                 <i class="bi bi-info-circle me-2"></i>
@@ -898,7 +808,7 @@ Sim - Academia XYZ
 
 
                     <!-- Tab: Avisos -->
-                    <div class="tab-pane fade d-none" id="avisos-content" role="tabpanel">
+                    <div class="tab-pane fade" id="avisos-content" role="tabpanel">
                         <div class="custom-card-body">
                             <div class="d-flex justify-content-between align-items-center mb-4">
                                 <div>
@@ -1219,8 +1129,12 @@ Sim - Academia XYZ
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <div class="alert alert-warning">
-                        <i class="bi bi-exclamation-triangle me-2"></i>Para finalizar, conclua as tarefas do Plano de
-                        Sucesso associado.
+                        <p class="mb-2"><i class="bi bi-exclamation-triangle-fill me-2"></i><strong>Regra
+                                Obrigatória:</strong></p>
+                        <ul class="mb-0 ps-3">
+                            <li>O <strong>Plano de Sucesso</strong> deve estar concluído e arquivado no histórico.</li>
+                            <li>Não podem existir tarefas pendentes na aba "Plano de Sucesso".</li>
+                        </ul>
                     </div>
                     <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
                     <input type="hidden" name="redirect_to" value="detalhes">
@@ -1527,6 +1441,7 @@ Sim - Academia XYZ
     // Dados do checklist para renderização
     window.CHECKLIST_DATA = {{ checklist_tree | tojson if checklist_tree else '[]' }};
     window.IMPLANTACAO_ID = {{ implantacao.id }};
+    window.IS_HISTORICO_VIEW = {{ 'true' if is_historico_view else 'false' }};
     window.PLANO_PERMITE_EXCLUIR_TAREFAS = {{ 'true' if plano_sucesso and plano_sucesso.get('permite_excluir_tarefas') else 'false' }};
 </script>
 
@@ -1541,6 +1456,18 @@ Sim - Academia XYZ
     if (window.initializeServices) {
         window.initializeServices();
     }
+
+    // Auto-switch to active plan tab (which shows historical items) if viewing historical plan
+    document.addEventListener('DOMContentLoaded', function () {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('plano_historico_id')) {
+            const checklistTab = document.getElementById('plano-andamento-tab');
+            if (checklistTab) {
+                const tab = new bootstrap.Tab(checklistTab);
+                tab.show();
+            }
+        }
+    });
 </script>
 
 <script src="{{ url_for('static', filename='js/components/checklist/checklist_drag_drop.js') }}"></script>
@@ -1751,6 +1678,102 @@ Sim - Academia XYZ
         </div>
     </div>
 </div>
+<!-- Modal Histórico Plano -->
+<div class="modal fade" id="modalHistoricoPlano" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold" id="modalHistoricoPlanoTitle">Histórico do Plano</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0" id="modalHistoricoPlanoBody">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2">Carregando itens do histórico...</p>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function abrirModalHistoricoPlano(planoId, planoNome) {
+        // Usar bootstrap globalmente ou via window
+        const modalEl = document.getElementById('modalHistoricoPlano');
+        const modalInstance = new bootstrap.Modal(modalEl);
+
+        const safePlanoNome = String(planoNome).replace(/\s*\(Conclu[íi]do.*\)\s*$/i, '');
+        document.getElementById('modalHistoricoPlanoTitle').innerHTML = `<i class="bi bi-clock-history me-2 text-primary"></i>Itens do Plano: <span class="text-primary">${safePlanoNome}</span>`;
+        const body = document.getElementById('modalHistoricoPlanoBody');
+        body.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-3 text-muted">Buscando estrutura do plano...</p></div>';
+
+        modalInstance.show();
+
+        fetch(`/api/checklist/tree?plano_id=${planoId}&format=nested`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.ok) {
+                    renderizarChecklistNoModal(body, data.items);
+                } else {
+                    body.innerHTML = `<div class="p-4"><div class="alert alert-danger border-0 shadow-sm"><i class="bi bi-exclamation-triangle me-2"></i>Erro ao carregar itens: ${data.error || 'Erro desconhecido'}</div></div>`;
+                }
+            })
+            .catch(err => {
+                body.innerHTML = `<div class="p-4"><div class="alert alert-danger border-0 shadow-sm"><i class="bi bi-exclamation-triangle me-2"></i>Erro de conexão: ${err.message}</div></div>`;
+            });
+    }
+
+    function renderizarChecklistNoModal(container, items) {
+        if (!items || items.length === 0) {
+            container.innerHTML = '<div class="text-center py-5 text-muted"><i class="bi bi-inbox fs-1 d-block mb-2"></i>Nenhum item encontrado neste plano.</div>';
+            return;
+        }
+
+        let html = '<div class="list-group list-group-flush">';
+
+        // Converte várias formas de timestamp para DD/MM/AAAA
+        function formatDateBR(dateStr) {
+            if (!dateStr) return '';
+            // Aceita formatos: "YYYY-MM-DD HH:MM:SS...", "YYYY-MM-DDTHH:MM:SSZ" ou apenas "YYYY-MM-DD"
+            const m = dateStr.match(/(\d{4})-(\d{2})-(\d{2})/);
+            if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+            return dateStr;
+        }
+
+        function processItem(item, level = 0) {
+            const padding = level * 25;
+            const isCompleted = item.completed;
+            const hasChildren = item.children && item.children.length > 0;
+
+            html += `
+                <div class="list-group-item py-2 border-bottom" style="padding-left: ${padding + 15}px !important; background-color: ${level === 0 ? '#f8f9fa' : 'transparent'}">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="flex-shrink-0">
+                            <i class="bi ${isCompleted ? 'bi-check-circle-fill text-success' : 'bi-circle text-muted'}" style="font-size: 1.1rem;"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="${level === 0 ? 'fw-bold text-dark' : 'text-secondary'} ${isCompleted ? 'text-decoration-line-through opacity-75' : ''}">${item.title}</div>
+                            ${item.comment ? `<div class="small text-muted mt-1 fst-italic"><i class="bi bi-chat-dots me-1"></i>${item.comment}</div>` : ''}
+                        </div>
+                        ${item.responsavel ? `<div class="badge bg-light text-dark border small fw-normal">${item.responsavel}</div>` : ''}
+                        ${item.data_conclusao ? `<div class="text-muted small">${formatDateBR(item.data_conclusao)}</div>` : ''}
+                    </div>
+                </div>
+            `;
+
+            if (hasChildren) {
+                item.children.forEach(child => processItem(child, level + 1));
+            }
+        }
+
+        items.forEach(item => processItem(item));
+        html += '</div>';
+        container.innerHTML = html;
+    }
+</script>
 
 {% endblock %}
 

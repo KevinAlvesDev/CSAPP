@@ -21,6 +21,7 @@ def criar_plano_sucesso(
     estrutura: dict,
     dias_duracao: int | None = None,
     context: str = "onboarding",
+    processo_id: int | None = None,
 ) -> int:
     """
     Cria um plano de sucesso com estrutura hierárquica.
@@ -32,6 +33,34 @@ def criar_plano_sucesso(
         raise ValidationError("Usuário criador é obrigatório")
 
     validar_estrutura_hierarquica(estrutura)
+
+    # Limite de 5 planos em andamento por usuário
+    # Limite de 5 planos em andamento ("rascunhos") por usuário
+    # Apenas se não estiver vinculado a um processo específico
+    if criado_por and criado_por != "sistema" and not processo_id:
+        try:
+            # Contar apenas planos SEM processo vinculado (rascunhos/modelos pessoais)
+            sql = "SELECT COUNT(*) as count FROM planos_sucesso WHERE status = 'em_andamento' AND criado_por = %s AND processo_id IS NULL"
+            res = query_db(sql, (criado_por,), one=True)
+            contagem = res["count"] if res else 0
+            
+            if contagem >= 5:
+                raise ValidationError("Você já possui 5 planos de rascunho em andamento. Conclua ou exclua um para criar outro.")
+        except ValidationError:
+            raise
+        except Exception:
+            # Falha ao contar não deve impedir criação em ambiente instável
+            current_app.logger.warning("Falha ao validar limite de planos rascunho")
+
+    # Garantir apenas um plano em andamento por processo
+    if processo_id:
+        existing = query_db(
+            "SELECT id FROM planos_sucesso WHERE processo_id = %s AND status = 'em_andamento'",
+            (processo_id,),
+            one=True,
+        )
+        if existing:
+            raise ValidationError("Já existe um plano em andamento vinculado a este processo")
 
     with db_connection() as (conn, db_type):
         cursor = conn.cursor()
@@ -53,13 +82,23 @@ def criar_plano_sucesso(
                     cursor.execute("ALTER TABLE planos_sucesso ADD COLUMN dias_duracao INTEGER")
                     conn.commit()
                     current_app.logger.info("Coluna dias_duracao adicionada à tabela planos_sucesso")
+
+                if "status" not in colunas_existentes:
+                    cursor.execute("ALTER TABLE planos_sucesso ADD COLUMN status TEXT DEFAULT 'em_andamento'")
+                    conn.commit()
+                    current_app.logger.info("Coluna status adicionada à tabela planos_sucesso")
+
+                if "processo_id" not in colunas_existentes:
+                    cursor.execute("ALTER TABLE planos_sucesso ADD COLUMN processo_id INTEGER")
+                    conn.commit()
+                    current_app.logger.info("Coluna processo_id adicionada à tabela planos_sucesso")
             except Exception as mig_error:
                 current_app.logger.warning(f"Erro ao verificar/migrar colunas de planos_sucesso: {mig_error}")
 
         try:
             sql_plano = """
-                INSERT INTO planos_sucesso (nome, descricao, criado_por, data_criacao, data_atualizacao, dias_duracao, permite_excluir_tarefas, contexto)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO planos_sucesso (nome, descricao, criado_por, data_criacao, data_atualizacao, dias_duracao, permite_excluir_tarefas, contexto, status, processo_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
             if db_type == "sqlite":
                 sql_plano = sql_plano.replace("%s", "?")
@@ -77,6 +116,8 @@ def criar_plano_sucesso(
                     dias_duracao,
                     permite_excluir,
                     context,
+                    "em_andamento",
+                    processo_id,
                 ),
             )
 
@@ -106,6 +147,7 @@ def criar_plano_sucesso_checklist(
     estrutura: dict,
     dias_duracao: int | None = None,
     context: str = "onboarding",
+    processo_id: int | None = None,
 ) -> int:
     """
     Cria um plano de sucesso usando a tabela checklist_items (hierarquia infinita).
@@ -119,6 +161,33 @@ def criar_plano_sucesso_checklist(
         raise ValidationError("Usuário criador é obrigatório")
 
     validar_estrutura_checklist(estrutura)
+
+    # Limite de 5 planos em andamento por usuário
+    # Limite de 5 planos em andamento ("rascunhos") por usuário
+    # Apenas se não estiver vinculado a um processo específico
+    if criado_por and criado_por != "sistema" and not processo_id:
+        try:
+            # Contar apenas planos SEM processo vinculado (rascunhos/modelos pessoais)
+            sql = "SELECT COUNT(*) as count FROM planos_sucesso WHERE status = 'em_andamento' AND criado_por = %s AND processo_id IS NULL"
+            res = query_db(sql, (criado_por,), one=True)
+            contagem = res["count"] if res else 0
+
+            if contagem >= 5:
+                raise ValidationError("Você já possui 5 planos de rascunho em andamento. Conclua ou exclua um para criar outro.")
+        except ValidationError:
+            raise
+        except Exception:
+            current_app.logger.warning("Falha ao validar limite de planos rascunho")
+
+    # Garantir apenas um plano em andamento por processo
+    if processo_id:
+        existing = query_db(
+            "SELECT id FROM planos_sucesso WHERE processo_id = %s AND status = 'em_andamento'",
+            (processo_id,),
+            one=True,
+        )
+        if existing:
+            raise ValidationError("Já existe um plano em andamento vinculado a este processo")
 
     with db_connection() as (conn, db_type):
         cursor = conn.cursor()
@@ -140,13 +209,23 @@ def criar_plano_sucesso_checklist(
                     cursor.execute("ALTER TABLE planos_sucesso ADD COLUMN dias_duracao INTEGER")
                     conn.commit()
                     current_app.logger.info("Coluna dias_duracao adicionada à tabela planos_sucesso")
+
+                if "status" not in colunas_existentes:
+                    cursor.execute("ALTER TABLE planos_sucesso ADD COLUMN status TEXT DEFAULT 'em_andamento'")
+                    conn.commit()
+                    current_app.logger.info("Coluna status adicionada à tabela planos_sucesso")
+
+                if "processo_id" not in colunas_existentes:
+                    cursor.execute("ALTER TABLE planos_sucesso ADD COLUMN processo_id INTEGER")
+                    conn.commit()
+                    current_app.logger.info("Coluna processo_id adicionada à tabela planos_sucesso")
             except Exception as mig_error:
                 current_app.logger.warning(f"Erro ao verificar/migrar colunas de planos_sucesso: {mig_error}")
 
         try:
             sql_plano = """
-                INSERT INTO planos_sucesso (nome, descricao, criado_por, data_criacao, data_atualizacao, dias_duracao, permite_excluir_tarefas, contexto)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO planos_sucesso (nome, descricao, criado_por, data_criacao, data_atualizacao, dias_duracao, permite_excluir_tarefas, contexto, status, processo_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
             if db_type == "sqlite":
                 sql_plano = sql_plano.replace("%s", "?")
@@ -164,6 +243,8 @@ def criar_plano_sucesso_checklist(
                     dias_duracao,
                     permite_excluir,
                     context,
+                    "em_andamento",
+                    processo_id,
                 ),
             )
 
@@ -285,10 +366,16 @@ def excluir_plano_sucesso(plano_id: int) -> bool:
 
 
 def listar_planos_sucesso(
-    ativo_apenas: bool = True, busca: str | None = None, context: str | None = None
+    ativo_apenas: bool = True,
+    busca: str | None = None,
+    context: str | None = None,
+    status: str | None = None,
+    usuario_id: str | None = None,
+    processo_id: int | None = None,
 ) -> list[dict]:
     """
     Lista todos os planos de sucesso.
+    Suporta filtragem por status, usuário e processo (implantacao).
     """
     sql = "SELECT * FROM planos_sucesso WHERE 1=1"
     params = []
@@ -304,15 +391,99 @@ def listar_planos_sucesso(
         sql += " AND ativo = %s"
         params.append(True)
 
+    if status:
+        sql += " AND status = %s"
+        params.append(status)
+
+    if usuario_id:
+        # Busca planos criados por ou vinculados a processos do usuário
+        sql += """ AND (criado_por = %s OR processo_id IN (
+            SELECT id FROM implantacoes WHERE usuario_cs = %s
+        ))"""
+        params.extend([usuario_id, usuario_id])
+
+    if processo_id:
+        sql += " AND processo_id = %s"
+        params.append(processo_id)
+
     if busca:
         sql += " AND (nome LIKE %s OR descricao LIKE %s)"
         busca_pattern = f"%{busca}%"
         params.extend([busca_pattern, busca_pattern])
 
-    sql += " ORDER BY nome ASC"
+    sql += " ORDER BY data_criacao DESC, nome ASC"
 
     planos = query_db(sql, tuple(params) if params else ())
     return planos or []
+
+
+def concluir_plano_sucesso(plano_id: int) -> bool:
+    """
+    Marca um plano de sucesso como concluído.
+    """
+    if not plano_id:
+        raise ValidationError("ID do plano é obrigatório")
+
+    plano = query_db("SELECT id, status FROM planos_sucesso WHERE id = %s", (plano_id,), one=True)
+    if not plano:
+        raise ValidationError(f"Plano com ID {plano_id} não encontrado")
+
+    result = execute_db(
+        "UPDATE planos_sucesso SET status = 'concluido', data_atualizacao = %s WHERE id = %s",
+        (datetime.now(), plano_id),
+        raise_on_error=True,
+    )
+
+    current_app.logger.info(f"Plano de sucesso ID {plano_id} marcado como concluído")
+    return result is not None
+
+
+def contar_planos_em_andamento(usuario_id: str) -> int:
+    """
+    Conta quantos planos em andamento um usuário possui.
+    Considera planos vinculados a processos do usuário.
+    """
+    sql = """
+        SELECT COUNT(*) as count
+        FROM planos_sucesso
+        WHERE status = 'em_andamento'
+        AND (criado_por = %s OR processo_id IN (
+            SELECT id FROM implantacoes WHERE usuario_cs = %s
+        ))
+    """
+    result = query_db(sql, (usuario_id, usuario_id), one=True)
+    return result["count"] if result else 0
+
+
+def contar_planos_por_status(usuario_id: str = None, context: str = "onboarding") -> dict:
+    """
+    Retorna contagem de planos por status para um usuário ou contexto.
+    """
+    sql = "SELECT status, COUNT(*) as count FROM planos_sucesso WHERE 1=1"
+    params = []
+
+    if context:
+        if context == "onboarding":
+            sql += " AND (contexto IS NULL OR contexto = 'onboarding')"
+        else:
+            sql += " AND contexto = %s"
+            params.append(context)
+
+    if usuario_id:
+        sql += " AND (criado_por = %s OR processo_id IN (SELECT id FROM implantacoes WHERE usuario_cs = %s))"
+        params.extend([usuario_id, usuario_id])
+
+    sql += " GROUP BY status"
+
+    results = query_db(sql, tuple(params))
+
+    counts = {"em_andamento": 0, "concluido": 0}
+    if results:
+        for row in results:
+            if row["status"] in counts:
+                counts[row["status"]] = row["count"]
+
+    return counts
 
 
 def obter_plano_completo(plano_id: int) -> dict | None:

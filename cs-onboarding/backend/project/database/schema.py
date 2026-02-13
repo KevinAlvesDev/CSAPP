@@ -391,7 +391,10 @@ def _criar_tabelas_basicas_sqlite(cursor):
             ativo INTEGER DEFAULT 1,
             contexto TEXT DEFAULT 'onboarding',
             permite_excluir_tarefas INTEGER DEFAULT 0,
-            FOREIGN KEY (criado_por) REFERENCES usuarios(usuario)
+            status TEXT DEFAULT 'em_andamento',
+            processo_id INTEGER,
+            FOREIGN KEY (criado_por) REFERENCES usuarios(usuario),
+            FOREIGN KEY (processo_id) REFERENCES implantacoes(id) ON DELETE CASCADE
         )
     """)
 
@@ -876,6 +879,8 @@ def _migrar_colunas_planos_sucesso(cursor):
             "data_atualizacao": "DATETIME DEFAULT CURRENT_TIMESTAMP",
             "dias_duracao": "INTEGER",
             "permite_excluir_tarefas": "INTEGER DEFAULT 0",
+            "status": "TEXT DEFAULT 'em_andamento'",
+            "processo_id": "INTEGER",
         }
 
         colunas_adicionadas = 0

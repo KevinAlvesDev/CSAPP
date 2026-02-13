@@ -355,6 +355,7 @@ def create_app(test_config=None):
     from .blueprints.api import api_bp
     from .blueprints.api_docs import api_docs_bp
     from .blueprints.api_v1 import api_v1_bp
+    from .blueprints.api_planos import api_planos_bp
     from .blueprints.auth import auth_bp  # Blueprint de autenticação
     from .blueprints.checklist_api import checklist_bp
     from .blueprints.checklist_finalizacao_bp import checklist_finalizacao_bp
@@ -388,6 +389,7 @@ def create_app(test_config=None):
     app.register_blueprint(auth_bp)
     app.register_blueprint(api_bp)
     app.register_blueprint(api_v1_bp)
+    app.register_blueprint(api_planos_bp)
     # app.register_blueprint(implantacao_actions_bp) # MOVIDO PARA ONBOARDING
 
     from .blueprints.onboarding.actions import onboarding_actions_bp
