@@ -143,6 +143,7 @@ def get_implantacoes_with_progress(
         date_column = "i.data_inicio_efetivo"
     elif date_type == "finalizacao":
         date_column = "i.data_final_implantacao"
+        status_condition = "finalizada"
     elif date_type == "parada":
         date_column = "i.data_final_implantacao"
         status_condition = "parada"
@@ -337,8 +338,7 @@ def get_implantacoes_count(
         date_column = "i.data_inicio_efetivo"
     elif date_type == "finalizacao":
         date_column = "i.data_final_implantacao"
-        # Opcional: garantir que status seja finalizada?
-        # status_condition = "finalizada" 
+        status_condition = "finalizada"
     elif date_type == "parada":
         date_column = "i.data_final_implantacao"
         status_condition = "parada"

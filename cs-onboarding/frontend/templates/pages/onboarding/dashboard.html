@@ -94,84 +94,106 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
 
         <div class="card p-2 px-3 mb-3">
             <form method="GET" action="{{ url_for('onboarding.dashboard') }}" id="cs-filter-form"
-                class="d-flex align-items-center gap-2 flex-wrap">
+                class="d-flex align-items-center flex-wrap gap-2">
                 {% if current_search %}
                 <input type="hidden" name="search" value="{{ current_search }}">
                 {% endif %}
                 {% if sort_days %}
                 <input type="hidden" name="sort_days" value="{{ sort_days }}">
                 {% endif %}
-                <span class="text-secondary small fw-semibold text-nowrap"><i
-                        class="bi bi-funnel me-1"></i>Filtros:</span>
-                {% if is_manager %}
-                <select id="cs_filter" name="cs_filter" class="form-select form-select-sm"
-                    style="width: auto; min-width: 220px;">
-                    <option value="">Todos os Implantadores</option>
-                    {% if all_cs_users %}
-                    {% for cs in all_cs_users %}
-                    <option value="{{ cs.usuario }}" {% if cs.usuario==current_cs_filter %}selected{% endif %}>
-                        {{ cs.nome }} ({{ cs.usuario }})
-                    </option>
-                    {% endfor %}
+
+                <!-- Barra Unificada de Filtros (Ajustada) -->
+                <div class="d-inline-flex align-items-center bg-white rounded-3 border px-2 py-1 shadow-sm"
+                    style="height: 42px;">
+
+                    <!-- Label Icon -->
+                    <div class="d-flex align-items-center px-2 text-secondary">
+                        <i class="bi bi-funnel-fill text-primary opacity-75"></i>
+                    </div>
+
+                    <div class="vr text-secondary opacity-25 mx-1" style="height: 20px;"></div>
+
+                    <!-- CS Filter -->
+                    {% if is_manager %}
+                    <div class="position-relative">
+                        <select id="cs_filter" name="cs_filter"
+                            class="form-select form-select-sm border-0 shadow-none bg-transparent ps-2 pe-5 fw-medium text-dark"
+                            style="width: auto; cursor: pointer; min-width: 180px;">
+                            <option value="" class="text-muted">Todos os Implantadores</option>
+                            {% if all_cs_users %}
+                            {% for cs in all_cs_users %}
+                            <option value="{{ cs.usuario }}" {% if cs.usuario==current_cs_filter %}selected{% endif %}>
+                                {{ cs.nome }}
+                            </option>
+                            {% endfor %}
+                            {% endif %}
+                        </select>
+                    </div>
+                    <div class="vr text-secondary opacity-25 mx-1" style="height: 20px;"></div>
                     {% endif %}
-                </select>
-                {% endif %}
-                <select name="tipo" class="form-select form-select-sm" style="width: auto; min-width: 160px;">
-                    <option value="">Todos os Tipos</option>
-                    <option value="sistema" {% if current_tipo=='sistema' %}selected{% endif %}>Sistema</option>
-                    <option value="modulo" {% if current_tipo=='modulo' %}selected{% endif %}>Módulo</option>
-                </select>
-                <!-- Bloco de Filtro de Data Unificado e Suave -->
-                <div class="form-control form-control-sm d-inline-flex align-items-center bg-white px-1"
-                    style="width: fit-content; padding-top: 6px; padding-bottom: 6px; height: auto;">
-                    <select name="date_type" class="form-select form-select-sm border-0 shadow-none bg-transparent py-0"
-                        style="width: auto; cursor: pointer; padding-right: 2rem !important;">
-                        <option value="criacao" {% if current_date_type=='criacao' %}selected{% endif %}>Criação
-                        </option>
-                        <option value="inicio" {% if current_date_type=='inicio' %}selected{% endif %}>Início
-                        </option>
-                        <option value="finalizacao" {% if current_date_type=='finalizacao' %}selected{% endif %}>
-                            Conclusão
-                        </option>
-                        <option value="parada" {% if current_date_type=='parada' %}selected{% endif %}>Parada (Atual)
-                        </option>
-                        <option value="cancelamento" {% if current_date_type=='cancelamento' %}selected{% endif %}>
-                            Cancelamento</option>
-                    </select>
 
-                    <div class="vr text-secondary opacity-25 mx-1" style="height: 16px;"></div>
+                    <!-- Tipo Filter -->
+                    <div class="position-relative">
+                        <select name="tipo"
+                            class="form-select form-select-sm border-0 shadow-none bg-transparent ps-2 pe-5 fw-medium text-dark"
+                            style="width: auto; cursor: pointer; min-width: 130px;">
+                            <option value="" class="text-muted">Todos os Tipos</option>
+                            <option value="sistema" {% if current_tipo=='sistema' %}selected{% endif %}>Sistema</option>
+                            <option value="modulo" {% if current_tipo=='modulo' %}selected{% endif %}>Módulo</option>
+                        </select>
+                    </div>
 
-                    <div class="d-flex align-items-center px-2">
-                        <span class="small text-secondary fw-semibold me-1" style="white-space: nowrap;">De:</span>
+                    <div class="vr text-secondary opacity-25 mx-1" style="height: 20px;"></div>
+
+                    <!-- Date Type Select -->
+                    <div class="position-relative">
+                        <select name="date_type"
+                            class="form-select form-select-sm border-0 shadow-none bg-transparent ps-2 pe-5 text-primary fw-bold"
+                            style="width: auto; cursor: pointer;">
+                            <option value="criacao" {% if current_date_type=='criacao' %}selected{% endif %}>Criação
+                            </option>
+                            <option value="inicio" {% if current_date_type=='inicio' %}selected{% endif %}>Início
+                            </option>
+                            <option value="finalizacao" {% if current_date_type=='finalizacao' %}selected{% endif %}>
+                                Conclusão
+                            </option>
+                            <option value="parada" {% if current_date_type=='parada' %}selected{% endif %}>Parada
+                                (Atual)
+                            </option>
+                            <option value="cancelamento" {% if current_date_type=='cancelamento' %}selected{% endif %}>
+                                Cancelamento</option>
+                        </select>
+                    </div>
+
+                    <!-- Date Range Inputs -->
+                    <div class="d-flex align-items-center px-1">
+                        <span class="small text-muted mx-1">de</span>
                         <input type="date" name="start_date"
-                            class="form-control form-control-sm border-0 p-0 shadow-none bg-transparent"
-                            value="{{ current_start_date or '' }}" style="width: 105px;">
-                    </div>
+                            class="form-control form-control-sm border-0 p-1 shadow-none bg-transparent fw-medium"
+                            value="{{ current_start_date or '' }}" style="width: 115px;" max="2100-12-31">
 
-                    <div class="vr text-secondary opacity-25 mx-1" style="height: 16px;"></div>
-
-                    <div class="d-flex align-items-center px-2">
-                        <span class="small text-secondary fw-semibold me-1" style="white-space: nowrap;">Até:</span>
+                        <span class="small text-muted mx-1">até</span>
                         <input type="date" name="end_date"
-                            class="form-control form-control-sm border-0 p-0 shadow-none bg-transparent"
-                            value="{{ current_end_date or '' }}" style="width: 105px;">
+                            class="form-control form-control-sm border-0 p-1 shadow-none bg-transparent fw-medium"
+                            value="{{ current_end_date or '' }}" style="width: 115px;" max="2100-12-31">
                     </div>
 
+                    <!-- Clear Button (Integrated) -->
+                    {% if current_cs_filter or current_tipo or current_start_date or current_end_date or
+                    (current_date_type and current_date_type != 'criacao') %}
+                    <div class="vr text-secondary opacity-25 mx-1" style="height: 20px;"></div>
+                    <a href="{{ url_for('onboarding.dashboard') }}{% if current_search %}?search={{ current_search }}{% endif %}"
+                        class="btn btn-sm btn-link text-secondary text-decoration-none px-2" title="Limpar Filtros">
+                        <i class="bi bi-x-circle-fill"></i>
+                    </a>
+                    {% endif %}
                 </div>
-                <button type="submit" class="btn btn-sm btn-primary px-3 fw-bold">
-                    Consultar
+
+                <!-- Submit Button -->
+                <button type="submit" class="btn btn-primary px-3 shadow-sm d-flex align-items-center"
+                    style="height: 42px;">
+                    <i class="bi bi-search me-2"></i> Consultar
                 </button>
-
-                {% if current_cs_filter or current_tipo or current_start_date or current_end_date or (current_date_type
-                and current_date_type != 'criacao') %}
-                <a href="{{ url_for('onboarding.dashboard') }}{% if current_search %}?search={{ current_search }}{% endif %}"
-                    class="btn btn-sm btn-outline-secondary" title="Limpar Filtros">
-                    <i class="bi bi-x-lg me-1"></i>Limpar
-                </a>
-                {% endif %}
-
-
-
             </form>
         </div>
 
@@ -1310,6 +1332,43 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                 }
             });
         }
+        // ===== VALIDAÇÃO DE DATA FORCE BRUTE =====
+        // Monitoramento contínuo para impedir anos > 4 dígitos
+        const dateInputs = document.querySelectorAll('input[type="date"]');
+
+        dateInputs.forEach(input => {
+            let intervalId;
+
+            // Quando foca, inicia verificação a cada 100ms
+            input.addEventListener('focus', function () {
+                intervalId = setInterval(() => {
+                    const val = input.value;
+                    if (!val) return;
+
+                    const parts = val.split('-');
+                    // Se ano > 4 dígitos (ex: 20265...)
+                    if (parts[0].length > 4) {
+                        parts[0] = parts[0].substring(0, 4);
+                        input.value = parts.join('-');
+                    }
+                    // Se ano > 2100 logica extra
+                    if (parts[0] > 2100) {
+                        parts[0] = "2100";
+                        input.value = parts.join('-');
+                    }
+                }, 100);
+            });
+
+            // Quando sai, para e faz verificação final
+            input.addEventListener('blur', function () {
+                clearInterval(intervalId);
+                const max = '2100-12-31';
+                if (this.value > max) {
+                    this.value = max;
+                }
+            });
+        });
+
     });
 </script>
 {% endblock %}
