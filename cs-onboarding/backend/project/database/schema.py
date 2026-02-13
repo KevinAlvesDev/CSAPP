@@ -1126,6 +1126,33 @@ def ensure_implantacoes_status_constraint():
                 pass
         conn.commit()
 
+        # Garantir colunas de prazos em checklist_items para Postgres (Auto-Migração)
+        try:
+            cursor.execute("""
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='checklist_items' AND column_name='prazo_inicio') THEN
+                        ALTER TABLE checklist_items ADD COLUMN prazo_inicio DATE NULL;
+                    END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='checklist_items' AND column_name='prazo_fim') THEN
+                        ALTER TABLE checklist_items ADD COLUMN prazo_fim DATE NULL;
+                    END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='checklist_items' AND column_name='dias_offset') THEN
+                        ALTER TABLE checklist_items ADD COLUMN dias_offset INTEGER NULL;
+                    END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='checklist_items' AND column_name='previsao_original') THEN
+                        ALTER TABLE checklist_items ADD COLUMN previsao_original TIMESTAMP NULL;
+                    END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='checklist_items' AND column_name='nova_previsao') THEN
+                        ALTER TABLE checklist_items ADD COLUMN nova_previsao TIMESTAMP NULL;
+                    END IF;
+                END
+                $$;
+            """)
+            conn.commit()
+        except Exception as e:
+            current_app.logger.warning(f"Erro ao verificar colunas de checklist_items: {e}")
+
         with contextlib.suppress(Exception):
             cursor.execute("ALTER TABLE implantacoes DROP CONSTRAINT IF EXISTS implantacoes_status_check;")
         try:

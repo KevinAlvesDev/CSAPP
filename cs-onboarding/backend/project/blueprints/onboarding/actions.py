@@ -987,7 +987,7 @@ def concluir_plano_implantacao():
                         cursor.execute(
                             sql_insert,
                             (
-                                f"{plano_template['nome']} (Concluído em {datetime.now().strftime('%d/%m/%Y')})",
+                                f"{plano_template['nome']} (Concluído em {datetime.now().strftime('%d/%m/%Y')} - ID {implantacao_id})",
                                 plano_template["descricao"],
                                 usuario_email,
                                 "em_andamento",  # Começa em andamento para concluir via service
