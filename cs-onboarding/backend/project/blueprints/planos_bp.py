@@ -73,11 +73,14 @@ def listar_planos():
             status=status,
             usuario_id=usuario_id,
             processo_id=processo_id,
+            somente_templates=True,
         )
 
         # Buscar contagens para as abas
         contagens = planos_sucesso_service.contar_planos_por_status(
-            usuario_id=current_user_id if context == "onboarding" else None, context=context
+            usuario_id=current_user_id if context == "onboarding" else None,
+            context=context,
+            somente_templates=True,
         )
 
         pode_editar = True

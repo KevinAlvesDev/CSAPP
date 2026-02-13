@@ -12,6 +12,7 @@ def api_listar_planos():
         status = request.args.get("status")
         usuario_id = request.args.get("usuario_id")
         processo_id = request.args.get("processo_id")
+        somente_templates = request.args.get("somente_templates", "true").lower() == "true"
 
         if processo_id:
             try:
@@ -20,10 +21,15 @@ def api_listar_planos():
                 processo_id = None
 
         planos = planos_sucesso_service.listar_planos_sucesso(
-            status=status if status else None, usuario_id=usuario_id if usuario_id else None, processo_id=processo_id
+            status=status if status else None,
+            usuario_id=usuario_id if usuario_id else None,
+            processo_id=processo_id,
+            somente_templates=somente_templates,
         )
 
-        contagens = planos_sucesso_service.contar_planos_por_status(usuario_id=usuario_id if usuario_id else None)
+        contagens = planos_sucesso_service.contar_planos_por_status(
+            usuario_id=usuario_id if usuario_id else None, somente_templates=somente_templates
+        )
 
         return jsonify({"success": True, "planos": planos, "contagens": contagens}), 200
 

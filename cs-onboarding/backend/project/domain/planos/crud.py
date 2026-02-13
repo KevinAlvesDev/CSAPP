@@ -372,6 +372,7 @@ def listar_planos_sucesso(
     status: str | None = None,
     usuario_id: str | None = None,
     processo_id: int | None = None,
+    somente_templates: bool = True,
 ) -> list[dict]:
     """
     Lista todos os planos de sucesso.
@@ -405,6 +406,8 @@ def listar_planos_sucesso(
     if processo_id:
         sql += " AND processo_id = %s"
         params.append(processo_id)
+    elif somente_templates:
+        sql += " AND processo_id IS NULL"
 
     if busca:
         sql += " AND (nome LIKE %s OR descricao LIKE %s)"
@@ -455,7 +458,9 @@ def contar_planos_em_andamento(usuario_id: str) -> int:
     return result["count"] if result else 0
 
 
-def contar_planos_por_status(usuario_id: str = None, context: str = "onboarding") -> dict:
+def contar_planos_por_status(
+    usuario_id: str | None = None, context: str = "onboarding", somente_templates: bool = True
+) -> dict:
     """
     Retorna contagem de planos por status para um usuário ou contexto.
     """
@@ -472,6 +477,9 @@ def contar_planos_por_status(usuario_id: str = None, context: str = "onboarding"
     if usuario_id:
         sql += " AND (criado_por = %s OR processo_id IN (SELECT id FROM implantacoes WHERE usuario_cs = %s))"
         params.extend([usuario_id, usuario_id])
+
+    if somente_templates:
+        sql += " AND processo_id IS NULL"
 
     sql += " GROUP BY status"
 
