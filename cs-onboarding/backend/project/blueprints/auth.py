@@ -142,7 +142,7 @@ def login():
         return redirect(url_for("core.modules_selection"))
 
     # Renderiza a página de login
-    login_bg_file = current_app.config.get("LOGIN_BG_FILE", "imagens/teladelogin.jpg")
+    login_bg_file = current_app.config.get("LOGIN_BG_FILE", "imagens/Meet_TimesSquare.png")
     try:
         static_folder = os.path.abspath(current_app.static_folder or "")
         candidate_path = os.path.join(static_folder, login_bg_file)
@@ -150,7 +150,7 @@ def login():
             # Tentar fallback padrão
             fallback = os.path.join(static_folder, "imagens", "teladelogin.jpg")
             if os.path.isfile(fallback):
-                login_bg_file = "imagens/teladelogin.jpg"
+                login_bg_file = "imagens/Meet_TimesSquare.png"
             else:
                 # Detectar automaticamente qualquer imagem disponível em /static/imagens
                 imgs_dir = os.path.join(static_folder, "imagens")
@@ -164,11 +164,11 @@ def login():
                             if "25" in lower or "anos" in lower:
                                 chosen = fname
                                 break
-                    login_bg_file = f"imagens/{chosen}" if chosen else "imagens/teladelogin.jpg"
+                    login_bg_file = f"imagens/{chosen}" if chosen else "imagens/Meet_TimesSquare.png"
                 except Exception:
-                    login_bg_file = "imagens/teladelogin.jpg"
+                    login_bg_file = "imagens/Meet_TimesSquare.png"
     except Exception:
-        login_bg_file = "imagens/teladelogin.jpg"
+        login_bg_file = "imagens/Meet_TimesSquare.png"
     google_enabled = current_app.config.get("GOOGLE_OAUTH_ENABLED", False)
     return render_template(
         "auth/login.html", auth0_enabled=False, use_custom_auth=google_enabled, login_bg_file=login_bg_file

@@ -38,7 +38,7 @@ class Config:
     # ------------------------------
 
     # Imagem de fundo da tela de login (arquivo em 'frontend/static')
-    LOGIN_BG_FILE = os.environ.get("LOGIN_BG_FILE", "imagens/25 ANOS - FUNDO MEET.jpg")
+    LOGIN_BG_FILE = os.environ.get("LOGIN_BG_FILE", "imagens/Meet_TimesSquare.png")
 
     USE_SQLITE_ENV = os.environ.get("USE_SQLITE_LOCALLY", "").lower() in ("true", "1", "yes")
 
