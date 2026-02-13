@@ -59,15 +59,15 @@ def listar_planos():
             except ValueError:
                 processo_id = None
 
-        # Se não especificou status mas quer apenas ativos, filtra por em_andamento
-        if not status and ativo_apenas:
-            status = "em_andamento"
+        # Se não especificou status, trazer todos do contexto
+        if not status:
+            status = None
 
         user = get_current_user()
         current_user_id = user.get("usuario") if user else None
 
         planos = planos_sucesso_service.listar_planos_sucesso(
-            ativo_apenas=ativo_apenas,
+            ativo=ativo_apenas,
             busca=busca if busca else None,
             context=context,
             status=status,

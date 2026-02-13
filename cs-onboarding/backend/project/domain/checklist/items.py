@@ -622,6 +622,10 @@ def atualizar_prazo_item(item_id, nova_data_iso, usuario_email):
             prev_orig = row[1]
             title = row[2]
 
+        # Ajustar a nova data para dia útil (Sempre)
+        from ...common.date_helpers import adjust_to_business_day
+        nova_dt = adjust_to_business_day(nova_dt)
+
         now = datetime.now()
         uq = "UPDATE checklist_items SET nova_previsao = %s, updated_at = %s WHERE id = %s"
         if db_type == "sqlite":

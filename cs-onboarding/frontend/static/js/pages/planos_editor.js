@@ -94,7 +94,7 @@
                   max="365"
                   value="${diasOffset}"
                 >
-                <span class="input-group-text" style="font-size: 0.75rem;">dias</span>
+                <span class="input-group-text d-none d-sm-block" style="font-size: 0.75rem;">dias úteis</span>
               </div>
             </div>
             <div class="d-flex align-items-center gap-1">

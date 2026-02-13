@@ -148,6 +148,23 @@ def add_business_days(start_date: date, days: int) -> date:
     return current
 
 
+def adjust_to_business_day(dt: date | datetime) -> date | datetime:
+    """
+    Ajusta uma data para o próximo dia útil se ela cair em um fim de semana.
+
+    Args:
+        dt: Data para ajustar
+
+    Returns:
+        Data ajustada (se necessário)
+    """
+    res = dt
+    # 5 = Sábado, 6 = Domingo
+    while res.weekday() >= 5:
+        res += timedelta(days=1)
+    return res
+
+
 def get_quarter(dt: datetime | date | None = None) -> int:
     """
     Retorna o trimestre de uma data.

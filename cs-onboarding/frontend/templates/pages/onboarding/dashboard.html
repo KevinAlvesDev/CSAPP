@@ -105,7 +105,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                         class="bi bi-funnel me-1"></i>Filtros:</span>
                 {% if is_manager %}
                 <select id="cs_filter" name="cs_filter" class="form-select form-select-sm"
-                    style="width: auto; min-width: 220px;" onchange="this.form.submit()">
+                    style="width: auto; min-width: 220px;">
                     <option value="">Todos os Implantadores</option>
                     {% if all_cs_users %}
                     {% for cs in all_cs_users %}
@@ -116,8 +116,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                     {% endif %}
                 </select>
                 {% endif %}
-                <select name="tipo" class="form-select form-select-sm" style="width: auto; min-width: 160px;"
-                    onchange="this.form.submit()">
+                <select name="tipo" class="form-select form-select-sm" style="width: auto; min-width: 160px;">
                     <option value="">Todos os Tipos</option>
                     <option value="sistema" {% if current_tipo=='sistema' %}selected{% endif %}>Sistema</option>
                     <option value="modulo" {% if current_tipo=='modulo' %}selected{% endif %}>Módulo</option>
@@ -158,14 +157,10 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                             value="{{ current_end_date or '' }}" style="width: 105px;">
                     </div>
 
-                    <div class="vr text-secondary opacity-25 mx-1" style="height: 16px;"></div>
-
-                    <button type="submit"
-                        class="btn btn-sm btn-link text-primary border-0 p-0 px-2 h-100 d-flex align-items-center"
-                        title="Aplicar Filtros">
-                        <i class="bi bi-search"></i>
-                    </button>
                 </div>
+                <button type="submit" class="btn btn-sm btn-primary px-3 fw-bold">
+                    Consultar
+                </button>
 
                 {% if current_cs_filter or current_tipo or current_start_date or current_end_date or (current_date_type
                 and current_date_type != 'criacao') %}

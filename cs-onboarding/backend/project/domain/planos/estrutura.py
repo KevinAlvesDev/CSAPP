@@ -184,8 +184,8 @@ def _criar_estrutura_plano_checklist(cursor, db_type: str, plano_id: int, estrut
         for fase_data in fases:
             ordem_global += 1
             sql_item = """
-                INSERT INTO checklist_items (parent_id, title, completed, comment, level, ordem, implantacao_id, plano_id, obrigatoria)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO checklist_items (parent_id, title, completed, comment, level, ordem, implantacao_id, plano_id, obrigatoria, dias_offset)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
             if db_type == "sqlite":
                 sql_item = sql_item.replace("%s", "?")
@@ -202,6 +202,7 @@ def _criar_estrutura_plano_checklist(cursor, db_type: str, plano_id: int, estrut
                     None,
                     plano_id,
                     fase_data.get("obrigatoria", False),
+                    fase_data.get("dias_offset"),
                 ),
             )
 
@@ -228,6 +229,7 @@ def _criar_estrutura_plano_checklist(cursor, db_type: str, plano_id: int, estrut
                         None,
                         plano_id,
                         grupo_data.get("obrigatoria", False),
+                        grupo_data.get("dias_offset"),
                     ),
                 )
 
@@ -252,6 +254,7 @@ def _criar_estrutura_plano_checklist(cursor, db_type: str, plano_id: int, estrut
                             None,
                             plano_id,
                             tarefa_data.get("obrigatoria", False),
+                            tarefa_data.get("dias_offset"),
                         ),
                     )
 
@@ -276,6 +279,7 @@ def _criar_estrutura_plano_checklist(cursor, db_type: str, plano_id: int, estrut
                                 None,
                                 plano_id,
                                 subtarefa_data.get("obrigatoria", False),
+                                subtarefa_data.get("dias_offset"),
                             ),
                         )
 

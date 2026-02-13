@@ -11,7 +11,7 @@ from werkzeug.utils import secure_filename
 from ...common import utils
 from ...common.audit_decorator import audit
 from ...common.validation import ValidationError, sanitize_string, validate_date, validate_integer
-from ...config.cache_config import clear_implantacao_cache, clear_user_cache
+from ...config.cache_config import clear_dashboard_cache, clear_implantacao_cache, clear_user_cache
 from ...config.logging_config import app_logger
 from ...constants import PERFIS_COM_CRIACAO, PERFIS_COM_GESTAO
 from ...core.extensions import limiter, r2_client
@@ -63,6 +63,7 @@ def criar_implantacao():
             if usuario_atribuido and usuario_atribuido != usuario_criador:
                 clear_user_cache(usuario_atribuido)
             clear_implantacao_cache(implantacao_id)
+            clear_dashboard_cache()
         except Exception:
             pass
         return redirect(url_for("onboarding.dashboard"))
@@ -111,6 +112,7 @@ def criar_implantacao_modulo():
             if usuario_atribuido and usuario_atribuido != usuario_criador:
                 clear_user_cache(usuario_atribuido)
             clear_implantacao_cache(implantacao_id)
+            clear_dashboard_cache()
         except Exception:
             pass
 
@@ -152,6 +154,7 @@ def iniciar_implantacao():
         try:
             clear_user_cache(usuario_cs_email)
             clear_implantacao_cache(implantacao_id)
+            clear_dashboard_cache()
         except Exception:
             pass
 
@@ -187,6 +190,7 @@ def desfazer_inicio_implantacao():
         try:
             clear_implantacao_cache(implantacao_id)
             clear_user_cache(usuario_cs_email)
+            clear_dashboard_cache()
         except Exception:
             pass
 
@@ -223,6 +227,7 @@ def desfazer_cancelamento_implantacao():
         try:
             clear_implantacao_cache(implantacao_id)
             clear_user_cache(usuario_cs_email)
+            clear_dashboard_cache()
         except Exception:
             pass
 
@@ -298,6 +303,7 @@ def marcar_sem_previsao():
         try:
             clear_user_cache(usuario_cs_email)
             clear_implantacao_cache(implantacao_id)
+            clear_dashboard_cache()
         except Exception:
             pass
     except ValueError as e:
@@ -340,6 +346,7 @@ def finalizar_implantacao():
         try:
             clear_user_cache(usuario_cs_email)
             clear_implantacao_cache(implantacao_id)
+            clear_dashboard_cache()
         except Exception:
             pass
 
@@ -385,6 +392,7 @@ def parar_implantacao():
         try:
             clear_user_cache(usuario_cs_email)
             clear_implantacao_cache(implantacao_id)
+            clear_dashboard_cache()
         except Exception:
             pass
 
@@ -452,6 +460,7 @@ def reabrir_implantacao():
         try:
             clear_user_cache(usuario_cs_email)
             clear_implantacao_cache(implantacao_id)
+            clear_dashboard_cache()
         except Exception:
             pass
 
@@ -518,6 +527,7 @@ def atualizar_detalhes_empresa():
         try:
             clear_implantacao_cache(implantacao_id)
             clear_user_cache(usuario_cs_email)
+            clear_dashboard_cache()
         except Exception as ex:
             app_logger.error(f"Erro ao limpar cache: {ex}")
             pass
@@ -599,6 +609,7 @@ def remover_plano_implantacao():
         flash("Plano de sucesso removido com sucesso!", "success")
         try:
             clear_implantacao_cache(implantacao_id)
+            clear_dashboard_cache()
         except Exception as e:
             app_logger.warning(f"Erro ao limpar cache após remover plano: {e}")
             pass
@@ -659,6 +670,7 @@ def excluir_implantacao():
         try:
             clear_user_cache(usuario_cs_email)
             clear_implantacao_cache(implantacao_id)
+            clear_dashboard_cache()
         except Exception:
             pass
     except ValueError as e:

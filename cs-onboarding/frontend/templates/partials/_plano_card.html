@@ -4,12 +4,9 @@
             <h3 class="plano-card-title">
                 <i class="bi bi-diagram-3 me-2"></i>{{ plano.nome }}
             </h3>
-            <span class="plano-status-badge {% if plano.status == 'concluido' %}active{% else %}inactive{% endif %}">
-                {% if plano.status == 'concluido' %}
-                <i class="bi bi-check-circle-fill me-1"></i>Concluído
-                {% else %}
-                <i class="bi bi-play-circle-fill me-1"></i>Em Andamento
-                {% endif %}
+            <span class="badge {% if plano.ativo %}bg-success{% else %}bg-secondary{% endif %}"
+                style="font-size: 0.7rem;">
+                {% if plano.ativo %}Ativo{% else %}Inativo{% endif %}
             </span>
         </div>
     </div>
@@ -30,12 +27,6 @@
     </div>
 
     <div class="plano-actions">
-        {% if plano.status == 'em_andamento' %}
-        <button type="button" class="btn btn-plano btn-plano-primary btn-concluir-plano" data-plano-id="{{ plano.id }}"
-            data-plano-nome="{{ plano.nome }}" title="Marcar como concluído">
-            <i class="bi bi-check-lg"></i>Concluir
-        </button>
-        {% endif %}
 
         {% if pode_editar %}
         <a href="{{ url_for('planos.obter_plano', plano_id=plano.id, context=context) }}?modo=editar"

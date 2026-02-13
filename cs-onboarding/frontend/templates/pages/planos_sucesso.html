@@ -50,25 +50,6 @@
     flex: 1;
   }
 
-  .plano-status-badge {
-    padding: 0.25rem 0.75rem;
-    border-radius: 20px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  .plano-status-badge.active {
-    background: #d4edda;
-    color: #155724;
-  }
-
-  .plano-status-badge.inactive {
-    background: #f8d7da;
-    color: #721c24;
-  }
-
   .plano-description {
     color: #718096;
     font-size: 0.95rem;
@@ -315,13 +296,13 @@
             <i class="bi bi-funnel me-1"></i>Status
           </label>
           <div class="filter-toggle">
-            <button type="submit" name="status" value="em_andamento" class="{% if status_atual == 'em_andamento' or not status_atual %}active{% endif %}">
-              <i class="bi bi-play-circle me-1"></i>Plano de sucesso em andamento
-              <span class="badge bg-primary ms-1">{{ contagens.em_andamento if contagens else 0 }}</span>
+            <button type="submit" name="ativo" value="true"
+              class="{% if request.args.get('ativo', 'true') == 'true' %}active{% endif %}">
+              Ativos
             </button>
-            <button type="submit" name="status" value="concluido" class="{% if status_atual == 'concluido' %}active{% endif %}">
-              <i class="bi bi-check-circle me-1"></i>Concluídos
-              <span class="badge bg-success ms-1">{{ contagens.concluido if contagens else 0 }}</span>
+            <button type="submit" name="ativo" value="false"
+              class="{% if request.args.get('ativo') == 'false' %}active{% endif %}">
+              Inativos
             </button>
           </div>
         </div>

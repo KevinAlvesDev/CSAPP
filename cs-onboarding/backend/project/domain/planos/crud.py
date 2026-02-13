@@ -366,7 +366,7 @@ def excluir_plano_sucesso(plano_id: int) -> bool:
 
 
 def listar_planos_sucesso(
-    ativo_apenas: bool = True,
+    ativo: bool | None = True,
     busca: str | None = None,
     context: str | None = None,
     status: str | None = None,
@@ -387,9 +387,9 @@ def listar_planos_sucesso(
             sql += " AND contexto = %s"
             params.append(context)
 
-    if ativo_apenas:
+    if ativo is not None:
         sql += " AND ativo = %s"
-        params.append(True)
+        params.append(ativo)
 
     if status:
         sql += " AND status = %s"
@@ -621,7 +621,7 @@ def obter_plano_completo_checklist(plano_id: int) -> dict | None:
 
     items = query_db(
         """
-        SELECT id, parent_id, title, completed, comment, level, ordem
+        SELECT id, parent_id, title, completed, comment, level, ordem, dias_offset
         FROM checklist_items
         WHERE plano_id = %s
         ORDER BY ordem, id
@@ -642,9 +642,10 @@ def obter_plano_completo_checklist(plano_id: int) -> dict | None:
                 "parent_id": item["parent_id"],
                 "title": item["title"],
                 "completed": item["completed"],
-                "comment": item["comment"],
+                 "comment": item["comment"],
                 "level": item["level"],
                 "ordem": item["ordem"],
+                "dias_offset": item.get("dias_offset"),
             }
         )
 
@@ -723,7 +724,7 @@ def clonar_plano_sucesso(
         # Buscar estrutura do plano original
         items = query_db(
             """
-            SELECT id, parent_id, title, comment, level, ordem, tipo_item, descricao, obrigatoria, tag
+            SELECT id, parent_id, title, comment, level, ordem, tipo_item, descricao, obrigatoria, tag, dias_offset
             FROM checklist_items
             WHERE plano_id = %s
             ORDER BY ordem, id
@@ -750,6 +751,7 @@ def clonar_plano_sucesso(
                     "tipo_item": item.get("tipo_item"),
                     "obrigatoria": item.get("obrigatoria", False),
                     "tag": item.get("tag"),
+                    "dias_offset": item.get("dias_offset"),
                 }
             )
 
