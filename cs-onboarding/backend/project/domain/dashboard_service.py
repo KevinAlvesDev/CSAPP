@@ -208,11 +208,11 @@ def get_dashboard_data(
             metrics["total_valor_modulos"] += impl_valor
 
         # Categorizar por status
-        if status == "finalizada":
+        if status in ["finalizada", "concluida", "concluída", "entregue"]:
             dashboard_data["finalizadas"].append(impl)
             metrics["impl_finalizadas"] += 1
             metrics["total_valor_finalizadas"] += impl_valor
-        elif status == "cancelada":
+        elif status in ["cancelada", "cancelado"]:
             dashboard_data["canceladas"].append(impl)
             metrics["impl_canceladas"] += 1
             metrics["total_valor_canceladas"] += impl_valor
