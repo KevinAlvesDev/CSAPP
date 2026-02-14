@@ -103,8 +103,8 @@ def get_implantacoes_with_progress(
         args.append(usuario_cs)
 
     if status:
-        query += f" AND i.status = {placeholder}"
-        args.append(status)
+        query += f" AND LOWER(i.status) = {placeholder}"
+        args.append(status.lower())
 
     if context:
         if context == "onboarding":
@@ -159,8 +159,8 @@ def get_implantacoes_with_progress(
         args.append(end_date)
     
     if status_condition:
-        query += f" AND i.status = {placeholder}"
-        args.append(status_condition)
+        query += f" AND LOWER(i.status) = {placeholder}"
+        args.append(status_condition.lower())
 
     if sort_by_status:
         query += """
@@ -303,8 +303,8 @@ def get_implantacoes_count(
         args.append(usuario_cs)
 
     if status:
-        query += f" AND i.status = {placeholder}"
-        args.append(status)
+        query += f" AND LOWER(i.status) = {placeholder}"
+        args.append(status.lower())
 
     if context:
         if context == "onboarding":
@@ -354,8 +354,8 @@ def get_implantacoes_count(
         args.append(end_date)
     
     if status_condition:
-        query += f" AND i.status = {placeholder}"
-        args.append(status_condition)
+        query += f" AND LOWER(i.status) = {placeholder}"
+        args.append(status_condition.lower())
 
     res = query_db(query, tuple(args), one=True)
     return res.get("total", 0) if res else 0
