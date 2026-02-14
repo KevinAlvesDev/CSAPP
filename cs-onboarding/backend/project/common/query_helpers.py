@@ -143,10 +143,10 @@ def get_implantacoes_with_progress(
         date_column = "i.data_inicio_efetivo"
     elif date_type == "finalizacao":
         date_column = "i.data_final_implantacao"
-        status_condition = "finalizada"
+        # status_condition = "finalizada"  <-- Removido para confiar na DATA
     elif date_type == "parada":
         date_column = "i.data_final_implantacao"
-        status_condition = "parada"
+        # status_condition = "parada" <-- Removido para confiar na DATA
     elif date_type == "cancelamento":
         date_column = "i.data_cancelamento"
 
@@ -338,10 +338,10 @@ def get_implantacoes_count(
         date_column = "i.data_inicio_efetivo"
     elif date_type == "finalizacao":
         date_column = "i.data_final_implantacao"
-        status_condition = "finalizada"
+        # status_condition = "finalizada"
     elif date_type == "parada":
         date_column = "i.data_final_implantacao"
-        status_condition = "parada"
+        # status_condition = "parada"
     elif date_type == "cancelamento":
         date_column = "i.data_cancelamento"
 
