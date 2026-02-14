@@ -86,28 +86,50 @@ def save_user_google_token(user_email: str, token: dict) -> bool:
         if isinstance(scopes, list):
             scopes = " ".join(scopes)
 
-        execute_db(
-            """
-            INSERT INTO google_tokens (usuario, access_token, refresh_token, token_type, expires_at, scopes, updated_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-            ON CONFLICT (usuario) DO UPDATE SET
-                access_token = EXCLUDED.access_token,
-                refresh_token = COALESCE(EXCLUDED.refresh_token, google_tokens.refresh_token),
-                token_type = EXCLUDED.token_type,
-                expires_at = EXCLUDED.expires_at,
-                scopes = EXCLUDED.scopes,
-                updated_at = EXCLUDED.updated_at
-            """,
-            (
-                user_email,
-                token.get("access_token"),
-                token.get("refresh_token"),
-                token.get("token_type", "Bearer"),
-                token.get("expires_at"),
-                scopes,
-                datetime.utcnow(),
-            ),
-        )
+        # Compatibilidade PG 9.3: Removemos ON CONFLICT
+        # Verificar se já existe
+        existing = query_db("SELECT 1 FROM google_tokens WHERE usuario = %s", (user_email,), one=True)
+
+        if existing:
+            # Update
+            execute_db(
+                """
+                UPDATE google_tokens SET
+                    access_token = %s,
+                    refresh_token = COALESCE(%s, refresh_token),
+                    token_type = %s,
+                    expires_at = %s,
+                    scopes = %s,
+                    updated_at = %s
+                WHERE usuario = %s
+                """,
+                (
+                    token.get("access_token"),
+                    token.get("refresh_token"),
+                    token.get("token_type", "Bearer"),
+                    token.get("expires_at"),
+                    scopes,
+                    datetime.utcnow(),
+                    user_email
+                )
+            )
+        else:
+            # Insert
+            execute_db(
+                """
+                INSERT INTO google_tokens (usuario, access_token, refresh_token, token_type, expires_at, scopes, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    user_email,
+                    token.get("access_token"),
+                    token.get("refresh_token"),
+                    token.get("token_type", "Bearer"),
+                    token.get("expires_at"),
+                    scopes,
+                    datetime.utcnow(),
+                ),
+            )
         logger.info(f"Token do Google salvo para {user_email}")
         return True
     except Exception as e:

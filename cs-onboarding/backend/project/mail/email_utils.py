@@ -136,31 +136,50 @@ def save_smtp_settings(user_email, data):
         if password:
             hashed_password_to_save = _hash_password(password)
 
-            sql = """
-                INSERT INTO smtp_settings (usuario_email, host, port, "user", password, use_tls, use_ssl)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (usuario_email) DO UPDATE SET
-                    host = EXCLUDED.host,
-                    port = EXCLUDED.port,
-                    "user" = EXCLUDED."user",
-                    password = EXCLUDED.password,
-                    use_tls = EXCLUDED.use_tls,
-                    use_ssl = EXCLUDED.use_ssl;
-            """
-            params = (user_email, host, int(port), user, hashed_password_to_save, use_tls, use_ssl)
+            # Verificar existência
+            exists = query_db("SELECT 1 FROM smtp_settings WHERE usuario_email = %s", (user_email,), one=True)
+
+            if exists:
+                sql = """
+                    UPDATE smtp_settings SET
+                        host = %s,
+                        port = %s,
+                        "user" = %s,
+                        password = %s,
+                        use_tls = %s,
+                        use_ssl = %s
+                    WHERE usuario_email = %s
+                """
+                params = (host, int(port), user, hashed_password_to_save, use_tls, use_ssl, user_email)
+            else:
+                sql = """
+                    INSERT INTO smtp_settings (usuario_email, host, port, "user", password, use_tls, use_ssl)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """
+                params = (user_email, host, int(port), user, hashed_password_to_save, use_tls, use_ssl)
 
         else:
-            sql = """
-                INSERT INTO smtp_settings (usuario_email, host, port, "user", use_tls, use_ssl)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                ON CONFLICT (usuario_email) DO UPDATE SET
-                    host = EXCLUDED.host,
-                    port = EXCLUDED.port,
-                    "user" = EXCLUDED."user",
-                    use_tls = EXCLUDED.use_tls,
-                    use_ssl = EXCLUDED.use_ssl;
-            """
-            params = (user_email, host, int(port), user, use_tls, use_ssl)
+            # Sem senha (somente update de configurações não sensíveis ou insert inicial incompleto?)
+            # Assumindo comportamento original: update fields except password
+            exists = query_db("SELECT 1 FROM smtp_settings WHERE usuario_email = %s", (user_email,), one=True)
+            
+            if exists:
+                sql = """
+                    UPDATE smtp_settings SET
+                        host = %s,
+                        port = %s,
+                        "user" = %s,
+                        use_tls = %s,
+                        use_ssl = %s
+                    WHERE usuario_email = %s
+                """
+                params = (host, int(port), user, use_tls, use_ssl, user_email)
+            else:
+                sql = """
+                    INSERT INTO smtp_settings (usuario_email, host, port, "user", use_tls, use_ssl)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """
+                params = (user_email, host, int(port), user, use_tls, use_ssl)
 
         result = execute_db(sql, params)
         if not result:

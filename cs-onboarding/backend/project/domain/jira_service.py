@@ -447,11 +447,21 @@ def save_jira_link(implantacao_id, jira_key, user_email):
                     raise e_sql
         else:
             # Postgres: ON CONFLICT DO NOTHING
-            cur.execute(
-                "INSERT INTO implantacao_jira_links (implantacao_id, jira_key, vinculado_por) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
-                (implantacao_id, jira_key, user_email),
-            )
-            conn.commit()
+            # Postgres: Compatível 9.3 (try/except uniqueness)
+            try:
+                cur.execute(
+                    "INSERT INTO implantacao_jira_links (implantacao_id, jira_key, vinculado_por) VALUES (%s, %s, %s)",
+                    (implantacao_id, jira_key, user_email),
+                )
+                conn.commit()
+            except Exception as e_pg:
+                # Se for erro de integridade (23505 = unique_violation), ignoramos como DO NOTHING
+                # O psycopg2 lança erros com código pgcode
+                if hasattr(e_pg, "pgcode") and e_pg.pgcode == "23505":
+                     logger.info("DB: Vínculo já existe (PG Unique Violation). Ignorando.")
+                     conn.rollback()
+                else:
+                    raise e_pg
 
     except Exception as e:
         logger.error(f"Erro critical salvar link Jira: {e}")

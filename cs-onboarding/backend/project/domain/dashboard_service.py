@@ -24,7 +24,6 @@ def get_dashboard_data(
     filtered_cs_email: str | None = None,
     page: int | None = None,
     per_page: int | None = None,
-    use_cache: bool = True,
     context: str | None = None,
     search_term: str | None = None,
     tipo: str | None = None,
@@ -333,14 +332,6 @@ def get_dashboard_data(
 
     # Salvar no cache
     result = (dashboard_data, metrics, pagination) if pagination else (dashboard_data, metrics)
-
-    # CACHE DESABILITADO - não salvar cache
-    # if cache and use_cache:
-    #     try:
-    #         cache.set(cache_key, result, timeout=30)
-    #         current_app.logger.info(f"Dashboard cache SAVED para {user_email}")
-    #     except Exception as e:
-    #         current_app.logger.warning(f"Erro ao salvar cache do dashboard: {e}")
 
     return result
 
