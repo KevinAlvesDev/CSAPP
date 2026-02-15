@@ -143,12 +143,20 @@ def get_implantacoes_with_progress(
     if date_type == "inicio":
         date_column = "i.data_inicio_efetivo"
     elif date_type == "finalizacao":
-        # Usar COALESCE para suportar ambas as colunas (legado e atual)
-        date_column = "COALESCE(i.data_finalizacao, i.data_final_implantacao)"
+        # Fallback supremo: Busca nas colunas de data OU direto no log da timeline se estiver vazio
+        date_column = """COALESCE(
+            i.data_finalizacao, 
+            i.data_final_implantacao, 
+            (SELECT MAX(t.data_criacao) FROM timeline_log t WHERE t.implantacao_id = i.id AND (t.detalhes LIKE '%finalizada%' OR t.detalhes LIKE '%concluída%'))
+        )"""
         status_filter_list = ["finalizada", "concluida", "concluída", "entregue"]
     elif date_type == "parada":
-        # Parada também usa data_finalizacao no status.py
-        date_column = "COALESCE(i.data_finalizacao, i.data_final_implantacao)"
+        # Fallback supremo também para paradas
+        date_column = """COALESCE(
+            i.data_finalizacao, 
+            i.data_final_implantacao, 
+            (SELECT MAX(t.data_criacao) FROM timeline_log t WHERE t.implantacao_id = i.id AND t.detalhes LIKE '%parada%')
+        )"""
         status_filter_list = ["parada"]
     elif date_type == "cancelamento":
         date_column = "i.data_cancelamento"
@@ -346,12 +354,20 @@ def get_implantacoes_count(
     if date_type == "inicio":
         date_column = "i.data_inicio_efetivo"
     elif date_type == "finalizacao":
-        # Usar COALESCE para suportar ambas as colunas (legado e atual)
-        date_column = "COALESCE(i.data_finalizacao, i.data_final_implantacao)"
+        # Fallback supremo também na contagem
+        date_column = """COALESCE(
+            i.data_finalizacao, 
+            i.data_final_implantacao, 
+            (SELECT MAX(t.data_criacao) FROM timeline_log t WHERE t.implantacao_id = i.id AND (t.detalhes LIKE '%finalizada%' OR t.detalhes LIKE '%concluída%'))
+        )"""
         status_filter_list = ["finalizada", "concluida", "concluída", "entregue"]
     elif date_type == "parada":
-        # Parada também usa data_finalizacao
-        date_column = "COALESCE(i.data_finalizacao, i.data_final_implantacao)"
+        # Fallback supremo
+        date_column = """COALESCE(
+            i.data_finalizacao, 
+            i.data_final_implantacao, 
+            (SELECT MAX(t.data_criacao) FROM timeline_log t WHERE t.implantacao_id = i.id AND t.detalhes LIKE '%parada%')
+        )"""
         status_filter_list = ["parada"]
     elif date_type == "cancelamento":
         date_column = "i.data_cancelamento"
