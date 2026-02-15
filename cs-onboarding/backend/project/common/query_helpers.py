@@ -137,18 +137,22 @@ def get_implantacoes_with_progress(
 
     # Date filtering logic
     date_column = "i.data_criacao"  # default
+    status_filter_list = []
     status_condition = None
 
     if date_type == "inicio":
         date_column = "i.data_inicio_efetivo"
     elif date_type == "finalizacao":
-        date_column = "i.data_final_implantacao"
-        # status_condition = "finalizada"  <-- Removido para confiar na DATA
+        # Usar COALESCE para suportar ambas as colunas (legado e atual)
+        date_column = "COALESCE(i.data_finalizacao, i.data_final_implantacao)"
+        status_filter_list = ["finalizada", "concluida", "concluída", "entregue"]
     elif date_type == "parada":
-        date_column = "i.data_final_implantacao"
-        # status_condition = "parada" <-- Removido para confiar na DATA
+        # Parada também usa data_finalizacao no status.py
+        date_column = "COALESCE(i.data_finalizacao, i.data_final_implantacao)"
+        status_filter_list = ["parada"]
     elif date_type == "cancelamento":
         date_column = "i.data_cancelamento"
+        status_filter_list = ["cancelada", "cancelado"]
 
     if start_date:
         query += f" AND date({date_column}) >= {placeholder}"
@@ -158,7 +162,11 @@ def get_implantacoes_with_progress(
         query += f" AND date({date_column}) <= {placeholder}"
         args.append(end_date)
     
-    if status_condition:
+    if status_filter_list:
+        placeholders_in = ", ".join([placeholder] * len(status_filter_list))
+        query += f" AND LOWER(i.status) IN ({placeholders_in})"
+        args.extend([s.lower() for s in status_filter_list])
+    elif status_condition:
         query += f" AND LOWER(i.status) = {placeholder}"
         args.append(status_condition.lower())
 
@@ -332,18 +340,22 @@ def get_implantacoes_count(
 
     # Date filtering logic
     date_column = "i.data_criacao"  # default
+    status_filter_list = []
     status_condition = None
 
     if date_type == "inicio":
         date_column = "i.data_inicio_efetivo"
     elif date_type == "finalizacao":
-        date_column = "i.data_final_implantacao"
-        # status_condition = "finalizada"
+        # Usar COALESCE para suportar ambas as colunas (legado e atual)
+        date_column = "COALESCE(i.data_finalizacao, i.data_final_implantacao)"
+        status_filter_list = ["finalizada", "concluida", "concluída", "entregue"]
     elif date_type == "parada":
-        date_column = "i.data_final_implantacao"
-        # status_condition = "parada"
+        # Parada também usa data_finalizacao
+        date_column = "COALESCE(i.data_finalizacao, i.data_final_implantacao)"
+        status_filter_list = ["parada"]
     elif date_type == "cancelamento":
         date_column = "i.data_cancelamento"
+        status_filter_list = ["cancelada", "cancelado"]
 
     if start_date:
         query += f" AND date({date_column}) >= {placeholder}"
@@ -353,7 +365,11 @@ def get_implantacoes_count(
         query += f" AND date({date_column}) <= {placeholder}"
         args.append(end_date)
     
-    if status_condition:
+    if status_filter_list:
+        placeholders_in = ", ".join([placeholder] * len(status_filter_list))
+        query += f" AND LOWER(i.status) IN ({placeholders_in})"
+        args.extend([s.lower() for s in status_filter_list])
+    elif status_condition:
         query += f" AND LOWER(i.status) = {placeholder}"
         args.append(status_condition.lower())
 
