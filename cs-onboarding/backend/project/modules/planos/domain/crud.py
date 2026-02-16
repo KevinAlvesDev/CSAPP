@@ -686,6 +686,46 @@ def _plano_usa_checklist_items(plano_id: int) -> bool:
     return count and count.get("count", 0) > 0
 
 
+def _extrair_estrutura_checklist(plano_id: int) -> dict:
+    """
+    Extrai a estrutura (items) de um plano baseado em checklist_items.
+    """
+    items = query_db(
+        """
+        SELECT id, parent_id, title, comment, level, ordem, tipo_item, descricao, obrigatoria, tag, dias_offset
+        FROM checklist_items
+        WHERE plano_id = %s
+        ORDER BY ordem, id
+        """,
+        (plano_id,),
+    )
+
+    if not items:
+        raise ValidationError("Plano original não possui estrutura para clonar")
+
+    from ....modules.checklist.application.checklist_service import build_nested_tree
+
+    flat_items = []
+    for item in items:
+        flat_items.append(
+            {
+                "id": item["id"],
+                "parent_id": item["parent_id"],
+                "title": item["title"],
+                "comment": item.get("comment", "") or item.get("descricao", ""),
+                "level": item.get("level", 0),
+                "ordem": item.get("ordem", 0),
+                "tipo_item": item.get("tipo_item"),
+                "obrigatoria": item.get("obrigatoria", False),
+                "tag": item.get("tag"),
+                "dias_offset": item.get("dias_offset"),
+            }
+        )
+
+    nested_items = build_nested_tree(flat_items)
+    return {"items": nested_items}
+
+
 def clonar_plano_sucesso(
     plano_id: int,
     novo_nome: str,
@@ -729,42 +769,7 @@ def clonar_plano_sucesso(
     usa_checklist = _plano_usa_checklist_items(plano_id)
 
     if usa_checklist:
-        # Buscar estrutura do plano original
-        items = query_db(
-            """
-            SELECT id, parent_id, title, comment, level, ordem, tipo_item, descricao, obrigatoria, tag, dias_offset
-            FROM checklist_items
-            WHERE plano_id = %s
-            ORDER BY ordem, id
-            """,
-            (plano_id,),
-        )
-
-        if not items:
-            raise ValidationError("Plano original não possui estrutura para clonar")
-
-        # Construir estrutura hierárquica
-        from ....modules.checklist.application.checklist_service import build_nested_tree
-
-        flat_items = []
-        for item in items:
-            flat_items.append(
-                {
-                    "id": item["id"],
-                    "parent_id": item["parent_id"],
-                    "title": item["title"],
-                    "comment": item.get("comment", "") or item.get("descricao", ""),
-                    "level": item.get("level", 0),
-                    "ordem": item.get("ordem", 0),
-                    "tipo_item": item.get("tipo_item"),
-                    "obrigatoria": item.get("obrigatoria", False),
-                    "tag": item.get("tag"),
-                    "dias_offset": item.get("dias_offset"),
-                }
-            )
-
-        nested_items = build_nested_tree(flat_items)
-        estrutura = {"items": nested_items}
+        estrutura = _extrair_estrutura_checklist(plano_id)
 
         # Definir descrição
         if nova_descricao is None:

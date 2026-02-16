@@ -22,6 +22,39 @@
     // Make it available globally for debugging if needed, but safe
     window.CONFIG = CONFIG;
 
+    function getPlanoTabTarget() {
+      const container = document.getElementById('checklist-container');
+      const pane = container ? container.closest('.tab-pane') : null;
+      if (pane && pane.id) return `#${pane.id}`;
+      return '#plano-andamento-content';
+    }
+
+    function getPlanoTabButton() {
+      const target = getPlanoTabTarget();
+      return document.querySelector(`[data-bs-target="${target}"]`);
+    }
+
+    function updateConcluirPlanoButton(progress) {
+      const p = Number(progress);
+      const ready = Number.isFinite(p) && p >= 100;
+      document.querySelectorAll('[data-concluir-plano-btn]').forEach(btn => {
+        btn.disabled = !ready;
+        btn.setAttribute('aria-disabled', (!ready).toString());
+        btn.classList.toggle('disabled', !ready);
+      });
+    }
+
+    window.getPlanoTabTarget = getPlanoTabTarget;
+    window.updateConcluirPlanoButton = updateConcluirPlanoButton;
+
+    const checklistContainer = document.getElementById('checklist-container');
+    if (checklistContainer) {
+      const initialProgress = Number(checklistContainer.getAttribute('data-progress-inicial'));
+      if (Number.isFinite(initialProgress)) {
+        updateConcluirPlanoButton(initialProgress);
+      }
+    }
+
     const baseConfig = {
       mode: 'single',
       dateFormat: 'Y-m-d',
@@ -264,19 +297,19 @@
       container.insertAdjacentHTML('beforeend', html);
 
       // Add event listeners for task links
-      container.querySelectorAll('.task-scroll-link').forEach(link => {
-        link.addEventListener('click', function (e) {
-          e.preventDefault();
-          const taskId = parseInt(this.dataset.taskId, 10);
+        container.querySelectorAll('.task-scroll-link').forEach(link => {
+          link.addEventListener('click', function (e) {
+            e.preventDefault();
+            const taskId = parseInt(this.dataset.taskId, 10);
           if (window.checklistRenderer && Number.isFinite(taskId)) {
             try { window.checklistRenderer.ensureItemVisible(taskId); } catch (_) { }
           }
-          const taskElement = document.getElementById(`checklist-item-${taskId}`) || document.querySelector(`.checklist-item[data-item-id="${taskId}"]`);
-          if (taskElement) {
-            const planoTabBtn = document.querySelector('button[data-bs-target="#plano-andamento-content"]');
-            if (planoTabBtn) {
-              const tabInstance = new bootstrap.Tab(planoTabBtn);
-              tabInstance.show();
+            const taskElement = document.getElementById(`checklist-item-${taskId}`) || document.querySelector(`.checklist-item[data-item-id="${taskId}"]`);
+            if (taskElement) {
+              const planoTabBtn = getPlanoTabButton();
+              if (planoTabBtn) {
+                const tabInstance = new bootstrap.Tab(planoTabBtn);
+                tabInstance.show();
             }
             setTimeout(() => {
               taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -655,23 +688,23 @@
 
 
     // NavegaÃ§Ã£o entre abas (Timeline -> ComentÃ¡rios / Plano)
-    function activateTab(targetId) {
-      if (!window.bootstrap) return;
-      const triggerEl = document.querySelector(`[data-bs-target="${targetId}"]`);
-      if (triggerEl) {
-        const tab = new bootstrap.Tab(triggerEl);
-        tab.show();
-      }
-    }
-
-    document.addEventListener('click', function (e) {
-      const btnComments = e.target.closest('.timeline-action-comments');
-      if (btnComments) {
-        const itemId = parseInt(btnComments.dataset.itemId);
-        activateTab('#plano-andamento-content');
-        if (window.checklistRenderer && Number.isFinite(itemId)) {
-          try { window.checklistRenderer.ensureItemVisible(itemId); } catch (_) { }
+      function activateTab(targetId) {
+        if (!window.bootstrap) return;
+        const triggerEl = document.querySelector(`[data-bs-target="${targetId}"]`);
+        if (triggerEl) {
+          const tab = new bootstrap.Tab(triggerEl);
+          tab.show();
         }
+      }
+
+      document.addEventListener('click', function (e) {
+        const btnComments = e.target.closest('.timeline-action-comments');
+        if (btnComments) {
+          const itemId = parseInt(btnComments.dataset.itemId);
+          activateTab(getPlanoTabTarget());
+          if (window.checklistRenderer && Number.isFinite(itemId)) {
+            try { window.checklistRenderer.ensureItemVisible(itemId); } catch (_) { }
+          }
         setTimeout(() => {
           const taskElement = document.getElementById(`checklist-item-${itemId}`) || document.querySelector(`.checklist-item[data-item-id="${itemId}"]`);
           if (taskElement) {
@@ -690,14 +723,14 @@
         }, 200);
         e.preventDefault();
         return;
-      }
-      const btnTask = e.target.closest('.timeline-action-task');
-      if (btnTask) {
-        const itemId = parseInt(btnTask.dataset.itemId);
-        activateTab('#plano-andamento-content');
-        if (window.checklistRenderer && itemId) {
-          try { window.checklistRenderer.ensureItemVisible(itemId); } catch (_) { }
         }
+        const btnTask = e.target.closest('.timeline-action-task');
+        if (btnTask) {
+          const itemId = parseInt(btnTask.dataset.itemId);
+          activateTab(getPlanoTabTarget());
+          if (window.checklistRenderer && itemId) {
+            try { window.checklistRenderer.ensureItemVisible(itemId); } catch (_) { }
+          }
         e.preventDefault();
       }
     });
@@ -997,15 +1030,16 @@
       }
     } catch (_) { }
 
-    try {
-      document.addEventListener('DOMContentLoaded', function () {
-        try {
-          const planoTabBtn = document.getElementById('plano-andamento-tab');
-          const timelineTabBtn = document.getElementById('timeline-tab');
-          const commentsTabBtn = document.getElementById('comments-tab');
-          const planoPane = document.getElementById('plano-andamento-content');
-          const timelinePane = document.getElementById('timeline-content');
-          const commentsPane = document.getElementById('comments-content');
+      try {
+        document.addEventListener('DOMContentLoaded', function () {
+          try {
+            const planoTarget = getPlanoTabTarget();
+            const planoTabBtn = document.querySelector(`[data-bs-target="${planoTarget}"]`);
+            const timelineTabBtn = document.getElementById('timeline-tab');
+            const commentsTabBtn = document.getElementById('comments-tab');
+            const planoPane = document.querySelector(planoTarget);
+            const timelinePane = document.getElementById('timeline-content');
+            const commentsPane = document.getElementById('comments-content');
 
           try {
             if (window.location && window.location.hash && (window.location.hash === '#timeline-content' || window.location.hash === '#comments-content')) {
@@ -1017,20 +1051,20 @@
             }
           } catch (_) { }
 
-          // Reset panes
-          [timelinePane, commentsPane].forEach(p => {
-            if (!p) return;
-            p.classList.remove('show');
-            p.classList.remove('active');
-          });
-          if (planoPane) {
-            planoPane.classList.add('show');
-            planoPane.classList.add('active');
-          }
+            // Reset panes
+            [timelinePane, commentsPane].forEach(p => {
+              if (!p) return;
+              p.classList.remove('show');
+              p.classList.remove('active');
+            });
+            if (planoPane) {
+              planoPane.classList.add('show');
+              planoPane.classList.add('active');
+            }
 
-          // Reset tabs
-          [timelineTabBtn, commentsTabBtn].forEach(b => { if (b) b.classList.remove('active'); });
-          if (planoTabBtn) planoTabBtn.classList.add('active');
+            // Reset tabs
+            [timelineTabBtn, commentsTabBtn].forEach(b => { if (b) b.classList.remove('active'); });
+            if (planoTabBtn) planoTabBtn.classList.add('active');
 
           // Ensure bootstrap tab API reflects the state
           if (window.bootstrap && bootstrap.Tab && planoTabBtn) {

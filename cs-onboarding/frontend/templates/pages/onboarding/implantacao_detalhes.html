@@ -452,6 +452,10 @@
                             display: block !important;
                         }
                     </style>
+                    {% set progresso_atual = progresso_porcentagem if progresso_porcentagem is defined else 0 %}
+                    {% set pode_concluir = progresso_atual >= 100 %}
+                    {% set plano_concluido_atual = (plano_sucesso and plano_sucesso.status == 'concluido' and not is_historico_view) %}
+
                     <!-- Tab: Plano de Sucesso em Andamento -->
                     <div class="tab-pane fade show active" id="plano-andamento-content" role="tabpanel">
                         <div class="custom-card-body">
@@ -478,17 +482,18 @@
                                         plano_ativo_instancia.data_criacao_fmt }}</small>
 
                                     {% if (is_manager or is_owner) and not is_historico_view %}
-                                    <form id="formConcluirPlanoImplantacao"
-                                        action="{{ url_for('onboarding_actions.concluir_plano_implantacao') }}"
-                                        method="POST">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
-                                        <input type="hidden" name="plano_instancia_id"
-                                            value="{{ plano_ativo_instancia.id }}">
-                                        <button type="submit" class="btn btn-success btn-sm fw-bold">
-                                            <i class="bi bi-check-lg me-1"></i>Concluir Plano
-                                        </button>
-                                    </form>
+                                        <form id="formConcluirPlanoImplantacao"
+                                            action="{{ url_for('onboarding_actions.concluir_plano_implantacao') }}"
+                                            method="POST">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
+                                            <input type="hidden" name="plano_instancia_id"
+                                                value="{{ plano_ativo_instancia.id }}">
+                                            <button type="submit" class="btn btn-success btn-sm fw-bold"
+                                                data-concluir-plano-btn {% if not pode_concluir %}disabled{% endif %}>
+                                                <i class="bi bi-check-lg me-1"></i>Concluir Plano
+                                            </button>
+                                        </form>
                                     {% elif is_historico_view and plano_ativo_instancia.status == 'concluido' %}
                                     <span class="badge bg-success">Concluído</span>
                                     {% endif %}
@@ -504,68 +509,46 @@
                             instância se necessário) #}
                             {% if (is_manager or is_owner) and not is_historico_view and progresso_porcentagem is
                             defined and progresso_porcentagem >= 100 %}
-                            <div class="mt-2">
-                                <form action="{{ url_for('onboarding_actions.concluir_plano_implantacao') }}"
-                                    method="POST">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
-                                    <input type="hidden" name="plano_instancia_id" value="">
-                                    <button type="submit" class="btn btn-success btn-sm fw-bold">
-                                        <i class="bi bi-check-lg me-1"></i>Concluir Plano
-                                    </button>
-                                </form>
-                            </div>
-                            {% endif %}
-                            {% endif %}
-
-                            <div class="plano-sucesso-container pt-0" id="plano-hierarquia">
-                                {% if checklist_tree and checklist_tree|length > 0 %}
-                                <!-- Novo Checklist Hierárquico -->
-                                <div id="checklist-container" data-implantacao-id="{{ implantacao.id }}"
-                                    data-previsao-termino="{{ implantacao.data_previsao_termino or '' }}">
-                                    <!-- Progresso Global -->
-                                    <div class="checklist-global-progress mb-4">
-                                        <div class="d-flex justify-content-between align-items-center mb-2">
-                                            <span class="text-muted small">Progresso Global do Onboarding</span>
-                                            <span id="checklist-global-progress-percent"
-                                                class="fw-bold text-primary">0%</span>
-                                        </div>
-                                        <div class="progress-thick">
-                                            <div id="checklist-global-progress-bar" class="progress-bar"
-                                                role="progressbar"
-                                                style="width: 0%; transition: width 0.25s ease-in-out;"
-                                                aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Checklist Tree será renderizado via JavaScript -->
-                                    <div class="checklist-grid px-2 py-1 text-muted small"
-                                        style="border-bottom: 1px solid rgba(0,0,0,0.06);">
-                                        <span class="col-empty"></span>
-                                        <span class="col-checkbox"></span>
-                                        <span class="col-title">Tarefa</span>
-                                        <span class="col-spacer"></span>
-                                        <span class="col-qtd" style="text-align:center">QTD</span>
-                                        <span class="col-responsavel">Responsável</span>
-                                        <span class="col-prev-orig">Prev. orig</span>
-                                        <span class="col-prev-atual">Nova previsão</span>
-                                        <span class="col-conclusao" style="visibility: hidden;">Data de
-                                            conclusão</span>
-                                        <span class="col-status">Status</span>
-                                        <span class="col-comment"></span>
-                                        <span class="col-delete"></span>
-                                    </div>
-                                    <div id="checklist-tree-root"></div>
+                                <div class="mt-2">
+                                    <form action="{{ url_for('onboarding_actions.concluir_plano_implantacao') }}"
+                                        method="POST">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
+                                        <input type="hidden" name="plano_instancia_id" value="">
+                                        <button type="submit" class="btn btn-success btn-sm fw-bold"
+                                            data-concluir-plano-btn {% if not pode_concluir %}disabled{% endif %}>
+                                            <i class="bi bi-check-lg me-1"></i>Concluir Plano
+                                        </button>
+                                    </form>
                                 </div>
-                                {% endif %}
-                            </div>
+                            {% endif %}
+                            {% endif %}
+
+                            {% if not plano_concluido_atual %}
+                            {% include 'partials/_plano_sucesso_checklist_onboarding.html' %}
+                            {% endif %}
                         </div>
                     </div>
 
                     <!-- Tab: Plano de Sucesso Concluído -->
                     <div class="tab-pane fade" id="plano-concluido-content" role="tabpanel">
                         <div class="custom-card-body">
-                            {% if planos_lista %}
+                            {% if plano_concluido_atual %}
+                            <div
+                                class="alert alert-light border d-flex justify-content-between align-items-center mb-3 shadow-sm">
+                                <div>
+                                    <h5 class="alert-heading mb-1 text-primary fw-bold">{{
+                                        plano_sucesso.nome.split(' (Concluído')[0] }}</h5>
+                                    <p class="mb-0 text-muted small">{{ plano_sucesso.descricao or 'Sem descrição' }}</p>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <small class="text-muted me-2">Iniciado em: {{
+                                        plano_sucesso.data_criacao_fmt }}</small>
+                                    <span class="badge bg-success">Concluído</span>
+                                </div>
+                            </div>
+                            {% include 'partials/_plano_sucesso_checklist_onboarding.html' %}
+                            {% elif planos_lista %}
                             {% set ns = namespace(tem_concluidos=false) %}
                             <div class="list-group">
                                 {% for plano in planos_lista %}

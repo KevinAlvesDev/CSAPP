@@ -782,6 +782,7 @@ class ChecklistRenderer {
 
     updateProgressDisplay(progress) {
         if (window.updateProgressBar) window.updateProgressBar(progress);
+        if (window.updateConcluirPlanoButton) window.updateConcluirPlanoButton(progress);
         this.updateConclusionHeaderVisibility();
     }
 

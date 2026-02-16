@@ -309,6 +309,14 @@ def get_implantacao_details(
     try:
         if success_plan_id:
             plano_sucesso_info = query_db("SELECT * FROM planos_sucesso WHERE id = %s", (success_plan_id,), one=True)
+            if plano_sucesso_info:
+                plano_sucesso_info["data_criacao_fmt"] = format_date_br(plano_sucesso_info.get("data_criacao"), False)
+                plano_sucesso_info["data_atualizacao_fmt"] = format_date_br(
+                    plano_sucesso_info.get("data_atualizacao"), plano_sucesso_info.get("status") != "concluido"
+                )
+                plano_sucesso_info["data_conclusao_fmt"] = format_date_br(
+                    plano_sucesso_info.get("data_atualizacao"), False
+                )
     except Exception as e:
         logger.warning(f"Erro ao buscar plano de sucesso {success_plan_id}: {e}")
 

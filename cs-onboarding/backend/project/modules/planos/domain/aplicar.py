@@ -11,7 +11,8 @@ from flask import current_app
 from ....common.date_helpers import add_business_days, adjust_to_business_day
 from ....common.exceptions import DatabaseError, ValidationError
 from ....db import db_connection, query_db
-from .crud import obter_plano_completo
+from .crud import _extrair_estrutura_checklist, obter_plano_completo
+from .estrutura import _criar_estrutura_plano_checklist
 
 
 def aplicar_plano_a_implantacao(implantacao_id: int, plano_id: int, usuario: str) -> bool:
@@ -154,10 +155,56 @@ def aplicar_plano_a_implantacao_checklist(
         data_previsao_termino = add_business_days(base_dia_util, int(dias_duracao))
         data_previsao_termino = adjust_to_business_day(data_previsao_termino)
 
+    estrutura_plano = _extrair_estrutura_checklist(plano_id)
+
     with db_connection() as (conn, db_type):
         cursor = conn.cursor()
 
         try:
+            # Concluir qualquer plano em andamento deste processo antes de criar uma nova instância
+            sql_concluir = """
+                UPDATE planos_sucesso
+                SET status = 'concluido', data_atualizacao = %s
+                WHERE processo_id = %s AND status = 'em_andamento'
+            """
+            if db_type == "sqlite":
+                sql_concluir = sql_concluir.replace("%s", "?")
+            cursor.execute(sql_concluir, (datetime.now(), implantacao_id))
+
+            # Criar instância do plano vinculada ao processo (snapshot do template)
+            sql_plano = """
+                INSERT INTO planos_sucesso
+                (nome, descricao, criado_por, data_criacao, data_atualizacao, dias_duracao, permite_excluir_tarefas, contexto, status, processo_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """
+            if db_type == "sqlite":
+                sql_plano = sql_plano.replace("%s", "?")
+
+            now = datetime.now()
+            cursor.execute(
+                sql_plano,
+                (
+                    plano.get("nome", "").strip(),
+                    plano.get("descricao", "") or "",
+                    usuario,
+                    now,
+                    now,
+                    plano.get("dias_duracao"),
+                    bool(plano.get("permite_excluir_tarefas", False)),
+                    plano.get("contexto", "onboarding"),
+                    "em_andamento",
+                    implantacao_id,
+                ),
+            )
+
+            if db_type == "postgres":
+                cursor.execute("SELECT lastval()")
+                plano_instancia_id = cursor.fetchone()[0]
+            else:
+                plano_instancia_id = cursor.lastrowid
+
+            _criar_estrutura_plano_checklist(cursor, db_type, plano_instancia_id, estrutura_plano)
+
             # Tratamento de comentários conforme escolha do usuário
             if preservar_comentarios:
                 # Preservar comentários: desvincula-los dos itens antes de deletar
@@ -196,7 +243,7 @@ def aplicar_plano_a_implantacao_checklist(
             _clonar_plano_para_implantacao_checklist(
                 cursor,
                 db_type,
-                plano_id,
+                plano_instancia_id,
                 implantacao_id,
                 responsavel_padrao,
                 data_inicio,
@@ -212,7 +259,7 @@ def aplicar_plano_a_implantacao_checklist(
             if db_type == "sqlite":
                 sql_update = sql_update.replace("%s", "?")
 
-            cursor.execute(sql_update, (plano_id, datetime.now(), data_previsao_termino, implantacao_id))
+            cursor.execute(sql_update, (plano_instancia_id, datetime.now(), data_previsao_termino, implantacao_id))
 
             conn.commit()
 

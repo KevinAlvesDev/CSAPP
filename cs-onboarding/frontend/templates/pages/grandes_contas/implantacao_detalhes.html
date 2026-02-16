@@ -463,60 +463,23 @@
                             display: block !important;
                         }
                     </style>
+                    {% set progresso_atual = progresso_porcentagem if progresso_porcentagem is defined else 0 %}
+                    {% set plano_concluido_atual = (plano_sucesso and plano_sucesso.status == 'concluido' and not is_historico_view) %}
+
                     <!-- Tab: Plano de Sucesso em Andamento -->
                     <div class="tab-pane fade show active" id="plano-andamento-content" role="tabpanel"
                         aria-labelledby="plano-andamento-tab">
-                        <div class="custom-card-body plano-sucesso-container" id="plano-hierarquia">
-                            {% if checklist_tree and checklist_tree|length > 0 %}
-                            <!-- Novo Checklist Hierárquico -->
-                            <div id="checklist-container" data-implantacao-id="{{ implantacao.id }}"
-                                data-previsao-termino="{{ implantacao.data_previsao_termino or '' }}">
-                                <!-- Progresso Global -->
-                                <div class="checklist-global-progress mb-4">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <span class="text-muted small">Progresso Global do Onboarding</span>
-                                        <span id="checklist-global-progress-percent"
-                                            class="fw-bold text-primary">0%</span>
-                                    </div>
-                                    <div class="progress-thick">
-                                        <div id="checklist-global-progress-bar" class="progress-bar" role="progressbar"
-                                            style="width: 0%; transition: width 0.25s ease-in-out;" aria-valuenow="0"
-                                            aria-valuemin="0" aria-valuemax="100"></div>
-                                    </div>
-                                </div>
-
-                                <!-- Checklist Tree será renderizado via JavaScript -->
-                                <div class="checklist-grid px-2 py-1 text-muted small"
-                                    style="border-bottom: 1px solid rgba(0,0,0,0.06);">
-                                    <span class="col-empty"></span>
-                                    <span class="col-checkbox"></span>
-                                    <span class="col-title">Tarefa</span>
-                                    <span class="col-spacer"></span>
-                                    <span class="col-qtd" style="text-align:center">QTD</span>
-                                    <span class="col-responsavel">Responsável</span>
-                                    <span class="col-prev-orig">Prev. orig</span>
-                                    <span class="col-prev-atual">Nova previsão</span>
-                                    <span class="col-conclusao d-none">Data de conclusão</span>
-                                    <span class="col-status">Status</span>
-                                    <span class="col-comment"></span>
-                                    <span class="col-delete"></span>
-                                </div>
-                                <div id="checklist-tree-root"></div>
-                            </div>
-                            {% elif false %}
-                            <!-- Modelo Antigo (Compatibilidade) -->
-                            <!-- ... Removido para brevidade, usando apenas o novo ... -->
-                            {% else %}
-                            <div class="empty-state">
-                                <!-- Ícone removido conforme solicitação -->
-                            </div>
-                            {% endif %}
-                        </div>
+                        {% if not plano_concluido_atual %}
+                        {% include 'partials/_plano_sucesso_checklist_grandes_contas.html' %}
+                        {% endif %}
                     </div>
 
                     <!-- Plano Concluído -->
                     <div class="tab-pane fade" id="plano-concluido-content" role="tabpanel"
                         aria-labelledby="plano-concluido-tab">
+                        {% if plano_concluido_atual %}
+                        {% include 'partials/_plano_sucesso_checklist_grandes_contas.html' %}
+                        {% else %}
                         <div class="card border-0 shadow-sm mt-3">
                             <div class="card-body">
                                 <h5 class="card-title fw-bold mb-4">Planos de Sucesso Concluídos</h5>
@@ -556,6 +519,7 @@
                                 {% endif %}
                             </div>
                         </div>
+                        {% endif %}
                     </div>
 
                     <!-- Tab: Linha do Tempo -->
