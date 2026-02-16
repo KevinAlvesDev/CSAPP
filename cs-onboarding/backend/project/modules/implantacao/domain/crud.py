@@ -12,7 +12,7 @@ from flask import current_app
 from ....common.utils import format_date_br
 from ....config.cache_config import clear_implantacao_cache, clear_user_cache
 from ....constants import MODULO_OPCOES, PERFIS_COM_GESTAO
-from ....db import execute_and_fetch_one, execute_db, logar_timeline, query_db
+from ....db import db_connection, execute_and_fetch_one, execute_db, logar_timeline, query_db
 
 
 def criar_implantacao_service(
@@ -249,7 +249,54 @@ def excluir_implantacao_service(implantacao_id, usuario_cs_email, user_perfil_ac
                 except Exception as e:
                     current_app.logger.warning(f"Falha ao excluir R2 (key: {object_key}): {e}")
 
-    execute_db("DELETE FROM implantacoes WHERE id = %s", (implantacao_id,))
+    # Remover dependencias antes de excluir implantacao (evita FK errors)
+    with db_connection() as (conn, db_type):
+        cursor = conn.cursor()
+        try:
+            # Remover checklist items ligados ao plano instancia (tabela legado implantacao_planos)
+            try:
+                sql_ci_inst = """
+                    DELETE FROM checklist_items
+                    WHERE plano_instancia_id IN (
+                        SELECT id FROM implantacao_planos WHERE implantacao_id = %s
+                    )
+                """
+                if db_type == "sqlite":
+                    sql_ci_inst = sql_ci_inst.replace("%s", "?")
+                cursor.execute(sql_ci_inst, (implantacao_id,))
+            except Exception as e:
+                current_app.logger.warning(f"Falha ao limpar checklist_items por plano_instancia_id: {e}")
+
+            # Remover checklist items da implantacao
+            sql_checklist = "DELETE FROM checklist_items WHERE implantacao_id = %s"
+            if db_type == "sqlite":
+                sql_checklist = sql_checklist.replace("%s", "?")
+            cursor.execute(sql_checklist, (implantacao_id,))
+
+            # Remover instancias de plano ligadas a implantacao (nova tabela)
+            sql_delete_instancias = "DELETE FROM planos_sucesso WHERE processo_id = %s"
+            if db_type == "sqlite":
+                sql_delete_instancias = sql_delete_instancias.replace("%s", "?")
+            cursor.execute(sql_delete_instancias, (implantacao_id,))
+
+            # Remover planos legados da implantacao (se tabela existir)
+            try:
+                sql_delete_legado = "DELETE FROM implantacao_planos WHERE implantacao_id = %s"
+                if db_type == "sqlite":
+                    sql_delete_legado = sql_delete_legado.replace("%s", "?")
+                cursor.execute(sql_delete_legado, (implantacao_id,))
+            except Exception as e:
+                current_app.logger.warning(f"Falha ao remover implantacao_planos: {e}")
+
+            # Remover implantacao por ultimo
+            sql_impl = "DELETE FROM implantacoes WHERE id = %s"
+            if db_type == "sqlite":
+                sql_impl = sql_impl.replace("%s", "?")
+            cursor.execute(sql_impl, (implantacao_id,))
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
 
     # Limpar caches
     try:
