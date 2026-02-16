@@ -46,7 +46,7 @@ logger = logging.getLogger("app")
 def handle_audit_implantacao_criada(event: ImplantacaoCriada) -> None:
     """Registra criação de implantação no log de auditoria."""
     try:
-        from ..domain.audit_service import log_action
+        from ..modules.audit.application.audit_service import log_action
 
         log_action(
             action="CREATE",
@@ -66,7 +66,7 @@ def handle_audit_implantacao_criada(event: ImplantacaoCriada) -> None:
 def handle_audit_implantacao_finalizada(event: ImplantacaoFinalizada) -> None:
     """Registra finalização no log de auditoria."""
     try:
-        from ..domain.audit_service import log_action
+        from ..modules.audit.application.audit_service import log_action
 
         log_action(
             action="FINALIZE",
@@ -87,7 +87,7 @@ def handle_audit_implantacao_finalizada(event: ImplantacaoFinalizada) -> None:
 def handle_audit_implantacao_transferida(event: ImplantacaoTransferida) -> None:
     """Registra transferência no log de auditoria."""
     try:
-        from ..domain.audit_service import log_action
+        from ..modules.audit.application.audit_service import log_action
 
         log_action(
             action="TRANSFER",
@@ -192,7 +192,7 @@ def handle_cache_implantacao_transferida(event: ImplantacaoTransferida) -> None:
 def handle_gamification_finalizada(event: ImplantacaoFinalizada) -> None:
     """Limpa cache de gamificação ao finalizar implantação."""
     try:
-        from ..domain.gamification.utils import clear_gamification_cache
+        from ..modules.gamification.domain.utils import clear_gamification_cache
 
         clear_gamification_cache()
         logger.debug(f"🎮 Gamificação: cache limpo após finalização {event.implantacao_id}")
@@ -203,7 +203,7 @@ def handle_gamification_finalizada(event: ImplantacaoFinalizada) -> None:
 def handle_gamification_item_concluido(event: ChecklistItemConcluido) -> None:
     """Limpa cache de gamificação ao concluir item."""
     try:
-        from ..domain.gamification.utils import clear_gamification_cache
+        from ..modules.gamification.domain.utils import clear_gamification_cache
 
         # Limpa cache apenas quando progresso atinge marcos relevantes
         if event.progresso_atual in (25.0, 50.0, 75.0, 100.0):

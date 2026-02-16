@@ -34,8 +34,8 @@ class PerformanceMonitor:
             @app.route("/admin/metrics")
             def view_metrics():
                 """Endpoint para visualizar métricas (apenas admin)."""
-                from .blueprints.auth import login_required
-                from .constants import PERFIL_ADMIN
+                from ..blueprints.auth import login_required
+                from ..constants import PERFIL_ADMIN
 
                 decorated = login_required(lambda: None)
                 res = decorated()

@@ -7,7 +7,7 @@ from flask import Blueprint, abort, current_app, flash, g, redirect, render_temp
 from ..config.logging_config import auth_logger, security_logger
 from ..constants import ADMIN_EMAIL, PERFIL_ADMIN, PERFIL_IMPLANTADOR, PERFIS_COM_GESTAO
 from ..core.extensions import limiter
-from ..domain.auth_service import (
+from ..modules.auth.application.auth_service import (
     find_cs_user_external_service,
     get_user_profile_service,
     sync_user_profile_service,
@@ -333,7 +333,7 @@ def google_callback():
         try:
             from datetime import datetime, timedelta
 
-            from ..domain.google_oauth_service import save_user_google_token
+            from ..modules.dashboard.infra.google_oauth_service import save_user_google_token
 
             # Preparar token para salvar
             token_to_save = {

@@ -8,7 +8,7 @@ from werkzeug.utils import secure_filename
 from ..blueprints.auth import login_required
 from ..config.logging_config import app_logger
 from ..core.extensions import r2_client
-from ..domain.auth_service import atualizar_dados_perfil_service
+from ..modules.auth.application.auth_service import atualizar_dados_perfil_service
 
 profile_bp = Blueprint("profile", __name__, url_prefix="/profile")
 

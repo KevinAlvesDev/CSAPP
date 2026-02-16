@@ -80,49 +80,43 @@ def _register_domain_services(app: Flask, container: ServiceContainer) -> None:
     # Dashboard Service
     container.register_factory(
         "dashboard_service",
-        lambda: _import("backend.project.domain.dashboard_service"),
+        lambda: _import("backend.project.modules.dashboard.application.dashboard_service"),
     )
 
     # Config Service
     container.register_factory(
         "config_service",
-        lambda: _import("backend.project.domain.config_service"),
-    )
-
-    # Implantacao Service
-    container.register_factory(
-        "implantacao_service",
-        lambda: _import("backend.project.domain.implantacao_service"),
+        lambda: _import("backend.project.modules.config.application.config_service"),
     )
 
     # Checklist Service
     container.register_factory(
         "checklist_service",
-        lambda: _import("backend.project.domain.checklist_service"),
+        lambda: _import("backend.project.modules.checklist.application.checklist_service"),
     )
 
     # Notification Service
     container.register_factory(
         "notification_service",
-        lambda: _import("backend.project.domain.notification_service"),
+        lambda: _import("backend.project.modules.notification.application.notification_service"),
     )
 
     # Perfis Service
     container.register_factory(
         "perfis_service",
-        lambda: _import("backend.project.domain.perfis_service"),
+        lambda: _import("backend.project.modules.perfis.application.perfis_service"),
     )
 
     # Timeline Service
     container.register_factory(
         "timeline_service",
-        lambda: _import("backend.project.domain.timeline_service"),
+        lambda: _import("backend.project.modules.timeline.application.timeline_service"),
     )
 
     # Audit Service
     container.register_factory(
         "audit_service",
-        lambda: _import("backend.project.domain.audit_service"),
+        lambda: _import("backend.project.modules.audit.application.audit_service"),
     )
 
 

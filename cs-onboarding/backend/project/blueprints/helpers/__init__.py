@@ -2,7 +2,7 @@
 Helpers para processamento de Blueprints.
 """
 
-from .form_processors import (
+from ...shared.form_processors import (
     build_detalhes_campos,
     get_boolean_value,
     get_form_value,

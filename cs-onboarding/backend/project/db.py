@@ -41,7 +41,7 @@ def query_db(query, args=(), one=False, raise_on_error=False):
     Executa uma query SELECT (APENAS LEITURA) e retorna o resultado.
     """
     try:
-        from .performance_monitoring import track_query
+        from .monitoring.performance_monitoring import track_query
 
         track_query()
     except ImportError:
@@ -87,7 +87,7 @@ def execute_db(query, args=(), raise_on_error=False):
     Executa uma query de INSERT, UPDATE ou DELETE no banco de dados.
     """
     try:
-        from .performance_monitoring import track_query
+        from .monitoring.performance_monitoring import track_query
 
         track_query()
     except ImportError:

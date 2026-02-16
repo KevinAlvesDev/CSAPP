@@ -98,7 +98,7 @@ def create_app(test_config=None):
     from .constants import ADMIN_EMAIL, PERFIL_ADMIN, PERFIS_COM_GESTAO
     from .database import schema
     from .db import execute_db, query_db
-    from .domain.gamification_service import _get_all_gamification_rules_grouped
+    from .modules.gamification.application.gamification_service import _get_all_gamification_rules_grouped
 
     app.jinja_env.filters["format_date_br"] = format_date_br
     app.jinja_env.filters["format_date_iso"] = format_date_iso_for_json
@@ -350,8 +350,8 @@ def create_app(test_config=None):
     except Exception:
         pass
 
-    from .blueprints.agenda import agenda_bp
-    from .blueprints.analytics import analytics_bp
+    from .modules.dashboard.api.agenda import agenda_bp
+    from .modules.analytics.api.analytics import analytics_bp
     from .blueprints.api import api_bp
     from .blueprints.api_docs import api_docs_bp
     from .blueprints.api_v1 import api_v1_bp
@@ -367,7 +367,7 @@ def create_app(test_config=None):
     from .blueprints.main import main_bp
     from .blueprints.management import management_bp
     from .blueprints.perfis_bp import perfis_bp
-    from .blueprints.planos_bp import planos_bp
+    from .modules.planos.api.planos_bp import planos_bp
     from .blueprints.profile import profile_bp
     from .blueprints.risc_bp import risc_bp  # RISC (Proteção entre Contas)
     from .blueprints.upload import upload_bp
@@ -392,7 +392,7 @@ def create_app(test_config=None):
     app.register_blueprint(api_planos_bp)
     # app.register_blueprint(implantacao_actions_bp) # MOVIDO PARA ONBOARDING
 
-    from .blueprints.onboarding.actions import onboarding_actions_bp
+    from .modules.onboarding.api.actions import onboarding_actions_bp
 
     app.register_blueprint(onboarding_actions_bp)
     app.register_blueprint(profile_bp)
@@ -431,7 +431,7 @@ def create_app(test_config=None):
 
     app.register_blueprint(grandes_contas_bp)
 
-    from .blueprints.grandes_contas.actions import grandes_contas_actions_bp
+    from .modules.grandes_contas.api.actions import grandes_contas_actions_bp
 
     app.register_blueprint(grandes_contas_actions_bp, url_prefix="/grandes-contas/actions")
 
@@ -446,7 +446,7 @@ def create_app(test_config=None):
     def backup_db_command():
         """Gera um backup do banco e imprime o caminho do arquivo."""
         try:
-            from .domain.management_service import perform_backup
+            from .modules.management.application.management_service import perform_backup
 
             result = perform_backup()
             click.echo(result.get("backup_file"))
@@ -533,7 +533,7 @@ def create_app(test_config=None):
         if g.user_email and g.user_email == MASTER_ADMIN_EMAIL:
             try:
                 if not g.perfil or g.perfil.get("perfil_acesso") != PERFIL_ADMIN:
-                    from .domain.auth_service import sync_user_profile_service, update_user_role_service
+                    from .modules.auth.application.auth_service import sync_user_profile_service, update_user_role_service
 
                     # Cria perfil se necessário e marca como admin
                     sync_user_profile_service(g.user_email, g.user.get("name", "Administrador"), "system|enforce")

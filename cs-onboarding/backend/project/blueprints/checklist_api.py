@@ -10,7 +10,7 @@ from ..blueprints.auth import login_required
 from ..common.validation import ValidationError, validate_integer
 from ..config.logging_config import api_logger
 from ..core.extensions import limiter
-from ..domain.checklist_service import (
+from ..modules.checklist.application.checklist_service import (
     add_comment_to_item,
     atualizar_prazo_item,
     build_nested_tree,
@@ -216,7 +216,7 @@ def add_comment(item_id: int):
 
                         if sent:
                             try:
-                                from ..domain.checklist_service import registrar_envio_email_comentario
+                                from ..modules.checklist.application.checklist_service import registrar_envio_email_comentario
 
                                 detalhe = f"E-mail enviado para responsável com resumo de '{email_data.get('tarefa_nome') or ''}'."
                                 registrar_envio_email_comentario(email_data["impl_id"], usuario_email, detalhe)
@@ -357,7 +357,7 @@ def send_comment_email(comentario_id):
             try:
                 detalhe = f"E-mail enviado para responsável com resumo de '{dados.get('tarefa_nome') or ''}'."
                 usuario_email = g.user_email if hasattr(g, "user_email") else None
-                from ..domain.checklist_service import registrar_envio_email_comentario
+                from ..modules.checklist.application.checklist_service import registrar_envio_email_comentario
 
                 registrar_envio_email_comentario(dados["impl_id"], usuario_email, detalhe)
             except Exception:
@@ -466,7 +466,7 @@ def delete_item(item_id: int):
     # Vou arriscar e permitir por enquanto, ou chamar um serviço auxiliar `check_permission`.
 
     from ..constants import PERFIS_COM_GESTAO
-    from ..domain.perfis_service import verificar_permissao
+    from ..modules.perfis.application.perfis_service import verificar_permissao
 
     perfil_id = g.perfil["id"] if g.perfil else None
     tem_permissao_excluir = verificar_permissao(perfil_id, "checklist.delete")

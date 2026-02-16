@@ -14,7 +14,7 @@ from flask_limiter.util import get_remote_address
 from ..common.validation import ValidationError, validate_integer
 from ..config.logging_config import api_logger
 from ..core.extensions import limiter
-from ..domain.implantacao_service import _get_progress
+from ..modules.implantacao.domain import _get_progress
 from ..security.api_security import validate_api_origin
 from ..security.context_validator import validate_context_access
 
@@ -63,7 +63,7 @@ def get_timeline(impl_id: int):
     dt_to = request.args.get("to", "")
 
     try:
-        from ..domain.timeline_service import get_timeline_logs
+        from ..modules.timeline.application.timeline_service import get_timeline_logs
 
         data = get_timeline_logs(
             impl_id=impl_id,
@@ -97,7 +97,7 @@ def export_timeline(impl_id: int):
     dt_to = request.args.get("to", "")
 
     try:
-        from ..domain.timeline_service import export_timeline_csv
+        from ..modules.timeline.application.timeline_service import export_timeline_csv
 
         csv_content = export_timeline_csv(
             impl_id=impl_id,
@@ -137,7 +137,7 @@ def consultar_empresa():
         except Exception:
             id_favorecido = None
 
-    from ..domain.external_service import consultar_empresa_oamd
+    from ..modules.implantacao.infra.external_service import consultar_empresa_oamd
 
     result = consultar_empresa_oamd(id_favorecido, infra_req)
 
@@ -155,7 +155,7 @@ def get_notifications():
     Refatorado: Usa notification_service para a lógica de negócio.
     """
     try:
-        from ..domain.notification_service import get_user_notifications
+        from ..modules.notification.application.notification_service import get_user_notifications
 
         user_email = g.user_email
         context = request.args.get("context")

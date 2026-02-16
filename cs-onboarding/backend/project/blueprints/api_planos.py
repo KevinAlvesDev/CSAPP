@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 
-from ..domain import planos_sucesso_service
+from ..modules.planos.application import planos_sucesso_service
 
 api_planos_bp = Blueprint("api_planos", __name__, url_prefix="/api")
 

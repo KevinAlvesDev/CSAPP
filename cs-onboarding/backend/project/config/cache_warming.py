@@ -79,37 +79,37 @@ WARM_RESOURCES: list[dict[str, Any]] = [
 
 
 def _fetch_tags() -> list[dict]:
-    from ..domain.config_service import listar_tags
+    from ..modules.config.application.config_service import listar_tags
 
     return listar_tags(tipo="ambos")
 
 
 def _fetch_status_implantacao() -> list[dict]:
-    from ..domain.config_service import listar_status_implantacao
+    from ..modules.config.application.config_service import listar_status_implantacao
 
     return listar_status_implantacao()
 
 
 def _fetch_niveis_atendimento() -> list[dict]:
-    from ..domain.config_service import listar_niveis_atendimento
+    from ..modules.config.application.config_service import listar_niveis_atendimento
 
     return listar_niveis_atendimento()
 
 
 def _fetch_tipos_evento() -> list[dict]:
-    from ..domain.config_service import listar_tipos_evento
+    from ..modules.config.application.config_service import listar_tipos_evento
 
     return listar_tipos_evento()
 
 
 def _fetch_motivos_parada() -> list[dict]:
-    from ..domain.config_service import listar_motivos_parada
+    from ..modules.config.application.config_service import listar_motivos_parada
 
     return listar_motivos_parada()
 
 
 def _fetch_motivos_cancelamento() -> list[dict]:
-    from ..domain.config_service import listar_motivos_cancelamento
+    from ..modules.config.application.config_service import listar_motivos_cancelamento
 
     return listar_motivos_cancelamento()
 

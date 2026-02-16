@@ -150,6 +150,46 @@ def init_db():
             except Exception:
                 pass
 
+        # Tabela de auditoria (necessária para decorator @audit e eventos de domínio)
+        try:
+            if db_type == "postgres":
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS audit_logs (
+                        id SERIAL PRIMARY KEY,
+                        user_email TEXT,
+                        action VARCHAR(100) NOT NULL,
+                        target_type VARCHAR(100) NOT NULL,
+                        target_id VARCHAR(255),
+                        changes JSONB,
+                        metadata JSONB,
+                        ip_address VARCHAR(45),
+                        user_agent TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    """
+                )
+            else:
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS audit_logs (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_email TEXT,
+                        action TEXT NOT NULL,
+                        target_type TEXT NOT NULL,
+                        target_id TEXT,
+                        changes TEXT,
+                        metadata TEXT,
+                        ip_address TEXT,
+                        user_agent TEXT,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+                    """
+                )
+        except Exception as audit_schema_err:
+            with contextlib.suppress(Exception):
+                current_app.logger.warning(f"Falha ao garantir tabela audit_logs: {audit_schema_err}")
+
         # Criar índices para performance
         try:
             # Índices básicos
@@ -175,6 +215,9 @@ def init_db():
             cursor.execute(
                 "CREATE INDEX IF NOT EXISTS idx_perfil_usuario_perfil_acesso ON perfil_usuario (perfil_acesso)"
             )
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs (created_at)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs (action)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_logs_target ON audit_logs (target_type, target_id)")
 
             # Índices compostos
             cursor.execute(

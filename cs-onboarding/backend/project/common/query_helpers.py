@@ -137,30 +137,18 @@ def get_implantacoes_with_progress(
 
     # Date filtering logic
     date_column = "i.data_criacao"  # default
-    status_filter_list = []
     status_condition = None
 
     if date_type == "inicio":
         date_column = "i.data_inicio_efetivo"
     elif date_type == "finalizacao":
-        # Fallback supremo: Busca nas colunas de data OU direto no log da timeline se estiver vazio
-        date_column = """COALESCE(
-            i.data_finalizacao, 
-            i.data_final_implantacao, 
-            (SELECT MAX(t.data_criacao) FROM timeline_log t WHERE t.implantacao_id = i.id AND (t.detalhes LIKE '%finalizada%' OR t.detalhes LIKE '%concluída%'))
-        )"""
-        status_filter_list = ["finalizada", "concluida", "concluída", "entregue"]
+        date_column = "i.data_final_implantacao"
+        # status_condition = "finalizada"  <-- Removido para confiar na DATA
     elif date_type == "parada":
-        # Fallback supremo também para paradas
-        date_column = """COALESCE(
-            i.data_finalizacao, 
-            i.data_final_implantacao, 
-            (SELECT MAX(t.data_criacao) FROM timeline_log t WHERE t.implantacao_id = i.id AND t.detalhes LIKE '%parada%')
-        )"""
-        status_filter_list = ["parada"]
+        date_column = "i.data_final_implantacao"
+        # status_condition = "parada" <-- Removido para confiar na DATA
     elif date_type == "cancelamento":
         date_column = "i.data_cancelamento"
-        status_filter_list = ["cancelada", "cancelado"]
 
     if start_date:
         query += f" AND date({date_column}) >= {placeholder}"
@@ -170,11 +158,7 @@ def get_implantacoes_with_progress(
         query += f" AND date({date_column}) <= {placeholder}"
         args.append(end_date)
     
-    if status_filter_list:
-        placeholders_in = ", ".join([placeholder] * len(status_filter_list))
-        query += f" AND LOWER(i.status) IN ({placeholders_in})"
-        args.extend([s.lower() for s in status_filter_list])
-    elif status_condition:
+    if status_condition:
         query += f" AND LOWER(i.status) = {placeholder}"
         args.append(status_condition.lower())
 
@@ -348,30 +332,18 @@ def get_implantacoes_count(
 
     # Date filtering logic
     date_column = "i.data_criacao"  # default
-    status_filter_list = []
     status_condition = None
 
     if date_type == "inicio":
         date_column = "i.data_inicio_efetivo"
     elif date_type == "finalizacao":
-        # Fallback supremo também na contagem
-        date_column = """COALESCE(
-            i.data_finalizacao, 
-            i.data_final_implantacao, 
-            (SELECT MAX(t.data_criacao) FROM timeline_log t WHERE t.implantacao_id = i.id AND (t.detalhes LIKE '%finalizada%' OR t.detalhes LIKE '%concluída%'))
-        )"""
-        status_filter_list = ["finalizada", "concluida", "concluída", "entregue"]
+        date_column = "i.data_final_implantacao"
+        # status_condition = "finalizada"
     elif date_type == "parada":
-        # Fallback supremo
-        date_column = """COALESCE(
-            i.data_finalizacao, 
-            i.data_final_implantacao, 
-            (SELECT MAX(t.data_criacao) FROM timeline_log t WHERE t.implantacao_id = i.id AND t.detalhes LIKE '%parada%')
-        )"""
-        status_filter_list = ["parada"]
+        date_column = "i.data_final_implantacao"
+        # status_condition = "parada"
     elif date_type == "cancelamento":
         date_column = "i.data_cancelamento"
-        status_filter_list = ["cancelada", "cancelado"]
 
     if start_date:
         query += f" AND date({date_column}) >= {placeholder}"
@@ -381,11 +353,7 @@ def get_implantacoes_count(
         query += f" AND date({date_column}) <= {placeholder}"
         args.append(end_date)
     
-    if status_filter_list:
-        placeholders_in = ", ".join([placeholder] * len(status_filter_list))
-        query += f" AND LOWER(i.status) IN ({placeholders_in})"
-        args.extend([s.lower() for s in status_filter_list])
-    elif status_condition:
+    if status_condition:
         query += f" AND LOWER(i.status) = {placeholder}"
         args.append(status_condition.lower())
 

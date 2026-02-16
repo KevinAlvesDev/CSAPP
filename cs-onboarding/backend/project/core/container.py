@@ -15,7 +15,6 @@ Uso:
     # Em routes/blueprints:
     from backend.project.core.container import get_container
     container = get_container()
-    implantacao_service = container.implantacao_service
 
     # Em testes:
     container = ServiceContainer(test_app)
@@ -151,7 +150,6 @@ def get_container() -> ServiceContainer:
 
     Uso em routes:
         container = get_container()
-        service = container.implantacao_service
     """
     from flask import current_app
 

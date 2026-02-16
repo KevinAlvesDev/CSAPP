@@ -51,6 +51,7 @@ dashboard_simples_test.db
 *.log
 logs/
 *.log.*
+backend/project/logs/
 
 # Testing
 .pytest_cache/
@@ -73,6 +74,9 @@ Thumbs.db
 backend/backups/
 backend/project/static/uploads/
 frontend/static/uploads/
+backend/uploads/
+backend/uploads/**
+frontend/static/uploads/**
 
 # Analysis/Debug files (não necessários em produção)
 analyze_*.py
@@ -80,6 +84,7 @@ inspect_*.py
 lista_*.txt
 debug_*.py
 test_*.txt
+route_inventory*.txt
 
 # Alembic
 alembic/versions/__pycache__/

@@ -25,7 +25,7 @@ from ..config.logging_config import api_logger
 from ..constants import PERFIS_COM_GESTAO
 from ..core.extensions import limiter
 from ..db import logar_timeline
-from ..domain.implantacao import aplicar_dados_oamd, consultar_dados_oamd, listar_implantacoes, obter_implantacao_basica
+from ..modules.implantacao.domain import aplicar_dados_oamd, consultar_dados_oamd, listar_implantacoes, obter_implantacao_basica
 from ..security.api_security import validate_api_origin
 
 

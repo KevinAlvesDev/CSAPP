@@ -9,7 +9,7 @@ from flask_limiter.util import get_remote_address
 from ..blueprints.auth import login_required
 from ..config.logging_config import get_logger
 from ..core.extensions import limiter
-from ..domain.checklist_finalizacao_service import (
+from ..modules.checklist.application.checklist_finalizacao_service import (
     criar_checklist_para_implantacao,
     marcar_item_checklist,
     obter_checklist_implantacao,
@@ -76,7 +76,7 @@ def toggle_item(item_id):
         if success:
             # AUDITORIA: Registrar a ação
             try:
-                from ..domain.audit_service import log_action
+                from ..modules.audit.application.audit_service import log_action
 
                 log_action(
                     action="CHECKLIST_TOGGLE",

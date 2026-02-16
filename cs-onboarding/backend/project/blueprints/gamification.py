@@ -8,7 +8,7 @@ from ..blueprints.auth import permission_required
 from ..common.validation import ValidationError, sanitize_string, validate_email, validate_integer
 from ..constants import PERFIS_COM_GESTAO
 from ..core.extensions import limiter
-from ..domain.gamification_service import (
+from ..modules.gamification.application.gamification_service import (
     _get_all_gamification_rules_grouped,
     _get_gamification_automatic_data_bulk,
     clear_gamification_cache,

@@ -9,6 +9,14 @@
   let itemCounter = 0;
 
   const PlanoEditor = {
+    notify(message, level = 'warning') {
+      if (window.showToast) {
+        window.showToast(message, level);
+      } else {
+        window.alert(message);
+      }
+    },
+
     init() {
       this.bindEvents();
       this.checkEmptyState();
@@ -345,13 +353,13 @@
 
     validarDados(estrutura) {
       if (!estrutura.items || estrutura.items.length === 0) {
-        if (window.showToast) window.showToast('Adicione pelo menos um item ao plano.', 'warning');
+        this.notify('Adicione pelo menos um item ao plano.', 'warning');
         return false;
       }
 
       const validarItem = (item) => {
         if (!item.title || !item.title.trim()) {
-          if (window.showToast) window.showToast('Todos os itens devem ter um título.', 'warning');
+          this.notify('Todos os itens devem ter um título.', 'warning');
           return false;
         }
 
@@ -461,18 +469,25 @@
       const diasDuracao = form.querySelector('#dias_duracao');
 
       if (!nome || !nome.value.trim()) {
-        if (window.showToast) window.showToast('O nome do plano é obrigatório.', 'warning');
+        this.notify('O nome do plano é obrigatório.', 'warning');
         if (nome) nome.focus();
         return;
       }
 
       if (!diasDuracao || !diasDuracao.value || parseInt(diasDuracao.value) < 1) {
-        if (window.showToast) window.showToast('Informe os dias de duração (mínimo 1 dia).', 'warning');
+        this.notify('Informe os dias de duração (mínimo 1 dia).', 'warning');
         if (diasDuracao) diasDuracao.focus();
         return;
       }
 
       const estrutura = this.coletarDados();
+      const isEditMode = !!form.querySelector('input[name="_method"][value="PUT"]');
+
+      if (isEditMode && (!estrutura.items || estrutura.items.length === 0)) {
+        // Em edição, permite salvar metadados mesmo se a estrutura não foi carregada no editor.
+        form.submit();
+        return;
+      }
 
       if (!this.validarDados(estrutura)) {
         return;

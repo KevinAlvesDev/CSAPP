@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 
 from ..blueprints.auth import login_required
 from ..config.logging_config import api_logger
-from ..domain import config_service
+from ..modules.config.application import config_service
 from ..security.api_security import validate_api_origin
 
 config_api = Blueprint("config_api", __name__, url_prefix="/api/config")

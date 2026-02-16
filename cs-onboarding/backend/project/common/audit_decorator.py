@@ -6,7 +6,7 @@ import functools
 
 from flask import g
 
-from ..domain.audit_service import log_action
+from ..modules.audit.application.audit_service import log_action
 
 
 def audit(action: str, target_type: str):

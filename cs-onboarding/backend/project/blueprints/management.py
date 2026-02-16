@@ -6,7 +6,7 @@ from ..blueprints.auth import permission_required
 from ..config.logging_config import management_logger
 from ..constants import PERFIL_ADMIN, PERFIS_GERENCIAR_USUARIOS
 from ..core.extensions import r2_client
-from ..domain.management_service import (
+from ..modules.management.application.management_service import (
     atualizar_perfil_usuario_service,
     excluir_usuario_service,
     limpar_implantacoes_orfas_service,

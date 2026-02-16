@@ -5,11 +5,11 @@ Rotas para gerenciar perfis e permissões (RBAC)
 
 from flask import Blueprint, flash, g, jsonify, redirect, render_template, request, url_for
 
-from ..__init__ import csrf
+from .. import csrf
 from ..blueprints.auth import login_required
 from ..common.exceptions import ValidationError
 from ..config.logging_config import get_logger
-from ..domain import perfis_service
+from ..modules.perfis.application import perfis_service
 
 perfis_bp = Blueprint("perfis", __name__, url_prefix="/perfis")
 logger = get_logger("perfis")

@@ -6,7 +6,7 @@ Endpoint para receber eventos de segurança do Google
 from flask import Blueprint, jsonify, request
 
 from ..config.logging_config import get_logger
-from ..domain.risc_service import process_security_event
+from ..modules.risc.application.risc_service import process_security_event
 
 risc_bp = Blueprint("risc", __name__, url_prefix="/risc")
 risc_logger = get_logger("risc")
