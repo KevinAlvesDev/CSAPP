@@ -172,38 +172,9 @@ def aplicar_plano_a_implantacao_checklist(
             cursor.execute(sql_concluir, (datetime.now(), implantacao_id))
 
             # Criar instância do plano vinculada ao processo (snapshot do template)
-            sql_plano = """
-                INSERT INTO planos_sucesso
-                (nome, descricao, criado_por, data_criacao, data_atualizacao, dias_duracao, permite_excluir_tarefas, contexto, status, processo_id)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """
-            if db_type == "sqlite":
-                sql_plano = sql_plano.replace("%s", "?")
-
-            now = datetime.now()
-            cursor.execute(
-                sql_plano,
-                (
-                    plano.get("nome", "").strip(),
-                    plano.get("descricao", "") or "",
-                    usuario,
-                    now,
-                    now,
-                    plano.get("dias_duracao"),
-                    bool(plano.get("permite_excluir_tarefas", False)),
-                    plano.get("contexto", "onboarding"),
-                    "em_andamento",
-                    implantacao_id,
-                ),
+            plano_instancia_id = _criar_instancia_plano_cursor(
+                cursor, db_type, plano, estrutura_plano, implantacao_id, usuario
             )
-
-            if db_type == "postgres":
-                cursor.execute("SELECT lastval()")
-                plano_instancia_id = cursor.fetchone()[0]
-            else:
-                plano_instancia_id = cursor.lastrowid
-
-            _criar_estrutura_plano_checklist(cursor, db_type, plano_instancia_id, estrutura_plano)
 
             # Tratamento de comentários conforme escolha do usuário
             if preservar_comentarios:
