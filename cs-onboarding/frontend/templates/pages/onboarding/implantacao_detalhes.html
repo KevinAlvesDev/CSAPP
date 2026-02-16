@@ -29,7 +29,7 @@
         <div class="sidebar-column">
 
             <!-- Card Plano de Sucesso (Lógica Importante) -->
-            {% if plano_sucesso %}
+            {% if plano_sucesso and plano_sucesso.status != 'concluido' %}
             <div class="custom-card border-primary border-top border-4">
                 <div class="custom-card-header">
                     <h5 class="custom-card-title"><i class="bi bi-diagram-3-fill me-2 text-primary"></i>Plano Atual</h5>
@@ -65,6 +65,17 @@
                         </div>
                         {% endif %}
                     </div>
+                </div>
+            </div>
+            {% elif plano_sucesso and plano_sucesso.status == 'concluido' %}
+            <div class="custom-card cta-card mb-4">
+                <div class="custom-card-body text-center">
+                    <div class="mb-3 text-primary">
+                        <i class="bi bi-check-circle-fill" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="cta-title mb-2">Plano Concluído</h5>
+                    <p class="text-muted small mb-0">O plano de sucesso foi concluído. Veja o conteúdo completo na aba
+                        <strong>Plano de sucesso concluído</strong>.</p>
                 </div>
             </div>
             {% else %}
@@ -396,18 +407,22 @@
 
                     <!-- Tabs de navegação -->
                     <ul class="nav tab-switcher" id="contentTabs" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="plano-andamento-tab" data-bs-toggle="tab"
-                                data-bs-target="#plano-andamento-content" type="button" role="tab">
-                                <i class="bi bi-play-circle me-1"></i>Plano de sucesso em andamento
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="plano-concluido-tab" data-bs-toggle="tab"
-                                data-bs-target="#plano-concluido-content" type="button" role="tab">
-                                <i class="bi bi-check-circle me-1"></i>Plano de sucesso concluído
-                            </button>
-                        </li>
+                          <li class="nav-item" role="presentation">
+                              <button class="nav-link {% if not plano_concluido_atual %}active{% endif %}"
+                                  id="plano-andamento-tab" data-bs-toggle="tab"
+                                  data-bs-target="#plano-andamento-content" type="button" role="tab"
+                                  aria-selected="{{ 'true' if not plano_concluido_atual else 'false' }}">
+                                  <i class="bi bi-play-circle me-1"></i>Plano de sucesso em andamento
+                              </button>
+                          </li>
+                          <li class="nav-item" role="presentation">
+                              <button class="nav-link {% if plano_concluido_atual %}active{% endif %}"
+                                  id="plano-concluido-tab" data-bs-toggle="tab"
+                                  data-bs-target="#plano-concluido-content" type="button" role="tab"
+                                  aria-selected="{{ 'true' if plano_concluido_atual else 'false' }}">
+                                  <i class="bi bi-check-circle me-1"></i>Plano de sucesso concluído
+                              </button>
+                          </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" id="timeline-tab" data-bs-toggle="tab"
                                 data-bs-target="#timeline-content" type="button" role="tab">
@@ -457,7 +472,8 @@
                     {% set plano_concluido_atual = (plano_sucesso and plano_sucesso.status == 'concluido' and not is_historico_view) %}
 
                     <!-- Tab: Plano de Sucesso em Andamento -->
-                    <div class="tab-pane fade show active" id="plano-andamento-content" role="tabpanel">
+                      <div class="tab-pane fade {% if not plano_concluido_atual %}show active{% endif %}"
+                          id="plano-andamento-content" role="tabpanel">
                         <div class="custom-card-body">
                             {% if plano_ativo_instancia %}
                             {% if is_historico_view %}
@@ -526,12 +542,19 @@
 
                             {% if not plano_concluido_atual %}
                             {% include 'partials/_plano_sucesso_checklist_onboarding.html' %}
+                            {% else %}
+                            <div class="alert alert-light border d-flex align-items-center gap-2 mb-0 shadow-sm">
+                                <i class="bi bi-info-circle text-primary"></i>
+                                <span>Este plano foi concluído. Veja o conteúdo completo na aba
+                                    <strong>Plano de sucesso concluído</strong>.</span>
+                            </div>
                             {% endif %}
                         </div>
                     </div>
 
                     <!-- Tab: Plano de Sucesso Concluído -->
-                    <div class="tab-pane fade" id="plano-concluido-content" role="tabpanel">
+                      <div class="tab-pane fade {% if plano_concluido_atual %}show active{% endif %}"
+                          id="plano-concluido-content" role="tabpanel">
                         <div class="custom-card-body">
                             {% if plano_concluido_atual %}
                             <div

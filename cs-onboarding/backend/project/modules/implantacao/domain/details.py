@@ -421,7 +421,11 @@ def get_implantacao_details(
                 temp_p = query_db(
                     "SELECT * FROM planos_sucesso WHERE id = %s", (implantacao["plano_sucesso_id"],), one=True
                 )
-                if temp_p and temp_p.get("status") == "em_andamento":
+                if (
+                    temp_p
+                    and temp_p.get("status") == "em_andamento"
+                    and temp_p.get("processo_id") == impl_id
+                ):
                     plano_ativo_instancia = temp_p
 
         for p in planos_lista:

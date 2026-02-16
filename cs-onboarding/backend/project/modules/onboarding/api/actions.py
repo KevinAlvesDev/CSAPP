@@ -224,10 +224,40 @@ def concluir_plano_implantacao():
             plano_instancia_id = plano_em_andamento["id"] if plano_em_andamento else None
 
         if not plano_instancia_id:
+            from ....db import query_db
+
+            impl = query_db(
+                "SELECT plano_sucesso_id FROM implantacoes WHERE id = %s",
+                (implantacao_id,),
+                one=True,
+            )
+            plano_instancia_id = impl.get("plano_sucesso_id") if impl else None
+
+        if not plano_instancia_id:
             flash("Nenhum plano em andamento encontrado para concluir.", "warning")
             return redirect(url_for("onboarding.ver_implantacao", impl_id=implantacao_id))
 
+        from ....db import query_db, db_connection
         from ....modules.planos.application.planos_sucesso_service import concluir_plano_sucesso
+        from ....modules.planos.domain.aplicar import criar_instancia_plano_para_implantacao
+
+        plano = query_db("SELECT * FROM planos_sucesso WHERE id = %s", (plano_instancia_id,), one=True)
+        if plano and not plano.get("processo_id"):
+            # Plano apontando para template. Criar instancia e concluir apenas a instancia.
+            with db_connection() as (conn, db_type):
+                cursor = conn.cursor()
+                plano_instancia_id = criar_instancia_plano_para_implantacao(
+                    plano_id=plano.get("id"),
+                    implantacao_id=implantacao_id,
+                    usuario=g.user_email,
+                    cursor=cursor,
+                    db_type=db_type,
+                )
+                sql_update = "UPDATE implantacoes SET plano_sucesso_id = %s WHERE id = %s"
+                if db_type == "sqlite":
+                    sql_update = sql_update.replace("%s", "?")
+                cursor.execute(sql_update, (plano_instancia_id, implantacao_id))
+                conn.commit()
 
         concluir_plano_sucesso(plano_instancia_id)
         flash("Plano concluído com sucesso!", "success")

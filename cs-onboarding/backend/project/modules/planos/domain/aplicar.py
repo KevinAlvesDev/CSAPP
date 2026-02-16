@@ -297,6 +297,78 @@ def aplicar_plano_a_implantacao_checklist(
             raise DatabaseError(f"Erro ao aplicar plano: {e}") from e
 
 
+def criar_instancia_plano_para_implantacao(
+    plano_id: int,
+    implantacao_id: int,
+    usuario: str,
+    cursor=None,
+    db_type: str | None = None,
+) -> int:
+    """
+    Cria uma instancia (snapshot) de um plano template para uma implantacao.
+    Nao altera checklist_items da implantacao.
+    """
+    if not plano_id or not implantacao_id:
+        raise ValidationError("ID do plano e da implantacao sao obrigatorios")
+
+    plano = query_db("SELECT * FROM planos_sucesso WHERE id = %s", (plano_id,), one=True)
+    if not plano:
+        raise ValidationError(f"Plano com ID {plano_id} nao encontrado")
+
+    estrutura_plano = _extrair_estrutura_checklist(plano_id)
+
+    own_conn = cursor is None
+    if own_conn:
+        with db_connection() as (conn, db_type):
+            cursor = conn.cursor()
+            plano_instancia_id = _criar_instancia_plano_cursor(
+                cursor, db_type, plano, estrutura_plano, implantacao_id, usuario
+            )
+            conn.commit()
+            return plano_instancia_id
+
+    if not db_type:
+        raise ValidationError("db_type obrigatorio quando cursor e fornecido")
+
+    return _criar_instancia_plano_cursor(cursor, db_type, plano, estrutura_plano, implantacao_id, usuario)
+
+
+def _criar_instancia_plano_cursor(cursor, db_type, plano, estrutura_plano, implantacao_id, usuario):
+    sql_plano = """
+        INSERT INTO planos_sucesso
+        (nome, descricao, criado_por, data_criacao, data_atualizacao, dias_duracao, permite_excluir_tarefas, contexto, status, processo_id)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    """
+    if db_type == "sqlite":
+        sql_plano = sql_plano.replace("%s", "?")
+
+    now = datetime.now()
+    cursor.execute(
+        sql_plano,
+        (
+            plano.get("nome", "").strip(),
+            plano.get("descricao", "") or "",
+            usuario,
+            now,
+            now,
+            plano.get("dias_duracao"),
+            bool(plano.get("permite_excluir_tarefas", False)),
+            plano.get("contexto", "onboarding"),
+            "em_andamento",
+            implantacao_id,
+        ),
+    )
+
+    if db_type == "postgres":
+        cursor.execute("SELECT lastval()")
+        plano_instancia_id = cursor.fetchone()[0]
+    else:
+        plano_instancia_id = cursor.lastrowid
+
+    _criar_estrutura_plano_checklist(cursor, db_type, plano_instancia_id, estrutura_plano)
+    return plano_instancia_id
+
+
 def remover_plano_de_implantacao(implantacao_id: int, usuario: str, excluir_comentarios: bool = False) -> bool:
     """
     Remove o plano de sucesso de uma implantação.
