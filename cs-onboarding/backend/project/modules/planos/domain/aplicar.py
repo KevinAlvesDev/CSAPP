@@ -334,6 +334,29 @@ def criar_instancia_plano_para_implantacao(
 
 
 def _criar_instancia_plano_cursor(cursor, db_type, plano, estrutura_plano, implantacao_id, usuario):
+    def _nome_disponivel(nome):
+        sql_chk = "SELECT COUNT(*) FROM planos_sucesso WHERE nome = %s"
+        if db_type == "sqlite":
+            sql_chk = sql_chk.replace("%s", "?")
+        cursor.execute(sql_chk, (nome,))
+        row = cursor.fetchone()
+        if isinstance(row, dict):
+            return (row.get("COUNT(*)", 0) or row.get("count", 0) or 0) == 0
+        return (row[0] if row else 0) == 0
+
+    base_nome = (plano.get("nome", "") or "").strip() or "Plano"
+    nome_instancia = base_nome
+    if not _nome_disponivel(nome_instancia):
+        nome_instancia = f"{base_nome} (Implantacao {implantacao_id})"
+    if not _nome_disponivel(nome_instancia):
+        suffix = 2
+        while True:
+            candidato = f"{base_nome} (Implantacao {implantacao_id} #{suffix})"
+            if _nome_disponivel(candidato):
+                nome_instancia = candidato
+                break
+            suffix += 1
+
     sql_plano = """
         INSERT INTO planos_sucesso
         (nome, descricao, criado_por, data_criacao, data_atualizacao, dias_duracao, permite_excluir_tarefas, contexto, status, processo_id)
@@ -346,7 +369,7 @@ def _criar_instancia_plano_cursor(cursor, db_type, plano, estrutura_plano, impla
     cursor.execute(
         sql_plano,
         (
-            plano.get("nome", "").strip(),
+            nome_instancia,
             plano.get("descricao", "") or "",
             usuario,
             now,
