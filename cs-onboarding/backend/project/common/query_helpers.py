@@ -48,6 +48,8 @@ def get_implantacoes_with_progress(
             END as progresso_percent
         """
         completed_check = "ci.completed = 1"
+        active_leaf_check = "COALESCE(ci.dispensada, 0) = 0"
+        child_active_check = "COALESCE(child.dispensada, 0) = 0"
         placeholder = "?"
     else:
         progress_calc = """
@@ -58,6 +60,8 @@ def get_implantacoes_with_progress(
             END as progresso_percent
         """
         completed_check = "ci.completed = TRUE"
+        active_leaf_check = "COALESCE(ci.dispensada, FALSE) = FALSE"
+        child_active_check = "COALESCE(child.dispensada, FALSE) = FALSE"
         placeholder = "%s"
 
     query = f"""
@@ -81,8 +85,8 @@ def get_implantacoes_with_progress(
                 COUNT(ci.id) as total_tarefas,
                 SUM(CASE WHEN {completed_check} THEN 1 ELSE 0 END) as tarefas_concluidas
             FROM checklist_items ci
-            LEFT JOIN checklist_items child ON child.parent_id = ci.id
-            WHERE child.id IS NULL
+            LEFT JOIN checklist_items child ON child.parent_id = ci.id AND {child_active_check}
+            WHERE child.id IS NULL AND {active_leaf_check}
             GROUP BY ci.implantacao_id
         ) prog ON prog.implantacao_id = i.id
         LEFT JOIN (
@@ -230,8 +234,8 @@ def get_implantacao_with_details(implantacao_id: int) -> dict[str, Any] | None:
                 COUNT(ci.id) as total_tarefas,
                 SUM(CASE WHEN ci.completed = TRUE THEN 1 ELSE 0 END) as tarefas_concluidas
             FROM checklist_items ci
-            LEFT JOIN checklist_items child ON child.parent_id = ci.id
-            WHERE child.id IS NULL
+            LEFT JOIN checklist_items child ON child.parent_id = ci.id AND COALESCE(child.dispensada, FALSE) = FALSE
+            WHERE child.id IS NULL AND COALESCE(ci.dispensada, FALSE) = FALSE
             GROUP BY ci.implantacao_id
         ) prog ON prog.implantacao_id = i.id
         LEFT JOIN (
@@ -266,8 +270,9 @@ def get_checklist_tree_optimized(implantacao_id: int) -> list[dict[str, Any]]:
             COUNT(sub.id) as total_filhos,
             SUM(CASE WHEN sub.completed THEN 1 ELSE 0 END) as filhos_concluidos
         FROM checklist_items ci
-        LEFT JOIN checklist_items sub ON sub.parent_id = ci.id
+        LEFT JOIN checklist_items sub ON sub.parent_id = ci.id AND COALESCE(sub.dispensada, FALSE) = FALSE
         WHERE ci.implantacao_id = %s
+          AND COALESCE(ci.dispensada, FALSE) = FALSE
         GROUP BY ci.id
         ORDER BY ci.ordem, ci.id
     """

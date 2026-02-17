@@ -31,6 +31,7 @@ from .items import (
     atualizar_prazo_item,
     delete_checklist_item,
     move_item,
+    set_item_dispensa,
     toggle_item_status,
     update_item_responsavel,
 )
@@ -69,6 +70,7 @@ __all__ = [
     "obter_progresso_global_service",
     "plano_permite_excluir_tarefas",
     "registrar_envio_email_comentario",
+    "set_item_dispensa",
     "toggle_item_status",
     "update_comment_service",
     "update_item_responsavel",

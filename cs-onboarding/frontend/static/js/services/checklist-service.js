@@ -458,6 +458,39 @@ class ChecklistService {
             };
         }
     }
+
+    /**
+     * Dispensa ou reativa um item do checklist.
+     * @param {number} itemId - ID do item
+     * @param {boolean} dispensar - true para dispensar, false para reativar
+     * @param {string} motivo - Motivo da dispensa (obrigatorio ao dispensar)
+     * @returns {Promise<{success: boolean, cancelled?: boolean, progress?: number, error?: string}>}
+     */
+    async dispenseItem(itemId, dispensar = true, motivo = '') {
+        if (dispensar && (!motivo || !motivo.trim())) {
+            this.notifier.warning('Motivo da dispensa é obrigatório');
+            return { success: false, cancelled: true };
+        }
+
+        try {
+            const data = await this.api.dispenseItem(itemId, dispensar, motivo || '');
+
+            if (data && data.ok) {
+                this.notifier.success(dispensar ? 'Tarefa dispensada' : 'Tarefa reativada');
+                return {
+                    success: true,
+                    progress: data.progress
+                };
+            }
+
+            throw new Error(data?.error || 'Erro ao alterar dispensa da tarefa');
+        } catch (error) {
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    }
 }
 
 // Export para uso global

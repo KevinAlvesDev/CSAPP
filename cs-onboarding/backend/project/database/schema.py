@@ -92,6 +92,30 @@ def init_db():
                         ) THEN
                             ALTER TABLE checklist_items ADD COLUMN dias_uteis BOOLEAN DEFAULT FALSE;
                         END IF;
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns
+                            WHERE table_name='checklist_items' AND column_name='dispensada'
+                        ) THEN
+                            ALTER TABLE checklist_items ADD COLUMN dispensada BOOLEAN DEFAULT FALSE;
+                        END IF;
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns
+                            WHERE table_name='checklist_items' AND column_name='motivo_dispensa'
+                        ) THEN
+                            ALTER TABLE checklist_items ADD COLUMN motivo_dispensa TEXT NULL;
+                        END IF;
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns
+                            WHERE table_name='checklist_items' AND column_name='dispensada_por'
+                        ) THEN
+                            ALTER TABLE checklist_items ADD COLUMN dispensada_por TEXT NULL;
+                        END IF;
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns
+                            WHERE table_name='checklist_items' AND column_name='dispensada_em'
+                        ) THEN
+                            ALTER TABLE checklist_items ADD COLUMN dispensada_em TIMESTAMP NULL;
+                        END IF;
                     END
                     $$;
                 """)
@@ -232,6 +256,12 @@ def init_db():
         except Exception as idx_err:
             with contextlib.suppress(Exception):
                 current_app.logger.warning(f"Falha ao criar índices: {idx_err}")
+
+        try:
+            _garantir_recurso_dispensa_checklist(cursor, db_type)
+        except Exception as e:
+            with contextlib.suppress(Exception):
+                current_app.logger.warning(f"Falha ao garantir recurso checklist.dispense: {e}")
 
         conn.commit()
 
@@ -386,6 +416,10 @@ def _criar_tabelas_basicas_sqlite(cursor):
             descricao TEXT,
             tag TEXT,
             data_conclusao DATETIME,
+            dispensada INTEGER DEFAULT 0,
+            motivo_dispensa TEXT,
+            dispensada_por TEXT,
+            dispensada_em DATETIME,
             dias_offset INTEGER,
             dias_uteis INTEGER DEFAULT 0,
             FOREIGN KEY (parent_id) REFERENCES checklist_items(id) ON DELETE CASCADE,
@@ -719,6 +753,7 @@ def _popular_dados_iniciais_perfis(cursor):
             ("checklist.comment", "Adicionar Comentários", "Comentar", "Checklist", "acao", 22),
             ("checklist.edit", "Editar Tarefas", "Modificar tarefas", "Checklist", "acao", 23),
             ("checklist.delete", "Excluir Tarefas", "Remover tarefas", "Checklist", "acao", 24),
+            ("checklist.dispense", "Dispensar Tarefas", "Dispensar/reativar tarefas sem excluir", "Checklist", "acao", 25),
             ("planos.list", "Listar Planos", "Ver lista", "Planos de Sucesso", "pagina", 30),
             ("planos.view", "Visualizar Plano", "Ver detalhes", "Planos de Sucesso", "acao", 31),
             ("planos.create", "Criar Plano", "Criar novo", "Planos de Sucesso", "acao", 32),
@@ -775,6 +810,71 @@ def _popular_dados_iniciais_perfis(cursor):
     except Exception:
         # Silenciar erros - dados podem já existir
         pass
+
+
+def _garantir_recurso_dispensa_checklist(cursor, db_type):
+    """Garante recurso checklist.dispense e permissões padrão para Admin/Implantador."""
+    recurso = (
+        "checklist.dispense",
+        "Dispensar Tarefas",
+        "Dispensar/reativar tarefas sem excluir",
+        "Checklist",
+        "acao",
+        25,
+    )
+
+    if db_type == "sqlite":
+        cursor.execute(
+            """
+            INSERT OR IGNORE INTO recursos (codigo, nome, descricao, categoria, tipo, ordem)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            recurso,
+        )
+        cursor.execute("SELECT id FROM recursos WHERE codigo = ?", ("checklist.dispense",))
+        row = cursor.fetchone()
+        if not row:
+            return
+        recurso_id = row[0] if not isinstance(row, dict) else row.get("id")
+
+        cursor.execute("SELECT id FROM perfis_acesso WHERE nome IN ('Administrador', 'Implantador')")
+        perfis = cursor.fetchall() or []
+        for p in perfis:
+            perfil_id = p[0] if not isinstance(p, dict) else p.get("id")
+            cursor.execute(
+                """
+                INSERT OR IGNORE INTO permissoes (perfil_id, recurso_id, concedida)
+                VALUES (?, ?, 1)
+                """,
+                (perfil_id, recurso_id),
+            )
+    else:
+        cursor.execute(
+            """
+            INSERT INTO recursos (codigo, nome, descricao, categoria, tipo, ordem)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            ON CONFLICT (codigo) DO NOTHING
+            """,
+            recurso,
+        )
+        cursor.execute("SELECT id FROM recursos WHERE codigo = %s", ("checklist.dispense",))
+        row = cursor.fetchone()
+        if not row:
+            return
+        recurso_id = row[0] if not isinstance(row, dict) else row.get("id")
+
+        cursor.execute("SELECT id FROM perfis_acesso WHERE nome IN ('Administrador', 'Implantador')")
+        perfis = cursor.fetchall() or []
+        for p in perfis:
+            perfil_id = p[0] if not isinstance(p, dict) else p.get("id")
+            cursor.execute(
+                """
+                INSERT INTO permissoes (perfil_id, recurso_id, concedida)
+                VALUES (%s, %s, TRUE)
+                ON CONFLICT (perfil_id, recurso_id) DO NOTHING
+                """,
+                (perfil_id, recurso_id),
+            )
 
 
 def _popular_dados_configuracao(cursor):
@@ -996,6 +1096,14 @@ def _migrar_colunas_prazos_checklist_items(cursor):
             cursor.execute("ALTER TABLE checklist_items ADD COLUMN dias_offset INTEGER")
         if "dias_uteis" not in names:
             cursor.execute("ALTER TABLE checklist_items ADD COLUMN dias_uteis INTEGER DEFAULT 0")
+        if "dispensada" not in names:
+            cursor.execute("ALTER TABLE checklist_items ADD COLUMN dispensada INTEGER DEFAULT 0")
+        if "motivo_dispensa" not in names:
+            cursor.execute("ALTER TABLE checklist_items ADD COLUMN motivo_dispensa TEXT")
+        if "dispensada_por" not in names:
+            cursor.execute("ALTER TABLE checklist_items ADD COLUMN dispensada_por TEXT")
+        if "dispensada_em" not in names:
+            cursor.execute("ALTER TABLE checklist_items ADD COLUMN dispensada_em DATETIME")
     except Exception:
         pass
 
@@ -1200,6 +1308,18 @@ def ensure_implantacoes_status_constraint():
                     END IF;
                     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='checklist_items' AND column_name='nova_previsao') THEN
                         ALTER TABLE checklist_items ADD COLUMN nova_previsao TIMESTAMP NULL;
+                    END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='checklist_items' AND column_name='dispensada') THEN
+                        ALTER TABLE checklist_items ADD COLUMN dispensada BOOLEAN DEFAULT FALSE;
+                    END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='checklist_items' AND column_name='motivo_dispensa') THEN
+                        ALTER TABLE checklist_items ADD COLUMN motivo_dispensa TEXT NULL;
+                    END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='checklist_items' AND column_name='dispensada_por') THEN
+                        ALTER TABLE checklist_items ADD COLUMN dispensada_por TEXT NULL;
+                    END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='checklist_items' AND column_name='dispensada_em') THEN
+                        ALTER TABLE checklist_items ADD COLUMN dispensada_em TIMESTAMP NULL;
                     END IF;
                 END
                 $$;

@@ -42,6 +42,7 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, plano_id=None, in
                             id, parent_id, title, completed, comment,
                             level, ordem, implantacao_id, plano_id, tipo_item, obrigatoria, tag,
                             responsavel, previsao_original, nova_previsao, data_conclusao,
+                            dispensada, motivo_dispensa, dispensada_por, dispensada_em,
                             created_at, updated_at
                         FROM checklist_items
                         WHERE implantacao_id = %s
@@ -54,6 +55,7 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, plano_id=None, in
                             id, parent_id, title, completed, comment,
                             level, ordem, implantacao_id, plano_id, tipo_item, obrigatoria, tag,
                             responsavel, previsao_original, nova_previsao, data_conclusao,
+                            dispensada, motivo_dispensa, dispensada_por, dispensada_em,
                             created_at, updated_at
                         FROM checklist_items
                         WHERE plano_id = %s
@@ -66,6 +68,7 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, plano_id=None, in
                             SELECT id, parent_id, title, completed, comment,
                                    level, ordem, implantacao_id, plano_id, tipo_item, obrigatoria, tag,
                                    responsavel, previsao_original, nova_previsao, data_conclusao,
+                                   dispensada, motivo_dispensa, dispensada_por, dispensada_em,
                                    created_at, updated_at
                             FROM checklist_items
                             WHERE id = %s
@@ -75,6 +78,7 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, plano_id=None, in
                             SELECT ci.id, ci.parent_id, ci.title, ci.completed, ci.comment,
                                    ci.level, ci.ordem, ci.implantacao_id, ci.plano_id, ci.tipo_item, ci.obrigatoria, ci.tag,
                                    ci.responsavel, ci.previsao_original, ci.nova_previsao, ci.data_conclusao,
+                                   ci.dispensada, ci.motivo_dispensa, ci.dispensada_por, ci.dispensada_em,
                                    ci.created_at, ci.updated_at
                             FROM checklist_items ci
                             INNER JOIN subtree st ON ci.parent_id = st.id
@@ -90,6 +94,7 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, plano_id=None, in
                             id, parent_id, title, completed, comment,
                             level, ordem, implantacao_id, plano_id, tipo_item, obrigatoria, tag,
                             responsavel, previsao_original, nova_previsao, data_conclusao,
+                            dispensada, motivo_dispensa, dispensada_por, dispensada_em,
                             created_at, updated_at
                         FROM checklist_items
                         WHERE implantacao_id = ?
@@ -102,6 +107,7 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, plano_id=None, in
                             id, parent_id, title, completed, comment,
                             level, ordem, implantacao_id, plano_id, tipo_item, obrigatoria, tag,
                             responsavel, previsao_original, nova_previsao, data_conclusao,
+                            dispensada, motivo_dispensa, dispensada_por, dispensada_em,
                             created_at, updated_at
                         FROM checklist_items
                         WHERE plano_id = ?
@@ -113,10 +119,12 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, plano_id=None, in
                         WITH RECURSIVE subtree(id, parent_id, title, completed, comment,
                                                level, ordem, implantacao_id, plano_id, tipo_item, obrigatoria, tag,
                                                responsavel, previsao_original, nova_previsao, data_conclusao,
+                                               dispensada, motivo_dispensa, dispensada_por, dispensada_em,
                                                created_at, updated_at) AS (
                             SELECT id, parent_id, title, completed, comment,
                                    level, ordem, implantacao_id, plano_id, tipo_item, obrigatoria, tag,
                                    responsavel, previsao_original, nova_previsao, data_conclusao,
+                                   dispensada, motivo_dispensa, dispensada_por, dispensada_em,
                                    created_at, updated_at
                             FROM checklist_items
                             WHERE id = ?
@@ -126,6 +134,7 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, plano_id=None, in
                             SELECT ci.id, ci.parent_id, ci.title, ci.completed, ci.comment,
                                    ci.level, ci.ordem, ci.implantacao_id, ci.plano_id, ci.tipo_item, ci.obrigatoria, ci.tag,
                                    ci.responsavel, ci.previsao_original, ci.nova_previsao, ci.data_conclusao,
+                                   ci.dispensada, ci.motivo_dispensa, ci.dispensada_por, ci.dispensada_em,
                                    ci.created_at, ci.updated_at
                             FROM checklist_items ci
                             INNER JOIN subtree st ON ci.parent_id = st.id
@@ -139,6 +148,7 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, plano_id=None, in
                 query = (
                     "SELECT id, parent_id, title, completed, comment, level, ordem, implantacao_id, plano_id, "
                     "tipo_item, obrigatoria, tag, responsavel, previsao_original, nova_previsao, data_conclusao, "
+                    "dispensada, motivo_dispensa, dispensada_por, dispensada_em, "
                     "created_at, updated_at FROM checklist_items ORDER BY ordem ASC, id ASC"
                 )
 
@@ -188,12 +198,14 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, plano_id=None, in
                             SELECT parent_id, id, completed
                             FROM checklist_items
                             WHERE parent_id = ANY(%s)
+                              AND COALESCE(dispensada, FALSE) = FALSE
 
                             UNION ALL
 
                             SELECT ci.parent_id, ci.id, ci.completed
                             FROM checklist_items ci
                             INNER JOIN all_children ac ON ci.parent_id = ac.id
+                            WHERE COALESCE(ci.dispensada, FALSE) = FALSE
                         )
                         SELECT
                             parent_id,
@@ -255,6 +267,13 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, plano_id=None, in
                         item.get("data_conclusao") if isinstance(item, dict) else item.get("data_conclusao", None),
                         only_date=True,
                     ),
+                    "dispensada": bool(item.get("dispensada") if isinstance(item, dict) else item.get("dispensada", False)),
+                    "motivo_dispensa": item.get("motivo_dispensa") if isinstance(item, dict) else item.get("motivo_dispensa", None),
+                    "dispensada_por": item.get("dispensada_por") if isinstance(item, dict) else item.get("dispensada_por", None),
+                    "dispensada_em": _format_datetime(
+                        item.get("dispensada_em") if isinstance(item, dict) else item.get("dispensada_em", None),
+                        only_date=True,
+                    ),
                     "created_at": _format_datetime(
                         item.get("created_at") if isinstance(item, dict) else item.get("created_at", None)
                     ),
@@ -270,7 +289,7 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, plano_id=None, in
 
                 ref_dt = item_dict["nova_previsao"] or item_dict["previsao_original"]
                 item_dict["atrasada"] = bool(
-                    ref_dt and not item_dict["completed"] and ref_dt < _format_datetime(datetime.now(UTC))
+                    ref_dt and not item_dict["completed"] and not item_dict["dispensada"] and ref_dt < _format_datetime(datetime.now(UTC))
                 )
 
                 if include_progress:
@@ -343,12 +362,14 @@ def get_item_progress_stats(item_id, db_type=None, cursor=None):
                 SELECT id, completed
                 FROM checklist_items
                 WHERE parent_id = %s
+                  AND COALESCE(dispensada, FALSE) = FALSE
 
                 UNION ALL
 
                 SELECT ci.id, ci.completed
                 FROM checklist_items ci
                 INNER JOIN all_children ac ON ci.parent_id = ac.id
+                WHERE COALESCE(ci.dispensada, FALSE) = FALSE
             )
             SELECT
                 COUNT(*) as total,
@@ -374,12 +395,14 @@ def get_item_progress_stats(item_id, db_type=None, cursor=None):
                 SELECT id, completed
                 FROM checklist_items
                 WHERE parent_id = ?
+                  AND COALESCE(dispensada, 0) = 0
 
                 UNION ALL
 
                 SELECT ci.id, ci.completed
                 FROM checklist_items ci
                 INNER JOIN all_children ac ON ci.parent_id = ac.id
+                WHERE COALESCE(ci.dispensada, 0) = 0
             )
             SELECT
                 COUNT(*) as total,
@@ -419,10 +442,12 @@ def obter_progresso_global_service(implantacao_id):
                 SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END) as completed
             FROM checklist_items ci
             WHERE ci.implantacao_id = ?
+            AND COALESCE(ci.dispensada, 0) = 0
             AND NOT EXISTS (
                 SELECT 1 FROM checklist_items filho
                 WHERE filho.parent_id = ci.id
                 AND filho.implantacao_id = ?
+                AND COALESCE(filho.dispensada, 0) = 0
             )
         """
         res = query_db(progress_query, (implantacao_id, implantacao_id), one=True)
@@ -433,10 +458,12 @@ def obter_progresso_global_service(implantacao_id):
                 SUM(CASE WHEN completed THEN 1 ELSE 0 END) as completed
             FROM checklist_items ci
             WHERE ci.implantacao_id = %s
+            AND COALESCE(ci.dispensada, FALSE) = FALSE
             AND NOT EXISTS (
                 SELECT 1 FROM checklist_items filho
                 WHERE filho.parent_id = ci.id
                 AND filho.implantacao_id = %s
+                AND COALESCE(filho.dispensada, FALSE) = FALSE
             )
         """
         res = query_db(progress_query, (implantacao_id, implantacao_id), one=True)
@@ -447,5 +474,5 @@ def obter_progresso_global_service(implantacao_id):
         if total > 0:
             return round((completed / total) * 100, 2)
         else:
-            return 0.0
-    return 0.0
+            return 100.0
+    return 100.0

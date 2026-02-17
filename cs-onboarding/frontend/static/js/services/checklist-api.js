@@ -58,6 +58,17 @@ class ChecklistAPI {
     }
 
     /**
+     * Dispensa ou reativa um item
+     * @param {number} itemId - ID do item
+     * @param {boolean} dispensar - true para dispensar, false para reativar
+     * @param {string} motivo - Motivo (obrigatorio ao dispensar)
+     * @returns {Promise<Object>}
+     */
+    async dispenseItem(itemId, dispensar = true, motivo = '') {
+        return this.api.post(`/api/checklist/dispense/${itemId}`, { dispensar, motivo });
+    }
+
+    /**
      * Atualiza responsável de um item
      * @param {number} itemId - ID do item
      * @param {string} responsavel - Nome do responsável

@@ -146,23 +146,21 @@ class ChecklistRenderer {
 
     /**
      * Verifica se o usuário pode excluir itens
-     * Apenas gestores ou se o plano permitir explicitamente
+     * Controlado por permissao RBAC
      */
     canDeleteItems() {
         if (this.isHistoricoView) return false;
 
-        // Verificar se é gestor
+        // Permissao vem do backend via data attribute no template
         const mainContent = document.getElementById('main-content');
-        const isManager = mainContent?.dataset?.isManager === 'true';
+        return mainContent?.dataset?.canDeleteTask === 'true';
 
-        // Se for gestor, sempre pode excluir
-        if (isManager) {
-            return true;
-        }
+    }
 
-        // Verificar se o plano permite exclusão
-        const permiteExcluir = window.PLANO_PERMITE_EXCLUIR_TAREFAS || false;
-        return permiteExcluir;
+    canDispenseItems() {
+        if (this.isHistoricoView) return false;
+        const mainContent = document.getElementById('main-content');
+        return mainContent?.dataset?.canDispenseTask === 'true';
     }
 
     init() {
@@ -240,16 +238,16 @@ class ChecklistRenderer {
         });
     }
 
-    render() {
-        if (this.openComments.size > 0) {
+    render(force = false) {
+        if (!force && this.openComments.size > 0) {
             console.log('[ChecklistRenderer] render() blocked because comments are open');
             return;
         }
-        if (this.isInteracting) {
+        if (!force && this.isInteracting) {
             console.log('[ChecklistRenderer] render() blocked because isInteracting=true');
             return;
         }
-        if (this.container.contains(document.activeElement)) {
+        if (!force && this.container.contains(document.activeElement)) {
             console.log('[ChecklistRenderer] render() blocked because user has focus inside container');
             return;
         }
@@ -309,9 +307,13 @@ class ChecklistRenderer {
         const progressLabel = item.progress_label || null;
         const indentPx = Math.max(0, (item.level || 0) * 14);
 
-        const statusClass = item.completed ? 'bg-success' : 'bg-warning';
-        const statusText = item.completed ? 'Concluído' : 'Pendente';
-        const statusIcon = item.completed ? 'bi-check-circle-fill' : 'bi-clock-fill';
+        const isDispensed = !!item.dispensada;
+        const statusClass = isDispensed ? 'bg-secondary' : (item.completed ? 'bg-success' : 'bg-warning');
+        const statusText = isDispensed ? 'Dispensada' : (item.completed ? 'Concluído' : 'Pendente');
+        const statusIcon = isDispensed ? 'bi-slash-circle-fill' : (item.completed ? 'bi-check-circle-fill' : 'bi-clock-fill');
+        const statusTitle = isDispensed && item.motivo_dispensa
+            ? `Status: ${statusText} | Motivo: ${item.motivo_dispensa}`
+            : `Status: ${statusText}`;
 
         // Helper to escape HTML safely
         const escape = window.HtmlUtils ? window.HtmlUtils.escapeHtml : this.escapeHtml.bind(this);
@@ -331,11 +333,11 @@ class ChecklistRenderer {
                             ` : '<span class="btn-icon-placeholder" style="width: 24px;"></span>'}
                         </span>
                         <span class="col-checkbox d-flex align-items-center justify-content-center">
-                            <input type="checkbox" class="checklist-checkbox form-check-input" id="checklist-${item.id}" data-item-id="${item.id}" ${item.completed ? 'checked' : ''} ${this.isHistoricoView ? 'disabled' : ''} style="cursor: pointer; width: 18px; height: 18px;">
+                            <input type="checkbox" class="checklist-checkbox form-check-input" id="checklist-${item.id}" data-item-id="${item.id}" ${item.completed ? 'checked' : ''} ${(this.isHistoricoView || isDispensed) ? 'disabled' : ''} style="cursor: pointer; width: 18px; height: 18px;">
                         </span>
                         <span class="col-title d-flex align-items-center gap-2">
                             <span class="indent-spacer" style="display:inline-block; width: ${indentPx}px;"></span>
-                            <span class="checklist-item-title mb-0 js-toggle-comments-text" data-item-id="${item.id}" style="cursor: pointer; ${item.completed ? 'text-decoration: line-through; color: #6c757d;' : ''}">
+                            <span class="checklist-item-title mb-0 js-toggle-comments-text" data-item-id="${item.id}" style="cursor: pointer; ${(item.completed || isDispensed) ? 'text-decoration: line-through; color: #6c757d;' : ''}">
                                 ${escape(item.title)}
                             </span>
                         </span>
@@ -369,15 +371,15 @@ class ChecklistRenderer {
             }
                         </span>
                         <span class="col-conclusao">
-                            ${item.completed && item.data_conclusao ?
+                            ${item.completed && !isDispensed && item.data_conclusao ?
                 `<span class="badge badge-truncate bg-success text-white" id="badge-concl-${item.id}" title="Concluído em: ${item.data_conclusao}">${formatDate(item.data_conclusao)}</span>` :
                 `<span class="badge badge-truncate bg-success text-white d-none" id="badge-concl-${item.id}"></span>`
             }
                         </span>
                         <span class="col-status">
-                            <span class="badge badge-truncate ${statusClass}" id="status-badge-${item.id}" title="Status: ${statusText}">
+                            <span class="badge badge-truncate ${statusClass}" id="status-badge-${item.id}" title="${statusTitle}">
                                 <i class="bi ${statusIcon} me-1"></i>${statusText}
-                                ${item.atrasada ? '<i class="bi bi-exclamation-triangle-fill"></i>' : ''}
+                                ${(item.atrasada && !isDispensed) ? '<i class="bi bi-exclamation-triangle-fill"></i>' : ''}
                             </span>
                         </span>
                         
@@ -390,6 +392,8 @@ class ChecklistRenderer {
                         </span>
                         <span class="col-delete d-flex align-items-center">
                              <button class="btn-icon btn-move-item p-1 border-0 bg-transparent drag-handle" data-item-id="${item.id}" title="Arrastar para mover"><i class="bi bi-grip-vertical text-secondary"></i></button>
+                             ${this.canDispenseItems() && !isDispensed ? `<button class="btn-icon btn-dispense-item p-1 border-0 bg-transparent" data-item-id="${item.id}" title="Dispensar tarefa"><i class="bi bi-eye-slash text-warning"></i></button>` : ''}
+                             ${this.canDispenseItems() && isDispensed ? `<button class="btn-icon btn-undispense-item p-1 border-0 bg-transparent" data-item-id="${item.id}" title="Reativar tarefa"><i class="bi bi-arrow-counterclockwise text-secondary"></i></button>` : ''}
                              ${this.canDeleteItems() ? `<button class="btn-icon btn-delete-item p-1 border-0 bg-transparent" data-item-id="${item.id}" title="Excluir tarefa"><i class="bi bi-trash text-danger"></i></button>` : ''}
                         </span>
                     </div>
@@ -521,13 +525,15 @@ class ChecklistRenderer {
                 else if (e.target.closest('.js-edit-prev')) {
                     const itemId = parseInt(e.target.closest('.js-edit-prev').dataset.itemId);
                     const node = this.flatData[itemId];
-                    if (node.completed || node.data_conclusao) {
-                        this.showToast('Tarefa concluída: não é possível adicionar previsão', 'warning');
+                    if (node.completed || node.data_conclusao || node.dispensada) {
+                        this.showToast('Tarefa concluída ou dispensada: não é possível adicionar previsão', 'warning');
                     } else {
                         this.openPrevModal(itemId);
                     }
                 }
                 else if (e.target.closest('.js-edit-tag')) this.openTagModal(parseInt(e.target.closest('.js-edit-tag').dataset.itemId));
+                else if (e.target.closest('.btn-dispense-item')) this.setDispense(parseInt(e.target.closest('.btn-dispense-item').dataset.itemId), true);
+                else if (e.target.closest('.btn-undispense-item')) this.setDispense(parseInt(e.target.closest('.btn-undispense-item').dataset.itemId), false);
                 else if (e.target.closest('.btn-delete-item')) this.deleteItem(parseInt(e.target.closest('.btn-delete-item').dataset.itemId));
             },
             tagsChange: (e) => {
@@ -633,6 +639,11 @@ class ChecklistRenderer {
     // Check Logic (Propagation)
     async handleCheck(itemId, completed) {
         if (this.isLoading) return;
+        if (this.flatData[itemId]?.dispensada) {
+            if (window.showToast) window.showToast('Tarefa dispensada. Reative-a para alterar o status.', 'warning');
+            this.updateItemUI(itemId);
+            return;
+        }
         this.isLoading = true;
 
         // Optimistic UI
@@ -700,29 +711,39 @@ class ChecklistRenderer {
         if (!node) return;
         const itemEl = this.container.querySelector(`.checklist-item[data-item-id="${itemId}"]`);
         if (!itemEl) return;
+        const isDispensed = !!node.dispensada;
 
         // Checkbox
         const cb = itemEl.querySelector(`#checklist-${itemId}`);
-        if (cb && cb.checked !== node.completed) cb.checked = node.completed;
+        if (cb) {
+            if (cb.checked !== node.completed) cb.checked = node.completed;
+            cb.disabled = isDispensed || this.isHistoricoView;
+        }
 
         // Title
         const title = itemEl.querySelector('.checklist-item-title');
         if (title) {
-            title.style.textDecoration = node.completed ? 'line-through' : 'none';
-            title.style.color = node.completed ? '#6c757d' : '';
+            title.style.textDecoration = (node.completed || isDispensed) ? 'line-through' : 'none';
+            title.style.color = (node.completed || isDispensed) ? '#6c757d' : '';
         }
 
         // Status Badge
         const badge = itemEl.querySelector(`#status-badge-${itemId}`);
         if (badge) {
-            badge.className = `badge badge-truncate ${node.completed ? 'bg-success' : 'bg-warning'}`;
-            badge.innerHTML = `<i class="bi ${node.completed ? 'bi-check-circle-fill' : 'bi-clock-fill'} me-1"></i>${node.completed ? 'Concluído' : 'Pendente'}`;
+            const statusClass = isDispensed ? 'bg-secondary' : (node.completed ? 'bg-success' : 'bg-warning');
+            const statusIcon = isDispensed ? 'bi-slash-circle-fill' : (node.completed ? 'bi-check-circle-fill' : 'bi-clock-fill');
+            const statusText = isDispensed ? 'Dispensada' : (node.completed ? 'Concluído' : 'Pendente');
+            badge.className = `badge badge-truncate ${statusClass}`;
+            badge.innerHTML = `<i class="bi ${statusIcon} me-1"></i>${statusText}`;
+            badge.title = isDispensed && node.motivo_dispensa
+                ? `Status: ${statusText} | Motivo: ${node.motivo_dispensa}`
+                : `Status: ${statusText}`;
         }
 
         // Conclusion Badge
         const conBadge = itemEl.querySelector(`#badge-concl-${itemId}`);
         if (conBadge) {
-            if (node.completed && node.data_conclusao) {
+            if (node.completed && !isDispensed && node.data_conclusao) {
                 const formatDate = window.DateUtils ? window.DateUtils.formatDate : this.formatDate.bind(this);
                 conBadge.textContent = formatDate(node.data_conclusao);
                 conBadge.title = `Concluído em: ${node.data_conclusao}`;
@@ -766,14 +787,18 @@ class ChecklistRenderer {
         const qtdCol = itemEl.querySelector('.col-qtd');
         if (qtdCol) {
             if (node.childrenIds && node.childrenIds.length > 0) {
-                const total = node.childrenIds.length;
-                const completedCount = node.childrenIds.filter(cid => this.flatData[cid] && this.flatData[cid].completed).length;
+                const activeChildren = node.childrenIds
+                    .map(cid => this.flatData[cid])
+                    .filter(child => child && !child.dispensada);
+                const total = activeChildren.length;
+                const completedCount = activeChildren.filter(child => child.completed).length;
                 const progressLabel = `${completedCount}/${total}`;
 
                 // Update flatData for consistency
                 node.progress_label = progressLabel;
-
-                qtdCol.innerHTML = `<span class="checklist-progress-badge badge badge-truncate bg-light text-dark">${progressLabel}</span>`;
+                qtdCol.innerHTML = total > 0
+                    ? `<span class="checklist-progress-badge badge badge-truncate bg-light text-dark">${progressLabel}</span>`
+                    : '';
             } else {
                 qtdCol.innerHTML = '';
             }
@@ -783,7 +808,7 @@ class ChecklistRenderer {
     updateProgressFromLocalData() {
         let total = 0, completed = 0;
         Object.values(this.flatData).forEach(item => {
-            if (!item.childrenIds || item.childrenIds.length === 0) {
+            if ((!item.childrenIds || item.childrenIds.length === 0) && !item.dispensada) {
                 total++;
                 if (item.completed) completed++;
             }
@@ -998,6 +1023,98 @@ class ChecklistRenderer {
         m.show();
     }
 
+    async setDispense(itemId, dispensar) {
+        if (!this.service) return;
+
+        let motivo = '';
+        if (dispensar) {
+            const promptValue = await this.openDispenseReasonModal(itemId);
+            if (promptValue === null) return;
+            motivo = promptValue;
+        }
+
+        const result = await this.service.dispenseItem(itemId, dispensar, motivo.trim());
+        if (result.success) {
+            await this.reloadChecklist();
+            if (window.reloadTimeline) window.reloadTimeline();
+        } else if (!result.cancelled && window.showToast) {
+            window.showToast(result.error || 'Erro ao alterar dispensa da tarefa', 'error');
+        }
+    }
+
+    openDispenseReasonModal(itemId) {
+        return new Promise((resolve) => {
+            let modal = document.getElementById('dispense-reason-modal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'dispense-reason-modal';
+                modal.className = 'modal fade';
+                modal.setAttribute('tabindex', '-1');
+                modal.innerHTML = `
+                <div class="modal-dialog">
+                  <div class="modal-content">
+                    <div class="modal-header">
+                      <h5 class="modal-title">Dispensar Tarefa</h5>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                      <label class="form-label" for="dispense-reason-input">Informe o motivo da dispensa</label>
+                      <input type="text" class="form-control" id="dispense-reason-input" maxlength="255" />
+                      <div class="form-text">Esse motivo fica registrado no plano e no histórico.</div>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                      <button type="button" class="btn btn-warning" id="dispense-reason-save">Dispensar</button>
+                    </div>
+                  </div>
+                </div>`;
+                document.body.appendChild(modal);
+            }
+
+            const input = modal.querySelector('#dispense-reason-input');
+            const saveBtn = modal.querySelector('#dispense-reason-save');
+            const title = modal.querySelector('.modal-title');
+            const itemTitle = (this.flatData[itemId]?.title || '').trim();
+            title.textContent = itemTitle ? `Dispensar: ${itemTitle}` : 'Dispensar Tarefa';
+
+            input.value = '';
+            input.classList.remove('is-invalid');
+
+            const bsModal = bootstrap.Modal.getOrCreateInstance(modal);
+            let settled = false;
+
+            const finalize = (value) => {
+                if (settled) return;
+                settled = true;
+                modal.removeEventListener('hidden.bs.modal', onHidden);
+                saveBtn.removeEventListener('click', onSave);
+                resolve(value);
+            };
+
+            const onHidden = () => finalize(null);
+
+            const onSave = () => {
+                const value = (input.value || '').trim();
+                if (!value) {
+                    input.classList.add('is-invalid');
+                    if (window.showToast) window.showToast('Motivo da dispensa é obrigatório.', 'warning');
+                    input.focus();
+                    return;
+                }
+                finalize(value);
+                bsModal.hide();
+            };
+
+            modal.addEventListener('hidden.bs.modal', onHidden);
+            saveBtn.addEventListener('click', onSave);
+            bsModal.show();
+
+            setTimeout(() => {
+                if (!settled) input.focus();
+            }, 120);
+        });
+    }
+
     // Logic for deletes
     async deleteItem(itemId) {
         if (this.service) {
@@ -1023,7 +1140,7 @@ class ChecklistRenderer {
                 this.data = result.items;
                 this.flatData = {};
                 this.buildFlatData(this.data);
-                this.render();
+                this.render(true);
                 // Opcional: manter estado expandido
                 this.expandedItems.forEach(id => this.updateExpandedState(id));
                 this.updateProgressFromLocalData();

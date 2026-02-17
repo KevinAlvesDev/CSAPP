@@ -102,10 +102,12 @@ def _get_progress_optimized(impl_id):
                     SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END) as done
                 FROM checklist_items ci
                 WHERE ci.implantacao_id = ?
+                AND COALESCE(ci.dispensada, 0) = 0
                 AND NOT EXISTS (
                     SELECT 1 FROM checklist_items filho
                     WHERE filho.parent_id = ci.id
                     AND filho.implantacao_id = ?
+                    AND COALESCE(filho.dispensada, 0) = 0
                 )
             """
             result = query_db(query, (impl_id, impl_id), one=True) or {}
@@ -119,10 +121,12 @@ def _get_progress_optimized(impl_id):
                     SUM(CASE WHEN completed THEN 1 ELSE 0 END) as done
                 FROM checklist_items ci
                 WHERE ci.implantacao_id = %s
+                AND COALESCE(ci.dispensada, FALSE) = FALSE
                 AND NOT EXISTS (
                     SELECT 1 FROM checklist_items filho
                     WHERE filho.parent_id = ci.id
                     AND filho.implantacao_id = %s
+                    AND COALESCE(filho.dispensada, FALSE) = FALSE
                 )
             """
             result = query_db(query, (impl_id, impl_id), one=True) or {}
@@ -142,6 +146,7 @@ def _get_progress_optimized(impl_id):
                             SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END) as done
                         FROM checklist_items
                         WHERE implantacao_id = ?
+                        AND COALESCE(dispensada, 0) = 0
                     """
                     fallback_result = query_db(fallback_query, (impl_id,), one=True) or {}
                 else:
@@ -151,6 +156,7 @@ def _get_progress_optimized(impl_id):
                             SUM(CASE WHEN completed THEN 1 ELSE 0 END) as done
                         FROM checklist_items
                         WHERE implantacao_id = %s
+                        AND COALESCE(dispensada, FALSE) = FALSE
                     """
                     fallback_result = query_db(fallback_query, (impl_id,), one=True) or {}
 
@@ -180,7 +186,7 @@ def _get_progress_legacy(impl_id):
                 """
             SELECT COUNT(*) as total, SUM(CASE WHEN completed THEN 1 ELSE 0 END) as done
             FROM checklist_items
-            WHERE implantacao_id = %s AND tipo_item = 'subtarefa'
+            WHERE implantacao_id = %s AND tipo_item = 'subtarefa' AND COALESCE(dispensada, FALSE) = FALSE
             """,
                 (impl_id,),
                 one=True,
@@ -196,10 +202,12 @@ def _get_progress_legacy(impl_id):
             FROM checklist_items ci
             WHERE ci.implantacao_id = %s
             AND ci.tipo_item = 'tarefa'
+            AND COALESCE(ci.dispensada, FALSE) = FALSE
             AND NOT EXISTS (
                 SELECT 1 FROM checklist_items s
                 WHERE s.parent_id = ci.id
                 AND s.tipo_item = 'subtarefa'
+                AND COALESCE(s.dispensada, FALSE) = FALSE
             )
             """,
                 (impl_id,),

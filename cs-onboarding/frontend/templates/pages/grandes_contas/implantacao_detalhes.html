@@ -14,7 +14,9 @@
 <div class="container-fluid p-4 content-wrapper" id="main-content" data-context="grandes_contas"
     data-implantacao-id="{{ implantacao.id }}" data-email-usuario-logado="{{ email_usuario_logado }}"
     data-email-responsavel="{{ implantacao.email_responsavel or '' }}"
-    data-is-manager="{{ 'true' if g.perfil and g.perfil.get('perfil_acesso') in ['Administrador', 'Gerente', 'Coordenador'] else 'false' }}">
+    data-is-manager="{{ 'true' if g.perfil and g.perfil.get('perfil_acesso') in ['Administrador', 'Gerente', 'Coordenador'] else 'false' }}"
+    data-can-delete-task="{{ 'true' if can_delete_tasks else 'false' }}"
+    data-can-dispense-task="{{ 'true' if can_dispense_tasks else 'false' }}">
 
     <header class="header-bg p-3 d-flex align-items-center position-relative rounded-3 mb-4">
         <h1 class="main-title mb-0 fs-4 w-100 text-center">Detalhes da Implantação (Grandes Contas)</h1>

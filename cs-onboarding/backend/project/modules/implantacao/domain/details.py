@@ -570,6 +570,18 @@ def get_implantacao_details(
     except Exception as e:
         logger.warning(f"Erro ao buscar lista de planos da implantação {impl_id}: {e}")
 
+    can_delete_tasks = bool(is_manager)
+    can_dispense_tasks = bool(is_manager)
+    try:
+        from ....modules.perfis.application.perfis_service import verificar_permissao
+
+        perfil_id = user_perfil.get("id") if isinstance(user_perfil, dict) else None
+        if perfil_id:
+            can_delete_tasks = can_delete_tasks or verificar_permissao(perfil_id, "checklist.delete")
+            can_dispense_tasks = can_dispense_tasks or verificar_permissao(perfil_id, "checklist.dispense")
+    except Exception as e:
+        logger.warning(f"Erro ao verificar permissões de checklist da implantação {impl_id}: {e}")
+
     return {
         "user_info": user_info,
         "implantacao": implantacao,
@@ -596,6 +608,8 @@ def get_implantacao_details(
         "SIM_NAO_OPTIONS": SIM_NAO_OPTIONS,
         "all_cs_users": all_cs_users,
         "is_manager": is_manager,
+        "can_delete_tasks": can_delete_tasks,
+        "can_dispense_tasks": can_dispense_tasks,
         "is_owner": implantacao.get("usuario_cs") == usuario_cs_email,
         "tt": TASK_TIPS,
         "plano_sucesso": plano_sucesso_info,

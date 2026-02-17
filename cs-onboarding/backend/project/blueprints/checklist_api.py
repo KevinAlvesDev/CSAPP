@@ -26,7 +26,7 @@ from ..modules.checklist.application.checklist_service import (
     obter_historico_prazos,
     obter_historico_responsavel,
     obter_progresso_global_service,
-    plano_permite_excluir_tarefas,
+    set_item_dispensa,
     toggle_item_status,
     update_comment_service,
     update_item_responsavel,
@@ -468,14 +468,12 @@ def delete_item(item_id: int):
     from ..constants import PERFIS_COM_GESTAO
     from ..modules.perfis.application.perfis_service import verificar_permissao
 
-    perfil_id = g.perfil["id"] if g.perfil else None
+    perfil_id = g.perfil.get("id") if isinstance(g.perfil, dict) else None
     tem_permissao_excluir = verificar_permissao(perfil_id, "checklist.delete")
 
     is_manager = g.perfil and g.perfil.get("perfil_acesso") in PERFIS_COM_GESTAO
 
-    plano_permite_excluir = plano_permite_excluir_tarefas(item_id)
-
-    if not is_manager and not tem_permissao_excluir and not plano_permite_excluir:
+    if not is_manager and not tem_permissao_excluir:
         return jsonify({"ok": False, "error": "Você não tem permissão para excluir tarefas."}), 403
 
     try:
@@ -491,6 +489,53 @@ def delete_item(item_id: int):
     except Exception as e:
         api_logger.error(f"Erro ao excluir item {item_id}: {e}", exc_info=True)
         return jsonify({"ok": False, "error": f"Erro interno ao excluir item: {e}"}), 500
+
+
+@checklist_bp.route("/dispense/<int:item_id>", methods=["POST"])
+@login_required
+@validate_api_origin
+@validate_context_access(id_param="item_id", entity_type="checklist_item")
+@limiter.limit("80 per minute", key_func=lambda: g.user_email or get_remote_address())
+def dispense_item(item_id: int):
+    """
+    Dispensa (ou reativa) item do checklist sem excluir.
+    Body JSON:
+      - dispensar: bool (default true)
+      - motivo: string (obrigatorio quando dispensar=true)
+    """
+    from ..constants import PERFIS_COM_GESTAO
+    from ..modules.perfis.application.perfis_service import verificar_permissao
+
+    try:
+        item_id = validate_integer(item_id, min_value=1)
+    except ValidationError as e:
+        return jsonify({"ok": False, "error": f"ID inválido: {e!s}"}), 400
+
+    data = request.get_json(silent=True) or {}
+    dispensar = bool(data.get("dispensar", True))
+    motivo = (data.get("motivo") or "").strip()
+
+    perfil_id = g.perfil.get("id") if isinstance(g.perfil, dict) else None
+    is_manager = g.perfil and g.perfil.get("perfil_acesso") in PERFIS_COM_GESTAO
+    tem_permissao_dispensar = verificar_permissao(perfil_id, "checklist.dispense")
+
+    if not is_manager and not tem_permissao_dispensar:
+        return jsonify({"ok": False, "error": "Você não tem permissão para dispensar tarefas."}), 403
+
+    try:
+        result = set_item_dispensa(
+            item_id=item_id,
+            dispensar=dispensar,
+            motivo=motivo,
+            usuario_email=g.user_email,
+            is_manager=is_manager,
+        )
+        return jsonify(result)
+    except ValueError as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
+    except Exception as e:
+        api_logger.error(f"Erro ao dispensar/reativar item {item_id}: {e}", exc_info=True)
+        return jsonify({"ok": False, "error": "Erro interno ao dispensar tarefa"}), 500
 
 
 @checklist_bp.route("/tree", methods=["GET"])

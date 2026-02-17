@@ -74,11 +74,12 @@ def dashboard():
     start_date = _arg_or_saved("start_date")
     end_date = _arg_or_saved("end_date")
     date_type_param = _arg_or_saved("date_type")
+    date_type_request_param = request.args.get("date_type")
     date_type = date_type_param or "criacao"
     if date_type not in ["criacao", "inicio", "finalizacao", "parada", "cancelamento"]:
         date_type = "criacao"
     if (
-        date_type_param is not None
+        date_type_request_param is not None
         and date_type in ["criacao", "inicio"]
         and not (start_date or end_date)
     ):
