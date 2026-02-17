@@ -306,6 +306,86 @@ def get_implantacao_details(
         logger.error(f"Erro ao carregar lista de CS users: {e}", exc_info=True)
         all_cs_users = []
 
+    # Tentativa de auto-relink: se a implantação perdeu o plano_sucesso_id,
+    # mas ainda existe uma instância em andamento para processo_id.
+    if not plano_historico_id and not implantacao.get("plano_sucesso_id"):
+        try:
+            plano_atual = query_db(
+                """
+                SELECT id
+                FROM planos_sucesso
+                WHERE processo_id = %s AND status = 'em_andamento'
+                ORDER BY data_criacao DESC, id DESC
+                LIMIT 1
+                """,
+                (impl_id,),
+                one=True,
+            )
+            if plano_atual and plano_atual.get("id"):
+                from ....db import db_connection
+
+                with db_connection() as (conn, db_type):
+                    cursor = conn.cursor()
+                    sql_update = "UPDATE implantacoes SET plano_sucesso_id = %s WHERE id = %s"
+                    if db_type == "sqlite":
+                        sql_update = sql_update.replace("%s", "?")
+                    cursor.execute(sql_update, (plano_atual["id"], impl_id))
+                    conn.commit()
+                implantacao["plano_sucesso_id"] = plano_atual["id"]
+                logger.warning(
+                    f"Implantação {impl_id} estava sem plano_sucesso_id. Relink automático para plano {plano_atual['id']}."
+                )
+        except Exception as e:
+            logger.warning(f"Falha ao tentar relink automático do plano da implantação {impl_id}: {e}")
+
+    # Auto-correção: se implantação aponta para template (processo_id NULL),
+    # criar/relincar instância de plano em andamento.
+    if not plano_historico_id and implantacao.get("plano_sucesso_id"):
+        try:
+            plano_atual = query_db(
+                "SELECT id, processo_id, status FROM planos_sucesso WHERE id = %s",
+                (implantacao["plano_sucesso_id"],),
+                one=True,
+            )
+            if plano_atual and plano_atual.get("processo_id") is None:
+                # procurar instância existente
+                instancia = query_db(
+                    """
+                    SELECT id
+                    FROM planos_sucesso
+                    WHERE processo_id = %s AND status = 'em_andamento'
+                    ORDER BY data_criacao DESC, id DESC
+                    LIMIT 1
+                    """,
+                    (impl_id,),
+                    one=True,
+                )
+                if not instancia:
+                    from ....modules.planos.domain.aplicar import criar_instancia_plano_para_implantacao
+
+                    novo_id = criar_instancia_plano_para_implantacao(
+                        plano_id=plano_atual["id"],
+                        implantacao_id=impl_id,
+                        usuario=usuario_cs_email or "sistema",
+                    )
+                    instancia = {"id": novo_id}
+
+                from ....db import db_connection
+
+                with db_connection() as (conn, db_type):
+                    cursor = conn.cursor()
+                    sql_update = "UPDATE implantacoes SET plano_sucesso_id = %s WHERE id = %s"
+                    if db_type == "sqlite":
+                        sql_update = sql_update.replace("%s", "?")
+                    cursor.execute(sql_update, (instancia["id"], impl_id))
+                    conn.commit()
+                implantacao["plano_sucesso_id"] = instancia["id"]
+                logger.warning(
+                    f"Implantação {impl_id} apontava para template. Relink automático para plano {instancia['id']}."
+                )
+        except Exception as e:
+            logger.warning(f"Falha ao auto-corrigir plano da implantação {impl_id}: {e}")
+
     success_plan_id = plano_historico_id or implantacao.get("plano_sucesso_id")
 
     plano_sucesso_info = None

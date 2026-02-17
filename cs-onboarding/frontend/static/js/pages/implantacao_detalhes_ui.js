@@ -64,12 +64,12 @@
       locale: {
         firstDayOfWeek: 1,
         weekdays: {
-          shorthand: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'SÃ¡b'],
-          longhand: ['Domingo', 'Segunda-feira', 'TerÃ§a-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'SÃ¡bado']
+          shorthand: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
+          longhand: ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']
         },
         months: {
           shorthand: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
-          longhand: ['Janeiro', 'Fevereiro', 'MarÃ§o', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+          longhand: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
         }
       }
     };
@@ -109,7 +109,7 @@
     }
 
     // =========================================================================
-    // Global Comments Logic (New "ComentÃ¡rios" Tab)
+    // Global Comments Logic (New "Comentários" Tab)
     // =========================================================================
     let globalCommentsState = {
       page: 1,
@@ -121,7 +121,7 @@
     const commentsTabBtn = document.getElementById('comments-tab');
     if (commentsTabBtn) {
       commentsTabBtn.addEventListener('shown.bs.tab', function (e) {
-        // Sempre recarrega os comentÃ¡rios quando a aba Ã© exibida
+        // Sempre recarrega os comentários quando a aba é exibida
         resetGlobalComments();
         carregarComentariosGerais();
       });
@@ -223,8 +223,8 @@
         }
 
       } catch (error) {
-        console.error('Erro ao carregar comentÃ¡rios gerais:', error);
-        showToast('Erro ao carregar comentÃ¡rios. Tente novamente.', 'error');
+        console.error('Erro ao carregar comentários gerais:', error);
+        showToast('Erro ao carregar comentários. Tente novamente.', 'error');
         if (!append && loadingEl) loadingEl.classList.add('d-none');
       } finally {
         globalCommentsState.isLoading = false;
@@ -248,8 +248,8 @@
           // Fallbacks
           let bg = 'bg-secondary';
           let icon = 'bi-tag-fill';
-          if (c.tag === 'Ação interna' || c.tag === 'AÃ§Ã£o interna') { bg = 'bg-primary'; icon = 'bi-briefcase'; }
-          else if (c.tag === 'Reunião' || c.tag === 'ReuniÃ£o') { bg = 'bg-danger'; icon = 'bi-calendar-event'; }
+          if (c.tag === 'Ação interna' || c.tag === 'Ação interna') { bg = 'bg-primary'; icon = 'bi-briefcase'; }
+          else if (c.tag === 'Reunião' || c.tag === 'Reunião') { bg = 'bg-danger'; icon = 'bi-calendar-event'; }
           else if (c.tag === 'No Show') { bg = 'bg-warning text-dark'; icon = 'bi-calendar-x'; }
           tagBadge = `<span class="badge rounded-pill ${bg}" style="font-size: 0.65rem;"><i class="bi ${icon}"></i> ${c.tag}</span>`;
         } else if (c.noshow) {
@@ -263,7 +263,7 @@
                  <div class="d-flex flex-column">
                     <div class="d-flex align-items-center gap-2">
                         <span class="fw-bold text-dark">
-                            <i class="bi bi-person-circle me-1 text-secondary"></i>${escapeHtml(c.usuario_nome || c.usuario_cs || 'UsuÃ¡rio')}
+                            <i class="bi bi-person-circle me-1 text-secondary"></i>${escapeHtml(c.usuario_nome || c.usuario_cs || 'Usuário')}
                         </span>
                         <span class="badge ${c.visibilidade === 'externo' ? 'bg-warning text-dark' : 'bg-primary text-white'} rounded-pill" style="font-size: 0.65rem;">
                             ${c.visibilidade === 'externo' ? 'Externo' : 'Interno'}
@@ -330,7 +330,7 @@
               }
             }, 200);
           } else {
-            showToast('Tarefa nÃ£o encontrada na visualizaÃ§Ã£o atual.', 'warning');
+            showToast('Tarefa não encontrada na visualização atual.', 'warning');
           }
         });
       });
@@ -357,7 +357,7 @@
         if (input.classList.contains('date-mask') && window.IMask) {
           config.onReady = function (selectedDates, dateStr, instance) {
             if (instance.altInput) {
-              // Aplica a mÃ¡scara ao input visÃ­vel (altInput)
+              // Aplica a máscara ao input visível (altInput)
               const mask = IMask(instance.altInput, {
                 mask: Date,
                 pattern: 'd/`m/`Y',
@@ -381,7 +381,7 @@
                 }
               });
 
-              // Sincronizar alteraÃ§Ãµes manuais na mÃ¡scara com o Flatpickr
+              // Sincronizar alterações manuais na máscara com o Flatpickr
               mask.on('accept', function () {
                 if (mask.masked.isComplete) {
                   instance.setDate(mask.value, true, 'd/m/Y');
@@ -405,34 +405,34 @@
       document.querySelectorAll('button[id^="btn_cal_"], button[id^="btn-cal-"], button[id*="cal-"], button[data-toggle]').forEach(btn => {
         btn.addEventListener('click', (e) => {
           e.preventDefault();
-          const target = btn.previousElementSibling; // Assumindo que o input estÃ¡ imediatamente antes do botÃ£o (estrutura input-group)
-          // No DOM final do flatpickr (com altInput), a estrutura Ã©:
+          const target = btn.previousElementSibling; // Assumindo que o input está imediatamente antes do botão (estrutura input-group)
+          // No DOM final do flatpickr (com altInput), a estrutura é:
           // input[hidden], input[text].form-control, button
-          // Portanto, previousElementSibling do botÃ£o Ã© o altInput.
+          // Portanto, previousElementSibling do botão é o altInput.
           // Mas o target para inicializar flatpickr deve ser o input original.
 
-          // Se o flatpickr jÃ¡ estiver inicializado no input original (que pode estar oculto antes do altInput)
-          // O input original geralmente Ã© acessÃ­vel.
-          // Vamos verificar se o elemento anterior tem a instÃ¢ncia _flatpickr.
+          // Se o flatpickr já estiver inicializado no input original (que pode estar oculto antes do altInput)
+          // O input original geralmente é acessível.
+          // Vamos verificar se o elemento anterior tem a instância _flatpickr.
 
-          // Caso altInput esteja presente, o DOM Ã©:
+          // Caso altInput esteja presente, o DOM é:
           // <input type="hidden" ...> (original)
           // <input type="text" ...> (altInput)
           // <button ...>
 
-          // O previousElementSibling do botÃ£o Ã© o altInput.
-          // O altInput nÃ£o tem a propriedade _flatpickr, mas podemos acessÃ¡-lo?
-          // NÃ£o diretamente.
+          // O previousElementSibling do botão é o altInput.
+          // O altInput não tem a propriedade _flatpickr, mas podemos acessá-lo?
+          // Não diretamente.
 
-          // Mas se jÃ¡ foi inicializado, podemos buscar a instÃ¢ncia flatpickr associada.
+          // Mas se já foi inicializado, podemos buscar a instância flatpickr associada.
 
           // Se target for o altInput, precisamos achar o original?
-          // Na verdade, se jÃ¡ estÃ¡ inicializado, podemos apenas chamar open() na instÃ¢ncia.
+          // Na verdade, se já está inicializado, podemos apenas chamar open() na instância.
 
           // Vamos tentar encontrar o input original.
           let inputOriginal = target;
 
-          // Se o target for o altInput (nÃ£o tem a classe original custom-datepicker se o flatpickr moveu as classes, mas geralmente copia)
+          // Se o target for o altInput (não tem a classe original custom-datepicker se o flatpickr moveu as classes, mas geralmente copia)
           // Mas o _flatpickr fica no elemento original.
 
           // Melhor abordagem: procurar o input com a classe custom-datepicker dentro do mesmo parent node.
@@ -442,7 +442,7 @@
           if (originalInput && originalInput._flatpickr) {
             originalInput._flatpickr.open();
           } else if (target && target.classList.contains('custom-datepicker')) {
-            // Fallback se nÃ£o estiver inicializado (ex: dinamicamente)
+            // Fallback se não estiver inicializado (ex: dinamicamente)
             const fp = window.flatpickr(target, Object.assign({}, baseConfig));
             fp.open();
           }
@@ -674,7 +674,7 @@
             .then(response => response.json())
             .then(data => {
               if (data.error || !data.ok) {
-                showToast(data.error || data.message || 'Erro ao processar requisiÃ§Ã£o.', 'error');
+                showToast(data.error || data.message || 'Erro ao processar requisição.', 'error');
               } else {
                 showToast(data.message || 'Cancelamento desfeito com sucesso!', 'success');
                 setTimeout(() => location.reload(), 1200);
@@ -690,7 +690,7 @@
 
 
 
-    // NavegaÃ§Ã£o entre abas (Timeline -> ComentÃ¡rios / Plano)
+    // Navegação entre abas (Timeline -> Comentários / Plano)
       function activateTab(targetId) {
         if (!window.bootstrap) return;
         const triggerEl = document.querySelector(`[data-bs-target="${targetId}"]`);
@@ -789,7 +789,7 @@
             btnEmail.disabled = true;
             btnEmail.classList.add('btn-secondary');
             btnEmail.classList.remove('btn-primary');
-            btnEmail.title = 'Email do responsÃ¡vel nÃ£o cadastrado. Acesse "Editar Detalhes" para adicionar.';
+            btnEmail.title = 'Email do responsável não cadastrado. Acesse "Editar Detalhes" para adicionar.';
             btnEmail.setAttribute('data-bs-toggle', 'tooltip');
             btnEmail.setAttribute('data-bs-placement', 'top');
 
@@ -930,7 +930,7 @@
         let actions = '';
         const m = /Item\s+(\d+)/.exec(log.detalhes || '');
         const itemId = m ? parseInt(m[1], 10) : null;
-        if (t === 'novo_comentario' && itemId) actions += `<button class="btn btn-sm btn-outline-primary timeline-action-comments" data-item-id="${itemId}">Ver comentÃ¡rios</button>`;
+        if (t === 'novo_comentario' && itemId) actions += `<button class="btn btn-sm btn-outline-primary timeline-action-comments" data-item-id="${itemId}">Ver comentários</button>`;
         return `
           <li class="timeline-item">
             <div class="timeline-icon"><i class="bi ${icon}"></i></div>
@@ -1006,7 +1006,7 @@
       let actions = '';
       const m = /Item\s+(\d+)/.exec(detalhes || '');
       const itemId = m ? parseInt(m[1], 10) : null;
-      if (t === 'novo_comentario' && itemId) actions += `<button class="btn btn-sm btn-outline-primary timeline-action-comments" data-item-id="${itemId}">Ver comentÃ¡rios</button>`;
+      if (t === 'novo_comentario' && itemId) actions += `<button class="btn btn-sm btn-outline-primary timeline-action-comments" data-item-id="${itemId}">Ver comentários</button>`;
       const usuario = (window.CONFIG && window.CONFIG.emailUsuarioLogado) ? window.CONFIG.emailUsuarioLogado : '';
       const li = document.createElement('li');
       li.className = 'timeline-item';
@@ -1160,7 +1160,7 @@
           const data = await resp.json();
           if (data && data.ok) {
             showToast('Detalhes atualizados', 'success');
-            // permanece no modal; opcionalmente, reativar botÃ£o salvar
+            // permanece no modal; opcionalmente, reativar botão salvar
           } else {
             showToast('Erro ao salvar detalhes', 'error');
           }
@@ -1177,8 +1177,8 @@
 
       const comentarioId = targetBtn.dataset.comentarioId;
       const confirmed = await showConfirm({
-        title: 'Excluir ComentÃ¡rio',
-        message: 'Tem certeza que deseja excluir este comentÃ¡rio? Esta aÃ§Ã£o nÃ£o pode ser desfeita.',
+        title: 'Excluir Comentário',
+        message: 'Tem certeza que deseja excluir este comentário? Esta ação não pode ser desfeita.',
         confirmText: 'Excluir',
         cancelText: 'Cancelar',
         type: 'danger',
@@ -1198,7 +1198,7 @@
 
         if (!response.ok) {
           const errorText = await response.text();
-          showToast('Erro ao excluir comentÃ¡rio: ' + (errorText || `Status ${response.status}`), 'error');
+          showToast('Erro ao excluir comentário: ' + (errorText || `Status ${response.status}`), 'error');
           return;
         }
 
@@ -1206,7 +1206,7 @@
         if (contentType.includes('application/json')) {
           const data = await response.json();
           if (!data.ok && !data.success) {
-            showToast('Erro ao excluir comentÃ¡rio: ' + (data.error || 'Erro desconhecido'), 'error');
+            showToast('Erro ao excluir comentário: ' + (data.error || 'Erro desconhecido'), 'error');
             return;
           }
         } else if (!contentType.includes('text/html')) {
@@ -1214,7 +1214,7 @@
             const text = await response.text();
             const data = JSON.parse(text);
             if (!data.ok && !data.success) {
-              showToast('Erro ao excluir comentÃ¡rio: ' + (data.error || 'Erro desconhecido'), 'error');
+              showToast('Erro ao excluir comentário: ' + (data.error || 'Erro desconhecido'), 'error');
               return;
             }
           } catch (err) {
@@ -1228,7 +1228,7 @@
         if (comentarioItem) comentarioItem.remove();
         if (itemId) await carregarComentarios(itemId);
 
-        showToast('ComentÃ¡rio excluÃ­do com sucesso', 'success');
+        showToast('Comentário excluído com sucesso', 'success');
         try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) { }
       } catch (error) {
         showToast('Erro ao comunicar com o servidor: ' + error.message, 'error');
@@ -1240,8 +1240,8 @@
 
 
     // =========================================================================
-    // MODAL DETALHES EMPRESA - LÃ³gica movida para modal_detalhes_empresa.js
-    // Este arquivo NÃƒO deve ter lÃ³gica do modal para evitar conflitos
+    // MODAL DETALHES EMPRESA - Lógica movida para modal_detalhes_empresa.js
+    // Este arquivo NÃO deve ter lógica do modal para evitar conflitos
     // =========================================================================
     // }); // Removed to maintain CONFIG scope for functions below
 
