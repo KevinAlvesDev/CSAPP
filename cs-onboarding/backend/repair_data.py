@@ -1,8 +1,8 @@
-import os
 import sys
 from datetime import datetime
+from pathlib import Path
 
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from project import create_app
 from project.db import db_connection, query_db
@@ -57,7 +57,7 @@ def repair_planos_concluidos_templates(dry_run: bool = True):
                 print("[dry-run] Reset templates concluídos -> em_andamento")
             else:
                 now = datetime.now()
-                cursor.execute(sql_reset, [now] + in_params)
+                cursor.execute(sql_reset, [now, *in_params])
 
         # Criar instancias por implantacao (se ainda não existe)
         repaired = 0
@@ -113,6 +113,94 @@ def repair_planos_concluidos_templates(dry_run: bool = True):
         else:
             conn.commit()
             print(f"Instancias criadas: {repaired}, skipped {skipped}")
+
+
+def repair_planos_concluidos_invalidos(dry_run: bool = True):
+    """
+    Repara planos concluídos inválidos (sem qualquer item de checklist).
+    Regras:
+    - Considera inválido plano com status='concluido', processo_id preenchido e sem checklist_items.
+    - Reabre (status='em_andamento') apenas o mais recente inválido por implantação.
+    - Se não houver plano ativo na implantação, atualiza implantacoes.plano_sucesso_id para o reaberto.
+    """
+    rows = query_db(
+        """
+        SELECT p.id, p.processo_id, p.data_atualizacao, p.data_criacao
+        FROM planos_sucesso p
+        WHERE p.status = 'concluido'
+          AND p.processo_id IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1
+            FROM checklist_items ci
+            WHERE ci.plano_id = p.id
+          )
+        ORDER BY p.processo_id, p.data_atualizacao DESC, p.id DESC
+        """
+    ) or []
+
+    if not rows:
+        print("Nenhum plano concluído inválido encontrado.")
+        return
+
+    latest_by_processo = {}
+    for row in rows:
+        proc_id = row["processo_id"]
+        if proc_id not in latest_by_processo:
+            latest_by_processo[proc_id] = row
+
+    targets = list(latest_by_processo.values())
+    print(f"Planos concluídos inválidos encontrados: {len(rows)}")
+    print(f"Planos selecionados para reabrir (1 por implantação): {len(targets)}")
+
+    with db_connection() as (conn, db_type):
+        cursor = conn.cursor()
+        reopened = 0
+        relinked = 0
+
+        for target in targets:
+            plano_id = target["id"]
+            impl_id = target["processo_id"]
+
+            ativo = query_db(
+                """
+                SELECT id
+                FROM planos_sucesso
+                WHERE processo_id = %s AND status = 'em_andamento'
+                ORDER BY data_criacao DESC
+                LIMIT 1
+                """,
+                (impl_id,),
+                one=True,
+            )
+
+            if ativo and ativo.get("id"):
+                print(f"{'[dry-run] ' if dry_run else ''}Implantação {impl_id}: já possui ativo {ativo['id']} (skip reabertura)")
+                continue
+
+            if dry_run:
+                print(f"[dry-run] Reabrir plano inválido {plano_id} da implantação {impl_id}")
+                reopened += 1
+                continue
+
+            sql_reopen = "UPDATE planos_sucesso SET status = 'em_andamento', data_atualizacao = %s WHERE id = %s"
+            if db_type == "sqlite":
+                sql_reopen = sql_reopen.replace("%s", "?")
+            cursor.execute(sql_reopen, (datetime.now(), plano_id))
+            reopened += 1
+
+            impl = query_db("SELECT plano_sucesso_id FROM implantacoes WHERE id = %s", (impl_id,), one=True) or {}
+            if not impl.get("plano_sucesso_id"):
+                sql_link = "UPDATE implantacoes SET plano_sucesso_id = %s WHERE id = %s"
+                if db_type == "sqlite":
+                    sql_link = sql_link.replace("%s", "?")
+                cursor.execute(sql_link, (plano_id, impl_id))
+                relinked += 1
+
+        if dry_run:
+            print(f"[dry-run] Reabriria: {reopened}, relink: {relinked}")
+        else:
+            conn.commit()
+            print(f"Reabertos: {reopened}, relinkados: {relinked}")
 
 
 def main():

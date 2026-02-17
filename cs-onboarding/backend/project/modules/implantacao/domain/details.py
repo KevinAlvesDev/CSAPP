@@ -225,7 +225,10 @@ def _get_tarefas_and_comentarios(
 
 
 def get_implantacao_details(
-    impl_id: int, usuario_cs_email: str, user_perfil: dict = None, plano_historico_id: int = None
+    impl_id: int,
+    usuario_cs_email: str,
+    user_perfil: dict | None = None,
+    plano_historico_id: int | None = None,
 ) -> dict[str, Any]:
     """
     Busca, processa e valida todos os dados para a página de detalhes da implantação.
@@ -321,11 +324,35 @@ def get_implantacao_details(
         logger.warning(f"Erro ao buscar plano de sucesso {success_plan_id}: {e}")
 
     checklist_nested = None
+    historico_sem_execucao = False
     try:
         from ....modules.checklist.application.checklist_service import build_nested_tree, get_checklist_tree
 
         if plano_historico_id:
             checklist_flat = get_checklist_tree(plano_id=plano_historico_id, include_progress=True)
+
+            # Historico deve exibir apenas execucao real (fase/grupo/tarefa/subtarefa).
+            # Nunca exibir snapshot do template (tipo_item=plano_*) como se fosse execucao.
+            checklist_execucao = [
+                item
+                for item in (checklist_flat or [])
+                if not str((item or {}).get("tipo_item") or "").startswith("plano_")
+            ]
+            if checklist_execucao:
+                checklist_flat = checklist_execucao
+            elif checklist_flat:
+                historico_sem_execucao = True
+                checklist_flat = []
+
+            # Fallback legado: quando o plano solicitado e o plano ativo atual da implantacao,
+            # ainda podemos montar pela visao de implantacao.
+            plano_atual_implantacao = implantacao.get("plano_sucesso_id")
+            precisa_fallback_implantacao = not checklist_flat
+            if precisa_fallback_implantacao and plano_atual_implantacao == plano_historico_id:
+                checklist_flat_impl = get_checklist_tree(implantacao_id=impl_id, include_progress=True)
+                if checklist_flat_impl:
+                    checklist_flat = checklist_flat_impl
+                    historico_sem_execucao = False
         else:
             checklist_flat = get_checklist_tree(implantacao_id=impl_id, include_progress=True)
 
@@ -334,8 +361,10 @@ def get_implantacao_details(
                 f"Implantação {impl_id} tem plano {implantacao['plano_sucesso_id']} mas checklist vazio. Tentando auto-reparar..."
             )
             try:
-                from datetime import date as datetime_date
-                from datetime import datetime as datetime_dt
+                from datetime import (
+                    date as datetime_date,
+                    datetime as datetime_dt,
+                )
 
                 from ....db import db_connection
                 from ....modules.planos.domain.aplicar import _clonar_plano_para_implantacao_checklist
@@ -390,6 +419,7 @@ def get_implantacao_details(
             f"Erro ao carregar checklist da implantação {impl_id}: {e}\n{error_trace}. Usando checklist vazio."
         )
         checklist_nested = []
+        historico_sem_execucao = False
 
     try:
         user_info = getattr(g, "user", None) or {
@@ -403,7 +433,9 @@ def get_implantacao_details(
         }
 
     planos_lista = []
+    planos_concluidos_ordenados = []
     plano_ativo_instancia = None
+    plano_historico_invalido = False
     try:
         planos_lista = (
             query_db(
@@ -415,23 +447,40 @@ def get_implantacao_details(
         if plano_historico_id:
             plano_ativo_instancia = query_db("SELECT * FROM planos_sucesso WHERE id = %s", (plano_historico_id,), one=True)
         else:
-            plano_ativo_instancia = next((p for p in planos_lista if p.get("status") == "em_andamento"), None)
+            plano_ativo_instancia = None
 
-            if not plano_ativo_instancia and implantacao.get("plano_sucesso_id"):
+            # Fonte de verdade principal: implantação apontando para plano ativo.
+            if implantacao.get("plano_sucesso_id"):
                 temp_p = query_db(
                     "SELECT * FROM planos_sucesso WHERE id = %s", (implantacao["plano_sucesso_id"],), one=True
                 )
-                if (
-                    temp_p
-                    and temp_p.get("status") == "em_andamento"
-                    and temp_p.get("processo_id") == impl_id
-                ):
+                if temp_p and temp_p.get("status") == "em_andamento" and temp_p.get("processo_id") == impl_id:
                     plano_ativo_instancia = temp_p
+
+            # Fallback legado: só considerar "em_andamento" se ainda existir checklist na implantação.
+            if not plano_ativo_instancia:
+                checklist_count = query_db(
+                    "SELECT COUNT(*) as total FROM checklist_items WHERE implantacao_id = %s",
+                    (impl_id,),
+                    one=True,
+                ) or {"total": 0}
+                if int(checklist_count.get("total", 0) or 0) > 0:
+                    plano_ativo_instancia = next((p for p in planos_lista if p.get("status") == "em_andamento"), None)
 
         for p in planos_lista:
             p["data_criacao_fmt"] = format_date_br(p.get("data_criacao"), False)
             p["data_atualizacao_fmt"] = format_date_br(p.get("data_atualizacao"), p.get("status") != "concluido")
             p["data_conclusao_fmt"] = format_date_br(p.get("data_atualizacao"), False)
+
+        # Histórico de concluídos: ordenar do mais recente para o mais antigo
+        planos_concluidos_ordenados = [p for p in planos_lista if p.get("status") == "concluido"]
+        planos_concluidos_ordenados.sort(
+            key=lambda p: (
+                p.get("data_atualizacao") or p.get("data_criacao"),
+                p.get("id") or 0,
+            ),
+            reverse=True,
+        )
 
         if plano_ativo_instancia:
             plano_ativo_instancia["data_criacao_fmt"] = format_date_br(plano_ativo_instancia.get("data_criacao"), False)
@@ -472,9 +521,12 @@ def get_implantacao_details(
         "plano_sucesso": plano_sucesso_info,
         "checklist_tree": checklist_nested,
         "planos_lista": planos_lista,
+        "planos_concluidos_ordenados": planos_concluidos_ordenados,
         "plano_ativo_instancia": plano_ativo_instancia,
         "is_historico_view": bool(plano_historico_id),
         "plano_historico_id": plano_historico_id,
+        "plano_historico_invalido": plano_historico_invalido,
+        "historico_sem_execucao": historico_sem_execucao,
     }
 
 def _get_timeline_logs(impl_id):

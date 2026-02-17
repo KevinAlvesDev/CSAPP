@@ -161,45 +161,47 @@ def aplicar_plano_a_implantacao_checklist(
         cursor = conn.cursor()
 
         try:
-            # Concluir qualquer plano em andamento deste processo antes de criar uma nova instância
-            sql_concluir = """
-                UPDATE planos_sucesso
-                SET status = 'concluido', data_atualizacao = %s
-                WHERE processo_id = %s AND status = 'em_andamento'
-            """
+            # Não concluir automaticamente planos em andamento ao trocar de plano.
+            # Conclusão só deve ocorrer explicitamente e com progresso válido (100%).
+
+            # Preservar histórico do plano atual antes de trocar:
+            # - garante vínculo por plano_id (legado podia estar nulo)
+            # - arquiva itens removendo vínculo implantacao_id (não deleta histórico)
+            plano_anterior_id = None
+            sql_plano_atual = "SELECT plano_sucesso_id FROM implantacoes WHERE id = %s"
             if db_type == "sqlite":
-                sql_concluir = sql_concluir.replace("%s", "?")
-            cursor.execute(sql_concluir, (datetime.now(), implantacao_id))
+                sql_plano_atual = sql_plano_atual.replace("%s", "?")
+            cursor.execute(sql_plano_atual, (implantacao_id,))
+            row_plano_atual = cursor.fetchone()
+            if row_plano_atual:
+                if isinstance(row_plano_atual, dict):
+                    plano_anterior_id = row_plano_atual.get("plano_sucesso_id")
+                else:
+                    plano_anterior_id = row_plano_atual[0]
+
+            if plano_anterior_id:
+                sql_backfill_plano_id = """
+                    UPDATE checklist_items
+                    SET plano_id = %s
+                    WHERE implantacao_id = %s
+                      AND (plano_id IS NULL OR plano_id <> %s)
+                """
+                if db_type == "sqlite":
+                    sql_backfill_plano_id = sql_backfill_plano_id.replace("%s", "?")
+                cursor.execute(sql_backfill_plano_id, (plano_anterior_id, implantacao_id, plano_anterior_id))
+
+            sql_arquivar_itens = "UPDATE checklist_items SET implantacao_id = NULL WHERE implantacao_id = %s"
+            if db_type == "sqlite":
+                sql_arquivar_itens = sql_arquivar_itens.replace("%s", "?")
+            cursor.execute(sql_arquivar_itens, (implantacao_id,))
 
             # Criar instância do plano vinculada ao processo (snapshot do template)
             plano_instancia_id = _criar_instancia_plano_cursor(
                 cursor, db_type, plano, estrutura_plano, implantacao_id, usuario
             )
 
-            # Tratamento de comentários conforme escolha do usuário
-            if preservar_comentarios:
-                # Preservar comentários: desvincula-los dos itens antes de deletar
-                from ....modules.checklist.domain.comments import preservar_comentarios_implantacao
-
-                preservar_comentarios_implantacao(implantacao_id)
-            else:
-                # Deletar apenas comentários vinculados a checklist_items desta implantação
-                # NÃO deletar comentários órfãos - eles são comentários preservados de planos anteriores
-                sql_limpar_comentarios = """
-                    DELETE FROM comentarios_h
-                    WHERE checklist_item_id IN (
-                        SELECT id FROM checklist_items WHERE implantacao_id = %s
-                    )
-                """
-                if db_type == "sqlite":
-                    sql_limpar_comentarios = sql_limpar_comentarios.replace("%s", "?")
-                cursor.execute(sql_limpar_comentarios, (implantacao_id,))
-
-            # Agora deletar os itens do checklist
-            sql_limpar = "DELETE FROM checklist_items WHERE implantacao_id = %s"
-            if db_type == "sqlite":
-                sql_limpar = sql_limpar.replace("%s", "?")
-            cursor.execute(sql_limpar, (implantacao_id,))
+            # Histórico preservado por padrão: não deletar comentários/itens antigos aqui.
+            # preservar_comentarios permanece por compatibilidade de assinatura.
 
             # Responsável padrão: nome completo do usuário (fallback: email)
             if responsavel_nome and isinstance(responsavel_nome, str) and responsavel_nome.strip():
@@ -509,8 +511,8 @@ def _clonar_plano_para_implantacao(
         if db_type == "postgres":
             sql_insert = """
                 INSERT INTO checklist_items
-                (parent_id, title, completed, comment, level, ordem, implantacao_id, tipo_item, descricao, obrigatoria, status, responsavel, tag, created_at, updated_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                (parent_id, title, completed, comment, level, ordem, implantacao_id, plano_id, tipo_item, descricao, obrigatoria, status, responsavel, tag, created_at, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 RETURNING id
             """
             cursor.execute(
@@ -523,6 +525,7 @@ def _clonar_plano_para_implantacao(
                     level,
                     ordem,
                     implantacao_id,
+                    plano_id,
                     tipo_item_implantacao,
                     descricao,
                     obrigatoria,
@@ -535,8 +538,8 @@ def _clonar_plano_para_implantacao(
         else:
             sql_insert = """
                 INSERT INTO checklist_items
-                (parent_id, title, completed, comment, level, ordem, implantacao_id, tipo_item, descricao, obrigatoria, status, responsavel, tag, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                (parent_id, title, completed, comment, level, ordem, implantacao_id, plano_id, tipo_item, descricao, obrigatoria, status, responsavel, tag, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             """
             cursor.execute(
                 sql_insert,
@@ -548,6 +551,7 @@ def _clonar_plano_para_implantacao(
                     level,
                     ordem,
                     implantacao_id,
+                    plano_id,
                     tipo_item_implantacao,
                     descricao,
                     1 if obrigatoria else 0,
@@ -610,7 +614,7 @@ def _clonar_plano_para_implantacao_checklist(
 
     def clone_item_recursivo(plano_item_id, new_parent_id):
         if db_type == "postgres":
-            sql_item = "SELECT title, completed, comment, level, ordem, obrigatoria, tipo_item, descricao, status, responsavel, tag, dias_offset, dias_uteis FROM checklist_items WHERE id = %s"
+            sql_item = "SELECT title, completed, comment, level, ordem, obrigatoria, tipo_item, descricao, status, responsavel, tag, dias_offset FROM checklist_items WHERE id = %s"
             cursor.execute(sql_item, (plano_item_id,))
             row = cursor.fetchone()
             if not row:
@@ -623,9 +627,8 @@ def _clonar_plano_para_implantacao_checklist(
             responsavel = row[9]
             tag = row[10]
             item_dias_offset = row[11]
-            item_dias_uteis = row[12]
         else:
-            sql_item = "SELECT title, completed, comment, level, ordem, obrigatoria, tipo_item, descricao, status, responsavel, tag, dias_offset, dias_uteis FROM checklist_items WHERE id = ?"
+            sql_item = "SELECT title, completed, comment, level, ordem, obrigatoria, tipo_item, descricao, status, responsavel, tag, dias_offset FROM checklist_items WHERE id = ?"
             cursor.execute(sql_item, (plano_item_id,))
             row = cursor.fetchone()
             if not row:
@@ -643,7 +646,6 @@ def _clonar_plano_para_implantacao_checklist(
             responsavel = row[9]
             tag = row[10]
             item_dias_offset = row[11]
-            item_dias_uteis = bool(row[12]) if row[12] is not None else False
 
         tipo_item_implantacao = (
             tipo_item_plano.replace("plano_", "") if tipo_item_plano.startswith("plano_") else tipo_item_plano
@@ -669,7 +671,7 @@ def _clonar_plano_para_implantacao_checklist(
                         base = datetime.strptime(base[:10], "%Y-%m-%d")
                     elif isinstance(base, date) and not isinstance(base, datetime):
                         base = datetime.combine(base, datetime.min.time())
-                    
+
                     previsao_original = add_business_days(base.date() if hasattr(base, 'date') else base, int(item_dias_offset))
                 except Exception:
                     previsao_original = data_previsao_termino
@@ -677,8 +679,8 @@ def _clonar_plano_para_implantacao_checklist(
                 previsao_original = data_previsao_termino
             responsavel = responsavel_padrao
             sql_insert = """
-                INSERT INTO checklist_items (parent_id, title, completed, comment, level, ordem, implantacao_id, obrigatoria, tipo_item, descricao, status, responsavel, tag, previsao_original, nova_previsao, dias_offset, created_at, updated_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                INSERT INTO checklist_items (parent_id, title, completed, comment, level, ordem, implantacao_id, plano_id, obrigatoria, tipo_item, descricao, status, responsavel, tag, previsao_original, nova_previsao, dias_offset, created_at, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 RETURNING id
             """
             cursor.execute(
@@ -691,6 +693,7 @@ def _clonar_plano_para_implantacao_checklist(
                     level,
                     ordem,
                     implantacao_id,
+                    plano_id,
                     obrigatoria,
                     tipo_item_implantacao,
                     descricao,
@@ -714,7 +717,7 @@ def _clonar_plano_para_implantacao_checklist(
                         base = datetime.strptime(base[:10], "%Y-%m-%d")
                     elif isinstance(base, date) and not isinstance(base, datetime):
                         base = datetime.combine(base, datetime.min.time())
-                    
+
                     # PULA FINS DE SEMANA (DIAS ÚTEIS)
                     previsao_original = add_business_days(base.date() if hasattr(base, 'date') else base, int(item_dias_offset))
                 except Exception:
@@ -723,8 +726,8 @@ def _clonar_plano_para_implantacao_checklist(
                 previsao_original = data_previsao_termino
             responsavel = responsavel_padrao
             sql_insert = """
-                INSERT INTO checklist_items (parent_id, title, completed, comment, level, ordem, implantacao_id, obrigatoria, tipo_item, descricao, status, responsavel, tag, previsao_original, nova_previsao, dias_offset, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                INSERT INTO checklist_items (parent_id, title, completed, comment, level, ordem, implantacao_id, plano_id, obrigatoria, tipo_item, descricao, status, responsavel, tag, previsao_original, nova_previsao, dias_offset, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             """
             cursor.execute(
                 sql_insert,
@@ -736,6 +739,7 @@ def _clonar_plano_para_implantacao_checklist(
                     level,
                     ordem,
                     implantacao_id,
+                    plano_id,
                     1 if obrigatoria else 0,
                     tipo_item_implantacao,
                     descricao,

@@ -62,9 +62,11 @@ htmlcov/
 
 # Backups
 *.bak
+*.bak_*
 *.backup
 *.old
 *.tmp
+*.db.bak_*
 
 # OS
 Thumbs.db
@@ -85,6 +87,7 @@ lista_*.txt
 debug_*.py
 test_*.txt
 route_inventory*.txt
+import_audit*.txt
 
 # Alembic
 alembic/versions/__pycache__/

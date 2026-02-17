@@ -1,7 +1,8 @@
-from datetime import date, timedelta
 
 from flask import current_app, flash, g, redirect, render_template, request, url_for
 
+from ....blueprints.auth import login_required
+from ....blueprints.onboarding import onboarding_bp
 from ....common.validation import ValidationError, sanitize_string, validate_integer
 from ....constants import (
     CARGOS_RESPONSAVEL,
@@ -19,8 +20,6 @@ from ....constants import (
 )
 from ..application.dashboard_service import get_dashboard_data, get_tags_metrics
 from ..application.management_service import listar_todos_cs_com_cache
-from ....blueprints.auth import login_required
-from ....blueprints.onboarding import onboarding_bp
 
 
 @onboarding_bp.route("/dashboard")
@@ -225,3 +224,4 @@ def ver_implantacao(impl_id):
         logger.error(f"Erro ao carregar detalhes da implantação ID {impl_id}: {e}\\n{error_trace}")
         flash(f"Erro ao carregar detalhes da implantação: {e!s}", "error")
         return redirect(url_for("onboarding.dashboard"))
+

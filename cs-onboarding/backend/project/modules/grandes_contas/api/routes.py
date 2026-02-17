@@ -1,5 +1,7 @@
 from flask import current_app, flash, g, redirect, render_template, request, url_for
 
+from ....blueprints.auth import login_required
+from ....blueprints.grandes_contas import grandes_contas_bp
 from ....common.validation import ValidationError, sanitize_string, validate_integer
 from ....constants import (
     CARGOS_RESPONSAVEL,
@@ -17,8 +19,6 @@ from ....constants import (
 )
 from ..application.dashboard_service import get_dashboard_data, get_tags_metrics
 from ..application.management_service import listar_todos_cs_com_cache
-from ....blueprints.auth import login_required
-from ....blueprints.grandes_contas import grandes_contas_bp
 
 
 @grandes_contas_bp.route("/dashboard")
@@ -160,7 +160,13 @@ def ver_implantacao(impl_id):
     try:
         logger.info(f"Chamando get_implantacao_details para ID {impl_id}")
         user_perfil = g.perfil if hasattr(g, "perfil") and g.perfil else {}
-        context_data = get_implantacao_details(impl_id=impl_id, usuario_cs_email=g.user_email, user_perfil=user_perfil)
+        plano_historico_id = request.args.get("plano_historico_id", type=int)
+        context_data = get_implantacao_details(
+            impl_id=impl_id,
+            usuario_cs_email=g.user_email,
+            user_perfil=user_perfil,
+            plano_historico_id=plano_historico_id,
+        )
         logger.info(f"Dados da implantação {impl_id} obtidos com sucesso")
 
         return render_template("pages/grandes_contas/implantacao_detalhes.html", **context_data)

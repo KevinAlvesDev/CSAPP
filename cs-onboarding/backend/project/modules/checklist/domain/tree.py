@@ -40,7 +40,7 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, plano_id=None, in
                     query = """
                         SELECT
                             id, parent_id, title, completed, comment,
-                            level, ordem, implantacao_id, plano_id, obrigatoria, tag,
+                            level, ordem, implantacao_id, plano_id, tipo_item, obrigatoria, tag,
                             responsavel, previsao_original, nova_previsao, data_conclusao,
                             created_at, updated_at
                         FROM checklist_items
@@ -52,7 +52,7 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, plano_id=None, in
                     query = """
                         SELECT
                             id, parent_id, title, completed, comment,
-                            level, ordem, implantacao_id, plano_id, obrigatoria, tag,
+                            level, ordem, implantacao_id, plano_id, tipo_item, obrigatoria, tag,
                             responsavel, previsao_original, nova_previsao, data_conclusao,
                             created_at, updated_at
                         FROM checklist_items
@@ -64,7 +64,7 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, plano_id=None, in
                     query = """
                         WITH RECURSIVE subtree AS (
                             SELECT id, parent_id, title, completed, comment,
-                                   level, ordem, implantacao_id, plano_id, obrigatoria, tag,
+                                   level, ordem, implantacao_id, plano_id, tipo_item, obrigatoria, tag,
                                    responsavel, previsao_original, nova_previsao, data_conclusao,
                                    created_at, updated_at
                             FROM checklist_items
@@ -73,7 +73,7 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, plano_id=None, in
                             UNION ALL
 
                             SELECT ci.id, ci.parent_id, ci.title, ci.completed, ci.comment,
-                                   ci.level, ci.ordem, ci.implantacao_id, ci.plano_id, ci.obrigatoria, ci.tag,
+                                   ci.level, ci.ordem, ci.implantacao_id, ci.plano_id, ci.tipo_item, ci.obrigatoria, ci.tag,
                                    ci.responsavel, ci.previsao_original, ci.nova_previsao, ci.data_conclusao,
                                    ci.created_at, ci.updated_at
                             FROM checklist_items ci
@@ -88,7 +88,7 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, plano_id=None, in
                     query = """
                         SELECT
                             id, parent_id, title, completed, comment,
-                            level, ordem, implantacao_id, plano_id, obrigatoria, tag,
+                            level, ordem, implantacao_id, plano_id, tipo_item, obrigatoria, tag,
                             responsavel, previsao_original, nova_previsao, data_conclusao,
                             created_at, updated_at
                         FROM checklist_items
@@ -100,7 +100,7 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, plano_id=None, in
                     query = """
                         SELECT
                             id, parent_id, title, completed, comment,
-                            level, ordem, implantacao_id, plano_id, obrigatoria, tag,
+                            level, ordem, implantacao_id, plano_id, tipo_item, obrigatoria, tag,
                             responsavel, previsao_original, nova_previsao, data_conclusao,
                             created_at, updated_at
                         FROM checklist_items
@@ -111,11 +111,11 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, plano_id=None, in
                 elif root_item_id:
                     query = """
                         WITH RECURSIVE subtree(id, parent_id, title, completed, comment,
-                                               level, ordem, implantacao_id, plano_id, obrigatoria, tag,
+                                               level, ordem, implantacao_id, plano_id, tipo_item, obrigatoria, tag,
                                                responsavel, previsao_original, nova_previsao, data_conclusao,
                                                created_at, updated_at) AS (
                             SELECT id, parent_id, title, completed, comment,
-                                   level, ordem, implantacao_id, plano_id, obrigatoria, tag,
+                                   level, ordem, implantacao_id, plano_id, tipo_item, obrigatoria, tag,
                                    responsavel, previsao_original, nova_previsao, data_conclusao,
                                    created_at, updated_at
                             FROM checklist_items
@@ -124,7 +124,7 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, plano_id=None, in
                             UNION ALL
 
                             SELECT ci.id, ci.parent_id, ci.title, ci.completed, ci.comment,
-                                   ci.level, ci.ordem, ci.implantacao_id, ci.plano_id, ci.obrigatoria, ci.tag,
+                                   ci.level, ci.ordem, ci.implantacao_id, ci.plano_id, ci.tipo_item, ci.obrigatoria, ci.tag,
                                    ci.responsavel, ci.previsao_original, ci.nova_previsao, ci.data_conclusao,
                                    ci.created_at, ci.updated_at
                             FROM checklist_items ci
@@ -136,7 +136,11 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, plano_id=None, in
                     params = (root_item_id,)
 
             if not query:
-                query = "SELECT id, parent_id, title, completed, comment, level, ordem, implantacao_id, obrigatoria, tag, responsavel, previsao_original, nova_previsao, data_conclusao, created_at, updated_at FROM checklist_items ORDER BY ordem ASC, id ASC"
+                query = (
+                    "SELECT id, parent_id, title, completed, comment, level, ordem, implantacao_id, plano_id, "
+                    "tipo_item, obrigatoria, tag, responsavel, previsao_original, nova_previsao, data_conclusao, "
+                    "created_at, updated_at FROM checklist_items ORDER BY ordem ASC, id ASC"
+                )
 
             cursor.execute(query, params)
             rows = cursor.fetchall()
@@ -234,6 +238,8 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, plano_id=None, in
                     "level": item.get("level") if isinstance(item, dict) else item["level"],
                     "ordem": item.get("ordem") if isinstance(item, dict) else item["ordem"],
                     "implantacao_id": item.get("implantacao_id") if isinstance(item, dict) else item["implantacao_id"],
+                    "plano_id": item.get("plano_id") if isinstance(item, dict) else item["plano_id"],
+                    "tipo_item": item.get("tipo_item") if isinstance(item, dict) else item["tipo_item"],
                     "obrigatoria": bool(item.get("obrigatoria") if isinstance(item, dict) else item["obrigatoria"]),
                     "tag": item.get("tag") if isinstance(item, dict) else item["tag"],
                     "responsavel": item.get("responsavel") if isinstance(item, dict) else item.get("responsavel", None),

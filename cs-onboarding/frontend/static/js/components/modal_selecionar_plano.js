@@ -7,7 +7,6 @@
     'use strict';
 
     let planosDisponiveis = [];
-    let planoSelecionado = null;
 
     document.addEventListener('DOMContentLoaded', function () {
         const modalElement = document.getElementById('modalSelecionarPlano');
@@ -55,13 +54,6 @@
                     return;
                 }
 
-                // Handle Card Selection
-                const card = target.closest('.plano-select-card');
-                if (card && !target.closest('button')) {
-                    container.querySelectorAll('.plano-select-card').forEach(c => c.classList.remove('selected'));
-                    card.classList.add('selected');
-                    planoSelecionado = parseInt(card.dataset.planoId);
-                }
             });
         }
 
@@ -99,37 +91,21 @@
                 </div>
             `;
 
-            // Detectar o contexto da implantação atual
-            // Primeiro tenta pegar do URL (ex: /grandes_contas/...)
+            // Detectar contexto da implantação atual
             let context = 'onboarding'; // default
             const path = window.location.pathname;
 
-            console.log('🔍 [DEBUG] Detecção de Contexto - URL atual:', path);
-
             if (path.includes('/grandes_contas/')) {
                 context = 'grandes_contas';
-                console.log('✅ [DEBUG] Contexto detectado pelo URL: grandes_contas');
             } else if (path.includes('/onboarding/')) {
                 context = 'onboarding';
-                console.log('✅ [DEBUG] Contexto detectado pelo URL: onboarding');
-            } else {
-                console.log('⚠️ [DEBUG] URL não contém /grandes_contas/ nem /onboarding/, usando default: onboarding');
             }
 
-            // Também pode tentar pegar de um atributo data no DOM se existir
+            // Priorizar contexto explícito do DOM quando disponível
             const mainContent = document.getElementById('main-content');
             if (mainContent && mainContent.dataset.context) {
-                const dataContext = mainContent.dataset.context;
-                console.log('📋 [DEBUG] Atributo data-context encontrado:', dataContext);
-                if (dataContext !== context) {
-                    console.log('🔄 [DEBUG] Sobrescrevendo contexto de', context, 'para', dataContext);
-                }
-                context = dataContext;
-            } else {
-                console.log('⚠️ [DEBUG] Elemento #main-content ou data-context não encontrado');
+                context = mainContent.dataset.context;
             }
-
-            console.log('🎯 [DEBUG] Contexto FINAL que será enviado para API:', context);
 
             window.apiFetch(`/planos/?ativo=true&context=${context}`)
                 .then(data => {
@@ -148,7 +124,7 @@
                     `;
                     }
                 })
-                .catch(error => {
+                .catch(() => {
                     // O apiFetch já mostra Toast de erro, aqui só atualizamos a UI
                     container.innerHTML = `
                     <div class="col-12">
@@ -404,109 +380,27 @@
                 return;
             }
 
-            // 1. Verificar se existem comentários
-            let totalComentarios = 0;
-            try {
-                const contagem = await window.apiFetch(`/planos/implantacao/${implantacaoId}/comentarios/count`);
-                if (contagem.success) {
-                    totalComentarios = contagem.total || 0;
-                }
-            } catch (e) {
-                console.warn('Erro ao contar comentários:', e);
-            }
+            // Comentários são preservados automaticamente neste fluxo.
+            const preservarComentarios = true;
 
-            // 2. Definir variável de preservação
-            let preservarComentarios = false;
-
-            // 3. Se houver comentários, perguntar se quer preservar
-            if (totalComentarios > 0) {
-                const modalOptionsHTML = `
-                    <div class="modal fade" id="modalConfirmComentarios" tabindex="-1" data-bs-backdrop="static">
-                        <div class="modal-dialog modal-dialog-centered">
-                            <div class="modal-content">
-                                <div class="modal-header bg-warning text-dark">
-                                    <h5 class="modal-title">
-                                        <i class="bi bi-chat-left-text me-2"></i>Comentários Existentes
-                                    </h5>
-                                </div>
-                                <div class="modal-body">
-                                    <p class="mb-3">
-                                        Esta implantação possui <strong>${totalComentarios} comentário(s)</strong> registrado(s).
-                                    </p>
-                                    <p class="text-muted">
-                                        Ao aplicar o plano <strong>"${escapeHtml(planoNome)}"</strong>, as tarefas atuais serão substituídas.
-                                    </p>
-                                    <div class="alert alert-info mb-0">
-                                        <i class="bi bi-info-circle me-2"></i>
-                                        Os comentários aparecerão na aba "Comentários", mas não estarão vinculados às novas tarefas.
-                                    </div>
-                                </div>
-                                <div class="modal-footer justify-content-center gap-3">
-                                    <button type="button" class="btn btn-outline-secondary" data-action="cancel">
-                                        <i class="bi bi-x-lg me-1"></i>Cancelar
-                                    </button>
-                                    <button type="button" class="btn btn-danger" data-action="delete">
-                                        <i class="bi bi-trash me-1"></i>Excluir Comentários
-                                    </button>
-                                    <button type="button" class="btn btn-success" data-action="preserve">
-                                        <i class="bi bi-check-lg me-1"></i>Manter Comentários
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-
-                // Inserir modal no DOM
-                let existingModal = document.getElementById('modalConfirmComentarios');
-                if (existingModal) existingModal.remove();
-                document.body.insertAdjacentHTML('beforeend', modalOptionsHTML);
-
-                const modalEl = document.getElementById('modalConfirmComentarios');
-                const bsModal = new bootstrap.Modal(modalEl);
-                bsModal.show(); // IMPORTANTE: Mostrar o modal
-
-                // Aguardar escolha do usuário
-                const userChoice = await new Promise(resolve => {
-                    modalEl.querySelectorAll('[data-action]').forEach(btn => {
-                        btn.addEventListener('click', () => {
-                            bsModal.hide();
-                            resolve(btn.dataset.action);
-                        });
-                    });
-                    modalEl.addEventListener('hidden.bs.modal', () => {
-                        resolve('cancel');
-                    }, { once: true });
+            // Confirmação padrão (pula se já veio do preview)
+            let confirmed = false;
+            if (pularConfirmacao) {
+                confirmed = true;
+            } else if (window.showConfirm) {
+                confirmed = await window.showConfirm({
+                    title: 'Aplicar Plano',
+                    message: `Tem certeza que deseja aplicar o plano "${planoNome}"?\n\nA estrutura atual será substituída.`,
+                    confirmText: 'Sim, aplicar plano',
+                    type: 'warning'
                 });
-
-                bsModal.hide();
-                modalEl.remove();
-
-                if (userChoice === 'cancel') {
-                    return; // Usuário cancelou
-                }
-
-                preservarComentarios = (userChoice === 'preserve');
             } else {
-                // Sem comentários: confirmação padrão (pula se já veio do preview)
-                let confirmed = false;
-                if (pularConfirmacao) {
-                    confirmed = true;
-                } else if (window.showConfirm) {
-                    confirmed = await window.showConfirm({
-                        title: 'Aplicar Plano',
-                        message: `Tem certeza que deseja aplicar o plano "${planoNome}"?\n\nA estrutura atual será substituída.`,
-                        confirmText: 'Sim, aplicar plano',
-                        type: 'warning'
-                    });
-                } else {
-                    // Fallback se showConfirm não estiver disponível
-                    confirmed = confirm(`Tem certeza que deseja aplicar o plano "${planoNome}"?\n\nA estrutura atual será substituída.`);
-                }
-                if (!confirmed) return;
+                // Fallback se showConfirm não estiver disponível
+                confirmed = confirm(`Tem certeza que deseja aplicar o plano "${planoNome}"?\n\nA estrutura atual será substituída.`);
             }
+            if (!confirmed) return;
 
-            // 4. Aplicar plano com a opção de preservar comentários
+            // Aplicar plano com preservação automática de comentários
             const originalText = btnElement.innerHTML;
             btnElement.disabled = true;
             btnElement.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Aplicando...';
@@ -526,7 +420,8 @@
                         if (window.showToast) window.showToast(msg, 'success');
                         else alert(msg);
 
-                        window.location.reload();
+                        // Sempre voltar para a visao principal da implantacao (sem plano_historico_id)
+                        window.location.assign(window.location.pathname);
                     } else {
                         throw new Error(data.error || 'Erro desconhecido ao aplicar plano');
                     }

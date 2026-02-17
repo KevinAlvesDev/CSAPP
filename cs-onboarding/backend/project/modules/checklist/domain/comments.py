@@ -488,19 +488,31 @@ def excluir_comentario_service(comentario_id, usuario_email, is_manager):
             logger.warning(f"Erro ao invalidar cache após excluir comentário: {e}")
 
 
-def contar_comentarios_implantacao(impl_id):
+def contar_comentarios_implantacao(impl_id, incluir_orfaos=True):
     """
     Conta o número total de comentários de uma implantação.
     Usado para exibir confirmação antes de aplicar/trocar plano.
     """
-    count_query = """
-        SELECT COUNT(*) as total
-        FROM comentarios_h c
-        LEFT JOIN checklist_items ci ON c.checklist_item_id = ci.id
-        WHERE (ci.implantacao_id = %s)
-           OR (c.implantacao_id = %s)
-    """
-    result = query_db(count_query, (impl_id, impl_id), one=True)
+    if incluir_orfaos:
+        count_query = """
+            SELECT COUNT(*) as total
+            FROM comentarios_h c
+            LEFT JOIN checklist_items ci ON c.checklist_item_id = ci.id
+            WHERE (ci.implantacao_id = %s)
+               OR (c.implantacao_id = %s)
+        """
+        params = (impl_id, impl_id)
+    else:
+        # Apenas comentários vinculados às tarefas atuais da implantação.
+        count_query = """
+            SELECT COUNT(*) as total
+            FROM comentarios_h c
+            INNER JOIN checklist_items ci ON c.checklist_item_id = ci.id
+            WHERE ci.implantacao_id = %s
+        """
+        params = (impl_id,)
+
+    result = query_db(count_query, params, one=True)
     return result["total"] if result else 0
 
 

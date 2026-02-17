@@ -43,7 +43,7 @@ def criar_plano_sucesso(
             sql = "SELECT COUNT(*) as count FROM planos_sucesso WHERE status = 'em_andamento' AND criado_por = %s AND processo_id IS NULL"
             res = query_db(sql, (criado_por,), one=True)
             contagem = res["count"] if res else 0
-            
+
             if contagem >= 5:
                 raise ValidationError("Você já possui 5 planos de rascunho em andamento. Conclua ou exclua um para criar outro.")
         except ValidationError:
@@ -427,9 +427,21 @@ def concluir_plano_sucesso(plano_id: int) -> bool:
     if not plano_id:
         raise ValidationError("ID do plano é obrigatório")
 
-    plano = query_db("SELECT id, status FROM planos_sucesso WHERE id = %s", (plano_id,), one=True)
+    plano = query_db("SELECT id, status, processo_id FROM planos_sucesso WHERE id = %s", (plano_id,), one=True)
     if not plano:
         raise ValidationError(f"Plano com ID {plano_id} não encontrado")
+
+    processo_id = plano.get("processo_id")
+    if processo_id:
+        try:
+            from ....modules.implantacao.domain.progress import _get_progress
+
+            progresso, total_itens, _ = _get_progress(int(processo_id))
+        except Exception as e:
+            raise ValidationError(f"Não foi possível validar progresso do plano: {e}") from e
+
+        if int(total_itens or 0) <= 0 or float(progresso or 0) < 100:
+            raise ValidationError("Para concluir o plano, o progresso precisa estar em 100%.")
 
     result = execute_db(
         "UPDATE planos_sucesso SET status = 'concluido', data_atualizacao = %s WHERE id = %s",

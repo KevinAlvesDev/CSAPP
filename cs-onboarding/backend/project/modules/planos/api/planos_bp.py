@@ -184,8 +184,8 @@ def criar_plano():
                 dias_duracao = int(dias_duracao_str)
                 if dias_duracao < 1 or dias_duracao > 365:
                     raise ValidationError("Dias de duração deve ser entre 1 e 365")
-            except ValueError:
-                raise ValidationError("Dias de duração deve ser um número válido")
+            except ValueError as err:
+                raise ValidationError("Dias de duração deve ser um número válido") from err
 
         if not nome:
             raise ValidationError("Nome do plano é obrigatório")
@@ -282,8 +282,8 @@ def atualizar_plano(plano_id):
                     if dias_int < 1 or dias_int > 365:
                         raise ValidationError("Dias de duração deve ser entre 1 e 365")
                     dados_atualizacao["dias_duracao"] = dias_int
-                except ValueError:
-                    raise ValidationError("Dias de duração deve ser um número válido")
+                except ValueError as err:
+                    raise ValidationError("Dias de duração deve ser um número válido") from err
             else:
                 dados_atualizacao["dias_duracao"] = None
 
@@ -294,9 +294,9 @@ def atualizar_plano(plano_id):
 
                 try:
                     estrutura = json.loads(estrutura)
-                except json.JSONDecodeError:
+                except json.JSONDecodeError as err:
                     planos_logger.error(f"Erro ao fazer parse da estrutura JSON: {estrutura[:200]}")
-                    raise ValidationError("Estrutura inválida: JSON malformado")
+                    raise ValidationError("Estrutura inválida: JSON malformado") from err
 
             if estrutura and (estrutura.get("items") or estrutura.get("fases")):
                 planos_sucesso_service.atualizar_estrutura_plano(plano_id, estrutura)
@@ -554,9 +554,26 @@ def aplicar_plano_implantacao(implantacao_id):
 def contar_comentarios_implantacao(implantacao_id):
     """Retorna a contagem de comentários de uma implantação."""
     try:
+        from ....db import query_db
         from ...checklist.domain.comments import contar_comentarios_implantacao as contar_comentarios
 
-        total = contar_comentarios(implantacao_id)
+        apenas_vinculados = request.args.get("apenas_vinculados", "false").lower() in ("true", "1", "sim", "yes")
+        if apenas_vinculados:
+            plano_ativo = query_db(
+                """
+                SELECT id
+                FROM planos_sucesso
+                WHERE processo_id = %s AND status = 'em_andamento'
+                ORDER BY data_criacao DESC
+                LIMIT 1
+                """,
+                (implantacao_id,),
+                one=True,
+            )
+            if not plano_ativo:
+                return jsonify({"success": True, "total": 0}), 200
+
+        total = contar_comentarios(implantacao_id, incluir_orfaos=not apenas_vinculados)
         return jsonify({"success": True, "total": total}), 200
     except Exception as e:
         planos_logger.error(f"Erro ao contar comentários da implantação {implantacao_id}: {e!s}", exc_info=True)
