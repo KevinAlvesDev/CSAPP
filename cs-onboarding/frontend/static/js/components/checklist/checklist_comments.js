@@ -24,24 +24,61 @@ class ChecklistComments {
         const commentsSection = this.container.querySelector(`#comments-${itemId}`);
         if (!commentsSection) return;
 
-        const isOpening = !commentsSection.classList.contains('show');
+        if (commentsSection.classList.contains('show')) {
+            this.closeComments(itemId);
+        } else {
+            this.openComments(itemId);
+        }
+    }
+
+    /**
+     * Opens a comments section if closed and keeps renderer state in sync.
+     */
+    openComments(itemId) {
+        const commentsSection = this.container.querySelector(`#comments-${itemId}`);
+        if (!commentsSection) return;
+
+        const isOpen = commentsSection.classList.contains('show');
+        if (isOpen) {
+            this.loadComments(itemId);
+            return;
+        }
 
         if (window.bootstrap && window.bootstrap.Collapse) {
             // Use Bootstrap Collapse if available
             const bsCollapse = window.bootstrap.Collapse.getOrCreateInstance(commentsSection, { toggle: false });
-            if (isOpening) bsCollapse.show(); else bsCollapse.hide();
+            bsCollapse.show();
         } else {
-            // Fallback
-            commentsSection.classList.toggle('show');
+            commentsSection.classList.add('show');
         }
 
-        if (isOpening) {
-            this.loadComments(itemId);
-        }
+        this.loadComments(itemId);
 
         // Notify renderer to update UI state (counter, badge)
         if (this.renderer && typeof this.renderer.handleCommentToggle === 'function') {
-            this.renderer.handleCommentToggle(itemId, isOpening);
+            this.renderer.handleCommentToggle(itemId, true);
+        }
+    }
+
+    /**
+     * Closes a comments section if open and keeps renderer state in sync.
+     */
+    closeComments(itemId) {
+        const commentsSection = this.container.querySelector(`#comments-${itemId}`);
+        if (!commentsSection) return;
+
+        const isOpen = commentsSection.classList.contains('show');
+        if (!isOpen) return;
+
+        if (window.bootstrap && window.bootstrap.Collapse) {
+            const bsCollapse = window.bootstrap.Collapse.getOrCreateInstance(commentsSection, { toggle: false });
+            bsCollapse.hide();
+        } else {
+            commentsSection.classList.remove('show');
+        }
+
+        if (this.renderer && typeof this.renderer.handleCommentToggle === 'function') {
+            this.renderer.handleCommentToggle(itemId, false);
         }
     }
 

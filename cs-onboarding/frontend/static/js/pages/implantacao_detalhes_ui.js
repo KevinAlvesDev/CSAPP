@@ -315,15 +315,18 @@
               taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
               taskElement.classList.add('highlight-task');
               setTimeout(() => taskElement.classList.remove('highlight-task'), 2000);
-              const commentsSection = document.getElementById(`comments-${taskId}`);
-              if (commentsSection && window.bootstrap && bootstrap.Collapse) {
+              if (window.checklistRenderer && Number.isFinite(taskId) && typeof window.checklistRenderer.openComments === 'function') {
                 try {
-                  const inst = bootstrap.Collapse.getInstance(commentsSection) || new bootstrap.Collapse(commentsSection, { toggle: false });
-                  inst.show();
-                  if (window.checklistRenderer && typeof window.checklistRenderer.loadComments === 'function') {
-                    try { window.checklistRenderer.loadComments(taskId); } catch (_) { }
-                  }
+                  window.checklistRenderer.openComments(taskId);
                 } catch (_) { }
+              } else {
+                const commentsSection = document.getElementById(`comments-${taskId}`);
+                if (commentsSection && window.bootstrap && bootstrap.Collapse) {
+                  try {
+                    const inst = bootstrap.Collapse.getInstance(commentsSection) || new bootstrap.Collapse(commentsSection, { toggle: false });
+                    inst.show();
+                  } catch (_) { }
+                }
               }
             }, 200);
           } else {
@@ -709,15 +712,18 @@
           const taskElement = document.getElementById(`checklist-item-${itemId}`) || document.querySelector(`.checklist-item[data-item-id="${itemId}"]`);
           if (taskElement) {
             taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            const commentsSection = document.getElementById(`comments-${itemId}`);
-            if (commentsSection && window.bootstrap && bootstrap.Collapse) {
+            if (window.checklistRenderer && Number.isFinite(itemId) && typeof window.checklistRenderer.openComments === 'function') {
               try {
-                const inst = bootstrap.Collapse.getInstance(commentsSection) || new bootstrap.Collapse(commentsSection, { toggle: false });
-                inst.show();
-                if (window.checklistRenderer && typeof window.checklistRenderer.loadComments === 'function') {
-                  try { window.checklistRenderer.loadComments(itemId); } catch (_) { }
-                }
+                window.checklistRenderer.openComments(itemId);
               } catch (_) { }
+            } else {
+              const commentsSection = document.getElementById(`comments-${itemId}`);
+              if (commentsSection && window.bootstrap && bootstrap.Collapse) {
+                try {
+                  const inst = bootstrap.Collapse.getInstance(commentsSection) || new bootstrap.Collapse(commentsSection, { toggle: false });
+                  inst.show();
+                } catch (_) { }
+              }
             }
           }
         }, 200);

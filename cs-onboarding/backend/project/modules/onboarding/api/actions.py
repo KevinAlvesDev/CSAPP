@@ -40,7 +40,7 @@ def criar_implantacao():
     return handle_criar_implantacao(
         dashboard_endpoint="onboarding.dashboard",
         contexto="onboarding",
-        success_message='ImplantaÃ§Ã£o "{nome_empresa}" criada com sucesso. Aplique um plano de sucesso para criar as tarefas.',
+        success_message='Implantação "{nome_empresa}" criada com sucesso. Aplique um plano de sucesso para criar as tarefas.',
         clear_dashboard=True,
     )
 
@@ -53,7 +53,7 @@ def criar_implantacao_modulo():
     return handle_criar_implantacao_modulo(
         dashboard_endpoint="onboarding.dashboard",
         contexto="onboarding",
-        success_message='ImplantaÃ§Ã£o de MÃ³dulo "{nome_empresa}" criada e atribuÃ­da a {usuario_atribuido}.',
+        success_message='Implantação de Módulo "{nome_empresa}" criada e atribuída a {usuario_atribuido}.',
         clear_dashboard=True,
     )
 
@@ -64,7 +64,7 @@ def iniciar_implantacao():
     return handle_iniciar_implantacao(
         dashboard_endpoint="onboarding.dashboard",
         detail_endpoint="onboarding.ver_implantacao",
-        success_message="ImplantaÃ§Ã£o iniciada com sucesso!",
+        success_message="Implantação iniciada com sucesso!",
         clear_dashboard=True,
     )
 
@@ -78,14 +78,14 @@ def desfazer_inicio_implantacao():
 def desfazer_cancelamento_implantacao():
     data = request.get_json()
     if not data:
-        return jsonify({"ok": False, "error": "Dados invÃ¡lidos"}), 400
+        return jsonify({"ok": False, "error": "Dados inválidos"}), 400
 
     implantacao_id = data.get("implantacao_id")
     usuario_cs_email = g.user_email
     user_perfil_acesso = g.perfil.get("perfil_acesso") if g.perfil else None
 
     if not implantacao_id:
-        return jsonify({"ok": False, "error": "ID da implantaÃ§Ã£o Ã© obrigatÃ³rio"}), 400
+        return jsonify({"ok": False, "error": "ID da implantação é obrigatório"}), 400
 
     try:
         from ....modules.implantacao.domain.status import desfazer_cancelamento_implantacao_service
@@ -100,7 +100,7 @@ def desfazer_cancelamento_implantacao():
             pass
 
         return jsonify(
-            {"ok": True, "message": "Cancelamento desfeito com sucesso! A implantaÃ§Ã£o retornou para 'Em Andamento'."}
+            {"ok": True, "message": "Cancelamento desfeito com sucesso! A implantação retornou para 'Em Andamento'."}
         ), 200
 
     except ValueError as e:
@@ -145,7 +145,7 @@ def parar_implantacao():
     return handle_parar_implantacao(
         detail_endpoint="onboarding.ver_implantacao",
         clear_dashboard=True,
-        success_message='ImplantaÃ§Ã£o marcada como "Parada" com data retroativa.',
+        success_message='Implantação marcada como "Parada" com data retroativa.',
     )
 
 
@@ -197,14 +197,14 @@ def remover_plano_implantacao():
 @limiter.limit("30 per minute", key_func=lambda: g.user_email or get_remote_address())
 def concluir_plano_implantacao():
     """
-    Endpoint de compatibilidade para concluir plano pela tela de detalhes da implantaÃ§Ã£o.
+    Endpoint de compatibilidade para concluir plano pela tela de detalhes da implantação.
     """
     try:
         implantacao_id = request.form.get("implantacao_id", type=int)
         plano_instancia_id = request.form.get("plano_instancia_id", type=int)
 
         if not implantacao_id:
-            flash("ImplantaÃ§Ã£o invÃ¡lida.", "error")
+            flash("Implantação inválida.", "error")
             return redirect(url_for("onboarding.dashboard"))
 
         if not plano_instancia_id:
@@ -327,9 +327,3 @@ def fetch_jira_issue_action(implantacao_id):
 @login_required
 def delete_jira_link_action(implantacao_id, jira_key):
     return handle_delete_jira_link(implantacao_id, jira_key)
-
-
-
-
-
-

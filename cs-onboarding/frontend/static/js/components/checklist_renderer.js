@@ -100,8 +100,41 @@ class ChecklistRenderer {
         // Create copy of set to iterate safely
         const toClose = Array.from(this.openComments);
         toClose.forEach(itemId => {
-            if (this.comments) this.comments.toggleComments(itemId);
+            if (!this.comments) return;
+            if (typeof this.comments.closeComments === 'function') {
+                this.comments.closeComments(itemId);
+            } else {
+                this.comments.toggleComments(itemId);
+            }
         });
+    }
+
+    openComments(itemId) {
+        if (!this.comments) return;
+        if (typeof this.comments.openComments === 'function') {
+            this.comments.openComments(itemId);
+        } else {
+            this.comments.toggleComments(itemId);
+        }
+    }
+
+    loadComments(itemId) {
+        if (this.comments && typeof this.comments.loadComments === 'function') {
+            return this.comments.loadComments(itemId);
+        }
+        return Promise.resolve();
+    }
+
+    ensureItemVisible(itemId) {
+        if (!Number.isFinite(itemId)) return;
+        let current = this.flatData[itemId];
+        const visited = new Set();
+        while (current && current.parentId && !visited.has(current.parentId)) {
+            visited.add(current.parentId);
+            this.expandedItems.add(current.parentId);
+            current = this.flatData[current.parentId];
+        }
+        this.updateExpandedState();
     }
 
     /**
