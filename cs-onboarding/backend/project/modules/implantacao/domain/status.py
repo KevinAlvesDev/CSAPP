@@ -391,9 +391,11 @@ def parar_implantacao_service(implantacao_id, usuario_cs_email, user_perfil_aces
     if impl.get("status") != "andamento":
         raise ValueError('Apenas implantações "Em Andamento" podem ser marcadas como "Parada".')
 
+    # Guardar início da parada em coluna dedicada; manter data_finalizacao como
+    # fallback para rotinas antigas que ainda a consultam.
     execute_db(
-        "UPDATE implantacoes SET status = 'parada', data_finalizacao = %s, motivo_parada = %s WHERE id = %s",
-        (data_parada_iso, motivo, implantacao_id),
+        "UPDATE implantacoes SET status = 'parada', data_parada = %s, data_finalizacao = %s, motivo_parada = %s WHERE id = %s",
+        (data_parada_iso, data_parada_iso, motivo, implantacao_id),
     )
     logar_timeline(
         implantacao_id,
@@ -434,8 +436,9 @@ def retomar_implantacao_service(implantacao_id, usuario_cs_email, user_perfil_ac
     if impl.get("status") != "parada":
         raise ValueError('Apenas implantações "Paradas" podem ser retomadas.')
 
+    # Limpar marcação de parada (nova e legada)
     execute_db(
-        "UPDATE implantacoes SET status = 'andamento', data_finalizacao = NULL, motivo_parada = '' WHERE id = %s",
+        "UPDATE implantacoes SET status = 'andamento', data_parada = NULL, data_finalizacao = NULL, motivo_parada = '' WHERE id = %s",
         (implantacao_id,),
     )
     logar_timeline(

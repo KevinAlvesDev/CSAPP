@@ -59,9 +59,20 @@ def dashboard():
     # Filtros de data para relatório de tags
     start_date = request.args.get("start_date")
     end_date = request.args.get("end_date")
-    date_type = request.args.get("date_type", "criacao")
+    date_type_param = request.args.get("date_type")
+    date_type = date_type_param or "criacao"
     if date_type not in ["criacao", "inicio", "finalizacao", "parada", "cancelamento"]:
         date_type = "criacao"
+    if (
+        date_type_param is not None
+        and date_type in ["criacao", "inicio"]
+        and not (start_date or end_date)
+    ):
+        flash("Para filtrar por Criação ou Início, informe ao menos uma data.", "warning")
+        # Sem datas: não aplicar filtro de período
+        date_type = "criacao"
+        start_date = None
+        end_date = None
     tags_report_email = current_cs_filter if is_manager else user_email
 
     tags_report = {}

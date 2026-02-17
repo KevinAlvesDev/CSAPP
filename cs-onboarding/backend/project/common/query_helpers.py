@@ -143,12 +143,15 @@ def get_implantacoes_with_progress(
         date_column = "i.data_inicio_efetivo"
     elif date_type == "finalizacao":
         date_column = "i.data_final_implantacao"
-        # status_condition = "finalizada"  <-- Removido para confiar na DATA
+        status_condition = ["finalizada", "concluida", "concluída", "entregue"]
     elif date_type == "parada":
-        date_column = "i.data_final_implantacao"
-        # status_condition = "parada" <-- Removido para confiar na DATA
+        # Nova coluna dedicada à data de início da parada.
+        # Fallback para bases ainda sem o campo populado.
+        date_column = "COALESCE(i.data_parada, i.data_final_implantacao, i.data_finalizacao)"
+        status_condition = ["parada"]
     elif date_type == "cancelamento":
         date_column = "i.data_cancelamento"
+        status_condition = ["cancelada"]
 
     if start_date:
         query += f" AND date({date_column}) >= {placeholder}"
@@ -159,8 +162,11 @@ def get_implantacoes_with_progress(
         args.append(end_date)
     
     if status_condition:
-        query += f" AND LOWER(i.status) = {placeholder}"
-        args.append(status_condition.lower())
+        # Aceita lista de status equivalentes
+        status_list = status_condition if isinstance(status_condition, (list, tuple)) else [status_condition]
+        placeholders = ", ".join([placeholder] * len(status_list))
+        query += f" AND LOWER(i.status) IN ({placeholders})"
+        args.extend([s.lower() for s in status_list])
 
     if sort_by_status:
         query += """
@@ -338,12 +344,13 @@ def get_implantacoes_count(
         date_column = "i.data_inicio_efetivo"
     elif date_type == "finalizacao":
         date_column = "i.data_final_implantacao"
-        # status_condition = "finalizada"
+        status_condition = ["finalizada", "concluida", "concluída", "entregue"]
     elif date_type == "parada":
-        date_column = "i.data_final_implantacao"
-        # status_condition = "parada"
+        date_column = "COALESCE(i.data_parada, i.data_final_implantacao, i.data_finalizacao)"
+        status_condition = ["parada"]
     elif date_type == "cancelamento":
         date_column = "i.data_cancelamento"
+        status_condition = ["cancelada"]
 
     if start_date:
         query += f" AND date({date_column}) >= {placeholder}"
@@ -354,8 +361,10 @@ def get_implantacoes_count(
         args.append(end_date)
     
     if status_condition:
-        query += f" AND LOWER(i.status) = {placeholder}"
-        args.append(status_condition.lower())
+        status_list = status_condition if isinstance(status_condition, (list, tuple)) else [status_condition]
+        placeholders = ", ".join([placeholder] * len(status_list))
+        query += f" AND LOWER(i.status) IN ({placeholders})"
+        args.extend([s.lower() for s in status_list])
 
     res = query_db(query, tuple(args), one=True)
     return res.get("total", 0) if res else 0

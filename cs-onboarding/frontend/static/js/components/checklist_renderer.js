@@ -272,40 +272,32 @@ class ChecklistRenderer {
         if (!this.tagsList || this.tagsList.length === 0) {
             // Fallback defaults while loading or on failure
             return `
-               <span class="comentario-tipo-tag tag-option acao-interna" data-item-id="${itemId}" data-tag="Ação interna"><i class="bi bi-briefcase"></i> Ação interna</span>
-               <span class="comentario-tipo-tag tag-option reuniao" data-item-id="${itemId}" data-tag="Reunião"><i class="bi bi-calendar-event"></i> Reunião</span>
-               <span class="comentario-tipo-tag tag-option noshow" data-item-id="${itemId}" data-tag="No Show"><i class="bi bi-calendar-x"></i> No Show</span>
-               <span class="comentario-tipo-tag tag-option simples-registro" data-item-id="${itemId}" data-tag="Simples registro"><i class="bi bi-pencil-square"></i> Simples registro</span>
+               <option value="">Selecione</option>
+               <option value="Ação interna">Ação interna</option>
+               <option value="Reunião">Reunião</option>
+               <option value="No Show">No Show</option>
+               <option value="Simples registro">Simples registro</option>
             `;
         }
 
-        return this.tagsList
-            .filter(t => t.tipo === 'comentario' || t.tipo === 'ambos')
-            .sort((a, b) => a.ordem - b.ordem)
-            .map(t => {
-                // Ensure valid class name from tag name if we want specific classes, 
-                // but we rely on generic .comentario-tipo-tag and data-tag now.
-                return `<span class="comentario-tipo-tag tag-option" data-item-id="${itemId}" data-tag="${t.nome}" title="${t.nome}"><i class="bi ${t.icone}"></i> ${t.nome}</span>`;
-            })
-            .join('');
+        const options = ['<option value="">Selecione</option>'];
+        options.push(
+            ...this.tagsList
+                .filter(t => t.tipo === 'comentario' || t.tipo === 'ambos')
+                .sort((a, b) => a.ordem - b.ordem)
+                .map(t => `<option value="${t.nome}">${t.nome}</option>`)
+        );
+        return options.join('');
     }
 
     updateTagsUI() {
         if (!this.flatData) return;
         Object.keys(this.flatData).forEach(id => {
-            const container = this.container.querySelector(`.tag-options-container[data-item-id="${id}"]`);
-            if (container) {
-                // Capture active tag if any
-                const activeTag = container.querySelector('.comentario-tipo-tag.active');
-                const activeTagName = activeTag ? activeTag.dataset.tag : null;
-
-                container.innerHTML = this.renderTagOptions(parseInt(id));
-
-                // Restore active state
-                if (activeTagName) {
-                    const newTag = container.querySelector(`.comentario-tipo-tag[data-tag="${activeTagName}"]`);
-                    if (newTag) newTag.classList.add('active');
-                }
+            const select = this.container.querySelector(`.comment-tag-select[data-item-id="${id}"]`);
+            if (select) {
+                const currentValue = select.value || '';
+                select.innerHTML = this.renderTagOptions(parseInt(id));
+                select.value = currentValue;
             }
         });
     }
@@ -426,12 +418,15 @@ class ChecklistRenderer {
                         </div>
                         
                         <div class="d-flex align-items-center justify-content-between gap-2 mt-2">
-                             <div class="d-flex align-items-center gap-2 flex-wrap">
-                                <span class="comentario-tipo-tag interno active" data-tipo="interno" data-item-id="${item.id}"><i class="bi bi-lock-fill"></i> Interno</span>
-                                <span class="comentario-tipo-tag externo" data-tipo="externo" data-item-id="${item.id}"><i class="bi bi-globe"></i> Externo</span>
-                                <span class="tag-options-container d-flex gap-2" data-item-id="${item.id}">
+                             <div class="d-flex align-items-center gap-2">
+                                <select class="form-select form-select-sm w-auto comment-visibility-select" data-item-id="${item.id}" style="width: 120px; padding-left: 0.5rem; padding-right: 1.6rem; font-size: 0.85rem; background-position: right 0.5rem center;">
+                                    <option value="" selected>Selecione</option>
+                                    <option value="interno">Interno</option>
+                                    <option value="externo">Externo</option>
+                                </select>
+                                <select class="form-select form-select-sm w-auto comment-tag-select" data-item-id="${item.id}" style="width: 200px;">
                                     ${this.renderTagOptions(item.id)}
-                                </span>
+                                </select>
                              </div>
                              <div class="d-flex gap-2 align-items-center">
                                 <label class="btn btn-sm btn-outline-secondary mb-0"><i class="bi bi-paperclip"></i><input type="file" class="d-none comentario-imagem-input" data-item-id="${item.id}" accept="image/*"></label>
@@ -535,28 +530,12 @@ class ChecklistRenderer {
                 else if (e.target.closest('.js-edit-tag')) this.openTagModal(parseInt(e.target.closest('.js-edit-tag').dataset.itemId));
                 else if (e.target.closest('.btn-delete-item')) this.deleteItem(parseInt(e.target.closest('.btn-delete-item').dataset.itemId));
             },
-            tagsClick: (e) => {
-                const visibilityTag = e.target.closest('.comentario-tipo-tag.interno, .comentario-tipo-tag.externo');
-                if (visibilityTag) {
-                    const container = visibilityTag.closest('.d-flex');
-                    if (container) container.querySelectorAll('.comentario-tipo-tag.interno, .comentario-tipo-tag.externo').forEach(t => t.classList.remove('active'));
-                    visibilityTag.classList.add('active');
-
-                    // Update request: handle email checkbox visibility
-                    const itemId = visibilityTag.dataset.itemId;
-                    const tipo = visibilityTag.dataset.tipo;
+            tagsChange: (e) => {
+                const visibilitySelect = e.target.closest('.comment-visibility-select');
+                if (visibilitySelect) {
+                    const itemId = visibilitySelect.dataset.itemId;
+                    const tipo = visibilitySelect.value || 'interno';
                     this.updateEmailCheckboxVisibility(itemId, tipo);
-                }
-
-                const tagOption = e.target.closest('.comentario-tipo-tag.tag-option');
-                if (tagOption) {
-                    const container = tagOption.closest('.d-flex');
-                    if (tagOption.classList.contains('active')) {
-                        tagOption.classList.remove('active');
-                    } else {
-                        if (container) container.querySelectorAll('.comentario-tipo-tag.tag-option').forEach(t => t.classList.remove('active'));
-                        tagOption.classList.add('active');
-                    }
                 }
             }
         };
@@ -566,7 +545,7 @@ class ChecklistRenderer {
         this.container.addEventListener('change', this._handlers.checkboxChange);
         this.container.addEventListener('click', this._handlers.commentsClick);
         this.container.addEventListener('click', this._handlers.modalsClick);
-        this.container.addEventListener('click', this._handlers.tagsClick);
+        this.container.addEventListener('change', this._handlers.tagsChange);
     }
 
     updateEmailCheckboxVisibility(itemId, tipo) {
@@ -599,7 +578,7 @@ class ChecklistRenderer {
             this.container.removeEventListener('change', this._handlers.checkboxChange);
             this.container.removeEventListener('click', this._handlers.commentsClick);
             this.container.removeEventListener('click', this._handlers.modalsClick);
-            this.container.removeEventListener('click', this._handlers.tagsClick);
+            this.container.removeEventListener('change', this._handlers.tagsChange);
             this._handlers = null;
         }
     }

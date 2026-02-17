@@ -277,12 +277,12 @@ class ChecklistComments {
         const texto = textarea.value.trim();
 
         // Get visibility
-        const activeVisibilityTag = commentsSection?.querySelector('.comentario-tipo-tag.interno.active, .comentario-tipo-tag.externo.active');
-        const visibilidade = activeVisibilityTag?.classList.contains('externo') ? 'externo' : 'interno';
+        const visibilitySelect = commentsSection?.querySelector('.comment-visibility-select');
+        const visibilidade = visibilitySelect?.value || '';
 
         // Get tag
-        const activeTagOption = commentsSection?.querySelector('.comentario-tipo-tag.tag-option.active');
-        const tag = activeTagOption ? activeTagOption.dataset.tag : null;
+        const tagSelect = commentsSection?.querySelector('.comment-tag-select');
+        const tag = tagSelect && tagSelect.value ? tagSelect.value : null;
         const noshow = tag === 'No Show';
 
         // Get image
@@ -292,6 +292,16 @@ class ChecklistComments {
         // Get email notification
         const checkboxEmail = commentsSection?.querySelector(`#check-email-${itemId}`);
         const send_email = checkboxEmail ? checkboxEmail.checked : false;
+
+        if (!visibilidade) {
+            if (this.renderer.showToast) this.renderer.showToast('Selecione Interno ou Externo', 'warning');
+            return;
+        }
+
+        if (!tag) {
+            if (this.renderer.showToast) this.renderer.showToast('Selecione uma tag', 'warning');
+            return;
+        }
 
         if (!texto && !imageFile) {
             if (this.renderer.showToast) this.renderer.showToast('Digite um comentário ou anexe uma imagem', 'warning');
@@ -324,12 +334,18 @@ class ChecklistComments {
     resetTags(commentsSection) {
         if (!commentsSection) return;
         // Reset visibility to Interno
-        commentsSection.querySelectorAll('.comentario-tipo-tag.interno, .comentario-tipo-tag.externo').forEach(t => t.classList.remove('active'));
-        const internoTag = commentsSection.querySelector('.comentario-tipo-tag.interno');
-        if (internoTag) internoTag.classList.add('active');
+        const visibilitySelect = commentsSection.querySelector('.comment-visibility-select');
+        if (visibilitySelect) {
+            visibilitySelect.value = '';
+            const itemId = visibilitySelect.dataset.itemId;
+            if (itemId && this.renderer.updateEmailCheckboxVisibility) {
+                this.renderer.updateEmailCheckboxVisibility(itemId, '');
+            }
+        }
 
         // Reset tags
-        commentsSection.querySelectorAll('.comentario-tipo-tag.tag-option').forEach(t => t.classList.remove('active'));
+        const tagSelect = commentsSection.querySelector('.comment-tag-select');
+        if (tagSelect) tagSelect.value = '';
     }
 
     cancelComment(itemId) {

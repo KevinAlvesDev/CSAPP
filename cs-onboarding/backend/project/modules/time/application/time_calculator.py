@@ -91,7 +91,9 @@ def calculate_total_days_in_status(impl_id, target_status="andamento"):
         Total de dias no status especificado
     """
     impl = query_db(
-        "SELECT data_inicio_efetivo, data_finalizacao, status FROM implantacoes WHERE id = %s", (impl_id,), one=True
+        "SELECT data_inicio_efetivo, data_finalizacao, data_parada, status FROM implantacoes WHERE id = %s",
+        (impl_id,),
+        one=True,
     )
 
     if not impl:
@@ -120,7 +122,7 @@ def calculate_total_days_in_status(impl_id, target_status="andamento"):
             return 0
         elif target_status == "parada":
             if current_status == "parada":
-                parada_inicio = parse_datetime(impl.get("data_finalizacao"))
+                parada_inicio = parse_datetime(impl.get("data_parada")) or parse_datetime(impl.get("data_finalizacao"))
                 if parada_inicio:
                     delta = agora - parada_inicio
                     return max(0, delta.days)
@@ -146,8 +148,10 @@ def calculate_total_days_in_status(impl_id, target_status="andamento"):
     if current_status == target_status:
         if target_status == "parada":
             # Se tem histórico, o período começa na última mudança (current_start)
-            # Se não tem, usa data_finalizacao como fallback
-            parada_inicio = current_start if status_history else parse_datetime(impl.get("data_finalizacao"))
+            # Se não tem, usa data_parada (novo) ou data_finalizacao (fallback)
+            parada_inicio = current_start if status_history else (
+                parse_datetime(impl.get("data_parada")) or parse_datetime(impl.get("data_finalizacao"))
+            )
 
             if parada_inicio and agora > parada_inicio:
                 periods.append((parada_inicio, agora))
@@ -202,7 +206,7 @@ def calculate_days_bulk(impl_ids: list) -> dict:
     # Buscar todas as implantações de uma vez
     placeholders = ", ".join(["%s"] * len(impl_ids))
     impl_query = f"""
-        SELECT id, data_inicio_efetivo, data_finalizacao, status
+        SELECT id, data_inicio_efetivo, data_finalizacao, data_parada, status
         FROM implantacoes
         WHERE id IN ({placeholders})
     """
@@ -267,7 +271,7 @@ def calculate_days_bulk(impl_ids: list) -> dict:
                 delta = agora - inicio_efetivo
                 result[impl_id]["dias_passados"] = max(0, delta.days)
             elif current_status == "parada":
-                parada_inicio = parse_datetime(impl.get("data_finalizacao"))
+                parada_inicio = parse_datetime(impl.get("data_parada")) or parse_datetime(impl.get("data_finalizacao"))
                 if parada_inicio:
                     result[impl_id]["dias_parada"] = max(0, (agora - parada_inicio).days)
                     if parada_inicio > inicio_efetivo:
