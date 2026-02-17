@@ -142,7 +142,7 @@ def get_implantacoes_with_progress(
     if date_type == "inicio":
         date_column = "i.data_inicio_efetivo"
     elif date_type == "finalizacao":
-        date_column = "i.data_final_implantacao"
+        date_column = "COALESCE(i.data_finalizacao, i.data_final_implantacao)"
         status_condition = ["finalizada", "concluida", "concluída", "entregue"]
     elif date_type == "parada":
         # Nova coluna dedicada à data de início da parada.
@@ -343,7 +343,7 @@ def get_implantacoes_count(
     if date_type == "inicio":
         date_column = "i.data_inicio_efetivo"
     elif date_type == "finalizacao":
-        date_column = "i.data_final_implantacao"
+        date_column = "COALESCE(i.data_finalizacao, i.data_final_implantacao)"
         status_condition = ["finalizada", "concluida", "concluída", "entregue"]
     elif date_type == "parada":
         date_column = "COALESCE(i.data_parada, i.data_final_implantacao, i.data_finalizacao)"
