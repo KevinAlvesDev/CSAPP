@@ -182,7 +182,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                     {% if current_cs_filter or current_tipo or current_start_date or current_end_date or
                     (current_date_type and current_date_type != 'criacao') %}
                     <div class="vr text-secondary opacity-25 mx-1" style="height: 20px;"></div>
-                    <a href="{{ url_for('onboarding.dashboard') }}{% if current_search %}?search={{ current_search }}{% endif %}"
+                    <a href="{{ url_for('onboarding.dashboard', clear_filters=1, search=current_search if current_search else None) }}"
                         class="btn btn-sm btn-link text-secondary text-decoration-none px-2" title="Limpar Filtros">
                         <i class="bi bi-x-circle-fill"></i>
                     </a>

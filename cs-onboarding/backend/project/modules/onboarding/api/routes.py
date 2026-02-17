@@ -1,5 +1,5 @@
 
-from flask import current_app, flash, g, redirect, render_template, request, url_for
+from flask import current_app, flash, g, redirect, render_template, request, session, url_for
 
 from ....blueprints.auth import login_required
 from ....blueprints.onboarding import onboarding_bp
@@ -27,6 +27,20 @@ from ..application.management_service import listar_todos_cs_com_cache
 def dashboard():
     user_email = g.user_email
     user_info = g.user
+    session_key = "onboarding_dashboard_filters"
+    saved_filters = session.get(session_key, {})
+    if not isinstance(saved_filters, dict):
+        saved_filters = {}
+
+    clear_filters = request.args.get("clear_filters") in {"1", "true", "True"}
+    if clear_filters:
+        session.pop(session_key, None)
+        saved_filters = {}
+
+    def _arg_or_saved(name: str, default=None):
+        if name in request.args:
+            return request.args.get(name)
+        return saved_filters.get(name, default)
 
     perfil_acesso = g.perfil.get("perfil_acesso") if g.get("perfil") else None
 
@@ -36,10 +50,10 @@ def dashboard():
     current_cs_filter = None
     sort_days = None
     try:
-        cs_filter_param = request.args.get("cs_filter", None)
+        cs_filter_param = _arg_or_saved("cs_filter", None)
         if cs_filter_param and is_manager:
             current_cs_filter = sanitize_string(cs_filter_param, max_length=100)
-        sort_days_param = request.args.get("sort_days", None)
+        sort_days_param = _arg_or_saved("sort_days", None)
         if sort_days_param:
             sort_days = sanitize_string(sort_days_param, max_length=4)
     except ValidationError as e:
@@ -48,18 +62,18 @@ def dashboard():
         sort_days = None
 
     # Novos Filtros (Busca e Tipo)
-    search_term = request.args.get("search", None)
+    search_term = _arg_or_saved("search", None)
     if search_term:
         search_term = sanitize_string(search_term, max_length=100)
 
-    tipo_filter = request.args.get("tipo", None)
+    tipo_filter = _arg_or_saved("tipo", None)
     if tipo_filter:
         tipo_filter = sanitize_string(tipo_filter, max_length=20)
 
     # Filtros de data para relatório de tags
-    start_date = request.args.get("start_date")
-    end_date = request.args.get("end_date")
-    date_type_param = request.args.get("date_type")
+    start_date = _arg_or_saved("start_date")
+    end_date = _arg_or_saved("end_date")
+    date_type_param = _arg_or_saved("date_type")
     date_type = date_type_param or "criacao"
     if date_type not in ["criacao", "inicio", "finalizacao", "parada", "cancelamento"]:
         date_type = "criacao"
@@ -73,6 +87,17 @@ def dashboard():
         date_type = "criacao"
         start_date = None
         end_date = None
+
+    session[session_key] = {
+        "search": search_term or "",
+        "cs_filter": current_cs_filter or "",
+        "sort_days": sort_days or "",
+        "tipo": tipo_filter or "",
+        "start_date": start_date or "",
+        "end_date": end_date or "",
+        "date_type": date_type or "criacao",
+    }
+
     tags_report_email = current_cs_filter if is_manager else user_email
 
     tags_report = {}
