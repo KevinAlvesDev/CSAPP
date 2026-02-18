@@ -11,7 +11,8 @@
 
 {% block content %}
 <div class="container-fluid p-4 content-wrapper" id="main-content" data-context="onboarding"
-    data-implantacao-id="{{ implantacao.id }}" data-email-usuario-logado="{{ email_usuario_logado }}"
+    data-implantacao-id="{{ implantacao.id }}" data-implantacao-nome="{{ implantacao.nome_empresa }}"
+    data-implantacao-status="{{ implantacao.status }}" data-email-usuario-logado="{{ email_usuario_logado }}"
     data-email-responsavel="{{ implantacao.email_responsavel or '' }}"
     data-is-manager="{{ 'true' if g.perfil and g.perfil.get('perfil_acesso') in ['Administrador', 'Gerente', 'Coordenador'] else 'false' }}"
     data-can-delete-task="{{ 'true' if can_delete_tasks else 'false' }}"

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections import Counter
 from datetime import date, datetime, timedelta
 from typing import Any
 
@@ -90,8 +91,9 @@ def _build_context(impl_id: int, user_email: str | None, is_manager: bool) -> di
             elif prazo_fim and now.date() <= prazo_fim.date() <= upcoming_limit.date():
                 upcoming_items.append(pending_items[-1])
 
-    comments_data = listar_comentarios_implantacao(impl_id, page=1, per_page=60)
+    comments_data = listar_comentarios_implantacao(impl_id, page=1, per_page=120)
     comments = comments_data.get("comments", [])
+    comments_total = comments_data.get("total", len(comments))
     recent_comments = [
         {
             "id": c.get("id"),
@@ -100,6 +102,7 @@ def _build_context(impl_id: int, user_email: str | None, is_manager: bool) -> di
             "tag": c.get("tag"),
             "data": c.get("data_criacao"),
             "imagem_url": c.get("imagem_url"),
+            "item_title": c.get("item_title"),
         }
         for c in comments
     ]
@@ -112,6 +115,30 @@ def _build_context(impl_id: int, user_email: str | None, is_manager: bool) -> di
     ]
 
     attachments = [c for c in recent_comments if c.get("imagem_url")]
+
+    # Estatisticas de comentarios
+    tag_counts = Counter([c.get("tag") for c in recent_comments if c.get("tag")])
+    top_tags = [f"{tag} ({count})" for tag, count in tag_counts.most_common(6)]
+    author_counts = Counter([c.get("autor") for c in recent_comments if c.get("autor")])
+    top_authors = [f"{author} ({count})" for author, count in author_counts.most_common(5)]
+    task_counts = Counter([c.get("item_title") for c in recent_comments if c.get("item_title")])
+    top_tasks = [f"{task} ({count})" for task, count in task_counts.most_common(5)]
+
+    treinamentos = []
+    for c in recent_comments:
+        text = (c.get("texto") or "").lower()
+        if any(k in text for k in ["trein", "capacita", "onboard", "aula", "workshop"]):
+            snippet = _truncate(c.get("texto") or "", 140)
+            treinamentos.append(f"{c.get('data')}: {snippet}")
+        if len(treinamentos) >= 8:
+            break
+
+    comentarios_highlights = []
+    for c in recent_comments[:12]:
+        titulo = c.get("item_title") or "Tarefa"
+        comentarios_highlights.append(
+            f"{c.get('data')}: {titulo} - {c.get('autor') or 'N/A'}: {c.get('texto')}"
+        )
 
     timeline = get_timeline_logs(impl_id=impl_id, page=1, per_page=30)
     timeline_logs = timeline.get("logs", [])
@@ -168,6 +195,12 @@ def _build_context(impl_id: int, user_email: str | None, is_manager: bool) -> di
         "comentarios_recentes": recent_comments[:25],
         "comentarios_reunioes": meeting_comments[:15],
         "anexos_recentes": attachments[:10],
+        "comentarios_total": comments_total,
+        "tags_top": top_tags,
+        "autores_top": top_authors,
+        "tarefas_top": top_tasks,
+        "treinamentos": treinamentos,
+        "comentarios_highlights": comentarios_highlights,
         "riscos": riscos,
         "metadados": {
             "gerado_por": user_email,
@@ -178,57 +211,145 @@ def _build_context(impl_id: int, user_email: str | None, is_manager: bool) -> di
 
 def _build_prompt(context: dict[str, Any]) -> str:
     return (
-        "Voce e um assistente que gera relatorios claros e objetivos para CS Onboarding.\n"
-        "Gere um resumo da implantacao em portugues, com as secoes abaixo.\n"
-        "Use linguagem profissional, sem inventar dados. Se algo nao existir, indique como 'Nao informado'.\n\n"
-        "Secoes obrigatorias:\n"
-        "1. Resumo executivo (3-5 linhas)\n"
-        "2. Andamento atual (progresso, status e marcos)\n"
-        "3. Pendencias e prazos (inclua atrasos e proximos 7 dias)\n"
-        "4. Riscos/Pontos criticos\n"
-        "5. Ultimos eventos relevantes\n"
-        "6. Proximos passos sugeridos\n\n"
+        "Voce e um assistente que gera relatorios completos para CS Onboarding.\n"
+        "Responda APENAS em JSON valido, sem texto extra.\n"
+        "Use as chaves exatamente como abaixo. Se algo nao existir, use 'Nao informado' ou lista vazia.\n\n"
+        "Chaves obrigatorias:\n"
+        "- header: {title, subtitle, empresa, status}\n"
+        "- sections: lista de objetos com {title, text, bullets}\n\n"
+        "Secoes (na ordem):\n"
+        "1. Resumo executivo\n"
+        "2. Andamento atual\n"
+        "3. Pendencias e prazos\n"
+        "4. Comentarios e treinamentos\n"
+        "5. Tags e temas recorrentes\n"
+        "6. Anexos e evidencias\n"
+        "7. Ultimos eventos relevantes\n"
+        "8. Proximos passos sugeridos\n\n"
         "Dados estruturados (JSON):\n"
         f"{json.dumps(context, ensure_ascii=False)}"
     )
 
 
-def _fallback_summary(context: dict[str, Any]) -> str:
+def _structured_fallback(context: dict[str, Any]) -> dict[str, Any]:
     imp = context.get("implantacao", {})
     prog = context.get("progresso", {})
     pend = context.get("pendencias", {})
     riscos = context.get("riscos", [])
     timeline = context.get("timeline", [])
+    tags_top = context.get("tags_top", [])
+    autores_top = context.get("autores_top", [])
+    tarefas_top = context.get("tarefas_top", [])
+    treinamentos = context.get("treinamentos", [])
+    comentarios_total = context.get("comentarios_total", 0)
+    comentarios_highlights = context.get("comentarios_highlights", [])
+    anexos = context.get("anexos_recentes", [])
 
+    sections = [
+        {
+            "title": "Resumo executivo",
+            "text": (
+                f"Implantacao de {imp.get('nome_empresa', 'N/A')} em status {imp.get('status', 'N/A')}."
+            ),
+            "bullets": [],
+        },
+        {
+            "title": "Andamento atual",
+            "text": (
+                f"{prog.get('percentual', 0)}% ({prog.get('concluidos', 0)}/{prog.get('total_itens', 0)} itens)."
+            ),
+            "bullets": [],
+        },
+        {
+            "title": "Pendencias e prazos",
+            "text": (
+                f"{pend.get('total', 0)} abertas, {pend.get('overdue_total', 0)} atrasadas, "
+                f"{pend.get('upcoming_total', 0)} nos proximos 7 dias."
+            ),
+            "bullets": [
+                *[
+                    f"Atraso: {i.get('titulo')} (prazo {i.get('prazo_fim')})"
+                    for i in pend.get("overdue_itens", [])[:5]
+                ],
+                *[
+                    f"Proximo: {i.get('titulo')} (prazo {i.get('prazo_fim')})"
+                    for i in pend.get("upcoming_itens", [])[:5]
+                ],
+            ],
+        },
+        {
+            "title": "Comentarios e treinamentos",
+            "text": (
+                f"Total de comentarios: {comentarios_total}. "
+                f"Autores mais ativos: {', '.join(autores_top) if autores_top else 'Nao informado.'} "
+                f"Tarefas com mais comentarios: {', '.join(tarefas_top) if tarefas_top else 'Nao informado.'}"
+            ),
+            "bullets": [
+                *treinamentos[:6],
+                *comentarios_highlights[:6],
+            ],
+        },
+        {
+            "title": "Tags e temas recorrentes",
+            "text": "Principais tags identificadas.",
+            "bullets": tags_top[:8] if tags_top else ["Nao informado."],
+        },
+        {
+            "title": "Anexos e evidencias",
+            "text": f"{len(anexos)} anexo(s) recente(s).",
+            "bullets": [f"{a.get('data')}: {a.get('imagem_url')}" for a in anexos[:6]] or ["Nao informado."],
+        },
+        {
+            "title": "Ultimos eventos relevantes",
+            "text": "",
+            "bullets": [
+                f"{t.get('data_criacao')}: {t.get('tipo_evento')} - {t.get('detalhes')}"
+                for t in timeline[:6]
+            ]
+            or ["Nao informado."],
+        },
+        {
+            "title": "Proximos passos sugeridos",
+            "text": "",
+            "bullets": [
+                "Revisar pendencias e validar prazos com o cliente.",
+                "Garantir registro de treinamentos e alinhamentos recentes.",
+            ],
+        },
+    ]
+
+    return {
+        "header": {
+            "title": "Resumo da Implantacao",
+            "subtitle": "Documento sintetico do andamento",
+            "empresa": imp.get("nome_empresa", "N/A"),
+            "status": imp.get("status", "N/A"),
+        },
+        "sections": sections,
+    }
+
+
+def _structured_to_text(structured: dict[str, Any]) -> str:
+    sections = structured.get("sections", [])
+    mapping = {
+        "Resumo executivo": "Resumo executivo",
+        "Andamento atual": "Andamento",
+        "Pendencias e prazos": "Pendencias",
+        "Comentarios e treinamentos": "Comentarios e treinamentos",
+        "Tags e temas recorrentes": "Tags e temas",
+        "Anexos e evidencias": "Anexos",
+        "Ultimos eventos relevantes": "Ultimos eventos",
+        "Proximos passos sugeridos": "Proximos passos sugeridos",
+    }
     lines = []
-    lines.append(
-        f"Resumo executivo: Implantaçao de {imp.get('nome_empresa', 'N/A')} em status "
-        f"{imp.get('status', 'N/A')}."
-    )
-    lines.append(
-        f"Andamento: {prog.get('percentual', 0)}% ({prog.get('concluidos', 0)}/{prog.get('total_itens', 0)} itens)."
-    )
-    lines.append(
-        f"Pendencias: {pend.get('total', 0)} abertas, "
-        f"{pend.get('overdue_total', 0)} atrasadas, "
-        f"{pend.get('upcoming_total', 0)} nos proximos 7 dias."
-    )
-    if riscos:
-        lines.append("Riscos: " + "; ".join(riscos))
-    else:
-        lines.append("Riscos: Nenhum critico identificado.")
-
-    if timeline:
-        last = timeline[0]
-        lines.append(
-            "Ultimo evento: "
-            f"{last.get('tipo_evento', 'N/A')} - {last.get('detalhes', '')}"
-        )
-    else:
-        lines.append("Ultimos eventos: Nao informado.")
-
-    lines.append("Proximos passos sugeridos: revisar pendencias e validar prazos com o cliente.")
-
+    for sec in sections:
+        title = mapping.get(sec.get("title"), sec.get("title", "Secao"))
+        text = (sec.get("text") or "").strip()
+        bullets = sec.get("bullets") or []
+        line = f"{title}: {text}" if text else f"{title}:"
+        if bullets:
+            line += " " + "; ".join([str(b) for b in bullets[:4]])
+        lines.append(line)
     return "\n".join(lines)
 
 
@@ -241,14 +362,30 @@ def gerar_resumo_implantacao_service(
     context = _build_context(impl_id, user_email, is_manager)
     prompt = _build_prompt(context)
 
+    summary_structured: dict[str, Any] | None = None
     try:
         summary_text = generate_text(prompt)
         source = "gemini"
+        # Tentar extrair JSON
+        raw = summary_text.strip()
+        if raw.startswith("```"):
+            raw = re.sub(r"^```(json)?", "", raw.strip(), flags=re.IGNORECASE).strip()
+            if raw.endswith("```"):
+                raw = raw[:-3].strip()
+        if raw.startswith("{") and raw.endswith("}"):
+            try:
+                summary_structured = json.loads(raw)
+            except Exception:
+                summary_structured = None
+        if summary_structured is None:
+            summary_structured = _structured_fallback(context)
     except GeminiClientError:
-        summary_text = _fallback_summary(context)
+        summary_structured = _structured_fallback(context)
+        summary_text = _structured_to_text(summary_structured)
         source = "fallback"
 
     return {
         "summary": summary_text,
+        "summary_structured": summary_structured,
         "source": source,
     }

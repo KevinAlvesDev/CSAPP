@@ -12,6 +12,8 @@
     // Populate CONFIG
     CONFIG = {
       implantacaoId: mainContent.dataset.implantacaoId,
+      implantacaoNome: mainContent.dataset.implantacaoNome || '',
+      implantacaoStatus: mainContent.dataset.implantacaoStatus || '',
       emailUsuarioLogado: mainContent.dataset.emailUsuarioLogado,
       userEmail: mainContent.dataset.emailUsuarioLogado || '',
       emailResponsavel: mainContent.dataset.emailResponsavel || '',
@@ -125,9 +127,56 @@
       if (btnRegenerarResumo) btnRegenerarResumo.disabled = isLoading;
     }
 
-    function setResumoContent(text, source) {
+    function renderStructuredResumo(structured) {
+      if (!structured) return '';
+      const header = structured.header || {};
+      const sections = Array.isArray(structured.sections) ? structured.sections : [];
+      if (!sections.length) return '';
+      const title = escapeHtml(header.title || 'Resumo da Implantacao');
+      const subtitle = escapeHtml(header.subtitle || 'Documento sintetico do andamento');
+      const empresa = escapeHtml(header.empresa || CONFIG.implantacaoNome || 'N/A');
+      const status = escapeHtml(header.status || CONFIG.implantacaoStatus || 'N/A');
+
+      const sectionHtml = sections.map((sec, index) => {
+        const secTitle = escapeHtml(sec.title || 'Secao');
+        const secText = escapeHtml(sec.text || '');
+        const bullets = Array.isArray(sec.bullets) ? sec.bullets : [];
+        const bulletsHtml = bullets.length
+          ? `<ul class="resumo-bullets">${bullets.map(b => `<li>${escapeHtml(String(b))}</li>`).join('')}</ul>`
+          : '';
+        const textHtml = secText ? `<div class="resumo-section-text">${secText}</div>` : '';
+        const divider = index === sections.length - 1 ? '' : '<div class="resumo-divider"></div>';
+        return `
+          <div class="resumo-section">
+            <div class="resumo-section-title">${secTitle}</div>
+            ${textHtml}
+            ${bulletsHtml}
+          </div>
+          ${divider}
+        `;
+      }).join('');
+
+      return `
+        <div class="resumo-document">
+          <div class="resumo-doc-header">
+            <div>
+              <div class="resumo-doc-title">${title}</div>
+              <div class="resumo-doc-subtitle">${subtitle}</div>
+            </div>
+            <div class="resumo-doc-meta">
+              <div>Empresa: <strong>${empresa}</strong></div>
+              <div>Status: <strong>${status}</strong></div>
+            </div>
+          </div>
+          <div class="resumo-doc-body">
+            ${sectionHtml}
+          </div>
+        </div>
+      `;
+    }
+    function setResumoContent(text, source, structured) {
       const normalized = (text || '').trim();
-      const sections = parseResumoSections(normalized);
+      const sections = structured ? renderStructuredResumo(structured) : parseResumoSections(normalized);
 
       if (sections && resumoSections) {
         resumoSections.innerHTML = sections;
@@ -249,11 +298,11 @@
           throw new Error(data.error || `Erro ${response.status}`);
         }
 
-        setResumoContent(data.summary || '', data.source || '');
+        setResumoContent(data.summary || '', data.source || '', data.summary_structured || null);
       } catch (error) {
         console.error('Erro ao gerar resumo da implantacao:', error);
         showToast('Erro ao gerar resumo. Tente novamente.', 'error');
-        setResumoContent('', '');
+        setResumoContent('', '', null);
       } finally {
         setResumoLoading(false);
         resumoRequestInFlight = false;
