@@ -17,7 +17,7 @@
       emailUsuarioLogado: mainContent.dataset.emailUsuarioLogado,
       userEmail: mainContent.dataset.emailUsuarioLogado || '',
       emailResponsavel: mainContent.dataset.emailResponsavel || '',
-      csrfToken: document.querySelector('input[name="csrf_token"]')?.value || '',
+      csrfToken: document.querySelector('input[name="csrf_token"]')?.value || document.querySelector('meta[name="csrf-token"]')?.content || '',
       isManager: (mainContent.dataset.isManager || 'false') === 'true'
     };
 
@@ -303,15 +303,24 @@
           body: JSON.stringify({})
         });
 
-        const data = await response.json();
-        if (!response.ok || !data.ok) {
-          throw new Error(data.error || `Erro ${response.status}`);
+        const contentType = response.headers.get('content-type') || '';
+        let data = null;
+        if (contentType.includes('application/json')) {
+          data = await response.json();
+        } else {
+          const raw = await response.text();
+          throw new Error(`Erro ${response.status}: ${raw.slice(0, 180)}`);
+        }
+
+        if (!response.ok || !data || !data.ok) {
+          throw new Error((data && data.error) ? data.error : `Erro ${response.status}`);
         }
 
         setResumoContent(data.summary || '', data.source || '', data.summary_structured || null);
       } catch (error) {
         console.error('Erro ao gerar resumo da implantacao:', error);
-        showToast('Erro ao gerar resumo. Tente novamente.', 'error');
+        const detail = error && error.message ? ` (${error.message})` : '';
+        showToast(`Erro ao gerar resumo${detail}`, 'error');
         setResumoContent('', '', null);
       } finally {
         setResumoLoading(false);

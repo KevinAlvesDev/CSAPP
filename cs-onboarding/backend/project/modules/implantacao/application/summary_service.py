@@ -233,6 +233,70 @@ def _build_context(impl_id: int, user_email: str | None, is_manager: bool) -> di
     }
 
 
+def _build_minimal_context(impl_id: int, user_email: str | None, is_manager: bool) -> dict[str, Any]:
+    impl = query_db(
+        """
+        SELECT id, nome_empresa, status, tipo, usuario_cs, data_criacao
+        FROM implantacoes
+        WHERE id = %s
+        """,
+        (impl_id,),
+        one=True,
+    )
+    if not impl:
+        raise ValueError("Implantacao nao encontrada.")
+
+    try:
+        progress_pct, total_items, completed_items = _get_progress(impl_id)
+    except Exception:
+        progress_pct, total_items, completed_items = 0, 0, 0
+
+    return {
+        "implantacao": {
+            "id": impl.get("id"),
+            "nome_empresa": impl.get("nome_empresa"),
+            "status": impl.get("status"),
+            "tipo": impl.get("tipo"),
+            "usuario_cs": impl.get("usuario_cs"),
+            "data_criacao": format_date_br(impl.get("data_criacao")),
+            "data_inicio_efetivo": "Nao informado",
+            "data_previsao_termino": "Nao informado",
+            "data_finalizacao": "Nao informado",
+            "data_parada": "Nao informado",
+            "data_cancelamento": "Nao informado",
+            "motivo_parada": "",
+            "motivo_cancelamento": "",
+        },
+        "progresso": {
+            "percentual": progress_pct,
+            "total_itens": total_items,
+            "concluidos": completed_items,
+        },
+        "pendencias": {
+            "total": 0,
+            "overdue_total": 0,
+            "upcoming_total": 0,
+            "overdue_itens": [],
+            "upcoming_itens": [],
+        },
+        "timeline": [],
+        "comentarios_recentes": [],
+        "comentarios_reunioes": [],
+        "anexos_recentes": [],
+        "comentarios_total": 0,
+        "tags_top": [],
+        "autores_top": [],
+        "tarefas_top": [],
+        "treinamentos": [],
+        "comentarios_highlights": [],
+        "riscos": [],
+        "metadados": {
+            "gerado_por": user_email,
+            "is_manager": is_manager,
+        },
+    }
+
+
 def _build_prompt(context: dict[str, Any]) -> str:
     return (
         "Voce e um assistente que gera relatorios completos para CS Onboarding.\n"
@@ -389,7 +453,10 @@ def gerar_resumo_implantacao_service(
     perfil_acesso: str | None = None,
 ) -> dict[str, Any]:
     is_manager = bool(perfil_acesso in PERFIS_COM_GESTAO) if perfil_acesso else False
-    context = _build_context(impl_id, user_email, is_manager)
+    try:
+        context = _build_context(impl_id, user_email, is_manager)
+    except Exception:
+        context = _build_minimal_context(impl_id, user_email, is_manager)
     prompt = _build_prompt(context)
 
     summary_structured: dict[str, Any] | None = None

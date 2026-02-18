@@ -53,7 +53,10 @@ def generate_text(
     if not response.ok:
         raise GeminiClientError(f"Gemini retornou erro {response.status_code}.")
 
-    data = response.json() or {}
+    try:
+        data = response.json() or {}
+    except ValueError as exc:
+        raise GeminiClientError("Resposta invalida do Gemini (nao-JSON).") from exc
     candidates = data.get("candidates") or []
     if not candidates:
         raise GeminiClientError("Gemini nao retornou candidatos.")
