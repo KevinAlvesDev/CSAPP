@@ -113,6 +113,7 @@
     // =========================================================================
     const resumoModal = document.getElementById('modalResumoImplantacao');
     const resumoContent = document.getElementById('resumo-implantacao-content');
+    const resumoSections = document.getElementById('resumo-implantacao-sections');
     const resumoLoading = document.getElementById('resumo-implantacao-loading');
     const resumoEmpty = document.getElementById('resumo-implantacao-empty');
     const resumoMeta = document.getElementById('resumo-implantacao-meta');
@@ -125,18 +126,108 @@
     }
 
     function setResumoContent(text, source) {
-      if (resumoContent) {
-        resumoContent.textContent = text || '';
-        resumoContent.classList.toggle('d-none', !text);
+      const normalized = (text || '').trim();
+      const sections = parseResumoSections(normalized);
+
+      if (sections && resumoSections) {
+        resumoSections.innerHTML = sections;
+        resumoSections.classList.remove('d-none');
+        if (resumoContent) resumoContent.classList.add('d-none');
+      } else {
+        if (resumoContent) {
+          resumoContent.textContent = normalized;
+          resumoContent.classList.toggle('d-none', !normalized);
+        }
+        if (resumoSections) resumoSections.classList.add('d-none');
       }
-      if (resumoEmpty) resumoEmpty.classList.toggle('d-none', Boolean(text));
+
+      if (resumoEmpty) resumoEmpty.classList.toggle('d-none', Boolean(normalized));
       if (resumoMeta) {
         const agora = new Date();
         const sourceText = source ? `Fonte: ${source}` : '';
-        resumoMeta.textContent = `Gerado em ${agora.toLocaleString()} ${sourceText ? '• ' + sourceText : ''}`;
+        resumoMeta.textContent = `Gerado em ${agora.toLocaleString()}${sourceText ? ' - ' + sourceText : ''}`;
       }
     }
 
+    function parseResumoSections(text) {
+      if (!text) return '';
+      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      if (!lines.length) return '';
+
+      const sections = {
+        resumo: '',
+        andamento: '',
+        pendencias: '',
+        riscos: '',
+        eventos: '',
+        proximos: ''
+      };
+
+      for (const line of lines) {
+        const lower = line.toLowerCase();
+        if (lower.startsWith('resumo executivo:')) sections.resumo = line.replace(/^[^:]+:/, '').trim();
+        else if (lower.startsWith('andamento:')) sections.andamento = line.replace(/^[^:]+:/, '').trim();
+        else if (lower.startsWith('pendencias:')) sections.pendencias = line.replace(/^[^:]+:/, '').trim();
+        else if (lower.startsWith('riscos:')) sections.riscos = line.replace(/^[^:]+:/, '').trim();
+        else if (lower.startsWith('ultimos eventos:')) sections.eventos = line.replace(/^[^:]+:/, '').trim();
+        else if (lower.startsWith('ultimo evento:')) sections.eventos = line.replace(/^[^:]+:/, '').trim();
+        else if (lower.startsWith('proximos passos sugeridos:')) sections.proximos = line.replace(/^[^:]+:/, '').trim();
+      }
+
+      const hasStructured = Object.values(sections).some(v => v);
+      if (!hasStructured) return '';
+
+      const bullets = (text) => {
+        const safe = escapeHtml(text || 'Nao informado.');
+        return `<ul class="resumo-bullets"><li>${safe}</li></ul>`;
+      };
+
+      return `
+        <div class="resumo-document">
+          <div class="resumo-doc-header">
+            <div>
+              <div class="resumo-doc-title">Resumo da Implantacao</div>
+              <div class="resumo-doc-subtitle">Documento sintetico do andamento</div>
+            </div>
+            <div class="resumo-doc-meta">
+              <div>Gerado automaticamente</div>
+              <div><strong>IA</strong> Gemini</div>
+            </div>
+          </div>
+          <div class="resumo-doc-body">
+            <div class="resumo-section">
+              <div class="resumo-section-title">Resumo executivo</div>
+              <div class="resumo-section-text">${escapeHtml(sections.resumo || 'Nao informado.')}</div>
+            </div>
+            <div class="resumo-divider"></div>
+            <div class="resumo-section">
+              <div class="resumo-section-title">Andamento atual</div>
+              <div class="resumo-section-text">${escapeHtml(sections.andamento || 'Nao informado.')}</div>
+            </div>
+            <div class="resumo-divider"></div>
+            <div class="resumo-section">
+              <div class="resumo-section-title">Pendencias e prazos</div>
+              ${bullets(sections.pendencias)}
+            </div>
+            <div class="resumo-divider"></div>
+            <div class="resumo-section">
+              <div class="resumo-section-title">Riscos e pontos criticos</div>
+              ${bullets(sections.riscos)}
+            </div>
+            <div class="resumo-divider"></div>
+            <div class="resumo-section">
+              <div class="resumo-section-title">Ultimos eventos relevantes</div>
+              ${bullets(sections.eventos)}
+            </div>
+            <div class="resumo-divider"></div>
+            <div class="resumo-section">
+              <div class="resumo-section-title">Proximos passos sugeridos</div>
+              ${bullets(sections.proximos)}
+            </div>
+          </div>
+        </div>
+      `;
+    }
     async function gerarResumoImplantacao() {
       if (resumoRequestInFlight) return;
       resumoRequestInFlight = true;

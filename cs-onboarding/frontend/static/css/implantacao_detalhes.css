@@ -159,6 +159,114 @@
     color: #1f2937;
 }
 
+.resumo-sections {
+    display: block;
+}
+
+.resumo-document {
+    background: #fffaf0;
+    border: 1px solid #e2d3c2;
+    border-radius: 12px;
+    padding: 1.25rem 1.35rem;
+    box-shadow:
+        0 1px 0 rgba(148, 163, 184, 0.5),
+        0 12px 30px rgba(15, 23, 42, 0.08);
+    position: relative;
+    overflow: hidden;
+}
+
+.resumo-document::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        to bottom,
+        rgba(15, 23, 42, 0.03),
+        rgba(15, 23, 42, 0.03) 1px,
+        transparent 1px,
+        transparent 26px
+    );
+    pointer-events: none;
+}
+
+.resumo-doc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid #1f2937;
+    position: relative;
+    z-index: 1;
+}
+
+.resumo-doc-title {
+    font-size: 1.1rem;
+    font-weight: 800;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: #0f172a;
+}
+
+.resumo-doc-subtitle {
+    font-size: 0.85rem;
+    color: #475569;
+    margin-top: 0.2rem;
+}
+
+.resumo-doc-meta {
+    text-align: right;
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+.resumo-doc-meta strong {
+    color: #0f172a;
+    font-weight: 700;
+}
+
+.resumo-doc-body {
+    margin-top: 0.9rem;
+    position: relative;
+    z-index: 1;
+}
+
+.resumo-section {
+    margin-bottom: 0.85rem;
+}
+
+.resumo-section-title {
+    font-size: 0.78rem;
+    letter-spacing: 0.45px;
+    text-transform: uppercase;
+    color: #0f172a;
+    font-weight: 800;
+    margin-bottom: 0.25rem;
+}
+
+.resumo-section-text {
+    font-size: 0.95rem;
+    color: #1f2937;
+    line-height: 1.55;
+}
+
+.resumo-divider {
+    height: 1px;
+    background: #e2d3c2;
+    margin: 0.75rem 0;
+}
+
+.resumo-bullets {
+    margin: 0.35rem 0 0 0;
+    padding-left: 1.1rem;
+    color: #1f2937;
+    font-size: 0.93rem;
+}
+
+.resumo-bullets li {
+    margin-bottom: 0.3rem;
+}
+
 /* Layout das colunas */
 .sidebar-column {
     flex: 0 0 20%;
