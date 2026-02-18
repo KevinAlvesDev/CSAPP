@@ -11,6 +11,7 @@ from ....common.utils import format_date_br
 from ....constants import PERFIS_COM_GESTAO
 from ....db import query_db
 from ....modules.checklist.domain.comments import listar_comentarios_implantacao
+from ....modules.implantacao.domain.progress import _get_progress
 from ....modules.timeline.application.timeline_service import get_timeline_logs
 from ..infra.gemini_client import GeminiClientError, generate_text
 
@@ -60,9 +61,8 @@ def _build_context(impl_id: int, user_email: str | None, is_manager: bool) -> di
 
     loader = ChecklistDataLoader(impl_id)
     items = loader.get_all_items()
-    total_items = loader.total_items
-    completed_items = loader.completed_items
-    progress_pct = loader.progress_percentage
+    progress_pct, total_items, completed_items = _get_progress(impl_id)
+    leaf_types = {"tarefa", "subtarefa"}
 
     pending_items: list[dict[str, Any]] = []
     overdue_items: list[dict[str, Any]] = []
@@ -70,8 +70,6 @@ def _build_context(impl_id: int, user_email: str | None, is_manager: bool) -> di
 
     now = datetime.now()
     upcoming_limit = now + timedelta(days=7)
-    leaf_types = {"tarefa", "subtarefa"}
-
     for item in items:
         if item.get("tipo_item") not in leaf_types:
             continue
