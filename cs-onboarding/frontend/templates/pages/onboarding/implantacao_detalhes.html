@@ -102,6 +102,19 @@
                             <h6 class="mb-0 fw-bold">Editar Detalhes</h6>
                         </div>
                     </button>
+                    <button
+                        class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-3"
+                        id="btn-gerar-resumo-implantacao"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalResumoImplantacao">
+                        <div class="bg-primary bg-opacity-10 p-2 rounded text-primary">
+                            <i class="bi bi-stars"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 fw-bold">Gerar resumo da implantação</h6>
+                            <small class="text-muted">IA (Gemini)</small>
+                        </div>
+                    </button>
 
                     {% if implantacao.status == 'andamento' %}
                     <button class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-3"
@@ -1034,6 +1047,37 @@ Sim - Academia XYZ
                 <button type="button" class="btn btn-danger" id="btnConfirmarRemoverPlano"
                     data-implantacao-id="{{ implantacao.id }}">
                     <i class="bi bi-trash me-1"></i>Confirmar Remoção
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Resumo da Implantacao -->
+<div class="modal fade" id="modalResumoImplantacao" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title">Resumo da ImplantaÃ§Ã£o (IA)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="resumo-implantacao-loading" class="resumo-loading d-none">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Gerando...</span>
+                    </div>
+                    <span>Gerando resumo, aguarde...</span>
+                </div>
+                <div id="resumo-implantacao-empty" class="text-muted small">
+                    Clique em "Gerar resumo" para iniciar.
+                </div>
+                <pre id="resumo-implantacao-content" class="resumo-content d-none"></pre>
+                <div id="resumo-implantacao-meta" class="text-muted small mt-2"></div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                <button type="button" class="btn btn-primary" id="btn-regenerar-resumo-implantacao">
+                    Gerar resumo
                 </button>
             </div>
         </div>

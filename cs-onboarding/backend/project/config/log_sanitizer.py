@@ -42,6 +42,7 @@ class SensitiveDataFilter(logging.Filter):
         "CLOUDFLARE_ACCESS_KEY_ID",
         "SMTP_PASSWORD",
         "SENDGRID_API_KEY",
+        "GEMINI_API_KEY",
         "SENTRY_DSN",
     ]
 

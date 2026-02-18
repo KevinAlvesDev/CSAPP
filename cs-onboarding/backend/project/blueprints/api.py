@@ -115,6 +115,34 @@ def export_timeline(impl_id: int):
         return jsonify({"ok": False, "error": "Erro interno ao exportar timeline"}), 500
 
 
+@api_bp.route("/implantacao/<int:impl_id>/resumo", methods=["POST"])
+@login_required
+@validate_api_origin
+@validate_context_access(id_param="impl_id", entity_type="implantacao")
+@limiter.limit("30 per minute", key_func=lambda: g.user_email or get_remote_address())
+def gerar_resumo_implantacao(impl_id: int):
+    try:
+        impl_id = validate_integer(impl_id, min_value=1)
+    except ValidationError as e:
+        return jsonify({"ok": False, "error": f"ID invalido: {e!s}"}), 400
+
+    try:
+        from ..modules.implantacao.application.summary_service import gerar_resumo_implantacao_service
+
+        perfil_acesso = g.perfil.get("perfil_acesso") if g.get("perfil") else None
+        result = gerar_resumo_implantacao_service(
+            impl_id=impl_id,
+            user_email=g.user_email,
+            perfil_acesso=perfil_acesso,
+        )
+        return jsonify({"ok": True, **result})
+    except ValueError as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
+    except Exception as e:
+        api_logger.error(f"Erro ao gerar resumo da implantacao {impl_id}: {e}", exc_info=True)
+        return jsonify({"ok": False, "error": "Erro interno ao gerar resumo"}), 500
+
+
 @api_bp.route("/consultar_empresa", methods=["GET"])
 @login_required
 @validate_api_origin

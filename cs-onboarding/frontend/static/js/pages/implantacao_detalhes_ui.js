@@ -109,6 +109,80 @@
     }
 
     // =========================================================================
+    // Resumo da Implantacao (IA)
+    // =========================================================================
+    const resumoModal = document.getElementById('modalResumoImplantacao');
+    const resumoContent = document.getElementById('resumo-implantacao-content');
+    const resumoLoading = document.getElementById('resumo-implantacao-loading');
+    const resumoEmpty = document.getElementById('resumo-implantacao-empty');
+    const resumoMeta = document.getElementById('resumo-implantacao-meta');
+    const btnRegenerarResumo = document.getElementById('btn-regenerar-resumo-implantacao');
+    let resumoRequestInFlight = false;
+
+    function setResumoLoading(isLoading) {
+      if (resumoLoading) resumoLoading.classList.toggle('d-none', !isLoading);
+      if (btnRegenerarResumo) btnRegenerarResumo.disabled = isLoading;
+    }
+
+    function setResumoContent(text, source) {
+      if (resumoContent) {
+        resumoContent.textContent = text || '';
+        resumoContent.classList.toggle('d-none', !text);
+      }
+      if (resumoEmpty) resumoEmpty.classList.toggle('d-none', Boolean(text));
+      if (resumoMeta) {
+        const agora = new Date();
+        const sourceText = source ? `Fonte: ${source}` : '';
+        resumoMeta.textContent = `Gerado em ${agora.toLocaleString()} ${sourceText ? 'ï ' + sourceText : ''}`;
+      }
+    }
+
+    async function gerarResumoImplantacao() {
+      if (resumoRequestInFlight) return;
+      resumoRequestInFlight = true;
+      setResumoLoading(true);
+
+      try {
+        const response = await fetch(`/api/implantacao/${CONFIG.implantacaoId}/resumo`, {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CONFIG.csrfToken || ''
+          },
+          body: JSON.stringify({})
+        });
+
+        const data = await response.json();
+        if (!response.ok || !data.ok) {
+          throw new Error(data.error || `Erro ${response.status}`);
+        }
+
+        setResumoContent(data.summary || '', data.source || '');
+      } catch (error) {
+        console.error('Erro ao gerar resumo da implantacao:', error);
+        showToast('Erro ao gerar resumo. Tente novamente.', 'error');
+        setResumoContent('', '');
+      } finally {
+        setResumoLoading(false);
+        resumoRequestInFlight = false;
+      }
+    }
+
+    if (resumoModal) {
+      resumoModal.addEventListener('show.bs.modal', function () {
+        if (resumoContent && !resumoContent.textContent.trim()) {
+          gerarResumoImplantacao();
+        }
+      });
+    }
+
+    if (btnRegenerarResumo) {
+      btnRegenerarResumo.addEventListener('click', function () {
+        gerarResumoImplantacao();
+      });
+    }
+    // =========================================================================
     // Global Comments Logic (New "Coment√°rios" Tab)
     // =========================================================================
     let globalCommentsState = {
