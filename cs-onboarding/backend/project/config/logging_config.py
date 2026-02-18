@@ -34,6 +34,8 @@ class ContextFilter(logging.Filter):
 
 def setup_logging(app):
     """Configura o sistema de logs para a aplicação."""
+    if app.config.get("_LOGGING_CONFIGURED"):
+        return
 
     default_dir = os.path.join(os.path.dirname(__file__), "..", "logs")
     log_dir = app.config.get("LOG_DIR") or default_dir
@@ -74,16 +76,16 @@ def setup_logging(app):
     console_handler.setFormatter(formatter)
     console_handler.addFilter(ContextFilter())
 
-    root_logger = logging.getLogger("root")
+    root_logger = logging.getLogger()
+    root_logger.handlers.clear()
     root_logger.setLevel(log_level)
     root_logger.addHandler(file_handler)
     root_logger.addHandler(error_handler)
     root_logger.addHandler(console_handler)
 
     app.logger.setLevel(log_level)
-    app.logger.addHandler(file_handler)
-    app.logger.addHandler(error_handler)
-    app.logger.addHandler(console_handler)
+    app.logger.handlers.clear()
+    app.logger.propagate = True
     app.logger.addFilter(ContextFilter())
 
     for name in [
@@ -100,12 +102,12 @@ def setup_logging(app):
     ]:
         named_logger = logging.getLogger(name)
         named_logger.setLevel(log_level)
-        named_logger.addHandler(file_handler)
-        named_logger.addHandler(error_handler)
-        named_logger.addHandler(console_handler)
+        named_logger.handlers.clear()
+        named_logger.propagate = True
         named_logger.addFilter(ContextFilter())
 
     app.logger.info("Sistema de logging configurado com sucesso")
+    app.config["_LOGGING_CONFIGURED"] = True
 
 
 def get_logger(name):

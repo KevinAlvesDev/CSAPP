@@ -306,9 +306,13 @@ def get_implantacao_details(
         logger.error(f"Erro ao carregar lista de CS users: {e}", exc_info=True)
         all_cs_users = []
 
-    # Tentativa de auto-relink: se a implantação perdeu o plano_sucesso_id,
-    # mas ainda existe uma instância em andamento para processo_id.
-    if not plano_historico_id and not implantacao.get("plano_sucesso_id"):
+    # Tentativa de auto-relink: somente quando havia vínculo de plano registrado.
+    # Evita reanexar plano após remoção intencional (quando data_atribuicao_plano foi limpa).
+    if (
+        not plano_historico_id
+        and not implantacao.get("plano_sucesso_id")
+        and implantacao.get("data_atribuicao_plano")
+    ):
         try:
             plano_atual = query_db(
                 """
