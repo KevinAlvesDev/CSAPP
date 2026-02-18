@@ -309,6 +309,55 @@ def verificar_permissao(perfil_id: int, recurso_codigo: str) -> bool:
     return resultado and resultado["count"] > 0
 
 
+def resolver_perfil_id(perfil_contexto: dict | None) -> int | None:
+    """
+    Resolve o ID do perfil RBAC a partir do contexto do usuario.
+    Aceita dicts vindos de g.perfil/perfil_usuario.
+    """
+    if not perfil_contexto:
+        return None
+
+    perfil_id = None
+    if isinstance(perfil_contexto, dict):
+        perfil_id = perfil_contexto.get("id") or perfil_contexto.get("perfil_id")
+        perfil_nome = (perfil_contexto.get("perfil_acesso") or perfil_contexto.get("nome") or "").strip()
+    else:
+        try:
+            perfil_id = perfil_contexto["id"]
+        except Exception:
+            perfil_id = None
+        try:
+            perfil_nome = (perfil_contexto["perfil_acesso"] or "").strip()
+        except Exception:
+            perfil_nome = ""
+
+    if perfil_id:
+        try:
+            return int(perfil_id)
+        except (TypeError, ValueError):
+            current_app.logger.warning(f"perfil_id invalido no contexto: {perfil_id!r}")
+
+    if not perfil_nome:
+        return None
+
+    perfil = query_db(
+        "SELECT id FROM perfis_acesso WHERE LOWER(nome) = LOWER(%s) LIMIT 1",
+        (perfil_nome,),
+        one=True,
+    )
+    if perfil and perfil.get("id"):
+        return int(perfil["id"])
+    return None
+
+
+def verificar_permissao_por_contexto(perfil_contexto: dict | None, recurso_codigo: str) -> bool:
+    """
+    Verifica permissao de um recurso usando o contexto do usuario (g.perfil).
+    """
+    perfil_id = resolver_perfil_id(perfil_contexto)
+    return verificar_permissao(perfil_id, recurso_codigo)
+
+
 def clonar_perfil(perfil_id: int, novo_nome: str, criado_por: str = "Sistema") -> int:
     """
     Clona um perfil existente com todas as suas permissões.

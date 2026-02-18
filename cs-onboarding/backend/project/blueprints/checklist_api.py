@@ -466,10 +466,9 @@ def delete_item(item_id: int):
     # Vou arriscar e permitir por enquanto, ou chamar um serviço auxiliar `check_permission`.
 
     from ..constants import PERFIS_COM_GESTAO
-    from ..modules.perfis.application.perfis_service import verificar_permissao
+    from ..modules.perfis.application.perfis_service import verificar_permissao_por_contexto
 
-    perfil_id = g.perfil.get("id") if isinstance(g.perfil, dict) else None
-    tem_permissao_excluir = verificar_permissao(perfil_id, "checklist.delete")
+    tem_permissao_excluir = verificar_permissao_por_contexto(g.perfil, "checklist.delete")
 
     is_manager = g.perfil and g.perfil.get("perfil_acesso") in PERFIS_COM_GESTAO
 
@@ -504,7 +503,7 @@ def dispense_item(item_id: int):
       - motivo: string (obrigatorio quando dispensar=true)
     """
     from ..constants import PERFIS_COM_GESTAO
-    from ..modules.perfis.application.perfis_service import verificar_permissao
+    from ..modules.perfis.application.perfis_service import verificar_permissao_por_contexto
 
     try:
         item_id = validate_integer(item_id, min_value=1)
@@ -515,9 +514,8 @@ def dispense_item(item_id: int):
     dispensar = bool(data.get("dispensar", True))
     motivo = (data.get("motivo") or "").strip()
 
-    perfil_id = g.perfil.get("id") if isinstance(g.perfil, dict) else None
     is_manager = g.perfil and g.perfil.get("perfil_acesso") in PERFIS_COM_GESTAO
-    tem_permissao_dispensar = verificar_permissao(perfil_id, "checklist.dispense")
+    tem_permissao_dispensar = verificar_permissao_por_contexto(g.perfil, "checklist.dispense")
 
     if not is_manager and not tem_permissao_dispensar:
         return jsonify({"ok": False, "error": "Você não tem permissão para dispensar tarefas."}), 403

@@ -184,7 +184,8 @@
                     confirmText: 'Sim',
                     cancelText: 'Não'
                 }).then(confirmed => {
-                    if (confirmed) evt.detail.issueRequest();
+                    // Skip native htmx confirmation to avoid double prompt.
+                    if (confirmed) evt.detail.issueRequest(true);
                 });
             });
             document.body.dataset.htmxConfirmAttached = 'true';

@@ -573,12 +573,10 @@ def get_implantacao_details(
     can_delete_tasks = bool(is_manager)
     can_dispense_tasks = bool(is_manager)
     try:
-        from ....modules.perfis.application.perfis_service import verificar_permissao
+        from ....modules.perfis.application.perfis_service import verificar_permissao_por_contexto
 
-        perfil_id = user_perfil.get("id") if isinstance(user_perfil, dict) else None
-        if perfil_id:
-            can_delete_tasks = can_delete_tasks or verificar_permissao(perfil_id, "checklist.delete")
-            can_dispense_tasks = can_dispense_tasks or verificar_permissao(perfil_id, "checklist.dispense")
+        can_delete_tasks = can_delete_tasks or verificar_permissao_por_contexto(user_perfil, "checklist.delete")
+        can_dispense_tasks = can_dispense_tasks or verificar_permissao_por_contexto(user_perfil, "checklist.dispense")
     except Exception as e:
         logger.warning(f"Erro ao verificar permissões de checklist da implantação {impl_id}: {e}")
 
