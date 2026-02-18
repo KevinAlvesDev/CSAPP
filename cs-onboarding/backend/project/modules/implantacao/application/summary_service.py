@@ -42,6 +42,29 @@ def _truncate(text: str, max_len: int) -> str:
     return text[: max_len - 3].rstrip() + "..."
 
 
+def _load_comments_for_summary(impl_id: int, *, per_page: int = 100, max_pages: int = 8) -> dict[str, Any]:
+    """
+    Carrega comentarios paginados para evitar resumo raso quando ha muito historico.
+    Limita paginas para manter latencia previsivel.
+    """
+    page = 1
+    all_comments: list[dict[str, Any]] = []
+    total = 0
+
+    while page <= max_pages:
+        data = listar_comentarios_implantacao(impl_id, page=page, per_page=per_page)
+        batch = data.get("comments", []) or []
+        total = int(data.get("total", total) or total)
+        if not batch:
+            break
+        all_comments.extend(batch)
+        if len(all_comments) >= total:
+            break
+        page += 1
+
+    return {"comments": all_comments, "total": total or len(all_comments)}
+
+
 def _build_context(impl_id: int, user_email: str | None, is_manager: bool) -> dict[str, Any]:
     impl = query_db(
         """
@@ -89,7 +112,7 @@ def _build_context(impl_id: int, user_email: str | None, is_manager: bool) -> di
             elif prazo_fim and now.date() <= prazo_fim.date() <= upcoming_limit.date():
                 upcoming_items.append(pending_items[-1])
 
-    comments_data = listar_comentarios_implantacao(impl_id, page=1, per_page=120)
+    comments_data = _load_comments_for_summary(impl_id, per_page=100, max_pages=8)
     comments = comments_data.get("comments", [])
     comments_total = comments_data.get("total", len(comments))
     recent_comments = [
@@ -125,7 +148,10 @@ def _build_context(impl_id: int, user_email: str | None, is_manager: bool) -> di
     treinamentos = []
     for c in recent_comments:
         text = (c.get("texto") or "").lower()
-        if any(k in text for k in ["trein", "capacita", "onboard", "aula", "workshop"]):
+        tag = (c.get("tag") or "").lower()
+        if any(k in text for k in ["trein", "capacita", "onboard", "aula", "workshop"]) or any(
+            k in tag for k in ["trein", "reun", "kickoff", "welcome"]
+        ):
             snippet = _truncate(c.get("texto") or "", 140)
             treinamentos.append(f"{c.get('data')}: {snippet}")
         if len(treinamentos) >= 8:
@@ -213,7 +239,7 @@ def _build_prompt(context: dict[str, Any]) -> str:
         "Responda APENAS em JSON valido, sem texto extra.\n"
         "Use as chaves exatamente como abaixo. Se algo nao existir, use 'Nao informado' ou lista vazia.\n\n"
         "Chaves obrigatorias:\n"
-        "- header: {title, subtitle, empresa, status}\n"
+        "- header: {title, subtitle, empresa, status, metrics[]}\n"
         "- sections: lista de objetos com {title, text, bullets}\n\n"
         "Secoes (na ordem):\n"
         "1. Resumo executivo\n"
@@ -322,6 +348,12 @@ def _structured_fallback(context: dict[str, Any]) -> dict[str, Any]:
             "subtitle": "Documento sintetico do andamento",
             "empresa": imp.get("nome_empresa", "N/A"),
             "status": imp.get("status", "N/A"),
+            "metrics": [
+                {"label": "Progresso", "value": f"{prog.get('percentual', 0)}%"},
+                {"label": "Itens", "value": f"{prog.get('concluidos', 0)}/{prog.get('total_itens', 0)}"},
+                {"label": "Comentarios", "value": str(comentarios_total)},
+                {"label": "Tags", "value": str(len(tags_top))},
+            ],
         },
         "sections": sections,
     }

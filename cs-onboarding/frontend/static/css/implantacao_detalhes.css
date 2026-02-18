@@ -231,6 +231,35 @@
     z-index: 1;
 }
 
+.resumo-kpis {
+    display: grid;
+    gap: 0.55rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-bottom: 0.85rem;
+}
+
+.resumo-kpi {
+    border: 1px solid #d6c5b2;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.65);
+    padding: 0.45rem 0.55rem;
+}
+
+.resumo-kpi-label {
+    font-size: 0.67rem;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: #64748b;
+    font-weight: 700;
+}
+
+.resumo-kpi-value {
+    margin-top: 0.15rem;
+    font-size: 0.95rem;
+    color: #0f172a;
+    font-weight: 700;
+}
+
 .resumo-section {
     margin-bottom: 0.85rem;
 }
@@ -265,6 +294,12 @@
 
 .resumo-bullets li {
     margin-bottom: 0.3rem;
+}
+
+@media (max-width: 991.98px) {
+    .resumo-kpis {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 /* Layout das colunas */

@@ -132,10 +132,19 @@
       const header = structured.header || {};
       const sections = Array.isArray(structured.sections) ? structured.sections : [];
       if (!sections.length) return '';
+      const metrics = Array.isArray(header.metrics) ? header.metrics : [];
       const title = escapeHtml(header.title || 'Resumo da Implantacao');
       const subtitle = escapeHtml(header.subtitle || 'Documento sintetico do andamento');
       const empresa = escapeHtml(header.empresa || CONFIG.implantacaoNome || 'N/A');
       const status = escapeHtml(header.status || CONFIG.implantacaoStatus || 'N/A');
+      const metricsHtml = metrics.length
+        ? `<div class="resumo-kpis">${metrics.map(m => `
+            <div class="resumo-kpi">
+              <div class="resumo-kpi-label">${escapeHtml(String(m.label || 'Metrica'))}</div>
+              <div class="resumo-kpi-value">${escapeHtml(String(m.value || 'N/A'))}</div>
+            </div>
+          `).join('')}</div>`
+        : '';
 
       const sectionHtml = sections.map((sec, index) => {
         const secTitle = escapeHtml(sec.title || 'Secao');
@@ -169,6 +178,7 @@
             </div>
           </div>
           <div class="resumo-doc-body">
+            ${metricsHtml}
             ${sectionHtml}
           </div>
         </div>
