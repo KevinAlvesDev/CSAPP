@@ -279,6 +279,29 @@
     line-height: 1.55;
 }
 
+.resumo-section-text--pre {
+    white-space: pre-line;
+}
+
+.resumo-section-text--pre p {
+    margin: 0 0 0.72rem 0;
+}
+
+.resumo-section-text--pre .resumo-comment-intro {
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.resumo-section-text--pre .resumo-comment-heading {
+    margin-top: 0.9rem;
+    margin-bottom: 0.35rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: 0.84rem;
+    letter-spacing: 0.35px;
+    color: #1e293b;
+}
+
 .resumo-divider {
     height: 1px;
     background: #e2d3c2;

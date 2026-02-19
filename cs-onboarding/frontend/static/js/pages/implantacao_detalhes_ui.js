@@ -26,7 +26,7 @@
 
     function getPlanoTabTarget() {
       const container = document.getElementById('checklist-container');
-      const pane = container ? container.closest('.tab-pane') : null;
+      const pane = container ?container.closest('.tab-pane') : null;
       if (pane && pane.id) return `#${pane.id}`;
       return '#plano-andamento-content';
     }
@@ -66,12 +66,12 @@
       locale: {
         firstDayOfWeek: 1,
         weekdays: {
-          shorthand: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
-          longhand: ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']
+          shorthand: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'SÃ¡b'],
+          longhand: ['Domingo', 'Segunda-feira', 'TerÃ§a-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'SÃ¡bado']
         },
         months: {
           shorthand: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
-          longhand: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+          longhand: ['Janeiro', 'Fevereiro', 'MarÃ§o', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
         }
       }
     };
@@ -87,20 +87,20 @@
       });
     }
 
-    // Interceptar submissão do formulário de concluir (usar modal padrão em vez de confirm nativo)
+    // Interceptar submissÃ£o do formulÃ¡rio de concluir (usar modal padrÃ£o em vez de confirm nativo)
     const formConcluir = document.getElementById('formConcluirPlanoImplantacao');
     if (formConcluir) {
       formConcluir.addEventListener('submit', async function (ev) {
         ev.preventDefault();
         const confirmed = await showConfirm({
-          title: 'Confirmar ação',
-          message: 'Tem certeza que deseja concluir este plano?\n\nEle será movido para a aba Concluídos e as tarefas serão arquivadas.',
+          title: 'Confirmar aÃ§Ã£o',
+          message: 'Tem certeza que deseja concluir este plano?\n\nEle serÃ¡ movido para a aba ConcluÃ­dos e as tarefas serÃ£o arquivadas.',
           confirmText: 'Sim',
           cancelText: 'Cancelar',
           type: 'warning'
         });
         if (confirmed) {
-          // Submeter formulário normalmente
+          // Submeter formulÃ¡rio normalmente
           this.submit();
         }
       });
@@ -120,25 +120,126 @@
     const resumoEmpty = document.getElementById('resumo-implantacao-empty');
     const resumoMeta = document.getElementById('resumo-implantacao-meta');
     const btnRegenerarResumo = document.getElementById('btn-regenerar-resumo-implantacao');
+    const btnSalvarResumo = document.getElementById('btn-salvar-resumo-implantacao');
+    const resumoStorageKey = `csapp_resumo_implantacao_${CONFIG.implantacaoId}`;
+    let resumoCurrentPayload = null;
     let resumoRequestInFlight = false;
 
     function setResumoLoading(isLoading) {
       if (resumoLoading) resumoLoading.classList.toggle('d-none', !isLoading);
       if (btnRegenerarResumo) btnRegenerarResumo.disabled = isLoading;
+      if (btnSalvarResumo) btnSalvarResumo.disabled = isLoading;
+    }
+
+    function loadSavedResumo() {
+      try {
+        const raw = window.localStorage.getItem(resumoStorageKey);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return null;
+        if (!parsed.text && !parsed.structured) return null;
+        return parsed;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function saveResumo(payload) {
+      if (!payload || (!payload.text && !payload.structured)) return false;
+      try {
+        const toSave = {
+          text: payload.text || '',
+          source: payload.source || '',
+          structured: payload.structured || null,
+          savedAt: new Date().toISOString()
+        };
+        window.localStorage.setItem(resumoStorageKey, JSON.stringify(toSave));
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    function renderResumoMeta(source, options = {}) {
+      if (!resumoMeta) return;
+      const nowLabel = new Date().toLocaleString();
+      const sourceText = source ? `Fonte: ${source}` : '';
+      if (options.isSaved) {
+        const savedAt = options.savedAt ? new Date(options.savedAt) : new Date();
+        const savedLabel = Number.isNaN(savedAt.getTime()) ? nowLabel : savedAt.toLocaleString();
+        resumoMeta.textContent = `Resumo salvo em ${savedLabel}${sourceText ? ' - ' + sourceText : ''}`;
+        return;
+      }
+      resumoMeta.textContent = `Gerado em ${nowLabel}${sourceText ? ' - ' + sourceText : ''}`;
     }
 
     function renderStructuredResumo(structured) {
       if (!structured) return '';
       const header = structured.header || {};
-      const sections = Array.isArray(structured.sections) ? structured.sections : [];
+      const sections = (Array.isArray(structured.sections) ?structured.sections : []).filter(sec => {
+        const title = String((sec && sec.title) || '').trim().toLowerCase();
+        return title !== 'andamento atual' && title !== 'pendencias e prazos';
+      });
       if (!sections.length) return '';
-      const metrics = Array.isArray(header.metrics) ? header.metrics : [];
+      const metrics = (Array.isArray(header.metrics) ?header.metrics : []).filter(m => {
+        const label = String((m && m.label) || '').trim().toLowerCase();
+        return label !== 'tags';
+      });
       const title = escapeHtml(header.title || 'Resumo da Implantacao');
       const subtitle = escapeHtml(header.subtitle || 'Documento sintetico do andamento');
       const empresa = escapeHtml(header.empresa || CONFIG.implantacaoNome || 'N/A');
       const status = escapeHtml(header.status || CONFIG.implantacaoStatus || 'N/A');
+      const normalizeSectionTitle = (value) => String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toLowerCase();
+      const sanitizeCommentsText = (value) => String(value || '')
+        .replace(/total\s+de\s+comentarios[^.]*\.?/gi, '')
+        .replace(/autores?\s+mais\s+ativos?[^.]*\.?/gi, '')
+        .replace(/tarefas?\s+com\s+mais\s+coment(?:a|á)rios?[^.]*\.?/gi, '')
+        .replace(/\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/g, '')
+        .replace(/\b\d{4}-\d{2}-\d{2}\b/g, '')
+        .replace(/\b\d{1,2}:\d{2}(?::\d{2})?\b/g, '')
+        .replace(/\b\d{1,2}h\d{2}\b/gi, '')
+        .replace(/\b(?:as|\u00e0s)\b/gi, '')
+        .replace(/[ \t]+/g, ' ')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+      const formatCommentsOverviewHtml = (value) => {
+        let cleaned = sanitizeCommentsText(value);
+        if (!cleaned) return '';
+        cleaned = cleaned
+          .replace(/&quot;/gi, '"')
+          .replace(/&amp;/gi, '&')
+          .replace(/&lt;/gi, '<')
+          .replace(/&gt;/gi, '>');
+        cleaned = cleaned
+          .replace(/\s*(Resumo Descritivo:)/gi, '\n\n$1 ')
+          .replace(/\s*(Regras de Neg[oó]cio e Financeiro)\s*/gi, '\n\n$1\n\n')
+          .replace(/\s*(Fluxo Comercial e Administrativo)\s*/gi, '\n\n$1\n\n')
+          .replace(/\s*(Controle de Acesso e Opera[cç][aã]o)\s*/gi, '\n\n$1\n\n')
+          .replace(/^\n+/, '')
+          .replace(/\n{3,}/g, '\n\n');
+        const headingMap = new Set([
+          'regras de negocio e financeiro',
+          'fluxo comercial e administrativo',
+          'controle de acesso e operacao'
+        ]);
+        const chunks = cleaned.split(/\n{2,}/).map(s => s.trim()).filter(Boolean);
+        return chunks.map(chunk => {
+          const normalized = normalizeSectionTitle(chunk.replace(/:$/, ''));
+          if (chunk.toLowerCase().startsWith('resumo descritivo:')) {
+            return `<p class="resumo-comment-intro">${escapeHtml(chunk)}</p>`;
+          }
+          if (headingMap.has(normalized)) {
+            return `<p class="resumo-comment-heading">${escapeHtml(chunk)}</p>`;
+          }
+          return `<p>${escapeHtml(chunk)}</p>`;
+        }).join('');
+      };
       const metricsHtml = metrics.length
-        ? `<div class="resumo-kpis">${metrics.map(m => `
+        ?`<div class="resumo-kpis">${metrics.map(m => `
             <div class="resumo-kpi">
               <div class="resumo-kpi-label">${escapeHtml(String(m.label || 'Metrica'))}</div>
               <div class="resumo-kpi-value">${escapeHtml(String(m.value || 'N/A'))}</div>
@@ -148,13 +249,21 @@
 
       const sectionHtml = sections.map((sec, index) => {
         const secTitle = escapeHtml(sec.title || 'Secao');
-        const secText = escapeHtml(sec.text || '');
-        const bullets = Array.isArray(sec.bullets) ? sec.bullets : [];
-        const bulletsHtml = bullets.length
-          ? `<ul class="resumo-bullets">${bullets.map(b => `<li>${escapeHtml(String(b))}</li>`).join('')}</ul>`
+        const sectionKey = normalizeSectionTitle(sec.title || '');
+        const bullets = Array.isArray(sec.bullets) ?sec.bullets : [];
+        const isCommentsSection = sectionKey.includes('comentarios');
+        const commentsText = isCommentsSection ? String(sec.text || '') : '';
+        const secText = isCommentsSection ? commentsText : String(sec.text || '');
+        const bulletsHtml = !isCommentsSection && bullets.length
+          ?`<ul class="resumo-bullets">${bullets.map(b => `<li>${escapeHtml(String(b))}</li>`).join('')}</ul>`
           : '';
-        const textHtml = secText ? `<div class="resumo-section-text">${secText}</div>` : '';
-        const divider = index === sections.length - 1 ? '' : '<div class="resumo-divider"></div>';
+        const textClass = isCommentsSection ?'resumo-section-text resumo-section-text--pre' : 'resumo-section-text';
+        const textHtml = secText
+          ? (isCommentsSection
+            ? `<div class="${textClass}">${formatCommentsOverviewHtml(secText)}</div>`
+            : `<div class="${textClass}">${escapeHtml(secText)}</div>`)
+          : '';
+        const divider = index === sections.length - 1 ?'' : '<div class="resumo-divider"></div>';
         return `
           <div class="resumo-section">
             <div class="resumo-section-title">${secTitle}</div>
@@ -184,9 +293,9 @@
         </div>
       `;
     }
-    function setResumoContent(text, source, structured) {
+    function setResumoContent(text, source, structured, options = {}) {
       const normalized = (text || '').trim();
-      const sections = structured ? renderStructuredResumo(structured) : parseResumoSections(normalized);
+      const sections = structured ?renderStructuredResumo(structured) : parseResumoSections(normalized);
 
       if (sections && resumoSections) {
         resumoSections.innerHTML = sections;
@@ -201,11 +310,12 @@
       }
 
       if (resumoEmpty) resumoEmpty.classList.toggle('d-none', Boolean(normalized));
-      if (resumoMeta) {
-        const agora = new Date();
-        const sourceText = source ? `Fonte: ${source}` : '';
-        resumoMeta.textContent = `Gerado em ${agora.toLocaleString()}${sourceText ? ' - ' + sourceText : ''}`;
-      }
+      resumoCurrentPayload = {
+        text: normalized,
+        source: source || '',
+        structured: structured || null,
+      };
+      renderResumoMeta(source || '', options);
     }
 
     function parseResumoSections(text) {
@@ -215,8 +325,6 @@
 
       const sections = {
         resumo: '',
-        andamento: '',
-        pendencias: '',
         riscos: '',
         eventos: '',
         proximos: ''
@@ -225,8 +333,6 @@
       for (const line of lines) {
         const lower = line.toLowerCase();
         if (lower.startsWith('resumo executivo:')) sections.resumo = line.replace(/^[^:]+:/, '').trim();
-        else if (lower.startsWith('andamento:')) sections.andamento = line.replace(/^[^:]+:/, '').trim();
-        else if (lower.startsWith('pendencias:')) sections.pendencias = line.replace(/^[^:]+:/, '').trim();
         else if (lower.startsWith('riscos:')) sections.riscos = line.replace(/^[^:]+:/, '').trim();
         else if (lower.startsWith('ultimos eventos:')) sections.eventos = line.replace(/^[^:]+:/, '').trim();
         else if (lower.startsWith('ultimo evento:')) sections.eventos = line.replace(/^[^:]+:/, '').trim();
@@ -257,16 +363,6 @@
             <div class="resumo-section">
               <div class="resumo-section-title">Resumo executivo</div>
               <div class="resumo-section-text">${escapeHtml(sections.resumo || 'Nao informado.')}</div>
-            </div>
-            <div class="resumo-divider"></div>
-            <div class="resumo-section">
-              <div class="resumo-section-title">Andamento atual</div>
-              <div class="resumo-section-text">${escapeHtml(sections.andamento || 'Nao informado.')}</div>
-            </div>
-            <div class="resumo-divider"></div>
-            <div class="resumo-section">
-              <div class="resumo-section-title">Pendencias e prazos</div>
-              ${bullets(sections.pendencias)}
             </div>
             <div class="resumo-divider"></div>
             <div class="resumo-section">
@@ -313,13 +409,13 @@
         }
 
         if (!response.ok || !data || !data.ok) {
-          throw new Error((data && data.error) ? data.error : `Erro ${response.status}`);
+          throw new Error((data && data.error) ?data.error : `Erro ${response.status}`);
         }
 
-        setResumoContent(data.summary || '', data.source || '', data.summary_structured || null);
+        setResumoContent(data.summary || '', data.source || '', data.summary_structured || null, { isSaved: false });
       } catch (error) {
         console.error('Erro ao gerar resumo da implantacao:', error);
-        const detail = error && error.message ? ` (${error.message})` : '';
+        const detail = error && error.message ?` (${error.message})` : '';
         showToast(`Erro ao gerar resumo${detail}`, 'error');
         setResumoContent('', '', null);
       } finally {
@@ -330,9 +426,36 @@
 
     if (resumoModal) {
       resumoModal.addEventListener('show.bs.modal', function () {
-        if (resumoContent && !resumoContent.textContent.trim()) {
-          gerarResumoImplantacao();
+        const savedResumo = loadSavedResumo();
+        if (savedResumo) {
+          setResumoContent(savedResumo.text || '', savedResumo.source || '', savedResumo.structured || null, {
+            isSaved: true,
+            savedAt: savedResumo.savedAt
+          });
+          return;
         }
+      });
+    }
+
+    if (btnSalvarResumo) {
+      btnSalvarResumo.addEventListener('click', function () {
+        if (!resumoCurrentPayload || (!resumoCurrentPayload.text && !resumoCurrentPayload.structured)) {
+          showToast('Nao ha resumo para salvar ainda.', 'warning');
+          return;
+        }
+        const ok = saveResumo(resumoCurrentPayload);
+        if (!ok) {
+          showToast('Erro ao salvar resumo no navegador.', 'error');
+          return;
+        }
+        const savedResumo = loadSavedResumo();
+        setResumoContent(
+          resumoCurrentPayload.text || '',
+          resumoCurrentPayload.source || '',
+          resumoCurrentPayload.structured || null,
+          { isSaved: true, savedAt: savedResumo ?savedResumo.savedAt : null }
+        );
+        showToast('Resumo salvo com sucesso.', 'success');
       });
     }
 
@@ -342,7 +465,7 @@
       });
     }
     // =========================================================================
-    // Global Comments Logic (New "Comentários" Tab)
+    // Global Comments Logic (New "ComentÃ¡rios" Tab)
     // =========================================================================
     let globalCommentsState = {
       page: 1,
@@ -354,7 +477,7 @@
     const commentsTabBtn = document.getElementById('comments-tab');
     if (commentsTabBtn) {
       commentsTabBtn.addEventListener('shown.bs.tab', function (e) {
-        // Sempre recarrega os comentários quando a aba é exibida
+        // Sempre recarrega os comentÃ¡rios quando a aba Ã© exibida
         resetGlobalComments();
         carregarComentariosGerais();
       });
@@ -450,14 +573,14 @@
             }
           }
         } else {
-          showToast('Erro ao carregar comentários: ' + (data.error || 'Erro desconhecido'), 'error');
+          showToast('Erro ao carregar comentÃ¡rios: ' + (data.error || 'Erro desconhecido'), 'error');
           if (emptyEl) emptyEl.classList.remove('d-none');
           if (paginationEl) paginationEl.classList.add('d-none');
         }
 
       } catch (error) {
-        console.error('Erro ao carregar comentários gerais:', error);
-        showToast('Erro ao carregar comentários. Tente novamente.', 'error');
+        console.error('Erro ao carregar comentÃ¡rios gerais:', error);
+        showToast('Erro ao carregar comentÃ¡rios. Tente novamente.', 'error');
         if (!append && loadingEl) loadingEl.classList.add('d-none');
       } finally {
         globalCommentsState.isLoading = false;
@@ -481,8 +604,8 @@
           // Fallbacks
           let bg = 'bg-secondary';
           let icon = 'bi-tag-fill';
-          if (c.tag === 'Ação interna' || c.tag === 'Ação interna') { bg = 'bg-primary'; icon = 'bi-briefcase'; }
-          else if (c.tag === 'Reunião' || c.tag === 'Reunião') { bg = 'bg-danger'; icon = 'bi-calendar-event'; }
+          if (c.tag === 'AÃ§Ã£o interna' || c.tag === 'AÃ§Ã£o interna') { bg = 'bg-primary'; icon = 'bi-briefcase'; }
+          else if (c.tag === 'ReuniÃ£o' || c.tag === 'ReuniÃ£o') { bg = 'bg-danger'; icon = 'bi-calendar-event'; }
           else if (c.tag === 'No Show') { bg = 'bg-warning text-dark'; icon = 'bi-calendar-x'; }
           tagBadge = `<span class="badge rounded-pill ${bg}" style="font-size: 0.65rem;"><i class="bi ${icon}"></i> ${c.tag}</span>`;
         } else if (c.noshow) {
@@ -496,10 +619,10 @@
                  <div class="d-flex flex-column">
                     <div class="d-flex align-items-center gap-2">
                         <span class="fw-bold text-dark">
-                            <i class="bi bi-person-circle me-1 text-secondary"></i>${escapeHtml(c.usuario_nome || c.usuario_cs || 'Usuário')}
+                            <i class="bi bi-person-circle me-1 text-secondary"></i>${escapeHtml(c.usuario_nome || c.usuario_cs || 'UsuÃ¡rio')}
                         </span>
-                        <span class="badge ${c.visibilidade === 'externo' ? 'bg-warning text-dark' : 'bg-primary text-white'} rounded-pill" style="font-size: 0.65rem;">
-                            ${c.visibilidade === 'externo' ? 'Externo' : 'Interno'}
+                        <span class="badge ${c.visibilidade === 'externo' ?'bg-warning text-dark' : 'bg-primary text-white'} rounded-pill" style="font-size: 0.65rem;">
+                            ${c.visibilidade === 'externo' ?'Externo' : 'Interno'}
                         </span>
                         ${tagBadge}
                     </div>
@@ -509,14 +632,14 @@
                  </div>
                  <div class="d-flex align-items-center gap-2">
                     <span class="text-muted small" title="${c.data_criacao}">${formatarData(c.data_criacao, true)}</span>
-                    ${canEdit ? `
+                    ${canEdit ?`
                         <button type="button" class="btn btn-link text-danger p-0 ms-2 btn-excluir-comentario" style="font-size: 0.9rem;" data-comentario-id="${c.id}" title="Excluir">
                             <i class="bi bi-trash"></i>
                         </button>` : ''}
                  </div>
               </div>
               <div class="comentario-texto text-break" style="white-space: pre-wrap; word-wrap: break-word;">${escapeHtml(c.texto)}</div>
-              ${c.imagem_url ? `<div class="mt-2"><img src="${c.imagem_url}" class="img-fluid rounded comment-image-thumbnail" style="cursor: pointer;" style="max-height: 200px;" alt="Imagem anexada"></div>` : ''}
+              ${c.imagem_url ?`<div class="mt-2"><img src="${c.imagem_url}" class="img-fluid rounded comment-image-thumbnail" style="cursor: pointer;" style="max-height: 200px;" alt="Imagem anexada"></div>` : ''}
             </div>
           </div>`;
       }).join('');
@@ -563,7 +686,7 @@
               }
             }, 200);
           } else {
-            showToast('Tarefa não encontrada na visualização atual.', 'warning');
+            showToast('Tarefa nÃ£o encontrada na visualizaÃ§Ã£o atual.', 'warning');
           }
         });
       });
@@ -590,7 +713,7 @@
         if (input.classList.contains('date-mask') && window.IMask) {
           config.onReady = function (selectedDates, dateStr, instance) {
             if (instance.altInput) {
-              // Aplica a máscara ao input visível (altInput)
+              // Aplica a mÃ¡scara ao input visÃ­vel (altInput)
               const mask = IMask(instance.altInput, {
                 mask: Date,
                 pattern: 'd/`m/`Y',
@@ -614,7 +737,7 @@
                 }
               });
 
-              // Sincronizar alterações manuais na máscara com o Flatpickr
+              // Sincronizar alteraÃ§Ãµes manuais na mÃ¡scara com o Flatpickr
               mask.on('accept', function () {
                 if (mask.masked.isComplete) {
                   instance.setDate(mask.value, true, 'd/m/Y');
@@ -638,34 +761,34 @@
       document.querySelectorAll('button[id^="btn_cal_"], button[id^="btn-cal-"], button[id*="cal-"], button[data-toggle]').forEach(btn => {
         btn.addEventListener('click', (e) => {
           e.preventDefault();
-          const target = btn.previousElementSibling; // Assumindo que o input está imediatamente antes do botão (estrutura input-group)
-          // No DOM final do flatpickr (com altInput), a estrutura é:
+          const target = btn.previousElementSibling; // Assumindo que o input estÃ¡ imediatamente antes do botÃ£o (estrutura input-group)
+          // No DOM final do flatpickr (com altInput), a estrutura Ã©:
           // input[hidden], input[text].form-control, button
-          // Portanto, previousElementSibling do botão é o altInput.
+          // Portanto, previousElementSibling do botÃ£o Ã© o altInput.
           // Mas o target para inicializar flatpickr deve ser o input original.
 
-          // Se o flatpickr já estiver inicializado no input original (que pode estar oculto antes do altInput)
-          // O input original geralmente é acessível.
-          // Vamos verificar se o elemento anterior tem a instância _flatpickr.
+          // Se o flatpickr jÃ¡ estiver inicializado no input original (que pode estar oculto antes do altInput)
+          // O input original geralmente Ã© acessÃ­vel.
+          // Vamos verificar se o elemento anterior tem a instÃ¢ncia _flatpickr.
 
-          // Caso altInput esteja presente, o DOM é:
+          // Caso altInput esteja presente, o DOM Ã©:
           // <input type="hidden" ...> (original)
           // <input type="text" ...> (altInput)
           // <button ...>
 
-          // O previousElementSibling do botão é o altInput.
-          // O altInput não tem a propriedade _flatpickr, mas podemos acessá-lo?
-          // Não diretamente.
+          // O previousElementSibling do botÃ£o Ã© o altInput.
+          // O altInput nÃ£o tem a propriedade _flatpickr, mas podemos acessÃ¡-lo?
+          // NÃ£o diretamente.
 
-          // Mas se já foi inicializado, podemos buscar a instância flatpickr associada.
+          // Mas se jÃ¡ foi inicializado, podemos buscar a instÃ¢ncia flatpickr associada.
 
           // Se target for o altInput, precisamos achar o original?
-          // Na verdade, se já está inicializado, podemos apenas chamar open() na instância.
+          // Na verdade, se jÃ¡ estÃ¡ inicializado, podemos apenas chamar open() na instÃ¢ncia.
 
           // Vamos tentar encontrar o input original.
           let inputOriginal = target;
 
-          // Se o target for o altInput (não tem a classe original custom-datepicker se o flatpickr moveu as classes, mas geralmente copia)
+          // Se o target for o altInput (nÃ£o tem a classe original custom-datepicker se o flatpickr moveu as classes, mas geralmente copia)
           // Mas o _flatpickr fica no elemento original.
 
           // Melhor abordagem: procurar o input com a classe custom-datepicker dentro do mesmo parent node.
@@ -675,7 +798,7 @@
           if (originalInput && originalInput._flatpickr) {
             originalInput._flatpickr.open();
           } else if (target && target.classList.contains('custom-datepicker')) {
-            // Fallback se não estiver inicializado (ex: dinamicamente)
+            // Fallback se nÃ£o estiver inicializado (ex: dinamicamente)
             const fp = window.flatpickr(target, Object.assign({}, baseConfig));
             fp.open();
           }
@@ -869,13 +992,13 @@
               if (data.error) {
                 showToast(data.error, 'error');
               } else {
-                showToast(data.message || 'Início desfeito com sucesso!', 'success');
+                showToast(data.message || 'InÃ­cio desfeito com sucesso!', 'success');
                 setTimeout(() => location.reload(), 1000);
               }
             })
             .catch(err => {
               console.error(err);
-              showToast('Erro ao desfazer início.', 'error');
+              showToast('Erro ao desfazer inÃ­cio.', 'error');
             });
         });
       }
@@ -893,7 +1016,7 @@
 
           const context = document.getElementById('main-content')?.dataset.context || 'onboarding';
           const apiUrl = context === 'grandes_contas'
-            ? '/grandes-contas/actions/desfazer_cancelamento_implantacao'
+            ?'/grandes-contas/actions/desfazer_cancelamento_implantacao'
             : '/desfazer_cancelamento_implantacao';
 
           fetch(apiUrl, {
@@ -907,7 +1030,7 @@
             .then(response => response.json())
             .then(data => {
               if (data.error || !data.ok) {
-                showToast(data.error || data.message || 'Erro ao processar requisição.', 'error');
+                showToast(data.error || data.message || 'Erro ao processar requisiÃ§Ã£o.', 'error');
               } else {
                 showToast(data.message || 'Cancelamento desfeito com sucesso!', 'success');
                 setTimeout(() => location.reload(), 1200);
@@ -923,7 +1046,7 @@
 
 
 
-    // Navegação entre abas (Timeline -> Comentários / Plano)
+    // NavegaÃ§Ã£o entre abas (Timeline -> ComentÃ¡rios / Plano)
       function activateTab(targetId) {
         if (!window.bootstrap) return;
         const triggerEl = document.querySelector(`[data-bs-target="${targetId}"]`);
@@ -1004,7 +1127,7 @@
             if (!temEmail) {
               checkbox.disabled = true;
               checkbox.checked = false;
-              divCheckbox.setAttribute('title', 'Email do responsável não cadastrado');
+              divCheckbox.setAttribute('title', 'Email do responsÃ¡vel nÃ£o cadastrado');
             } else {
               checkbox.disabled = false;
               divCheckbox.removeAttribute('title');
@@ -1022,7 +1145,7 @@
             btnEmail.disabled = true;
             btnEmail.classList.add('btn-secondary');
             btnEmail.classList.remove('btn-primary');
-            btnEmail.title = 'Email do responsável não cadastrado. Acesse "Editar Detalhes" para adicionar.';
+            btnEmail.title = 'Email do responsÃ¡vel nÃ£o cadastrado. Acesse "Editar Detalhes" para adicionar.';
             btnEmail.setAttribute('data-bs-toggle', 'tooltip');
             btnEmail.setAttribute('data-bs-placement', 'top');
 
@@ -1097,7 +1220,7 @@
         if (mutation.type === 'childList') {
           mutation.addedNodes.forEach(function (node) {
             if (node.nodeType === 1) {
-              const tags = node.querySelectorAll ? node.querySelectorAll('.comentario-tipo-tag') : [];
+              const tags = node.querySelectorAll ?node.querySelectorAll('.comentario-tipo-tag') : [];
               tags.forEach(tag => {
                 const tarefaId = tag.getAttribute('data-tarefa-id') || tag.dataset.tarefaId;
                 if (tarefaId && tag.classList.contains('active')) {
@@ -1129,7 +1252,7 @@
         const implId = tab.getAttribute('data-impl-id');
         if (!implId) return;
         const resp = await fetch(`/api/implantacao/${implId}/timeline?per_page=100`, {
-          headers: { 'Accept': 'application/json', 'X-CSRFToken': (window.CONFIG && window.CONFIG.csrfToken) ? window.CONFIG.csrfToken : '' },
+          headers: { 'Accept': 'application/json', 'X-CSRFToken': (window.CONFIG && window.CONFIG.csrfToken) ?window.CONFIG.csrfToken : '' },
           credentials: 'same-origin'
         });
         const data = await resp.json();
@@ -1158,12 +1281,12 @@
         if (t === 'novo_comentario') icon = 'bi-chat-left-text-fill';
         else if (t.includes('tarefa')) icon = 'bi-check-circle-fill';
         else if (t.includes('status')) icon = 'bi-flag-fill';
-        const dt = (window.formatDate ? window.formatDate(log.data_criacao, true) : (log.data_criacao || ''));
+        const dt = (window.formatDate ?window.formatDate(log.data_criacao, true) : (log.data_criacao || ''));
         const detalhes = (log.detalhes || '').replace(/\n/g, '<br>');
         let actions = '';
         const m = /Item\s+(\d+)/.exec(log.detalhes || '');
-        const itemId = m ? parseInt(m[1], 10) : null;
-        if (t === 'novo_comentario' && itemId) actions += `<button class="btn btn-sm btn-outline-primary timeline-action-comments" data-item-id="${itemId}">Ver comentários</button>`;
+        const itemId = m ?parseInt(m[1], 10) : null;
+        if (t === 'novo_comentario' && itemId) actions += `<button class="btn btn-sm btn-outline-primary timeline-action-comments" data-item-id="${itemId}">Ver comentÃ¡rios</button>`;
         return `
           <li class="timeline-item">
             <div class="timeline-icon"><i class="bi ${icon}"></i></div>
@@ -1182,7 +1305,7 @@
 
     function getImplId() {
       const tab = document.getElementById('timeline-content');
-      return tab ? tab.getAttribute('data-impl-id') : null;
+      return tab ?tab.getAttribute('data-impl-id') : null;
     }
 
     function readTimelineBuffer() {
@@ -1190,8 +1313,8 @@
         const implId = getImplId();
         if (!implId) return [];
         const raw = localStorage.getItem(`timelineBuffer:${implId}`);
-        const arr = raw ? JSON.parse(raw) : [];
-        return Array.isArray(arr) ? arr : [];
+        const arr = raw ?JSON.parse(raw) : [];
+        return Array.isArray(arr) ?arr : [];
       } catch (_) { return []; }
     }
 
@@ -1234,13 +1357,13 @@
       else if (t.indexOf('tarefa') >= 0) icon = 'bi-check-circle-fill';
       else if (t.indexOf('status') >= 0) icon = 'bi-flag-fill';
       const now = new Date().toISOString();
-      const dt = window.formatDate ? window.formatDate(now, true) : now;
+      const dt = window.formatDate ?window.formatDate(now, true) : now;
       const text = (detalhes || '').replace(/\n/g, '<br>');
       let actions = '';
       const m = /Item\s+(\d+)/.exec(detalhes || '');
-      const itemId = m ? parseInt(m[1], 10) : null;
-      if (t === 'novo_comentario' && itemId) actions += `<button class="btn btn-sm btn-outline-primary timeline-action-comments" data-item-id="${itemId}">Ver comentários</button>`;
-      const usuario = (window.CONFIG && window.CONFIG.emailUsuarioLogado) ? window.CONFIG.emailUsuarioLogado : '';
+      const itemId = m ?parseInt(m[1], 10) : null;
+      if (t === 'novo_comentario' && itemId) actions += `<button class="btn btn-sm btn-outline-primary timeline-action-comments" data-item-id="${itemId}">Ver comentÃ¡rios</button>`;
+      const usuario = (window.CONFIG && window.CONFIG.emailUsuarioLogado) ?window.CONFIG.emailUsuarioLogado : '';
       const li = document.createElement('li');
       li.className = 'timeline-item';
       li.innerHTML = `
@@ -1386,14 +1509,14 @@
           fd.set('redirect_to', 'modal');
           const resp = await fetch('/atualizar_detalhes_empresa', {
             method: 'POST',
-            headers: { 'Accept': 'application/json', 'X-CSRFToken': (window.CONFIG && window.CONFIG.csrfToken) ? window.CONFIG.csrfToken : '' },
+            headers: { 'Accept': 'application/json', 'X-CSRFToken': (window.CONFIG && window.CONFIG.csrfToken) ?window.CONFIG.csrfToken : '' },
             body: fd,
             credentials: 'same-origin'
           });
           const data = await resp.json();
           if (data && data.ok) {
             showToast('Detalhes atualizados', 'success');
-            // permanece no modal; opcionalmente, reativar botão salvar
+            // permanece no modal; opcionalmente, reativar botÃ£o salvar
           } else {
             showToast('Erro ao salvar detalhes', 'error');
           }
@@ -1410,8 +1533,8 @@
 
       const comentarioId = targetBtn.dataset.comentarioId;
       const confirmed = await showConfirm({
-        title: 'Excluir Comentário',
-        message: 'Tem certeza que deseja excluir este comentário? Esta ação não pode ser desfeita.',
+        title: 'Excluir ComentÃ¡rio',
+        message: 'Tem certeza que deseja excluir este comentÃ¡rio?Esta aÃ§Ã£o nÃ£o pode ser desfeita.',
         confirmText: 'Excluir',
         cancelText: 'Cancelar',
         type: 'danger',
@@ -1431,7 +1554,7 @@
 
         if (!response.ok) {
           const errorText = await response.text();
-          showToast('Erro ao excluir comentário: ' + (errorText || `Status ${response.status}`), 'error');
+          showToast('Erro ao excluir comentÃ¡rio: ' + (errorText || `Status ${response.status}`), 'error');
           return;
         }
 
@@ -1439,7 +1562,7 @@
         if (contentType.includes('application/json')) {
           const data = await response.json();
           if (!data.ok && !data.success) {
-            showToast('Erro ao excluir comentário: ' + (data.error || 'Erro desconhecido'), 'error');
+            showToast('Erro ao excluir comentÃ¡rio: ' + (data.error || 'Erro desconhecido'), 'error');
             return;
           }
         } else if (!contentType.includes('text/html')) {
@@ -1447,7 +1570,7 @@
             const text = await response.text();
             const data = JSON.parse(text);
             if (!data.ok && !data.success) {
-              showToast('Erro ao excluir comentário: ' + (data.error || 'Erro desconhecido'), 'error');
+              showToast('Erro ao excluir comentÃ¡rio: ' + (data.error || 'Erro desconhecido'), 'error');
               return;
             }
           } catch (err) {
@@ -1455,13 +1578,13 @@
         }
 
         const comentarioItem = targetBtn.closest('.comentario-item');
-        const historico = comentarioItem ? comentarioItem.closest('[id^="historico-tarefa-"]') : null;
-        const itemId = historico ? historico.id.replace('historico-tarefa-', '') : null;
+        const historico = comentarioItem ?comentarioItem.closest('[id^="historico-tarefa-"]') : null;
+        const itemId = historico ?historico.id.replace('historico-tarefa-', '') : null;
 
         if (comentarioItem) comentarioItem.remove();
         if (itemId) await carregarComentarios(itemId);
 
-        showToast('Comentário excluído com sucesso', 'success');
+        showToast('ComentÃ¡rio excluÃ­do com sucesso', 'success');
         try { if (typeof window.reloadTimeline === 'function') window.reloadTimeline(); } catch (_) { }
       } catch (error) {
         showToast('Erro ao comunicar com o servidor: ' + error.message, 'error');
@@ -1473,8 +1596,8 @@
 
 
     // =========================================================================
-    // MODAL DETALHES EMPRESA - Lógica movida para modal_detalhes_empresa.js
-    // Este arquivo NÃO deve ter lógica do modal para evitar conflitos
+    // MODAL DETALHES EMPRESA - LÃ³gica movida para modal_detalhes_empresa.js
+    // Este arquivo NÃO deve ter lÃ³gica do modal para evitar conflitos
     // =========================================================================
     // }); // Removed to maintain CONFIG scope for functions below
 
@@ -1503,7 +1626,7 @@
         soma += numeros.charAt(tamanho - i) * pos--;
         if (pos < 2) pos = 9;
       }
-      let resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
+      let resultado = soma % 11 < 2 ?0 : 11 - soma % 11;
       if (resultado != digitos.charAt(0)) return false;
 
       tamanho = tamanho + 1;
@@ -1514,7 +1637,7 @@
         soma += numeros.charAt(tamanho - i) * pos--;
         if (pos < 2) pos = 9;
       }
-      resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
+      resultado = soma % 11 < 2 ?0 : 11 - soma % 11;
       if (resultado != digitos.charAt(1)) return false;
 
       return true;
@@ -1538,7 +1661,7 @@
     let jiraLoaded = false;
     let jiraIsSubmitting = false;
 
-    // --- Lógica Consulta Jira ---
+    // --- LÃ³gica Consulta Jira ---
     if (btnConsultaJira) {
       btnConsultaJira.addEventListener('click', () => {
         const modal = new bootstrap.Modal(modalConsultaTicket);
@@ -1589,22 +1712,22 @@
             // Badge Logic Check
             let badgeClass = 'bg-secondary';
             const st = (issue.status || '').toLowerCase();
-            if (st.includes('done') || st.includes('concluído') || st.includes('resolvido')) badgeClass = 'bg-success';
+            if (st.includes('done') || st.includes('concluÃ­do') || st.includes('resolvido')) badgeClass = 'bg-success';
             else if (st.includes('progress') || st.includes('andamento')) badgeClass = 'bg-primary';
 
             const cardHtml = `
               <div class="col-12 col-md-6 col-lg-4 animate__animated animate__fadeIn">
-                  <div class="jira-card h-100 shadow-sm" style="border: 2px solid #4F46E5 !important;" onclick="(function(link) { if (!link || link === '#' || link === 'https:/#') { showToast('Este ticket não está disponível ou foi arquivado', 'warning'); return; } const url = link.startsWith('http') ? link : 'https://' + link; try { window.open(url, '_blank'); } catch(e) { showToast('Erro ao abrir link do Jira', 'error'); } })('${issue.link}')">
+                  <div class="jira-card h-100 shadow-sm" style="border: 2px solid #4F46E5 !important;" onclick="(function(link) { if (!link || link === '#' || link === 'https:/#') { showToast('Este ticket nÃ£o estÃ¡ disponÃ­vel ou foi arquivado', 'warning'); return; } const url = link.startsWith('http') ?link : 'https://' + link; try { window.open(url, '_blank'); } catch(e) { showToast('Erro ao abrir link do Jira', 'error'); } })('${issue.link}')">
                        <div class="card-body d-flex flex-column h-100">
                           <div class="d-flex justify-content-between align-items-start mb-2">
                                <div class="d-flex align-items-center gap-2">
-                                  ${issue.type_icon ? `<img src="${issue.type_icon}" width="16" height="16" title="${issue.type}">` : ''}
+                                  ${issue.type_icon ?`<img src="${issue.type_icon}" width="16" height="16" title="${issue.type}">` : ''}
                                   <span class="fw-bold text-dark" style="font-size: 0.9rem;">${issue.key}</span>
                                </div>
                                <div class="d-flex gap-1 align-items-center">
                                    <span class="jira-status-badge ${badgeClass} text-white bg-opacity-75 border-0">${issue.status}</span>
-                                   ${issue.is_linked ? `
-                                        <button class="btn btn-link text-danger p-0 ms-1 unlink-jira-btn" data-key="${issue.key}" title="Desvincular ticket da implantação" style="z-index: 10;">
+                                   ${issue.is_linked ?`
+                                        <button class="btn btn-link text-danger p-0 ms-1 unlink-jira-btn" data-key="${issue.key}" title="Desvincular ticket da implantaÃ§Ã£o" style="z-index: 10;">
                                             <i class="bi bi-link-45deg fs-5"></i><i class="bi bi-x fs-6" style="margin-left: -8px;"></i>
                                         </button>
                                    ` : ''}
@@ -1636,7 +1759,7 @@
                   const key = newBtn.dataset.key;
                   const confirmed = await showConfirm({
                     title: 'Desvincular Ticket',
-                    message: `Deseja realmente desvincular o ticket <strong>${key}</strong> desta implantação?`,
+                    message: `Deseja realmente desvincular o ticket <strong>${key}</strong> desta implantaÃ§Ã£o?`,
                     confirmText: 'Desvincular',
                     cancelText: 'Cancelar',
                     type: 'danger',
@@ -1652,7 +1775,7 @@
                     });
 
                     if (resp.ok) {
-                      showToast('Vínculo removido com sucesso!', 'success');
+                      showToast('VÃ­nculo removido com sucesso!', 'success');
                       loadJiraIssues(true);
                     } else {
                       const data = await resp.json();
@@ -1660,7 +1783,7 @@
                     }
                   } catch (err) {
                     console.error(err);
-                    showToast('Erro de conexão ao desvincular', 'error');
+                    showToast('Erro de conexÃ£o ao desvincular', 'error');
                   }
                 });
               }
@@ -1722,7 +1845,7 @@
         e.preventDefault();
         if (jiraIsSubmitting) return;
 
-        // O botão está fora do form (no footer do modal), vinculado pelo atributo form="..."
+        // O botÃ£o estÃ¡ fora do form (no footer do modal), vinculado pelo atributo form="..."
         const btnSave = document.querySelector(`button[form="${formNovoTicket.id}"]`);
         const spinner = document.getElementById('btn-save-jira-spinner');
 
@@ -1743,7 +1866,7 @@
           formData.append('custom_origin', document.getElementById('jira-origem').value);
           formData.append('custom_enotas_link', document.getElementById('jira-link-enotas').value);
 
-          // Validação extra (Project is mandatory)
+          // ValidaÃ§Ã£o extra (Project is mandatory)
           if (!formData.get('project')) {
             throw new Error("Selecione um Projeto Jira.");
           }
@@ -1806,15 +1929,15 @@
 
       try {
         // Add timestamp to prevent caching if forced
-        const url = `/api/implantacao/${CONFIG.implantacaoId}/jira-issues` + (force ? `?t=${Date.now()}` : '');
+        const url = `/api/implantacao/${CONFIG.implantacaoId}/jira-issues` + (force ?`?t=${Date.now()}` : '');
         const resp = await fetch(url);
         const data = await resp.json();
 
         loadingEl.classList.add('d-none');
 
         if (data.error) {
-          if (data.error.includes('não configurado') || data.error.includes('Jira credentials')) {
-            errorEl.innerHTML = `<strong>Integração não ativa.</strong> Configure as variáveis de ambiente JIRA_URL e Token.`;
+          if (data.error.includes('nÃ£o configurado') || data.error.includes('Jira credentials')) {
+            errorEl.innerHTML = `<strong>IntegraÃ§Ã£o nÃ£o ativa.</strong> Configure as variÃ¡veis de ambiente JIRA_URL e Token.`;
           } else {
             errorEl.innerText = `Erro: ${data.error}`;
           }
@@ -1835,7 +1958,7 @@
 
       } catch (err) {
         loadingEl.classList.add('d-none');
-        errorEl.innerHTML = `<strong>Erro de conexão:</strong> <br/>${err.message}`;
+        errorEl.innerHTML = `<strong>Erro de conexÃ£o:</strong> <br/>${err.message}`;
         errorEl.classList.remove('d-none');
         console.error(err);
       }
@@ -1846,27 +1969,27 @@
 
       container.innerHTML = issues.map(issue => {
         // Status Color Mapping (Simplificado)
-        // Blue-gray vem do backend default, mas vamos normalizar se possível
+        // Blue-gray vem do backend default, mas vamos normalizar se possÃ­vel
         // Vamos usar classes do Bootstrap para badges
         let badgeClass = 'bg-secondary';
         const st = (issue.status || '').toLowerCase();
-        if (st.includes('done') || st.includes('concluído') || st.includes('resolvido')) badgeClass = 'bg-success';
+        if (st.includes('done') || st.includes('concluÃ­do') || st.includes('resolvido')) badgeClass = 'bg-success';
         else if (st.includes('progress') || st.includes('andamento')) badgeClass = 'bg-primary';
         else if (st.includes('todo') || st.includes('fazer') || st.includes('aberto')) badgeClass = 'bg-secondary';
 
         return `
         <div class="col-12 col-md-6 col-lg-4 animate__animated animate__fadeIn">
-            <div class="jira-card h-100 position-relative" style="cursor: pointer;" onclick="(function(link) { if (!link || link === '#' || link === 'https:/#') { showToast('Este ticket não está disponível ou foi arquivado', 'warning'); return; } const url = link.startsWith('http') ? link : 'https://' + link; try { window.open(url, '_blank'); } catch(e) { showToast('Erro ao abrir link do Jira', 'error'); } })('${issue.link}')">
+            <div class="jira-card h-100 position-relative" style="cursor: pointer;" onclick="(function(link) { if (!link || link === '#' || link === 'https:/#') { showToast('Este ticket nÃ£o estÃ¡ disponÃ­vel ou foi arquivado', 'warning'); return; } const url = link.startsWith('http') ?link : 'https://' + link; try { window.open(url, '_blank'); } catch(e) { showToast('Erro ao abrir link do Jira', 'error'); } })('${issue.link}')">
                 <div class="card-body d-flex flex-column h-100">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                          <div class="d-flex align-items-center gap-2">
-                            ${issue.type_icon ? `<img src="${issue.type_icon}" width="16" height="16" title="${issue.type}">` : ''}
+                            ${issue.type_icon ?`<img src="${issue.type_icon}" width="16" height="16" title="${issue.type}">` : ''}
                             <span class="fw-bold text-dark" style="font-size: 0.9rem;">${issue.key}</span>
                          </div>
                          <div class="d-flex gap-1 align-items-center">
                             <span class="jira-status-badge ${badgeClass} text-white bg-opacity-75 border-0">${issue.status}</span>
-                            ${issue.is_linked ? `
-                                <button class="btn btn-link text-danger p-0 ms-1 unlink-jira-btn" data-key="${issue.key}" title="Desvincular ticket da implantação" style="z-index: 10;">
+                            ${issue.is_linked ?`
+                                <button class="btn btn-link text-danger p-0 ms-1 unlink-jira-btn" data-key="${issue.key}" title="Desvincular ticket da implantaÃ§Ã£o" style="z-index: 10;">
                                     <i class="bi bi-link-45deg fs-5"></i><i class="bi bi-x fs-6" style="margin-left: -8px;"></i>
                                 </button>
                             ` : ''}
@@ -1879,7 +2002,7 @@
                     
                     <div class="mt-auto d-flex justify-content-between align-items-end border-top pt-3">
                         <div class="d-flex align-items-center gap-2">
-                             ${issue.priority_icon ? `<img src="${issue.priority_icon}" width="16" height="16" title="Prioridade: ${issue.priority}">` : `<span class="badge bg-light text-dark border">${issue.priority}</span>`}
+                             ${issue.priority_icon ?`<img src="${issue.priority_icon}" width="16" height="16" title="Prioridade: ${issue.priority}">` : `<span class="badge bg-light text-dark border">${issue.priority}</span>`}
                              <span class="text-muted small" style="font-size: 0.8rem;">${issue.priority}</span>
                         </div>
                         <small class="text-muted" style="font-size: 0.75rem;">
@@ -1896,13 +2019,13 @@
       container.querySelectorAll('.unlink-jira-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
           e.preventDefault();
-          e.stopPropagation(); // Não abrir o link do card
+          e.stopPropagation(); // NÃ£o abrir o link do card
 
           const key = btn.dataset.key;
 
           const confirmed = await showConfirm({
             title: 'Desvincular Ticket',
-            message: `Deseja realmente desvincular o ticket <strong>${key}</strong> desta implantação?`,
+            message: `Deseja realmente desvincular o ticket <strong>${key}</strong> desta implantaÃ§Ã£o?`,
             confirmText: 'Desvincular',
             cancelText: 'Cancelar',
             type: 'danger',
@@ -1920,7 +2043,7 @@
             });
 
             if (resp.ok) {
-              showToast('Vínculo removido com sucesso!', 'success');
+              showToast('VÃ­nculo removido com sucesso!', 'success');
               loadJiraIssues(true); // Recarrega a lista
             } else {
               const data = await resp.json();
@@ -1928,7 +2051,7 @@
             }
           } catch (err) {
             console.error(err);
-            showToast('Erro de conexão ao desvincular', 'error');
+            showToast('Erro de conexÃ£o ao desvincular', 'error');
           }
         });
       });
@@ -1936,5 +2059,3 @@
   });
 
 })();
-
-

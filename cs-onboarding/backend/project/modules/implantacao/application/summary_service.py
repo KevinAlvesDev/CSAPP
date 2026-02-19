@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import re
+from html import unescape
+import unicodedata
 from collections import Counter
 from datetime import date, datetime, timedelta
 from typing import Any
@@ -33,16 +35,259 @@ def _to_datetime(value: Any) -> datetime | None:
     return None
 
 
-def _truncate(text: str, max_len: int) -> str:
+def _truncate(text: str, max_len: int, *, preserve_newlines: bool = False) -> str:
     if not text:
         return ""
-    text = re.sub(r"\s+", " ", str(text)).strip()
+    text = str(text)
+    if preserve_newlines:
+        text = text.replace("\r\n", "\n").replace("\r", "\n")
+        text = re.sub(r"[ \t]+", " ", text)
+        text = re.sub(r"\n{3,}", "\n\n", text).strip()
+    else:
+        text = re.sub(r"\s+", " ", text).strip()
     if len(text) <= max_len:
         return text
     return text[: max_len - 3].rstrip() + "..."
 
 
-def _load_comments_for_summary(impl_id: int, *, per_page: int = 100, max_pages: int = 8) -> dict[str, Any]:
+def _strip_datetime_tokens(text: str) -> str:
+    if not text:
+        return ""
+    cleaned = unescape(str(text))
+    cleaned = re.sub(
+        r"\b\d{1,2}/\d{1,2}/\d{2,4}\s*(?:as|\u00e0s)?\s*\d{1,2}:\d{2}(?::\d{2})?\b",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(r"\b\d{1,2}/\d{1,2}/\d{2,4}\b", "", cleaned)
+    cleaned = re.sub(r"\b\d{4}-\d{2}-\d{2}\b", "", cleaned)
+    cleaned = re.sub(
+        r"\b\d{1,2}\s+de\s+[a-z\u00e7\u00e3\u00f5\u00e1\u00e9\u00ed\u00f3\u00fa]+\s+de\s+\d{4}\b",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(r"\b\d{1,2}:\d{2}(?::\d{2})?\b", "", cleaned)
+    cleaned = re.sub(r"\b\d{1,2}h\d{2}\b", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\b(?:as|\u00e0s)\b", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"total\s+de\s+comentarios[^.]*\.?", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"autores?\s+mais\s+ativos?[^.]*\.?", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"tarefas?\s+com\s+mais\s+coment[aá]rios?[^.]*\.?", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\bdata\s*:\s*", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s*[-:]\s*", " ", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip(" ,;.-")
+    return cleaned
+
+
+def _normalize_section_title(value: str) -> str:
+    normalized = unicodedata.normalize("NFKD", str(value or ""))
+    normalized = "".join(ch for ch in normalized if not unicodedata.combining(ch))
+    return re.sub(r"\s+", " ", normalized).strip().lower()
+
+
+def _extract_comment_sentences(comments: list[dict[str, Any]], *, max_len: int = 180) -> list[str]:
+    sentences: list[str] = []
+    seen: set[str] = set()
+
+    for c in comments:
+        raw = c.get("texto") or ""
+        texto = _strip_datetime_tokens(raw)
+        if not texto:
+            continue
+        # Evita que um unico comentario "engula" o resumo inteiro.
+        per_comment_added = 0
+        texto = re.sub(r"\s+", " ", texto).strip(" ,;.-")
+        for sent in re.split(r"(?<=[.!?])\s+", texto):
+            s = sent.strip(" ,;.-")
+            if len(s) < 18:
+                continue
+            key = s.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            s = s[0].upper() + s[1:] if s else s
+            sentences.append(_truncate(s, max_len))
+            per_comment_added += 1
+            if per_comment_added >= 1:
+                break
+    return sentences
+
+
+def _pick_thematic_sentences(
+    sentences: list[str],
+    keywords: tuple[str, ...],
+    *,
+    limit: int = 8,
+) -> list[str]:
+    picked: list[str] = []
+    for s in sentences:
+        lower = s.lower()
+        if any(k in lower for k in keywords):
+            picked.append(s)
+        if len(picked) >= limit:
+            break
+    return picked
+
+
+def _join_paragraph(sentences: list[str]) -> str:
+    if not sentences:
+        return ""
+    text = ". ".join(s.rstrip(".") for s in sentences).strip(" .")
+    if text and not text.endswith("."):
+        text += "."
+    return text
+
+
+def _comment_sort_key(comment: dict[str, Any]) -> datetime:
+    dt = _to_datetime(comment.get("data_criacao"))
+    return dt or datetime.min
+
+
+def _build_comments_overview(comments: list[dict[str, Any]], *, company_name: str | None = None) -> str:
+    if not comments:
+        return "Resumo descritivo: nao ha comentarios registrados nas tarefas ate o momento."
+
+    all_sentences = _extract_comment_sentences(comments, max_len=180)
+    if not all_sentences:
+        return "Resumo descritivo: nao ha comentarios com conteudo relevante para resumir."
+
+    finance_keywords = (
+        "pagamento",
+        "parcela",
+        "inadimpl",
+        "tolerancia zero",
+        "bloqueio",
+        "carencia",
+        "renovacao",
+        "matricula",
+        "pro-rata",
+        "prorrata",
+        "cobranca",
+        "plano",
+    )
+    commercial_keywords = (
+        "venda",
+        "comercial",
+        "contrato",
+        "modalidade",
+        "cpf",
+        "telefone",
+        "e-mail",
+        "email",
+        "pin",
+        "pix",
+        "dinheiro",
+        "negociacao",
+        "afastamento",
+        "ferias",
+        "atestado",
+        "horario",
+        "administrativ",
+    )
+    access_keywords = (
+        "acesso",
+        "check-in",
+        "checkin",
+        "aplicativo",
+        "catraca",
+        "bike",
+        "indoor",
+        "credito",
+        "trava",
+        "minutos",
+        "24 horas",
+        "antecedencia",
+        "integracao",
+        "instalacao",
+    )
+
+    finance_sentences = _pick_thematic_sentences(all_sentences, finance_keywords, limit=4)
+    commercial_sentences = _pick_thematic_sentences(all_sentences, commercial_keywords, limit=4)
+    access_sentences = _pick_thematic_sentences(all_sentences, access_keywords, limit=4)
+
+    used = {s.lower() for s in [*finance_sentences, *commercial_sentences, *access_sentences]}
+    generic_sentences = [s for s in all_sentences if s.lower() not in used][:3]
+
+    title_suffix = f" - {company_name}" if company_name else ""
+    intro = _join_paragraph(generic_sentences) or _join_paragraph(all_sentences[:2])
+
+    blocks = [f"Resumo Descritivo: Treinamento Operacional{title_suffix}", intro]
+
+    if finance_sentences:
+        blocks.append("Regras de Negocio e Financeiro")
+        blocks.append(_join_paragraph(finance_sentences))
+    if commercial_sentences:
+        blocks.append("Fluxo Comercial e Administrativo")
+        blocks.append(_join_paragraph(commercial_sentences))
+    if access_sentences:
+        blocks.append("Controle de Acesso e Operacao")
+        blocks.append(_join_paragraph(access_sentences))
+
+    result = "\n\n".join([b for b in blocks if b]).strip()
+    return _truncate(result, 2400, preserve_newlines=True)
+
+def _enforce_comments_section(structured: dict[str, Any], context: dict[str, Any], source: str) -> dict[str, Any]:
+    if not isinstance(structured, dict):
+        structured = {}
+
+    sections = structured.get("sections")
+    if not isinstance(sections, list):
+        sections = []
+
+    company_name = (context.get("implantacao") or {}).get("nome_empresa")
+    comments_overview = _build_comments_overview(context.get("comentarios_tarefas", []), company_name=company_name)
+    found = False
+
+    for sec in sections:
+        if not isinstance(sec, dict):
+            continue
+        title = _normalize_section_title(sec.get("title") or "")
+        if "comentarios" not in title:
+            continue
+        text = str(sec.get("text") or "").strip()
+        bullets = [str(b or "").strip() for b in (sec.get("bullets") or []) if str(b or "").strip()]
+
+        # Prioriza o texto original do LLM; usa fallback apenas se vier vazio/ruim.
+        if source == "gemini":
+            merged_parts = []
+            if text:
+                merged_parts.append(_strip_datetime_tokens(text))
+            if bullets:
+                merged_parts.extend([_strip_datetime_tokens(b) for b in bullets])
+            merged = "\n\n".join([p for p in merged_parts if p]).strip()
+            unique_items = sorted(
+                {
+                    str(c.get("item_title") or "").strip()
+                    for c in context.get("comentarios_tarefas", [])
+                    if str(c.get("item_title") or "").strip()
+                }
+            )
+            merged_lower = merged.lower()
+            covered_items = [item for item in unique_items if item.lower() in merged_lower]
+            min_item_coverage = min(3, len(unique_items))
+            has_coverage = len(covered_items) >= min_item_coverage if min_item_coverage > 0 else True
+            sec["text"] = merged if (len(merged) >= 120 and has_coverage) else comments_overview
+        else:
+            sec["text"] = comments_overview
+        sec["bullets"] = []
+        sec["title"] = "Comentarios e treinamentos"
+        found = True
+        break
+
+    if not found:
+        sections.append(
+            {
+                "title": "Comentarios e treinamentos",
+                "text": comments_overview,
+                "bullets": [],
+            }
+        )
+
+    structured["sections"] = sections
+    return structured
+
+def _load_comments_for_summary(impl_id: int, *, per_page: int = 100, max_pages: int = 50) -> dict[str, Any]:
     """
     Carrega comentarios paginados para evitar resumo raso quando ha muito historico.
     Limita paginas para manter latencia previsivel.
@@ -112,9 +357,20 @@ def _build_context(impl_id: int, user_email: str | None, is_manager: bool) -> di
             elif prazo_fim and now.date() <= prazo_fim.date() <= upcoming_limit.date():
                 upcoming_items.append(pending_items[-1])
 
-    comments_data = _load_comments_for_summary(impl_id, per_page=100, max_pages=8)
+    comments_data = _load_comments_for_summary(impl_id, per_page=100, max_pages=50)
     comments = comments_data.get("comments", [])
+    comments = sorted(comments, key=_comment_sort_key, reverse=True)
     comments_total = comments_data.get("total", len(comments))
+    comments_for_summary = [
+        {
+            "id": c.get("id"),
+            "autor": c.get("usuario_nome") or c.get("usuario_cs"),
+            "item_title": _truncate(c.get("item_title") or "Tarefa", 90),
+            "texto": c.get("texto") or "",
+        }
+        for c in comments
+        if (c.get("texto") or "").strip()
+    ]
     recent_comments = [
         {
             "id": c.get("id"),
@@ -153,7 +409,8 @@ def _build_context(impl_id: int, user_email: str | None, is_manager: bool) -> di
             k in tag for k in ["trein", "reun", "kickoff", "welcome"]
         ):
             snippet = _truncate(c.get("texto") or "", 140)
-            treinamentos.append(f"{c.get('data')}: {snippet}")
+            tarefa = c.get("item_title") or "Tarefa"
+            treinamentos.append(f"{tarefa}: {snippet}")
         if len(treinamentos) >= 8:
             break
 
@@ -161,7 +418,7 @@ def _build_context(impl_id: int, user_email: str | None, is_manager: bool) -> di
     for c in recent_comments[:12]:
         titulo = c.get("item_title") or "Tarefa"
         comentarios_highlights.append(
-            f"{c.get('data')}: {titulo} - {c.get('autor') or 'N/A'}: {c.get('texto')}"
+            f"{titulo} - {c.get('autor') or 'N/A'}: {c.get('texto')}"
         )
 
     timeline = get_timeline_logs(impl_id=impl_id, page=1, per_page=30)
@@ -217,6 +474,7 @@ def _build_context(impl_id: int, user_email: str | None, is_manager: bool) -> di
         },
         "timeline": timeline_logs[:20],
         "comentarios_recentes": recent_comments[:25],
+        "comentarios_tarefas": comments_for_summary,
         "comentarios_reunioes": meeting_comments[:15],
         "anexos_recentes": attachments[:10],
         "comentarios_total": comments_total,
@@ -281,6 +539,7 @@ def _build_minimal_context(impl_id: int, user_email: str | None, is_manager: boo
         },
         "timeline": [],
         "comentarios_recentes": [],
+        "comentarios_tarefas": [],
         "comentarios_reunioes": [],
         "anexos_recentes": [],
         "comentarios_total": 0,
@@ -314,6 +573,14 @@ def _build_prompt(context: dict[str, Any]) -> str:
         "6. Anexos e evidencias\n"
         "7. Ultimos eventos relevantes\n"
         "8. Proximos passos sugeridos\n\n"
+        "Regra obrigatoria para 'Comentarios e treinamentos':\n"
+        "- Gere texto descritivo com subtitulos tematicos exatamente nesta ordem quando houver conteudo:\n"
+        "  1) Regras de Negocio e Financeiro\n"
+        "  2) Fluxo Comercial e Administrativo\n"
+        "  3) Controle de Acesso e Operacao\n"
+        "- Use TODOS os comentarios das tarefas fornecidos no contexto.\n"
+        "- Quando houver varios comentarios, cubra multiplas frentes e nao foque em um unico comentario.\n"
+        "- Nao exiba total de comentarios, contagens, data ou horario.\n\n"
         "Dados estruturados (JSON):\n"
         f"{json.dumps(context, ensure_ascii=False)}"
     )
@@ -326,11 +593,8 @@ def _structured_fallback(context: dict[str, Any]) -> dict[str, Any]:
     riscos = context.get("riscos", [])
     timeline = context.get("timeline", [])
     tags_top = context.get("tags_top", [])
-    autores_top = context.get("autores_top", [])
-    tarefas_top = context.get("tarefas_top", [])
-    treinamentos = context.get("treinamentos", [])
+    comentarios_tarefas = context.get("comentarios_tarefas", [])
     comentarios_total = context.get("comentarios_total", 0)
-    comentarios_highlights = context.get("comentarios_highlights", [])
     anexos = context.get("anexos_recentes", [])
 
     sections = [
@@ -367,15 +631,8 @@ def _structured_fallback(context: dict[str, Any]) -> dict[str, Any]:
         },
         {
             "title": "Comentarios e treinamentos",
-            "text": (
-                f"Total de comentarios: {comentarios_total}. "
-                f"Autores mais ativos: {', '.join(autores_top) if autores_top else 'Nao informado.'} "
-                f"Tarefas com mais comentarios: {', '.join(tarefas_top) if tarefas_top else 'Nao informado.'}"
-            ),
-            "bullets": [
-                *treinamentos[:6],
-                *comentarios_highlights[:6],
-            ],
+            "text": _build_comments_overview(comentarios_tarefas),
+            "bullets": [],
         },
         {
             "title": "Tags e temas recorrentes",
@@ -476,13 +733,20 @@ def gerar_resumo_implantacao_service(
                 summary_structured = None
         if summary_structured is None:
             summary_structured = _structured_fallback(context)
+            source = "fallback"
     except GeminiClientError:
         summary_structured = _structured_fallback(context)
-        summary_text = _structured_to_text(summary_structured)
         source = "fallback"
+    except Exception:
+        summary_structured = _structured_fallback(context)
+        source = "fallback"
+
+    summary_structured = _enforce_comments_section(summary_structured, context, source)
+    summary_text = _structured_to_text(summary_structured)
 
     return {
         "summary": summary_text,
         "summary_structured": summary_structured,
         "source": source,
     }
+
