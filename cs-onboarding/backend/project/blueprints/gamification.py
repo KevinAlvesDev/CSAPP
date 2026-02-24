@@ -22,6 +22,14 @@ from ..modules.gamification.application.gamification_service import (
 gamification_bp = Blueprint("gamification", __name__, url_prefix="/gamification")
 
 
+@gamification_bp.route("/rules")
+@permission_required(PERFIS_COM_GESTAO)
+def legacy_gamification_rules():
+    """Compatibilidade retroativa para links antigos de regras."""
+    context = request.args.get("context")
+    return redirect(url_for("gamification.manage_gamification_metrics", context=context))
+
+
 @gamification_bp.route("/save-rules-modal", methods=["POST"])
 @permission_required(PERFIS_COM_GESTAO)
 @limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
