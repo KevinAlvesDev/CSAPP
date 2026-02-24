@@ -657,18 +657,33 @@ class ChecklistRenderer {
         this.updateAllItemsUI();
         this.updateProgressFromLocalData();
 
+        let result = null;
         if (this.service) {
-            const result = await this.service.toggleItem(itemId, completed);
-            if (result.success) {
-                this.updateProgressDisplay(result.progress || 0);
-            } else {
-                // Rollback
-                if (this.flatData[itemId]) this.flatData[itemId].completed = !completed;
-                this.propagateDown(itemId, !completed);
-                this.propagateUp(itemId);
-                this.updateAllItemsUI();
-                if (window.showToast) window.showToast(result.error || 'Erro ao alterar status', 'error');
+            result = await this.service.toggleItem(itemId, completed);
+        } else if (window.apiFetch) {
+            // Fallback defensivo: garante persistencia mesmo sem ChecklistService injetado.
+            try {
+                const data = await window.apiFetch(`/api/checklist/toggle/${itemId}`, {
+                    method: 'POST',
+                    body: JSON.stringify({ completed })
+                });
+                result = { success: !!(data && data.ok), progress: data ? data.progress : 0, error: data && data.error };
+            } catch (e) {
+                result = { success: false, error: e?.message || 'Erro ao alterar status' };
             }
+        } else {
+            result = { success: false, error: 'Servico de persistencia indisponivel' };
+        }
+
+        if (result?.success) {
+            this.updateProgressDisplay(result.progress || 0);
+        } else {
+            // Rollback
+            if (this.flatData[itemId]) this.flatData[itemId].completed = !completed;
+            this.propagateDown(itemId, !completed);
+            this.propagateUp(itemId);
+            this.updateAllItemsUI();
+            if (window.showToast) window.showToast(result?.error || 'Erro ao alterar status', 'error');
         }
         this.isLoading = false;
     }

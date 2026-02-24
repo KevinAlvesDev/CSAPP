@@ -6,29 +6,59 @@
 {% from 'macros/dashboard.html' import empresa_link, empresa_cell, implantador_cell, status_badge, tipo_badge,
 ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
 
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/onboarding/dashboard_grid.css') }}">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/onboarding/dashboard_uiux.css') }}">
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid p-0">
-    <header class="header-bg py-2 px-3 rounded-3" style="z-index: 1000;">
+<div class="container-fluid p-0 dashboard-shell">
+    <header class="header-bg py-2 px-3 rounded-3 dashboard-header" style="z-index: 1000;">
         <div class="d-flex align-items-center justify-content-between">
             <!-- Seção Esquerda: Busca centralizada no espaço -->
-            <div class="d-flex align-items-center justify-content-center" style="flex: 1;">
-                <div style="width: 300px; position: relative;">
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text bg-white border-end-0">
-                            <i class="bi bi-search text-muted"></i>
-                        </span>
-                        <input type="text" class="form-control border-start-0 ps-0" id="searchEmpresa"
-                            placeholder="Buscar empresa..." style="background-color: white;">
-                        <button class="btn btn-outline-secondary" type="button" id="clearSearch" style="display: none;">
-                            <i class="bi bi-x-lg"></i>
-                        </button>
+            <!-- Seção Esquerda: Busca e Filtros -->
+            <div class="d-flex align-items-center justify-content-start" style="flex: 1; gap: 10px;">
+                <form method="GET" action="{{ url_for('grandes_contas.dashboard') }}"
+                    class="d-flex align-items-center gap-2" id="search-form">
+                    <!-- Preservar filtros existentes -->
+                    {% if current_cs_filter %}
+                    <input type="hidden" name="cs_filter" value="{{ current_cs_filter }}">
+                    {% endif %}
+                    {% if sort_days %}
+                    <input type="hidden" name="sort_days" value="{{ sort_days }}">
+                    {% endif %}
+                    {% if current_tipo %}
+                    <input type="hidden" name="tipo" value="{{ current_tipo }}">
+                    {% endif %}
+                    {% if current_periodo %}
+                    <input type="hidden" name="periodo" value="{{ current_periodo }}">
+                    {% endif %}
+                    {% if current_date_type %}
+                    <input type="hidden" name="date_type" value="{{ current_date_type }}">
+                    {% endif %}
+
+                    <div style="width: 250px; position: relative;">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white border-end-0">
+                                <i class="bi bi-search text-muted"></i>
+                            </span>
+                            <input type="text" class="form-control border-start-0 ps-0" name="search"
+                                value="{{ current_search or '' }}" placeholder="Buscar empresa..."
+                                style="background-color: white;">
+                            {% if current_search %}
+                            <a href="{{ url_for('grandes_contas.dashboard') }}?{% if current_cs_filter %}cs_filter={{ current_cs_filter }}&{% endif %}{% if current_tipo %}tipo={{ current_tipo }}&{% endif %}{% if current_date_type %}date_type={{ current_date_type }}&{% endif %}{% if current_start_date %}start_date={{ current_start_date }}&{% endif %}{% if current_end_date %}end_date={{ current_end_date }}{% endif %}"
+                                class="btn btn-outline-secondary" title="Limpar Busca">
+                                <i class="bi bi-x-lg"></i>
+                            </a>
+                            {% else %}
+                            <button class="btn btn-outline-secondary" type="submit">
+                                <i class="bi bi-arrow-right"></i>
+                            </button>
+                            {% endif %}
+                        </div>
                     </div>
-                    <small class="text-white-50" id="searchCounter"
-                        style="display: none; position: absolute; top: 100%; left: 0; margin-top: 2px; white-space: nowrap;">
-                        <i class="bi bi-info-circle me-1"></i><span id="searchResults">0</span> resultado(s)
-                        encontrado(s)
-                    </small>
-                </div>
+                </form>
             </div>
 
             <!-- Título (Centro) -->
@@ -62,39 +92,118 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
             </div>
         </div>
     </header>
-    <main class="p-4" id="main-content" data-context="grandes_contas">
+    <main class="p-4 dashboard-main" id="main-content" data-context="grandes_contas">
 
-        {% if is_manager %}
-        <div class="card p-2 px-3 mb-3">
+        <div class="card p-2 px-3 mb-3 dashboard-filters">
             <form method="GET" action="{{ url_for('grandes_contas.dashboard') }}" id="cs-filter-form"
-                class="d-flex align-items-center gap-2 flex-wrap">
-                <span class="text-secondary small fw-semibold text-nowrap"><i
-                        class="bi bi-funnel me-1"></i>Filtros:</span>
-                <select id="cs_filter" name="cs_filter" class="form-select form-select-sm"
-                    style="width: auto; min-width: 220px;" onchange="this.form.submit()">
-                    <option value="">Todos os Implantadores</option>
-                    {% if all_cs_users %}
-                    {% for cs in all_cs_users %}
-                    <option value="{{ cs.usuario }}" {% if cs.usuario==current_cs_filter %}selected{% endif %}>
-                        {{ cs.nome }} ({{ cs.usuario }})
-                    </option>
-                    {% endfor %}
-                    {% endif %}
-                </select>
-                {% if current_cs_filter %}
-                <a href="{{ url_for('grandes_contas.dashboard') }}" class="btn btn-sm btn-outline-secondary"
-                    title="Limpar Filtros">
-                    <i class="bi bi-x-lg me-1"></i>Limpar
-                </a>
+                class="d-flex align-items-center flex-wrap gap-2">
+                {% if current_search %}
+                <input type="hidden" name="search" value="{{ current_search }}">
                 {% endif %}
+                {% if sort_days %}
+                <input type="hidden" name="sort_days" value="{{ sort_days }}">
+                {% endif %}
+
+                <!-- Barra Unificada de Filtros (Ajustada) -->
+                <div class="d-inline-flex align-items-center bg-white rounded-3 border px-2 py-1 shadow-sm"
+                    style="height: 42px;">
+
+                    <!-- Label Icon -->
+                    <div class="d-flex align-items-center px-2 text-secondary">
+                        <i class="bi bi-funnel-fill text-primary opacity-75"></i>
+                    </div>
+
+                    <div class="vr text-secondary opacity-25 mx-1" style="height: 20px;"></div>
+
+                    <!-- CS Filter -->
+                    {% if is_manager %}
+                    <div class="position-relative">
+                        <select id="cs_filter" name="cs_filter"
+                            class="form-select form-select-sm border-0 shadow-none bg-transparent ps-2 pe-5 fw-medium text-dark"
+                            style="width: auto; cursor: pointer; min-width: 180px;">
+                            <option value="" class="text-muted">Todos os Implantadores</option>
+                            {% if all_cs_users %}
+                            {% for cs in all_cs_users %}
+                            <option value="{{ cs.usuario }}" {% if cs.usuario==current_cs_filter %}selected{% endif %}>
+                                {{ cs.nome }}
+                            </option>
+                            {% endfor %}
+                            {% endif %}
+                        </select>
+                    </div>
+                    <div class="vr text-secondary opacity-25 mx-1" style="height: 20px;"></div>
+                    {% endif %}
+
+                    <!-- Tipo Filter -->
+                    <div class="position-relative">
+                        <select name="tipo"
+                            class="form-select form-select-sm border-0 shadow-none bg-transparent ps-2 pe-5 fw-medium text-dark"
+                            style="width: auto; cursor: pointer; min-width: 130px;">
+                            <option value="" class="text-muted">Todos os Tipos</option>
+                            <option value="sistema" {% if current_tipo=='sistema' %}selected{% endif %}>Sistema</option>
+                            <option value="modulo" {% if current_tipo=='modulo' %}selected{% endif %}>Módulo</option>
+                        </select>
+                    </div>
+
+                    <div class="vr text-secondary opacity-25 mx-1" style="height: 20px;"></div>
+
+                    <!-- Date Type Select -->
+                    <div class="position-relative">
+                        <select name="date_type"
+                            class="form-select form-select-sm border-0 shadow-none bg-transparent ps-2 pe-5 text-primary fw-bold"
+                            style="width: auto; cursor: pointer;">
+                            <option value="criacao" {% if current_date_type=='criacao' %}selected{% endif %}>Criação
+                            </option>
+                            <option value="inicio" {% if current_date_type=='inicio' %}selected{% endif %}>Início
+                            </option>
+                            <option value="finalizacao" {% if current_date_type=='finalizacao' %}selected{% endif %}>
+                                Conclusão
+                            </option>
+                            <option value="parada" {% if current_date_type=='parada' %}selected{% endif %}>Parada
+                                (Atual)
+                            </option>
+                            <option value="cancelamento" {% if current_date_type=='cancelamento' %}selected{% endif %}>
+                                Cancelamento</option>
+                        </select>
+                    </div>
+
+                    <!-- Date Range Inputs -->
+                    <div class="d-flex align-items-center px-1">
+                        <span class="small text-muted mx-1">de</span>
+                        <input type="date" name="start_date"
+                            class="form-control form-control-sm border-0 p-1 shadow-none bg-transparent fw-medium"
+                            value="{{ current_start_date or '' }}" style="width: 115px;" max="2100-12-31">
+
+                        <span class="small text-muted mx-1">até</span>
+                        <input type="date" name="end_date"
+                            class="form-control form-control-sm border-0 p-1 shadow-none bg-transparent fw-medium"
+                            value="{{ current_end_date or '' }}" style="width: 115px;" max="2100-12-31">
+                    </div>
+
+                    <!-- Clear Button (Integrated) -->
+                    {% if current_cs_filter or current_tipo or current_start_date or current_end_date or
+                    (current_date_type and current_date_type != 'criacao') %}
+                    <div class="vr text-secondary opacity-25 mx-1" style="height: 20px;"></div>
+                    <a href="{{ url_for('grandes_contas.dashboard', clear_filters=1, search=current_search if current_search else None) }}"
+                        class="btn btn-sm btn-link text-secondary text-decoration-none px-2" title="Limpar Filtros">
+                        <i class="bi bi-x-circle-fill"></i>
+                    </a>
+                    {% endif %}
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="btn btn-primary px-3 shadow-sm d-flex align-items-center"
+                    style="height: 42px;">
+                    <i class="bi bi-search me-2"></i> Consultar
+                </button>
             </form>
         </div>
-        {% endif %}
-        <h2 class="h5 mb-3 text-center">Resumo Rápido {% if current_cs_filter and is_manager %}(Filtrado){% endif %}
-        </h2>
+
         {% from 'macros/cards.html' import card_stats %}
         {% set m = metrics or {} %}
-        <div class="metrics-grid mb-4">
+        <div class="metrics-grid mb-4 dashboard-metrics">
+            {{ card_stats('Total', m.total_ativos | default(0), 'secondary', monetary_value=metrics.total_valor_ativos)
+            }}
             {{ card_stats('Novas', m.impl_novas | default(0), 'dark', monetary_value=metrics.total_valor_novas) }}
             {{ card_stats('Em Andamento', implantacoes_andamento|length if implantacoes_andamento else
             (m.impl_andamento_total | default(0)), 'primary', monetary_value=metrics.total_valor_andamento) }}
@@ -112,10 +221,12 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
 
         <!-- Flash messages agora são exibidos como toasts flutuantes automaticamente -->
 
-        <div class="card">
-            <div class="card-header">
-                <ul class="nav nav-pills card-header-pills" id="myTab" role="tablist">
-                    <li class="nav-item" role="presentation"><button class="nav-link active" id="novas-tab"
+        <div class="card dashboard-table-card">
+            <div class="card-header dashboard-table-header">
+                <ul class="nav nav-pills card-header-pills dashboard-tabs" id="myTab" role="tablist">
+                    <li class="nav-item" role="presentation"><button class="nav-link active" id="total-tab"
+                            data-bs-toggle="tab" data-bs-target="#total" type="button" role="tab">Total</button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" id="novas-tab"
                             data-bs-toggle="tab" data-bs-target="#novas" type="button" role="tab">Novas</button></li>
                     <li class="nav-item" role="presentation"><button class="nav-link" id="andamento-tab"
                             data-bs-toggle="tab" data-bs-target="#andamento" type="button" role="tab">Em
@@ -140,7 +251,72 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
 
             <div class="card-body">
                 <div class="tab-content" id="myTabContent">
-                    <div class="tab-pane fade show active" id="novas" role="tabpanel" aria-labelledby="novas-tab">
+                    <div class="tab-pane fade show active" id="total" role="tabpanel" aria-labelledby="total-tab">
+                        <h2 class="h5 mb-3">Total de Implantações Ativas</h2>
+                        {% if not dashboard_data.total_ativos %}
+                        <div class="alert alert-info text-center" role="alert"> Nenhuma implantação ativa encontrada.
+                        </div>
+                        {% else %}
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover table-sm align-middle">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">ID</th>
+                                        <th scope="col">Empresa</th>
+                                        <th scope="col">Implantador</th>
+                                        <th scope="col">Tipo</th>
+                                        <th scope="col">Status</th>
+                                        <th scope="col">Progresso</th>
+                                        <th scope="col">Valor (Total: R$ {{
+                                            "%.2f"|format(metrics.total_valor_ativos|float) if
+                                            metrics.total_valor_ativos else '0.00' }})</th>
+                                        <th scope="col">Ações</th>
+                                        <th scope="col">Último Comentário</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for impl in dashboard_data.total_ativos %}
+                                    <tr>
+                                        <td class="text-nowrap">{{ impl.id }}</td>
+                                        <td class="text-truncate" style="max-width: 350px;">
+                                            {{ empresa_link(impl) }}
+                                        </td>
+                                        <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or
+                                            impl.usuario_cs }}</td>
+                                        <td>{{ tipo_badge(impl.tipo) }}</td>
+                                        <td>
+                                            {% if impl.status == 'andamento' %}
+                                            <span class="badge bg-primary">Em Andamento</span>
+                                            {% elif impl.status == 'nova' %}
+                                            <span class="badge bg-dark">Nova</span>
+                                            {% elif impl.status == 'parada' %}
+                                            <span class="badge bg-danger">Parada</span>
+                                            {% elif impl.status == 'futura' %}
+                                            <span class="badge bg-info text-dark">Futura</span>
+                                            {% elif impl.status == 'sem_previsao' %}
+                                            <span class="badge bg-warning text-dark">Sem Previsão</span>
+                                            {% else %}
+                                            {{ status_badge(impl.status) }}
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ progress_bar(impl) }}</td>
+                                        <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_monetario|float) if
+                                            impl.valor_monetario else 'N/A' }}</td>
+                                        <td class="text-nowrap">
+                                            <a href="{{ url_for('grandes_contas.ver_implantacao', impl_id=impl.id) }}"
+                                                class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i>
+                                                Detalhes</a>
+                                        </td>
+                                        {{ ultima_atividade_cell(impl) }}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="tab-pane fade" id="novas" role="tabpanel" aria-labelledby="novas-tab">
                         <h2 class="h5 mb-3">Implantações Novas (Aguardando Início)</h2>
                         {% if not implantacoes_novas %}
                         <div class="alert alert-info text-center" role="alert"> Nenhuma nova implantação aguardando
@@ -436,7 +612,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                                         <th scope="col">Implantador</th>
                                         <th scope="col">Tipo</th>
                                         <th scope="col">Dias</th>
-                                        <th scope="col">Motivo</th>
+                                        <th scope="col" style="width: 20%;">Progresso</th>
                                         <th scope="col">Valor (Total: R$ {{
                                             "%.2f"|format(metrics.total_valor_paradas|float) if
                                             metrics.total_valor_paradas else '0.00' }})</th>
@@ -453,11 +629,8 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                                         <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or
                                             impl.usuario_cs }}</td>
                                         <td>{{ tipo_badge(impl.tipo) }}</td>
-                                        <td><span class="badge bg-danger js-dias-badge" data-impl-id="{{ impl.id }}"
-                                                data-start-iso="{{ impl.data_finalizacao | default('') }}"
-                                                data-status="parada">{{ impl.dias_parada | int }} dias</span></td>
-                                        <td class="text-truncate" style="max-width: 200px;">{{ impl.motivo_parada |
-                                            default('N/A') }}</td>
+                                        <td><span class="badge bg-danger">{{ impl.dias_parada | int }} dias</span></td>
+                                        <td>{{ progress_bar(impl) }}</td>
                                         <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_monetario|float) if
                                             impl.valor_monetario else 'N/A' }}</td>
                                         <td class="text-nowrap">
@@ -538,12 +711,11 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header header-bg">
-                <h5 class="modal-title">Nova Implantação (Grandes Contas)</h5>
+                <h5 class="modal-title">Nova Implantação</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form action="{{ url_for('grandes_contas_actions.criar_implantacao') }}" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
                 <div class="modal-body">
                     {% if g.perfil.perfil_acesso in PERFIS_COM_CRIACAO %}
                     <div class="mb-3">
@@ -594,12 +766,11 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header header-bg">
-                <h5 class="modal-title">Implantar Novo Módulo (Grandes Contas)</h5>
+                <h5 class="modal-title">Implantar Novo Módulo</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form action="{{ url_for('grandes_contas_actions.criar_implantacao_modulo') }}" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
                 <div class="modal-body">
                     {% if g.perfil.perfil_acesso in PERFIS_COM_CRIACAO %}
                     <p>Isso criará uma nova implantação do tipo "Módulo" e a definirá como "Nova" para o implantador
@@ -759,67 +930,6 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
     </div>
 </div>
 
-<!-- Modal único para Iniciar Implantação (Grandes Contas) -->
-<div class="modal fade" id="modalIniciarImplantacao" tabindex="-1" aria-labelledby="modalIniciarImplantacaoLabel"
-    aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header header-bg">
-                <h5 class="modal-title" id="modalIniciarImplantacaoLabel">Iniciar Implantação (Grandes Contas)</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p class="text-break mb-3">Escolha como deseja iniciar a implantação de <strong class="text-break"
-                        id="iniciarNomeEmpresa"></strong>:</p>
-
-                <!-- Opção 1: Iniciar Agora -->
-                <form method="POST" action="{{ url_for('grandes_contas_actions.iniciar_implantacao') }}"
-                    id="formIniciarAgora" class="mb-3">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <input type="hidden" name="implantacao_id" id="iniciarImplId" value="">
-                    <input type="hidden" name="redirect_to" value="dashboard">
-                    <button type="submit" class="btn btn-success w-100">
-                        <i class="bi bi-play-circle me-2"></i> Iniciar Agora
-                    </button>
-                </form>
-
-                <!-- Opção 2: Agendar Início Futuro -->
-                <form method="POST" action="{{ url_for('grandes_contas_actions.agendar_implantacao') }}"
-                    id="formAgendarFuturo" class="mb-3">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <input type="hidden" name="implantacao_id" id="agendarImplId2" value="">
-                    <div class="mb-2">
-                        <label for="data_inicio_previsto_modal" class="form-label small">Data de Início
-                            Previsto:</label>
-                        <div class="input-group input-group-sm">
-                            <input type="text" class="form-control flatpickr-date" id="data_inicio_previsto_modal"
-                                name="data_inicio_previsto" placeholder="DD/MM/AAAA" inputmode="numeric"
-                                pattern="\d{2}/\d{2}/\d{4}" required>
-                            <button class="btn btn-outline-secondary" type="button" id="btn-cal-modal"
-                                aria-label="Abrir calendário"><i class="bi bi-calendar3"></i></button>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn btn-info w-100">
-                        <i class="bi bi-calendar-event me-2"></i> Agendar Início Futuro
-                    </button>
-                </form>
-
-                <!-- Opção 3: Sem Previsão -->
-                <form method="POST" action="{{ url_for('grandes_contas_actions.marcar_sem_previsao') }}"
-                    id="formSemPrevisao">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <input type="hidden" name="implantacao_id" id="semPrevisaoImplId" value="">
-                    <button type="submit" class="btn btn-warning w-100">
-                        <i class="bi bi-question-circle me-2"></i> Marcar como Sem Previsão
-                    </button>
-                </form>
-            </div>
-            <div class="modal-footer header-bg">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-            </div>
-        </div>
-    </div>
-</div>
 
 {% endblock %}
 
@@ -829,7 +939,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
     document.addEventListener('DOMContentLoaded', function () {
         const tabSelector = '#myTab .nav-link';
         const tabs = document.querySelectorAll(tabSelector);
-        const tabStorageKey = 'tabAtiva-dashboard-gc';
+        const tabStorageKey = 'tabAtiva-dashboard';
 
         tabs.forEach(tab => {
             tab.addEventListener('shown.bs.tab', event => {
@@ -838,7 +948,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
         });
 
         const abaAtivaId = localStorage.getItem(tabStorageKey);
-        const defaultTabEl = document.getElementById('novas-tab');
+        const defaultTabEl = document.getElementById('total-tab');
 
         if (abaAtivaId) {
             const tabEl = document.getElementById(abaAtivaId);
@@ -863,35 +973,72 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
         if (agendarModal) {
             agendarModal.addEventListener('show.bs.modal', function (event) {
                 var button = event.relatedTarget;
+
                 var implId = button.getAttribute('data-impl-id');
                 var implNome = button.getAttribute('data-impl-nome');
-                var inputId = agendarModal.querySelector('#agendarImplId');
-                var nomeSpan = agendarModal.querySelector('#agendarNomeEmpresa');
-                if (inputId) inputId.value = implId;
-                if (nomeSpan) nomeSpan.textContent = implNome;
-            });
-        }
-    });
 
-    // Inicializar Flatpickr para datas
-    document.addEventListener('DOMContentLoaded', function () {
-        // Configurar locale pt
-        if (typeof flatpickr !== 'undefined') {
-            flatpickr.localize(flatpickr.l10ns.pt);
-            document.querySelectorAll('.flatpickr-date').forEach(function (elem) {
-                flatpickr(elem, {
-                    dateFormat: "d/m/Y",
-                    allowInput: true,
-                    disableMobile: "true"
+                var modalNomeEmpresa = agendarModal.querySelector('#agendarNomeEmpresa');
+                var modalImplIdInput = agendarModal.querySelector('#agendarImplId');
+
+                if (modalNomeEmpresa) {
+                    modalNomeEmpresa.textContent = implNome;
+                }
+                if (modalImplIdInput) {
+                    modalImplIdInput.value = implId;
+                }
+                var semPrevIdInput = agendarModal.querySelector('#semPrevImplId');
+                if (semPrevIdInput) {
+                    semPrevIdInput.value = implId;
+                }
+
+                var dateInput = agendarModal.querySelector('#data_inicio_previsto');
+                if (dateInput) {
+                    var today = new Date().toISOString().split('T')[0];
+                    dateInput.setAttribute('min', today);
+                }
+            });
+            var agendarForm = agendarModal.querySelector('form');
+            if (agendarForm) {
+                agendarForm.addEventListener('submit', function (e) {
+                    var input = agendarForm.querySelector('#data_inicio_previsto');
+                    if (!input) return;
+                    var v = (input.value || '').trim();
+                    var m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+                    if (!m) return;
+                    input.value = m[3] + '-' + m[2] + '-' + m[1];
                 });
-            });
-        }
-    });
+            }
 
-    document.addEventListener('DOMContentLoaded', function () {
+            if (window.flatpickr) {
+                var fpPrevisto = window.flatpickr('#data_inicio_previsto', {
+                    dateFormat: 'Y-m-d',
+                    altInput: true,
+                    altFormat: 'd/m/Y',
+                    allowInput: true,
+                    appendTo: agendarModal.querySelector('.modal-body'),
+                    static: false,
+                    position: 'auto',
+                    minDate: 'today'
+                });
+                var btnPrevisto = document.getElementById('btn-cal-data_inicio_previsto');
+                if (btnPrevisto && fpPrevisto) btnPrevisto.addEventListener('click', function () { fpPrevisto.open(); });
+                var alt = fpPrevisto && fpPrevisto._input ? fpPrevisto._input : null;
+                if (alt) {
+                    alt.addEventListener('input', function (e) {
+                        var v = e.target.value.replace(/[^\d]/g, '').slice(0, 8);
+                        var out = '';
+                        if (v.length >= 2) out = v.slice(0, 2);
+                        if (v.length >= 4) out = out + '/' + v.slice(2, 4);
+                        if (v.length >= 5) out = out + '/' + v.slice(4, 8);
+                        e.target.value = out;
+                    });
+                }
+            }
+        }
+
+        // Handler para o modal único de Iniciar Implantação
         var iniciarModal = document.getElementById('modalIniciarImplantacao');
         if (iniciarModal) {
-            // Attach click handlers to all "Iniciar" buttons
             document.querySelectorAll('.btn-iniciar-implantacao').forEach(function (btn) {
                 btn.addEventListener('click', function (e) {
                     var implId = this.getAttribute('data-impl-id');
@@ -915,13 +1062,13 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                         semPrevisaoImplIdInput.value = implId;
                     }
 
-                    // Open the modal
+                    // Abrir o modal
                     var bsModal = new bootstrap.Modal(iniciarModal);
                     bsModal.show();
                 });
             });
 
-            // Configure flatpickr for the date field in the modal
+            // Configurar flatpickr para o campo de data no modal
             if (window.flatpickr) {
                 var fpModal = window.flatpickr('#data_inicio_previsto_modal', {
                     dateFormat: 'd/m/Y',
@@ -947,7 +1094,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                 }
             }
 
-            // Convert date DD/MM/YYYY to YYYY-MM-DD before sending
+            // Converter data DD/MM/AAAA para YYYY-MM-DD antes de enviar
             var formAgendarFuturo = iniciarModal.querySelector('#formAgendarFuturo');
             if (formAgendarFuturo) {
                 formAgendarFuturo.addEventListener('submit', function (e) {
@@ -960,86 +1107,290 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                     }
                 });
             }
+
+            // Data agora será convertida antes do envio
         }
     });
+</script>
+<script>
+    (function () {
+        function parseDiasFromRow(tr) {
+            var el = tr.querySelector('.js-dias-badge');
+            if (!el) return 0;
+            var txt = (el.textContent || '').trim();
+            var n = parseInt(txt, 10);
+            return isNaN(n) ? 0 : n;
+        }
+        function sortAndamento(desc) {
+            var tbody = document.getElementById('andamento-tbody');
+            if (!tbody) return;
+            var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+            rows.sort(function (a, b) {
+                var da = parseDiasFromRow(a);
+                var db = parseDiasFromRow(b);
+                return desc ? (db - da) : (da - db);
+            });
+            rows.forEach(function (r) { tbody.appendChild(r); });
+        }
+        var descBtn = document.getElementById('sort-days-desc');
+        var ascBtn = document.getElementById('sort-days-asc');
+        if (descBtn) { descBtn.addEventListener('click', function (e) { e.preventDefault(); sortAndamento(true); }); }
+        if (ascBtn) { ascBtn.addEventListener('click', function (e) { e.preventDefault(); sortAndamento(false); }); }
+    })();
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Funções de atualização de badges removidas pois o cálculo agora é feito no backend
+    });
+</script>
+<script>
+    document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') { updateDashboardProgress(); } });
 
-    function updateDashboardProgressGC() {
+    function updateDashboardProgress() {
         var bars = document.querySelectorAll('.js-progress-bar[data-progress-url]');
         bars.forEach(function (bar) {
             var url = bar.getAttribute('data-progress-url');
             if (!url) return;
-            fetch(url, {
-                headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                credentials: 'include',
-                cache: 'no-store'
-            })
+            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'include' })
                 .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
-                .then(function (data) {
-                    var p = parseInt(data.progresso || 0, 10);
-                    if (isNaN(p)) p = 0;
-                    bar.style.width = p + '%';
-                    bar.setAttribute('aria-valuenow', p);
-                    bar.textContent = p + '%';
-                })
+                .then(function (data) { var p = parseInt(data.progresso || 0, 10); if (isNaN(p)) p = 0; bar.style.width = p + '%'; bar.setAttribute('aria-valuenow', p); bar.textContent = p + '%'; })
                 .catch(function () { });
         });
     }
-
+</script>
+<script>
     document.addEventListener('DOMContentLoaded', function () {
-        updateDashboardProgressGC();
-        setInterval(updateDashboardProgressGC, 10000);
-    });
+        const btnConsultar = document.getElementById('btnConsultarEmpresa');
+        if (btnConsultar) {
+            btnConsultar.addEventListener('click', async function () {
+                const idFavorecidoInput = document.getElementById('idFavorecido');
+                const idFavorecido = idFavorecidoInput.value;
+                const feedbackEl = document.getElementById('consultaFeedback');
+                const btn = this;
+                const spinner = btn.querySelector('.spinner-border');
+                const nomeEmpresaInput = document.getElementById('nomeEmpresa');
 
-    document.addEventListener('visibilitychange', function () {
-        if (document.visibilityState === 'visible') {
-            updateDashboardProgressGC();
-        }
-    });
-
-    // Consultar dados da empresa (Pacto Global)
-    const btnConsultar = document.getElementById('btnConsultarEmpresa');
-    if (btnConsultar) {
-        btnConsultar.addEventListener('click', consultarEmpresa);
-    }
-    const btnConsultarMod = document.getElementById('btnConsultarEmpresaModulo');
-    if (btnConsultarMod) {
-        btnConsultarMod.addEventListener('click', function () {
-            consultarEmpresa(true);
-        });
-    }
-
-    function consultarEmpresa(isModulo = false) {
-        const idInput = isModulo ? document.getElementById('idFavorecidoModulo') : document.getElementById('idFavorecido');
-        const nomeInput = isModulo ? document.getElementById('nomeEmpresaModulo') : document.getElementById('nomeEmpresa');
-        const feedbackDiv = isModulo ? document.getElementById('consultaFeedbackModulo') : document.getElementById('consultaFeedback');
-        const spinner = isModulo ? btnConsultarMod.querySelector('.spinner-border') : btnConsultar.querySelector('.spinner-border');
-
-        const idFavorecido = idInput.value;
-        if (!idFavorecido) return;
-
-        spinner.classList.remove('d-none');
-        feedbackDiv.textContent = 'Consultando...';
-        feedbackDiv.className = 'form-text text-muted';
-        nomeInput.value = '';
-
-        fetch(`/api/consultar_empresa/${idFavorecido}`)
-            .then(response => response.json())
-            .then(data => {
-                spinner.classList.add('d-none');
-                if (data.error) {
-                    feedbackDiv.textContent = data.error;
-                    feedbackDiv.className = 'form-text text-danger';
-                } else if (data.nome_fantasia) {
-                    nomeInput.value = data.nome_fantasia;
-                    feedbackDiv.textContent = 'Empresa encontrada!';
-                    feedbackDiv.className = 'form-text text-success';
+                if (!idFavorecido) {
+                    feedbackEl.textContent = 'Por favor, digite um ID Favorecido.';
+                    feedbackEl.className = 'form-text text-danger';
+                    return;
                 }
-            })
-            .catch(err => {
-                spinner.classList.add('d-none');
-                feedbackDiv.textContent = 'Erro ao consultar API.';
-                feedbackDiv.className = 'form-text text-danger';
+
+                // Reset state
+                feedbackEl.textContent = '';
+                feedbackEl.className = 'form-text';
+                btn.disabled = true;
+                spinner.classList.remove('d-none');
+
+                try {
+                    const response = await fetch(`/api/consultar_empresa?id_favorecido=${idFavorecido}`);
+                    const data = await response.json();
+
+                    if (data.ok) {
+                        feedbackEl.textContent = 'Empresa encontrada: ' + (data.empresa.nomefantasia || data.empresa.razaosocial);
+                        feedbackEl.className = 'form-text text-success';
+
+                        // Auto-fill name if available and empty
+                        if (!nomeEmpresaInput.value) {
+                            if (data.empresa.nomefantasia) {
+                                nomeEmpresaInput.value = data.empresa.nomefantasia;
+                            } else if (data.empresa.razaosocial) {
+                                nomeEmpresaInput.value = data.empresa.razaosocial;
+                            }
+                        }
+                    } else {
+                        feedbackEl.textContent = data.error || 'Erro ao consultar empresa.';
+                        feedbackEl.className = 'form-text text-danger';
+                    }
+                } catch (error) {
+                    feedbackEl.textContent = 'Erro de conexão ao consultar empresa.';
+                    feedbackEl.className = 'form-text text-danger';
+                } finally {
+                    btn.disabled = false;
+                    spinner.classList.add('d-none');
+                }
             });
-    }
+        }
+
+        const btnConsultarModulo = document.getElementById('btnConsultarEmpresaModulo');
+        if (btnConsultarModulo) {
+            btnConsultarModulo.addEventListener('click', async function () {
+                const idFavorecidoInput = document.getElementById('idFavorecidoModulo');
+                const idFavorecido = idFavorecidoInput.value;
+                const feedbackEl = document.getElementById('consultaFeedbackModulo');
+                const btn = this;
+                const spinner = btn.querySelector('.spinner-border');
+                const nomeEmpresaInput = document.getElementById('nomeEmpresaModulo');
+
+                if (!idFavorecido) {
+                    feedbackEl.textContent = 'Por favor, digite um ID Favorecido.';
+                    feedbackEl.className = 'form-text text-danger';
+                    return;
+                }
+
+                feedbackEl.textContent = '';
+                feedbackEl.className = 'form-text';
+                btn.disabled = true;
+                spinner.classList.remove('d-none');
+
+                try {
+                    const response = await fetch(`/api/consultar_empresa?id_favorecido=${idFavorecido}`);
+                    const data = await response.json();
+
+                    if (data.ok) {
+                        feedbackEl.textContent = 'Empresa encontrada: ' + (data.empresa.nomefantasia || data.empresa.razaosocial);
+                        feedbackEl.className = 'form-text text-success';
+
+                        if (!nomeEmpresaInput.value) {
+                            if (data.empresa.nomefantasia) {
+                                nomeEmpresaInput.value = data.empresa.nomefantasia;
+                            } else if (data.empresa.razaosocial) {
+                                nomeEmpresaInput.value = data.empresa.razaosocial;
+                            }
+                        }
+                    } else {
+                        feedbackEl.textContent = data.error || 'Erro ao consultar empresa.';
+                        feedbackEl.className = 'form-text text-danger';
+                    }
+                } catch (error) {
+                    feedbackEl.textContent = 'Erro de conexão ao consultar empresa.';
+                    feedbackEl.className = 'form-text text-danger';
+                } finally {
+                    btn.disabled = false;
+                    spinner.classList.add('d-none');
+                }
+            });
+        }
+
+        // NOTA: A consulta OAMD foi centralizada em modal_detalhes_empresa.js
+        // Não é mais necessário código duplicado aqui
+
+
+        // ===== BUSCA RÁPIDA DE EMPRESA =====
+        const searchInput = document.getElementById('searchEmpresa');
+        const clearBtn = document.getElementById('clearSearch');
+        const searchCounter = document.getElementById('searchCounter');
+        const searchResults = document.getElementById('searchResults');
+
+        if (searchInput) {
+            searchInput.addEventListener('input', function () {
+                const searchTerm = this.value.toLowerCase().trim();
+
+                // Mostrar/ocultar botão de limpar
+                clearBtn.style.display = searchTerm ? 'block' : 'none';
+
+                // Buscar em todas as tabelas
+                const allTables = document.querySelectorAll('.tab-pane table tbody');
+                let totalFound = 0;
+
+                allTables.forEach(tbody => {
+                    const rows = tbody.querySelectorAll('tr');
+
+                    rows.forEach(row => {
+                        // Pegar o nome da empresa (primeira coluna)
+                        const empresaCell = row.querySelector('td:first-child');
+                        if (!empresaCell) return;
+
+                        const empresaNome = empresaCell.textContent.toLowerCase();
+                        const matches = empresaNome.includes(searchTerm);
+
+                        if (searchTerm === '') {
+                            // Sem busca: mostrar tudo, remover destaque
+                            row.style.display = '';
+                            row.classList.remove('table-warning');
+                        } else if (matches) {
+                            // Encontrado: mostrar e destacar
+                            row.style.display = '';
+                            row.classList.add('table-warning');
+                            totalFound++;
+                        } else {
+                            // Não encontrado: ocultar
+                            row.style.display = 'none';
+                            row.classList.remove('table-warning');
+                        }
+                    });
+                });
+
+                // Atualizar contador
+                if (searchTerm) {
+                    searchResults.textContent = totalFound;
+                    searchCounter.style.display = 'block';
+                } else {
+                    searchCounter.style.display = 'none';
+                }
+            });
+
+            // Botão de limpar
+            clearBtn.addEventListener('click', function () {
+                searchInput.value = '';
+                searchInput.dispatchEvent(new Event('input'));
+                searchInput.focus();
+            });
+
+            // Atalho: ESC para limpar busca
+            searchInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') {
+                    clearBtn.click();
+                }
+            });
+        }
+        // ===== VALIDAÇÃO DE DATA FORCE BRUTE =====
+        // Monitoramento contínuo para impedir anos > 4 dígitos
+        const dateInputs = document.querySelectorAll('input[type="date"]');
+
+        dateInputs.forEach(input => {
+            let intervalId;
+
+            // Quando foca, inicia verificação a cada 100ms
+            input.addEventListener('focus', function () {
+                intervalId = setInterval(() => {
+                    const val = input.value;
+                    if (!val) return;
+
+                    const parts = val.split('-');
+                    // Se ano > 4 dígitos (ex: 20265...)
+                    if (parts[0].length > 4) {
+                        parts[0] = parts[0].substring(0, 4);
+                        input.value = parts.join('-');
+                    }
+                    // Se ano > 2100 logica extra
+                    if (parts[0] > 2100) {
+                        parts[0] = "2100";
+                        input.value = parts.join('-');
+                    }
+                }, 100);
+            });
+
+            // Quando sai, para e faz verificação final
+            input.addEventListener('blur', function () {
+                clearInterval(intervalId);
+                const max = '2100-12-31';
+                if (this.value > max) {
+                    this.value = max;
+                }
+            });
+        });
+
+
+        // Anti-Cache: Adicionar timestamp em formulários GET para forçar atualização
+        const cacheBustForms = ["cs-filter-form", "search-form"];
+        cacheBustForms.forEach(formId => {
+            const form = document.getElementById(formId);
+            if (form) {
+                let hidden = form.querySelector('input[name="_t"]');
+                if (!hidden) {
+                    hidden = document.createElement("input");
+                    hidden.type = "hidden";
+                    hidden.name = "_t";
+                    form.appendChild(hidden);
+                }
+                form.addEventListener("submit", function () {
+                    hidden.value = Date.now();
+                });
+            }
+        });
+
+    });
 </script>
 {% endblock %}
+

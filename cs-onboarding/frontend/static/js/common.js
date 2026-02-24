@@ -33,6 +33,10 @@
 
     // Function to initialize services (called after dependencies are loaded)
     window.initializeServices = function () {
+        // Lazily create container in pages that load service-container.js after common.js
+        if (!window.appContainer && window.ServiceContainer) {
+            window.appContainer = new window.ServiceContainer();
+        }
         if (!window.appContainer) return;
 
         // Register NProgress

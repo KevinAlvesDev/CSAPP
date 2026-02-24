@@ -933,6 +933,27 @@ Sim - Academia XYZ
 
 {% block scripts_extra %}
 
+<script>
+    // Dados do checklist para renderização
+    window.CHECKLIST_DATA = {{ checklist_tree | tojson if checklist_tree else '[]' }};
+    window.IMPLANTACAO_ID = {{ implantacao.id }};
+    window.IS_HISTORICO_VIEW = {{ 'true' if is_historico_view else 'false' }};
+    window.PLANO_PERMITE_EXCLUIR_TAREFAS = {{ 'true' if plano_sucesso and plano_sucesso.get('permite_excluir_tarefas') else 'false' }};
+</script>
+
+<!-- Service Layer Scripts (SOLID architecture) -->
+<script src="{{ url_for('static', filename='js/core/service-container.js') }}"></script>
+<script src="{{ url_for('static', filename='js/services/api-service.js') }}"></script>
+<script src="{{ url_for('static', filename='js/services/notification-service.js') }}"></script>
+<script src="{{ url_for('static', filename='js/services/checklist-api.js') }}"></script>
+<script src="{{ url_for('static', filename='js/services/checklist-service.js') }}"></script>
+<script>
+    // Inicializa servicos antes dos componentes do checklist
+    if (window.initializeServices) {
+        window.initializeServices();
+    }
+</script>
+
 <!-- Scripts de Drag and Drop e Checklist -->
 <script src="{{ url_for('static', filename='js/components/checklist/checklist_drag_drop.js') }}"></script>
 <script src="{{ url_for('static', filename='js/components/checklist_renderer.js') }}"></script>
@@ -1010,3 +1031,4 @@ Sim - Academia XYZ
     }
 </script>
 {% endblock %}
+

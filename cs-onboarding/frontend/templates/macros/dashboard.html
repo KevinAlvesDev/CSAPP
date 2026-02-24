@@ -147,7 +147,7 @@ Macro para barra de progresso
 Uso: {{ progress_bar(impl) }}
 #}
 {% macro progress_bar(impl) %}
-{% if impl.status not in ['andamento', 'atrasada'] %}
+{% if impl.status not in ['andamento', 'atrasada', 'parada'] %}
 <span class="badge bg-secondary">0%</span>
 {% else %}
 {% set progress_color = 'bg-danger' if impl.progresso < 40 else ('bg-warning text-dark' if impl.progresso < 80 else 'bg-success') %}
