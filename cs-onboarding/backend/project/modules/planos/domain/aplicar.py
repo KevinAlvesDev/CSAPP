@@ -371,27 +371,51 @@ def _criar_instancia_plano_cursor(cursor, db_type, plano, estrutura_plano, impla
         sql_plano = sql_plano.replace("%s", "?")
 
     now = datetime.now()
-    cursor.execute(
-        sql_plano,
-        (
-            nome_instancia,
-            plano.get("descricao", "") or "",
-            usuario,
-            now,
-            now,
-            plano.get("dias_duracao"),
-            bool(plano.get("permite_excluir_tarefas", False)),
-            plano.get("contexto", "onboarding"),
-            "em_andamento",
-            implantacao_id,
-        ),
+    insert_params = (
+        nome_instancia,
+        plano.get("descricao", "") or "",
+        usuario,
+        now,
+        now,
+        plano.get("dias_duracao"),
+        bool(plano.get("permite_excluir_tarefas", False)),
+        plano.get("contexto", "onboarding"),
+        "em_andamento",
+        implantacao_id,
     )
 
-    if db_type == "postgres":
-        cursor.execute("SELECT lastval()")
-        plano_instancia_id = cursor.fetchone()[0]
-    else:
-        plano_instancia_id = cursor.lastrowid
+    def _insert_plano_instancia():
+        cursor.execute(sql_plano, insert_params)
+        if db_type == "postgres":
+            cursor.execute("SELECT lastval()")
+            return cursor.fetchone()[0]
+        return cursor.lastrowid
+
+    try:
+        plano_instancia_id = _insert_plano_instancia()
+    except Exception as e:
+        err = str(e).lower()
+        conflito_processo = (
+            "uq_planos_processo_em_andamento" in err
+            or ("duplicate key value" in err and "processo_id" in err)
+            or ("unique constraint" in err and "processo_id" in err)
+        )
+        if not conflito_processo:
+            raise
+
+        # Recuperacao defensiva: em cenarios de inconsistencias/concorrencia,
+        # desativa qualquer plano em andamento residual e tenta novamente.
+        now_retry = datetime.now()
+        sql_fix = """
+            UPDATE planos_sucesso
+            SET status = %s, data_atualizacao = %s
+            WHERE processo_id = %s
+              AND status = 'em_andamento'
+        """
+        if db_type == "sqlite":
+            sql_fix = sql_fix.replace("%s", "?")
+        cursor.execute(sql_fix, ("substituido", now_retry, implantacao_id))
+        plano_instancia_id = _insert_plano_instancia()
 
     _criar_estrutura_plano_checklist(cursor, db_type, plano_instancia_id, estrutura_plano)
     return plano_instancia_id
