@@ -40,8 +40,10 @@ def _upload_comment_attachment_impl():
     if not r2_client:
         return jsonify({"ok": False, "error": "Sistema de upload nao configurado"}), 503
 
-    bucket_name = current_app.config.get("R2_BUCKET_NAME")
-    public_url_base = current_app.config.get("R2_PUBLIC_URL")
+    # Config oficial do projeto usa prefixo CLOUDFLARE_*.
+    # Mantemos fallback para R2_* por compatibilidade.
+    bucket_name = current_app.config.get("CLOUDFLARE_BUCKET_NAME") or current_app.config.get("R2_BUCKET_NAME")
+    public_url_base = current_app.config.get("CLOUDFLARE_PUBLIC_URL") or current_app.config.get("R2_PUBLIC_URL")
 
     if not bucket_name or not public_url_base:
         return jsonify({"ok": False, "error": "Configuracao de storage incompleta"}), 503
