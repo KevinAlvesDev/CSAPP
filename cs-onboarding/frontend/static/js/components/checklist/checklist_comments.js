@@ -231,12 +231,24 @@ class ChecklistComments {
                 </div>
                 
                 <p class="mb-1 small mt-2" style="white-space: pre-wrap; word-wrap: break-word;">${escape(c.texto)}</p>
-                ${c.imagem_url ? `
+                ${(() => {
+                if (!c.imagem_url) return '';
+                if (this.isImageUrl(c.imagem_url)) {
+                    return `
                     <div class="mt-1">
                          <img src="${c.imagem_url}" class="img-fluid rounded comment-image-thumbnail" style="max-height: 100px; cursor: pointer;" title="Clique para ampliar">
                     </div>
-                ` : ''
-            }
+                `;
+                }
+                const filename = this.getAttachmentName(c.imagem_url);
+                return `
+                    <div class="mt-1">
+                        <a href="${c.imagem_url}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-file-earmark-text me-1"></i>${escape(filename)}
+                        </a>
+                    </div>
+                `;
+            })()}
         <div class="d-flex gap-2 mt-2 justify-content-end action-buttons">
             ${isExterno && temEmailResponsavel ? `
                         <button class="btn btn-sm btn-link text-primary p-0 small btn-send-email-comment me-auto" 
@@ -304,7 +316,7 @@ class ChecklistComments {
         }
 
         if (!texto && !imageFile) {
-            if (this.renderer.showToast) this.renderer.showToast('Digite um comentário ou anexe uma imagem', 'warning');
+            if (this.renderer.showToast) this.renderer.showToast('Digite um comentário ou anexe um arquivo', 'warning');
             return;
         }
 
@@ -462,28 +474,40 @@ class ChecklistComments {
     }
 
     handleImageSelect(itemId, file) {
-        if (!file || !file.type.startsWith('image/')) return;
+        if (!file) return;
 
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const previewContainer = document.getElementById(`image-preview-${itemId}`);
-            if (previewContainer) {
-                const img = previewContainer.querySelector('.image-preview');
-                if (img) {
+        const isImage = (file.type || '').startsWith('image/');
+        const previewContainer = document.getElementById(`image-preview-${itemId}`);
+        if (previewContainer) {
+            const img = previewContainer.querySelector('.image-preview');
+            const nameEl = previewContainer.querySelector('.attachment-filename');
+
+            if (isImage && img) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
                     img.src = event.target.result;
+                    img.classList.remove('d-none');
+                    if (nameEl) nameEl.textContent = file.name || '';
                     previewContainer.classList.remove('d-none');
+                };
+                reader.readAsDataURL(file);
+            } else {
+                if (img) {
+                    img.src = '';
+                    img.classList.add('d-none');
                 }
+                if (nameEl) nameEl.textContent = file.name || 'anexo';
+                previewContainer.classList.remove('d-none');
             }
+        }
 
-            // Update file input if it wasn't the source (e.g. pasted)
-            const fileInput = document.querySelector(`.comentario-imagem-input[data-item-id="${itemId}"]`);
-            if (fileInput && fileInput.files[0] !== file) {
-                const dataTransfer = new DataTransfer();
-                dataTransfer.items.add(file);
-                fileInput.files = dataTransfer.files;
-            }
-        };
-        reader.readAsDataURL(file);
+        // Update file input if it wasn't the source (e.g. pasted)
+        const fileInput = document.querySelector(`.comentario-imagem-input[data-item-id="${itemId}"]`);
+        if (fileInput && fileInput.files[0] !== file) {
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            fileInput.files = dataTransfer.files;
+        }
     }
 
     removeImagePreview(itemId) {
@@ -493,7 +517,12 @@ class ChecklistComments {
         if (previewContainer) {
             previewContainer.classList.add('d-none');
             const img = previewContainer.querySelector('.image-preview');
-            if (img) img.src = '';
+            const nameEl = previewContainer.querySelector('.attachment-filename');
+            if (img) {
+                img.src = '';
+                img.classList.remove('d-none');
+            }
+            if (nameEl) nameEl.textContent = '';
         }
 
         if (fileInput) {
@@ -603,6 +632,23 @@ class ChecklistComments {
             .replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
+    }
+
+    isImageUrl(url) {
+        if (!url) return false;
+        const s = String(url).toLowerCase();
+        if (s.startsWith('data:image/')) return true;
+        return /\.(png|jpg|jpeg|gif|webp)(\?|#|$)/i.test(s);
+    }
+
+    getAttachmentName(url) {
+        try {
+            const clean = String(url || '').split('?')[0].split('#')[0];
+            const name = clean.substring(clean.lastIndexOf('/') + 1);
+            return decodeURIComponent(name || 'anexo');
+        } catch (_) {
+            return 'anexo';
+        }
     }
 }
 

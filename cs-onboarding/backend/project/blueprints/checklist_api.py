@@ -168,8 +168,9 @@ def add_comment(item_id: int):
     imagem_url = data.get("imagem_url")  # URL da imagem anexada
     imagem_base64 = data.get("imagem_base64")  # Imagem em base64
 
-    if not texto or not texto.strip():
-        return jsonify({"ok": False, "error": "O texto do comentário é obrigatório"}), 400
+    has_attachment = bool(imagem_url or imagem_base64)
+    if (not texto or not texto.strip()) and not has_attachment:
+        return jsonify({"ok": False, "error": "Informe texto ou anexo no comentário"}), 400
 
     if visibilidade not in ("interno", "externo"):
         visibilidade = "interno"

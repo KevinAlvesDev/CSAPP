@@ -45,11 +45,12 @@ def add_comment_to_item(
     except (ValueError, TypeError) as err:
         raise ValueError("item_id deve ser um inteiro válido") from err
 
-    if not text or not text.strip():
-        raise ValueError("Texto do comentário é obrigatório")
+    has_attachment = bool(imagem_url or imagem_base64)
+    if (not text or not text.strip()) and not has_attachment:
+        raise ValueError("Informe texto ou anexo no comentário")
 
     usuario_email = usuario_email or (g.user_email if hasattr(g, "user_email") else None)
-    text = sanitize_string(text.strip(), max_length=12000, min_length=1)
+    text = sanitize_string((text or "").strip(), max_length=12000, min_length=0)
     noshow = bool(noshow) or (tag == "No Show")
 
     with db_transaction_with_lock() as (conn, cursor, db_type):

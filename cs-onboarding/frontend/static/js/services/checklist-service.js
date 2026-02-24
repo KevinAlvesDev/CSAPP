@@ -324,16 +324,26 @@ class ChecklistService {
      * @returns {Promise<{success: boolean, error?: string}>}
      */
     async saveComment(itemId, commentData, imageFile = null) {
-        if (!this.validateCommentText(commentData.texto)) {
+        const hasText = !!(commentData.texto && String(commentData.texto).trim());
+        if (!hasText && !imageFile) {
+            this.notifier.warning('Digite um comentario ou anexe um arquivo');
+            return { success: false };
+        }
+
+        if (hasText && !this.validateCommentText(commentData.texto)) {
             return { success: false }; // Validação já notificou o usuário
         }
 
         try {
-            // Se houver imagem, converter para base64
+            // Se houver arquivo, fazer upload e salvar apenas URL no comentario.
             if (imageFile) {
-                const base64 = await this.fileToBase64(imageFile);
-                commentData.imagem_base64 = base64;
-                commentData.imagem_nome = imageFile.name;
+                const upload = await this.uploadCommentAttachment(imageFile);
+                if (!upload.success) {
+                    throw new Error(upload.error || 'Erro ao enviar anexo');
+                }
+                commentData.imagem_url = upload.url;
+                commentData.imagem_nome = upload.filename || imageFile.name;
+                commentData.imagem_tipo = upload.contentType || imageFile.type || '';
             }
 
             const data = await this.api.saveComment(itemId, commentData);
@@ -344,6 +354,39 @@ class ChecklistService {
             }
 
             throw new Error(data?.error || 'Erro ao salvar comentário');
+        } catch (error) {
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    }
+
+    /**
+     * Upload de anexo para comentario.
+     * @param {File} file
+     * @returns {Promise<{success: boolean, url?: string, filename?: string, contentType?: string, error?: string}>}
+     */
+    async uploadCommentAttachment(file) {
+        try {
+            if (!window.apiFetch) {
+                throw new Error('API indisponivel');
+            }
+            const formData = new FormData();
+            formData.append('file', file);
+            const data = await window.apiFetch('/api/upload/comment-attachment', {
+                method: 'POST',
+                body: formData
+            });
+            if (!data || !data.ok) {
+                throw new Error((data && data.error) ? data.error : 'Falha no upload');
+            }
+            return {
+                success: true,
+                url: data.attachment_url || data.image_url,
+                filename: data.filename,
+                contentType: data.content_type
+            };
         } catch (error) {
             return {
                 success: false,

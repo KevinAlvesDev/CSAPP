@@ -639,7 +639,17 @@
                  </div>
               </div>
               <div class="comentario-texto text-break" style="white-space: pre-wrap; word-wrap: break-word;">${escapeHtml(c.texto)}</div>
-              ${c.imagem_url ?`<div class="mt-2"><img src="${c.imagem_url}" class="img-fluid rounded comment-image-thumbnail" style="cursor: pointer;" style="max-height: 200px;" alt="Imagem anexada"></div>` : ''}
+              ${(() => {
+                if (!c.imagem_url) return '';
+                const lower = String(c.imagem_url).toLowerCase();
+                const isImage = lower.startsWith('data:image/') || /\.(png|jpg|jpeg|gif|webp)(\?|#|$)/i.test(lower);
+                if (isImage) {
+                  return `<div class="mt-2"><img src="${c.imagem_url}" class="img-fluid rounded comment-image-thumbnail" style="cursor: pointer; max-height: 200px;" alt="Imagem anexada"></div>`;
+                }
+                const clean = String(c.imagem_url).split('?')[0].split('#')[0];
+                const filename = decodeURIComponent(clean.substring(clean.lastIndexOf('/') + 1) || 'anexo');
+                return `<div class="mt-2"><a href="${c.imagem_url}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary"><i class="bi bi-file-earmark-text me-1"></i>${escapeHtml(filename)}</a></div>`;
+              })()}
             </div>
           </div>`;
       }).join('');

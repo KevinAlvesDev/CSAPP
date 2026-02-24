@@ -32,9 +32,17 @@
             data-target-id="comment-text-{{ comentario.id }}">Ver mais...</button>
         {% endif %}
         {% if comentario.imagem_url %}
-        <a href="{{ comentario.imagem_url }}" target="_blank" title="Ampliar">
-            <img src="{{ comentario.imagem_url }}" class="img-fluid rounded mt-1 comment-image">
-        </a>
+            {% set _u = comentario.imagem_url|lower %}
+            {% if _u.startswith('data:image/') or _u.endswith('.png') or _u.endswith('.jpg') or _u.endswith('.jpeg') or _u.endswith('.gif') or _u.endswith('.webp') or '.png?' in _u or '.jpg?' in _u or '.jpeg?' in _u or '.gif?' in _u or '.webp?' in _u %}
+            <a href="{{ comentario.imagem_url }}" target="_blank" title="Ampliar">
+                <img src="{{ comentario.imagem_url }}" class="img-fluid rounded mt-1 comment-image">
+            </a>
+            {% else %}
+            <a href="{{ comentario.imagem_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary mt-1">
+                <i class="bi bi-file-earmark-text me-1"></i>
+                {{ (comentario.imagem_url.split('?')[0].split('#')[0].split('/')[-1]) if comentario.imagem_url else 'anexo' }}
+            </a>
+            {% endif %}
         {% endif %}
     </div>
     {% if comentario.usuario_cs == g.user_email %}

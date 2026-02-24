@@ -417,6 +417,7 @@ class ChecklistRenderer {
                         <div class="image-preview-container d-none mt-2 p-2 bg-white border rounded" id="image-preview-${item.id}">
                             <div class="d-flex align-items-center gap-2">
                                 <img class="image-preview" style="max-height: 80px; max-width: 120px; border-radius: 4px;">
+                                <span class="attachment-filename small text-muted"></span>
                                 <button type="button" class="btn btn-sm btn-outline-danger" onclick="if(window.checklistRenderer.comments) window.checklistRenderer.comments.removeImagePreview(${item.id})">Remover</button>
                             </div>
                         </div>
@@ -433,7 +434,7 @@ class ChecklistRenderer {
                                 </select>
                              </div>
                              <div class="d-flex gap-2 align-items-center">
-                                <label class="btn btn-sm btn-outline-secondary mb-0"><i class="bi bi-paperclip"></i><input type="file" class="d-none comentario-imagem-input" data-item-id="${item.id}" accept="image/*"></label>
+                                <label class="btn btn-sm btn-outline-secondary mb-0"><i class="bi bi-paperclip"></i><input type="file" class="d-none comentario-imagem-input" data-item-id="${item.id}" accept="image/*,.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"></label>
                                 
                                 <div class="form-check d-flex align-items-center d-none mb-0" id="div-check-email-${item.id}">
                                     <input class="form-check-input me-1" type="checkbox" id="check-email-${item.id}" style="cursor: pointer;">
