@@ -162,6 +162,14 @@ def aplicar_plano_a_implantacao_checklist(
         cursor = conn.cursor()
 
         try:
+            # Garantir serializacao por implantacao (evita corrida em aplicacoes concorrentes).
+            sql_lock_impl = "SELECT id FROM implantacoes WHERE id = %s"
+            if db_type == "postgres":
+                sql_lock_impl += " FOR UPDATE"
+            if db_type == "sqlite":
+                sql_lock_impl = sql_lock_impl.replace("%s", "?")
+            cursor.execute(sql_lock_impl, (implantacao_id,))
+
             # Não concluir automaticamente planos em andamento ao trocar de plano.
             # Conclusão só deve ocorrer explicitamente e com progresso válido (100%).
 
@@ -195,6 +203,19 @@ def aplicar_plano_a_implantacao_checklist(
             if db_type == "sqlite":
                 sql_arquivar_itens = sql_arquivar_itens.replace("%s", "?")
             cursor.execute(sql_arquivar_itens, (implantacao_id,))
+
+            # Constraint parcial do Postgres permite somente 1 plano em_andamento por processo_id.
+            # Ao trocar plano, o anterior vira historico "substituido" (nao concluido).
+            now = datetime.now()
+            sql_desativar_em_andamento = """
+                UPDATE planos_sucesso
+                SET status = %s, data_atualizacao = %s
+                WHERE processo_id = %s
+                  AND status = 'em_andamento'
+            """
+            if db_type == "sqlite":
+                sql_desativar_em_andamento = sql_desativar_em_andamento.replace("%s", "?")
+            cursor.execute(sql_desativar_em_andamento, ("substituido", now, implantacao_id))
 
             # Criar instância do plano vinculada ao processo (snapshot do template)
             plano_instancia_id = _criar_instancia_plano_cursor(
