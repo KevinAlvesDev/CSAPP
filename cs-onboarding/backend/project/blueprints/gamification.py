@@ -27,7 +27,7 @@ gamification_bp = Blueprint("gamification", __name__, url_prefix="/gamification"
 def legacy_gamification_rules():
     """Compatibilidade retroativa para links antigos de regras."""
     context = request.args.get("context")
-    return redirect(url_for("gamification.manage_gamification_metrics", context=context))
+    return redirect(url_for("gamification.manage_gamification_metrics", context=context, view="rules"))
 
 
 @gamification_bp.route("/save-rules-modal", methods=["POST"])

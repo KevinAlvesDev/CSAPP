@@ -136,12 +136,12 @@ request.args.get('context') == 'grandes_contas') or (request.blueprint == 'perfi
         <li class="nav-item nav-item-section-title"><span class="nav-link disabled nav-link-text">GAMIFICAÇÃO</span>
         </li>
         <li class="nav-item"><a
-            class="nav-link {% if request.endpoint == 'gamification.manage_gamification_metrics' %}active{% endif %}"
+            class="nav-link {% if request.endpoint == 'gamification.manage_gamification_metrics' and request.args.get('view') != 'rules' %}active{% endif %}"
             href="{{ url_for('gamification.manage_gamification_metrics', context=current_context) }}"><i
               class="bi bi-list-check me-2"></i><span class="nav-link-text"> Métricas</span></a></li>
         <li class="nav-item"><a
-            class="nav-link {% if request.endpoint == 'gamification.manage_gamification_metrics' %}active{% endif %}"
-            href="{{ url_for('gamification.manage_gamification_metrics', context=current_context) }}"><i class="bi bi-card-list me-2"></i><span
+            class="nav-link {% if request.endpoint == 'gamification.manage_gamification_metrics' and request.args.get('view') == 'rules' %}active{% endif %}"
+            href="{{ url_for('gamification.manage_gamification_metrics', context=current_context, view='rules') }}"><i class="bi bi-card-list me-2"></i><span
               class="nav-link-text"> Critérios da Gamificação</span></a></li>
         <li class="nav-item"><a
             class="nav-link {% if request.endpoint == 'gamification.gamification_report' %}active{% endif %}"
