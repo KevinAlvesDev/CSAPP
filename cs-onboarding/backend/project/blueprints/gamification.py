@@ -24,10 +24,10 @@ gamification_bp = Blueprint("gamification", __name__, url_prefix="/gamification"
 
 @gamification_bp.route("/rules")
 @permission_required(PERFIS_COM_GESTAO)
-def legacy_gamification_rules():
-    """Compatibilidade retroativa para links antigos de regras."""
-    context = request.args.get("context")
-    return redirect(url_for("gamification.manage_gamification_metrics", context=context, view="rules"))
+def manage_gamification_rules():
+    """Rota para configurar regras e pontuações da gamificação."""
+    regras_agrupadas = _get_all_gamification_rules_grouped()
+    return render_template("pages/gamification_rules_form.html", regras_agrupadas=regras_agrupadas)
 
 
 @gamification_bp.route("/save-rules-modal", methods=["POST"])
