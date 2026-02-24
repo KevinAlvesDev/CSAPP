@@ -218,7 +218,9 @@ def listar_comentarios_implantacao(impl_id, page=1, per_page=20):
             COALESCE(p.nome, c.usuario_cs) as usuario_nome
         FROM comentarios_h c
         LEFT JOIN checklist_items ci ON c.checklist_item_id = ci.id
+        LEFT JOIN implantacoes i ON COALESCE(ci.implantacao_id, c.implantacao_id) = i.id
         LEFT JOIN perfil_usuario p ON c.usuario_cs = p.usuario
+        LEFT JOIN perfil_usuario_contexto puc ON c.usuario_cs = puc.usuario AND puc.contexto = COALESCE(i.contexto, 'onboarding')
         WHERE
             -- Robustez máxima: considera vinculado se o item pertencer à implantação
             -- OU se o próprio comentário apontar para a implantação (mesmo que item deletado/nulo)
@@ -257,7 +259,10 @@ def listar_comentarios_item(item_id):
         SELECT c.id, c.texto, c.usuario_cs, c.data_criacao, c.visibilidade, c.imagem_url, c.noshow, c.tag,
                 COALESCE(p.nome, c.usuario_cs) as usuario_nome
         FROM comentarios_h c
+        LEFT JOIN checklist_items ci ON c.checklist_item_id = ci.id
+        LEFT JOIN implantacoes i ON ci.implantacao_id = i.id
         LEFT JOIN perfil_usuario p ON c.usuario_cs = p.usuario
+        LEFT JOIN perfil_usuario_contexto puc ON c.usuario_cs = puc.usuario AND puc.contexto = COALESCE(i.contexto, 'onboarding')
         WHERE c.checklist_item_id = %s
         ORDER BY c.data_criacao DESC
         """,

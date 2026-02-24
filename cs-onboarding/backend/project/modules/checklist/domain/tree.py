@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 
 from flask import current_app
 
+from ....common.context_profiles import resolve_context
 from ....common.exceptions import DatabaseError
 from ....db import db_transaction_with_lock, query_db
 from .utils import _format_datetime
@@ -169,13 +170,28 @@ def get_checklist_tree(implantacao_id=None, root_item_id=None, plano_id=None, in
             # Buscar todos os nomes em uma única query
             responsaveis_map = {}
             if responsaveis_emails:
+                ctx = resolve_context()
                 placeholder = (
                     ",".join(["%s"] * len(responsaveis_emails))
                     if db_type == "postgres"
                     else ",".join(["?"] * len(responsaveis_emails))
                 )
-                resp_query = f"SELECT usuario, nome FROM perfil_usuario WHERE usuario IN ({placeholder})"
-                cursor.execute(resp_query, tuple(responsaveis_emails))
+                if db_type == "postgres":
+                    resp_query = f"""
+                        SELECT pu.usuario, pu.nome
+                        FROM perfil_usuario pu
+                        LEFT JOIN perfil_usuario_contexto puc ON pu.usuario = puc.usuario AND puc.contexto = %s
+                        WHERE pu.usuario IN ({placeholder})
+                    """
+                    cursor.execute(resp_query, (ctx, *tuple(responsaveis_emails)))
+                else:
+                    resp_query = f"""
+                        SELECT pu.usuario, pu.nome
+                        FROM perfil_usuario pu
+                        LEFT JOIN perfil_usuario_contexto puc ON pu.usuario = puc.usuario AND puc.contexto = ?
+                        WHERE pu.usuario IN ({placeholder})
+                    """
+                    cursor.execute(resp_query, (ctx, *tuple(responsaveis_emails)))
                 for resp_row in cursor.fetchall():
                     if isinstance(resp_row, dict):
                         responsaveis_map[resp_row["usuario"]] = resp_row["nome"]

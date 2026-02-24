@@ -8,6 +8,13 @@ from werkzeug.security import generate_password_hash
 
 from ....config.logging_config import auth_logger
 from ....constants import MASTER_ADMIN_EMAIL, PERFIL_ADMIN, PERFIL_IMPLANTADOR
+from ....common.context_profiles import (
+    ensure_user_context_profiles,
+    get_contextual_profile,
+    resolve_context,
+    set_user_role_for_all_contexts,
+    set_user_role_for_context,
+)
 from ....db import execute_db, query_db
 
 
@@ -20,6 +27,7 @@ def sync_user_profile_service(user_email, user_name, auth0_user_id):
         # Definir perfil padrão
         # ADMIN_EMAIL recebe PERFIL_ADMIN, todos os outros recebem PERFIL_IMPLANTADOR
         if user_email == MASTER_ADMIN_EMAIL:
+            perfil_acesso_final = PERFIL_ADMIN
             auth_logger.info(f"Admin user [service] {user_email} detected")
         else:
             perfil_acesso_final = PERFIL_IMPLANTADOR
@@ -40,6 +48,7 @@ def sync_user_profile_service(user_email, user_name, auth0_user_id):
                 "INSERT INTO perfil_usuario (usuario, nome, perfil_acesso) VALUES (%s, %s, %s)",
                 (user_email, user_name, perfil_acesso_final),
             )
+            set_user_role_for_all_contexts(user_email, perfil_acesso_final, updated_by="auth_sync")
             auth_logger.info(f"User profile created [service]: {user_email} with role {perfil_acesso_final}")
         elif user_email == MASTER_ADMIN_EMAIL:
             perfil_acesso_atual = query_db(
@@ -49,7 +58,13 @@ def sync_user_profile_service(user_email, user_name, auth0_user_id):
                 execute_db(
                     "UPDATE perfil_usuario SET perfil_acesso = %s WHERE usuario = %s", (PERFIL_ADMIN, user_email)
                 )
+                set_user_role_for_all_contexts(user_email, PERFIL_ADMIN, updated_by="auth_sync")
                 auth_logger.info(f"Admin role enforced [service] for user: {user_email}")
+        else:
+            # Garantir linhas contextuais para usuários legados.
+            perfil_row = query_db("SELECT perfil_acesso FROM perfil_usuario WHERE usuario = %s", (user_email,), one=True)
+            if perfil_row and perfil_row.get("perfil_acesso"):
+                ensure_user_context_profiles(user_email, perfil_row.get("perfil_acesso"), updated_by="auth_sync")
 
     except ValueError as ve:
         raise ve
@@ -58,12 +73,36 @@ def sync_user_profile_service(user_email, user_name, auth0_user_id):
         raise db_error
 
 
-def get_user_profile_service(user_email):
-    return query_db("SELECT * FROM perfil_usuario WHERE usuario = %s", (user_email,), one=True)
+def get_user_profile_service(user_email, context=None):
+    ctx = resolve_context(context)
+    profile = get_contextual_profile(user_email, ctx)
+    if profile:
+        return profile
+    row = query_db(
+        """
+        SELECT
+            pu.*,
+            COALESCE(puc.perfil_acesso, pu.perfil_acesso) AS perfil_acesso
+        FROM perfil_usuario pu
+        LEFT JOIN perfil_usuario_contexto puc
+            ON puc.usuario = pu.usuario AND puc.contexto = %s
+        WHERE pu.usuario = %s
+        """,
+        (ctx, user_email),
+        one=True,
+    )
+    if row:
+        row["contexto"] = ctx
+    return row
 
 
-def update_user_role_service(user_email, role):
-    execute_db("UPDATE perfil_usuario SET perfil_acesso = %s WHERE usuario = %s", (role, user_email))
+def update_user_role_service(user_email, role, context=None):
+    ctx = resolve_context(context)
+    if context:
+        set_user_role_for_context(user_email, role, context=ctx, updated_by="role_update")
+    else:
+        execute_db("UPDATE perfil_usuario SET perfil_acesso = %s WHERE usuario = %s", (role, user_email))
+        set_user_role_for_all_contexts(user_email, role, updated_by="role_update")
     # Invalidar cache do perfil
     from ....config.cache_config import clear_user_cache
 

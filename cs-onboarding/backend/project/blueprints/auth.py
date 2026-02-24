@@ -43,8 +43,10 @@ def login_required(f):
 
         if not g.perfil or g.perfil.get("perfil_acesso") is None:
             try:
+                from ..common.context_profiles import get_contextual_profile
+
                 sync_user_profile_service(g.user_email, g.user.get("name", g.user_email), g.user.get("sub"))
-                g.perfil = get_user_profile_service(g.user_email)
+                g.perfil = get_contextual_profile(g.user_email, getattr(g, "modulo_atual", None))
 
                 if not g.perfil:
                     g.perfil = {
@@ -53,6 +55,7 @@ def login_required(f):
                         "foto_url": None,
                         "cargo": None,
                         "perfil_acesso": None,
+                        "contexto": getattr(g, "modulo_atual", "onboarding"),
                     }
 
             except ValueError as ve:

@@ -9,6 +9,7 @@ from datetime import date, datetime
 from flask import current_app
 
 from ....common.date_helpers import add_business_days, adjust_to_business_day
+from ....common.context_profiles import resolve_context
 from ....common.exceptions import DatabaseError, ValidationError
 from ....db import db_connection, query_db
 from .crud import _extrair_estrutura_checklist, obter_plano_completo
@@ -208,7 +209,17 @@ def aplicar_plano_a_implantacao_checklist(
                 responsavel_padrao = responsavel_nome.strip()
             else:
                 try:
-                    perfil = query_db("SELECT nome FROM perfil_usuario WHERE usuario = %s", (usuario,), one=True)
+                    ctx = resolve_context(plano.get("contexto"))
+                    perfil = query_db(
+                        """
+                        SELECT pu.nome
+                        FROM perfil_usuario pu
+                        LEFT JOIN perfil_usuario_contexto puc ON pu.usuario = puc.usuario AND puc.contexto = %s
+                        WHERE pu.usuario = %s
+                        """,
+                        (ctx, usuario),
+                        one=True,
+                    )
                     responsavel_padrao = perfil.get("nome") if perfil and perfil.get("nome") else usuario
                 except Exception:
                     responsavel_padrao = usuario

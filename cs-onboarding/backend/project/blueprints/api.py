@@ -27,7 +27,9 @@ def _api_origin_guard():
 
 
 @api_bp.route("/progresso_implantacao/<int:impl_id>", methods=["GET"])
+@login_required
 @validate_api_origin
+@validate_context_access(id_param="impl_id", entity_type="implantacao")
 @limiter.limit("2000 per minute")
 def progresso_implantacao(impl_id):
     try:

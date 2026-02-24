@@ -15,8 +15,10 @@ from datetime import datetime
 from flask import current_app, g
 
 from ....common.date_helpers import format_relative_time_simple
+from ....common.context_profiles import resolve_context
 from ....common.query_helpers import get_implantacoes_count, get_implantacoes_with_progress
 from ....constants import PERFIL_ADMIN, PERFIL_COORDENADOR, PERFIL_GERENTE
+from ....modules.implantacao.domain import _get_progress
 
 
 def get_dashboard_data(
@@ -47,6 +49,8 @@ def get_dashboard_data(
     """
 
     # Configurar paginação
+    ctx = resolve_context(context)
+    context = ctx
     if page is not None and per_page is None:
         per_page = 100
 
@@ -169,8 +173,17 @@ def get_dashboard_data(
             impl.get("data_final_implantacao"), only_date=True
         )
 
-        # Progresso (já calculado no SQL!)
-        impl["progresso"] = impl.get("progresso_percent", 0)
+        # Progresso:
+        # para status "parada", usa a mesma fonte do detalhe (_get_progress)
+        # para evitar divergência entre dashboard e tela de implantação.
+        if status == "parada":
+            try:
+                progresso_pct, _, _ = _get_progress(impl_id)
+                impl["progresso"] = int(progresso_pct or 0)
+            except Exception:
+                impl["progresso"] = int(impl.get("progresso_percent", 0) or 0)
+        else:
+            impl["progresso"] = int(impl.get("progresso_percent", 0) or 0)
 
         # Valor monetário
         try:
@@ -296,24 +309,6 @@ def get_dashboard_data(
     # Ordenar por nome da empresa para facilitar a busca visual
     dashboard_data["total_ativos"].sort(key=lambda x: x.get("nome_empresa", "").lower())
 
-    # Atualizar métricas no perfil do usuário (apenas para não-gestores)
-    if not is_manager_view and not filtered_cs_email and impl_list:
-        try:
-            from ....db import execute_db
-
-            execute_db(
-                """
-                UPDATE perfil_usuario
-                SET impl_andamento_total = %s,
-                    impl_finalizadas = %s,
-                    impl_paradas = %s
-                WHERE usuario = %s
-                """,
-                (metrics["impl_andamento_total"], metrics["impl_finalizadas"], metrics["impl_paradas"], user_email),
-            )
-        except Exception as update_err:
-            current_app.logger.error(f"Failed to update metrics for user {user_email}: {update_err}")
-
     # Calcular totais ativos (Novas + Andamento + Paradas + Futuras + Sem Previsão)
     metrics["total_ativos"] = (
         metrics["impl_novas"]
@@ -342,6 +337,7 @@ def get_tags_metrics(start_date=None, end_date=None, user_email=None, context=No
     """
     from ....db import query_db
 
+    ctx = resolve_context(context)
     query_sql = """
         SELECT
             ch.usuario_cs,
@@ -351,11 +347,12 @@ def get_tags_metrics(start_date=None, end_date=None, user_email=None, context=No
             COUNT(*) as qtd
         FROM comentarios_h ch
         LEFT JOIN perfil_usuario p ON ch.usuario_cs = p.usuario
+        LEFT JOIN perfil_usuario_contexto puc ON ch.usuario_cs = puc.usuario AND puc.contexto = %s
         LEFT JOIN checklist_items ci ON ch.checklist_item_id = ci.id
         JOIN implantacoes i ON ci.implantacao_id = i.id
         WHERE 1=1
     """
-    args = []
+    args = [ctx]
 
     if context:
         if context == "onboarding":

@@ -7,6 +7,7 @@ Princípio SOLID: Single Responsibility
 import logging
 from datetime import UTC, date, datetime, timedelta, timezone
 
+from ....common.context_profiles import resolve_context
 from ....db import query_db
 
 logger = logging.getLogger(__name__)
@@ -92,7 +93,21 @@ def _format_datetime(dt_value, only_date=False):
 
 def listar_usuarios_cs():
     """Retorna lista simples de usuários para atribuição."""
-    rows = query_db("SELECT usuario, COALESCE(nome, usuario) as nome FROM perfil_usuario ORDER BY nome ASC") or []
+    ctx = resolve_context()
+    rows = (
+        query_db(
+            """
+            SELECT pu.usuario, COALESCE(pu.nome, pu.usuario) as nome
+            FROM perfil_usuario pu
+            LEFT JOIN perfil_usuario_contexto puc ON pu.usuario = puc.usuario AND puc.contexto = %s
+            WHERE COALESCE(puc.perfil_acesso, pu.perfil_acesso) IS NOT NULL
+                AND COALESCE(puc.perfil_acesso, pu.perfil_acesso) != ''
+            ORDER BY pu.nome ASC
+            """,
+            (ctx,),
+        )
+        or []
+    )
     return rows
 
 

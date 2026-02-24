@@ -167,6 +167,9 @@ class ComentariosDataLoader:
                        pu.nome AS autor_nome, pu.foto_url AS autor_foto
                 FROM checklist_comentarios cc
                 LEFT JOIN perfil_usuario pu ON pu.usuario = cc.autor
+                LEFT JOIN checklist_items ci2 ON ci2.id = cc.item_id
+                LEFT JOIN implantacoes i ON i.id = ci2.implantacao_id
+                LEFT JOIN perfil_usuario_contexto puc ON puc.usuario = cc.autor AND puc.contexto = COALESCE(i.contexto, 'onboarding')
                 WHERE cc.item_id IN (
                     SELECT id FROM checklist_items WHERE implantacao_id = %s
                 )

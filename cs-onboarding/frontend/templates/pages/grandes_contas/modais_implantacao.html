@@ -123,7 +123,7 @@
 <script>
     function cancelarInicioGC() {
         const csrfToken = "{{ csrf_token() }}";
-        const implId = {{ implantacao.id }
+        const implId = {{ implantacao.id }};
     };
 
     fetch("{{ url_for('grandes_contas_actions.desfazer_inicio_implantacao') }}", {

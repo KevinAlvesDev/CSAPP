@@ -52,7 +52,7 @@ def criar_implantacao():
         dashboard_endpoint="grandes_contas.dashboard",
         contexto="grandes_contas",
         success_message='Implantação "{nome_empresa}" criada com sucesso. Aplique um plano de sucesso para criar as tarefas.',
-        clear_dashboard=False,
+        clear_dashboard=True,
     )
 
 
@@ -66,7 +66,7 @@ def criar_implantacao_modulo():
         dashboard_endpoint="grandes_contas.dashboard",
         contexto="grandes_contas",
         success_message='Implantação de Módulo "{nome_empresa}" criada e atribuída a {usuario_atribuido}.',
-        clear_dashboard=False,
+        clear_dashboard=True,
     )
 
 
@@ -78,27 +78,27 @@ def iniciar_implantacao():
         dashboard_endpoint="grandes_contas.dashboard",
         detail_endpoint="grandes_contas.ver_implantacao",
         success_message="Implantação iniciada com sucesso!",
-        clear_dashboard=False,
+        clear_dashboard=True,
     )
 
 
 @grandes_contas_actions_bp.route("/desfazer_inicio_implantacao", methods=["POST"])
 @login_required
 def desfazer_inicio_implantacao():
-    return handle_desfazer_inicio_implantacao(clear_dashboard=False)
+    return handle_desfazer_inicio_implantacao(clear_dashboard=True)
 
 @grandes_contas_actions_bp.route("/agendar_implantacao", methods=["POST"])
 @login_required
 @limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 def agendar_implantacao():
-    return handle_agendar_implantacao(dashboard_endpoint="grandes_contas.dashboard", clear_dashboard=False)
+    return handle_agendar_implantacao(dashboard_endpoint="grandes_contas.dashboard", clear_dashboard=True)
 
 
 @grandes_contas_actions_bp.route("/marcar_sem_previsao", methods=["POST"])
 @login_required
 @limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 def marcar_sem_previsao():
-    return handle_marcar_sem_previsao(dashboard_endpoint="grandes_contas.dashboard", clear_dashboard=False)
+    return handle_marcar_sem_previsao(dashboard_endpoint="grandes_contas.dashboard", clear_dashboard=True)
 
 
 @grandes_contas_actions_bp.route("/finalizar_implantacao", methods=["POST"])
@@ -109,7 +109,7 @@ def finalizar_implantacao():
     return handle_finalizar_implantacao(
         dashboard_endpoint="grandes_contas.dashboard",
         detail_endpoint="grandes_contas.ver_implantacao",
-        clear_dashboard=False,
+        clear_dashboard=True,
     )
 
 
@@ -119,7 +119,7 @@ def finalizar_implantacao():
 def parar_implantacao():
     return handle_parar_implantacao(
         detail_endpoint="grandes_contas.ver_implantacao",
-        clear_dashboard=False,
+        clear_dashboard=True,
         success_message='Implantação marcada como "Parada" (GC).',
     )
 
@@ -131,7 +131,7 @@ def retomar_implantacao():
     return handle_retomar_implantacao(
         dashboard_endpoint="grandes_contas.dashboard",
         detail_endpoint="grandes_contas.ver_implantacao",
-        clear_dashboard=False,
+        clear_dashboard=True,
     )
 
 
@@ -142,7 +142,7 @@ def reabrir_implantacao():
     return handle_reabrir_implantacao(
         dashboard_endpoint="grandes_contas.dashboard",
         detail_endpoint="grandes_contas.ver_implantacao",
-        clear_dashboard=False,
+        clear_dashboard=True,
     )
 
 
@@ -153,7 +153,7 @@ def atualizar_detalhes_empresa():
     return handle_atualizar_detalhes_empresa(
         dashboard_endpoint="grandes_contas.dashboard",
         detail_endpoint="grandes_contas.ver_implantacao",
-        clear_dashboard=False,
+        clear_dashboard=True,
     )
 
 
@@ -163,7 +163,7 @@ def atualizar_detalhes_empresa():
 def remover_plano_implantacao():
     return handle_remover_plano_implantacao(
         detail_endpoint="grandes_contas.ver_implantacao",
-        clear_dashboard=False,
+        clear_dashboard=True,
     )
 
 
@@ -186,7 +186,7 @@ def transferir_implantacao():
 def excluir_implantacao():
     return handle_excluir_implantacao(
         dashboard_endpoint="grandes_contas.dashboard",
-        clear_dashboard=False,
+        clear_dashboard=True,
     )
 
 
@@ -220,6 +220,8 @@ def fetch_jira_issue_action(implantacao_id):
 @login_required
 def delete_jira_link_action(implantacao_id, jira_key):
     return handle_delete_jira_link(implantacao_id, jira_key)
+
+
 
 
 

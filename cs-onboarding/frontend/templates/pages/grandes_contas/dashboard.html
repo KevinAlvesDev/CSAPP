@@ -963,6 +963,39 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
         }
     });
 
+    function updateDashboardProgressGC() {
+        var bars = document.querySelectorAll('.js-progress-bar[data-progress-url]');
+        bars.forEach(function (bar) {
+            var url = bar.getAttribute('data-progress-url');
+            if (!url) return;
+            fetch(url, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'include',
+                cache: 'no-store'
+            })
+                .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+                .then(function (data) {
+                    var p = parseInt(data.progresso || 0, 10);
+                    if (isNaN(p)) p = 0;
+                    bar.style.width = p + '%';
+                    bar.setAttribute('aria-valuenow', p);
+                    bar.textContent = p + '%';
+                })
+                .catch(function () { });
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        updateDashboardProgressGC();
+        setInterval(updateDashboardProgressGC, 10000);
+    });
+
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') {
+            updateDashboardProgressGC();
+        }
+    });
+
     // Consultar dados da empresa (Pacto Global)
     const btnConsultar = document.getElementById('btnConsultarEmpresa');
     if (btnConsultar) {

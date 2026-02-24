@@ -6,13 +6,14 @@ Princípio SOLID: Single Responsibility
 
 from flask import current_app
 
+from ....common.context_profiles import set_user_role_for_all_contexts, set_user_role_for_context
 from ....config.logging_config import management_logger, security_logger
 from ....constants import ADMIN_EMAIL, PERFIL_ADMIN
 from ....db import execute_db, query_db
 from .users import obter_perfil_usuario, verificar_usuario_existe
 
 
-def atualizar_perfil_usuario_service(usuario_alvo, novo_perfil, usuario_admin):
+def atualizar_perfil_usuario_service(usuario_alvo, novo_perfil, usuario_admin, context=None):
     """
     Atualiza o perfil de acesso de um usuário.
 
@@ -50,7 +51,7 @@ def atualizar_perfil_usuario_service(usuario_alvo, novo_perfil, usuario_admin):
         raise ValueError("Perfil de acesso inválido.")
 
     # Verificar se está tentando alterar um admin (apenas admin pode)
-    perfil_atual = obter_perfil_usuario(usuario_alvo)
+    perfil_atual = obter_perfil_usuario(usuario_alvo, context=context)
     if perfil_atual and perfil_atual.get("perfil_acesso") == PERFIL_ADMIN:
         # Esta validação deveria verificar se usuario_admin é admin, mas assumimos que sim
         # pois a rota já tem @admin_required
@@ -58,6 +59,10 @@ def atualizar_perfil_usuario_service(usuario_alvo, novo_perfil, usuario_admin):
 
     # Executar atualização
     execute_db("UPDATE perfil_usuario SET perfil_acesso = %s WHERE usuario = %s", (novo_perfil, usuario_alvo))
+    if context:
+        set_user_role_for_context(usuario_alvo, novo_perfil, context=context, updated_by=usuario_admin)
+    else:
+        set_user_role_for_all_contexts(usuario_alvo, novo_perfil, updated_by=usuario_admin)
 
     # Invalidar cache do perfil do usuário para refletir mudanças imediatamente
     try:
@@ -109,6 +114,7 @@ def excluir_usuario_service(usuario_alvo, usuario_admin):
 
     # Excluir perfil e usuário
     execute_db("DELETE FROM perfil_usuario WHERE usuario = %s", (usuario_alvo,))
+    execute_db("DELETE FROM perfil_usuario_contexto WHERE usuario = %s", (usuario_alvo,))
     execute_db("DELETE FROM usuarios WHERE usuario = %s", (usuario_alvo,))
 
     # Invalidar cache do perfil do usuário excluído

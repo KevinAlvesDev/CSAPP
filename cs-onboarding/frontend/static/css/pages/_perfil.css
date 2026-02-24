@@ -5,75 +5,11 @@
 .profile-page {
   max-width: 1200px;
   margin: 0 auto;
-  padding: var(--space-8);
-}
-
-.profile-hero {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: var(--space-6);
-  margin-bottom: var(--space-6);
-  padding: var(--space-6);
-  border-radius: var(--radius-xl);
-  background: linear-gradient(90deg, #2b66c9 0%, #3a7be0 100%);
-  color: var(--color-white);
-}
-
-.profile-breadcrumb {
-  color: rgba(255, 255, 255, 0.8);
-  font-size: var(--font-size-sm);
-  margin-bottom: var(--space-2);
-}
-
-.profile-breadcrumb span {
-  color: rgba(255, 255, 255, 0.55);
-  margin: 0 0.35rem;
-}
-
-.profile-title {
-  font-size: var(--font-size-3xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-white);
-  margin-bottom: var(--space-2);
-}
-
-.profile-subtitle {
-  color: rgba(255, 255, 255, 0.85);
-  max-width: 540px;
-  margin-bottom: 0;
-}
-
-.profile-hero-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.profile-dashboard-btn {
-  border-radius: 999px;
-  background: var(--color-white);
-  color: #1f3f8a;
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  font-weight: var(--font-weight-semibold);
-  padding: 0.45rem 1.15rem;
-  box-shadow: 0 8px 18px rgba(13, 46, 116, 0.18);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
-}
-
-.profile-dashboard-btn:hover,
-.profile-dashboard-btn:focus {
-  color: #0f2f6b;
-  transform: translateY(-1px);
-  box-shadow: 0 12px 24px rgba(13, 46, 116, 0.25);
-}
-
-.profile-dashboard-btn:active {
-  transform: translateY(0);
-  box-shadow: 0 6px 14px rgba(13, 46, 116, 0.2);
+  padding: 0;
 }
 
 .profile-card {
+  margin-top: var(--space-4);
   border-radius: var(--radius-xl);
   overflow: hidden;
   border: 1px solid var(--table-border-color);
@@ -234,7 +170,7 @@
 
 @media (max-width: 992px) {
   .profile-page {
-    padding: var(--space-6);
+    padding: 0;
   }
 
   .profile-card__header {
@@ -252,12 +188,7 @@
 
 @media (max-width: 768px) {
   .profile-page {
-    padding: var(--space-5);
-  }
-
-  .profile-hero {
-    flex-direction: column;
-    align-items: flex-start;
+    padding: 0;
   }
 
   .profile-card__header {
@@ -269,10 +200,6 @@
   .profile-avatar {
     margin-top: -56px;
   }
-}
-
-body.dark-mode .profile-hero {
-  color: var(--color-white);
 }
 
 body.dark-mode .profile-avatar__fallback {

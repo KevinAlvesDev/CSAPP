@@ -8,6 +8,7 @@ import calendar
 from datetime import date, datetime
 
 from ....db import execute_db, query_db
+from ....common.context_profiles import resolve_context
 from .calculator import _calculate_user_gamification_score
 from .metrics import _get_gamification_automatic_data_bulk
 from .rules import _get_gamification_rules_as_dict
@@ -55,16 +56,21 @@ def get_gamification_report_data(mes, ano, target_cs_email=None, all_cs_users_li
 
     primeiro_dia_str = primeiro_dia.isoformat()
     fim_ultimo_dia_str = fim_ultimo_dia.isoformat()
+    ctx = resolve_context(context)
 
     if all_cs_users_list is None:
-        sql_users = (
-            "SELECT usuario, nome, cargo FROM perfil_usuario WHERE perfil_acesso IS NOT NULL AND perfil_acesso != ''"
-        )
-        args_users = []
+        sql_users = """
+            SELECT pu.usuario, pu.nome, pu.cargo
+            FROM perfil_usuario pu
+            LEFT JOIN perfil_usuario_contexto puc ON pu.usuario = puc.usuario AND puc.contexto = %s
+            WHERE COALESCE(puc.perfil_acesso, pu.perfil_acesso) IS NOT NULL
+                AND COALESCE(puc.perfil_acesso, pu.perfil_acesso) != ''
+        """
+        args_users = [ctx]
         if target_cs_email:
-            sql_users += " AND usuario = %s"
+            sql_users += " AND pu.usuario = %s"
             args_users.append(target_cs_email)
-        sql_users += " ORDER BY nome"
+        sql_users += " ORDER BY pu.nome"
 
         all_cs_users_list = query_db(sql_users, tuple(args_users))
         all_cs_users_list = all_cs_users_list if all_cs_users_list is not None else []

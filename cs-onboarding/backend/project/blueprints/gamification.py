@@ -5,6 +5,7 @@ from flask import Blueprint, current_app, flash, g, redirect, render_template, r
 from flask_limiter.util import get_remote_address
 
 from ..blueprints.auth import permission_required
+from ..common.context_navigation import redirect_to_current_dashboard
 from ..common.validation import ValidationError, sanitize_string, validate_email, validate_integer
 from ..constants import PERFIS_COM_GESTAO
 from ..core.extensions import limiter
@@ -26,8 +27,17 @@ gamification_bp = Blueprint("gamification", __name__, url_prefix="/gamification"
 @permission_required(PERFIS_COM_GESTAO)
 def manage_gamification_rules():
     """Rota para configurar regras e pontuações da gamificação."""
+    context = request.args.get("context")
+    valid_contexts = ("onboarding", "ongoing", "grandes_contas")
+    if context and context not in valid_contexts:
+        context = None
+
     regras_agrupadas = _get_all_gamification_rules_grouped()
-    return render_template("pages/gamification_rules_form.html", regras_agrupadas=regras_agrupadas)
+    return render_template(
+        "pages/gamification_rules_form.html",
+        regras_agrupadas=regras_agrupadas,
+        current_context=context,
+    )
 
 
 @gamification_bp.route("/save-rules-modal", methods=["POST"])
@@ -38,7 +48,7 @@ def save_gamification_rules_from_modal():
     Rota (apenas POST) para salvar as regras de gamificação
     enviadas pelo formulário dentro do modal em base.html.
     """
-    fallback_redirect = redirect(request.referrer or url_for("onboarding.dashboard"))
+    fallback_redirect = redirect_to_current_dashboard()
 
     try:
         updates_to_make = []
@@ -72,8 +82,13 @@ def save_gamification_rules_from_modal():
 @limiter.limit("100 per minute", key_func=lambda: g.user_email or get_remote_address())
 def manage_gamification_metrics():
     """Rota para gestores inserirem/atualizarem as métricas manuais de um CS."""
+    # Obter contexto do request
+    context = request.args.get("context")
+    valid_contexts = ("onboarding", "ongoing", "grandes_contas")
+    if context and context not in valid_contexts:
+        context = None  # Ignorar valores inválidos
 
-    all_cs_users = get_all_cs_users_for_gamification()
+    all_cs_users = get_all_cs_users_for_gamification(context=context)
     regras_agrupadas = _get_all_gamification_rules_grouped()
 
     target_cs_email = None
@@ -99,12 +114,6 @@ def manage_gamification_metrics():
 
     metricas_atuais = None
     metricas_automaticas = {}
-
-    # Obter contexto do request
-    context = request.args.get("context")
-    valid_contexts = ("onboarding", "ongoing", "grandes_contas")
-    if context and context not in valid_contexts:
-        context = None  # Ignorar valores inválidos
 
     if target_cs_email:
         metricas_atuais = obter_metricas_mensais(target_cs_email, target_mes, target_ano)
@@ -319,6 +328,7 @@ def manage_gamification_metrics():
         metricas_automaticas=metricas_automaticas,
         current_year=hoje.year,
         regras_agrupadas=regras_agrupadas,
+        current_context=context,
     )
 
 
@@ -326,8 +336,13 @@ def manage_gamification_metrics():
 @permission_required(PERFIS_COM_GESTAO)
 def gamification_report():
     """Rota para exibir o relatório de pontuação da gamificação."""
+    # Obter contexto do request
+    context = request.args.get("context")
+    valid_contexts = ("onboarding", "ongoing", "grandes_contas")
+    if context and context not in valid_contexts:
+        context = None  # Ignorar valores inválidos
 
-    all_cs_users = get_all_cs_users_for_gamification()
+    all_cs_users = get_all_cs_users_for_gamification(context=context)
 
     hoje = datetime.now()
 
@@ -349,12 +364,6 @@ def gamification_report():
             flash("Email inválido no filtro do relatório.", "warning")
             target_cs_email = None
 
-    # Obter contexto do request
-    context = request.args.get("context")
-    valid_contexts = ("onboarding", "ongoing", "grandes_contas")
-    if context and context not in valid_contexts:
-        context = None  # Ignorar valores inválidos
-
     try:
         # Limpar cache antes de gerar relatório para garantir dados atualizados
         clear_gamification_cache()
@@ -374,4 +383,5 @@ def gamification_report():
         selected_month=selected_month,
         selected_year=selected_year,
         current_year=hoje.year,
+        current_context=context,
     )

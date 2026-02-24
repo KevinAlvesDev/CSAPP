@@ -277,6 +277,12 @@ def create_app(test_config=None):
                     app.logger.warning(f"Banco não existe ainda, será criado: {e}")
 
                 schema.init_db()
+                try:
+                    from .common.context_profiles import ensure_context_profile_schema
+
+                    ensure_context_profile_schema()
+                except Exception as e_ctx_schema:
+                    app.logger.warning(f"Falha ao inicializar schema contextual de perfis: {e_ctx_schema}")
 
                 # Criar usuário admin padrão automaticamente
                 try:
@@ -301,6 +307,14 @@ def create_app(test_config=None):
     # ================================================
     # CACHE WARMING (moved after DB init)
     # ================================================
+    try:
+        from .common.context_profiles import ensure_context_profile_schema
+
+        with app.app_context():
+            ensure_context_profile_schema()
+    except Exception as e:
+        app.logger.warning(f"Falha ao garantir schema contextual de perfis: {e}")
+
     try:
         from .config.cache_warming import warm_cache
 
@@ -464,6 +478,11 @@ def create_app(test_config=None):
         ):
             return
 
+        # Persistir contexto do módulo para evitar redirecionamentos cruzados.
+        from .common.context_navigation import persist_current_context
+
+        persist_current_context()
+
         # Importar constantes no início da função para garantir escopo
         from .constants import ADMIN_EMAIL, MASTER_ADMIN_EMAIL, PERFIL_ADMIN
 
@@ -511,8 +530,9 @@ def create_app(test_config=None):
         g.perfil = None
         if g.user_email:
             try:
-                # SEM CACHE - sempre buscar dados frescos do banco
-                g.perfil = query_db("SELECT * FROM perfil_usuario WHERE usuario = %s", (g.user_email,), one=True)
+                from .common.context_profiles import get_contextual_profile
+
+                g.perfil = get_contextual_profile(g.user_email, getattr(g, "modulo_atual", None))
             except Exception as e:
                 # Se a tabela não existir ainda, criar perfil básico
                 app.logger.warning(f"Falha ao buscar perfil para {g.user_email}: {e}")
@@ -527,25 +547,29 @@ def create_app(test_config=None):
                     "foto_url": None,
                     "cargo": None,
                     "perfil_acesso": PERFIL_ADMIN,
+                    "contexto": getattr(g, "modulo_atual", "onboarding"),
                 }
 
         # Robustez: garantir PERFIL_ADMIN para ADMIN_EMAIL sempre que detectado
         if g.user_email and g.user_email == MASTER_ADMIN_EMAIL:
             try:
                 if not g.perfil or g.perfil.get("perfil_acesso") != PERFIL_ADMIN:
+                    from .common.context_profiles import set_user_role_for_all_contexts
                     from .modules.auth.application.auth_service import sync_user_profile_service, update_user_role_service
 
                     # Cria perfil se necessário e marca como admin
                     sync_user_profile_service(g.user_email, g.user.get("name", "Administrador"), "system|enforce")
                     update_user_role_service(g.user_email, PERFIL_ADMIN)
-                    g.perfil = query_db(
-                        "SELECT * FROM perfil_usuario WHERE usuario = %s", (g.user_email,), one=True
-                    ) or {
+                    set_user_role_for_all_contexts(g.user_email, PERFIL_ADMIN, updated_by="system|enforce")
+                    from .common.context_profiles import get_contextual_profile
+
+                    g.perfil = get_contextual_profile(g.user_email, getattr(g, "modulo_atual", None)) or {
                         "nome": g.user.get("name", g.user_email) if g.user else "Administrador",
                         "usuario": g.user_email,
                         "foto_url": None,
                         "cargo": None,
                         "perfil_acesso": PERFIL_ADMIN,
+                        "contexto": getattr(g, "modulo_atual", "onboarding"),
                     }
             except Exception as e:
                 app.logger.warning(f"Falha ao reforçar perfil admin: {e}")
@@ -557,6 +581,7 @@ def create_app(test_config=None):
                 "foto_url": None,
                 "cargo": None,
                 "perfil_acesso": None,
+                "contexto": getattr(g, "modulo_atual", "onboarding"),
             }
 
         g.R2_CONFIGURED = app.config.get("R2_CONFIGURADO", False)

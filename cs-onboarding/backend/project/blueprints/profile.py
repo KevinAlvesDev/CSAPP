@@ -2,10 +2,11 @@ import io
 import os
 import time
 
-from flask import Blueprint, current_app, flash, g, redirect, render_template, request, session, url_for
+from flask import Blueprint, current_app, flash, g, render_template, request, session
 from werkzeug.utils import secure_filename
 
 from ..blueprints.auth import login_required
+from ..common.context_navigation import redirect_to_current_dashboard
 from ..config.logging_config import app_logger
 from ..core.extensions import r2_client
 from ..modules.auth.application.auth_service import atualizar_dados_perfil_service
@@ -109,14 +110,7 @@ def save_profile():
 
     if not nome or not cargo:
         flash("Nome e Cargo são obrigatórios.", "error")
-        # Redirect to current context dashboard
-        referer = request.headers.get("Referer", "")
-        if "/grandes-contas/" in referer:
-            return redirect(url_for("grandes_contas.dashboard"))
-        elif "/ongoing/" in referer:
-            return redirect(url_for("ongoing.dashboard"))
-        else:
-            return redirect(url_for("onboarding.dashboard"))
+        return redirect_to_current_dashboard()
 
     # Manter foto atual se não houver nova
     foto_url = g.perfil.get("foto_url")
@@ -161,11 +155,4 @@ def save_profile():
         response.headers["X-Updated-Cargo"] = cargo or ""
         return response
 
-    # Redirect to current context dashboard
-    referer = request.headers.get("Referer", "")
-    if "/grandes-contas/" in referer:
-        return redirect(url_for("grandes_contas.dashboard"))
-    elif "/ongoing/" in referer:
-        return redirect(url_for("ongoing.dashboard"))
-    else:
-        return redirect(url_for("onboarding.dashboard"))
+    return redirect_to_current_dashboard()

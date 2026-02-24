@@ -6,6 +6,7 @@ Princípio SOLID: Single Responsibility
 
 from flask import current_app
 
+from ....common.context_profiles import resolve_context
 from ....db import query_db
 from ....modules.hierarquia.application.hierarquia_service import get_hierarquia_implantacao
 from .details import _format_implantacao_dates
@@ -50,9 +51,12 @@ def listar_implantacoes(user_email, status_filter=None, page=1, per_page=50, is_
         where_clauses.append("i.status = %s")
         params.append(status_filter)
 
-    if context:
+    ctx = resolve_context(context)
+    if ctx == "onboarding":
+        where_clauses.append("(i.contexto IS NULL OR i.contexto = 'onboarding')")
+    else:
         where_clauses.append("i.contexto = %s")
-        params.append(context)
+        params.append(ctx)
 
     where_str = " WHERE " + " AND ".join(where_clauses) if where_clauses else ""
 
@@ -60,6 +64,7 @@ def listar_implantacoes(user_email, status_filter=None, page=1, per_page=50, is_
         SELECT i.*, p.nome as cs_nome
         FROM implantacoes i
         LEFT JOIN perfil_usuario p ON i.usuario_cs = p.usuario
+        LEFT JOIN perfil_usuario_contexto puc ON i.usuario_cs = puc.usuario AND puc.contexto = COALESCE(i.contexto, 'onboarding')
         {where_str}
         ORDER BY i.data_criacao DESC LIMIT %s OFFSET %s
     """
@@ -105,6 +110,7 @@ def obter_implantacao_basica(impl_id, user_email, is_manager=False):
         SELECT i.*, p.nome as cs_nome
         FROM implantacoes i
         LEFT JOIN perfil_usuario p ON i.usuario_cs = p.usuario
+        LEFT JOIN perfil_usuario_contexto puc ON i.usuario_cs = puc.usuario AND puc.contexto = COALESCE(i.contexto, 'onboarding')
         WHERE i.id = %s
     """
     params = [impl_id]

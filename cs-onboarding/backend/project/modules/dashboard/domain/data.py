@@ -9,6 +9,7 @@ from datetime import date, datetime
 from flask import current_app, g
 
 from ....common.utils import format_date_br, format_date_iso_for_json
+from ....common.context_profiles import resolve_context
 from ....constants import PERFIL_ADMIN, PERFIL_COORDENADOR, PERFIL_GERENTE
 from ....db import execute_db, query_db
 from ....modules.implantacao.domain import _get_progress
@@ -56,6 +57,7 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
             last_activity.ultima_atividade as ultima_atividade
         FROM implantacoes i
         LEFT JOIN perfil_usuario p ON i.usuario_cs = p.usuario
+        LEFT JOIN perfil_usuario_contexto puc ON i.usuario_cs = puc.usuario AND puc.contexto = %s
         LEFT JOIN (
             SELECT
                 ci.implantacao_id,
@@ -74,7 +76,7 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
             GROUP BY ci.implantacao_id
         ) last_activity ON last_activity.implantacao_id = i.id
     """
-    args = []
+    args = [ctx]
 
     if not is_manager_view:
         query_sql += " WHERE i.usuario_cs = %s "
@@ -335,20 +337,6 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
             if isinstance(item, dict) and "dias_passados" not in item:
                 item["dias_passados"] = 0
 
-    if not is_manager_view and not filtered_cs_email and impl_list:
-        try:
-            execute_db(
-                """
-                UPDATE perfil_usuario
-                SET impl_andamento_total = %s,
-                    impl_finalizadas = %s, impl_paradas = %s
-                WHERE usuario = %s
-                """,
-                (metrics["impl_andamento_total"], metrics["impl_finalizadas"], metrics["impl_paradas"], user_email),
-            )
-        except Exception as update_err:
-            current_app.logger.error(f"Failed to update metrics for user {user_email}: {update_err}")
-
     result = (dashboard_data, metrics, pagination) if pagination else (dashboard_data, metrics)
 
     # Cache desabilitado para garantir dados em tempo real
@@ -362,6 +350,7 @@ def get_tags_metrics(start_date=None, end_date=None, user_email=None):
     """
     Busca métricas de tags de comentários (Interno/Externo e Tipos).
     """
+    ctx = resolve_context()
     query_sql = """
         SELECT
             ch.usuario_cs,
@@ -371,9 +360,10 @@ def get_tags_metrics(start_date=None, end_date=None, user_email=None):
             COUNT(*) as qtd
         FROM comentarios_h ch
         LEFT JOIN perfil_usuario p ON ch.usuario_cs = p.usuario
+        LEFT JOIN perfil_usuario_contexto puc ON ch.usuario_cs = puc.usuario AND puc.contexto = %s
         WHERE 1=1
     """
-    args = []
+    args = [ctx]
 
     if start_date:
         query_sql += " AND date(ch.data_criacao) >= %s"
@@ -425,3 +415,4 @@ def get_tags_metrics(start_date=None, end_date=None, user_email=None):
             report[email]["tags_count"][tag] = qtd
 
     return report
+    ctx = resolve_context()

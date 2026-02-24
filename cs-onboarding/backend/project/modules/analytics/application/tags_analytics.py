@@ -6,6 +6,8 @@ This provides insights into comment tag patterns by user.
 from datetime import date, datetime
 from typing import Any
 
+from ....common.context_profiles import resolve_context
+
 
 def get_tags_by_user_chart_data(
     cs_email: str | None = None,
@@ -49,6 +51,8 @@ def get_tags_by_user_chart_data(
     start_date = parse_date(start_date)
     end_date = parse_date(end_date)
 
+    ctx = resolve_context(context)
+
     # Build the query - now from comentarios_h
     query = """
         SELECT
@@ -60,6 +64,7 @@ def get_tags_by_user_chart_data(
         LEFT JOIN perfil_usuario p ON ch.usuario_cs = p.usuario
         LEFT JOIN checklist_items ci ON ch.checklist_item_id = ci.id
         JOIN implantacoes i ON ci.implantacao_id = i.id
+        LEFT JOIN perfil_usuario_contexto puc ON ch.usuario_cs = puc.usuario AND puc.contexto = COALESCE(i.contexto, 'onboarding')
         WHERE ch.usuario_cs IS NOT NULL
     """
 
@@ -81,15 +86,15 @@ def get_tags_by_user_chart_data(
         query += f" AND {date_col_expr('ch.data_criacao')} >= {date_param_expr()}"
         args.append(start_date)
 
+    if end_date:
         query += f" AND {date_col_expr('ch.data_criacao')} <= {date_param_expr()}"
         args.append(end_date)
 
-    if context:
-        if context == "onboarding":
-            query += " AND (i.contexto IS NULL OR i.contexto = 'onboarding') "
-        else:
-            query += " AND i.contexto = %s "
-            args.append(context)
+    if ctx == "onboarding":
+        query += " AND (i.contexto IS NULL OR i.contexto = 'onboarding') "
+    else:
+        query += " AND i.contexto = %s "
+        args.append(ctx)
 
     query += " GROUP BY COALESCE(p.nome, ch.usuario_cs), ch.visibilidade, ch.tag ORDER BY user_name"
 

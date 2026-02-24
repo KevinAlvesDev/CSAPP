@@ -10,9 +10,8 @@
     --gmr-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
 
     background: var(--gmr-bg);
-    border-radius: 14px;
     min-height: calc(100vh - 1.5rem);
-    padding: 14px;
+    padding: 0;
 }
 
 .gmr-topbar {

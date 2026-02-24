@@ -4,6 +4,7 @@ from flask import Blueprint, flash, g, jsonify, redirect, render_template, reque
 
 from .... import csrf
 from ....blueprints.auth import login_required
+from ....common.context_navigation import detect_current_context, normalize_context, redirect_to_current_dashboard
 from ....common.exceptions import ValidationError
 from ....config.logging_config import planos_logger
 from ..application.planos_service import planos_sucesso_service
@@ -33,7 +34,7 @@ def requires_permission(allowed_roles):
                 if request.is_json:
                     return jsonify({"error": "Permissão negada"}), 403
                 flash("Você não tem permissão para acessar esta funcionalidade.", "error")
-                return redirect(url_for("onboarding.dashboard"))
+                return redirect_to_current_dashboard()
 
             return f(*args, **kwargs)
 
@@ -48,7 +49,7 @@ def listar_planos():
     try:
         ativo_apenas = request.args.get("ativo", "true").lower() == "true"
         busca = request.args.get("busca", "").strip()
-        context = request.args.get("context")
+        context = normalize_context(request.args.get("context")) or detect_current_context()
         status = request.args.get("status")
         usuario_id = request.args.get("usuario_id")
         processo_id = request.args.get("processo_id")
@@ -115,7 +116,7 @@ def listar_planos():
         if request.is_json:
             return jsonify({"error": str(e)}), 500
         flash(f"Erro ao listar planos: {e!s}", "error")
-        return redirect(url_for("onboarding.dashboard"))
+        return redirect_to_current_dashboard()
 
 
 @planos_bp.route("/<int:plano_id>", methods=["GET"])
@@ -162,7 +163,7 @@ def obter_plano(plano_id):
 @planos_bp.route("/novo", methods=["GET"])
 @login_required
 def novo_plano():
-    context = request.args.get("context", "onboarding")
+    context = normalize_context(request.args.get("context")) or detect_current_context()
     return render_template("pages/plano_sucesso_editor.html", modo="criar", pode_editar=True, context=context)
 
 
@@ -198,10 +199,10 @@ def criar_plano():
         user = get_current_user()
         criado_por = user.get("usuario") if user else "sistema"
 
-        context = data.get("context", "onboarding")
+        context = normalize_context(data.get("context")) or detect_current_context()
         # Se não vier no body, tenta query string (caso de form submit)
         if not context or context == "None":
-            context = request.args.get("context", "onboarding")
+            context = normalize_context(request.args.get("context")) or detect_current_context()
 
         processo_id = data.get("processo_id")
         if processo_id:

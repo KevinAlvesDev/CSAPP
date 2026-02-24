@@ -12,6 +12,7 @@ from typing import Any
 from flask import current_app, g
 
 from ....common.date_helpers import add_business_days, adjust_to_business_day
+from ....common.context_profiles import resolve_context
 from ....common.utils import format_date_br, format_date_iso_for_json
 from ....constants import (
     CARGOS_RESPONSAVEL,
@@ -67,7 +68,7 @@ def _format_implantacao_dates(implantacao):
 
 
 def _get_comentarios_bulk(
-    impl_id: int, is_owner: bool = False, is_manager: bool = False
+    impl_id: int, is_owner: bool = False, is_manager: bool = False, context: str | None = None
 ) -> dict[str, list[dict[str, Any]]]:
     """
     Busca TODOS os comentários de uma implantação em uma única query (ou poucas queries).
@@ -75,6 +76,7 @@ def _get_comentarios_bulk(
     """
     comentarios_map = {}
 
+    ctx = resolve_context(context)
     try:
         comentarios_h_raw = (
             query_db(
@@ -85,6 +87,7 @@ def _get_comentarios_bulk(
                    c.checklist_item_id
             FROM comentarios_h c
             LEFT JOIN perfil_usuario p ON c.usuario_cs = p.usuario
+            LEFT JOIN perfil_usuario_contexto puc ON c.usuario_cs = puc.usuario AND puc.contexto = %s
             WHERE EXISTS (
                 SELECT 1 FROM checklist_items ci
                 WHERE c.checklist_item_id = ci.id
@@ -92,7 +95,7 @@ def _get_comentarios_bulk(
             )
             ORDER BY c.data_criacao DESC
             """,
-                (impl_id,),
+                (ctx, impl_id),
             )
             or []
         )
@@ -126,14 +129,14 @@ def _get_comentarios_bulk(
 
 
 def _get_tarefas_and_comentarios(
-    impl_id: int, is_owner: bool = False, is_manager: bool = False
+    impl_id: int, is_owner: bool = False, is_manager: bool = False, context: str | None = None
 ) -> tuple[OrderedDict, OrderedDict, OrderedDict, list[str]]:
     """
     Carrega tarefas e comentários de uma implantação.
     """
     from ....common.dataloader import ChecklistDataLoader
 
-    comentarios_map = _get_comentarios_bulk(impl_id, is_owner, is_manager)
+    comentarios_map = _get_comentarios_bulk(impl_id, is_owner, is_manager, context=context)
 
     tarefas_agrupadas_treinamento: OrderedDict[str, list[dict[str, Any]]] = OrderedDict()
     tarefas_agrupadas_obrigatorio: OrderedDict[str, list[dict[str, Any]]] = OrderedDict()
@@ -270,8 +273,9 @@ def get_implantacao_details(
 
     try:
         is_owner = implantacao.get("usuario_cs") == usuario_cs_email
+        ctx = resolve_context(implantacao.get("contexto") or getattr(g, "modulo_atual", None))
         tarefas_agrupadas_obrigatorio, ordered_treinamento, tarefas_agrupadas_pendencias, todos_modulos_lista = (
-            _get_tarefas_and_comentarios(impl_id, is_owner=is_owner, is_manager=is_manager)
+            _get_tarefas_and_comentarios(impl_id, is_owner=is_owner, is_manager=is_manager, context=ctx)
         )
     except Exception as e:
         logger.error(f"Erro ao carregar tarefas da implantação {impl_id}: {e}", exc_info=True)
@@ -298,8 +302,17 @@ def get_implantacao_details(
 
     all_cs_users = []
     try:
+        ctx = resolve_context(implantacao.get("contexto") or getattr(g, "modulo_atual", None))
         all_cs_users = query_db(
-            "SELECT usuario, nome FROM perfil_usuario WHERE perfil_acesso IS NOT NULL AND perfil_acesso != '' ORDER BY nome"
+            """
+            SELECT pu.usuario, pu.nome
+            FROM perfil_usuario pu
+            LEFT JOIN perfil_usuario_contexto puc ON pu.usuario = puc.usuario AND puc.contexto = %s
+            WHERE COALESCE(puc.perfil_acesso, pu.perfil_acesso) IS NOT NULL
+                AND COALESCE(puc.perfil_acesso, pu.perfil_acesso) != ''
+            ORDER BY pu.nome
+            """,
+            (ctx,),
         )
         all_cs_users = all_cs_users if all_cs_users is not None else []
     except Exception as e:
@@ -631,11 +644,13 @@ def _get_timeline_logs(impl_id):
     """
     import re
 
+    ctx = resolve_context(getattr(g, "modulo_atual", None))
     logs_timeline = query_db(
         """ SELECT tl.*, COALESCE(p.nome, tl.usuario_cs) as usuario_nome
             FROM timeline_log tl LEFT JOIN perfil_usuario p ON tl.usuario_cs = p.usuario
+            LEFT JOIN perfil_usuario_contexto puc ON tl.usuario_cs = puc.usuario AND puc.contexto = %s
             WHERE tl.implantacao_id = %s ORDER BY tl.data_criacao DESC """,
-        (impl_id,),
+        (ctx, impl_id),
     )
     for log in logs_timeline:
         log["data_criacao_fmt_dt_hr"] = format_date_br(log.get("data_criacao"), True)

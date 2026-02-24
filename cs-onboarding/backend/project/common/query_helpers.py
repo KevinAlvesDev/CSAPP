@@ -7,6 +7,7 @@ from typing import Any
 
 from flask import current_app
 
+from .context_profiles import resolve_context
 from ..db import query_db
 
 
@@ -64,6 +65,8 @@ def get_implantacoes_with_progress(
         child_active_check = "COALESCE(child.dispensada, FALSE) = FALSE"
         placeholder = "%s"
 
+    ctx = resolve_context(context)
+
     query = f"""
         SELECT
             i.*,
@@ -79,6 +82,7 @@ def get_implantacoes_with_progress(
 
         FROM implantacoes i
         LEFT JOIN perfil_usuario p ON i.usuario_cs = p.usuario
+        LEFT JOIN perfil_usuario_contexto puc ON i.usuario_cs = puc.usuario AND puc.contexto = COALESCE(i.contexto, 'onboarding')
         LEFT JOIN (
             SELECT
                 ci.implantacao_id,
@@ -110,15 +114,11 @@ def get_implantacoes_with_progress(
         query += f" AND LOWER(i.status) = {placeholder}"
         args.append(status.lower())
 
-    if context:
-        if context == "onboarding":
-            if use_sqlite:
-                query += " AND (i.contexto IS NULL OR i.contexto = 'onboarding')"
-            else:
-                query += " AND (i.contexto IS NULL OR i.contexto = 'onboarding')"
-        else:
-            query += f" AND i.contexto = {placeholder}"
-            args.append(context)
+    if ctx == "onboarding":
+        query += " AND (i.contexto IS NULL OR i.contexto = 'onboarding')"
+    else:
+        query += f" AND i.contexto = {placeholder}"
+        args.append(ctx)
 
     if search_term:
         term = f"%{search_term}%"
@@ -228,6 +228,7 @@ def get_implantacao_with_details(implantacao_id: int) -> dict[str, Any] | None:
 
         FROM implantacoes i
         LEFT JOIN perfil_usuario p ON i.usuario_cs = p.usuario
+        LEFT JOIN perfil_usuario_contexto puc ON i.usuario_cs = puc.usuario AND puc.contexto = COALESCE(i.contexto, 'onboarding')
         LEFT JOIN (
             SELECT
                 ci.implantacao_id,
@@ -306,6 +307,8 @@ def get_implantacoes_count(
     use_sqlite = current_app.config.get("USE_SQLITE_LOCALLY", False)
     placeholder = "?" if use_sqlite else "%s"
 
+    ctx = resolve_context(context)
+
     query = "SELECT COUNT(*) as total FROM implantacoes i WHERE 1=1"
     args = []
 
@@ -317,12 +320,11 @@ def get_implantacoes_count(
         query += f" AND LOWER(i.status) = {placeholder}"
         args.append(status.lower())
 
-    if context:
-        if context == "onboarding":
-            query += " AND (i.contexto IS NULL OR i.contexto = 'onboarding')"
-        else:
-            query += f" AND i.contexto = {placeholder}"
-            args.append(context)
+    if ctx == "onboarding":
+        query += " AND (i.contexto IS NULL OR i.contexto = 'onboarding')"
+    else:
+        query += f" AND i.contexto = {placeholder}"
+        args.append(ctx)
 
     if search_term:
         term = f"%{search_term}%"

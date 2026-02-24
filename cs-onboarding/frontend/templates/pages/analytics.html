@@ -31,13 +31,11 @@
 {% set mrr_total = mrr_prata + mrr_ouro + mrr_platina + mrr_diamante + mrr_pendente %}
 
 <div class="gerencial-page">
-    <header class="gerencial-header">
-        <div class="header-spacer" aria-hidden="true"></div>
-        <h1>Dashboard Gerencial</h1>
-        <div class="gerencial-header-actions">
-            <a href="{{ url_for(context + '.dashboard') if context and context != 'None' else url_for('onboarding.dashboard') }}" class="header-action-link">
-                <i class="bi bi-arrow-left"></i>
-                Voltar ao dashboard
+    <header class="header-bg p-3 d-flex align-items-center position-relative rounded-3">
+        <h1 class="main-title mb-0 fs-4 w-100 text-center">Dashboard Gerencial</h1>
+        <div class="d-flex align-items-center position-absolute end-0 top-50 translate-middle-y pe-3">
+            <a href="{{ url_for(current_dashboard) }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-house me-1"></i> Dashboard
             </a>
         </div>
     </header>
@@ -446,6 +444,7 @@
 {% block scripts_extra %}
 <script>
 (function () {
+    let liveSignature = {{ (analytics_signature or '') | tojson | safe }};
     const statusData = {{ (chart_data.status_clientes if chart_data else {}) | tojson | safe }};
     const gargalosData = {{ (chart_data.gargalos_parada if chart_data else {}) | tojson | safe }};
     const rankingData = {{ (chart_data.ranking_periodo if chart_data else {}) | tojson | safe }};
@@ -623,6 +622,34 @@
     const updatedLabel = document.getElementById('updatedAtLabel');
     if (updatedLabel) updatedLabel.textContent = `Atualizado: Hoje, ${hour}`;
 
+    async function checkLiveUpdates() {
+        if (document.visibilityState !== 'visible') return;
+        try {
+            const qs = window.location.search || '';
+            const response = await fetch(`/analytics/live/check${qs}`, {
+                method: 'GET',
+                credentials: 'include',
+                cache: 'no-store',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            if (!response.ok) return;
+            const payload = await response.json();
+            if (!payload || !payload.ok || !payload.signature) return;
+
+            if (!liveSignature) {
+                liveSignature = payload.signature;
+                return;
+            }
+
+            if (payload.signature !== liveSignature) {
+                window.location.reload();
+            }
+        } catch (_) {
+            // Silent fail: não bloquear uso da página em caso de falha de rede temporária.
+        }
+    }
+
+    setInterval(checkLiveUpdates, 5000);
 })();
 </script>
 {% endblock %}

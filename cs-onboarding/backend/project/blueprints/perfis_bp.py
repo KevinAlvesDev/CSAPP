@@ -7,6 +7,7 @@ from flask import Blueprint, flash, g, jsonify, redirect, render_template, reque
 
 from .. import csrf
 from ..blueprints.auth import login_required
+from ..common.context_navigation import redirect_to_current_dashboard
 from ..common.exceptions import ValidationError
 from ..config.logging_config import get_logger
 from ..modules.perfis.application import perfis_service
@@ -16,36 +17,8 @@ logger = get_logger("perfis")
 
 
 def _get_dashboard_redirect():
-    """Detecta o contexto atual e retorna o redirect apropriado para o dashboard."""
-    # Primeiro tenta pegar do g.modulo_atual (se disponível)
-    if hasattr(g, "modulo_atual"):
-        if g.modulo_atual == "grandes_contas":
-            return redirect(url_for("grandes_contas.dashboard"))
-        elif g.modulo_atual == "ongoing":
-            return redirect(url_for("ongoing.dashboard"))
-
-    # Fallback: verifica o referer
-    referer = request.headers.get("Referer", "")
-    if "/grandes-contas/" in referer:
-        return redirect(url_for("grandes_contas.dashboard"))
-    elif "/ongoing/" in referer:
-        return redirect(url_for("ongoing.dashboard"))
-
-    # Default: onboarding
-    return redirect(url_for("onboarding.dashboard"))
-
-
-@perfis_bp.before_request
-def set_module_context():
-    """Define o contexto do módulo atual baseado no referer."""
-    referer = request.headers.get("Referer", "")
-
-    if "/grandes-contas/" in referer:
-        g.modulo_atual = "grandes_contas"
-    elif "/ongoing/" in referer:
-        g.modulo_atual = "ongoing"
-    else:
-        g.modulo_atual = "onboarding"
+    """Retorna o redirect apropriado para o dashboard do contexto atual."""
+    return redirect_to_current_dashboard()
 
 
 @perfis_bp.route("/", methods=["GET"])
@@ -53,7 +26,7 @@ def set_module_context():
 def listar_perfis():
     """Lista todos os perfis de acesso"""
     try:
-        perfis = perfis_service.listar_perfis()
+        perfis = perfis_service.listar_perfis(context=getattr(g, "modulo_atual", None))
         return render_template("pages/perfis_lista.html", perfis=perfis)
     except Exception as e:
         logger.error(f"Erro ao listar perfis: {e}", exc_info=True)
@@ -127,12 +100,16 @@ def criar_perfil():
             raise ValidationError("Nome do perfil é obrigatório")
 
         # Criar perfil
-        perfil_id = perfis_service.criar_perfil(nome, descricao, cor, icone)
+        perfil_id = perfis_service.criar_perfil(
+            nome, descricao, cor, icone, context=getattr(g, "modulo_atual", None)
+        )
 
         # Atualizar permissões se fornecidas
         if permissoes:
             permissoes_ids = [int(p) for p in permissoes if p]
-            perfis_service.atualizar_permissoes(perfil_id, permissoes_ids)
+            perfis_service.atualizar_permissoes(
+                perfil_id, permissoes_ids, context=getattr(g, "modulo_atual", None)
+            )
 
         if request.is_json:
             return jsonify({"ok": True, "message": "Perfil criado com sucesso!", "perfil_id": perfil_id}), 201
@@ -161,7 +138,7 @@ def atualizar_perfil(perfil_id):
     try:
         data = request.get_json() if request.is_json else request.form
 
-        perfis_service.atualizar_perfil(perfil_id, dict(data))
+        perfis_service.atualizar_perfil(perfil_id, dict(data), context=getattr(g, "modulo_atual", None))
 
         if request.is_json:
             return jsonify({"ok": True, "message": "Perfil atualizado com sucesso!"}), 200
@@ -193,7 +170,7 @@ def atualizar_permissoes(perfil_id):
         permissoes = data.getlist("permissoes") if hasattr(data, "getlist") else data.get("permissoes", [])
         permissoes_ids = [int(p) for p in permissoes if p]
 
-        perfis_service.atualizar_permissoes(perfil_id, permissoes_ids)
+        perfis_service.atualizar_permissoes(perfil_id, permissoes_ids, context=getattr(g, "modulo_atual", None))
 
         if request.is_json:
             return jsonify({"ok": True, "message": "Permissões atualizadas com sucesso!"}), 200
@@ -219,7 +196,7 @@ def atualizar_permissoes(perfil_id):
 def excluir_perfil(perfil_id):
     """Exclui um perfil"""
     try:
-        perfis_service.excluir_perfil(perfil_id)
+        perfis_service.excluir_perfil(perfil_id, context=getattr(g, "modulo_atual", None))
 
         if request.is_json:
             return jsonify({"ok": True, "message": "Perfil excluído com sucesso!"}), 200
@@ -252,7 +229,7 @@ def clonar_perfil(perfil_id):
         if not novo_nome:
             raise ValidationError("Nome do novo perfil é obrigatório")
 
-        novo_perfil_id = perfis_service.clonar_perfil(perfil_id, novo_nome)
+        novo_perfil_id = perfis_service.clonar_perfil(perfil_id, novo_nome, context=getattr(g, "modulo_atual", None))
 
         if request.is_json:
             return jsonify({"ok": True, "message": "Perfil clonado com sucesso!", "perfil_id": novo_perfil_id}), 201

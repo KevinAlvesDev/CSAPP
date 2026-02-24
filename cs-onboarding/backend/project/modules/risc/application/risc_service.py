@@ -16,6 +16,7 @@ import jwt
 import requests
 from flask import current_app
 
+from ....common.context_profiles import resolve_context
 from ....config.logging_config import get_logger
 from ....db import execute_db, query_db
 
@@ -134,7 +135,7 @@ def log_security_event(event_type: str, user_id: str, payload: dict, action_take
         return False
 
 
-def get_user_by_google_sub(google_sub: str) -> dict | None:
+def get_user_by_google_sub(google_sub: str, context: str | None = None) -> dict | None:
     """
     Busca usuário pelo ID do Google (sub).
 
@@ -145,8 +146,22 @@ def get_user_by_google_sub(google_sub: str) -> dict | None:
         Dados do usuário ou None se não encontrado
     """
     try:
-        # Buscar em perfil_usuario pelo auth0_user_id (onde salvamos o 'sub' do Google)
-        user = query_db("SELECT * FROM perfil_usuario WHERE auth0_user_id = %s", (google_sub,), one=True)
+        ctx = resolve_context(context)
+        user = query_db(
+            """
+            SELECT
+                pu.*,
+                COALESCE(puc.perfil_acesso, pu.perfil_acesso) AS perfil_acesso
+            FROM perfil_usuario pu
+            LEFT JOIN perfil_usuario_contexto puc
+                ON puc.usuario = pu.usuario AND puc.contexto = %s
+            WHERE pu.auth0_user_id = %s
+            """,
+            (ctx, google_sub),
+            one=True,
+        )
+        if user:
+            user["contexto"] = ctx
         return user
     except Exception as e:
         logger.error(f"Erro ao buscar usuário por Google sub: {e}")

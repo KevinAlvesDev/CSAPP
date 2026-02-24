@@ -29,7 +29,7 @@ def before_request():
 def manage_users():
     """Renderiza a página principal de gerenciamento de usuários."""
     try:
-        users_data = listar_usuarios_service()
+        users_data = listar_usuarios_service(context=getattr(g, "modulo_atual", None))
         perfis_disponiveis = obter_perfis_disponiveis()
 
         return render_template("pages/manage_users.html", users=users_data, perfis_list=perfis_disponiveis)
@@ -42,7 +42,7 @@ def manage_users():
 def manage_users_modal():
     """Renderiza somente o conteúdo do modal de gerenciamento de usuários (sem coluna 'Implantações')."""
     try:
-        users_data = listar_usuarios_service()
+        users_data = listar_usuarios_service(context=getattr(g, "modulo_atual", None))
         perfis_disponiveis = obter_perfis_disponiveis()
 
         return render_template("_manage_users_content.html", users=users_data, perfis_list=perfis_disponiveis)
@@ -77,7 +77,9 @@ def update_user_profile():
     novo_perfil = data["perfil"]
 
     try:
-        atualizar_perfil_usuario_service(usuario_alvo, novo_perfil, g.user_email)
+        atualizar_perfil_usuario_service(
+            usuario_alvo, novo_perfil, g.user_email, context=getattr(g, "modulo_atual", None)
+        )
         return jsonify({"ok": True})
     except ValueError as e:
         return jsonify({"ok": False, "error": str(e)}), 400 if "não encontrado" in str(e) else 403
@@ -95,7 +97,7 @@ def update_user_perfil():
 
     def render_users_list():
         """Helper para renderizar lista de usuários."""
-        users_data = listar_usuarios_service()
+        users_data = listar_usuarios_service(context=getattr(g, "modulo_atual", None))
         perfis_disponiveis = obter_perfis_disponiveis()
         return render_template("_manage_users_content.html", users=users_data, perfis_list=perfis_disponiveis)
 
@@ -109,7 +111,9 @@ def update_user_perfil():
         novo_perfil = None
 
     try:
-        atualizar_perfil_usuario_service(usuario_alvo, novo_perfil, g.user_email)
+        atualizar_perfil_usuario_service(
+            usuario_alvo, novo_perfil, g.user_email, context=getattr(g, "modulo_atual", None)
+        )
         flash("Perfil atualizado com sucesso.", "success")
         if request.headers.get("HX-Request") == "true":
             return render_users_list()
@@ -135,7 +139,7 @@ def delete_user():
 
     def render_users_list():
         """Helper para renderizar lista de usuários."""
-        users_data = listar_usuarios_service()
+        users_data = listar_usuarios_service(context=getattr(g, "modulo_atual", None))
         perfis_disponiveis = obter_perfis_disponiveis()
         return render_template("_manage_users_content.html", users=users_data, perfis_list=perfis_disponiveis)
 

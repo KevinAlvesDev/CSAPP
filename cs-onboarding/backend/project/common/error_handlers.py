@@ -7,6 +7,7 @@ import functools
 from flask import current_app, jsonify
 
 from ..config.logging_config import api_logger
+from .context_navigation import redirect_to_current_dashboard
 
 
 def handle_api_errors(f):
@@ -72,19 +73,19 @@ def handle_view_errors(f):
 
     @functools.wraps(f)
     def decorated_function(*args, **kwargs):
-        from flask import flash, redirect, render_template, url_for
+        from flask import flash, render_template
 
         try:
             return f(*args, **kwargs)
         except ValueError as e:
             flash(str(e), "error")
-            return redirect(url_for("onboarding.dashboard"))
+            return redirect_to_current_dashboard()
         except PermissionError as e:
             flash(str(e) or "Você não tem permissão para acessar este recurso", "error")
-            return redirect(url_for("onboarding.dashboard"))
+            return redirect_to_current_dashboard()
         except FileNotFoundError as e:
             flash(str(e) or "Recurso não encontrado", "error")
-            return redirect(url_for("onboarding.dashboard"))
+            return redirect_to_current_dashboard()
         except Exception as e:
             api_logger.error(f"Error in view {f.__name__}: {e!s}", exc_info=True)
 
@@ -93,7 +94,7 @@ def handle_view_errors(f):
                 return render_template("error.html", error=str(e)), 500
 
             flash("Ocorreu um erro inesperado. Tente novamente.", "error")
-            return redirect(url_for("onboarding.dashboard"))
+            return redirect_to_current_dashboard()
 
     return decorated_function
 

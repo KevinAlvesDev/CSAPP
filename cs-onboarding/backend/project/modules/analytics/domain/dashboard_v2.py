@@ -13,6 +13,7 @@ from datetime import date, datetime
 from flask import current_app
 
 from ....constants import NIVEIS_RECEITA
+from ....common.context_profiles import resolve_context
 from ....db import query_db
 from .utils import _format_date_for_query, date_col_expr, date_param_expr
 
@@ -107,18 +108,21 @@ def get_analytics_data_v2(
     """
 
     is_sqlite = current_app.config.get("USE_SQLITE_LOCALLY", False)
+    ctx = resolve_context(context)
     agora = datetime.now()
     ano_corrente = agora.year
 
     # QUERY 1: Buscar implantações
     query_impl = """
         SELECT i.*,
-               p.nome as cs_nome, p.cargo as cs_cargo, p.perfil_acesso as cs_perfil
+               p.nome as cs_nome, p.cargo as cs_cargo,
+               COALESCE(puc.perfil_acesso, p.perfil_acesso) as cs_perfil
         FROM implantacoes i
         LEFT JOIN perfil_usuario p ON i.usuario_cs = p.usuario
+        LEFT JOIN perfil_usuario_contexto puc ON i.usuario_cs = puc.usuario AND puc.contexto = %s
         WHERE 1=1
     """
-    args_impl = []
+    args_impl = [ctx]
 
     if context:
         if context == "onboarding":
@@ -161,12 +165,14 @@ def get_analytics_data_v2(
 
     # QUERY 2: Buscar módulos
     query_modules = """
-        SELECT i.*, p.nome as cs_nome, p.cargo as cs_cargo, p.perfil_acesso as cs_perfil
+        SELECT i.*, p.nome as cs_nome, p.cargo as cs_cargo,
+               COALESCE(puc.perfil_acesso, p.perfil_acesso) as cs_perfil
         FROM implantacoes i
         LEFT JOIN perfil_usuario p ON i.usuario_cs = p.usuario
+        LEFT JOIN perfil_usuario_contexto puc ON i.usuario_cs = puc.usuario AND puc.contexto = %s
         WHERE i.tipo = 'modulo'
     """
-    args_modules = []
+    args_modules = [ctx]
 
     if context:
         if context == "onboarding":
@@ -214,10 +220,7 @@ def get_analytics_data_v2(
             }
         )
 
-    # QUERY 3: Perfis CS
-    query_db("SELECT usuario, nome, cargo, perfil_acesso FROM perfil_usuario") or []
-
-    # QUERY 4: Tarefas
+    # QUERY 3: Tarefas
     primeiro_dia_mes = agora.replace(day=1)
     default_task_start_date_str = primeiro_dia_mes.strftime("%Y-%m-%d")
     default_task_end_date_str = agora.strftime("%Y-%m-%d")
@@ -238,13 +241,14 @@ def get_analytics_data_v2(
         FROM checklist_items ci
         JOIN implantacoes i ON ci.implantacao_id = i.id
         LEFT JOIN perfil_usuario p ON i.usuario_cs = p.usuario
+        LEFT JOIN perfil_usuario_contexto puc ON i.usuario_cs = puc.usuario AND puc.contexto = %s
         WHERE
             ci.tipo_item = 'subtarefa'
             AND ci.completed = TRUE
             AND ci.tag IN ('Ação interna', 'Reunião')
             AND ci.data_conclusao IS NOT NULL
     """
-    args_tasks = []
+    args_tasks = [ctx]
 
     if context:
         if context == "onboarding":
@@ -298,7 +302,7 @@ def get_analytics_data_v2(
 
     task_summary_list = list(task_summary_processed.values())
 
-    # QUERY 5: Implantações finalizadas no ano
+    # QUERY 4: Implantações finalizadas no ano
     query_impl_ano = """
         SELECT i.usuario_cs, i.data_finalizacao, i.data_criacao
         FROM implantacoes i

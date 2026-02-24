@@ -5,19 +5,34 @@ Gerencia perfis de acesso e suas permissões no sistema.
 
 from datetime import datetime
 
-from flask import current_app
+from flask import current_app, g
 
+from ....common.context_navigation import normalize_context
 from ....common.exceptions import DatabaseError, ValidationError
 from ....db import db_connection, execute_db, query_db
 
+PERFIS_TABLE = "perfis_acesso_contexto"
+PERMISSOES_TABLE = "permissoes_contexto"
 
-def listar_perfis(incluir_inativos: bool = False) -> list[dict]:
+
+def _resolve_context(context=None):
+    current_ctx = None
+    try:
+        current_ctx = getattr(g, "modulo_atual", None)
+    except Exception:
+        current_ctx = None
+    return normalize_context(context) or normalize_context(current_ctx) or "onboarding"
+
+
+def listar_perfis(incluir_inativos: bool = False, context: str | None = None) -> list[dict]:
     """
     Lista todos os perfis de acesso com resumo de permissões.
     """
+    ctx = _resolve_context(context)
     sql = """
         SELECT
             p.id,
+            p.contexto,
             p.nome,
             p.descricao,
             p.cor,
@@ -26,33 +41,40 @@ def listar_perfis(incluir_inativos: bool = False) -> list[dict]:
             p.ativo,
             COUNT(DISTINCT perm.recurso_id) as total_permissoes,
             (SELECT COUNT(*) FROM recursos WHERE ativo = TRUE) as total_recursos,
-            0 as total_usuarios
-        FROM perfis_acesso p
-        LEFT JOIN permissoes perm ON perm.perfil_id = p.id AND perm.concedida = TRUE
+            (
+                SELECT COUNT(*)
+                FROM perfil_usuario_contexto puc
+                WHERE puc.contexto = p.contexto
+                    AND COALESCE(puc.perfil_acesso, '') = COALESCE(p.nome, '')
+            ) as total_usuarios
+        FROM perfis_acesso_contexto p
+        LEFT JOIN permissoes_contexto perm ON perm.perfil_ctx_id = p.id AND perm.concedida = TRUE
+        WHERE p.contexto = %s
     """
 
     if not incluir_inativos:
-        sql += " WHERE p.ativo = TRUE"
+        sql += " AND p.ativo = TRUE"
 
-    sql += " GROUP BY p.id, p.nome, p.descricao, p.cor, p.icone, p.sistema, p.ativo ORDER BY p.nome"
+    sql += " GROUP BY p.id, p.contexto, p.nome, p.descricao, p.cor, p.icone, p.sistema, p.ativo ORDER BY p.nome"
 
-    perfis = query_db(sql)
+    perfis = query_db(sql, (ctx,))
     return perfis or []
 
 
-def obter_perfil(perfil_id: int) -> dict | None:
+def obter_perfil(perfil_id: int, context: str | None = None) -> dict | None:
     """
     Obtém detalhes de um perfil específico.
     """
-    perfil = query_db("SELECT * FROM perfis_acesso WHERE id = %s", (perfil_id,), one=True)
+    ctx = _resolve_context(context)
+    perfil = query_db(f"SELECT * FROM {PERFIS_TABLE} WHERE id = %s AND contexto = %s", (perfil_id, ctx), one=True)
     return perfil
 
 
-def obter_perfil_completo(perfil_id: int) -> dict | None:
+def obter_perfil_completo(perfil_id: int, context: str | None = None) -> dict | None:
     """
     Obtém perfil com todas as suas permissões organizadas por categoria.
     """
-    perfil = obter_perfil(perfil_id)
+    perfil = obter_perfil(perfil_id, context=context)
     if not perfil:
         return None
 
@@ -69,7 +91,7 @@ def obter_perfil_completo(perfil_id: int) -> dict | None:
             r.ordem,
             COALESCE(perm.concedida, FALSE) as tem_permissao
         FROM recursos r
-        LEFT JOIN permissoes perm ON perm.recurso_id = r.id AND perm.perfil_id = %s
+        LEFT JOIN permissoes_contexto perm ON perm.recurso_id = r.id AND perm.perfil_ctx_id = %s
         WHERE r.ativo = TRUE
         ORDER BY r.categoria, r.ordem
     """,
@@ -101,22 +123,24 @@ def criar_perfil(
     cor: str = "#667eea",
     icone: str = "bi-person-badge",
     criado_por: str = "Sistema",
+    context: str | None = None,
 ) -> int:
     """
     Cria um novo perfil de acesso.
     """
     if not nome or not nome.strip():
         raise ValidationError("Nome do perfil é obrigatório")
+    ctx = _resolve_context(context)
 
     # Verificar se já existe
-    existente = query_db("SELECT id FROM perfis_acesso WHERE nome = %s", (nome.strip(),), one=True)
+    existente = query_db(f"SELECT id FROM {PERFIS_TABLE} WHERE nome = %s AND contexto = %s", (nome.strip(), ctx), one=True)
 
     if existente:
         raise ValidationError(f"Já existe um perfil com o nome '{nome}'")
 
-    sql = """
-        INSERT INTO perfis_acesso (nome, descricao, cor, icone, criado_por, criado_em, atualizado_em)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
+    sql = f"""
+        INSERT INTO {PERFIS_TABLE} (contexto, nome, descricao, cor, icone, criado_por, criado_em, atualizado_em)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
     """
 
     now = datetime.now()
@@ -127,7 +151,7 @@ def criar_perfil(
         if db_type == "sqlite":
             sql = sql.replace("%s", "?")
 
-        cursor.execute(sql, (nome.strip(), descricao or "", cor, icone, criado_por, now, now))
+        cursor.execute(sql, (ctx, nome.strip(), descricao or "", cor, icone, criado_por, now, now))
 
         if db_type == "postgres":
             cursor.execute("SELECT lastval()")
@@ -141,11 +165,12 @@ def criar_perfil(
     return perfil_id
 
 
-def atualizar_perfil(perfil_id: int, dados: dict) -> bool:
+def atualizar_perfil(perfil_id: int, dados: dict, context: str | None = None) -> bool:
     """
     Atualiza dados básicos de um perfil.
     """
-    perfil = obter_perfil(perfil_id)
+    ctx = _resolve_context(context)
+    perfil = obter_perfil(perfil_id, context=ctx)
     if not perfil:
         raise ValidationError(f"Perfil com ID {perfil_id} não encontrado")
 
@@ -179,19 +204,21 @@ def atualizar_perfil(perfil_id: int, dados: dict) -> bool:
     valores.append(datetime.now())
     valores.append(perfil_id)
 
-    sql = f"UPDATE perfis_acesso SET {', '.join(campos)} WHERE id = %s"
+    sql = f"UPDATE {PERFIS_TABLE} SET {', '.join(campos)} WHERE id = %s AND contexto = %s"
 
+    valores.append(ctx)
     execute_db(sql, tuple(valores), raise_on_error=True)
 
     current_app.logger.info(f"Perfil ID {perfil_id} atualizado")
     return True
 
 
-def excluir_perfil(perfil_id: int) -> bool:
+def excluir_perfil(perfil_id: int, context: str | None = None) -> bool:
     """
     Exclui um perfil (se não for do sistema e não tiver usuários).
     """
-    perfil = obter_perfil(perfil_id)
+    ctx = _resolve_context(context)
+    perfil = obter_perfil(perfil_id, context=ctx)
     if not perfil:
         raise ValidationError(f"Perfil com ID {perfil_id} não encontrado")
 
@@ -199,20 +226,24 @@ def excluir_perfil(perfil_id: int) -> bool:
         raise ValidationError("Perfis do sistema não podem ser excluídos")
 
     # Verificar se há usuários usando este perfil
-    usuarios = query_db("SELECT COUNT(*) as count FROM usuarios WHERE perfil_id = %s", (perfil_id,), one=True)
+    usuarios = query_db(
+        "SELECT COUNT(*) as count FROM perfil_usuario_contexto WHERE contexto = %s AND perfil_acesso = %s",
+        (ctx, perfil["nome"]),
+        one=True,
+    )
 
     if usuarios and usuarios["count"] > 0:
         raise ValidationError(
             f"Não é possível excluir o perfil '{perfil['nome']}' pois está sendo usado por {usuarios['count']} usuário(s)"
         )
 
-    execute_db("DELETE FROM perfis_acesso WHERE id = %s", (perfil_id,), raise_on_error=True)
+    execute_db(f"DELETE FROM {PERFIS_TABLE} WHERE id = %s AND contexto = %s", (perfil_id, ctx), raise_on_error=True)
 
     current_app.logger.info(f"Perfil '{perfil['nome']}' (ID {perfil_id}) excluído")
     return True
 
 
-def atualizar_permissoes(perfil_id: int, permissoes: list[int]) -> bool:
+def atualizar_permissoes(perfil_id: int, permissoes: list[int], context: str | None = None) -> bool:
     """
     Atualiza as permissões de um perfil.
 
@@ -220,7 +251,8 @@ def atualizar_permissoes(perfil_id: int, permissoes: list[int]) -> bool:
         perfil_id: ID do perfil
         permissoes: Lista de IDs de recursos que devem ter permissão
     """
-    perfil = obter_perfil(perfil_id)
+    ctx = _resolve_context(context)
+    perfil = obter_perfil(perfil_id, context=ctx)
     if not perfil:
         raise ValidationError(f"Perfil com ID {perfil_id} não encontrado")
 
@@ -229,7 +261,7 @@ def atualizar_permissoes(perfil_id: int, permissoes: list[int]) -> bool:
 
         try:
             # Remover todas as permissões atuais
-            delete_sql = "DELETE FROM permissoes WHERE perfil_id = %s"
+            delete_sql = f"DELETE FROM {PERMISSOES_TABLE} WHERE perfil_ctx_id = %s"
             if db_type == "sqlite":
                 delete_sql = delete_sql.replace("%s", "?")
 
@@ -238,7 +270,7 @@ def atualizar_permissoes(perfil_id: int, permissoes: list[int]) -> bool:
             # Inserir novas permissões
             if permissoes:
                 insert_sql = (
-                    "INSERT INTO permissoes (perfil_id, recurso_id, concedida, criado_em) VALUES (%s, %s, %s, %s)"
+                    f"INSERT INTO {PERMISSOES_TABLE} (perfil_ctx_id, recurso_id, concedida, criado_em) VALUES (%s, %s, %s, %s)"
                 )
                 if db_type == "sqlite":
                     insert_sql = insert_sql.replace("%s", "?")
@@ -295,9 +327,9 @@ def verificar_permissao(perfil_id: int, recurso_codigo: str) -> bool:
     resultado = query_db(
         """
         SELECT COUNT(*) as count
-        FROM permissoes perm
+        FROM permissoes_contexto perm
         JOIN recursos r ON r.id = perm.recurso_id
-        WHERE perm.perfil_id = %s
+        WHERE perm.perfil_ctx_id = %s
         AND r.codigo = %s
         AND perm.concedida = TRUE
         AND r.ativo = TRUE
@@ -309,13 +341,14 @@ def verificar_permissao(perfil_id: int, recurso_codigo: str) -> bool:
     return resultado and resultado["count"] > 0
 
 
-def resolver_perfil_id(perfil_contexto: dict | None) -> int | None:
+def resolver_perfil_id(perfil_contexto: dict | None, context: str | None = None) -> int | None:
     """
     Resolve o ID do perfil RBAC a partir do contexto do usuario.
     Aceita dicts vindos de g.perfil/perfil_usuario.
     """
     if not perfil_contexto:
         return None
+    ctx = _resolve_context(context or (perfil_contexto.get("contexto") if isinstance(perfil_contexto, dict) else None))
 
     perfil_id = None
     if isinstance(perfil_contexto, dict):
@@ -341,8 +374,8 @@ def resolver_perfil_id(perfil_contexto: dict | None) -> int | None:
         return None
 
     perfil = query_db(
-        "SELECT id FROM perfis_acesso WHERE LOWER(nome) = LOWER(%s) LIMIT 1",
-        (perfil_nome,),
+        "SELECT id FROM perfis_acesso_contexto WHERE LOWER(nome) = LOWER(%s) AND contexto = %s LIMIT 1",
+        (perfil_nome, ctx),
         one=True,
     )
     if perfil and perfil.get("id"):
@@ -358,11 +391,12 @@ def verificar_permissao_por_contexto(perfil_contexto: dict | None, recurso_codig
     return verificar_permissao(perfil_id, recurso_codigo)
 
 
-def clonar_perfil(perfil_id: int, novo_nome: str, criado_por: str = "Sistema") -> int:
+def clonar_perfil(perfil_id: int, novo_nome: str, criado_por: str = "Sistema", context: str | None = None) -> int:
     """
     Clona um perfil existente com todas as suas permissões.
     """
-    perfil_original = obter_perfil(perfil_id)
+    ctx = _resolve_context(context)
+    perfil_original = obter_perfil(perfil_id, context=ctx)
     if not perfil_original:
         raise ValidationError(f"Perfil com ID {perfil_id} não encontrado")
 
@@ -373,21 +407,22 @@ def clonar_perfil(perfil_id: int, novo_nome: str, criado_por: str = "Sistema") -
         cor=perfil_original["cor"],
         icone=perfil_original["icone"],
         criado_por=criado_por,
+        context=ctx,
     )
 
     # Copiar permissões
     permissoes_originais = query_db(
         """
         SELECT recurso_id
-        FROM permissoes
-        WHERE perfil_id = %s AND concedida = TRUE
+        FROM permissoes_contexto
+        WHERE perfil_ctx_id = %s AND concedida = TRUE
     """,
         (perfil_id,),
     )
 
     if permissoes_originais:
         recurso_ids = [p["recurso_id"] for p in permissoes_originais]
-        atualizar_permissoes(novo_perfil_id, recurso_ids)
+        atualizar_permissoes(novo_perfil_id, recurso_ids, context=ctx)
 
     current_app.logger.info(f"Perfil '{perfil_original['nome']}' clonado como '{novo_nome}' (ID {novo_perfil_id})")
 

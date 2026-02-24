@@ -3,122 +3,120 @@
 {% block title %}Meu Perfil{% endblock %}
 
 {% block content %}
-<div class="profile-page">
-    <section class="profile-hero">
-        <div>
-            <div class="profile-breadcrumb">Sistema <span>/</span> Meu Perfil</div>
-            <h1 class="profile-title">Meu Perfil</h1>
-            <p class="profile-subtitle">
-                Gerencie suas informa&ccedil;&otilde;es pessoais e configura&ccedil;&otilde;es de conta com facilidade.
-            </p>
-        </div>
-        <div class="profile-hero-actions">
-            <a href="{{ url_for('onboarding.dashboard') }}" class="btn btn-sm profile-dashboard-btn">
+<div class="container-fluid p-0">
+    <header class="header-bg p-3 d-flex align-items-center position-relative rounded-3">
+        <h1 class="main-title mb-0 fs-4 w-100 text-center">Meu perfil</h1>
+        <div class="d-flex align-items-center position-absolute end-0 top-50 translate-middle-y pe-3">
+            <a href="{{ url_for(current_dashboard) }}" class="btn btn-sm btn-outline-secondary">
                 <i class="bi bi-house me-1"></i> Dashboard
             </a>
         </div>
-    </section>
+    </header>
+    <main class="p-4">
+        <div class="profile-page">
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-    {% for category, message in messages %}
-    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
-        {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-    {% endfor %}
-    {% endif %}
-    {% endwith %}
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
 
-    <div class="card profile-card shadow-sm">
-        <div class="card-body profile-card__body">
-            <form action="{{ url_for('profile.save_profile') }}" method="POST" enctype="multipart/form-data">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="next" value="{{ request.path }}">
+            <div class="card profile-card shadow-sm">
+                <div class="card-body profile-card__body">
+                    <form action="{{ url_for('profile.save_profile') }}" method="POST" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="next" value="{{ request.path }}">
 
-                <div class="profile-card__header">
-                    <div class="profile-avatar">
-                        {% if g.perfil.foto_url %}
-                        <img src="{{ g.perfil.foto_url }}" alt="Foto de Perfil" class="profile-avatar__image">
-                        {% else %}
-                        <div class="profile-avatar__fallback">
-                            <i class="bi bi-person-fill"></i>
+                        <div class="profile-card__header">
+                            <div class="profile-avatar">
+                                {% if g.perfil.foto_url %}
+                                <img src="{{ g.perfil.foto_url }}" alt="Foto de Perfil" class="profile-avatar__image">
+                                {% else %}
+                                <div class="profile-avatar__fallback">
+                                    <i class="bi bi-person-fill"></i>
+                                </div>
+                                {% endif %}
+                                <label for="foto" class="profile-avatar__badge" title="Alterar foto">
+                                    <i class="bi bi-pencil-fill"></i>
+                                </label>
+                            </div>
+                            <div class="profile-card__intro">
+                                <h2>Informa&ccedil;&otilde;es Gerais</h2>
+                                <p>Atualize seus dados para manter seu perfil completo.</p>
+                            </div>
+                            <div class="profile-card__actions">
+                                <label for="foto" class="btn btn-sm btn-outline-primary profile-photo-btn {% if not r2_configurado %}disabled{% endif %}"{% if not r2_configurado %} aria-disabled="true" tabindex="-1"{% endif %}>
+                                    <i class="bi bi-cloud-arrow-up me-1"></i> Alterar Foto
+                                </label>
+                            </div>
+                        </div>
+
+                        <input type="file" name="foto" id="foto" class="d-none" accept="image/png, image/jpeg"{% if not r2_configurado %} disabled{% endif %}>
+
+                        {% if not r2_configurado %}
+                        <div class="profile-alert">
+                            <i class="bi bi-exclamation-circle"></i>
+                            Upload de fotos desativado (R2 n&atilde;o configurado).
                         </div>
                         {% endif %}
-                        <label for="foto" class="profile-avatar__badge" title="Alterar foto">
-                            <i class="bi bi-pencil-fill"></i>
-                        </label>
-                    </div>
-                    <div class="profile-card__intro">
-                        <h2>Informa&ccedil;&otilde;es Gerais</h2>
-                        <p>Atualize seus dados para manter seu perfil completo.</p>
-                    </div>
-                    <div class="profile-card__actions">
-                        <label for="foto" class="btn btn-sm btn-outline-primary profile-photo-btn {% if not r2_configurado %}disabled{% endif %}"{% if not r2_configurado %} aria-disabled="true" tabindex="-1"{% endif %}>
-                            <i class="bi bi-cloud-arrow-up me-1"></i> Alterar Foto
-                        </label>
-                    </div>
-                </div>
 
-                <input type="file" name="foto" id="foto" class="d-none" accept="image/png, image/jpeg"{% if not r2_configurado %} disabled{% endif %}>
-
-                {% if not r2_configurado %}
-                <div class="profile-alert">
-                    <i class="bi bi-exclamation-circle"></i>
-                    Upload de fotos desativado (R2 n&atilde;o configurado).
-                </div>
-                {% endif %}
-
-                <div class="row g-3 profile-form">
-                    <div class="col-lg-6">
-                        <label for="nome" class="form-label">
-                            <i class="bi bi-person"></i> Nome Completo
-                        </label>
-                        <input type="text" id="nome" name="nome" class="form-control" value="{{ g.perfil.nome or '' }}" required>
-                    </div>
-                    <div class="col-lg-6">
-                        <label for="email" class="form-label">
-                            <i class="bi bi-envelope"></i> E-mail institucional
-                        </label>
-                        <input type="email" id="email" name="email" class="form-control" value="{{ g.user_email }}" readonly disabled>
-                        <small class="form-text text-muted">
-                            Entre em contato com o suporte para alterar o e-mail.
-                        </small>
-                    </div>
-                    <div class="col-lg-6">
-                        <label for="cargo" class="form-label">
-                            <i class="bi bi-briefcase"></i> Cargo / Fun&ccedil;&atilde;o
-                        </label>
-                        <select id="cargo" name="cargo" class="form-select" required>
-                            <option value="">Selecione...</option>
-                            <option value="J&uacute;nior" {% if (g.perfil.cargo or '' )=='J&uacute;nior' %}selected{% endif %}>
-                                J&uacute;nior
-                            </option>
-                            <option value="Pleno" {% if (g.perfil.cargo or '' )=='Pleno' %}selected{% endif %}>
-                                Pleno
-                            </option>
-                            <option value="S&ecirc;nior" {% if (g.perfil.cargo or '' )=='S&ecirc;nior' %}selected{% endif %}>
-                                S&ecirc;nior
-                            </option>
-                        </select>
-                    </div>
-                    <div class="col-lg-6">
-                        <label class="form-label">
-                            <i class="bi bi-shield-lock"></i> N&iacute;vel de Acesso
-                        </label>
-                        <div class="profile-access">
-                            <span class="profile-access__badge">{{ (g.perfil.perfil_acesso or 'N/D') | upper }}</span>
+                        <div class="row g-3 profile-form">
+                            <div class="col-lg-6">
+                                <label for="nome" class="form-label">
+                                    <i class="bi bi-person"></i> Nome Completo
+                                </label>
+                                <input type="text" id="nome" name="nome" class="form-control" value="{{ g.perfil.nome or '' }}" required>
+                            </div>
+                            <div class="col-lg-6">
+                                <label for="email" class="form-label">
+                                    <i class="bi bi-envelope"></i> E-mail institucional
+                                </label>
+                                <input type="email" id="email" name="email" class="form-control" value="{{ g.user_email }}" readonly disabled>
+                                <small class="form-text text-muted">
+                                    Entre em contato com o suporte para alterar o e-mail.
+                                </small>
+                            </div>
+                            <div class="col-lg-6">
+                                <label for="cargo" class="form-label">
+                                    <i class="bi bi-briefcase"></i> Cargo / Fun&ccedil;&atilde;o
+                                </label>
+                                <select id="cargo" name="cargo" class="form-select" required>
+                                    <option value="">Selecione...</option>
+                                    <option value="J&uacute;nior" {% if (g.perfil.cargo or '' )=='J&uacute;nior' %}selected{% endif %}>
+                                        J&uacute;nior
+                                    </option>
+                                    <option value="Pleno" {% if (g.perfil.cargo or '' )=='Pleno' %}selected{% endif %}>
+                                        Pleno
+                                    </option>
+                                    <option value="S&ecirc;nior" {% if (g.perfil.cargo or '' )=='S&ecirc;nior' %}selected{% endif %}>
+                                        S&ecirc;nior
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="col-lg-6">
+                                <label class="form-label">
+                                    <i class="bi bi-shield-lock"></i> N&iacute;vel de Acesso
+                                </label>
+                                <div class="profile-access">
+                                    <span class="profile-access__badge">{{ (g.perfil.perfil_acesso or 'N/D') | upper }}</span>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
 
-                <div class="profile-save">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save me-2"></i>Salvar Perfil
-                    </button>
+                        <div class="profile-save">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Salvar Perfil
+                            </button>
+                        </div>
+                    </form>
                 </div>
-            </form>
+            </div>
         </div>
-    </div>
+    </main>
 </div>
 {% endblock %}

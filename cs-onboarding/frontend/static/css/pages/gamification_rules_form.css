@@ -1,9 +1,7 @@
 .grf-page-shell {
     background: #e7e9ed;
-    border: 1px solid #d9dce2;
-    border-radius: 12px;
     min-height: calc(100vh - 1.5rem);
-    overflow: hidden;
+    overflow: visible;
 }
 
 .grf-topbar {

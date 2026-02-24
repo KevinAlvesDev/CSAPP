@@ -8,22 +8,16 @@
 
 {% block content %}
 <div class="container-fluid p-0 grf-page-shell">
-    <header class="grf-topbar">
-        <div class="grf-title-wrap">
-            <div>
-                <h1 class="grf-title">Regras e Pontos da Gamificação</h1>
-                <p class="grf-subtitle">CS Onboarding Gestão de Gamificação</p>
-            </div>
-        </div>
-
-        <div class="grf-actions">
-            <a href="{{ url_for('onboarding.dashboard') }}" class="btn grf-btn grf-btn-back">
-                <i class="bi bi-arrow-left"></i>
-                Voltar
+    <header class="header-bg p-3 d-flex align-items-center position-relative rounded-3">
+        <h1 class="main-title mb-0 fs-4 w-100 text-center">Regras e Pontos da Gamifica&ccedil;&atilde;o</h1>
+        <div class="d-flex align-items-center position-absolute end-0 top-50 translate-middle-y pe-3 gap-2">
+            <a href="{{ url_for(current_dashboard) }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-house me-1"></i>
+                Dashboard
             </a>
-            <button type="submit" form="gamification-rules-form" class="btn grf-btn grf-btn-save">
+            <button type="submit" form="gamification-rules-form" class="btn btn-sm grf-btn grf-btn-save">
                 <i class="bi bi-floppy"></i>
-                Salvar Alterações
+                Salvar Altera&ccedil;&otilde;es
             </button>
         </div>
     </header>
@@ -39,11 +33,6 @@
                 {% endfor %}
             {% endif %}
         {% endwith %}
-
-        <p class="grf-intro">
-            Configure os parâmetros que definem a pontuação do time. Ajuste os valores de bônus,
-            elegibilidade e penalidades. As alterações serão refletidas no próximo ciclo de cálculo do relatório.
-        </p>
 
         {% if not regras_agrupadas %}
             <div class="alert alert-warning grf-alert">Nenhuma regra de gamificação encontrada no banco de dados.</div>
@@ -140,3 +129,4 @@
     <footer class="grf-footer">&copy; 2024 CS Management Tool. All rights reserved.</footer>
 </div>
 {% endblock %}
+

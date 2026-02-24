@@ -57,7 +57,9 @@ def get_timeline_logs(
         SELECT tl.id, tl.implantacao_id, tl.usuario_cs, tl.tipo_evento, tl.detalhes, tl.data_criacao,
                COALESCE(p.nome, tl.usuario_cs) as usuario_nome
         FROM timeline_log tl
+        LEFT JOIN implantacoes i ON tl.implantacao_id = i.id
         LEFT JOIN perfil_usuario p ON tl.usuario_cs = p.usuario
+        LEFT JOIN perfil_usuario_contexto puc ON tl.usuario_cs = puc.usuario AND puc.contexto = COALESCE(i.contexto, 'onboarding')
         WHERE {where_clause}
         ORDER BY tl.data_criacao DESC
         LIMIT %s OFFSET %s
@@ -99,7 +101,9 @@ def export_timeline_csv(
     sql = f"""
         SELECT tl.data_criacao, tl.tipo_evento, COALESCE(p.nome, tl.usuario_cs) as usuario_nome, tl.detalhes
         FROM timeline_log tl
+        LEFT JOIN implantacoes i ON tl.implantacao_id = i.id
         LEFT JOIN perfil_usuario p ON tl.usuario_cs = p.usuario
+        LEFT JOIN perfil_usuario_contexto puc ON tl.usuario_cs = puc.usuario AND puc.contexto = COALESCE(i.contexto, 'onboarding')
         WHERE {where_clause}
         ORDER BY tl.data_criacao DESC
     """

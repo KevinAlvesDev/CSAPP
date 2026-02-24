@@ -121,8 +121,10 @@ def load_profiles_list(exclude_self=True):
     try:
         from flask import g
 
+        from ..common.context_profiles import resolve_context
         from ..db import query_db
 
+        ctx = resolve_context(getattr(g, "modulo_atual", None))
         users = (
             query_db(
                 """
@@ -130,15 +132,16 @@ def load_profiles_list(exclude_self=True):
                 p.usuario,
                 p.nome,
                 p.cargo,
-                p.perfil_acesso,
+                COALESCE(puc.perfil_acesso, p.perfil_acesso) as perfil_acesso,
                 COALESCE(SUM(CASE WHEN i.status = 'andamento' THEN 1 ELSE 0 END), 0) AS impl_andamento_total,
                 COALESCE(SUM(CASE WHEN i.status = 'finalizada' THEN 1 ELSE 0 END), 0) AS impl_finalizadas
             FROM perfil_usuario p
+            LEFT JOIN perfil_usuario_contexto puc ON p.usuario = puc.usuario AND puc.contexto = %s
             LEFT JOIN implantacoes i ON p.usuario = i.usuario_cs
-            GROUP BY p.usuario, p.nome, p.cargo, p.perfil_acesso
+            GROUP BY p.usuario, p.nome, p.cargo, COALESCE(puc.perfil_acesso, p.perfil_acesso)
             ORDER BY p.usuario
             """,
-                (),
+                (ctx,),
                 one=False,
             )
             or []

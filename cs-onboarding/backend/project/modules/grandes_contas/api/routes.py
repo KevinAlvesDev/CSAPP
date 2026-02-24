@@ -2,6 +2,7 @@ from flask import current_app, flash, g, redirect, render_template, request, url
 
 from ....blueprints.auth import login_required
 from ....blueprints.grandes_contas import grandes_contas_bp
+from ....common.context_profiles import resolve_context
 from ....common.validation import ValidationError, sanitize_string, validate_integer
 from ....constants import (
     CARGOS_RESPONSAVEL,
@@ -26,6 +27,7 @@ from ..application.management_service import listar_todos_cs_com_cache
 def dashboard():
     user_email = g.user_email
     user_info = g.user
+    contexto_atual = resolve_context(getattr(g, "modulo_atual", "grandes_contas"))
 
     perfil_acesso = g.perfil.get("perfil_acesso") if g.get("perfil") else None
 
@@ -55,7 +57,7 @@ def dashboard():
 
     tags_report = {}
     try:
-        tags_report = get_tags_metrics(start_date, end_date, tags_report_email, context="grandes_contas")
+        tags_report = get_tags_metrics(start_date, end_date, tags_report_email, context=contexto_atual)
     except Exception as e:
         current_app.logger.error(f"Erro ao buscar tags metrics: {e}")
 
@@ -63,7 +65,7 @@ def dashboard():
         # Usar versão otimizada do dashboard (consolidada)
         # Passando context='grandes_contas' para filtrar apenas este módulo
         dashboard_data, metrics = get_dashboard_data(
-            user_email, filtered_cs_email=current_cs_filter, use_cache=True, context="grandes_contas"
+            user_email, filtered_cs_email=current_cs_filter, context=contexto_atual
         )
 
         if sort_days in ["asc", "desc"]:

@@ -1,6 +1,15 @@
+import hashlib
+import json
+from datetime import datetime
+
 from flask import Blueprint, flash, g, jsonify, make_response, redirect, render_template, request, url_for
 
 from ....blueprints.auth import permission_required
+from ....common.context_navigation import (
+    detect_current_context,
+    get_current_dashboard_endpoint,
+    normalize_context,
+)
 from ....common.validation import ValidationError, sanitize_string, validate_date, validate_email
 from ....constants import PERFIS_COM_ANALYTICS, PERFIS_COM_GESTAO
 from ..application.analytics_service import (
@@ -13,6 +22,22 @@ from ..application.analytics_service import (
 from ....modules.management.application.management_service import listar_todos_cs_com_cache
 
 analytics_bp = Blueprint("analytics", __name__)
+
+
+def _build_analytics_signature(analytics_data: dict) -> str:
+    """Gera assinatura determinística para detectar mudanças no dashboard."""
+    payload = {
+        "kpi_cards": analytics_data.get("kpi_cards", {}),
+        "chart_data": analytics_data.get("chart_data", {}),
+        "tags_chart_data": analytics_data.get("tags_chart_data", {}),
+        "implantacoes_paradas_lista": analytics_data.get("implantacoes_paradas_lista", []),
+        "implantacoes_canceladas_lista": analytics_data.get("implantacoes_canceladas_lista", []),
+        "implantacoes_lista_detalhada": analytics_data.get("implantacoes_lista_detalhada", []),
+        "modules_implantacao_lista": analytics_data.get("modules_implantacao_lista", []),
+        "task_summary_data": analytics_data.get("task_summary_data", []),
+    }
+    serialized = json.dumps(payload, sort_keys=True, default=str, ensure_ascii=False)
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
 
 
 @analytics_bp.route("/analytics")
@@ -63,14 +88,14 @@ def analytics_dashboard():
                 end_date = None
                 flash("Erro nos filtros: Data final inválida — ignorada", "warning")
 
-        context = request.args.get("context", "onboarding")
+        context = normalize_context(request.args.get("context")) or detect_current_context()
     except Exception as e:
         flash(f"Erro nos filtros: {e!s}", "warning")
         cs_email = None
         status_filter = "todas"
         start_date = None
         end_date = None
-        context = "onboarding"
+        context = detect_current_context()
 
     task_cs_email = None
     task_start_date = None
@@ -105,30 +130,19 @@ def analytics_dashboard():
         task_cs_email = g.user_email
 
     try:
-        # CACHE: Gerar chave única baseada nos filtros
-        from ....config.cache_config import cache
-
-        cache_key = f"analytics_dash_{cs_email}_{status_filter}_{start_date}_{end_date}_{task_cs_email}_{task_start_date}_{task_end_date}_{sort_impl_date}_{context}"
-
-        # Tentar buscar do cache (2 minutos)
-        analytics_data = cache.get(cache_key)
-
-        if not analytics_data:
-            # Se não estiver no cache, buscar do banco
-            analytics_data = get_analytics_data(
-                target_cs_email=cs_email,
-                target_status=status_filter,
-                start_date=start_date,
-                end_date=end_date,
-                target_tag=None,
-                task_cs_email=task_cs_email,
-                task_start_date=task_start_date,
-                task_end_date=task_end_date,
-                sort_impl_date=sort_impl_date,
-                context=context,
-            )
-            # Salvar no cache por 2 minutos (120 segundos)
-            cache.set(cache_key, analytics_data, timeout=120)
+        analytics_data = get_analytics_data(
+            target_cs_email=cs_email,
+            target_status=status_filter,
+            start_date=start_date,
+            end_date=end_date,
+            target_tag=None,
+            task_cs_email=task_cs_email,
+            task_start_date=task_start_date,
+            task_end_date=task_end_date,
+            sort_impl_date=sort_impl_date,
+            context=context,
+        )
+        analytics_signature = _build_analytics_signature(analytics_data)
 
         all_cs = listar_todos_cs_com_cache()
 
@@ -169,6 +183,7 @@ def analytics_dashboard():
             user_info=g.user,
             user_perfil=user_perfil,
             context=context,
+            analytics_signature=analytics_signature,
         )
 
     except Exception as e:
@@ -177,9 +192,104 @@ def analytics_dashboard():
         logger = get_logger("analytics")
         logger.error(f"Erro ao carregar dashboard de analytics: {e}", exc_info=True)
         flash(f"Erro interno ao carregar os dados de relatórios: {e}", "error")
-        if context == "grandes_contas":
-            return redirect(url_for("grandes_contas.dashboard"))
-        return redirect(url_for("onboarding.dashboard"))
+        return redirect(url_for(get_current_dashboard_endpoint(context)))
+
+
+@analytics_bp.route("/analytics/live/check")
+@permission_required(PERFIS_COM_ANALYTICS)
+def analytics_live_check():
+    """Endpoint leve para verificar se os dados do dashboard mudaram."""
+    user_perfil = g.perfil.get("perfil_acesso")
+    cs_email = None
+    status_filter = "todas"
+    start_date = None
+    end_date = None
+    sort_impl_date = None
+    task_cs_email = None
+    task_start_date = None
+    task_end_date = None
+
+    try:
+        cs_email_param = request.args.get("cs_email")
+        if cs_email_param:
+            cs_email = validate_email(cs_email_param)
+    except Exception:
+        cs_email = None
+
+    try:
+        status_filter_param = request.args.get("status_filter", "todas")
+        status_filter = sanitize_string(status_filter_param, max_length=20)
+    except Exception:
+        status_filter = "todas"
+
+    try:
+        sort_param = request.args.get("sort_impl_date")
+        if sort_param:
+            sort_impl_date = sanitize_string(sort_param, max_length=4)
+    except Exception:
+        sort_impl_date = None
+
+    try:
+        start_date_param = request.args.get("start_date")
+        if start_date_param:
+            start_date = validate_date(start_date_param)
+    except Exception:
+        start_date = None
+
+    try:
+        end_date_param = request.args.get("end_date")
+        if end_date_param:
+            end_date = validate_date(end_date_param)
+    except Exception:
+        end_date = None
+
+    context = normalize_context(request.args.get("context")) or detect_current_context()
+
+    try:
+        task_cs_email_param = request.args.get("task_cs_email")
+        if task_cs_email_param:
+            task_cs_email = validate_email(task_cs_email_param)
+    except Exception:
+        task_cs_email = None
+
+    try:
+        task_start_date_param = request.args.get("task_start_date")
+        if task_start_date_param:
+            task_start_date = validate_date(task_start_date_param)
+    except Exception:
+        task_start_date = None
+
+    try:
+        task_end_date_param = request.args.get("task_end_date")
+        if task_end_date_param:
+            task_end_date = validate_date(task_end_date_param)
+    except Exception:
+        task_end_date = None
+
+    if user_perfil not in PERFIS_COM_GESTAO:
+        cs_email = g.user_email
+        task_cs_email = g.user_email
+
+    analytics_data = get_analytics_data(
+        target_cs_email=cs_email,
+        target_status=status_filter,
+        start_date=start_date,
+        end_date=end_date,
+        target_tag=None,
+        task_cs_email=task_cs_email,
+        task_start_date=task_start_date,
+        task_end_date=task_end_date,
+        sort_impl_date=sort_impl_date,
+        context=context,
+    )
+
+    return jsonify(
+        {
+            "ok": True,
+            "signature": _build_analytics_signature(analytics_data),
+            "updated_at": datetime.now().isoformat(),
+        }
+    )
 
 
 @analytics_bp.route("/analytics/implants_by_day")
@@ -201,7 +311,7 @@ def api_implants_by_day():
         if g.perfil.get("perfil_acesso") not in PERFIS_COM_GESTAO:
             cs_email = g.user_email
 
-        context = request.args.get("context", "onboarding")
+        context = normalize_context(request.args.get("context")) or detect_current_context()
         payload = get_implants_by_day(start_date=start_date, end_date=end_date, cs_email=cs_email, context=context)
         return jsonify({"ok": True, **payload})
     except ValidationError as e:
@@ -237,7 +347,7 @@ def cancelamentos_dashboard():
         if g.perfil.get("perfil_acesso") not in PERFIS_COM_GESTAO:
             cs_email = g.user_email
 
-        context = request.args.get("context", "onboarding")
+        context = normalize_context(request.args.get("context")) or detect_current_context()
         payload = get_cancelamentos_data(cs_email=cs_email, start_date=start_date, end_date=end_date, context=context)
         return render_template(
             "pages/cancelamentos.html",
@@ -250,10 +360,8 @@ def cancelamentos_dashboard():
         )
     except Exception as e:
         flash(f"Erro ao carregar cancelamentos: {e}", "error")
-        context = request.args.get("context", "onboarding")
-        if context == "grandes_contas":
-            return redirect(url_for("grandes_contas.dashboard"))
-        return redirect(url_for("onboarding.dashboard"))
+        context = normalize_context(request.args.get("context")) or detect_current_context()
+        return redirect(url_for(get_current_dashboard_endpoint(context)))
 
 
 @analytics_bp.route("/cancelamentos/export/csv")
@@ -273,7 +381,7 @@ def export_cancelamentos_csv():
         if g.perfil.get("perfil_acesso") not in PERFIS_COM_GESTAO:
             cs_email = g.user_email
 
-        context = request.args.get("context", "onboarding")
+        context = normalize_context(request.args.get("context")) or detect_current_context()
         payload = get_cancelamentos_data(cs_email=cs_email, start_date=start_date, end_date=end_date, context=context)
         rows = payload.get("dataset", [])
         headers = [
@@ -322,7 +430,7 @@ def api_funnel():
         if g.perfil.get("perfil_acesso") not in PERFIS_COM_GESTAO:
             cs_email = g.user_email
 
-        context = request.args.get("context", "onboarding")
+        context = normalize_context(request.args.get("context")) or detect_current_context()
         payload = get_funnel_counts(start_date=start_date, end_date=end_date, cs_email=cs_email, context=context)
         return jsonify({"ok": True, **payload})
     except ValidationError as e:
@@ -344,7 +452,8 @@ def api_gamification_rank():
         if year:
             year = int(sanitize_string(year, max_length=4))
 
-        payload = get_gamification_rank(month=month, year=year)
+        context = normalize_context(request.args.get("context")) or detect_current_context()
+        payload = get_gamification_rank(month=month, year=year, context=context)
         return jsonify({"ok": True, **payload})
     except ValueError:
         return jsonify({"ok": False, "error": "Parâmetros month/year devem ser inteiros."}), 400

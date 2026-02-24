@@ -14,9 +14,8 @@
     --mm-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
 
     background: var(--mm-bg);
-    border-radius: 14px;
     min-height: calc(100vh - 2rem);
-    padding: 12px;
+    padding: 0;
 }
 
 .mm-topbar {
