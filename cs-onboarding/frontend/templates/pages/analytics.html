@@ -3,1078 +3,626 @@
 {% block title %}Dashboard Gerencial{% endblock %}
 
 {% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/analytics_dashboard.css') }}">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script
-    src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
-
-<style>
-    .chart-container {
-        position: relative;
-        height: 350px;
-        width: 100%;
-    }
-
-    /* Loading Overlay para gráficos */
-    .chart-loading-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(255, 255, 255, 0.8);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 10;
-        border-radius: 0.375rem;
-    }
-
-    .chart-spinner {
-        width: 3rem;
-        height: 3rem;
-    }
-
-    /* Tabelas com scroll interno */
-    .limited-height-table {
-        max-height: 600px;
-        /* Aprox 15-20 linhas visíveis */
-        overflow-y: auto;
-        position: relative;
-    }
-
-    /* Garante que o padding do card-body não afete os gráficos */
-    .card-body-chart {
-        padding: 1rem;
-    }
-</style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid p-0">
-    <header class="header-bg p-3 d-flex align-items-center position-relative rounded-3">
-        <h1 class="main-title mb-0 fs-4 w-100 text-center">Dashboard Gerencial</h1>
-        <div class="d-flex align-items-center position-absolute end-0 top-50 translate-middle-y">
-            <a href="{{ url_for(context + '.dashboard') if context and context != 'None' else url_for('onboarding.dashboard') }}"
-                class="btn btn-sm btn-outline-primary">
-                <i class="bi bi-arrow-left me-1"></i> Voltar ao Dashboard
+{% set k = kpi_cards or {} %}
+{% set stats_total = k.total_clientes | default(0) %}
+{% set stats_novas = k.total_novas | default(0) %}
+{% set stats_andamento = k.total_andamento | default(0) %}
+{% set stats_futuras = k.total_futuras | default(0) %}
+{% set stats_paradas = k.total_paradas | default(0) %}
+{% set stats_canceladas = k.total_canceladas | default(0) %}
+{% set stats_finalizadas = k.total_finalizadas | default(0) %}
+
+{% set mrr_ns = namespace(values={}) %}
+{% if chart_data and chart_data.nivel_receita and chart_data.nivel_receita.labels and chart_data.nivel_receita.data %}
+{% for idx in range(chart_data.nivel_receita.labels | length) %}
+{% set _ = mrr_ns.values.update({ (chart_data.nivel_receita.labels[idx] | string): (chart_data.nivel_receita.data[idx] | int) }) %}
+{% endfor %}
+{% endif %}
+{% set mrr_prata = mrr_ns.values.get('Prata (MRR < 699)', 0) %}
+{% set mrr_ouro = mrr_ns.values.get('Ouro (MRR 700-999)', 0) %}
+{% set mrr_platina = mrr_ns.values.get('Platina (MRR 1k-1.9k)', 0) %}
+{% set mrr_diamante = mrr_ns.values.get('Diamante (MRR > 2k)', 0) %}
+{% set mrr_pendente = mrr_ns.values.get('Não Definido', 0) + mrr_ns.values.get('Nao Definido', 0) %}
+{% set mrr_total = mrr_prata + mrr_ouro + mrr_platina + mrr_diamante + mrr_pendente %}
+
+<div class="gerencial-page">
+    <header class="gerencial-header">
+        <div class="header-spacer" aria-hidden="true"></div>
+        <h1>Dashboard Gerencial</h1>
+        <div class="gerencial-header-actions">
+            <a href="{{ url_for(context + '.dashboard') if context and context != 'None' else url_for('onboarding.dashboard') }}" class="header-action-link">
+                <i class="bi bi-arrow-left"></i>
+                Voltar ao dashboard
             </a>
         </div>
     </header>
 
-    <main class="p-4" id="main-content">
-        <!-- Flash messages agora são exibidos como toasts flutuantes automaticamente -->
-
-        <div class="card metric-card mb-4">
-            <div class="card-header">
-                <h5 class="mb-0">Filtros Principais (Gráficos e Listas)</h5>
+    <main class="gerencial-main">
+        <section class="ger-card filter-card">
+            <div class="card-title-row">
+                <h2>Filtros Globais</h2>
+                <span class="muted" id="updatedAtLabel">Atualizado: agora</span>
             </div>
-            <div class="card-body">
-                <form method="GET" action="{{ url_for('analytics.analytics_dashboard') }}" id="analytics-filter-form">
-                    {% if current_task_cs_email %}
-                    <input type="hidden" name="task_cs_email" value="{{ current_task_cs_email }}">
-                    {% endif %}
-                    <input type="hidden" name="task_start_date" value="{{ current_task_start_date | default('') }}">
-                    <input type="hidden" name="task_end_date" value="{{ current_task_end_date | default('') }}">
-                    {% if context %}
-                    <input type="hidden" name="context" value="{{ context }}">
-                    {% endif %}
+            <form method="GET" action="{{ url_for('analytics.analytics_dashboard') }}" class="filters-grid">
+                {% if current_task_cs_email %}
+                <input type="hidden" name="task_cs_email" value="{{ current_task_cs_email }}">
+                {% endif %}
+                <input type="hidden" name="task_start_date" value="{{ current_task_start_date | default('') }}">
+                <input type="hidden" name="task_end_date" value="{{ current_task_end_date | default('') }}">
+                {% if context %}
+                <input type="hidden" name="context" value="{{ context }}">
+                {% endif %}
 
-                    <div class="row g-3 align-items-end" id="analytics-filters-row">
-                        <div class="col-md-3">
-                            <label for="cs_email_filter" class="form-label small">Filtrar por Colaborador</label>
-                            <select class="form-select" id="cs_email_filter" name="cs_email">
-                                <option value="">Todos os CS</option>
-                                {% for cs in all_cs %}
-                                <option value="{{ cs.usuario }}" {% if cs.usuario==current_cs_email %}selected{% endif
-                                    %}>
-                                    {{ cs.nome }} ({{ cs.perfil_acesso or 'N/A' }})
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label for="status_filter" class="form-label small">Filtrar por Status</label>
-                            <select class="form-select" id="status_filter" name="status_filter">
-                                {% for opt in status_options %}
-                                <option value="{{ opt.value }}" {% if opt.value==current_status_filter %}selected{%
-                                    endif %}>
-                                    {{ opt.label }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <label for="start_date_filter" class="form-label small">Período (Início)</label>
-                            <div class="input-group">
-                                <input type="text" class="form-control flatpickr-date" id="start_date_filter"
-                                    name="start_date" placeholder="DD/MM/AAAA" inputmode="numeric"
-                                    pattern="\d{2}/\d{2}/\d{4}" value="{{ current_start_date or '' }}">
-                                <button class="btn btn-outline-secondary" type="button" id="btn-cal-start_date_filter"
-                                    aria-label="Abrir calendário"><i class="bi bi-calendar3"></i></button>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <label for="end_date_filter" class="form-label small">Período (Fim)</label>
-                            <div class="input-group">
-                                <input type="text" class="form-control flatpickr-date" id="end_date_filter"
-                                    name="end_date" placeholder="DD/MM/AAAA" inputmode="numeric"
-                                    pattern="\d{2}/\d{2}/\d{4}" value="{{ current_end_date or '' }}">
-                                <button class="btn btn-outline-secondary" type="button" id="btn-cal-end_date_filter"
-                                    aria-label="Abrir calendário"><i class="bi bi-calendar3"></i></button>
-                            </div>
-                        </div>
-                        <div class="col-md-2 d-flex">
-                            <button type="submit" class="btn btn-primary w-100 me-2"><i
-                                    class="bi bi-funnel-fill me-1"></i> Filtrar</button>
-                            <a href="{{ url_for('analytics.analytics_dashboard', context=context) }}"
-                                class="btn btn-outline-secondary" title="Limpar Filtros"><i class="bi bi-x-lg"></i></a>
-                        </div>
+                <label class="field-wrap">
+                    <span>Colaborador</span>
+                    <select name="cs_email">
+                        <option value="">Todos os Especialistas</option>
+                        {% for cs in all_cs %}
+                        <option value="{{ cs.usuario }}" {% if cs.usuario == current_cs_email %}selected{% endif %}>{{ cs.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+
+                <label class="field-wrap">
+                    <span>Status</span>
+                    <select name="status_filter">
+                        {% for opt in status_options %}
+                        <option value="{{ opt.value }}" {% if opt.value == current_status_filter %}selected{% endif %}>{{ opt.label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+
+                <label class="field-wrap">
+                    <span>Início</span>
+                    <div class="input-icon-wrap">
+                        <input type="text" class="flatpickr-date" name="start_date" id="start_date_filter" placeholder="DD/MM/AAAA" value="{{ current_start_date or '' }}">
+                        <i class="bi bi-calendar3"></i>
                     </div>
+                </label>
+
+                <label class="field-wrap">
+                    <span>Fim</span>
+                    <div class="input-icon-wrap">
+                        <input type="text" class="flatpickr-date" name="end_date" id="end_date_filter" placeholder="DD/MM/AAAA" value="{{ current_end_date or '' }}">
+                        <i class="bi bi-calendar3"></i>
+                    </div>
+                </label>
+
+                <div class="filter-actions">
+                    <button class="btn-apply" type="submit"><i class="bi bi-funnel"></i> Aplicar</button>
+                    <a class="btn-reset" href="{{ url_for('analytics.analytics_dashboard', context=context) }}" aria-label="Limpar filtros"><i class="bi bi-arrow-clockwise"></i></a>
+                </div>
+            </form>
+        </section>
+
+        <section class="kpi-grid">
+            <article class="kpi-card tone-total"><span>Total Clientes</span><strong>{{ stats_total }}</strong></article>
+            <article class="kpi-card tone-novas"><span>Novas</span><strong>{{ stats_novas }}</strong></article>
+            <article class="kpi-card tone-andamento"><span>Em Andamento</span><strong>{{ stats_andamento }}</strong></article>
+            <article class="kpi-card tone-futuras"><span>Futuras</span><strong>{{ stats_futuras }}</strong></article>
+            <article class="kpi-card tone-paradas"><span>Paradas</span><strong>{{ stats_paradas }}</strong></article>
+            <article class="kpi-card tone-canceladas"><span>Canceladas</span><strong>{{ stats_canceladas }}</strong></article>
+            <article class="kpi-card tone-finalizadas"><span>Finalizadas</span><strong>{{ stats_finalizadas }}</strong></article>
+        </section>
+
+        <section class="charts-grid">
+            <article class="ger-card">
+                <div class="card-title-row">
+                    <h3>Carteira por MRR</h3>
+                </div>
+                <p class="muted">Distribuição de clientes por faixa de receita recorrente</p>
+
+                <div class="mrr-list">
+                    <div class="mrr-item"><span>Prata (MRR &lt; 699)</span><b>{{ (mrr_prata * 100 / mrr_total) | round(0) if mrr_total else 0 }}%</b><i style="--fill: {{ (mrr_prata * 100 / mrr_total) | round(2) if mrr_total else 0 }}%"></i></div>
+                    <div class="mrr-item"><span>Ouro (MRR 700-999)</span><b>{{ (mrr_ouro * 100 / mrr_total) | round(0) if mrr_total else 0 }}%</b><i style="--fill: {{ (mrr_ouro * 100 / mrr_total) | round(2) if mrr_total else 0 }}%"></i></div>
+                    <div class="mrr-item"><span>Platina (MRR 1k-1.9k)</span><b>{{ (mrr_platina * 100 / mrr_total) | round(0) if mrr_total else 0 }}%</b><i style="--fill: {{ (mrr_platina * 100 / mrr_total) | round(2) if mrr_total else 0 }}%"></i></div>
+                    <div class="mrr-item"><span>Diamante (MRR &gt; 2k)</span><b>{{ (mrr_diamante * 100 / mrr_total) | round(0) if mrr_total else 0 }}%</b><i style="--fill: {{ (mrr_diamante * 100 / mrr_total) | round(2) if mrr_total else 0 }}%"></i></div>
+                    <div class="mrr-item highlight"><span>Não Definido / Pendente</span><b>{{ mrr_pendente }} Clientes</b><i style="--fill: {{ (mrr_pendente * 100 / mrr_total) | round(2) if mrr_total else 0 }}%"></i></div>
+                </div>
+            </article>
+
+            <article class="ger-card">
+                <div class="card-title-row">
+                    <h3>Status das Implantações</h3>
+                </div>
+                <p class="muted">Visão geral do pipeline de onboarding</p>
+                <div class="status-chart-wrap">
+                    <canvas id="chartStatusClientes" height="230"></canvas>
+                </div>
+            </article>
+        </section>
+
+        <section class="ger-card table-card">
+            <div class="card-title-row">
+                <div>
+                    <h3>Produtividade por Tags</h3>
+                    <p class="muted">Tarefas concluídas agrupadas por tipo de atividade</p>
+                </div>
+                <form method="GET" class="mini-filter">
+                    {% if current_cs_email %}<input type="hidden" name="cs_email" value="{{ current_cs_email }}">{% endif %}
+                    {% if current_status_filter %}<input type="hidden" name="status_filter" value="{{ current_status_filter }}">{% endif %}
+                    {% if current_start_date %}<input type="hidden" name="start_date" value="{{ current_start_date }}">{% endif %}
+                    {% if current_end_date %}<input type="hidden" name="end_date" value="{{ current_end_date }}">{% endif %}
+                    {% if context %}<input type="hidden" name="context" value="{{ context }}">{% endif %}
+                    <select name="task_cs_email">
+                        <option value="">Todos os Usuários</option>
+                        {% for cs in all_cs %}
+                        <option value="{{ cs.usuario }}" {% if cs.usuario == current_task_cs_email %}selected{% endif %}>{{ cs.nome }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit"><i class="bi bi-funnel-fill"></i> Filtrar</button>
                 </form>
             </div>
-        </div>
-        {% from 'macros/cards.html' import card_stats %}
-        {% set k = kpi_cards %}
-        <div class="kpi-grid">
-            {{ card_stats('Clientes (Filtro)', k.total_clientes | default(0), 'primary') }}
-            {{ card_stats('Impl. Novas', k.total_novas | default(0), 'dark') }}
-            {{ card_stats('Impl. Em Andamento', k.total_andamento | default(0), 'warning') }}
-            {{ card_stats('Impl. Futuras', k.total_futuras | default(0), 'info') }}
-            {{ card_stats('Impl. Paradas', k.total_paradas | default(0), 'danger') }}
-            <div class="metric-card p-3 text-center" style="background-color: #f8d7da;">
-                <h6 class="text-secondary">Impl. Canceladas</h6>
-                <h4 class="mb-0 text-dark">{{ k.total_canceladas | default(0) }}</h4>
+
+            <div class="table-wrap">
+                <table class="ger-table tags-table">
+                    <thead>
+                        <tr>
+                            <th>COLABORADOR</th>
+                            <th>INTERNO</th>
+                            <th>EXTERNO</th>
+                            <th>AÇÃO INTERNA</th>
+                            <th>REUNIÃO</th>
+                            <th>NO SHOW</th>
+                            <th>REGISTRO SIMPLES</th>
+                            <th>TOTAL GERAL</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if tags_chart_data and tags_chart_data.labels and tags_chart_data.datasets %}
+                        {% set totals = namespace(interno=0, externo=0, acao=0, reuniao=0, no_show=0, simples=0, geral=0) %}
+                        {% for user_idx in range(tags_chart_data.labels|length) %}
+                        {% set row = namespace(interno=0, externo=0, acao=0, reuniao=0, no_show=0, simples=0, total=0) %}
+                        {% for ds in tags_chart_data.datasets %}
+                        {% set label = (ds.label | default('') | lower) %}
+                        {% set value = (ds.data[user_idx] | default(0) | int) %}
+                        {% if 'interno' in label %}{% set row.interno = value %}{% endif %}
+                        {% if 'externo' in label %}{% set row.externo = value %}{% endif %}
+                        {% if 'ação interna' in label or 'acao interna' in label %}{% set row.acao = value %}{% endif %}
+                        {% if 'reunião' in label or 'reuniao' in label %}{% set row.reuniao = value %}{% endif %}
+                        {% if 'no show' in label %}{% set row.no_show = value %}{% endif %}
+                        {% if 'simples registro' in label %}{% set row.simples = value %}{% endif %}
+                        {% endfor %}
+                        {% set row.total = row.interno + row.externo + row.acao + row.reuniao + row.no_show + row.simples %}
+                        {% set totals.interno = totals.interno + row.interno %}
+                        {% set totals.externo = totals.externo + row.externo %}
+                        {% set totals.acao = totals.acao + row.acao %}
+                        {% set totals.reuniao = totals.reuniao + row.reuniao %}
+                        {% set totals.no_show = totals.no_show + row.no_show %}
+                        {% set totals.simples = totals.simples + row.simples %}
+                        {% set totals.geral = totals.geral + row.total %}
+
+                        <tr>
+                            <td>{{ tags_chart_data.labels[user_idx] }}</td>
+                            <td><span class="tag-badge neutral">{{ row.interno if row.interno else '-' }}</span></td>
+                            <td><span class="tag-badge neutral">{{ row.externo if row.externo else '-' }}</span></td>
+                            <td><span class="tag-badge blue">{{ row.acao if row.acao else '-' }}</span></td>
+                            <td><span class="tag-badge green">{{ row.reuniao if row.reuniao else '-' }}</span></td>
+                            <td><span class="tag-badge amber">{{ row.no_show if row.no_show else '-' }}</span></td>
+                            <td><span class="tag-badge purple">{{ row.simples if row.simples else '-' }}</span></td>
+                            <td class="total-cell">{{ row.total }}</td>
+                        </tr>
+                        {% endfor %}
+                        <tr class="consolidated-row">
+                            <td>TOTAL CONSOLIDADO</td>
+                            <td>{{ totals.interno }}</td>
+                            <td>{{ totals.externo }}</td>
+                            <td>{{ totals.acao }}</td>
+                            <td>{{ totals.reuniao }}</td>
+                            <td>{{ totals.no_show }}</td>
+                            <td>{{ totals.simples }}</td>
+                            <td><span class="pill-total">{{ totals.geral }}</span></td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="8" class="empty-state">Nenhum dado disponível para os filtros selecionados.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
             </div>
-            {{ card_stats('Impl. Finalizadas', k.total_finalizadas | default(0), 'success') }}
-            {{ card_stats('Impl. Sem Previsão', k.total_sem_previsao | default(0), 'danger') }}
-            {{ card_stats('Média Implantação', (k.media_tma | default(0))|string + 'd', 'primary') }}
-        </div>
-        <div class="row g-4 mb-4">
-            <div class="col-lg-6">
-                <div class="card metric-card h-100">
-                    <div class="card-header">
-                        <h5 class="mb-0">Nível Clientes em Implantação (MRR) <i
-                                class="bi bi-question-circle-fill text-muted" style="font-size: 0.9rem; cursor: help;"
-                                data-bs-toggle="tooltip" data-bs-placement="top"
-                                title="Distribuição dos clientes em implantação por faixa de MRR (Receita Recorrente Mensal). Ajuda a identificar o perfil de receita da carteira."></i>
-                        </h5>
-                    </div>
-                    <div class="card-body card-body-chart">
-                        <div class="chart-container">
-                            <div class="chart-loading-overlay" id="loadingNivel">
-                                <div class="spinner-border text-primary chart-spinner" role="status">
-                                    <span class="visually-hidden">Carregando...</span>
-                                </div>
-                            </div>
-                            <canvas id="chartNivelReceita"></canvas>
-                        </div>
-                    </div>
+        </section>
+
+        <section class="ger-card table-card">
+            <div class="card-title-row">
+                <div>
+                    <h3>Lista de Implantações</h3>
+                    <p class="muted">Total de {{ implantacoes_lista_detalhada | length }} registros encontrados</p>
+                </div>
+                <div class="table-actions">
+                    <button type="button" class="icon-button"><i class="bi bi-download"></i></button>
+                    <button type="button" class="icon-button"><i class="bi bi-printer"></i></button>
                 </div>
             </div>
-            <div class="col-lg-6">
-                <div class="card metric-card h-100">
-                    <div class="card-header">
-                        <h5 class="mb-0">Status Clientes Implantação <i class="bi bi-question-circle-fill text-muted"
-                                style="font-size: 0.9rem; cursor: help;" data-bs-toggle="tooltip"
-                                data-bs-placement="top"
-                                title="Quantidade de clientes por status: Novas, Em Andamento, Finalizadas, Paradas, Futuras e Canceladas. Visão geral do funil de implantação."></i>
-                        </h5>
-                    </div>
-                    <div class="card-body card-body-chart">
-                        <div class="chart-container">
-                            <div class="chart-loading-overlay" id="loadingStatus">
-                                <div class="spinner-border text-primary chart-spinner" role="status">
-                                    <span class="visually-hidden">Carregando...</span>
-                                </div>
-                            </div>
-                            <canvas id="chartStatusClientes"></canvas>
-                        </div>
-                    </div>
+
+            <div class="table-wrap">
+                <table class="ger-table impl-table">
+                    <thead>
+                        <tr>
+                            <th>EMPRESA</th>
+                            <th>IMPLANTADOR</th>
+                            <th>INÍCIO IMPL.</th>
+                            <th>INÍCIO PROD.</th>
+                            <th>STATUS</th>
+                            <th>AÇÕES</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if implantacoes_lista_detalhada %}
+                        {% for impl in implantacoes_lista_detalhada[:5] %}
+                        {% set status = impl.status | default('nova') %}
+                        <tr>
+                            <td>{{ impl.nome_empresa | default('-') }}</td>
+                            <td>{{ impl.cs_nome | default(impl.usuario_cs) | default('-') }}</td>
+                            <td>{{ impl.data_criacao.strftime('%d/%m/%Y') if impl.data_criacao and impl.data_criacao.strftime is defined else (impl.data_criacao|string)[:10] | replace('-', '/') }}</td>
+                            <td>{{ impl.data_inicio_efetivo.strftime('%d/%m/%Y') if impl.data_inicio_efetivo and impl.data_inicio_efetivo.strftime is defined else ((impl.data_inicio_efetivo|string)[:10] | replace('-', '/')) if impl.data_inicio_efetivo else '-' }}</td>
+                            <td>
+                                <span class="status-pill status-{{ status | replace('_', '-') }}">
+                                    {% if status == 'andamento' %}Em Andamento{% elif status == 'finalizada' %}Concluído{% elif status == 'futura' %}Futura{% elif status == 'parada' %}Parada{% elif status == 'cancelada' %}Cancelada{% else %}Nova{% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{{ url_for((context if context and context != 'None' else 'onboarding') + '.ver_implantacao', impl_id=impl.id) }}" class="icon-link" aria-label="Visualizar"><i class="bi bi-eye-fill"></i></a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr><td colspan="6" class="empty-state">Nenhuma implantação encontrada.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="ger-card stopped-card">
+            <div class="card-title-row">
+                <div>
+                    <h3><span class="danger-square"><i class="bi bi-exclamation-triangle-fill"></i></span> Implantações Paradas</h3>
+                    <p class="muted">Atenção requerida: {{ implantacoes_paradas_lista | length }} casos com atraso significativo</p>
                 </div>
             </div>
-        </div>
 
-        <!-- New Chart: Tags Completed by User -->
-        <div class="card metric-card mt-4">
-            <div class="card-header">
-                <h5 class="mb-0">Relatório de tags</h5>
-            </div>
-            <div class="card-body">
-                <p class="small text-muted mb-3">
-                    Visualização de tarefas concluídas agrupadas por tag (Ação interna, Reunião, etc.) para cada
-                    usuário.
-                    Use os filtros abaixo para refinar o período de análise.
-                </p>
-
-                <!-- Date Range Filter for Tags Chart -->
-                <form method="GET" id="tags-filter-form" class="mb-4">
-                    <!-- Preserve main filters -->
-                    {% if current_cs_email %}
-                    <input type="hidden" name="cs_email" value="{{ current_cs_email }}">
-                    {% endif %}
-                    {% if current_status_filter %}
-                    <input type="hidden" name="status_filter" value="{{ current_status_filter }}">
-                    {% endif %}
-                    {% if current_start_date %}
-                    <input type="hidden" name="start_date" value="{{ current_start_date }}">
-                    {% endif %}
-                    {% if current_end_date %}
-                    <input type="hidden" name="end_date" value="{{ current_end_date }}">
-                    {% endif %}
-                    {% if context %}
-                    <input type="hidden" name="context" value="{{ context }}">
-                    {% endif %}
-
-                    <div class="row g-3 align-items-end">
-                        <div class="col-md-3">
-                            <label class="form-label small">Filtrar por Usuário (Tags)</label>
-                            <select class="form-select" name="task_cs_email">
-                                <option value="">Todos os Usuários</option>
-                                {% for cs in all_cs %}
-                                <option value="{{ cs.usuario }}" {% if cs.usuario==current_task_cs_email %}selected{%
-                                    endif %}>
-                                    {{ cs.nome }} ({{ cs.perfil_acesso or 'N/A' }})
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small">Data Início (Tags)</label>
-                            <div class="input-group">
-                                <input type="text" class="form-control flatpickr-date" name="task_start_date"
-                                    placeholder="DD/MM/AAAA" value="{{ current_task_start_date or '' }}">
-                                <button class="btn btn-outline-secondary" type="button" id="btn-cal-task-start">
-                                    <i class="bi bi-calendar3"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small">Data Fim (Tags)</label>
-                            <div class="input-group">
-                                <input type="text" class="form-control flatpickr-date" name="task_end_date"
-                                    placeholder="DD/MM/AAAA" value="{{ current_task_end_date or '' }}">
-                                <button class="btn btn-outline-secondary" type="button" id="btn-cal-task-end">
-                                    <i class="bi bi-calendar3"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="col-md-3 d-flex gap-2">
-                            <button type="submit" class="btn btn-primary flex-grow-1">
-                                <i class="bi bi-funnel-fill me-1"></i> Filtrar Tags
-                            </button>
-                            <a href="{{ url_for('analytics.analytics_dashboard', cs_email=current_cs_email, status_filter=current_status_filter, start_date=current_start_date, end_date=current_end_date, context=context) }}"
-                                class="btn btn-outline-secondary" title="Limpar Filtros de Tags">
-                                <i class="bi bi-x-lg"></i>
-                            </a>
-                        </div>
-                    </div>
-                </form>
-
-                <!-- Table Container -->
-                {% if tags_chart_data and tags_chart_data.labels %}
-                <div class="table-responsive">
-                    <table class="table table-sm table-hover table-bordered align-middle">
-                        <thead class="table-light">
+            <div class="stopped-grid">
+                <div class="table-wrap">
+                    <table class="ger-table">
+                        <thead>
                             <tr>
-                                <th class="text-center" style="min-width: 150px;">Usuário</th>
-                                {% for dataset in tags_chart_data.datasets %}
-                                <th class="text-center" style="min-width: 120px;">{{ dataset.label }}</th>
-                                {% endfor %}
-                                <th class="text-center bg-light" style="min-width: 100px;"><strong>Total</strong></th>
+                                <th>EMPRESA</th>
+                                <th>MOTIVO DO BLOQUEIO</th>
+                                <th>TEMPO PARADO</th>
+                                <th>DETALHES</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for user_idx in range(tags_chart_data.labels|length) %}
+                            {% if implantacoes_paradas_lista %}
+                            {% for item in implantacoes_paradas_lista[:3] %}
                             <tr>
-                                <td class="fw-semibold">{{ tags_chart_data.labels[user_idx] }}</td>
-                                {% set row_total = namespace(value=0) %}
-                                {% for dataset in tags_chart_data.datasets %}
-                                {% set count = dataset.data[user_idx] %}
-                                {% set row_total.value = row_total.value + count %}
-                                <td class="text-center">
-                                    {% if count > 0 %}
-                                    <span class="badge rounded-pill"
-                                        style="background-color: {{ dataset.backgroundColor }}; color: white; font-size: 0.9rem; padding: 0.4rem 0.8rem;">
-                                        {{ count }}
-                                    </span>
-                                    {% else %}
-                                    <span class="text-muted">-</span>
-                                    {% endif %}
-                                </td>
-                                {% endfor %}
-                                <td class="text-center bg-light">
-                                    <strong class="text-primary">{{ row_total.value }}</strong>
-                                </td>
+                                <td>{{ item.nome_empresa | default('-') }}</td>
+                                <td class="stop-motive">{{ item.motivo_parada | default('Motivo não informado') }}</td>
+                                <td><span class="danger-pill">{{ item.dias_parada | default(0) }} dias</span></td>
+                                <td><a href="{{ url_for((context if context and context != 'None' else 'onboarding') + '.ver_implantacao', impl_id=item.id) }}" class="text-link">Ver</a></td>
                             </tr>
                             {% endfor %}
-                            <!-- Totals Row -->
-                            <tr class="table-secondary fw-bold">
-                                <td class="text-start">Total por Tag:</td>
-                                {% for dataset in tags_chart_data.datasets %}
-                                {% set col_total = dataset.data|sum %}
-                                <td class="text-center">{{ col_total }}</td>
-                                {% endfor %}
-                                <td class="text-center bg-primary text-white">
-                                    <strong>{{ tags_chart_data.total_tasks or 0 }}</strong>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                {% else %}
-                <div class="alert alert-info text-center">
-                    <i class="bi bi-info-circle me-2"></i>
-                    Nenhum dado disponível para o período selecionado.
-                </div>
-                {% endif %}
-            </div>
-        </div>
-
-        <div class="card metric-card mt-4">
-            <div class="card-header">
-                <h5 class="mb-0">Lista Detalhada de Implantações</h5>
-            </div>
-            <div class="card-body">
-                {% if not implantacoes_lista_detalhada %}
-                <div class="alert alert-light text-center small py-2 mb-0">Nenhum cliente encontrado para os filtros
-                    selecionados.</div>
-                {% else %}
-                <div class="table-responsive limited-height-table">
-                    <table class="table table-sm table-hover align-middle caption-top">
-                        <caption class="small text-muted">
-                            Listando {{ implantacoes_lista_detalhada | length }} implantações
-                            {% if current_sort_impl_date in ['asc','desc'] %}
-                            (ordenadas por data de implantação {{ 'mais antiga' if current_sort_impl_date == 'asc' else
-                            'mais recente' }})
                             {% else %}
-                            (ordenadas por nome da empresa)
-                            {% endif %}.
-                        </caption>
-                        <thead class="table-light" style="position: sticky; top: 0;">
-                            <tr>
-                                <th scope="col">Empresa</th>
-                                <th scope="col">Implantador</th>
-                                <th scope="col">
-                                    Início da Implantação
-                                    <a href="{{ url_for('analytics.analytics_dashboard', cs_email=current_cs_email, status_filter=current_status_filter, start_date=current_start_date, end_date=current_end_date, sort_impl_date='desc', context=context) }}"
-                                        class="ms-1" title="Ordenar por mais recente"><i
-                                            class="bi bi-sort-down-alt"></i></a>
-                                    <a href="{{ url_for('analytics.analytics_dashboard', cs_email=current_cs_email, status_filter=current_status_filter, start_date=current_start_date, end_date=current_end_date, sort_impl_date='asc', context=context) }}"
-                                        class="ms-1" title="Ordenar por mais antiga"><i class="bi bi-sort-up"></i></a>
-                                </th>
-                                <th scope="col">Início em Produção</th>
-                                <th scope="col">Status</th>
-                                <th scope="col">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for impl in implantacoes_lista_detalhada %}
-                            <tr>
-                                <td class="text-truncate" style="max-width: 200px;">{{ impl.nome_empresa |
-                                    default('N/A') }}</td>
-                                <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome | default('N/A') }}
-                                </td>
-                                <td>{{ impl.data_criacao | format_date_br(include_time=False) }}</td>
-                                <td>{{ impl.data_inicio_producao | format_date_br(include_time=False) }}</td>
-                                <td>
-                                    {% if impl.status == 'finalizada' %} <span class="badge bg-success">Concluído</span>
-                                    {% elif impl.status == 'parada' %} <span class="badge bg-danger">Parada</span>
-                                    {% elif impl.status == 'futura' %} <span
-                                        class="badge bg-info text-dark">Futura</span>
-                                    {% elif impl.status == 'nova' %} <span class="badge bg-dark">Nova</span>
-                                    {% elif impl.status == 'cancelada' %} <span
-                                        class="badge bg-secondary text-dark">Cancelada</span>
-                                    {% else %} <span class="badge bg-warning text-dark">Em Andamento</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <a href="{{ url_for((context if context and context != 'None' else 'onboarding') + '.ver_implantacao', impl_id=impl.id) }}"
-                                        class="btn btn-sm btn-outline-primary py-0 px-2">Ver</a>
-                                </td>
-                            </tr>
-                            {% endfor %}
+                            <tr><td colspan="4" class="empty-state">Sem implantações paradas.</td></tr>
+                            {% endif %}
                         </tbody>
                     </table>
                 </div>
-                {% endif %}
+                <div class="stopped-chart-box">
+                    <h4>Distribuição de Motivos</h4>
+                    <div class="stopped-chart-wrap">
+                        <canvas id="chartGargalos"></canvas>
+                    </div>
+                </div>
             </div>
-        </div>
+        </section>
 
-        <div class="card metric-card border border-danger mt-4">
-            <div class="card-header">
-                <h5 class="mb-0 text-danger">Implantações Paradas <i class="bi bi-question-circle-fill text-muted"
-                        style="font-size: 0.9rem; cursor: help;" data-bs-toggle="tooltip" data-bs-placement="top"
-                        title="Lista de implantações com status 'Parada' e o gráfico de rosca mostra a distribuição dos principais motivos de parada (gargalos)."></i>
-                </h5>
-            </div>
-            <div class="card-body">
-                {% if not implantacoes_paradas_lista %}
-                <div class="alert alert-light text-center small py-2 mb-0">Nenhuma implantação parada encontrada para os
-                    filtros selecionados.</div>
-                {% else %}
-                <div class="row">
-                    <div class="col-lg-8">
-                        <div class="table-responsive limited-height-table">
-                            <table class="table table-sm table-hover align-middle caption-top">
-                                <caption class="small text-muted">Listando {{ implantacoes_paradas_lista | length }}
-                                    implantações paradas.</caption>
-                                <thead style="position: sticky; top: 0;">
-                                    <tr>
-                                        <th scope="col">Empresa</th>
-                                        <th scope="col">Motivo da Parada</th>
-                                        <th scope="col">Dias Parada</th>
-                                        <th scope="col">Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for impl in implantacoes_paradas_lista %}
-                                    <tr>
-                                        <td class="text-truncate" style="max-width: 250px;">{{ impl.nome_empresa |
-                                            default('N/A') }}</td>
-                                        <td class="text-truncate" style="max-width: 300px;">{{ impl.motivo_parada |
-                                            default('N/A') }}</td>
-                                        <td><span class="badge bg-danger">{{ impl.dias_parada | int }} dias</span></td>
-                                        <td>
-                                            <a href="{{ url_for((context if context and context != 'None' else 'onboarding') + '.ver_implantacao', impl_id=impl.id) }}"
-                                                class="btn btn-sm btn-outline-primary py-0 px-2">Ver</a>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div class="col-lg-4">
-                        <div class="card h-100 border-0 bg-light">
-                            <div class="card-body p-3 d-flex flex-column align-items-center justify-content-center">
-                                <h6 class="card-title text-center text-muted mb-3">Principais Motivos (Gargalos)</h6>
-                                <div class="chart-container" style="height: 250px;">
-                                    <div class="chart-loading-overlay" id="loadingGargalos">
-                                        <div class="spinner-border text-danger chart-spinner" role="status">
-                                            <span class="visually-hidden">Carregando...</span>
-                                        </div>
-                                    </div>
-                                    <canvas id="chartGargalos"></canvas>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+        <section class="ger-card table-card">
+            <div class="card-title-row">
+                <div>
+                    <h3>Implantações Canceladas</h3>
+                    <p class="muted">Listando {{ implantacoes_canceladas_lista | length }} implantações canceladas.</p>
                 </div>
-                {% endif %}
             </div>
-        </div>
+            <div class="table-wrap">
+                <table class="ger-table">
+                    <thead>
+                        <tr>
+                            <th>EMPRESA</th>
+                            <th>IMPLANTADOR</th>
+                            <th>DATA DO CANCELAMENTO</th>
+                            <th>AÇÕES</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if implantacoes_canceladas_lista %}
+                        {% for item in implantacoes_canceladas_lista[:5] %}
+                        <tr>
+                            <td>{{ item.nome_empresa | default('-') }}</td>
+                            <td>{{ item.cs_nome | default('-') }}</td>
+                            <td>{{ item.data_cancelamento.strftime('%d/%m/%Y') if item.data_cancelamento and item.data_cancelamento.strftime is defined else ((item.data_cancelamento|string)[:10] | replace('-', '/')) if item.data_cancelamento else '-' }}</td>
+                            <td>
+                                <a href="{{ url_for((context if context and context != 'None' else 'onboarding') + '.ver_implantacao', impl_id=item.id) }}" class="mini-action-link">Ver</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr><td colspan="4" class="empty-state">Nenhuma implantação cancelada encontrada.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
 
-        <div class="card metric-card mt-4">
-            <div class="card-header">
-                <h5 class="mb-0">Implantações Canceladas</h5>
-            </div>
-            <div class="card-body">
-                {% if not implantacoes_canceladas_lista %}
-                <div class="alert alert-dark text-center small py-2 mb-0">Nenhuma implantação cancelada encontrada para
-                    os filtros selecionados.</div>
-                {% else %}
-                <div class="table-responsive limited-height-table">
-                    <table class="table table-sm table-hover align-middle caption-top">
-                        <caption class="small text-muted">Listando {{ implantacoes_canceladas_lista | length }}
-                            implantações canceladas.</caption>
-                        <thead class="table-light">
-                            <tr>
-                                <th scope="col">Empresa</th>
-                                <th scope="col">Implantador</th>
-                                <th scope="col">Data do Cancelamento</th>
-                                <th scope="col">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for impl in implantacoes_canceladas_lista %}
-                            <tr>
-                                <td class="text-truncate" style="max-width: 250px;">{{ impl.nome_empresa |
-                                    default('N/A') }}</td>
-                                <td class="text-truncate" style="max-width: 200px;">{{ impl.cs_nome | default('N/A') }}
-                                </td>
-                                <td>{{ impl.data_cancelamento | format_date_br(include_time=False) }}</td>
-                                <td>
-                                    <a href="{{ url_for((context if context and context != 'None' else 'onboarding') + '.ver_implantacao', impl_id=impl.id) }}"
-                                        class="btn btn-sm btn-outline-primary py-0 px-2">Ver</a>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+        <section class="ger-card table-card">
+            <div class="card-title-row">
+                <div>
+                    <h3>Lista Detalhada de Módulos em Implantação</h3>
                 </div>
-                {% endif %}
             </div>
-        </div>
+            <div class="table-wrap">
+                <table class="ger-table">
+                    <thead>
+                        <tr>
+                            <th>EMPRESA</th>
+                            <th>RESPONSÁVEL</th>
+                            <th>STATUS</th>
+                            <th>DIAS</th>
+                            <th>AÇÕES</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if modules_implantacao_lista %}
+                        {% for mod in modules_implantacao_lista[:5] %}
+                        {% set mod_status = mod.status | default('nova') %}
+                        <tr>
+                            <td>{{ mod.nome_empresa | default('-') }}</td>
+                            <td>{{ mod.cs_nome | default('-') }}</td>
+                            <td>
+                                <span class="status-pill status-{{ mod_status | replace('_', '-') }}">
+                                    {% if mod_status == 'andamento' %}Em Andamento{% elif mod_status == 'finalizada' %}Concluído{% elif mod_status == 'futura' %}Futura{% elif mod_status == 'parada' %}Parada{% elif mod_status == 'cancelada' %}Cancelada{% elif mod_status == 'sem_previsao' %}sem_previsao{% else %}Nova{% endif %}
+                                </span>
+                            </td>
+                            <td><span class="days-pill">{{ mod.dias | default(0) }} dias</span></td>
+                            <td>
+                                <a href="{{ url_for((context if context and context != 'None' else 'onboarding') + '.ver_implantacao', impl_id=mod.id) }}" class="mini-action-link">Ver</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr><td colspan="5" class="empty-state">Nenhum módulo em implantação encontrado.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            {% if modules_implantacao_lista %}
+            <div class="table-footer-note">Mostrando 1 a {{ 5 if modules_implantacao_lista|length > 5 else modules_implantacao_lista|length }} de {{ modules_implantacao_lista|length }} resultados</div>
+            {% endif %}
+        </section>
 
-        <div class="card metric-card mt-4">
-            <div class="card-header">
-                <h5 class="mb-0">Lista Detalhada de Módulos em Implantação</h5>
-            </div>
-            <div class="card-body">
-                {% set modules_lista = modules_implantacao_lista | default([]) %}
-                {% if not modules_lista %}
-                <div class="alert alert-light text-center small py-2 mb-0">Nenhum módulo listado para os filtros
-                    selecionados.</div>
-                {% else %}
-                <div class="table-responsive limited-height-table">
-                    <table class="table table-sm table-hover align-middle caption-top">
-                        <thead class="table-light">
-                            <tr>
-                                <th scope="col">Empresa</th>
-                                <th scope="col">Responsável</th>
-                                <th scope="col">Status</th>
-                                <th scope="col">Dias</th>
-                                <th scope="col">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for item in modules_lista %}
-                            <tr>
-                                <td class="text-truncate" style="max-width: 250px;">{{ item.nome_empresa |
-                                    default('N/A') }}</td>
-                                <td class="text-truncate" style="max-width: 200px;">{{ item.cs_nome | default('N/A') }}
-                                </td>
-                                <td>
-                                    {% if item.status == 'finalizada' %}
-                                    <span class="badge bg-success">Concluído</span>
-                                    {% elif item.status == 'andamento' %}
-                                    <span class="badge bg-warning text-dark">Em Andamento</span>
-                                    {% elif item.status == 'parada' %}
-                                    <span class="badge bg-danger">Parada</span>
-                                    {% elif item.status == 'futura' %}
-                                    <span class="badge bg-info text-dark">Futura</span>
-                                    {% elif item.status == 'cancelada' %}
-                                    <span class="badge bg-secondary">Cancelada</span>
-                                    {% elif item.status == 'nova' %}
-                                    <span class="badge bg-dark">Nova</span>
-                                    {% else %}
-                                    <span class="badge bg-secondary">{{ item.status | default('N/A') }}</span>
-                                    {% endif %}
-                                </td>
-                                <td class="text-nowrap"><span class="badge bg-secondary text-dark">{{ item.dias |
-                                        default(0) }} dias</span></td>
-                                <td>
-                                    <a href="{{ url_for((context if context and context != 'None' else 'onboarding') + '.ver_implantacao', impl_id=item.impl_id | default(item.id)) }}"
-                                        class="btn btn-sm btn-outline-primary py-0 px-2">Ver</a>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+        <section class="ger-card chart-large-card">
+            <div class="card-title-row">
+                <div>
+                    <h3>Ranking Implantação por Período</h3>
+                    <p class="muted">Total de implantações finalizadas no ano corrente, agrupadas por mês.</p>
                 </div>
-                {% endif %}
             </div>
-        </div>
+            <div class="chart-large-wrap">
+                <canvas id="chartRankingPeriodo"></canvas>
+            </div>
+        </section>
 
-        <div class="card metric-card mt-4">
-            <div class="card-header">
-                <h5 class="mb-0">Ranking Implantação por Colaborador <i class="bi bi-question-circle-fill text-muted"
-                        style="font-size: 0.9rem; cursor: help;" data-bs-toggle="tooltip" data-bs-placement="top"
-                        title="Total de implantações atribuídas a cada colaborador CS, considerando os filtros aplicados. Útil para balanceamento de carga."></i>
-                </h5>
-            </div>
-            <div class="card-body card-body-chart">
-                <p class="small text-muted mb-3">Total de implantações (baseado nos filtros principais) por colaborador.
-                </p>
-                <div class="chart-container">
-                    <div class="chart-loading-overlay" id="loadingRankingColab">
-                        <div class="spinner-border text-primary chart-spinner" role="status">
-                            <span class="visually-hidden">Carregando...</span>
-                        </div>
+        <section class="performance-block">
+            <h3 class="perf-title">Análise de Performance &amp; Previsão</h3>
+            <div class="performance-grid">
+                <article class="ger-card">
+                    <div class="card-title-row">
+                        <h3>Velocidade de Entrega</h3>
                     </div>
-                    <canvas id="chartRankingColaborador"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="card metric-card mt-4">
-            <div class="card-header">
-                <h5 class="mb-0">Ranking Implantação por Período <i class="bi bi-question-circle-fill text-muted"
-                        style="font-size: 0.9rem; cursor: help;" data-bs-toggle="tooltip" data-bs-placement="top"
-                        title="Total de implantações finalizadas no ano corrente, agrupadas por mês. Mostra a evolução mensal de entregas."></i>
-                </h5>
-            </div>
-            <div class="card-body card-body-chart">
-                <p class="small text-muted mb-3">Total de implantações <span
-                        class="fw-bold text-success">finalizadas</span> no ano corrente, agrupadas por mês (respeita o
-                    filtro principal de Colaborador).</p>
-                <div class="chart-container">
-                    <div class="chart-loading-overlay" id="loadingRankingPeriodo">
-                        <div class="spinner-border text-primary chart-spinner" role="status">
-                            <span class="visually-hidden">Carregando...</span>
-                        </div>
+                    <p class="muted">Distribuição de dias para finalizar implantações (Histograma).</p>
+                    <div class="perf-chart-wrap">
+                        <canvas id="chartVelocidade"></canvas>
                     </div>
-                    <canvas id="chartRankingPeriodo"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <!-- Bloco 9: Inteligência & Previsão -->
-        <div class="row g-4 mt-1">
-            <div class="col-12">
-                <h5 class="text-secondary border-bottom pb-2">Análise de Performance & Previsão</h5>
-            </div>
-            <div class="col-lg-6">
-                <div class="card metric-card h-100">
-                    <div class="card-header bg-white">
-                        <h6 class="mb-0 text-primary"><i class="bi bi-speedometer2 me-2"></i>Velocidade de Entrega <i
-                                class="bi bi-question-circle-fill text-muted" style="font-size: 0.8rem; cursor: help;"
-                                data-bs-toggle="tooltip" data-bs-placement="top"
-                                title="Histograma mostrando quantas implantações foram finalizadas em cada faixa de tempo: 0-30 dias (rápidas), 31-60, 61-90 e 90+ dias (lentas)."></i>
-                        </h6>
+                </article>
+                <article class="ger-card">
+                    <div class="card-title-row">
+                        <h3>Previsibilidade de Entregas</h3>
                     </div>
-                    <div class="card-body card-body-chart">
-                        <p class="small text-muted mb-2">Quantos dias leva para finalizar uma implantação (Histograma).
-                        </p>
-                        <div class="chart-container">
-                            <div class="chart-loading-overlay" id="loadingVelocidade">
-                                <div class="spinner-border text-primary chart-spinner" role="status">
-                                    <span class="visually-hidden">Carregando...</span>
-                                </div>
-                            </div>
-                            <canvas id="chartVelocidade"></canvas>
-                        </div>
+                    <p class="muted">Previsão de término para implantações em andamento/futuras.</p>
+                    <div class="perf-chart-wrap">
+                        <canvas id="chartPrevisao"></canvas>
                     </div>
-                </div>
+                </article>
             </div>
-            <div class="col-lg-6">
-                <div class="card metric-card h-100">
-                    <div class="card-header bg-white">
-                        <h6 class="mb-0 text-success"><i class="bi bi-cash-coin me-2"></i>Previsibilidade de Entregas <i
-                                class="bi bi-question-circle-fill text-muted" style="font-size: 0.8rem; cursor: help;"
-                                data-bs-toggle="tooltip" data-bs-placement="top"
-                                title="Previsão de término de implantações em andamento e futuras, agrupadas por mês. Baseado na data de previsão de término cadastrada."></i>
-                        </h6>
-                    </div>
-                    <div class="card-body card-body-chart">
-                        <p class="small text-muted mb-2">Previsão de término para implantações em andamento/futuras (Mês
-                            a Mês).</p>
-                        <div class="chart-container">
-                            <div class="chart-loading-overlay" id="loadingPrevisao">
-                                <div class="spinner-border text-success chart-spinner" role="status">
-                                    <span class="visually-hidden">Carregando...</span>
-                                </div>
-                            </div>
-                            <canvas id="chartPrevisao"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        </section>
     </main>
 </div>
 {% endblock %}
 
 {% block scripts_extra %}
 <script>
-    // Passa os dados do Flask (convertidos para JSON) para o JavaScript
-    const chartData = {{ (chart_data or { }) | tojson | safe }};
+(function () {
+    const statusData = {{ (chart_data.status_clientes if chart_data else {}) | tojson | safe }};
+    const gargalosData = {{ (chart_data.gargalos_parada if chart_data else {}) | tojson | safe }};
+    const rankingData = {{ (chart_data.ranking_periodo if chart_data else {}) | tojson | safe }};
+    const velocidadeData = {{ (chart_data.velocidade_entrega if chart_data else {}) | tojson | safe }};
+    const previsaoData = {{ (chart_data.previsao_receita if chart_data else {}) | tojson | safe }};
+    const paradasList = {{ (implantacoes_paradas_lista or []) | tojson | safe }};
 
-    document.addEventListener('DOMContentLoaded', function () {
-
-        // TEMPORARIAMENTE DESABILITADO - Plugin ChartDataLabels causa lag
-        // Chart.register(ChartDataLabels);
-
-        // Opções de tooltip (popup)
-        const tooltipOptions = {
-            backgroundColor: '#212529',
-            titleFont: { size: 14, weight: 'bold' },
-            bodyFont: { size: 12 },
-            padding: 10,
-            cornerRadius: 6,
-            displayColors: false,
-        };
-
-        // Opções de rótulos (datalabels) para barras
-        const barDatalabelOptions = {
-            anchor: 'end',
-            align: 'top',
-            color: '#333',
-            font: {
-                weight: 'bold'
-            },
-            formatter: (value) => {
-                return value > 0 ? value : null;
-            }
-        };
-
-        // Ajusta a cor dos rótulos no Dark Mode
-        if (document.body.classList.contains('dark-mode')) {
-            barDatalabelOptions.color = '#e0e0e0';
-        }
-
-        const ctxNivel = document.getElementById('chartNivelReceita');
-        const ctxStatus = document.getElementById('chartStatusClientes');
-        const ctxRankingColab = document.getElementById('chartRankingColaborador');
-        const ctxRankingPeriodo = document.getElementById('chartRankingPeriodo');
-        const ctxGargalos = document.getElementById('chartGargalos');
-        const ctxVelocidade = document.getElementById('chartVelocidade');
-        const ctxPrevisao = document.getElementById('chartPrevisao');
-
-        // Define a cor azul padrão
-        const corAzul = 'rgba(54, 162, 235, 0.7)';
-        const corBordaAzul = 'rgba(54, 162, 235, 1)';
-
-        const barColors = [
-            'rgba(54, 162, 235, 0.7)', // Blue
-            'rgba(255, 99, 132, 0.7)', // Red
-            'rgba(255, 206, 86, 0.7)', // Yellow
-            'rgba(75, 192, 192, 0.7)', // Green
-            'rgba(153, 102, 255, 0.7)', // Purple
-            'rgba(255, 159, 64, 0.7)', // Orange
-            'rgba(100, 100, 100, 0.7)'  // Gray
-        ];
-
-        const statusColors = {
-            'Novas': 'rgba(108, 117, 125, 0.7)',
-            'Em Andamento': 'rgba(255, 206, 86, 0.7)', // Yellow
-            'Finalizadas': 'rgba(75, 192, 192, 0.7)', // Green
-            'Futuras': 'rgba(54, 162, 235, 0.7)', // Blue
-            'Paradas': 'rgba(255, 99, 132, 0.7)', // Red
-            'Canceladas': 'rgba(0, 0, 0, 0.6)' // Dark Gray/Blackish for Canceled
-        };
-
-        // OTIMIZAÇÃO MÁXIMA: Desabilitar TODAS as animações para evitar travamento
-        Chart.defaults.animation = false;
-        Chart.defaults.animations = false;
-        Chart.defaults.transitions = false;
-
-        // SOLUÇÃO DEFINITIVA: Lazy Loading com Intersection Observer
-        // Gráficos só são renderizados quando ficam visíveis na tela
-
-        const chartConfigs = {
-            ctxNivel: {
-                element: ctxNivel,
-                data: chartData.nivel_receita,
-                loadingId: 'loadingNivel',
-                config: {
-                    type: 'bar',
-                    data: {
-                        labels: chartData.nivel_receita?.labels || [],
-                        datasets: [{
-                            label: 'Qtd. Clientes',
-                            data: chartData.nivel_receita?.data || [],
-                            backgroundColor: corAzul,
-                            borderColor: corBordaAzul,
-                            borderWidth: 1,
-                            borderRadius: 6
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        indexAxis: 'y',
-                        scales: { x: { beginAtZero: true }, y: { beginAtZero: true } },
-                        plugins: { legend: { display: false }, tooltip: tooltipOptions }
-                    }
-                }
-            },
-            ctxStatus: {
-                element: ctxStatus,
-                data: chartData.status_clientes,
-                loadingId: 'loadingStatus',
-                config: function () {
-                    const statusData = chartData.status_clientes;
-                    const backgroundColorsStatus = statusData.labels.map(label => statusColors[label] || 'rgba(100, 100, 100, 0.7)');
-                    const total = statusData.data.reduce((acc, value) => acc + value, 0);
-                    return {
-                        type: 'doughnut',
-                        data: {
-                            labels: statusData.labels,
-                            datasets: [{
-                                label: 'Qtd. Clientes',
-                                data: statusData.data,
-                                backgroundColor: backgroundColorsStatus,
-                                borderColor: backgroundColorsStatus.map(c => c.replace('0.7', '1')),
-                                borderWidth: 1
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: { legend: { display: true, position: 'bottom' }, tooltip: tooltipOptions }
-                        }
-                    };
-                }
-            },
-            ctxRankingColab: {
-                element: ctxRankingColab,
-                data: chartData.ranking_colaborador,
-                loadingId: 'loadingRankingColab',
-                config: {
-                    type: 'bar',
-                    data: {
-                        labels: chartData.ranking_colaborador?.labels || [],
-                        datasets: [{
-                            label: 'Total Implantações (Filtro)',
-                            data: chartData.ranking_colaborador?.data || [],
-                            backgroundColor: corAzul,
-                            borderColor: corBordaAzul,
-                            borderWidth: 1,
-                            borderRadius: 6
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: { y: { beginAtZero: true } },
-                        plugins: { legend: { display: false }, tooltip: tooltipOptions }
-                    }
-                }
-            },
-            ctxRankingPeriodo: {
-                element: ctxRankingPeriodo,
-                data: chartData.ranking_periodo,
-                loadingId: 'loadingRankingPeriodo',
-                config: {
-                    type: 'bar',
-                    data: {
-                        labels: chartData.ranking_periodo?.labels || [],
-                        datasets: [{
-                            label: 'Impl. Finalizadas (Ano Corrente)',
-                            data: chartData.ranking_periodo?.data || [],
-                            backgroundColor: 'rgba(153, 102, 255, 0.7)',
-                            borderColor: 'rgba(153, 102, 255, 1)',
-                            borderWidth: 1,
-                            borderRadius: 6
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: { y: { beginAtZero: true } },
-                        plugins: { legend: { display: false }, tooltip: tooltipOptions }
-                    }
-                }
-            },
-            ctxGargalos: {
-                element: ctxGargalos,
-                data: chartData.gargalos_parada,
-                loadingId: 'loadingGargalos',
-                config: {
-                    type: 'doughnut',
-                    data: {
-                        labels: chartData.gargalos_parada?.labels || [],
-                        datasets: [{
-                            data: chartData.gargalos_parada?.data || [],
-                            backgroundColor: [
-                                'rgba(255, 99, 132, 0.8)',
-                                'rgba(255, 159, 64, 0.8)',
-                                'rgba(255, 205, 86, 0.8)',
-                                'rgba(54, 162, 235, 0.8)',
-                                'rgba(153, 102, 255, 0.8)',
-                                'rgba(201, 203, 207, 0.8)'
-                            ],
-                            borderWidth: 0
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'right',
-                                labels: { boxWidth: 10, font: { size: 10 } }
-                            },
-                            tooltip: tooltipOptions
-                        },
-                        layout: { padding: 10 }
-                    }
-                }
-            },
-            ctxVelocidade: {
-                element: ctxVelocidade,
-                data: chartData.velocidade_entrega,
-                loadingId: 'loadingVelocidade',
-                config: {
-                    type: 'bar',
-                    data: {
-                        labels: chartData.velocidade_entrega?.labels || [],
-                        datasets: [{
-                            label: 'Implantações',
-                            data: chartData.velocidade_entrega?.data || [],
-                            backgroundColor: corAzul,
-                            borderColor: corBordaAzul,
-                            borderWidth: 1,
-                            borderRadius: 6
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: { y: { beginAtZero: true } },
-                        plugins: { legend: { display: false }, tooltip: tooltipOptions }
-                    }
-                }
-            },
-            ctxPrevisao: {
-                element: ctxPrevisao,
-                data: chartData.previsao_receita,
-                loadingId: 'loadingPrevisao',
-                config: {
-                    type: 'bar',
-                    data: {
-                        labels: chartData.previsao_receita?.labels || [],
-                        datasets: [{
-                            label: 'Previsão de Entrega (Qtd)',
-                            data: chartData.previsao_receita?.data || [],
-                            backgroundColor: 'rgba(75, 192, 192, 0.7)',
-                            borderColor: 'rgba(75, 192, 192, 1)',
-                            borderWidth: 1,
-                            borderRadius: 6
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: { y: { beginAtZero: true } },
-                        plugins: { legend: { display: false }, tooltip: tooltipOptions }
-                    }
-                }
-            }
-        };
-
-        // Intersection Observer para lazy loading
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting && entry.target.dataset.chartKey) {
-                    const key = entry.target.dataset.chartKey;
-                    const chartConfig = chartConfigs[key];
-
-                    if (chartConfig && chartConfig.element && !entry.target.dataset.loaded) {
-                        // Remover spinner
-                        if (chartConfig.loadingId) {
-                            const spinner = document.getElementById(chartConfig.loadingId);
-                            if (spinner) spinner.style.display = 'none';
-                        }
-
-                        // Renderizar gráfico
-                        if (chartConfig.config) {
-                            const config = typeof chartConfig.config === 'function' ? chartConfig.config() : chartConfig.config;
-                            new Chart(chartConfig.element, config);
-                        }
-
-                        entry.target.dataset.loaded = 'true';
-                        observer.unobserve(entry.target);
-                    }
-                }
-            });
-        }, { rootMargin: '0px' });
-
-        // Observar cada canvas
-        Object.keys(chartConfigs).forEach(key => {
-            const chartConfig = chartConfigs[key];
-            if (chartConfig.element) {
-                chartConfig.element.dataset.chartKey = key;
-                observer.observe(chartConfig.element);
-            }
-        });
-
-        // Inicializar tooltips do Bootstrap
-        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
-        });
-
-
-        // 5. Tags por Usuário - NOW USING TABLE FORMAT (chart code disabled)
-        /*
-        const ctxTagsByUser = document.getElementById('chartTagsByUser');
-        const tagsData = {{ tags_chart_data | tojson | safe
-    }};
-     
-    if (ctxTagsByUser && tagsData && tagsData.labels && tagsData.labels.length > 0) {
-        new Chart(ctxTagsByUser, {
-            type: 'bar',
+    function createDoughnut(id, labels, values, colors, cutout, showLegendRight, showPercent, fallbackLabels) {
+        const el = document.getElementById(id);
+        if (!el || !window.Chart || !Array.isArray(values) || !values.length) return;
+        const resolvedLabels = (Array.isArray(labels) && labels.length === values.length && labels.every((item) => typeof item === 'string' && item.trim()))
+            ? labels
+            : (Array.isArray(fallbackLabels) && fallbackLabels.length >= values.length ? fallbackLabels.slice(0, values.length) : values.map((_, idx) => `Item ${idx + 1}`));
+        const total = values.reduce((sum, value) => sum + Number(value || 0), 0);
+        new Chart(el, {
+            type: 'doughnut',
             data: {
-                labels: tagsData.labels,
-                datasets: tagsData.datasets
+                labels: resolvedLabels,
+                datasets: [{ data: values, backgroundColor: colors, borderWidth: 0 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                indexAxis: 'y', // Horizontal bars for better readability
-                scales: {
-                    x: {
-                        beginAtZero: true,
-                        stacked: true,
-                        title: {
-                            display: true,
-                            text: 'Quantidade de Tarefas Concluídas'
-                        }
-                    },
-                    y: {
-                        stacked: true,
-                        beginAtZero: true
-                    }
-                },
+                cutout: cutout || '68%',
                 plugins: {
                     legend: {
                         display: true,
-                        position: 'top',
+                        position: showLegendRight ? 'right' : 'right',
                         labels: {
-                            boxWidth: 12,
-                            padding: 10
-                        }
-                    },
-                    tooltip: {
-                        ...tooltipOptions,
-                        callbacks: {
-                            label: function (context) {
-                                const label = context.dataset.label || '';
-                                const value = context.parsed.x || 0;
-                                return `${label}: ${value} tarefa${value !== 1 ? 's' : ''}`;
+                            boxWidth: 8,
+                            boxHeight: 8,
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            padding: 12,
+                            color: '#4b5563',
+                            generateLabels(chart) {
+                                const dataset = chart.data.datasets[0] || {};
+                                const bgColors = Array.isArray(dataset.backgroundColor) ? dataset.backgroundColor : [];
+                                return (chart.data.labels || []).map((label, idx) => {
+                                    const value = Number(dataset.data?.[idx] || 0);
+                                    const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+                                    return {
+                                        text: showPercent ? `${label} ${pct}%` : String(label),
+                                        fillStyle: bgColors[idx] || '#94a3b8',
+                                        strokeStyle: bgColors[idx] || '#94a3b8',
+                                        pointStyle: 'circle',
+                                        lineWidth: 0,
+                                        hidden: !chart.getDataVisibility(idx),
+                                        index: idx
+                                    };
+                                });
                             }
-                        }
-                    },
-                    datalabels: {
-                        anchor: 'center',
-                        align: 'center',
-                        color: '#fff',
-                        font: {
-                            weight: 'bold',
-                            size: 11
-                        },
-                        formatter: (value) => {
-                            return value > 0 ? value : null;
                         }
                     }
                 }
             }
         });
-    } else if (ctxTagsByUser) {
-        // Show empty state
-        const ctx = ctxTagsByUser.getContext('2d');
-        ctx.font = '14px Arial';
-        ctx.fillStyle = '#6c757d';
-        ctx.textAlign = 'center';
-        ctx.fillText('Nenhum dado disponível para o período selecionado', ctxTagsByUser.width / 2, ctxTagsByUser.height / 2);
     }
-    */
 
-        // Inicialização dos filtros com flatpickr e máscara BR
-        if (window.flatpickr) {
-            var fpStart = window.flatpickr('#start_date_filter', { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true });
-            var fpEnd = window.flatpickr('#end_date_filter', { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true });
-            var btnStart = document.getElementById('btn-cal-start_date_filter');
-            var btnEnd = document.getElementById('btn-cal-end_date_filter');
-            if (btnStart && fpStart) btnStart.addEventListener('click', function () { fpStart.open(); });
-            if (btnEnd && fpEnd) btnEnd.addEventListener('click', function () { fpEnd.open(); });
-            function attachMask(fp) {
-                var alt = fp && fp._input ? fp._input : null;
-                if (!alt) return;
-                alt.setAttribute('placeholder', 'DD/MM/AAAA');
-                alt.addEventListener('input', function (e) {
-                    var v = e.target.value.replace(/[^\d]/g, '').slice(0, 8);
-                    var out = '';
-                    if (v.length >= 2) out = v.slice(0, 2);
-                    if (v.length >= 4) out = out + '/' + v.slice(2, 4);
-                    if (v.length >= 5) out = out + '/' + v.slice(4, 8);
-                    e.target.value = out;
-                });
+    function createBar(id, labels, values, color) {
+        const el = document.getElementById(id);
+        if (!el || !window.Chart || !Array.isArray(values) || !values.length) return;
+        new Chart(el, {
+            type: 'bar',
+            data: {
+                labels: labels || [],
+                datasets: [{
+                    data: values,
+                    backgroundColor: color,
+                    borderRadius: 8,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: '#9ca3af', font: { size: 11 } } },
+                    y: { beginAtZero: true, grid: { color: '#eef2f7' }, ticks: { color: '#9ca3af', font: { size: 11 } } }
+                }
             }
-            attachMask(fpStart);
-            attachMask(fpEnd);
-        }
-    });
+        });
+    }
+
+    function createLineArea(id, labels, values) {
+        const el = document.getElementById(id);
+        if (!el || !window.Chart || !Array.isArray(values) || !values.length) return;
+        new Chart(el, {
+            type: 'line',
+            data: {
+                labels: labels || [],
+                datasets: [{
+                    data: values,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.18)',
+                    fill: true,
+                    tension: 0.35,
+                    pointRadius: 2,
+                    pointBackgroundColor: '#3b82f6'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: '#9ca3af', font: { size: 11 } } },
+                    y: { beginAtZero: true, grid: { color: '#eef2f7' }, ticks: { color: '#9ca3af', font: { size: 11 } } }
+                }
+            }
+        });
+    }
+
+    createDoughnut(
+        'chartStatusClientes',
+        statusData.labels || [],
+        statusData.data || [],
+        ['#9CA3AF', '#F59E0B', '#10B981', '#3B82F6', '#EF4444', '#475569'],
+        '70%',
+        true,
+        true,
+        ['Novas', 'Em Andamento', 'Finalizadas', 'Futuras', 'Paradas', 'Canceladas']
+    );
+
+    let gargalosLabels = Array.isArray(gargalosData.labels) ? gargalosData.labels : [];
+    let gargalosValues = Array.isArray(gargalosData.data) ? gargalosData.data : [];
+    if (!gargalosValues.length && Array.isArray(paradasList) && paradasList.length) {
+        const motivosMap = {};
+        paradasList.forEach((item) => {
+            const motivo = (item && item.motivo_parada) ? String(item.motivo_parada) : 'Motivo não informado';
+            motivosMap[motivo] = (motivosMap[motivo] || 0) + 1;
+        });
+        gargalosLabels = Object.keys(motivosMap);
+        gargalosValues = Object.values(motivosMap);
+    }
+    createDoughnut(
+        'chartGargalos',
+        gargalosLabels,
+        gargalosValues,
+        ['#EC4899', '#F97316', '#F59E0B', '#38BDF8', '#8B5CF6', '#94A3B8'],
+        '58%',
+        true,
+        false,
+        []
+    );
+
+    createLineArea(
+        'chartRankingPeriodo',
+        rankingData.labels || [],
+        rankingData.data || []
+    );
+
+    createBar(
+        'chartVelocidade',
+        velocidadeData.labels || [],
+        velocidadeData.data || [],
+        'rgba(59, 130, 246, 0.85)'
+    );
+
+    createBar(
+        'chartPrevisao',
+        previsaoData.labels || [],
+        previsaoData.data || [],
+        'rgba(20, 184, 166, 0.72)'
+    );
+
+    if (window.flatpickr) {
+        window.flatpickr('#start_date_filter', { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true });
+        window.flatpickr('#end_date_filter', { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true });
+    }
+
+    const now = new Date();
+    const hour = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const updatedLabel = document.getElementById('updatedAtLabel');
+    if (updatedLabel) updatedLabel.textContent = `Atualizado: Hoje, ${hour}`;
+
+})();
 </script>
 {% endblock %}

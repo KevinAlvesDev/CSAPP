@@ -606,8 +606,13 @@ header.header-bg {
   justify-content: center !important;
 }
 
-.sidebar-menu.collapsed .sidebar-header>.d-flex:first-child {
+.sidebar-menu.collapsed .sidebar-header .sidebar-user-meta {
   display: none !important;
+}
+
+.sidebar-menu.collapsed .sidebar-header .sidebar-user-block {
+  display: flex !important;
+  justify-content: center !important;
 }
 
 /* Conteúdo principal */

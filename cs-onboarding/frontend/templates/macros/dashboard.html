@@ -147,13 +147,17 @@ Macro para barra de progresso
 Uso: {{ progress_bar(impl) }}
 #}
 {% macro progress_bar(impl) %}
-{% set progress_color = 'bg-danger' if impl.progresso < 40 else ('bg-warning text-dark' if impl.progresso < 80
-    else 'bg-success' ) %} <div class="progress" style="height: 20px;">
+{% if impl.status not in ['andamento', 'atrasada'] %}
+<span class="badge bg-secondary">0%</span>
+{% else %}
+{% set progress_color = 'bg-danger' if impl.progresso < 40 else ('bg-warning text-dark' if impl.progresso < 80 else 'bg-success') %}
+<div class="progress" style="height: 20px;">
     <div class="progress-bar progress-bar-striped {{ progress_color }} js-progress-bar" data-impl-id="{{ impl.id }}"
         data-progress-url="{{ url_for('api.progresso_implantacao', impl_id=impl.id) }}" role="progressbar"
         style="width: {{ impl.progresso }}%;" aria-valuenow="{{ impl.progresso }}">{{ impl.progresso }}%</div>
-    </div>
-    {% endmacro %}
+</div>
+{% endif %}
+{% endmacro %}
 
     {#
     Macro para coluna de empresa (célula completa)

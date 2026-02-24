@@ -1,26 +1,38 @@
 {% extends "base.html" %}
 
-{% block title %}Editar Regras da Gamificação{% endblock %}
+{% block title %}Regras e Pontos da Gamificação{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ 'css/pages/gamification_rules_form.css' | static_versioned }}">
+{% endblock %}
 
 {% block content %}
-<div class="container-fluid p-0">
-    <header class="header-bg p-3 d-flex align-items-center position-relative rounded-3">
-        <h1 class="main-title mb-0 fs-4 w-100 text-center">CS ONBOARDING Gestão de Gamificação</h1>
-        <div class="d-flex align-items-center position-absolute end-0 top-50 translate-middle-y">
-            <a href="{{ url_for('onboarding.dashboard') }}" class="btn btn-sm btn-outline-secondary me-2">
-                <i class="bi bi-house me-1"></i> Dashboard
+<div class="container-fluid p-0 grf-page-shell">
+    <header class="grf-topbar">
+        <div class="grf-title-wrap">
+            <div>
+                <h1 class="grf-title">Regras e Pontos da Gamificação</h1>
+                <p class="grf-subtitle">CS Onboarding Gestão de Gamificação</p>
+            </div>
+        </div>
+
+        <div class="grf-actions">
+            <a href="{{ url_for('onboarding.dashboard') }}" class="btn grf-btn grf-btn-back">
+                <i class="bi bi-arrow-left"></i>
+                Voltar
             </a>
-            <a href="{{ url_for('gamification.manage_gamification_metrics') }}" class="btn btn-sm btn-outline-primary">
-                <i class="bi bi-arrow-left me-1"></i> Voltar (Métricas)
-            </a>
+            <button type="submit" form="gamification-rules-form" class="btn grf-btn grf-btn-save">
+                <i class="bi bi-floppy"></i>
+                Salvar Alterações
+            </button>
         </div>
     </header>
 
-    <main class="p-4" id="main-content">
+    <main class="grf-content" id="main-content">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show grf-alert" role="alert">
                         {{ message }}
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
@@ -28,75 +40,103 @@
             {% endif %}
         {% endwith %}
 
-        <div class="metric-card p-4">
-            <form action="{{ url_for('gamification.save_gamification_rules_from_modal') }}" method="POST">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-4">
-                    <h3 class="mb-0">Editar Regras e Pontos da Gamificação</h3>
-                    <button type="submit" class="btn btn-primary btn-lg">
-                        <i class="bi bi-save me-2"></i> Salvar Alterações
-                    </button>
-                </div>
-                
-                <p class="text-muted">
-                    Altere os valores de pontuação, penalidade ou os limites de elegibilidade.
-                    <br>
-                    Os valores são aplicados no próximo cálculo de relatório de gamificação.
-                </p>
+        <p class="grf-intro">
+            Configure os parâmetros que definem a pontuação do time. Ajuste os valores de bônus,
+            elegibilidade e penalidades. As alterações serão refletidas no próximo ciclo de cálculo do relatório.
+        </p>
 
-                
-                {% if not regras_agrupadas %}
-                    <div class="alert alert-warning">Nenhuma regra de gamificação encontrada no banco de dados.</div>
-                {% endif %}
+        {% if not regras_agrupadas %}
+            <div class="alert alert-warning grf-alert">Nenhuma regra de gamificação encontrada no banco de dados.</div>
+        {% endif %}
 
+        <form id="gamification-rules-form" action="{{ url_for('gamification.save_gamification_rules_from_modal') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <section class="grf-grid">
                 {% for categoria, regras in regras_agrupadas.items() %}
-                    <h5 class="mt-4 mb-3 text-primary">{{ categoria }}</h5>
-                    
-                    {% for regra in regras %}
-                    <div class="row mb-2">
-                        
-                        <label for="regra-{{ regra.regra_id }}" class="col-md-7 col-form-label text-md-end">
-                            {{ regra.descricao }}
-                        </label>
-                        
-                        
-                        <div class="col-md-5">
-                            <div class="input-group">
-                                <input type="number" 
-                                       class="form-control" 
-                                       id="regra-{{ regra.regra_id }}" 
-                                       name="regra-{{ regra.regra_id }}" 
-                                       value="{{ regra.valor_pontos }}"
-                                       step="1"
-                                       required>
-                                
-                                
-                                {% set suffix = 'pontos' %}
+                    {% set is_penalty = 'Penalidades' in categoria %}
+                    {% set heading_icon = 'bi-circle-fill' %}
+                    {% set heading_class = 'is-blue' %}
+
+                    {% if categoria == 'Bônus' %}
+                        {% set heading_icon = 'bi-star-fill' %}
+                        {% set heading_class = 'is-blue' %}
+                    {% elif categoria == 'Penalidades' %}
+                        {% set heading_icon = 'bi-exclamation-triangle' %}
+                        {% set heading_class = 'is-red' %}
+                    {% elif categoria == 'Elegibilidade' %}
+                        {% set heading_icon = 'bi-card-checklist' %}
+                        {% set heading_class = 'is-blue' %}
+                    {% elif categoria == 'Bônus: Reuniões Pres.' %}
+                        {% set heading_icon = 'bi-people-fill' %}
+                        {% set heading_class = 'is-blue' %}
+                    {% elif categoria == 'Pontos: Assiduidade' %}
+                        {% set heading_icon = 'bi-calendar2-check' %}
+                        {% set heading_class = 'is-purple' %}
+                    {% elif categoria == 'Pontos: Planos Sucesso' %}
+                        {% set heading_icon = 'bi-check-circle' %}
+                        {% set heading_class = 'is-green' %}
+                    {% elif categoria == 'Pontos: Impl. Iniciadas' %}
+                        {% set heading_icon = 'bi-play-circle' %}
+                        {% set heading_class = 'is-teal' %}
+                    {% elif categoria == 'Pontos: Satisfação' %}
+                        {% set heading_icon = 'bi-emoji-smile' %}
+                        {% set heading_class = 'is-pink' %}
+                    {% elif categoria == 'Pontos: Qualidade' %}
+                        {% set heading_icon = 'bi-award' %}
+                        {% set heading_class = 'is-indigo' %}
+                    {% elif categoria == 'Pontos: Ações/Dia' %}
+                        {% set heading_icon = 'bi-speedometer2' %}
+                        {% set heading_class = 'is-cyan' %}
+                    {% elif categoria == 'Pontos: TMA' %}
+                        {% set heading_icon = 'bi-stopwatch' %}
+                        {% set heading_class = 'is-amber' %}
+                    {% endif %}
+
+                    <article class="grf-card{% if is_penalty %} is-penalty{% endif %}">
+                        <header class="grf-card-head {{ heading_class }}">
+                            <div class="grf-card-title">
+                                <i class="bi {{ heading_icon }}" aria-hidden="true"></i>
+                                <h2>{{ categoria }}</h2>
+                            </div>
+                            {% if is_penalty %}
+                                <span class="grf-chip-negative">IMPACTO NEGATIVO</span>
+                            {% endif %}
+                        </header>
+
+                        <div class="grf-card-body">
+                            {% for regra in regras %}
+                                {% set suffix = 'pts' %}
                                 {% if regra.tipo_valor == 'percentual' %}
                                     {% set suffix = '%' %}
                                 {% elif regra.tipo_valor == 'quantidade' %}
                                     {% set suffix = 'unid.' %}
                                 {% elif regra.tipo_valor == 'dias' %}
                                     {% set suffix = 'dias' %}
-                                {% elif regra.tipo_valor == 'penalidade' %}
-                                    {% set suffix = 'pontos (negativos)' %}
                                 {% endif %}
-                                
-                                <span class="input-group-text" style="min-width: 130px;">{{ suffix }}</span>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                    
-                {% endfor %}
 
-                <div class="text-end mt-4 border-top pt-3">
-                    <button type="submit" class="btn btn-primary btn-lg">
-                        <i class="bi bi-save me-2"></i> Salvar Alterações
-                    </button>
-                </div>
-            </form>
-        </div>
+                                <div class="grf-rule-row">
+                                    <label for="regra-{{ regra.regra_id }}" class="grf-rule-label">{{ regra.descricao }}</label>
+                                    <div class="grf-input-wrap{% if is_penalty %} is-penalty{% endif %}">
+                                        <input
+                                            type="number"
+                                            id="regra-{{ regra.regra_id }}"
+                                            name="regra-{{ regra.regra_id }}"
+                                            value="{{ regra.valor_pontos }}"
+                                            step="1"
+                                            required
+                                        >
+                                        <span>{{ suffix }}</span>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </article>
+                {% endfor %}
+            </section>
+        </form>
     </main>
+
+    <footer class="grf-footer">&copy; 2024 CS Management Tool. All rights reserved.</footer>
 </div>
 {% endblock %}

@@ -8,11 +8,13 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
 
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/onboarding/dashboard_grid.css') }}">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/onboarding/dashboard_uiux.css') }}">
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid p-0">
-    <header class="header-bg py-2 px-3 rounded-3" style="z-index: 1000;">
+<div class="container-fluid p-0 dashboard-shell">
+    <header class="header-bg py-2 px-3 rounded-3 dashboard-header" style="z-index: 1000;">
         <div class="d-flex align-items-center justify-content-between">
             <!-- Seção Esquerda: Busca centralizada no espaço -->
             <!-- Seção Esquerda: Busca e Filtros -->
@@ -90,9 +92,9 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
             </div>
         </div>
     </header>
-    <main class="p-4" id="main-content" data-context="onboarding">
+    <main class="p-4 dashboard-main" id="main-content" data-context="onboarding">
 
-        <div class="card p-2 px-3 mb-3">
+        <div class="card p-2 px-3 mb-3 dashboard-filters">
             <form method="GET" action="{{ url_for('onboarding.dashboard') }}" id="cs-filter-form"
                 class="d-flex align-items-center flex-wrap gap-2">
                 {% if current_search %}
@@ -199,7 +201,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
 
         {% from 'macros/cards.html' import card_stats %}
         {% set m = metrics or {} %}
-        <div class="metrics-grid mb-4">
+        <div class="metrics-grid mb-4 dashboard-metrics">
             {{ card_stats('Total', m.total_ativos | default(0), 'secondary', monetary_value=metrics.total_valor_ativos)
             }}
             {{ card_stats('Novas', m.impl_novas | default(0), 'dark', monetary_value=metrics.total_valor_novas) }}
@@ -219,9 +221,9 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
 
         <!-- Flash messages agora são exibidos como toasts flutuantes automaticamente -->
 
-        <div class="card">
-            <div class="card-header">
-                <ul class="nav nav-pills card-header-pills" id="myTab" role="tablist">
+        <div class="card dashboard-table-card">
+            <div class="card-header dashboard-table-header">
+                <ul class="nav nav-pills card-header-pills dashboard-tabs" id="myTab" role="tablist">
                     <li class="nav-item" role="presentation"><button class="nav-link active" id="total-tab"
                             data-bs-toggle="tab" data-bs-target="#total" type="button" role="tab">Total</button></li>
                     <li class="nav-item" role="presentation"><button class="nav-link" id="novas-tab"

@@ -66,12 +66,12 @@
       locale: {
         firstDayOfWeek: 1,
         weekdays: {
-          shorthand: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'SÃ¡b'],
-          longhand: ['Domingo', 'Segunda-feira', 'TerÃ§a-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'SÃ¡bado']
+          shorthand: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
+          longhand: ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']
         },
         months: {
           shorthand: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
-          longhand: ['Janeiro', 'Fevereiro', 'MarÃ§o', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+          longhand: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
         }
       }
     };
@@ -93,8 +93,8 @@
       formConcluir.addEventListener('submit', async function (ev) {
         ev.preventDefault();
         const confirmed = await showConfirm({
-          title: 'Confirmar aÃ§Ã£o',
-          message: 'Tem certeza que deseja concluir este plano?\n\nEle serÃ¡ movido para a aba ConcluÃ­dos e as tarefas serÃ£o arquivadas.',
+          title: 'Confirmar ação',
+          message: 'Tem certeza que deseja concluir este plano?\n\nEle será movido para a aba Concluídos e as tarefas serão arquivadas.',
           confirmText: 'Sim',
           cancelText: 'Cancelar',
           type: 'warning'

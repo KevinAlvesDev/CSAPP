@@ -1,425 +1,700 @@
 {% extends "base.html" %}
 
-{% block title %}{% if modo == 'criar' %}Novo Perfil{% else %}Editar {{ perfil.nome }}{% endif %}{% endblock %}
+{% block title %}{% if modo == 'criar' %}Novo Perfil{% else %}Editar Permissões{% endif %}{% endblock %}
 
 {% block head_extra %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-    .editor-container {
-        max-width: 1200px;
+    :root {
+        --permissions-bg: #f3f6fb;
+        --permissions-surface: #ffffff;
+        --permissions-surface-alt: #ffffff;
+        --permissions-border: #d6e0ee;
+        --permissions-muted: #6a7f9f;
+        --permissions-text: #0f1e36;
+        --permissions-primary: #2368ff;
+        --permissions-danger: #ea4a64;
+    }
+
+    body {
+        background: #f3f6fb !important;
+        color: var(--permissions-text) !important;
+        font-family: "Inter", sans-serif;
+    }
+
+    .main-content {
+        min-height: 100vh;
+        padding-bottom: 86px;
+    }
+
+    .permissions-shell {
+        background: var(--permissions-bg);
+        min-height: 100vh;
+    }
+
+    .permissions-topbar {
+        height: 76px;
+        border-bottom: 1px solid #dfe7f3;
+        background: #f5f7fb;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        padding: 0 14px;
+        gap: 10px;
+        border-radius: 0 0 8px 8px;
+        position: relative;
+    }
+
+    .permissions-topbar-back {
+        height: 50px;
+        padding: 0 16px;
+        border-radius: 10px;
+        border: 1px solid #e4ebf5;
+        background: #f9fbff;
+        color: #3f5678;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        text-decoration: none;
+        box-shadow: 0 2px 8px rgba(35, 47, 66, 0.08);
+    }
+
+    .permissions-topbar-title {
+        display: inline-flex;
+        align-items: center;
+        color: #f5b000;
+        font-size: 24px;
+        font-weight: 700;
+        letter-spacing: 0.2px;
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+
+    .permissions-container {
+        max-width: 1680px;
         margin: 0 auto;
+        padding: 24px 28px 32px;
     }
 
-    .editor-header {
-        display: flex;
-        justify-content: space-between;
+    .back-link {
+        color: #2d7dff;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 500;
+        display: inline-flex;
         align-items: center;
-        margin-bottom: 2rem;
-        flex-wrap: wrap;
-        gap: 1rem;
+        gap: 8px;
+        margin-bottom: 14px;
     }
 
-    .editor-title {
+    .page-header {
         display: flex;
+        flex-direction: column;
         align-items: center;
-        gap: 1rem;
+        justify-content: center;
+        border-bottom: 1px solid #d8e2ef;
+        padding-bottom: 16px;
+        margin-bottom: 22px;
+        gap: 16px;
     }
 
-    .editor-title h2 {
+    .page-header h1 {
         margin: 0;
-        font-weight: 700;
+        font-size: 18px;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        color: #10233f !important;
+        line-height: 1.05;
+        text-align: center;
     }
 
-    .perfil-form-card {
-        background: white;
-        border-radius: 16px;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    .page-header p {
+        margin: 10px 0 0;
+        color: var(--permissions-muted);
+        max-width: 760px;
+        font-size: 22px;
+        line-height: 1.4;
+        text-align: center;
     }
 
-    .form-section-title {
-        font-weight: 700;
-        font-size: 1.1rem;
-        margin-bottom: 1rem;
-        color: #2d3748;
+    .header-actions {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 10px;
     }
 
-    .cor-picker {
-        display: flex;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-    }
-
-    .cor-option {
-        width: 36px;
-        height: 36px;
-        border-radius: 8px;
-        border: 3px solid transparent;
+    .action-btn {
+        height: 39px;
+        border-radius: 9px;
+        border: 1px solid transparent;
+        padding: 0 16px;
+        font-size: 14px;
+        font-weight: 700;
         cursor: pointer;
-        transition: all 0.2s ease;
     }
 
-    .cor-option:hover {
-        transform: scale(1.1);
+    .action-btn-secondary {
+        background: #eaf1fb;
+        border-color: #d5e1f0;
+        color: #35527a;
     }
 
-    .cor-option.selected {
-        border-color: #2d3748;
-        box-shadow: 0 0 0 2px white, 0 0 0 4px currentColor;
+    .action-btn-danger {
+        background: #fff0f3;
+        border-color: #ffd0d9;
+        color: #ca3d58;
     }
 
-    .permissoes-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 1rem;
-        margin-bottom: 1rem;
+    .edit-grid {
+        display: grid;
+        grid-template-columns: 390px minmax(0, 1fr);
+        gap: 20px;
+        align-items: start;
     }
 
-    .permissoes-counter {
-        font-size: 0.9rem;
-        color: #718096;
-    }
-
-    .permissoes-counter strong {
-        color: #667eea;
-        font-size: 1.1rem;
-    }
-
-    .permissoes-actions {
-        display: flex;
-        gap: 0.5rem;
-    }
-
-    .categoria-card {
-        background: white;
+    .panel-card {
+        background: var(--permissions-surface-alt);
+        border: 1px solid var(--permissions-border);
         border-radius: 12px;
-        margin-bottom: 1rem;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .profile-panel {
+        padding: 24px;
+    }
+
+    .panel-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 16px;
+        line-height: 1.1;
+        font-weight: 700;
+        margin-bottom: 18px;
+    }
+
+    .panel-title i {
+        color: #2f80ff;
+        font-size: 14px;
+    }
+
+    .field-wrap {
+        margin-bottom: 16px;
+    }
+
+    .field-wrap label {
+        font-size: 11px;
+        color: #93a8c7;
+        margin-bottom: 8px;
+        display: block;
+    }
+
+    .field-wrap input,
+    .field-wrap textarea {
+        width: 100%;
+        border: 1px solid #284067;
+        border-radius: 8px;
+        background: #ffffff;
+        color: #1b2f4f;
+        outline: none;
+        font-size: 12px;
+    }
+
+    .field-wrap input {
+        height: 42px;
+        padding: 0 12px;
+    }
+
+    .field-wrap textarea {
+        min-height: 106px;
+        resize: none;
+        padding: 10px 12px;
+    }
+
+    .permissions-panel {
         overflow: hidden;
     }
 
-    .categoria-header {
-        padding: 1rem 1.25rem;
-        background: #f7fafc;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        cursor: pointer;
-        transition: background 0.2s;
-    }
-
-    .categoria-header:hover {
-        background: #edf2f7;
-    }
-
-    .categoria-title {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        font-weight: 600;
-        color: #2d3748;
-    }
-
-    .categoria-title i {
-        font-size: 1.2rem;
-        color: #667eea;
-    }
-
-    .categoria-counter {
-        font-size: 0.85rem;
-        padding: 0.25rem 0.75rem;
-        background: #e2e8f0;
-        border-radius: 20px;
-        color: #4a5568;
-    }
-
-    .categoria-counter.all-selected {
-        background: #c6f6d5;
-        color: #22543d;
-    }
-
-    .categoria-body {
-        padding: 1rem 1.25rem;
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 0.75rem;
-    }
-
-    .permissao-item {
+    .permissions-panel-head {
+        padding: 18px 20px;
+        border-bottom: 1px solid #dbe5f2;
         display: flex;
         align-items: flex-start;
-        gap: 0.75rem;
-        padding: 0.75rem;
-        background: #f7fafc;
-        border-radius: 8px;
-        transition: all 0.2s;
+        justify-content: space-between;
+        gap: 14px;
     }
 
-    .permissao-item:hover {
-        background: #edf2f7;
+    .permissions-panel-head .panel-title {
+        margin: 0;
+        font-size: 17px;
     }
 
-    .permissao-item input[type="checkbox"] {
-        width: 20px;
-        height: 20px;
-        margin-top: 2px;
+    .permissions-panel-head p {
+        margin: 6px 0 0;
+        color: #6f86a8;
+        font-size: 11px;
+    }
+
+    .head-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        white-space: nowrap;
+        margin-top: 8px;
+    }
+
+    .head-link {
+        background: transparent;
+        border: 0;
+        color: #2f80ff;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 0;
         cursor: pointer;
-        accent-color: #667eea;
     }
 
-    .permissao-info {
-        flex: 1;
+    .head-link-muted {
+        color: #7e94b4;
     }
 
-    .permissao-nome {
-        font-weight: 500;
-        color: #2d3748;
-        font-size: 0.95rem;
+    .cat-item {
+        border-top: 1px solid #e1e9f4;
     }
 
-    .permissao-desc {
-        font-size: 0.8rem;
-        color: #718096;
+    .cat-item:first-child {
+        border-top: 0;
+    }
+
+    .cat-header {
+        width: 100%;
+        border: 0;
+        background: #ffffff;
+        color: inherit;
+        padding: 16px 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        cursor: pointer;
+    }
+
+    .cat-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+    }
+
+    .cat-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 15px;
+    }
+
+    .cat-icon-1 {
+        background: #1b3f7a;
+        color: #7eb3ff;
+    }
+
+    .cat-icon-2 {
+        background: #322359;
+        color: #b489ff;
+    }
+
+    .cat-icon-3 {
+        background: #153f3e;
+        color: #4ee3d2;
+    }
+
+    .cat-icon-4 {
+        background: #304153;
+        color: #a2bfd9;
+    }
+
+    .cat-name {
+        font-size: 15px;
+        line-height: 1.08;
+        font-weight: 700;
+    }
+
+    .cat-desc {
         margin-top: 2px;
+        font-size: 11px;
+        color: #6f85a8;
     }
 
-    .footer-actions {
-        position: sticky;
+    .cat-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .cat-counter {
+        min-width: 156px;
+        text-align: center;
+        height: 28px;
+        border-radius: 7px;
+        background: #ebf2fc;
+        color: #52719a;
+        font-size: 12px;
+        line-height: 28px;
+        font-weight: 600;
+    }
+
+    .cat-chevron {
+        color: #7892b3;
+        font-size: 14px;
+        transition: transform 0.2s ease;
+    }
+
+    .cat-item.is-open .cat-chevron {
+        transform: rotate(180deg);
+    }
+
+    .cat-body {
+        padding: 0 16px 16px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .permission-toggle {
+        background: #ffffff;
+        border: 1px solid #d8e4f2;
+        border-radius: 8px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 12px;
+    }
+
+    .permission-toggle span {
+        font-size: 11px;
+        font-weight: 700;
+        color: #34557f;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        padding-right: 10px;
+    }
+
+    .permission-toggle input {
+        appearance: none;
+        width: 42px;
+        height: 22px;
+        border-radius: 999px;
+        background: #b8c7da;
+        position: relative;
+        cursor: pointer;
+        transition: background 0.15s ease;
+        margin: 0;
+        flex: 0 0 auto;
+    }
+
+    .permission-toggle input::after {
+        content: "";
+        position: absolute;
+        width: 16px;
+        height: 16px;
+        left: 3px;
+        top: 3px;
+        border-radius: 50%;
+        background: #edf4ff;
+        transition: transform 0.15s ease;
+    }
+
+    .permission-toggle input:checked {
+        background: #2368ff;
+    }
+
+    .permission-toggle input:checked::after {
+        transform: translateX(20px);
+    }
+
+    .permission-toggle input:disabled {
+        cursor: not-allowed;
+        opacity: 0.65;
+    }
+
+    .system-warning {
+        margin-bottom: 16px;
+        border-radius: 10px;
+        border: 1px solid #f0d7a7;
+        background: #fff8ea;
+        color: #7c5a1f;
+        padding: 12px 14px;
+        font-size: 13px;
+    }
+
+    .bottom-bar {
+        position: fixed;
+        left: 0;
+        right: 0;
         bottom: 0;
-        background: white;
-        padding: 1rem 1.5rem;
-        border-top: 1px solid #e2e8f0;
+        height: 78px;
+        border-top: 1px solid #d8e2ef;
+        background: #ffffff;
         display: flex;
         justify-content: flex-end;
-        gap: 1rem;
-        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
-        z-index: 100;
+        align-items: center;
+        padding: 0 28px;
+        gap: 12px;
+        z-index: 50;
     }
 
-    .sistema-warning {
-        background: #fef3cd;
-        border: 1px solid #ffc107;
+    .btn-cancel {
+        min-width: 112px;
+        height: 42px;
         border-radius: 8px;
-        padding: 1rem;
-        margin-bottom: 1.5rem;
-        color: #856404;
+        border: 1px solid #c5d3e6;
+        background: transparent;
+        color: #486892 !important;
+        font-weight: 700;
     }
 
-    /* Dark Mode */
-    body.dark-mode .perfil-form-card,
-    body.dark-mode .categoria-card {
-        background: var(--card-bg);
+    .btn-save {
+        min-width: 188px;
+        height: 42px;
+        border-radius: 8px;
+        border: 0;
+        background: #2368ff;
+        color: #fff !important;
+        font-weight: 700;
     }
 
-    body.dark-mode .categoria-header {
-        background: var(--table-header-bg);
+    .btn-duplicate {
+        min-width: 116px;
+        height: 42px;
+        border-radius: 8px;
+        border: 1px solid #d5e1f0;
+        background: #eaf1fb;
+        color: #35527a !important;
+        font-weight: 700;
     }
 
-    body.dark-mode .categoria-header:hover {
-        background: var(--table-hover-bg);
+    .btn-delete-profile {
+        min-width: 132px;
+        height: 42px;
+        border-radius: 8px;
+        border: 1px solid #ffd0d9;
+        background: #fff0f3;
+        color: #ca3d58 !important;
+        font-weight: 700;
     }
 
-    body.dark-mode .categoria-title,
-    body.dark-mode .permissao-nome,
-    body.dark-mode .form-section-title {
-        color: var(--body-color);
+    @media (max-width: 1200px) {
+        .page-header h1 {
+            font-size: 42px;
+        }
+
+        .page-header p {
+            font-size: 22px;
+            max-width: 620px;
+        }
+
+        .edit-grid {
+            grid-template-columns: 1fr;
+        }
     }
 
-    body.dark-mode .permissao-item {
-        background: var(--table-header-bg);
-    }
+    @media (max-width: 992px) {
+        .permissions-topbar {
+            height: auto;
+            flex-wrap: wrap;
+            padding: 12px 16px;
+        }
 
-    body.dark-mode .permissao-item:hover {
-        background: var(--table-hover-bg);
-    }
+        .brand-wrap,
+        .top-actions {
+            min-width: 0;
+        }
 
-    body.dark-mode .footer-actions {
-        background: var(--card-bg);
-        border-color: var(--table-border-color);
+        .top-search {
+            order: 3;
+            max-width: none;
+            flex: 1 0 100%;
+        }
+
+        .permissions-container {
+            padding: 18px 14px 24px;
+        }
+
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .page-header h1 {
+            font-size: 34px;
+        }
+
+        .page-header p {
+            font-size: 17px;
+        }
+
+        .cat-body {
+            grid-template-columns: 1fr;
+        }
+
+        .cat-counter {
+            min-width: 130px;
+        }
+
+        .bottom-bar {
+            padding: 0 14px;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid p-0">
-    <header class="header-bg p-3 d-flex align-items-center position-relative rounded-3">
-        <a href="{{ url_for('perfis.listar_perfis') }}" class="btn btn-sm btn-outline-light me-3">
+<div class="permissions-shell">
+    <header class="permissions-topbar">
+        <a class="permissions-topbar-back" href="{{ url_for('perfis.listar_perfis') }}" aria-label="Voltar">
             <i class="bi bi-arrow-left"></i>
+            Voltar para Lista de Perfis
         </a>
-        <h1 class="main-title mb-0 fs-4">
-            {% if modo == 'criar' %}
-            <i class="bi bi-plus-circle me-2"></i>Novo Perfil de Acesso
-            {% else %}
-            <i class="bi bi-sliders me-2"></i>{{ perfil.nome }}
-            {% endif %}
-        </h1>
+        <div class="permissions-topbar-title">
+            <span>{{ perfil.nome if perfil else 'Novo Perfil' }}</span>
+        </div>
     </header>
 
-    <main class="p-4 editor-container">
-        {% if perfil and perfil.sistema %}
-        <div class="sistema-warning">
-            <i class="bi bi-info-circle me-2"></i>
-            <strong>Perfil do Sistema:</strong> Este perfil é gerenciado pelo sistema e possui todas as permissões. Não
-            pode ser modificado.
-        </div>
-        {% endif %}
+    <main class="permissions-container">
+        <section class="page-header">
+            <div></div>
+        </section>
 
         <form id="formPerfil" method="POST">
-            <!-- Dados do Perfil -->
-            <div class="perfil-form-card">
-                <h3 class="form-section-title">
-                    <i class="bi bi-person-badge"></i> Dados do Perfil
-                </h3>
+            <div class="edit-grid">
+                <aside class="panel-card profile-panel">
+                    <h2 class="panel-title">
+                        <i class="bi bi-briefcase-fill"></i>
+                        Dados do Perfil
+                    </h2>
 
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label for="nome" class="form-label fw-bold">Nome do Perfil *</label>
-                        <input type="text" class="form-control" id="nome" name="nome"
-                            value="{{ perfil.nome if perfil else '' }}" required maxlength="100">
+                    <div class="field-wrap">
+                        <label for="nome">Nome do Perfil</label>
+                        <input type="text" id="nome" name="nome" maxlength="100" required
+                            value="{{ perfil.nome if perfil else '' }}">
                     </div>
 
-                    <div class="col-md-6">
-                        <label for="descricao" class="form-label fw-bold">Descrição</label>
-                        <input type="text" class="form-control" id="descricao" name="descricao"
-                            value="{{ perfil.descricao if perfil else '' }}" placeholder="Breve descrição do perfil">
+                    <div class="field-wrap">
+                        <label for="descricao">Descrição</label>
+                        <textarea id="descricao" name="descricao">{{ perfil.descricao if perfil else '' }}</textarea>
                     </div>
 
-                    <div class="col-12">
-                        <label class="form-label fw-bold">Cor de Identificação</label>
-                        <div class="cor-picker">
-                            {% set cores = ['#dc3545', '#fd7e14', '#ffc107', '#28a745', '#20c997', '#17a2b8', '#0d6efd',
-                            '#667eea', '#6f42c1', '#e83e8c', '#6c757d', '#343a40'] %}
-                            {% set cor_atual = perfil.cor if perfil else '#667eea' %}
-                            {% for cor in cores %}
-                            <div class="cor-option {% if cor == cor_atual %}selected{% endif %}"
-                                style="background-color: {{ cor }}" data-cor="{{ cor }}" {% if perfil and perfil.sistema
-                                %}style="pointer-events: none; opacity: 0.5;" {% endif %}>
+                    {% set cor_atual = perfil.cor if perfil and perfil.cor else '#3B82F6' %}
+                    <input type="hidden" id="cor" name="cor" value="{{ cor_atual }}">
+                </aside>
+
+                <section class="panel-card permissions-panel">
+                    <div class="permissions-panel-head">
+                        <div>
+                            <h2 class="panel-title">
+                                <i class="bi bi-shield-lock-fill"></i>
+                                Permissões do Sistema
+                            </h2>
+                            <p>Controle o que os usuários com este perfil podem acessar.</p>
+                        </div>
+                        <div class="head-actions">
+                            <button type="button" class="head-link" id="btnMarcarTodas">Marcar todos</button>
+                            <span style="color:#5b7295;">|</span>
+                            <button type="button" class="head-link head-link-muted" id="btnDesmarcarTodas">Desmarcar todos</button>
+                        </div>
+                    </div>
+
+                    <div id="permissoesContainer">
+                        {% if perfil and perfil.categorias %}
+                        {% for categoria in perfil.categorias %}
+                        {% set cat_index = loop.index %}
+                        <article class="cat-item {% if loop.first %}is-open{% endif %}" data-cat="{{ cat_index }}">
+                            <button type="button" class="cat-header" data-toggle-cat="{{ cat_index }}">
+                                <div class="cat-left">
+                                    <span class="cat-icon cat-icon-{{ 1 if loop.index == 1 else 2 if loop.index == 2 else 3 if loop.index == 3 else 4 }}">
+                                        <i class="{{ 'bi bi-grid-1x2-fill' if loop.index == 1 else 'bi bi-people-fill' if loop.index == 2 else 'bi bi-bar-chart-fill' if loop.index == 3 else 'bi bi-gear-fill' }}"></i>
+                                    </span>
+                                    <div>
+                                        <div class="cat-name">{{ categoria.nome }}</div>
+                                        {% set cat_desc = categoria.descricao if categoria.descricao else 'Controle os recursos disponíveis nesta seção.' %}
+                                        <div class="cat-desc">{{ cat_desc }}</div>
+                                    </div>
+                                </div>
+                                <div class="cat-right">
+                                    <span class="cat-counter" id="counter-{{ cat_index }}">{{ categoria.concedidas }}/{{ categoria.total }} Selecionados</span>
+                                    <i class="bi bi-chevron-down cat-chevron"></i>
+                                </div>
+                            </button>
+                            <div class="cat-body" id="cat-body-{{ cat_index }}" {% if not loop.first %}hidden{% endif %}>
+                                {% for recurso in categoria.recursos %}
+                                <label class="permission-toggle" for="perm-{{ recurso.id }}">
+                                    <span>{{ recurso.nome }}</span>
+                                    <input type="checkbox" id="perm-{{ recurso.id }}" name="permissoes" value="{{ recurso.id }}"
+                                        data-categoria="{{ cat_index }}" {% if recurso.tem_permissao %}checked{% endif %}>
+                                </label>
+                                {% endfor %}
                             </div>
-                            {% endfor %}
-                        </div>
-                        <input type="hidden" id="cor" name="cor" value="{{ cor_atual }}">
-                    </div>
-                </div>
-            </div>
-
-            <!-- Permissões -->
-            <div class="perfil-form-card">
-                <div class="permissoes-header">
-                    <h3 class="form-section-title mb-0">
-                        <i class="bi bi-shield-check"></i> Permissões
-                    </h3>
-
-                    <div class="d-flex align-items-center gap-3">
-                        <span class="permissoes-counter">
-                            <strong id="countSelecionadas">0</strong> de <span id="countTotal">0</span> selecionadas
-                        </span>
-
-                        {% if not (perfil and perfil.sistema) %}
-                        <div class="permissoes-actions">
-                            <button type="button" class="btn btn-sm btn-outline-primary" id="btnMarcarTodas">
-                                <i class="bi bi-check-all me-1"></i>Marcar Todas
+                        </article>
+                        {% endfor %}
+                        {% elif recursos_agrupados %}
+                        {% for categoria, recursos in recursos_agrupados.items() %}
+                        {% set cat_index = loop.index %}
+                        <article class="cat-item {% if loop.first %}is-open{% endif %}" data-cat="{{ cat_index }}">
+                            <button type="button" class="cat-header" data-toggle-cat="{{ cat_index }}">
+                                <div class="cat-left">
+                                    <span class="cat-icon cat-icon-{{ 1 if loop.index == 1 else 2 if loop.index == 2 else 3 if loop.index == 3 else 4 }}">
+                                        <i class="{{ 'bi bi-grid-1x2-fill' if loop.index == 1 else 'bi bi-people-fill' if loop.index == 2 else 'bi bi-bar-chart-fill' if loop.index == 3 else 'bi bi-gear-fill' }}"></i>
+                                    </span>
+                                    <div>
+                                        <div class="cat-name">{{ categoria }}</div>
+                                        <div class="cat-desc">Controle os recursos disponíveis nesta seção.</div>
+                                    </div>
+                                </div>
+                                <div class="cat-right">
+                                    <span class="cat-counter" id="counter-{{ cat_index }}">0/{{ recursos|length }} Selecionados</span>
+                                    <i class="bi bi-chevron-down cat-chevron"></i>
+                                </div>
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" id="btnDesmarcarTodas">
-                                <i class="bi bi-x-lg me-1"></i>Limpar
-                            </button>
-                        </div>
+                            <div class="cat-body" id="cat-body-{{ cat_index }}" {% if not loop.first %}hidden{% endif %}>
+                                {% for recurso in recursos %}
+                                <label class="permission-toggle" for="perm-{{ recurso.id }}">
+                                    <span>{{ recurso.nome }}</span>
+                                    <input type="checkbox" id="perm-{{ recurso.id }}" name="permissoes" value="{{ recurso.id }}"
+                                        data-categoria="{{ cat_index }}">
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </article>
+                        {% endfor %}
+                        {% else %}
+                        <div style="padding: 24px; color: #8ea5c6;">Nenhum recurso disponível.</div>
                         {% endif %}
                     </div>
-                </div>
-
-                <div id="permissoesContainer">
-                    {% if perfil and perfil.categorias %}
-                    {% for categoria in perfil.categorias %}
-                    {% set cat_index = loop.index %}
-                    <div class="categoria-card">
-                        <div class="categoria-header" data-bs-toggle="collapse" data-bs-target="#cat-{{ cat_index }}">
-                            <div class="categoria-title">
-                                <i class="bi bi-folder"></i>
-                                <span>{{ categoria.nome }}</span>
-                            </div>
-                            <span
-                                class="categoria-counter {% if categoria.concedidas == categoria.total %}all-selected{% endif %}"
-                                id="counter-{{ cat_index }}">
-                                {{ categoria.concedidas }}/{{ categoria.total }}
-                            </span>
-                        </div>
-                        <div class="collapse" id="cat-{{ cat_index }}">
-                            <div class="categoria-body">
-                                {% for recurso in categoria.recursos %}
-                                <div class="permissao-item">
-                                    <input type="checkbox" name="permissoes" value="{{ recurso.id }}"
-                                        id="perm-{{ recurso.id }}" data-categoria="{{ cat_index }}" {% if
-                                        recurso.tem_permissao %}checked{% endif %}>
-                                    <label for="perm-{{ recurso.id }}" class="permissao-info">
-                                        <div class="permissao-nome">{{ recurso.nome }}</div>
-                                        {% if recurso.descricao %}
-                                        <div class="permissao-desc">{{ recurso.descricao }}</div>
-                                        {% endif %}
-                                    </label>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                    {% elif recursos_agrupados %}
-                    {% for categoria, recursos in recursos_agrupados.items() %}
-                    {% set cat_index = loop.index %}
-                    <div class="categoria-card">
-                        <div class="categoria-header" data-bs-toggle="collapse" data-bs-target="#cat-{{ cat_index }}">
-                            <div class="categoria-title">
-                                <i class="bi bi-folder"></i>
-                                <span>{{ categoria }}</span>
-                            </div>
-                            <span class="categoria-counter" id="counter-{{ cat_index }}">
-                                0/{{ recursos|length }}
-                            </span>
-                        </div>
-                        <div class="collapse" id="cat-{{ cat_index }}">
-                            <div class="categoria-body">
-                                {% for recurso in recursos %}
-                                <div class="permissao-item">
-                                    <input type="checkbox" name="permissoes" value="{{ recurso.id }}"
-                                        id="perm-{{ recurso.id }}" data-categoria="{{ cat_index }}">
-                                    <label for="perm-{{ recurso.id }}" class="permissao-info">
-                                        <div class="permissao-nome">{{ recurso.nome }}</div>
-                                        {% if recurso.descricao %}
-                                        <div class="permissao-desc">{{ recurso.descricao }}</div>
-                                        {% endif %}
-                                    </label>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                    {% else %}
-                    <div class="text-center text-muted py-4">
-                        <i class="bi bi-inbox fs-1"></i>
-                        <p class="mt-2">Nenhum recurso disponível</p>
-                    </div>
-                    {% endif %}
-                </div>
+                </section>
             </div>
-
             <input type="hidden" id="perfil_id" value="{{ perfil.id if perfil else '' }}">
         </form>
     </main>
 
-    <div class="footer-actions">
-        <a href="{{ url_for('perfis.listar_perfis') }}" class="btn btn-outline-secondary">
-            <i class="bi bi-x-lg me-1"></i>Cancelar
-        </a>
-        <button type="button" class="btn btn-primary" id="btnSalvar">
-            <i class="bi bi-check-lg me-1"></i>
+    <footer class="bottom-bar">
+        <a href="{{ url_for('perfis.listar_perfis') }}" class="btn btn-cancel">Cancelar</a>
+        {% if modo != 'criar' %}
+        <button type="button" class="btn btn-duplicate" id="btnDuplicar">Duplicar</button>
+        <button type="button" class="btn btn-delete-profile" id="btnExcluirPerfil">Excluir Perfil</button>
+        {% endif %}
+        <button type="button" class="btn btn-save" id="btnSalvar">
             {% if modo == 'criar' %}Criar Perfil{% else %}Salvar Alterações{% endif %}
         </button>
-    </div>
+    </footer>
 </div>
 {% endblock %}
 
@@ -430,127 +705,174 @@
         const perfilId = '{{ perfil.id if perfil else "" }}';
         const isSistema = {% if perfil and perfil.sistema %}true{% else %}false{% endif %};
 
-    // Seletor de cor
-    document.querySelectorAll('.cor-option').forEach(el => {
-        el.addEventListener('click', function () {
-            if (isSistema) return;
-            document.querySelectorAll('.cor-option').forEach(c => c.classList.remove('selected'));
-            this.classList.add('selected');
-            document.getElementById('cor').value = this.dataset.cor;
-        });
-    });
-
-    // Atualizar contadores
-    function atualizarContadores() {
-        const checkboxes = document.querySelectorAll('input[name="permissoes"]');
-        const selecionadas = document.querySelectorAll('input[name="permissoes"]:checked');
-
-        document.getElementById('countSelecionadas').textContent = selecionadas.length;
-        document.getElementById('countTotal').textContent = checkboxes.length;
-
-        // Atualizar contadores por categoria
-        document.querySelectorAll('.categoria-card').forEach((card, index) => {
-            const catCheckboxes = card.querySelectorAll('input[name="permissoes"]');
-            const catSelecionadas = card.querySelectorAll('input[name="permissoes"]:checked');
-            const counter = card.querySelector('.categoria-counter');
-
-            if (counter) {
-                counter.textContent = `${catSelecionadas.length}/${catCheckboxes.length}`;
-                counter.classList.toggle('all-selected', catSelecionadas.length === catCheckboxes.length);
-            }
-        });
-    }
-
-    // Event listeners para checkboxes
-    document.querySelectorAll('input[name="permissoes"]').forEach(cb => {
-        cb.addEventListener('change', atualizarContadores);
-    });
-
-    // Marcar todas
-    const btnMarcar = document.getElementById('btnMarcarTodas');
-    if (btnMarcar) {
-        btnMarcar.addEventListener('click', function () {
-            document.querySelectorAll('input[name="permissoes"]').forEach(cb => cb.checked = true);
-            atualizarContadores();
-        });
-    }
-
-    // Desmarcar todas
-    const btnDesmarcar = document.getElementById('btnDesmarcarTodas');
-    if (btnDesmarcar) {
-        btnDesmarcar.addEventListener('click', function () {
-            document.querySelectorAll('input[name="permissoes"]').forEach(cb => cb.checked = false);
-            atualizarContadores();
-        });
-    }
-
-    // Salvar
-    const btnSalvar = document.getElementById('btnSalvar');
-    if (btnSalvar) {
-        btnSalvar.addEventListener('click', async function () {
-            const nome = document.getElementById('nome').value.trim();
-
-            if (!nome) {
-                if (window.showToast) window.showToast('Nome do perfil é obrigatório', 'warning');
-                document.getElementById('nome').focus();
-                return;
-            }
-
-            const btn = this;
-            const originalText = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...';
-
-            try {
-                const permissoes = Array.from(document.querySelectorAll('input[name="permissoes"]:checked'))
-                    .map(cb => cb.value);
-
-                const dados = {
-                    nome: nome,
-                    descricao: document.getElementById('descricao').value.trim(),
-                    cor: document.getElementById('cor').value,
-                    permissoes: permissoes
-                };
-
-                let url, method;
-
-                if (modo === 'criar') {
-                    url = '/perfis';
-                    method = 'POST';
-                } else {
-                    // Atualizar dados do perfil
-                    await window.apiFetch(`/perfis/${perfilId}`, {
-                        method: 'PUT',
-                        body: JSON.stringify(dados)
-                    });
-
-                    // Atualizar permissões separadamente
-                    url = `/perfis/${perfilId}/permissoes`;
-                    method = 'POST';
+        function atualizarContadores() {
+            document.querySelectorAll('.cat-item').forEach((card) => {
+                const catId = card.dataset.cat;
+                const catCheckboxes = card.querySelectorAll('input[name="permissoes"]');
+                const catSelecionadas = card.querySelectorAll('input[name="permissoes"]:checked');
+                const counter = document.getElementById(`counter-${catId}`);
+                if (counter) {
+                    counter.textContent = `${catSelecionadas.length}/${catCheckboxes.length} Selecionados`;
                 }
+            });
+        }
 
-                const response = await window.apiFetch(url, {
-                    method: method,
-                    body: JSON.stringify(dados)
+        document.querySelectorAll('[data-toggle-cat]').forEach((trigger) => {
+            trigger.addEventListener('click', function () {
+                const catId = this.dataset.toggleCat;
+                const card = this.closest('.cat-item');
+                const body = document.getElementById(`cat-body-${catId}`);
+                const willOpen = body.hasAttribute('hidden');
+                document.querySelectorAll('.cat-item').forEach((item) => {
+                    item.classList.remove('is-open');
+                    const section = item.querySelector('.cat-body');
+                    if (section) section.setAttribute('hidden', 'hidden');
                 });
-
-                if (response.ok) {
-                    if (window.showToast) window.showToast(response.message || 'Salvo com sucesso!', 'success');
-                    setTimeout(() => {
-                        window.location.href = '/perfis';
-                    }, 1000);
-                } else {
-                    throw new Error(response.error || 'Erro ao salvar');
+                if (willOpen) {
+                    card.classList.add('is-open');
+                    body.removeAttribute('hidden');
                 }
-            } catch (error) {
-                btn.disabled = false;
-                btn.innerHTML = originalText;
-            }
+            });
         });
-    }
 
-    // Inicializar contadores
-    atualizarContadores();
-});
+        document.querySelectorAll('input[name="permissoes"]').forEach((cb) => {
+            cb.addEventListener('change', atualizarContadores);
+        });
+
+        const btnMarcar = document.getElementById('btnMarcarTodas');
+        if (btnMarcar) {
+            btnMarcar.addEventListener('click', function () {
+                document.querySelectorAll('input[name="permissoes"]').forEach((cb) => {
+                    if (!cb.disabled) cb.checked = true;
+                });
+                atualizarContadores();
+            });
+        }
+
+        const btnDesmarcar = document.getElementById('btnDesmarcarTodas');
+        if (btnDesmarcar) {
+            btnDesmarcar.addEventListener('click', function () {
+                document.querySelectorAll('input[name="permissoes"]').forEach((cb) => {
+                    if (!cb.disabled) cb.checked = false;
+                });
+                atualizarContadores();
+            });
+        }
+
+        const btnDuplicar = document.getElementById('btnDuplicar');
+        if (btnDuplicar) {
+            btnDuplicar.addEventListener('click', async function () {
+                if (!perfilId) return;
+                try {
+                    const response = await window.apiFetch(`/perfis/${perfilId}/clonar`, {
+                        method: 'POST',
+                        body: JSON.stringify({ nome: `Cópia de ${document.getElementById('nome').value.trim()}` })
+                    });
+                    if (response.ok) {
+                        if (window.showToast) window.showToast('Perfil duplicado com sucesso!', 'success');
+                        setTimeout(() => { window.location.href = '/perfis'; }, 900);
+                    } else {
+                        throw new Error(response.error || 'Erro ao duplicar');
+                    }
+                } catch (error) {
+                    if (window.showToast) window.showToast(error.message || 'Erro ao duplicar perfil', 'error');
+                }
+            });
+        }
+
+        const btnExcluir = document.getElementById('btnExcluirPerfil');
+        if (btnExcluir) {
+            btnExcluir.addEventListener('click', async function () {
+                if (!perfilId) return;
+                let confirmed = false;
+                if (window.showConfirm) {
+                    confirmed = await window.showConfirm({
+                        title: 'Confirmar Exclusão',
+                        message: 'Tem certeza que deseja excluir este perfil?',
+                        confirmText: 'Excluir',
+                        cancelText: 'Cancelar',
+                        type: 'danger',
+                        alertLabel: 'Atenção! Esta ação não pode ser desfeita.'
+                    });
+                } else {
+                    confirmed = window.confirm('Tem certeza que deseja excluir este perfil?');
+                }
+                if (!confirmed) return;
+                try {
+                    const response = await window.apiFetch(`/perfis/${perfilId}`, { method: 'DELETE' });
+                    if (response.ok) {
+                        if (window.showToast) window.showToast('Perfil excluído com sucesso!', 'success');
+                        setTimeout(() => { window.location.href = '/perfis'; }, 900);
+                    } else {
+                        throw new Error(response.error || 'Erro ao excluir');
+                    }
+                } catch (error) {
+                    if (window.showToast) window.showToast(error.message || 'Erro ao excluir perfil', 'error');
+                }
+            });
+        }
+
+        const btnSalvar = document.getElementById('btnSalvar');
+        if (btnSalvar) {
+            btnSalvar.addEventListener('click', async function () {
+                const nome = document.getElementById('nome').value.trim();
+
+                if (!nome) {
+                    if (window.showToast) window.showToast('Nome do perfil é obrigatório', 'warning');
+                    document.getElementById('nome').focus();
+                    return;
+                }
+
+                const btn = this;
+                const originalText = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...';
+
+                try {
+                    const permissoes = Array.from(document.querySelectorAll('input[name="permissoes"]:checked')).map((cb) => cb.value);
+                    const dados = {
+                        nome: nome,
+                        descricao: document.getElementById('descricao').value.trim(),
+                        cor: document.getElementById('cor').value,
+                        permissoes: permissoes
+                    };
+
+                    let response;
+                    if (modo === 'criar') {
+                        response = await window.apiFetch('/perfis', {
+                            method: 'POST',
+                            body: JSON.stringify(dados)
+                        });
+                    } else {
+                        const dadosPerfil = await window.apiFetch(`/perfis/${perfilId}`, {
+                            method: 'PUT',
+                            body: JSON.stringify(dados)
+                        });
+                        if (!dadosPerfil.ok) {
+                            throw new Error(dadosPerfil.error || 'Erro ao atualizar perfil');
+                        }
+
+                        response = await window.apiFetch(`/perfis/${perfilId}/permissoes`, {
+                            method: 'POST',
+                            body: JSON.stringify(dados)
+                        });
+                    }
+
+                    if (response.ok) {
+                        if (window.showToast) window.showToast(response.message || 'Perfil salvo com sucesso!', 'success');
+                        setTimeout(() => { window.location.href = '/perfis'; }, 900);
+                    } else {
+                        throw new Error(response.error || 'Erro ao salvar');
+                    }
+                } catch (error) {
+                    if (window.showToast) window.showToast(error.message || 'Erro ao salvar', 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+            });
+        }
+
+        atualizarContadores();
+    });
 </script>
 {% endblock %}

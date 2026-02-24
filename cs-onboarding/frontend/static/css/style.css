@@ -465,21 +465,19 @@ input:read-only:disabled {
     color: var(--body-color);
 }
 
-#modalDetalhesEmpresa .modal-content,
-#modalGerenciarUsuarios .modal-content,
-#modalGamificacao .modal-content {
-    max-height: 95vh;
-    border-radius: var(--border-radius-md);
-    box-shadow: var(--shadow);
-    border: none;
-}
-
-#modalDetalhesEmpresa .modal-body,
-#modalGerenciarUsuarios .modal-body,
-#modalGamificacao .modal-body {
-    max-height: calc(95vh - 120px);
-    overflow-y: auto;
-}
+  #modalDetalhesEmpresa .modal-content,
+  #modalGerenciarUsuarios .modal-content {
+      max-height: 95vh;
+      border-radius: var(--border-radius-md);
+      box-shadow: var(--shadow);
+      border: none;
+  }
+  
+  #modalDetalhesEmpresa .modal-body,
+  #modalGerenciarUsuarios .modal-body {
+      max-height: calc(95vh - 120px);
+      overflow-y: auto;
+  }
 
 .modal-header {
     border-bottom: 1px solid var(--input-border);
@@ -915,4 +913,272 @@ input:read-only:disabled {
     transition: width 0.2s ease-out, opacity 0.3s ease;
     border-top-right-radius: 2px;
     border-bottom-right-radius: 2px;
+}
+/* ========================================================================== 
+   USERS - CARD VIEW
+   ========================================================================== */
+
+.users-shell {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.users-toolbar {
+    padding: var(--space-3);
+    border: 1px solid var(--card-border-color);
+    border-radius: var(--radius-lg);
+}
+
+.users-toolbar-main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.users-title {
+    font-size: 0.98rem;
+    font-weight: 700;
+    margin-bottom: 0.15rem;
+    color: var(--body-color);
+}
+
+.users-subtitle {
+    margin: 0;
+    color: #6b7280;
+    font-size: 0.8rem;
+}
+
+.users-toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.users-search {
+    min-width: 240px;
+}
+
+.users-sort {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    height: 36px;
+}
+
+.users-filters {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+    flex-wrap: wrap;
+}
+
+.users-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: var(--space-4);
+}
+
+.user-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4) var(--space-5);
+    box-shadow: var(--elevation-1);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    align-items: stretch;
+    min-height: 180px;
+}
+
+.user-card:hover {
+    box-shadow: var(--elevation-2);
+}
+
+.user-card-header {
+    display: flex;
+    gap: var(--space-3);
+    align-items: center;
+}
+
+.user-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #dbeafe, #f0f9ff);
+    display: grid;
+    place-items: center;
+    font-weight: 700;
+    color: #1e3a8a;
+    position: relative;
+    border: 2px solid #ffffff;
+    box-shadow: var(--elevation-1);
+}
+
+.user-avatar span:first-child {
+    font-size: 1.1rem;
+}
+
+.user-status {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #22c55e;
+    border: 2px solid #ffffff;
+}
+
+.user-identity {
+    flex: 1;
+    min-width: 0;
+}
+
+.user-name {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--body-color);
+}
+
+.user-email {
+    margin: 0;
+    color: #6b7280;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.user-role {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.role-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.role-admin {
+    background: rgba(220, 38, 38, 0.12);
+    color: #b91c1c;
+}
+
+.role-manager {
+    background: rgba(59, 130, 246, 0.12);
+    color: #1d4ed8;
+}
+
+.role-coordinator {
+    background: rgba(14, 165, 233, 0.12);
+    color: #0369a1;
+}
+
+.role-default {
+    background: rgba(107, 114, 128, 0.12);
+    color: #4b5563;
+}
+
+.role-empty {
+    background: rgba(148, 163, 184, 0.2);
+    color: #64748b;
+}
+
+.user-role-form {
+    display: contents;
+}
+
+.user-role-form .form-select {
+    min-width: 0;
+    height: 36px;
+    padding-top: 0.35rem;
+    padding-bottom: 0.35rem;
+}
+
+.user-delete-form {
+    display: contents;
+}
+
+.user-role-form .btn,
+.user-delete-form .btn {
+    height: 36px;
+    align-items: center;
+    display: inline-flex;
+    justify-content: center;
+    padding: 0 0.6rem;
+}
+
+.user-delete-form .btn {
+    min-width: 86px;
+}
+
+.user-actions {
+    display: grid;
+    grid-template-columns: minmax(140px, 1fr) 76px 86px;
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
+}
+
+.user-actions .form-select {
+    width: 100%;
+    min-width: 140px;
+    border-radius: 10px;
+    border-color: #d0d7e2;
+    background-color: #f9fafb;
+    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.02);
+}
+
+.user-actions .form-select:focus {
+    border-color: #fbbf24;
+    box-shadow: 0 0 0 0.2rem rgba(251, 191, 36, 0.25);
+    background-color: #ffffff;
+}
+
+.user-actions .form-select:hover {
+    border-color: #c7cdd8;
+}
+
+.users-empty {
+    padding: var(--space-4);
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    .users-toolbar-main {
+        grid-template-columns: 1fr;
+        align-items: flex-start;
+    }
+
+    .users-search {
+        min-width: 100%;
+    }
+
+    .user-actions {
+        grid-template-columns: 1fr;
+    }
+
+    .user-actions .btn {
+        width: 100%;
+    }
+
+    .user-delete-form {
+        justify-content: stretch;
+    }
+
+    .user-delete-form .btn {
+        width: 100%;
+    }
 }

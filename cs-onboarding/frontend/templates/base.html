@@ -60,6 +60,7 @@ request.args.get('context') == 'grandes_contas') or (request.blueprint == 'perfi
   <!-- Legacy CSS (mantido para compatibilidade - serão removidos gradualmente) -->
   <link rel="stylesheet" href="{{ 'css/style.css' | static_versioned }}">
   <link rel="stylesheet" href="{{ 'css/theme.css' | static_versioned }}">
+  <link rel="stylesheet" href="{{ 'css/responsive_global.css' | static_versioned }}">
 
 
   {% block head_extra %}{% endblock %}
@@ -76,27 +77,34 @@ request.args.get('context') == 'grandes_contas') or (request.blueprint == 'perfi
     <!-- Sidebar sempre visível -->
     {% block sidebar %}
     <nav id="menu" class="sidebar-menu" role="navigation">
-      <div class="sidebar-header d-flex align-items-center justify-content-between mb-3">
-        <div class="d-flex align-items-center">
-          <div class="user-profile-btn-sidebar me-2">
-            {% if g.perfil and g.perfil.foto_url %}
-            <img src="{{ g.perfil.foto_url }}?v={{ range(1, 10000) | random }}" alt="Foto" id="sidebar-user-photo"
-              class="user-photo-global">
-            {% else %}
-            <i class="bi bi-person-fill" style="font-size: 1.5rem;"></i>
-            {% endif %}
+      <div class="sidebar-header">
+        <div class="sidebar-user-block d-flex align-items-center justify-content-between">
+          <div class="d-flex align-items-center sidebar-user-meta">
+            <div class="user-profile-btn-sidebar me-2">
+              <span class="sidebar-user-status-dot" aria-hidden="true"></span>
+              {% if g.perfil and g.perfil.foto_url %}
+              <img src="{{ g.perfil.foto_url }}?v={{ range(1, 10000) | random }}" alt="Foto" id="sidebar-user-photo"
+                class="user-photo-global">
+              {% else %}
+              <i class="bi bi-person-fill" style="font-size: 1.5rem;"></i>
+              {% endif %}
+            </div>
+            <div class="sidebar-user-info">
+              <strong class="nav-link-text user-name-global" id="sidebar-user-name">{{ g.perfil.nome or g.user_email
+                }}</strong>
+              <span class="nav-link-text sidebar-user-role">{{ (g.perfil.perfil_acesso if g.perfil and
+                g.perfil.perfil_acesso else 'Admin') }}</span>
+            </div>
           </div>
-          <strong class="nav-link-text user-name-global" id="sidebar-user-name">{{ g.perfil.nome or g.user_email
-            }}</strong>
+          <button id="sidebarToggle" class="sidebar-toggle-btn" title="Colapsar menu" aria-label="Colapsar menu">
+            <i class="bi bi-chevron-left"></i>
+          </button>
         </div>
-        <button id="sidebarToggle" class="sidebar-toggle-btn" title="Colapsar menu">
-          <i class="bi bi-chevron-left"></i>
-        </button>
       </div>
-      <ul class="nav flex-column">
+      <ul class="nav flex-column sidebar-nav-main">
         <li class="nav-item"><a
             class="nav-link {% if request.endpoint and 'dashboard' in request.endpoint %}active{% endif %}"
-            href="{{ url_for(current_dashboard) }}"><i class="bi bi-speedometer2 me-2"></i><span class="nav-link-text">
+            href="{{ url_for(current_dashboard) }}"><i class="bi bi-grid me-2"></i><span class="nav-link-text">
               Dashboard</span></a></li>
         {% if implantacao and implantacao.id %}
         {% set ver_impl_blueprint = (request.blueprint if request.blueprint in ['onboarding', 'grandes_contas',
@@ -109,64 +117,60 @@ request.args.get('context') == 'grandes_contas') or (request.blueprint == 'perfi
         <li class="nav-item"><a class="nav-link {% if request.endpoint == 'profile.profile' %}active{% endif %}"
             href="{{ url_for('profile.profile') }}"><i class="bi bi-person-circle me-2"></i><span class="nav-link-text">
               Perfil</span></a></li>
-
-        {# Acesso restrito: Coordenador, Gerente e Administrador #}
         {% if g.perfil and g.perfil.perfil_acesso in g.PERFIS_COM_GESTAO %}
-        <li class="nav-item nav-item-divider">
-          <hr>
-        </li>
-
         <li class="nav-item"><a
             class="nav-link {% if request.endpoint and request.endpoint.startswith('planos.') %}active{% endif %}"
             href="{{ url_for('planos.listar_planos', context=current_context) }}"><i
-              class="bi bi-diagram-3 me-2"></i><span class="nav-link-text"> Planos de Sucesso</span></a></li>
-
+              class="bi bi-signpost-split me-2"></i><span class="nav-link-text"> Planos de Sucesso</span></a></li>
         <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.manage_users' %}active{% endif %}"
-            href="{{ url_for('management.manage_users') }}"><i class="bi bi-people-fill me-2"></i><span
-              class="nav-link-text">
+            href="{{ url_for('management.manage_users') }}"><i class="bi bi-people me-2"></i><span class="nav-link-text">
               Usuários</span></a></li>
         <li class="nav-item"><a
             class="nav-link {% if request.endpoint and request.endpoint.startswith('perfis.') %}active{% endif %}"
-            href="{{ url_for('perfis.listar_perfis') }}"><i class="bi bi-shield-lock me-2"></i><span
+            href="{{ url_for('perfis.listar_perfis') }}"><i class="bi bi-shield-shaded me-2"></i><span
               class="nav-link-text"> Perfis de Acesso</span></a></li>
         <li class="nav-item"><a
             class="nav-link {% if request.endpoint == 'analytics.analytics_dashboard' %}active{% endif %}"
             href="{{ url_for('analytics.analytics_dashboard', context=current_context) }}"><i
-              class="bi bi-graph-up me-2"></i><span class="nav-link-text"> Gerencial</span></a></li>
-        <!-- <li class="nav-item"><a
-          class="nav-link {% if request.endpoint == 'analytics.cancelamentos_dashboard' %}active{% endif %}"
-          href="{{ url_for('analytics.cancelamentos_dashboard') }}"><i class="bi bi-x-circle me-2"></i><span class="nav-link-text"> Cancelamentos</span></a></li> -->
-        <li class="nav-item nav-item-divider">
-          <hr>
+              class="bi bi-graph-up-arrow me-2"></i><span class="nav-link-text"> Gerencial</span></a></li>
+        <li class="nav-item nav-item-section-title"><span class="nav-link disabled nav-link-text">GAMIFICAÇÃO</span>
         </li>
-        <li class="nav-item"><span class="nav-link disabled nav-link-text">Gamificação</span></li>
         <li class="nav-item"><a
             class="nav-link {% if request.endpoint == 'gamification.manage_gamification_metrics' %}active{% endif %}"
             href="{{ url_for('gamification.manage_gamification_metrics', context=current_context) }}"><i
-              class="bi bi-pencil-square me-2"></i><span class="nav-link-text"> Métricas</span></a></li>
-        <li class="nav-item"><a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#modalGamificacao"><i
-              class="bi bi-list-check me-2"></i><span class="nav-link-text"> Critérios da Gamificação</span></a></li>
+              class="bi bi-list-check me-2"></i><span class="nav-link-text"> Métricas</span></a></li>
+        <li class="nav-item"><a
+            class="nav-link {% if request.endpoint == 'gamification.manage_gamification_rules' %}active{% endif %}"
+            href="/gamification/rules"><i class="bi bi-card-list me-2"></i><span
+              class="nav-link-text"> Critérios da Gamificação</span></a></li>
         <li class="nav-item"><a
             class="nav-link {% if request.endpoint == 'gamification.gamification_report' %}active{% endif %}"
             href="{{ url_for('gamification.gamification_report', context=current_context) }}"><i
-              class="bi bi-clipboard-data me-2"></i><span class="nav-link-text"> Relatório</span></a></li>
+              class="bi bi-file-earmark-bar-graph me-2"></i><span class="nav-link-text"> Relatório</span></a></li>
         {% endif %}
+      </ul>
+      <ul class="nav flex-column sidebar-nav-footer">
         <li class="nav-item nav-item-divider">
           <hr>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="#" id="themeToggle">
-            <i class="bi bi-moon-stars me-2" id="themeIcon"></i>
-            <span class="nav-link-text" id="themeText">Tema Escuro</span>
+          <a class="nav-link nav-link-theme" href="#" id="themeToggle">
+            <span class="nav-link-theme-left">
+              <i class="bi bi-moon-stars me-2" id="themeIcon"></i>
+              <span class="nav-link-text" id="themeText">Tema Escuro</span>
+            </span>
+            <span class="theme-switch" aria-hidden="true">
+              <span class="theme-switch-thumb"></span>
+            </span>
           </a>
         </li>
         <li class="nav-item">
           <a class="nav-link" href="{{ url_for('core.modules_selection') }}">
-            <i class="bi bi-grid-3x3-gap me-2"></i>
+            <i class="bi bi-grid me-2"></i>
             <span class="nav-link-text">Trocar Módulo</span>
           </a>
         </li>
-        <li class="nav-item"><a class="nav-link text-danger" href="{{ url_for('auth.logout') }}"><i
+        <li class="nav-item"><a class="nav-link nav-link-danger" href="{{ url_for('auth.logout') }}"><i
               class="bi bi-box-arrow-left me-2"></i><span class="nav-link-text"> Sair</span></a></li>
       </ul>
     </nav>
@@ -188,7 +192,6 @@ request.args.get('context') == 'grandes_contas') or (request.blueprint == 'perfi
   </div>
 
   {% include 'modals/_detalhes_empresa.html' %}
-  {% include 'modals/_gamificacao_regras.html' %}
 
   <!-- Modal de Confirmação Reutilizável (Bootstrap) -->
   <div class="modal fade" id="modalConfirmacao" tabindex="-1" data-bs-backdrop="static">

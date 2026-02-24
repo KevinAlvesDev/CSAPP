@@ -33,12 +33,23 @@
             if (buscaInput) buscaInput.value = '';
         });
 
-        // Filter plans on input
+        // Busca apenas sob demanda (botao/Enter), sem auto-busca ao digitar
         if (buscaInput) {
-            buscaInput.addEventListener('input', function (e) {
-                filtrarPlanos(e.target.value);
+            buscaInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    carregarPlanos((buscaInput.value || '').trim());
+                }
             });
         }
+
+        // Busca explicita por clique no botao (delegacao para evitar perda de binding)
+        modalElement.addEventListener('click', function (e) {
+            const btnBuscar = e.target.closest('#btnBuscarPlanoModal');
+            if (!btnBuscar) return;
+            e.preventDefault();
+            carregarPlanos((buscaInput?.value || '').trim());
+        });
 
         // Event Delegation for dynamically created buttons
         if (container) {
@@ -79,7 +90,7 @@
 
         // --- Functions ---
 
-        function carregarPlanos() {
+        function carregarPlanos(termoBusca = '') {
             if (!container) return;
 
             // Show loading state
@@ -107,7 +118,12 @@
                 context = mainContent.dataset.context;
             }
 
-            window.apiFetch(`/planos/?ativo=true&context=${context}`)
+            const params = new URLSearchParams({
+                somente_templates: 'true'
+            });
+            if (termoBusca) params.set('busca', termoBusca);
+
+            window.apiFetch(`/api/planos-sucesso?${params.toString()}`)
                 .then(data => {
                     if (data.success && data.planos) {
                         planosDisponiveis = data.planos;
@@ -185,15 +201,6 @@
                     </div>
                 </div>
             `).join('');
-        }
-
-        function filtrarPlanos(termo) {
-            const termoLower = termo.toLowerCase();
-            const planosFiltrados = planosDisponiveis.filter(plano =>
-                plano.nome.toLowerCase().includes(termoLower) ||
-                (plano.descricao && plano.descricao.toLowerCase().includes(termoLower))
-            );
-            renderizarPlanos(planosFiltrados);
         }
 
         function formatarData(dataStr) { return window.formatDate(dataStr, false) || 'N/A'; }

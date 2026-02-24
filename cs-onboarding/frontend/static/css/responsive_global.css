@@ -1,0 +1,172 @@
+/**
+ * Global Responsive Hardening
+ * ===========================
+ * Regras globais para evitar quebra de layout em zoom in/out.
+ * Carregado por ultimo para sobrescrever CSS legado.
+ */
+
+html,
+body {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+.main-layout,
+.main-content,
+.main-content > * {
+    min-width: 0;
+}
+
+.container,
+.container-sm,
+.container-md,
+.container-lg,
+.container-xl,
+.container-xxl,
+.container-fluid {
+    max-width: 100%;
+}
+
+.card,
+.modal-dialog,
+.modal-content {
+    max-width: 100%;
+}
+
+img,
+svg,
+video,
+iframe,
+canvas {
+    max-width: 100%;
+}
+
+canvas {
+    display: block;
+}
+
+.table-responsive {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
+.table-responsive .table {
+    min-width: 680px;
+}
+
+.form-control,
+.form-select,
+.btn,
+.input-group {
+    max-width: 100%;
+}
+
+.text-truncate {
+    min-width: 0;
+}
+
+@media (max-width: 1200px) {
+    .sidebar-menu {
+        width: 60px !important;
+        padding: 10px 6px !important;
+        overflow-x: hidden;
+    }
+
+    .sidebar-menu .nav-link-text,
+    .sidebar-menu .sidebar-user-role,
+    .sidebar-menu .sidebar-user-status-dot,
+    .sidebar-menu .theme-switch,
+    .sidebar-menu .nav-item-divider,
+    .sidebar-menu .sidebar-user-info,
+    .sidebar-menu .sidebar-user-meta {
+        display: none !important;
+    }
+
+    .sidebar-menu .sidebar-header {
+        padding-bottom: 8px !important;
+    }
+
+    .sidebar-menu .sidebar-user-block {
+        justify-content: center !important;
+    }
+
+    .sidebar-menu #menu .nav-link {
+        justify-content: center;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
+    .main-content {
+        margin-left: 60px !important;
+        width: calc(100% - 60px) !important;
+    }
+
+    .container-fluid {
+        padding: 12px !important;
+    }
+}
+
+@media (max-width: 992px) {
+    .container-fluid {
+        padding: 10px !important;
+    }
+
+    .card-header,
+    .card-body,
+    .card-footer {
+        padding: 12px !important;
+    }
+
+    .metrics-grid {
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)) !important;
+    }
+
+    .card-header-pills {
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        gap: 8px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .container-fluid {
+        padding: 8px !important;
+    }
+
+    .main-content {
+        margin-left: 60px !important;
+        width: calc(100% - 60px) !important;
+    }
+
+    .row {
+        --bs-gutter-x: 0.75rem;
+    }
+
+    .btn,
+    .form-control,
+    .form-select {
+        min-height: 36px;
+    }
+}
+
+@media (max-width: 576px) {
+    .sidebar-menu {
+        width: 52px !important;
+    }
+
+    .main-content {
+        margin-left: 52px !important;
+        width: calc(100% - 52px) !important;
+    }
+
+    .container-fluid {
+        padding: 6px !important;
+    }
+
+    .table-responsive .table {
+        min-width: 560px;
+    }
+}

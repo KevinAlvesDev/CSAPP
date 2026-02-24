@@ -39,8 +39,7 @@
 
 /* Large modals with scrollable body */
 #modalDetalhesEmpresa .modal-body,
-#modalGerenciarUsuarios .modal-body,
-#modalGamificacao .modal-body {
+#modalGerenciarUsuarios .modal-body {
     max-height: calc(95vh - 120px);
     overflow-y: auto;
 }

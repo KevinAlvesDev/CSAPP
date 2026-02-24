@@ -40,8 +40,8 @@
       const itemId = dados?.id || `item_${itemCounter}`;
       const container = document.getElementById('itemsContainer');
 
-      if (dados && dados.children && dados.children.length > 0) {
-        dados.expanded = true;
+      if (dados && dados.children && dados.children.length > 0 && typeof dados.expanded === 'undefined') {
+        dados.expanded = false;
       }
 
       const itemElement = this.criarItemElement(itemId, dados, 0, null);
@@ -144,7 +144,8 @@
       `;
     },
 
-    adicionarFilho(parentElement, dados = null) {
+    adicionarFilho(parentElement, dados = null, options = {}) {
+      const { autoExpandParent = true } = options;
       itemCounter++;
       const parentId = parentElement.getAttribute('data-item-id');
       const level = parseInt(parentElement.getAttribute('data-level')) + 1;
@@ -165,7 +166,9 @@
       const element = childrenContainer.querySelector(`:scope > [data-item-id="${itemId}"]`);
       this.bindItemEvents(element);
 
-      this.expandItem(parentElement);
+      if (autoExpandParent) {
+        this.expandItem(parentElement);
+      }
     },
 
     expandItem(element) {
@@ -384,17 +387,28 @@
     },
 
     carregarPlano(planoData) {
+      const prepararItens = (items) => (items || []).map(item => this.definirMinimizadoRecursivo(item));
+
       if (planoData.items && Array.isArray(planoData.items)) {
-        planoData.items.forEach(item => {
+        prepararItens(planoData.items).forEach(item => {
           this.adicionarItemRaiz(item);
         });
       } else if (planoData.fases && Array.isArray(planoData.fases)) {
         this.carregarPlanoLegado(planoData);
       } else if (planoData.estrutura && planoData.estrutura.items) {
-        planoData.estrutura.items.forEach(item => {
+        prepararItens(planoData.estrutura.items).forEach(item => {
           this.adicionarItemRaiz(item);
         });
       }
+    },
+
+    definirMinimizadoRecursivo(itemData) {
+      const item = { ...itemData };
+      item.expanded = false;
+      if (Array.isArray(item.children) && item.children.length > 0) {
+        item.children = item.children.map(child => this.definirMinimizadoRecursivo(child));
+      }
+      return item;
     },
 
     carregarPlanoLegado(planoData) {
@@ -403,7 +417,7 @@
           title: fase.nome,
           comment: fase.descricao || '',
           level: 0,
-          expanded: true,
+          expanded: false,
           children: []
         };
 
@@ -440,7 +454,7 @@
       }
 
       itemData.children.forEach(childData => {
-        this.adicionarFilho(parentElement, childData);
+        this.adicionarFilho(parentElement, childData, { autoExpandParent: false });
 
         // Usar :scope > para pegar apenas filhos diretos
         const itemBody = parentElement.querySelector(':scope > .item-body');

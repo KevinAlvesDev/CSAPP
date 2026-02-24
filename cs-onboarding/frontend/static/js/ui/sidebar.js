@@ -24,6 +24,16 @@
         if (!sidebarToggle || !sidebar) return;
 
         function updateMainContent() {
+            const isCompactViewport = global.matchMedia && global.matchMedia('(max-width: 1200px)').matches;
+            if (isCompactViewport) {
+                sidebar.classList.add('collapsed');
+                if (mainContent) {
+                    mainContent.style.marginLeft = '60px';
+                    mainContent.style.width = 'calc(100% - 60px)';
+                }
+                return;
+            }
+
             if (sidebar.classList.contains('collapsed')) {
                 if (mainContent) {
                     mainContent.style.marginLeft = '60px';
@@ -52,6 +62,11 @@
 
         // Toggle handler
         sidebarToggle.addEventListener('click', function () {
+            if (global.matchMedia && global.matchMedia('(max-width: 1200px)').matches) {
+                // Em viewport compacto, manter sidebar no modo compacto para evitar quebra em zoom alto.
+                updateMainContent();
+                return;
+            }
             sidebar.classList.toggle('collapsed');
             const icon = sidebarToggle.querySelector('i');
             if (icon) {
@@ -60,6 +75,9 @@
             updateMainContent();
             localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
         });
+
+        // Recalcula layout em resize/zoom (zoom altera viewport efetivo).
+        global.addEventListener('resize', updateMainContent);
     }
 
     // ========================================

@@ -13,6 +13,7 @@
 
   <form action="{{ url_for('profile.save_profile') }}" method="POST" enctype="multipart/form-data" hx-post="{{ url_for('profile.save_profile') }}" hx-target="#profile-content" hx-swap="innerHTML">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="next" value="{{ request.path }}">
 
     <div class="d-flex align-items-center mb-3">
       <div class="me-3 text-center">

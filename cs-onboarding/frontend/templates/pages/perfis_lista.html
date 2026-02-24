@@ -4,457 +4,394 @@
 
 {% block head_extra %}
 <style>
-    .perfis-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 2rem;
-    }
-
-    .perfis-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 1.5rem;
-    }
-
-    .perfil-card {
-        background: white;
-        border-radius: 16px;
-        padding: 1.5rem;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-        transition: all 0.3s ease;
-        border-left: 4px solid var(--perfil-cor, #667eea);
-        position: relative;
+    .access-profiles-wrap {
+        --bg-main: #f3f6fb;
+        --bg-card: #ffffff;
+        --bg-card-soft: #ffffff;
+        --border: #d8e2f1;
+        --text-primary: #152238;
+        --text-secondary: #5f7393;
+        --text-muted: #7084a2;
+        --accent: #1f6bff;
+        --accent-strong: #2f7eff;
+        --success-soft: #0d5f4d;
+        --success: #0f9d72;
+        --card-radius: 12px;
+        background: var(--bg-main);
+        border: 1px solid #d8e2f1;
+        border-radius: 10px;
         overflow: hidden;
     }
 
-    .perfil-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-    }
-
-    .perfil-card-header {
+    .access-profiles-top {
+        padding: 18px 22px 20px;
+        border-bottom: 1px solid #d8e2f1;
         display: flex;
-        align-items: center;
-        gap: 1rem;
-        margin-bottom: 1rem;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 18px;
+        flex-wrap: wrap;
     }
 
-    .perfil-icon {
-        width: 50px;
-        height: 50px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
-        color: white;
-        background: var(--perfil-cor, #667eea);
-    }
-
-    .perfil-info h3 {
+    .access-profiles-title {
         margin: 0;
-        font-size: 1.25rem;
+        color: var(--text-primary);
+        font-size: 28px;
+        line-height: 1.08;
         font-weight: 700;
-        color: #2d3748;
+        letter-spacing: -0.02em;
     }
 
-    .perfil-badge {
-        font-size: 0.7rem;
-        padding: 0.2rem 0.5rem;
-        border-radius: 20px;
-        background: #e2e8f0;
-        color: #4a5568;
-        margin-top: 0.25rem;
-        display: inline-block;
+    .access-profiles-subtitle {
+        margin: 4px 0 0;
+        color: var(--text-secondary);
+        font-size: 12px;
+        line-height: 1.35;
     }
 
-    .perfil-badge.sistema {
-        background: #fed7d7;
-        color: #c53030;
-    }
-
-    .perfil-descricao {
-        color: #718096;
-        font-size: 0.9rem;
-        margin-bottom: 1rem;
-        min-height: 40px;
-    }
-
-    .perfil-stats {
+    .access-profiles-top-actions {
         display: flex;
-        gap: 1rem;
-        margin-bottom: 1rem;
-        padding: 0.75rem;
-        background: #f7fafc;
-        border-radius: 8px;
-    }
-
-    .stat-item {
-        flex: 1;
-        text-align: center;
-    }
-
-    .stat-value {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: #2d3748;
-    }
-
-    .stat-label {
-        font-size: 0.75rem;
-        color: #718096;
-    }
-
-    .perfil-actions {
-        display: flex;
-        gap: 0.5rem;
-    }
-
-    .btn-perfil {
-        flex: 1;
-        padding: 0.5rem 1rem;
-        border-radius: 8px;
-        font-size: 0.875rem;
-        font-weight: 500;
-        border: none;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        display: flex;
+        gap: 12px;
         align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
+        margin-top: 2px;
+    }
+
+    .access-search {
+        width: 300px;
+        height: 44px;
+        border-radius: 10px;
+        border: 1px solid transparent;
+        background: #ffffff;
+        color: #263850;
+        padding: 0 14px 0 36px;
+        outline: none;
+        font-size: 15px;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .access-search::placeholder {
+        color: #7d90ad;
+    }
+
+    .access-search:focus {
+        border-color: #3c7bff;
+        box-shadow: 0 0 0 2px rgba(47, 126, 255, 0.15);
+    }
+
+    .access-search-wrap {
+        position: relative;
+    }
+
+    .access-search-wrap i {
+        position: absolute;
+        left: 13px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #7d90ad;
+        font-size: 15px;
+    }
+
+    .access-create-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        height: 44px;
+        padding: 0 18px;
+        border-radius: 10px;
+        border: 0;
         text-decoration: none;
+        color: #ffffff;
+        background: linear-gradient(180deg, var(--accent-strong) 0%, var(--accent) 100%);
+        font-size: 17px;
+        font-weight: 600;
+        transition: transform 0.2s ease, filter 0.2s ease;
     }
 
-    .btn-perfil-primary {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
+    .access-create-btn:hover {
+        color: #ffffff;
+        transform: translateY(-1px);
+        filter: brightness(1.07);
     }
 
-    .btn-perfil-primary:hover {
-        transform: scale(1.02);
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        color: white;
+    .access-profiles-body {
+        padding: 16px 22px 8px;
+        max-width: 1760px;
+        margin: 0 auto;
     }
 
-    .btn-perfil-danger {
-        background: #fc8181;
-        color: white;
+    .access-profiles-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+        padding-bottom: 8px;
     }
 
-    .btn-perfil-danger:hover {
-        background: #f56565;
-    }
-
-    .btn-perfil-danger:disabled {
-        background: #e2e8f0;
-        color: #a0aec0;
-        cursor: not-allowed;
-    }
-
-    .new-perfil-card {
-        background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
-        border: 2px dashed #cbd5e0;
+    .access-profile-card {
+        background: #ffffff;
+        border: 1px solid #d8e2f1;
+        border-radius: var(--card-radius);
+        overflow: hidden;
+        min-height: 210px;
         display: flex;
         flex-direction: column;
+    }
+
+    .access-profile-main {
+        padding: 12px 12px 10px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .access-profile-main-header {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 8px;
+    }
+
+    .access-profile-icon {
+        width: 30px;
+        height: 30px;
+        border-radius: 6px;
+        display: inline-flex;
         align-items: center;
         justify-content: center;
-        min-height: 250px;
-        cursor: pointer;
-        text-decoration: none;
-        color: #4a5568;
+        color: #ffffff;
+        font-size: 14px;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
     }
 
-    .new-perfil-card:hover {
-        border-color: #667eea;
-        background: linear-gradient(135deg, #ebf4ff 0%, #e2e8f0 100%);
-        color: #667eea;
+    .access-profile-name {
+        margin: 0 0 6px;
+        color: #152238;
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 1.25;
     }
 
-    .new-perfil-card i {
-        font-size: 3rem;
-        margin-bottom: 1rem;
+    .access-profile-desc {
+        margin: 0 0 10px;
+        color: #5f7393;
+        font-size: 11px;
+        line-height: 1.45;
+        min-height: 50px;
     }
 
-    .new-perfil-card h3 {
-        margin: 0;
+    .access-profile-stats {
+        margin-top: auto;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        border-top: 1px solid #e2e9f5;
+        padding-top: 10px;
+    }
+
+    .access-profile-stat-label {
+        color: #6e83a4;
+        text-transform: uppercase;
+        font-size: 10px;
+        letter-spacing: 0.06em;
+        margin-bottom: 2px;
         font-weight: 600;
     }
 
-    .empty-state {
+    .access-profile-stat-value {
+        color: #152238;
+        font-size: 18px;
+        line-height: 1.08;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+    }
+
+    .access-profile-stat-subvalue {
+        color: #152238;
+        font-size: 16px;
+        line-height: 1.08;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+    }
+
+    .access-profile-footer {
+        border-top: 1px solid #e2e9f5;
+        padding: 8px 12px;
+        text-align: right;
+    }
+
+    .access-edit-link {
+        color: #2f7eff;
+        text-decoration: none;
+        font-size: 12px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .access-edit-link:hover {
+        color: #4f91ff;
+    }
+
+    .access-empty {
+        grid-column: 1 / -1;
+        background: #ffffff;
+        border: 1px solid #d8e2f1;
+        border-radius: 12px;
+        color: #5f7393;
+        min-height: 180px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         text-align: center;
-        padding: 4rem 2rem;
-        background: white;
-        border-radius: 16px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        padding: 24px;
+        font-size: 15px;
     }
 
-    .empty-state i {
-        font-size: 4rem;
-        color: #cbd5e0;
-        margin-bottom: 1rem;
+    @media (max-width: 1500px) {
+        .access-profiles-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
     }
 
-    /* Dark Mode */
-    body.dark-mode .perfil-card {
-        background: var(--card-bg);
+    @media (max-width: 1200px) {
+        .access-profiles-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
     }
 
-    body.dark-mode .perfil-info h3 {
-        color: var(--body-color);
+    @media (max-width: 991px) {
+        .access-profiles-top {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .access-profiles-top-actions {
+            width: 100%;
+            flex-wrap: wrap;
+        }
+
+        .access-search-wrap {
+            flex: 1;
+            min-width: 220px;
+        }
+
+        .access-search {
+            width: 100%;
+        }
     }
 
-    body.dark-mode .perfil-stats {
-        background: var(--table-header-bg);
-    }
+    @media (max-width: 768px) {
+        .access-profiles-top,
+        .access-profiles-body {
+            padding-left: 16px;
+            padding-right: 16px;
+        }
 
-    body.dark-mode .stat-value {
-        color: var(--body-color);
-    }
+        .access-profiles-title {
+            font-size: 32px;
+        }
 
-    body.dark-mode .new-perfil-card {
-        background: var(--card-bg);
-        border-color: var(--table-border-color);
-        color: var(--body-color);
+        .access-profiles-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .access-profile-desc {
+            min-height: 0;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid p-0">
-    <header class="header-bg p-3 d-flex align-items-center position-relative rounded-3">
-        <h1 class="main-title mb-0 fs-4 w-100 text-center">Perfis de Acesso</h1>
-        <div class="d-flex align-items-center position-absolute end-0 top-50 translate-middle-y gap-2 me-3">
-            {% if g.modulo_atual == 'grandes_contas' %}
-            <a href="{{ url_for('grandes_contas.dashboard') }}" class="btn btn-sm btn-outline-secondary">
-                <i class="bi bi-house me-1"></i> Dashboard
-            </a>
-            {% elif g.modulo_atual == 'ongoing' %}
-            <a href="{{ url_for('ongoing.dashboard') }}" class="btn btn-sm btn-outline-secondary">
-                <i class="bi bi-house me-1"></i> Dashboard
-            </a>
-            {% else %}
-            <a href="{{ url_for('onboarding.dashboard') }}" class="btn btn-sm btn-outline-secondary">
-                <i class="bi bi-house me-1"></i> Dashboard
-            </a>
-            {% endif %}
-        </div>
-    </header>
+    <div class="access-profiles-wrap">
+        <div class="access-profiles-top">
+            <div>
+                <h1 class="access-profiles-title">Perfis de Acesso</h1>
+                <p class="access-profiles-subtitle">Gerencie níveis de acesso e permissões do sistema.</p>
+            </div>
 
-    <main class="p-4" style="padding-top: 20px !important;">
-        <div class="perfis-grid">
-            <!-- Card para criar novo perfil -->
-            <a href="{{ url_for('perfis.novo_perfil') }}" class="perfil-card new-perfil-card">
-                <i class="bi bi-plus-circle"></i>
-                <h3>Novo Perfil</h3>
-                <p class="text-muted mt-2 mb-0">Criar novo perfil de acesso</p>
-            </a>
-
-            {% for perfil in perfis %}
-            <div class="perfil-card" style="--perfil-cor: {{ perfil.cor or '#667eea' }}">
-                <div class="perfil-card-header">
-                    <div class="perfil-icon" style="background: {{ perfil.cor or '#667eea' }}">
-                        <i class="{{ perfil.icone or 'bi-person-badge' }}"></i>
-                    </div>
-                    <div class="perfil-info">
-                        <h3>{{ perfil.nome }}</h3>
-                        {% if perfil.sistema %}
-                        <span class="perfil-badge sistema">
-                            <i class="bi bi-lock-fill me-1"></i>Sistema
-                        </span>
-                        {% endif %}
-                    </div>
+            <div class="access-profiles-top-actions">
+                <div class="access-search-wrap">
+                    <i class="bi bi-search"></i>
+                    <input id="accessProfileSearch" class="access-search" type="text" placeholder="Buscar perfis...">
                 </div>
+                <a href="{{ url_for('perfis.novo_perfil') }}" class="access-create-btn">
+                    <i class="bi bi-plus-lg"></i>
+                    <span>Criar Novo Perfil</span>
+                </a>
+            </div>
+        </div>
 
-                <p class="perfil-descricao">
-                    {{ perfil.descricao or 'Sem descrição' }}
-                </p>
+        <div class="access-profiles-body">
+            <div class="access-profiles-grid" id="accessProfilesGrid">
+                {% if perfis %}
+                    {% for perfil in perfis %}
+                    <article
+                        class="access-profile-card"
+                        data-profile-name="{{ (perfil.nome or '')|lower }}"
+                        data-profile-description="{{ (perfil.descricao or '')|lower }}"
+                    >
+                        <div class="access-profile-main">
+                            <div class="access-profile-main-header">
+                                <span class="access-profile-icon" style="background: {{ perfil.cor or '#2f7eff' }};">
+                                    <i class="{{ perfil.icone or 'bi-shield-lock-fill' }}"></i>
+                                </span>
+                            </div>
 
-                <div class="perfil-stats">
-                    <div class="stat-item">
-                        <div class="stat-value">{{ perfil.total_permissoes or 0 }}/{{ perfil.total_recursos or 0 }}
+                            <h3 class="access-profile-name">{{ perfil.nome }}</h3>
+                            <p class="access-profile-desc">
+                                {{ perfil.descricao or 'Sem descrição cadastrada para este perfil.' }}
+                            </p>
+
+                            <div class="access-profile-stats">
+                                <div>
+                                    <div class="access-profile-stat-label">Usuários</div>
+                                    <div class="access-profile-stat-value">{{ perfil.total_usuarios or 0 }}</div>
+                                </div>
+                                <div>
+                                    <div class="access-profile-stat-label">Permissões</div>
+                                    <div class="access-profile-stat-subvalue">
+                                        {{ perfil.total_permissoes or 0 }} Ativas
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="stat-label">Permissões</div>
+
+                        <div class="access-profile-footer">
+                            <a class="access-edit-link" href="{{ url_for('perfis.editar_perfil', perfil_id=perfil.id) }}">
+                                Editar Perfil <i class="bi bi-arrow-right"></i>
+                            </a>
+                        </div>
+                    </article>
+                    {% endfor %}
+                {% else %}
+                    <div class="access-empty">
+                        Nenhum perfil encontrado.
                     </div>
-                    <div class="stat-item">
-                        <div class="stat-value">{{ perfil.total_usuarios or 0 }}</div>
-                        <div class="stat-label">Usuários</div>
-                    </div>
-                </div>
-
-                <div class="perfil-actions">
-                    <a href="{{ url_for('perfis.editar_perfil', perfil_id=perfil.id) }}"
-                        class="btn-perfil btn-perfil-primary">
-                        <i class="bi bi-pencil"></i> Editar
-                    </a>
-
-                    <button type="button" class="btn-perfil btn-clonar-perfil"
-                        style="background: #38b2ac; color: white;" data-perfil-id="{{ perfil.id }}"
-                        data-perfil-nome="{{ perfil.nome }}">
-                        <i class="bi bi-copy"></i> Clonar
-                    </button>
-
-                    <button type="button" class="btn-perfil btn-perfil-danger btn-excluir-perfil"
-                        data-perfil-id="{{ perfil.id }}" data-perfil-nome="{{ perfil.nome }}" {% if
-                        perfil.total_usuarios> 0 %}disabled title="Perfil em uso por {{ perfil.total_usuarios }}
-                        usuário(s)"{% endif %}>
-                        <i class="bi bi-trash"></i> Excluir
-                    </button>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </main>
-</div>
-
-<!-- Modal Excluir Perfil -->
-<div class="modal fade" id="modalExcluirPerfil" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">
-                    <i class="bi bi-exclamation-triangle me-2"></i>Excluir Perfil
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>Tem certeza que deseja excluir o perfil <strong id="perfilNomeExcluir"></strong>?</p>
-                <p class="text-danger small mb-0">
-                    <i class="bi bi-info-circle me-1"></i>
-                    Esta ação não pode ser desfeita.
-                </p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-danger" id="btnConfirmarExclusao">
-                    <i class="bi bi-trash me-1"></i>Excluir
-                </button>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
-
-<!-- Modal Clonar Perfil -->
-<div class="modal fade" id="modalClonarPerfil" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-info text-white">
-                <h5 class="modal-title">
-                    <i class="bi bi-copy me-2"></i>Clonar Perfil
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>Criar uma cópia do perfil <strong id="perfilNomeClonar"></strong>?</p>
-                <div class="mb-3">
-                    <label for="novoNomePerfil" class="form-label fw-bold">Nome do Novo Perfil *</label>
-                    <input type="text" class="form-control" id="novoNomePerfil"
-                        placeholder="Ex: Cópia de Administrador">
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-info text-white" id="btnConfirmarClonagem">
-                    <i class="bi bi-copy me-1"></i>Clonar
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 {% endblock %}
 
 {% block scripts_extra %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        // ===== EXCLUIR =====
-        let perfilIdExcluir = null;
-        const modalExcluir = new bootstrap.Modal(document.getElementById('modalExcluirPerfil'));
+        const searchInput = document.getElementById('accessProfileSearch');
+        const cards = Array.from(document.querySelectorAll('.access-profile-card'));
 
-        document.querySelectorAll('.btn-excluir-perfil').forEach(btn => {
-            btn.addEventListener('click', function () {
-                if (this.disabled) return;
-                perfilIdExcluir = this.dataset.perfilId;
-                document.getElementById('perfilNomeExcluir').textContent = this.dataset.perfilNome;
-                modalExcluir.show();
+        if (!searchInput || !cards.length) return;
+
+        searchInput.addEventListener('input', function () {
+            const query = searchInput.value.trim().toLowerCase();
+
+            cards.forEach((card) => {
+                const name = card.dataset.profileName || '';
+                const description = card.dataset.profileDescription || '';
+                const matches = !query || name.includes(query) || description.includes(query);
+                card.style.display = matches ? '' : 'none';
             });
-        });
-
-        document.getElementById('btnConfirmarExclusao').addEventListener('click', async function () {
-            if (!perfilIdExcluir) return;
-
-            const btn = this;
-            const originalText = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Excluindo...';
-
-            try {
-                const response = await window.apiFetch(`/perfis/${perfilIdExcluir}`, {
-                    method: 'DELETE'
-                });
-
-                if (response.ok) {
-                    if (window.showToast) window.showToast('Perfil excluído com sucesso!', 'success');
-                    setTimeout(() => window.location.reload(), 1000);
-                } else {
-                    throw new Error(response.error || 'Erro ao excluir');
-                }
-            } catch (error) {
-                if (window.showToast) window.showToast(error.message || 'Erro ao excluir', 'error');
-                btn.disabled = false;
-                btn.innerHTML = originalText;
-            }
-        });
-
-        // ===== CLONAR =====
-        let perfilIdClonar = null;
-        let perfilNomeClonar = null;
-        const modalClonar = new bootstrap.Modal(document.getElementById('modalClonarPerfil'));
-
-        document.querySelectorAll('.btn-clonar-perfil').forEach(btn => {
-            btn.addEventListener('click', function () {
-                perfilIdClonar = this.dataset.perfilId;
-                perfilNomeClonar = this.dataset.perfilNome;
-                document.getElementById('perfilNomeClonar').textContent = perfilNomeClonar;
-                document.getElementById('novoNomePerfil').value = `Cópia de ${perfilNomeClonar}`;
-                modalClonar.show();
-            });
-        });
-
-        document.getElementById('btnConfirmarClonagem').addEventListener('click', async function () {
-            if (!perfilIdClonar) return;
-
-            const novoNome = document.getElementById('novoNomePerfil').value.trim();
-            if (!novoNome) {
-                if (window.showToast) window.showToast('Digite um nome para o novo perfil', 'warning');
-                document.getElementById('novoNomePerfil').focus();
-                return;
-            }
-
-            const btn = this;
-            const originalText = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Clonando...';
-
-            try {
-                const response = await window.apiFetch(`/perfis/${perfilIdClonar}/clonar`, {
-                    method: 'POST',
-                    body: JSON.stringify({ nome: novoNome })
-                });
-
-                if (response.ok) {
-                    if (window.showToast) window.showToast('Perfil clonado com sucesso!', 'success');
-                    setTimeout(() => window.location.reload(), 1000);
-                } else {
-                    throw new Error(response.error || 'Erro ao clonar');
-                }
-            } catch (error) {
-                if (window.showToast) window.showToast(error.message || 'Erro ao clonar', 'error');
-                btn.disabled = false;
-                btn.innerHTML = originalText;
-            }
         });
     });
 </script>

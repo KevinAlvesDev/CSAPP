@@ -1,7 +1,3 @@
-
-
-
-
 {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
         {% for category, message in messages %}
@@ -13,96 +9,85 @@
     {% endif %}
 {% endwith %}
 
-<div class="table-responsive">
-    <table class="table table-hover align-middle">
-        <thead>
-            <tr class="table-light">
-                <th>Usuário (E-mail)</th>
-                <th>Nome</th> 
-                <th>Perfil de Acesso</th> 
-                <th>Alterar Perfil de Acesso</th>
-                
-                <th>Excluir</th> 
-            </tr>
-        </thead>
-        <tbody>
-            {% for user in users %}
-            <tr id="user-row-{{ loop.index }}" class="
-            {% if user.perfil_acesso == 'Administrador' %}table-danger
-            {% elif not user.perfil_acesso %}table-warning
-            {% elif user.perfil_acesso == 'Gerente' or user.perfil_acesso == 'Coordenador' %}table-info
-            {% endif %}
-            ">
-                <td>
-                    <strong class="text-truncate" style="max-width: 150px; display: inline-block;">{{ user.usuario }}</strong>
-                </td>
-                <td>
-                    {{ user.nome or 'N/A' }}
-                </td>
-                <td>
-                    {% if user.perfil_acesso %}
-                        <span class="badge 
-                        {% if user.perfil_acesso == 'Administrador' %}bg-danger
-                        {% elif user.perfil_acesso == 'Gerente' %}bg-primary
-                        {% elif user.perfil_acesso == 'Coordenador' %}bg-info
-                        {% else %}bg-secondary{% endif %}">
-                            {{ user.perfil_acesso }}
-                        </span>
-                    {% else %}
-                        <span class="text-muted">Nenhum</span>
-                    {% endif %}
-                </td>
-                <td>
-                    <form method="POST" action="{{ url_for('management.update_user_perfil') }}" class="d-flex"
-                          hx-post="{{ url_for('management.update_user_perfil') }}"
-                          hx-target="#users-management-content"
-                          hx-swap="innerHTML"
-                          hx-confirm="Tem certeza que deseja alterar o Perfil de Acesso de {{ user.usuario }}?">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <input type="hidden" name="usuario_email" value="{{ user.usuario }}">
-                        
-                        <select name="new_perfil" class="form-select form-select-sm me-2" style="width: 170px;">
-                            <option value="">Nenhum</option>
-                            {% for perfil in perfis_list %}
-                                <option value="{{ perfil }}" {% if user.perfil_acesso == perfil %}selected{% endif %}>
-                                    {{ perfil }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                        
-                        <button type="submit" class="btn btn-primary btn-sm" 
-                            {% if user.usuario == g.user_email and g.perfil.perfil_acesso == 'Administrador' %}disabled title="Você não pode remover seu próprio perfil de Admin."{% endif %}>
-                            Salvar
-                        </button>
-                    </form>
-                </td>
-                
-                
-                <td>
-                    
-                    {% set can_delete = g.perfil.perfil_acesso == 'Administrador' and user.usuario != g.user_email and user.usuario != ADMIN_EMAIL %}
-                    
-                    <form method="POST" action="{{ url_for('management.delete_user') }}" style="display:inline;"
-                          hx-post="{{ url_for('management.delete_user') }}"
-                          hx-target="#users-management-content"
-                          hx-swap="innerHTML"
-                          hx-confirm="ATENÇÃO: A exclusão de {{ user.usuario }} é IRREVERSÍVEL e removerá todos os dados! Tem certeza?">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <input type="hidden" name="usuario_email" value="{{ user.usuario }}">
-                        
-                        <button type="submit" class="btn btn-danger btn-sm"
-                            {% if not can_delete %}disabled title="Você não pode excluir a si mesmo ou este usuário."{% endif %}>
-                            <i class="bi bi-trash"></i> Excluir
-                        </button>
-                    </form>
-                </td>
-            </tr>
-            {% endfor %}
-            {% if not users %}
-            <tr>
-                <td colspan="5" class="text-center text-muted">Nenhum usuário encontrado no sistema.</td> 
-            </tr>
-            {% endif %}
-        </tbody>
-    </table>
-</div>
+{% set total_users = users|length %}
+{% set perfis = perfis_list %}
+{% set sem_perfil = users|rejectattr('perfil_acesso')|list|length %}
+
+<section class="users-shell">
+
+    {% if users %}
+    <div class="users-grid">
+        {% for user in users %}
+        {% set delay = ((loop.index0 % 3) + 1) * 100 %}
+        <article class="user-card animate-fade-in-up delay-{{ delay }}">
+            <div class="user-card-header">
+                <div class="user-avatar">
+                    <span>{{ (user.nome or user.usuario or '?')[:1] }}</span>
+                    <span class="user-status"></span>
+                </div>
+                <div class="user-identity">
+                    <h3 class="user-name">{{ user.nome or 'Sem nome' }}</h3>
+                    <p class="user-email">{{ user.usuario }}</p>
+                </div>
+            </div>
+            <div class="user-role">
+                {% if user.perfil_acesso %}
+                    <span class="role-pill
+                        {% if user.perfil_acesso == 'Administrador' %}role-admin
+                        {% elif user.perfil_acesso == 'Gerente' %}role-manager
+                        {% elif user.perfil_acesso == 'Coordenador' %}role-coordinator
+                        {% else %}role-default{% endif %}
+                    ">
+                        {{ user.perfil_acesso }}
+                    </span>
+                {% else %}
+                    <span class="role-pill role-empty">Sem perfil</span>
+                {% endif %}
+            </div>
+
+            <div class="user-actions">
+                <form method="POST" action="{{ url_for('management.update_user_perfil') }}" class="user-role-form"
+                      hx-post="{{ url_for('management.update_user_perfil') }}"
+                      hx-target="#users-management-content"
+                      hx-swap="innerHTML"
+                      hx-confirm="Tem certeza que deseja alterar o Perfil de Acesso de {{ user.usuario }}?">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="usuario_email" value="{{ user.usuario }}">
+                    <select name="new_perfil" class="form-select form-select-sm">
+                        <option value="">Sem perfil</option>
+                        {% for perfil in perfis_list %}
+                            <option value="{{ perfil }}" {% if user.perfil_acesso == perfil %}selected{% endif %}>
+                                {{ perfil }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-primary btn-sm"
+                            {% if user.usuario == g.user_email and g.perfil.perfil_acesso == 'Administrador' %}disabled title="Voce nao pode remover seu proprio perfil de Admin."{% endif %}>
+                        Salvar
+                    </button>
+                </form>
+
+                {% set can_delete = g.perfil.perfil_acesso == 'Administrador' and user.usuario != g.user_email and user.usuario != ADMIN_EMAIL %}
+                <form method="POST" action="{{ url_for('management.delete_user') }}" class="user-delete-form"
+                      hx-post="{{ url_for('management.delete_user') }}"
+                      hx-target="#users-management-content"
+                      hx-swap="innerHTML"
+                      hx-confirm="ATENCAO: A exclusao de {{ user.usuario }} e IRREVERSIVEL e removera todos os dados! Tem certeza?">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="usuario_email" value="{{ user.usuario }}">
+                    <button type="submit" class="btn btn-outline-danger btn-sm"
+                            {% if not can_delete %}disabled title="Voce nao pode excluir a si mesmo ou este usuario."{% endif %}>
+                        <i class="bi bi-trash"></i>
+                        Excluir
+                    </button>
+                </form>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card users-empty">
+        <p class="text-muted mb-0">Nenhum usuario encontrado no sistema.</p>
+    </div>
+    {% endif %}
+</section>
