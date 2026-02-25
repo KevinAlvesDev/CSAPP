@@ -113,6 +113,9 @@ def get_tags_by_user_chart_data(
         (),
     ) or []
     configured_tags = [str(r.get("nome")) for r in tags_config_rows if isinstance(r, dict) and r.get("nome")]
+    for base_tag in ["Interno", "Externo"]:
+        if base_tag not in configured_tags:
+            configured_tags.append(base_tag)
 
     ordered_tags: list[str] = []
     for tag_name in configured_tags:
