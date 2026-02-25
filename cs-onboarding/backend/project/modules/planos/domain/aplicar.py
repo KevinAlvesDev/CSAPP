@@ -1,7 +1,7 @@
-"""
-Módulo de Aplicação de Planos
-Aplicar e remover planos de implantações.
-Princípio SOLID: Single Responsibility
+﻿"""
+MÃ³dulo de AplicaÃ§Ã£o de Planos
+Aplicar e remover planos de implantaÃ§Ãµes.
+PrincÃ­pio SOLID: Single Responsibility
 """
 
 from datetime import date, datetime
@@ -18,23 +18,23 @@ from .estrutura import _criar_estrutura_plano_checklist
 
 def aplicar_plano_a_implantacao(implantacao_id: int, plano_id: int, usuario: str) -> bool:
     """
-    Aplica um plano de sucesso a uma implantação.
+    Aplica um plano de sucesso a uma implantaÃ§Ã£o.
     """
     if not implantacao_id or not plano_id:
-        raise ValidationError("ID da implantação e do plano são obrigatórios")
+        raise ValidationError("ID da implantaÃ§Ã£o e do plano sÃ£o obrigatÃ³rios")
 
     implantacao = query_db(
         "SELECT id, data_inicio_efetivo, data_criacao FROM implantacoes WHERE id = %s", (implantacao_id,), one=True
     )
     if not implantacao:
-        raise ValidationError(f"Implantação com ID {implantacao_id} não encontrada")
+        raise ValidationError(f"ImplantaÃ§Ã£o com ID {implantacao_id} nÃ£o encontrada")
 
     plano = obter_plano_completo(plano_id)
     if not plano:
-        raise ValidationError(f"Plano com ID {plano_id} não encontrado")
+        raise ValidationError(f"Plano com ID {plano_id} nÃ£o encontrado")
 
     if not plano.get("ativo"):
-        raise ValidationError(f"Plano '{plano['nome']}' está inativo")
+        raise ValidationError(f"Plano '{plano['nome']}' estÃ¡ inativo")
 
     data_inicio = implantacao.get("data_inicio_efetivo") or implantacao.get("data_criacao")
     data_previsao_termino = None
@@ -62,8 +62,8 @@ def aplicar_plano_a_implantacao(implantacao_id: int, plano_id: int, usuario: str
         cursor = conn.cursor()
 
         try:
-            # Deletar apenas comentários vinculados a checklist_items desta implantação
-            # NÃO deletar comentários órfãos - eles são comentários preservados de planos anteriores
+            # Deletar apenas comentÃ¡rios vinculados a checklist_items desta implantaÃ§Ã£o
+            # NÃƒO deletar comentÃ¡rios Ã³rfÃ£os - eles sÃ£o comentÃ¡rios preservados de planos anteriores
             sql_limpar_comentarios = """
                 DELETE FROM comentarios_h
                 WHERE checklist_item_id IN (
@@ -95,7 +95,7 @@ def aplicar_plano_a_implantacao(implantacao_id: int, plano_id: int, usuario: str
             conn.commit()
 
             current_app.logger.info(
-                f"Plano '{plano['nome']}' aplicado à implantação {implantacao_id} por {usuario}. Previsão de término: {data_previsao_termino}"
+                f"Plano '{plano['nome']}' aplicado Ã  implantaÃ§Ã£o {implantacao_id} por {usuario}. PrevisÃ£o de tÃ©rmino: {data_previsao_termino}"
             )
             return True
 
@@ -113,28 +113,28 @@ def aplicar_plano_a_implantacao_checklist(
     preservar_comentarios: bool = False,
 ) -> bool:
     """
-    Aplica um plano de sucesso a uma implantação usando checklist_items.
-    Clona a estrutura do plano (itens com implantacao_id = NULL) para a implantação.
+    Aplica um plano de sucesso a uma implantaÃ§Ã£o usando checklist_items.
+    Clona a estrutura do plano (itens com implantacao_id = NULL) para a implantaÃ§Ã£o.
 
     Args:
-        preservar_comentarios: Se True, preserva os comentários existentes desvinculando-os
-                               dos checklist_items antes de deletá-los.
+        preservar_comentarios: Se True, preserva os comentÃ¡rios existentes desvinculando-os
+                               dos checklist_items antes de deletÃ¡-los.
     """
     if not implantacao_id or not plano_id:
-        raise ValidationError("ID da implantação e do plano são obrigatórios")
+        raise ValidationError("ID da implantaÃ§Ã£o e do plano sÃ£o obrigatÃ³rios")
 
     implantacao = query_db(
         "SELECT id, data_inicio_efetivo, data_criacao FROM implantacoes WHERE id = %s", (implantacao_id,), one=True
     )
     if not implantacao:
-        raise ValidationError(f"Implantação com ID {implantacao_id} não encontrada")
+        raise ValidationError(f"ImplantaÃ§Ã£o com ID {implantacao_id} nÃ£o encontrada")
 
     plano = query_db("SELECT * FROM planos_sucesso WHERE id = %s", (plano_id,), one=True)
     if not plano:
-        raise ValidationError(f"Plano com ID {plano_id} não encontrado")
+        raise ValidationError(f"Plano com ID {plano_id} nÃ£o encontrado")
 
     if not plano.get("ativo", True):
-        raise ValidationError(f"Plano '{plano['nome']}' está inativo")
+        raise ValidationError(f"Plano '{plano['nome']}' estÃ¡ inativo")
 
     data_inicio = implantacao.get("data_inicio_efetivo") or implantacao.get("data_criacao")
     data_previsao_termino = None
@@ -170,12 +170,12 @@ def aplicar_plano_a_implantacao_checklist(
                 sql_lock_impl = sql_lock_impl.replace("%s", "?")
             cursor.execute(sql_lock_impl, (implantacao_id,))
 
-            # Não concluir automaticamente planos em andamento ao trocar de plano.
-            # Conclusão só deve ocorrer explicitamente e com progresso válido (100%).
+            # NÃ£o concluir automaticamente planos em andamento ao trocar de plano.
+            # ConclusÃ£o sÃ³ deve ocorrer explicitamente e com progresso vÃ¡lido (100%).
 
-            # Preservar histórico do plano atual antes de trocar:
-            # - garante vínculo por plano_id (legado podia estar nulo)
-            # - arquiva itens removendo vínculo implantacao_id (não deleta histórico)
+            # Preservar histÃ³rico do plano atual antes de trocar:
+            # - garante vÃ­nculo por plano_id (legado podia estar nulo)
+            # - arquiva itens removendo vÃ­nculo implantacao_id (nÃ£o deleta histÃ³rico)
             plano_anterior_id = None
             sql_plano_atual = "SELECT plano_sucesso_id FROM implantacoes WHERE id = %s"
             if db_type == "sqlite":
@@ -217,15 +217,15 @@ def aplicar_plano_a_implantacao_checklist(
                 sql_desativar_em_andamento = sql_desativar_em_andamento.replace("%s", "?")
             cursor.execute(sql_desativar_em_andamento, ("substituido", now, implantacao_id))
 
-            # Criar instância do plano vinculada ao processo (snapshot do template)
+            # Criar instÃ¢ncia do plano vinculada ao processo (snapshot do template)
             plano_instancia_id = _criar_instancia_plano_cursor(
                 cursor, db_type, plano, estrutura_plano, implantacao_id, usuario
             )
 
-            # Histórico preservado por padrão: não deletar comentários/itens antigos aqui.
+            # HistÃ³rico preservado por padrÃ£o: nÃ£o deletar comentÃ¡rios/itens antigos aqui.
             # preservar_comentarios permanece por compatibilidade de assinatura.
 
-            # Responsável padrão: nome completo do usuário (fallback: email)
+            # ResponsÃ¡vel padrÃ£o: nome completo do usuÃ¡rio (fallback: email)
             if responsavel_nome and isinstance(responsavel_nome, str) and responsavel_nome.strip():
                 responsavel_padrao = responsavel_nome.strip()
             else:
@@ -269,14 +269,14 @@ def aplicar_plano_a_implantacao_checklist(
             conn.commit()
 
             current_app.logger.info(
-                f"Plano '{plano['nome']}' aplicado à implantação {implantacao_id} usando checklist_items por {usuario}. Previsão: {data_previsao_termino}"
+                f"Plano '{plano['nome']}' aplicado Ã  implantaÃ§Ã£o {implantacao_id} usando checklist_items por {usuario}. PrevisÃ£o: {data_previsao_termino}"
             )
 
             try:
-                from ....common.utils import format_date_iso_for_json
+                from ....common.utils import format_date_br
                 from ....db import logar_timeline
 
-                prev_txt = format_date_iso_for_json(data_previsao_termino) if data_previsao_termino else None
+                prev_txt = format_date_br(data_previsao_termino, include_time=False) if data_previsao_termino else None
 
                 detalhe = f"Plano aplicado: '{plano.get('nome')}'"
                 if prev_txt:
@@ -285,7 +285,7 @@ def aplicar_plano_a_implantacao_checklist(
             except Exception:
                 pass
 
-            # Limpar cache relacionado à implantação
+            # Limpar cache relacionado Ã  implantaÃ§Ã£o
             try:
                 from ....config.cache_config import clear_implantacao_cache, clear_user_cache
 
@@ -423,21 +423,21 @@ def _criar_instancia_plano_cursor(cursor, db_type, plano, estrutura_plano, impla
 
 def remover_plano_de_implantacao(implantacao_id: int, usuario: str, excluir_comentarios: bool = False) -> bool:
     """
-    Remove o plano de sucesso de uma implantação.
+    Remove o plano de sucesso de uma implantaÃ§Ã£o.
 
     Args:
-        implantacao_id: ID da implantação
-        usuario: Usuário que está removendo o plano
-        excluir_comentarios: Se True, exclui os comentários junto com o plano.
-                            Se False (padrão), preserva os comentários na aba "Comentários".
+        implantacao_id: ID da implantaÃ§Ã£o
+        usuario: UsuÃ¡rio que estÃ¡ removendo o plano
+        excluir_comentarios: Se True, exclui os comentÃ¡rios junto com o plano.
+                            Se False (padrÃ£o), preserva os comentÃ¡rios na aba "ComentÃ¡rios".
     """
     if not implantacao_id:
-        raise ValidationError("ID da implantação é obrigatório")
+        raise ValidationError("ID da implantaÃ§Ã£o Ã© obrigatÃ³rio")
 
     implantacao = query_db("SELECT plano_sucesso_id FROM implantacoes WHERE id = %s", (implantacao_id,), one=True)
 
     if not implantacao:
-        raise ValidationError(f"Implantação com ID {implantacao_id} não encontrada")
+        raise ValidationError(f"ImplantaÃ§Ã£o com ID {implantacao_id} nÃ£o encontrada")
 
     if not implantacao.get("plano_sucesso_id"):
         return True
@@ -447,7 +447,7 @@ def remover_plano_de_implantacao(implantacao_id: int, usuario: str, excluir_come
 
         try:
             if excluir_comentarios:
-                # Excluir todos os comentários da implantação
+                # Excluir todos os comentÃ¡rios da implantaÃ§Ã£o
                 sql_excluir_comentarios = """
                     DELETE FROM comentarios_h
                     WHERE checklist_item_id IN (
@@ -458,13 +458,13 @@ def remover_plano_de_implantacao(implantacao_id: int, usuario: str, excluir_come
                 if db_type == "sqlite":
                     sql_excluir_comentarios = sql_excluir_comentarios.replace("%s", "?")
                 cursor.execute(sql_excluir_comentarios, (implantacao_id, implantacao_id))
-                current_app.logger.info(f"Comentários da implantação {implantacao_id} excluídos por {usuario}")
+                current_app.logger.info(f"ComentÃ¡rios da implantaÃ§Ã£o {implantacao_id} excluÃ­dos por {usuario}")
             else:
-                # Preservar comentários: desvincular dos itens antes de deletar
+                # Preservar comentÃ¡rios: desvincular dos itens antes de deletar
                 from ....modules.checklist.domain.comments import preservar_comentarios_implantacao
 
                 preservar_comentarios_implantacao(implantacao_id, cursor=cursor, db_type=db_type)
-                current_app.logger.info(f"Comentários da implantação {implantacao_id} preservados por {usuario}")
+                current_app.logger.info(f"ComentÃ¡rios da implantaÃ§Ã£o {implantacao_id} preservados por {usuario}")
 
             # Deletar os itens do checklist
             sql_limpar = "DELETE FROM checklist_items WHERE implantacao_id = %s"
@@ -472,7 +472,7 @@ def remover_plano_de_implantacao(implantacao_id: int, usuario: str, excluir_come
                 sql_limpar = sql_limpar.replace("%s", "?")
             cursor.execute(sql_limpar, (implantacao_id,))
 
-            # Atualizar implantação para remover referência ao plano
+            # Atualizar implantaÃ§Ã£o para remover referÃªncia ao plano
             sql_update = """
                 UPDATE implantacoes
                 SET plano_sucesso_id = NULL, data_atribuicao_plano = NULL
@@ -484,17 +484,17 @@ def remover_plano_de_implantacao(implantacao_id: int, usuario: str, excluir_come
 
             conn.commit()
 
-            current_app.logger.info(f"Plano removido da implantação {implantacao_id} por {usuario}")
+            current_app.logger.info(f"Plano removido da implantaÃ§Ã£o {implantacao_id} por {usuario}")
 
             try:
                 from ....db import logar_timeline
 
                 acao = "plano_removido"
-                detalhe = f"Plano de sucesso removido da implantação por {usuario}."
+                detalhe = f"Plano de sucesso removido da implantaÃ§Ã£o por {usuario}."
                 if excluir_comentarios:
-                    detalhe += " Comentários excluídos."
+                    detalhe += " ComentÃ¡rios excluÃ­dos."
                 else:
-                    detalhe += " Comentários preservados."
+                    detalhe += " ComentÃ¡rios preservados."
                 logar_timeline(implantacao_id, usuario, acao, detalhe)
             except Exception:
                 pass
@@ -511,12 +511,12 @@ def _clonar_plano_para_implantacao(
     cursor, db_type: str, plano: dict, implantacao_id: int, responsavel: str | None = None
 ):
     """
-    Clona a estrutura do plano para a implantação usando checklist_items.
-    Converte itens do plano (tipo_item='plano_*') para itens de implantação (tipo_item='fase'/'grupo'/'tarefa'/'subtarefa').
+    Clona a estrutura do plano para a implantaÃ§Ã£o usando checklist_items.
+    Converte itens do plano (tipo_item='plano_*') para itens de implantaÃ§Ã£o (tipo_item='fase'/'grupo'/'tarefa'/'subtarefa').
     """
     plano_id = plano.get("id")
     if not plano_id:
-        raise ValidationError("Plano deve ter um ID válido")
+        raise ValidationError("Plano deve ter um ID vÃ¡lido")
 
     if db_type == "postgres":
         cursor.execute(
@@ -662,9 +662,9 @@ def _clonar_plano_para_implantacao_checklist(
     data_previsao_termino=None,
 ):
     """
-    Clona a estrutura do plano (itens com implantacao_id = NULL) para a implantação.
-    Usa abordagem iterativa para clonar toda a árvore mantendo a hierarquia.
-    IMPORTANTE: Copia também o tipo_item convertendo de 'plano_*' para o tipo de implantação.
+    Clona a estrutura do plano (itens com implantacao_id = NULL) para a implantaÃ§Ã£o.
+    Usa abordagem iterativa para clonar toda a Ã¡rvore mantendo a hierarquia.
+    IMPORTANTE: Copia tambÃ©m o tipo_item convertendo de 'plano_*' para o tipo de implantaÃ§Ã£o.
     """
     item_map = {}
 
@@ -718,7 +718,7 @@ def _clonar_plano_para_implantacao_checklist(
                 tipo_item_implantacao = "subtarefa"
 
         if db_type == "postgres":
-            # Calcular previsao_original individual: se dias_offset definido, usar data_base + offset (Sempre Dias Úteis)
+            # Calcular previsao_original individual: se dias_offset definido, usar data_base + offset (Sempre Dias Ãšteis)
             if item_dias_offset is not None and data_base:
                 try:
                     from ....common.date_helpers import add_business_days
@@ -764,7 +764,7 @@ def _clonar_plano_para_implantacao_checklist(
             result = cursor.fetchone()
             new_item_id = result[0] if result else None
         else:
-            # Calcular previsao_original individual: se dias_offset definido, usar data_base + offset (Sempre Dias Úteis)
+            # Calcular previsao_original individual: se dias_offset definido, usar data_base + offset (Sempre Dias Ãšteis)
             if item_dias_offset is not None and data_base:
                 try:
                     from ....common.date_helpers import add_business_days
@@ -774,7 +774,7 @@ def _clonar_plano_para_implantacao_checklist(
                     elif isinstance(base, date) and not isinstance(base, datetime):
                         base = datetime.combine(base, datetime.min.time())
 
-                    # PULA FINS DE SEMANA (DIAS ÚTEIS)
+                    # PULA FINS DE SEMANA (DIAS ÃšTEIS)
                     previsao_original = add_business_days(base.date() if hasattr(base, 'date') else base, int(item_dias_offset))
                 except Exception:
                     previsao_original = data_previsao_termino
@@ -840,3 +840,4 @@ def _clonar_plano_para_implantacao_checklist(
 
     for raiz_row in raizes:
         clone_item_recursivo(raiz_row[0], None)
+
