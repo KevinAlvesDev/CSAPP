@@ -1,5 +1,5 @@
 ﻿/**
- * Checklist HierÃ¡rquico Infinito - Renderizador e Gerenciador
+ * Checklist Hierárquico Infinito - Renderizador e Gerenciador
  * Refatorado para usar Componentes (ChecklistComments, ChecklistDragDrop)
  */
 
@@ -30,7 +30,7 @@ class ChecklistRenderer {
         }
 
         if (!this.service) {
-            console.warn('[ChecklistRenderer] ChecklistService nÃ£o disponÃ­vel.');
+            console.warn('[ChecklistRenderer] ChecklistService não disponível.');
         }
 
         if (!this.container) return;
@@ -83,7 +83,7 @@ class ChecklistRenderer {
             }
             badge.innerHTML = `
                 <i class="bi bi-chat-dots-fill"></i>
-                <span><span class="badge-count">${count}</span> caixas de comentÃ¡rios abertas</span>
+                <span><span class="badge-count">${count}</span> caixas de comentários abertas</span>
                 <button class="btn btn-sm btn-light ms-2" id="btn-close-all-comments" title="Fechar todas (ESC)">
                     <i class="bi bi-x-lg"></i>
                 </button>
@@ -138,14 +138,14 @@ class ChecklistRenderer {
     }
 
     /**
-     * Verifica se o service estÃ¡ disponÃ­vel
+     * Verifica se o service está disponível
      */
     hasService() {
         return this.service && typeof this.service.loadComments === 'function';
     }
 
     /**
-     * Verifica se o usuÃ¡rio pode excluir itens
+     * Verifica se o usuário pode excluir itens
      * Controlado por permissao RBAC
      */
     canDeleteItems() {
@@ -198,7 +198,7 @@ class ChecklistRenderer {
         if (!configService) return;
         try {
             // Fetch 'ambos' to get everything or 'tarefa' specific? 
-            // Items can have tags that are 'tarefa' type (Cliente, Rede) or 'ambos' (AÃ§Ã£o interna).
+            // Items can have tags that are 'tarefa' type (Cliente, Rede) or 'ambos' (Ação interna).
             // So we fetch 'ambos' (which logic in API might need adjustment if we want ALL tags regardless of type? 
             // API code: `if tipo != 'ambos': sql += " AND (tipo = %s OR tipo = 'ambos')"`
             // If I pass 'ambos', it filters `tipo='ambos' OR tipo='ambos'`. 
@@ -207,7 +207,7 @@ class ChecklistRenderer {
             // If I pass 'ambos', it DOES NOT filter by type, so it returns ALL rows.
             // Correct.
 
-            const tags = await configService.getTags('ambos');
+            const tags = await configService.getTags('comentario');
             this.tagsList = tags;
             this.tagsMap = {};
             this.tagsData = {};
@@ -269,17 +269,7 @@ class ChecklistRenderer {
 
     renderTagOptions(itemId) {
         if (!this.tagsList || this.tagsList.length === 0) {
-            const fallbackTags = [
-                "Ação interna",
-                "Reunião",
-                "No Show",
-                "Simples registro",
-                "Treinamento",
-                "Migração",
-                "Suporte",
-                "Visita",
-                "Live"
-            ];
+            const fallbackTags = ["Ação interna", "Reunião", "No Show", "Simples registro", "Visita", "Live"];
             return [
                 '<option value="">Selecione</option>',
                 ...fallbackTags.map(tag => `<option value="${tag}">${tag}</option>`)
@@ -288,7 +278,7 @@ class ChecklistRenderer {
         const options = ['<option value="">Selecione</option>'];
         options.push(
             ...this.tagsList
-                .filter(t => t.tipo === 'comentario' || t.tipo === 'ambos')
+                .filter(t => t.tipo === 'comentario')
                 .sort((a, b) => a.ordem - b.ordem)
                 .map(t => `<option value="${t.nome}">${t.nome}</option>`)
         );
@@ -316,7 +306,7 @@ class ChecklistRenderer {
 
         const isDispensed = !!item.dispensada;
         const statusClass = isDispensed ? 'bg-secondary' : (item.completed ? 'bg-success' : 'bg-warning');
-        const statusText = isDispensed ? 'Dispensada' : (item.completed ? 'ConcluÃ­do' : 'Pendente');
+        const statusText = isDispensed ? 'Dispensada' : (item.completed ? 'Concluído' : 'Pendente');
         const statusIcon = isDispensed ? 'bi-slash-circle-fill' : (item.completed ? 'bi-check-circle-fill' : 'bi-clock-fill');
         const statusTitle = isDispensed && item.motivo_dispensa
             ? `Status: ${statusText} | Motivo: ${item.motivo_dispensa}`
@@ -358,28 +348,28 @@ class ChecklistRenderer {
                         <span class="col-responsavel">
                             ${item.responsavel ?
                 `<span class="badge bg-primary ${this.isHistoricoView ? '' : 'js-edit-resp'} badge-resp-ellipsis badge-truncate" data-item-id="${item.id}" title="${escape(item.responsavel)}">${escape(this.abbrevResponsavel(item.responsavel))}</span>` :
-                `<span class="badge bg-primary ${this.isHistoricoView ? '' : 'js-edit-resp'} badge-resp-ellipsis badge-truncate" data-item-id="${item.id}">Definir responsÃ¡vel</span>`
+                `<span class="badge bg-primary ${this.isHistoricoView ? '' : 'js-edit-resp'} badge-resp-ellipsis badge-truncate" data-item-id="${item.id}">Definir responsável</span>`
             }
                         </span>
 
                         <span class="col-prev-orig">
                             ${item.previsao_original ?
-                `<span class="badge badge-truncate bg-warning text-dark" id="badge-prev-orig-${item.id}" title="PrevisÃ£o original: ${item.previsao_original}">${formatDate(item.previsao_original)}</span>` :
+                `<span class="badge badge-truncate bg-warning text-dark" id="badge-prev-orig-${item.id}" title="Previsão original: ${item.previsao_original}">${formatDate(item.previsao_original)}</span>` :
                 `<span class="badge bg-warning text-dark d-none" id="badge-prev-orig-${item.id}"></span>`
             }
                         </span>
                         <span class="col-prev-atual">
                             ${item.nova_previsao ?
-                `<span class="badge badge-truncate bg-danger text-white ${this.isHistoricoView ? '' : 'js-edit-prev'}" id="badge-prev-nova-${item.id}" data-item-id="${item.id}" title="Nova previsÃ£o: ${item.nova_previsao}">${formatDate(item.nova_previsao)}</span>` :
+                `<span class="badge badge-truncate bg-danger text-white ${this.isHistoricoView ? '' : 'js-edit-prev'}" id="badge-prev-nova-${item.id}" data-item-id="${item.id}" title="Nova previsão: ${item.nova_previsao}">${formatDate(item.nova_previsao)}</span>` :
                 ((item.previsao_original || this.previsaoTermino) ?
-                    `<span class="badge badge-truncate bg-warning text-dark ${this.isHistoricoView ? '' : 'js-edit-prev'}" id="badge-prev-nova-${item.id}" data-item-id="${item.id}" title="Nova previsÃ£o: ${item.previsao_original || this.previsaoTermino}">${formatDate(item.previsao_original || this.previsaoTermino)}</span>` :
-                    `<span class="badge badge-truncate bg-warning text-dark ${this.isHistoricoView ? '' : 'js-edit-prev'}" id="badge-prev-nova-${item.id}" data-item-id="${item.id}">Definir nova previsÃ£o</span>`
+                    `<span class="badge badge-truncate bg-warning text-dark ${this.isHistoricoView ? '' : 'js-edit-prev'}" id="badge-prev-nova-${item.id}" data-item-id="${item.id}" title="Nova previsão: ${item.previsao_original || this.previsaoTermino}">${formatDate(item.previsao_original || this.previsaoTermino)}</span>` :
+                    `<span class="badge badge-truncate bg-warning text-dark ${this.isHistoricoView ? '' : 'js-edit-prev'}" id="badge-prev-nova-${item.id}" data-item-id="${item.id}">Definir nova previsão</span>`
                 )
             }
                         </span>
                         <span class="col-conclusao">
                             ${item.completed && !isDispensed && item.data_conclusao ?
-                `<span class="badge badge-truncate bg-success text-white" id="badge-concl-${item.id}" title="ConcluÃ­do em: ${item.data_conclusao}">${formatDate(item.data_conclusao)}</span>` :
+                `<span class="badge badge-truncate bg-success text-white" id="badge-concl-${item.id}" title="Concluído em: ${item.data_conclusao}">${formatDate(item.data_conclusao)}</span>` :
                 `<span class="badge badge-truncate bg-success text-white d-none" id="badge-concl-${item.id}"></span>`
             }
                         </span>
@@ -391,7 +381,7 @@ class ChecklistRenderer {
                         </span>
                         
                         <span class="col-comment">
-                            <button class="btn-icon btn-comment-toggle p-1 border-0 bg-transparent" data-item-id="${item.id}" title="ComentÃ¡rios">
+                            <button class="btn-icon btn-comment-toggle p-1 border-0 bg-transparent" data-item-id="${item.id}" title="Comentários">
                                 <i class="bi bi-chat-left-text ${hasComment ? 'text-primary' : 'text-muted'} position-relative">
                                     ${hasComment ? '<span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle" style="font-size: 0.4rem;"></span>' : ''}
                                 </i>
@@ -413,13 +403,13 @@ class ChecklistRenderer {
                         <div class="comment-task-header mb-3 pb-2">
                             <div class="task-title-label">
                                 <i class="bi bi-chat-left-text text-primary"></i>
-                                <strong>ComentÃ¡rios da tarefa:</strong>
+                                <strong>Comentários da tarefa:</strong>
                             </div>
                             <div class="task-title-text">${escape(item.title)}</div>
                         </div>
 
-                        <label class="form-label small text-muted mb-1">Adicionar ComentÃ¡rio</label>
-                        <textarea class="form-control form-control-sm" id="comment-input-${item.id}" rows="2" placeholder="Escreva um comentÃ¡rio..."></textarea>
+                        <label class="form-label small text-muted mb-1">Adicionar Comentário</label>
+                        <textarea class="form-control form-control-sm" id="comment-input-${item.id}" rows="2" placeholder="Escreva um comentário..."></textarea>
                         
                         <div class="image-preview-container d-none mt-2 p-2 bg-white border rounded" id="image-preview-${item.id}">
                             <div class="d-flex align-items-center gap-2">
@@ -453,7 +443,7 @@ class ChecklistRenderer {
                              </div>
                         </div>
                         <div class="mt-3">
-                            <label class="form-label small text-muted mb-2">HistÃ³rico de ComentÃ¡rios</label>
+                            <label class="form-label small text-muted mb-2">Histórico de Comentários</label>
                             <div class="comments-history" id="comments-history-${item.id}" style="min-height: 40px;"></div>
                         </div>
                     </div>
@@ -534,7 +524,7 @@ class ChecklistRenderer {
                     const itemId = parseInt(e.target.closest('.js-edit-prev').dataset.itemId);
                     const node = this.flatData[itemId];
                     if (node.completed || node.data_conclusao || node.dispensada) {
-                        this.showToast('Tarefa concluÃ­da ou dispensada: nÃ£o Ã© possÃ­vel adicionar previsÃ£o', 'warning');
+                        this.showToast('Tarefa concluída ou dispensada: não é possível adicionar previsão', 'warning');
                     } else {
                         this.openPrevModal(itemId);
                     }
@@ -574,7 +564,7 @@ class ChecklistRenderer {
                 if (!temEmail) {
                     checkbox.disabled = true;
                     checkbox.checked = false;
-                    divCheckbox.setAttribute('title', 'Email do responsÃ¡vel nÃ£o cadastrado');
+                    divCheckbox.setAttribute('title', 'Email do responsável não cadastrado');
                 } else {
                     checkbox.disabled = false;
                     divCheckbox.removeAttribute('title');
@@ -755,7 +745,7 @@ class ChecklistRenderer {
         if (badge) {
             const statusClass = isDispensed ? 'bg-secondary' : (node.completed ? 'bg-success' : 'bg-warning');
             const statusIcon = isDispensed ? 'bi-slash-circle-fill' : (node.completed ? 'bi-check-circle-fill' : 'bi-clock-fill');
-            const statusText = isDispensed ? 'Dispensada' : (node.completed ? 'ConcluÃ­do' : 'Pendente');
+            const statusText = isDispensed ? 'Dispensada' : (node.completed ? 'Concluído' : 'Pendente');
             badge.className = `badge badge-truncate ${statusClass}`;
             badge.innerHTML = `<i class="bi ${statusIcon} me-1"></i>${statusText}`;
             badge.title = isDispensed && node.motivo_dispensa
@@ -769,7 +759,7 @@ class ChecklistRenderer {
             if (node.completed && !isDispensed && node.data_conclusao) {
                 const formatDate = window.DateUtils ? window.DateUtils.formatDate : this.formatDate.bind(this);
                 conBadge.textContent = formatDate(node.data_conclusao);
-                conBadge.title = `ConcluÃ­do em: ${node.data_conclusao}`;
+                conBadge.title = `Concluído em: ${node.data_conclusao}`;
                 conBadge.classList.remove('d-none');
             } else {
                 conBadge.classList.add('d-none');
@@ -782,7 +772,7 @@ class ChecklistRenderer {
             const formatDate = window.DateUtils ? window.DateUtils.formatDate : this.formatDate.bind(this);
             if (node.previsao_original) {
                 prevOrigBadge.textContent = formatDate(node.previsao_original);
-                prevOrigBadge.title = `PrevisÃ£o original: ${node.previsao_original}`;
+                prevOrigBadge.title = `Previsão original: ${node.previsao_original}`;
                 prevOrigBadge.classList.remove('d-none');
             } else {
                 prevOrigBadge.classList.add('d-none');
@@ -795,10 +785,10 @@ class ChecklistRenderer {
             const refVal = node.nova_previsao || node.previsao_original || this.previsaoTermino;
             if (refVal) {
                 prevNovaBadge.textContent = formatDate(refVal);
-                prevNovaBadge.title = `Nova previsÃ£o: ${refVal}`;
+                prevNovaBadge.title = `Nova previsão: ${refVal}`;
                 prevNovaBadge.className = `badge badge-truncate js-edit-prev ${node.nova_previsao ? 'bg-danger text-white' : 'bg-warning text-dark'}`;
             } else {
-                prevNovaBadge.textContent = 'Definir nova previsÃ£o';
+                prevNovaBadge.textContent = 'Definir nova previsão';
                 prevNovaBadge.className = 'badge badge-truncate bg-warning text-dark js-edit-prev';
             }
         }
@@ -866,7 +856,7 @@ class ChecklistRenderer {
             <div class="modal-dialog">
               <div class="modal-content">
                 <div class="modal-header">
-                  <h5 class="modal-title">Editar ResponsÃ¡vel</h5>
+                  <h5 class="modal-title">Editar Responsável</h5>
                   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -897,7 +887,7 @@ class ChecklistRenderer {
                     if (m) m.hide();
                     if (window.reloadTimeline) window.reloadTimeline();
                 } else {
-                    if (window.showToast) window.showToast(result.error || 'Erro ao atualizar responsÃ¡vel', 'error');
+                    if (window.showToast) window.showToast(result.error || 'Erro ao atualizar responsável', 'error');
                 }
             }
         };
@@ -923,11 +913,11 @@ class ChecklistRenderer {
                 </div>
                 <div class="modal-body">
                   <div class="mb-2">
-                    <label class="form-label small text-muted">PrevisÃ£o Original</label>
+                    <label class="form-label small text-muted">Previsão Original</label>
                     <input type="text" class="form-control" id="prev-orig-view" readonly />
                   </div>
                   <div class="mb-2">
-                    <label class="form-label small">Nova PrevisÃ£o</label>
+                    <label class="form-label small">Nova Previsão</label>
                     <input type="text" class="form-control" id="prev-edit-input" placeholder="DD/MM/AAAA" />
                   </div>
                 </div>
@@ -971,7 +961,7 @@ class ChecklistRenderer {
                     // Rollback
                     this.flatData[itemId].nova_previsao = old;
                     this.updateItemUI(itemId);
-                    if (window.showToast) window.showToast(result.error || 'Erro ao atualizar previsÃ£o', 'error');
+                    if (window.showToast) window.showToast(result.error || 'Erro ao atualizar previsão', 'error');
                 }
             }
         };
@@ -1083,7 +1073,7 @@ class ChecklistRenderer {
                     <div class="modal-body">
                       <label class="form-label" for="dispense-reason-input">Informe o motivo da dispensa</label>
                       <input type="text" class="form-control" id="dispense-reason-input" maxlength="255" />
-                      <div class="form-text">Esse motivo fica registrado no plano e no histÃ³rico.</div>
+                      <div class="form-text">Esse motivo fica registrado no plano e no histórico.</div>
                     </div>
                     <div class="modal-footer">
                       <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -1120,7 +1110,7 @@ class ChecklistRenderer {
                 const value = (input.value || '').trim();
                 if (!value) {
                     input.classList.add('is-invalid');
-                    if (window.showToast) window.showToast('Motivo da dispensa Ã© obrigatÃ³rio.', 'warning');
+                    if (window.showToast) window.showToast('Motivo da dispensa é obrigatório.', 'warning');
                     input.focus();
                     return;
                 }
@@ -1215,8 +1205,8 @@ class ChecklistRenderer {
             return this.tagsMap[tag];
         }
         // Fallbacks for legacy/hardcoded support during migration
-        if (tag === 'AÃ§Ã£o interna') return 'bg-primary';
-        if (tag === 'ReuniÃ£o') return 'bg-danger';
+        if (tag === 'Ação interna') return 'bg-primary';
+        if (tag === 'Reunião') return 'bg-danger';
         if (tag === 'Cliente') return 'bg-info';
         if (tag === 'Rede') return 'bg-success';
         if (tag === 'No Show') return 'bg-warning text-dark';
@@ -1240,3 +1230,4 @@ document.addEventListener('DOMContentLoaded', () => {
         window.checklistRenderer = new ChecklistRenderer('checklist-container', window.IMPLANTACAO_ID);
     }
 });
+
