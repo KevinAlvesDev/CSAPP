@@ -116,7 +116,7 @@ def get_tags_by_user_chart_data(
 
     ordered_tags: list[str] = []
     for tag_name in configured_tags:
-        if tag_name in tags_seen:
+        if tag_name not in ordered_tags:
             ordered_tags.append(tag_name)
 
     for tag_name in sorted(tags_seen):
