@@ -425,6 +425,7 @@
 {% block scripts_extra %}
 <script>
 (function () {
+    let liveSignature = {{ (analytics_signature or '') | tojson | safe }};
     const statusData = {{ (chart_data.status_clientes if chart_data else {}) | tojson | safe }};
     const gargalosData = {{ (chart_data.gargalos_parada if chart_data else {}) | tojson | safe }};
     const rankingData = {{ (chart_data.ranking_periodo if chart_data else {}) | tojson | safe }};
@@ -602,7 +603,35 @@
     const updatedLabel = document.getElementById('updatedAtLabel');
     if (updatedLabel) updatedLabel.textContent = `Atualizado: Hoje, ${hour}`;
 
-    // Atualização apenas manual via botão "Aplicar".
+    async function checkLiveUpdates() {
+        if (document.visibilityState !== 'visible') return;
+        try {
+            const qs = window.location.search || '';
+            const response = await fetch(`/analytics/live/check${qs}`, {
+                method: 'GET',
+                credentials: 'include',
+                cache: 'no-store',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            if (!response.ok) return;
+            const payload = await response.json();
+            if (!payload || !payload.ok || !payload.signature) return;
+
+            if (!liveSignature) {
+                liveSignature = payload.signature;
+                return;
+            }
+
+            if (payload.signature !== liveSignature) {
+                window.location.reload();
+            }
+        } catch (_) {
+            // fail silent para nao interromper o uso do dashboard.
+        }
+    }
+
+    setInterval(checkLiveUpdates, 5000);
 })();
 </script>
 {% endblock %}
+
