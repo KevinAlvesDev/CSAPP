@@ -75,9 +75,13 @@ def dashboard():
     end_date = _arg_or_saved("end_date")
     date_type_param = _arg_or_saved("date_type")
     date_type_request_param = request.args.get("date_type")
-    date_type = date_type_param or "criacao"
-    if date_type not in ["criacao", "inicio", "finalizacao", "parada", "cancelamento"]:
-        date_type = "criacao"
+    date_type = (date_type_param or "").strip().lower()
+    if date_type not in ["", "criacao", "inicio", "finalizacao", "parada", "cancelamento"]:
+        date_type = ""
+    # Compatibilidade com sessão antiga: se não veio date_type na URL e não há período,
+    # não manter "criacao" como seleção implícita.
+    if date_type_request_param is None and not (start_date or end_date) and date_type == "criacao":
+        date_type = ""
     if (
         date_type_request_param is not None
         and date_type in ["criacao", "inicio"]
@@ -85,7 +89,7 @@ def dashboard():
     ):
         flash("Para filtrar por Criação ou Início, informe ao menos uma data.", "warning")
         # Sem datas: não aplicar filtro de período
-        date_type = "criacao"
+        date_type = ""
         start_date = None
         end_date = None
 
@@ -96,7 +100,7 @@ def dashboard():
         "tipo": tipo_filter or "",
         "start_date": start_date or "",
         "end_date": end_date or "",
-        "date_type": date_type or "criacao",
+        "date_type": date_type or "",
     }
 
     tags_report_email = current_cs_filter if is_manager else user_email
@@ -119,7 +123,7 @@ def dashboard():
             tipo=tipo_filter,
             start_date=start_date,
             end_date=end_date,
-            date_type=date_type,
+            date_type=date_type or None,
         )
 
         if sort_days in ["asc", "desc"]:

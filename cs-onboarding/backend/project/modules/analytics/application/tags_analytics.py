@@ -1,6 +1,7 @@
 """
-New function to get tags statistics by user for the management dashboard.
-This provides insights into comment tag patterns by user.
+Tags analytics for the management dashboard.
+
+This module aggregates comment tags (`comentarios_h.tag`) by user.
 """
 
 from datetime import date, datetime
@@ -16,18 +17,8 @@ def get_tags_by_user_chart_data(
     context: str | None = None,
 ) -> dict[str, Any]:
     """
-    Retrieves comment tag statistics grouped by user.
-    Tags are stored in comentarios_h table:
-    - visibilidade: 'interno' or 'externo'
-    - tag: 'Ação interna', 'Reunião', 'No Show', etc.
-
-    Args:
-        cs_email: Optional filter for specific user
-        start_date: Optional start date filter (YYYY-MM-DD or DD/MM/YYYY)
-        end_date: Optional end date filter (YYYY-MM-DD or DD/MM/YYYY)
-
-    Returns:
-        Dictionary with chart data in Chart.js format
+    Returns comment-tag statistics grouped by user.
+    Only comments with a non-empty tag are counted.
     """
     from flask import current_app
 
@@ -35,13 +26,11 @@ def get_tags_by_user_chart_data(
 
     is_sqlite = current_app.config.get("USE_SQLITE_LOCALLY", False)
 
-    # Helper to parse date
-    def parse_date(date_str):
+    def parse_date(date_str: str | date | datetime | None) -> str | None:
         if not date_str:
             return None
         if isinstance(date_str, (date, datetime)):
             return date_str.strftime("%Y-%m-%d")
-        # Try DD/MM/YYYY format (Brazilian)
         if "/" in date_str:
             parts = date_str.split("/")
             if len(parts) == 3:
@@ -50,44 +39,37 @@ def get_tags_by_user_chart_data(
 
     start_date = parse_date(start_date)
     end_date = parse_date(end_date)
-
     ctx = resolve_context(context)
 
-    # Build the query - now from comentarios_h
+    def date_col_expr(col: str) -> str:
+        return f"date({col})" if is_sqlite else f"CAST({col} AS DATE)"
+
     query = """
         SELECT
-        COALESCE(p.nome, ch.usuario_cs) as user_name,
-        ch.visibilidade as visibilidade,
-        ch.tag as tag,
-        COUNT(*) as comment_count
+            COALESCE(p.nome, ch.usuario_cs) AS user_name,
+            TRIM(ch.tag) AS tag,
+            COUNT(*) AS comment_count
         FROM comentarios_h ch
         LEFT JOIN perfil_usuario p ON ch.usuario_cs = p.usuario
         LEFT JOIN checklist_items ci ON ch.checklist_item_id = ci.id
         JOIN implantacoes i ON ci.implantacao_id = i.id
         LEFT JOIN perfil_usuario_contexto puc ON ch.usuario_cs = puc.usuario AND puc.contexto = COALESCE(i.contexto, 'onboarding')
         WHERE ch.usuario_cs IS NOT NULL
+          AND ch.tag IS NOT NULL
+          AND TRIM(ch.tag) <> ''
     """
+    args: list[Any] = []
 
-    args = []
-
-    # Apply filters
     if cs_email:
         query += " AND ch.usuario_cs = %s"
         args.append(cs_email)
 
-    # Date filtering
-    def date_col_expr(col: str) -> str:
-        return f"date({col})" if is_sqlite else f"CAST({col} AS DATE)"
-
-    def date_param_expr() -> str:
-        return "%s"
-
     if start_date:
-        query += f" AND {date_col_expr('ch.data_criacao')} >= {date_param_expr()}"
+        query += f" AND {date_col_expr('ch.data_criacao')} >= %s"
         args.append(start_date)
 
     if end_date:
-        query += f" AND {date_col_expr('ch.data_criacao')} <= {date_param_expr()}"
+        query += f" AND {date_col_expr('ch.data_criacao')} <= %s"
         args.append(end_date)
 
     if ctx == "onboarding":
@@ -96,82 +78,70 @@ def get_tags_by_user_chart_data(
         query += " AND i.contexto = %s "
         args.append(ctx)
 
-    query += " GROUP BY COALESCE(p.nome, ch.usuario_cs), ch.visibilidade, ch.tag ORDER BY user_name"
+    query += """
+        GROUP BY COALESCE(p.nome, ch.usuario_cs), TRIM(ch.tag)
+        ORDER BY user_name, tag
+    """
 
-    # Execute query
     rows = query_db(query, tuple(args)) or []
 
-    # Process results
-    users_data = {}
+    users_data: dict[str, dict[str, int]] = {}
+    tags_seen: set[str] = set()
 
     for row in rows:
         if not row or not isinstance(row, dict):
             continue
 
         user_name = row.get("user_name", "Desconhecido")
-        visibilidade = row.get("visibilidade") or "interno"
-        tag = row.get("tag") or "Sem tag"
-        count = row.get("comment_count", 0)
+        tag = row.get("tag")
+        if not tag:
+            continue
+        count = int(row.get("comment_count", 0) or 0)
 
-        if user_name not in users_data:
-            users_data[user_name] = {
-                "Interno": 0,
-                "Externo": 0,
-                "Ação interna": 0,
-                "Reunião": 0,
-                "No Show": 0,
-                "Simples registro": 0,
-                "Sem tag": 0,
-            }
+        tags_seen.add(tag)
+        users_data.setdefault(user_name, {})
+        users_data[user_name][tag] = users_data[user_name].get(tag, 0) + count
 
-        # Count by visibility
-        if visibilidade == "interno":
-            users_data[user_name]["Interno"] += count
-        elif visibilidade == "externo":
-            users_data[user_name]["Externo"] += count
+    # Prefer configured comment tags order, then append any custom tags found.
+    tags_config_rows = query_db(
+        """
+        SELECT nome
+        FROM tags_sistema
+        WHERE tipo IN ('comentario', 'ambos')
+        ORDER BY ordem ASC, nome ASC
+        """,
+        (),
+    ) or []
+    configured_tags = [str(r.get("nome")) for r in tags_config_rows if isinstance(r, dict) and r.get("nome")]
 
-        # Count by tag type
-        if tag in users_data[user_name]:
-            users_data[user_name][tag] += count
-        else:
-            users_data[user_name]["Sem tag"] += count
+    ordered_tags: list[str] = []
+    for tag_name in configured_tags:
+        if tag_name in tags_seen:
+            ordered_tags.append(tag_name)
+
+    for tag_name in sorted(tags_seen):
+        if tag_name not in ordered_tags:
+            ordered_tags.append(tag_name)
 
     sorted_users = sorted(users_data.keys())
 
-    # Define columns/tags to show
-    display_tags = ["Interno", "Externo", "Ação interna", "Reunião", "No Show", "Simples registro"]
-
-    # Define colors for each tag type
-    tag_colors = {
-        "Interno": "rgba(108, 117, 125, 0.7)",  # Gray
-        "Externo": "rgba(23, 162, 184, 0.7)",  # Cyan
-        "Ação interna": "rgba(54, 162, 235, 0.7)",  # Blue
-        "Reunião": "rgba(40, 167, 69, 0.7)",  # Green
-        "No Show": "rgba(220, 53, 69, 0.7)",  # Red
-        "Simples registro": "rgba(153, 102, 255, 0.7)",  # Purple
-    }
-
-    # Build datasets for Chart.js
     datasets = []
-    for tag in display_tags:
-        dataset = {
-            "label": tag,
-            "data": [users_data.get(user, {}).get(tag, 0) for user in sorted_users],
-            "backgroundColor": tag_colors.get(tag, "rgba(153, 102, 255, 0.7)"),
-            "borderColor": tag_colors.get(tag, "rgba(153, 102, 255, 1)").replace("0.7", "1"),
-            "borderWidth": 1,
-        }
-        datasets.append(dataset)
+    for tag in ordered_tags:
+        datasets.append(
+            {
+                "label": tag,
+                "data": [users_data.get(user, {}).get(tag, 0) for user in sorted_users],
+            }
+        )
 
-    # Calculate total
-    total_comments = sum(
-        users_data.get(user, {}).get("Interno", 0) + users_data.get(user, {}).get("Externo", 0) for user in sorted_users
-    )
+    total_tags_count = 0
+    for user in sorted_users:
+        total_tags_count += sum(users_data.get(user, {}).values())
 
     return {
         "labels": sorted_users,
         "datasets": datasets,
-        "total_tasks": total_comments,
+        "total_tasks": total_tags_count,
         "total_users": len(sorted_users),
-        "total_tags": len(display_tags),
+        "total_tags": len(ordered_tags),
     }

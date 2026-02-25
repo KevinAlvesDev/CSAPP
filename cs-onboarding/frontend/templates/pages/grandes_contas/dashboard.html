@@ -152,6 +152,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                         <select name="date_type"
                             class="form-select form-select-sm border-0 shadow-none bg-transparent ps-2 pe-5 text-primary fw-bold"
                             style="width: auto; cursor: pointer;">
+                            <option value="" {% if not current_date_type %}selected{% endif %}>Selecionar</option>
                             <option value="criacao" {% if current_date_type=='criacao' %}selected{% endif %}>Criação
                             </option>
                             <option value="inicio" {% if current_date_type=='inicio' %}selected{% endif %}>Início
@@ -182,7 +183,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
 
                     <!-- Clear Button (Integrated) -->
                     {% if current_cs_filter or current_tipo or current_start_date or current_end_date or
-                    (current_date_type and current_date_type != 'criacao') %}
+                    current_date_type %}
                     <div class="vr text-secondary opacity-25 mx-1" style="height: 20px;"></div>
                     <a href="{{ url_for('grandes_contas.dashboard', clear_filters=1, search=current_search if current_search else None) }}"
                         class="btn btn-sm btn-link text-secondary text-decoration-none px-2" title="Limpar Filtros">

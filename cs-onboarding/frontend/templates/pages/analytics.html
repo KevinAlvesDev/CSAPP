@@ -139,7 +139,7 @@
             <div class="card-title-row">
                 <div>
                     <h3>Produtividade por Tags</h3>
-                    <p class="muted">Tarefas concluídas agrupadas por tipo de atividade</p>
+                    <p class="muted">Comentários com tags lançados no plano de sucesso</p>
                 </div>
                 <form method="GET" class="mini-filter">
                     {% if current_cs_email %}<input type="hidden" name="cs_email" value="{{ current_cs_email }}">{% endif %}
@@ -159,65 +159,46 @@
 
             <div class="table-wrap">
                 <table class="ger-table tags-table">
+                    {% set tag_columns = (tags_chart_data.datasets if tags_chart_data and tags_chart_data.datasets else []) %}
+                    {% set dynamic_colspan = (tag_columns | length) + 2 %}
                     <thead>
                         <tr>
                             <th>COLABORADOR</th>
-                            <th>INTERNO</th>
-                            <th>EXTERNO</th>
-                            <th>AÇÃO INTERNA</th>
-                            <th>REUNIÃO</th>
-                            <th>NO SHOW</th>
-                            <th>REGISTRO SIMPLES</th>
+                            {% for ds in tag_columns %}
+                            <th>{{ (ds.label | default('-')) | upper }}</th>
+                            {% endfor %}
                             <th>TOTAL GERAL</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% if tags_chart_data and tags_chart_data.labels and tags_chart_data.datasets %}
-                        {% set totals = namespace(interno=0, externo=0, acao=0, reuniao=0, no_show=0, simples=0, geral=0) %}
-                        {% for user_idx in range(tags_chart_data.labels|length) %}
-                        {% set row = namespace(interno=0, externo=0, acao=0, reuniao=0, no_show=0, simples=0, total=0) %}
-                        {% for ds in tags_chart_data.datasets %}
-                        {% set label = (ds.label | default('') | lower) %}
-                        {% set value = (ds.data[user_idx] | default(0) | int) %}
-                        {% if 'interno' in label %}{% set row.interno = value %}{% endif %}
-                        {% if 'externo' in label %}{% set row.externo = value %}{% endif %}
-                        {% if 'ação interna' in label or 'acao interna' in label %}{% set row.acao = value %}{% endif %}
-                        {% if 'reunião' in label or 'reuniao' in label %}{% set row.reuniao = value %}{% endif %}
-                        {% if 'no show' in label %}{% set row.no_show = value %}{% endif %}
-                        {% if 'simples registro' in label %}{% set row.simples = value %}{% endif %}
+                        {% set totals = namespace(by_tag={}, geral=0) %}
+                        {% for ds in tag_columns %}
+                        {% set _ = totals.by_tag.update({ (ds.label | string): 0 }) %}
                         {% endfor %}
-                        {% set row.total = row.interno + row.externo + row.acao + row.reuniao + row.no_show + row.simples %}
-                        {% set totals.interno = totals.interno + row.interno %}
-                        {% set totals.externo = totals.externo + row.externo %}
-                        {% set totals.acao = totals.acao + row.acao %}
-                        {% set totals.reuniao = totals.reuniao + row.reuniao %}
-                        {% set totals.no_show = totals.no_show + row.no_show %}
-                        {% set totals.simples = totals.simples + row.simples %}
-                        {% set totals.geral = totals.geral + row.total %}
-
+                        {% for user_idx in range(tags_chart_data.labels|length) %}
+                        {% set row = namespace(total=0) %}
                         <tr>
                             <td>{{ tags_chart_data.labels[user_idx] }}</td>
-                            <td><span class="tag-badge neutral">{{ row.interno if row.interno else '-' }}</span></td>
-                            <td><span class="tag-badge neutral">{{ row.externo if row.externo else '-' }}</span></td>
-                            <td><span class="tag-badge blue">{{ row.acao if row.acao else '-' }}</span></td>
-                            <td><span class="tag-badge green">{{ row.reuniao if row.reuniao else '-' }}</span></td>
-                            <td><span class="tag-badge amber">{{ row.no_show if row.no_show else '-' }}</span></td>
-                            <td><span class="tag-badge purple">{{ row.simples if row.simples else '-' }}</span></td>
+                            {% for ds in tag_columns %}
+                            {% set value = (ds.data[user_idx] | default(0) | int) %}
+                            {% set row.total = row.total + value %}
+                            {% set _ = totals.by_tag.update({ (ds.label | string): (totals.by_tag.get(ds.label | string, 0) + value) }) %}
+                            <td><span class="tag-badge neutral">{{ value if value else '-' }}</span></td>
+                            {% endfor %}
+                            {% set totals.geral = totals.geral + row.total %}
                             <td class="total-cell">{{ row.total }}</td>
                         </tr>
                         {% endfor %}
                         <tr class="consolidated-row">
                             <td>TOTAL CONSOLIDADO</td>
-                            <td>{{ totals.interno }}</td>
-                            <td>{{ totals.externo }}</td>
-                            <td>{{ totals.acao }}</td>
-                            <td>{{ totals.reuniao }}</td>
-                            <td>{{ totals.no_show }}</td>
-                            <td>{{ totals.simples }}</td>
+                            {% for ds in tag_columns %}
+                            <td>{{ totals.by_tag.get(ds.label | string, 0) }}</td>
+                            {% endfor %}
                             <td><span class="pill-total">{{ totals.geral }}</span></td>
                         </tr>
                         {% else %}
-                        <tr><td colspan="8" class="empty-state">Nenhum dado disponível para os filtros selecionados.</td></tr>
+                        <tr><td colspan="{{ dynamic_colspan }}" class="empty-state">Nenhum dado disponível para os filtros selecionados.</td></tr>
                         {% endif %}
                     </tbody>
                 </table>
@@ -444,7 +425,6 @@
 {% block scripts_extra %}
 <script>
 (function () {
-    let liveSignature = {{ (analytics_signature or '') | tojson | safe }};
     const statusData = {{ (chart_data.status_clientes if chart_data else {}) | tojson | safe }};
     const gargalosData = {{ (chart_data.gargalos_parada if chart_data else {}) | tojson | safe }};
     const rankingData = {{ (chart_data.ranking_periodo if chart_data else {}) | tojson | safe }};
@@ -622,34 +602,7 @@
     const updatedLabel = document.getElementById('updatedAtLabel');
     if (updatedLabel) updatedLabel.textContent = `Atualizado: Hoje, ${hour}`;
 
-    async function checkLiveUpdates() {
-        if (document.visibilityState !== 'visible') return;
-        try {
-            const qs = window.location.search || '';
-            const response = await fetch(`/analytics/live/check${qs}`, {
-                method: 'GET',
-                credentials: 'include',
-                cache: 'no-store',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            });
-            if (!response.ok) return;
-            const payload = await response.json();
-            if (!payload || !payload.ok || !payload.signature) return;
-
-            if (!liveSignature) {
-                liveSignature = payload.signature;
-                return;
-            }
-
-            if (payload.signature !== liveSignature) {
-                window.location.reload();
-            }
-        } catch (_) {
-            // Silent fail: não bloquear uso da página em caso de falha de rede temporária.
-        }
-    }
-
-    setInterval(checkLiveUpdates, 5000);
+    // Atualização apenas manual via botão "Aplicar".
 })();
 </script>
 {% endblock %}
