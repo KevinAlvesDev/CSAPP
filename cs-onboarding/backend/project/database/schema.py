@@ -879,23 +879,27 @@ def _popular_dados_configuracao(cursor):
     """Insere dados iniciais nas tabelas de configuração (tags, status, motivos, etc.)."""
     try:
         # ── tags_sistema ──
-        cursor.execute("SELECT COUNT(*) FROM tags_sistema")
-        if cursor.fetchone()[0] == 0:
-            tags = [
-                ("Ação interna", 1, "comentario"),
-                ("Reunião", 2, "comentario"),
-                ("No Show", 3, "comentario"),
-                ("Treinamento", 4, "ambos"),
-                ("Migração", 5, "ambos"),
-                ("Suporte", 6, "ambos"),
-                ("Visita", 7, "comentario"),
-                ("Live", 8, "comentario"),
-            ]
-            for nome, ordem, tipo in tags:
-                cursor.execute(
-                    "INSERT OR IGNORE INTO tags_sistema (nome, ordem, tipo) VALUES (?, ?, ?)",
-                    (nome, ordem, tipo),
+        tags = [
+            ("Ação interna", 1, "comentario"),
+            ("Reunião", 2, "comentario"),
+            ("No Show", 3, "comentario"),
+            ("Treinamento", 4, "ambos"),
+            ("Migração", 5, "ambos"),
+            ("Suporte", 6, "ambos"),
+            ("Visita", 7, "comentario"),
+            ("Live", 8, "comentario"),
+        ]
+        for nome, ordem, tipo in tags:
+            cursor.execute(
+                """
+                INSERT INTO tags_sistema (nome, ordem, tipo)
+                SELECT ?, ?, ?
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM tags_sistema WHERE nome = ?
                 )
+                """,
+                (nome, ordem, tipo, nome),
+            )
 
         # ── status_implantacao ──
         cursor.execute("SELECT COUNT(*) FROM status_implantacao")
