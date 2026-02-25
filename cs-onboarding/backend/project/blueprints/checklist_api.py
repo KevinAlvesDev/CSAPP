@@ -176,7 +176,7 @@ def add_comment(item_id: int):
         visibilidade = "interno"
 
     # Validate tag if provided
-    valid_tags = ["Ação interna", "Reunião", "No Show", "Simples registro", None, ""]
+    valid_tags = ["Ação interna", "Reunião", "No Show", "Simples registro", "Visita", "Live", None, ""]
     if tag and tag not in valid_tags:
         tag = None
 

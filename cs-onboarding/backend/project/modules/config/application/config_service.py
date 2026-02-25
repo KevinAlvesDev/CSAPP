@@ -3,7 +3,7 @@ from ....db import query_db
 
 def listar_tags(tipo: str = "ambos") -> list[dict]:
     sql = """
-        SELECT id, nome, icone, cor_badge, ordem, tipo
+        SELECT id, nome, ordem, tipo
         FROM tags_sistema
         WHERE ativo = %s
     """
@@ -17,8 +17,6 @@ def listar_tags(tipo: str = "ambos") -> list[dict]:
         {
             "id": r["id"],
             "nome": r["nome"],
-            "icone": r["icone"],
-            "cor_badge": r["cor_badge"],
             "ordem": r["ordem"],
             "tipo": r["tipo"],
         }

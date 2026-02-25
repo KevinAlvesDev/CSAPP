@@ -1,5 +1,5 @@
--- ============================================
--- Migração Completa: Criar Todas as Tabelas de Configuração
+﻿-- ============================================
+-- MigraÃ§Ã£o Completa: Criar Todas as Tabelas de ConfiguraÃ§Ã£o
 -- Corrige Bugs #3, #9-14 - Dados Hardcoded
 -- ============================================
 
@@ -10,8 +10,6 @@
 CREATE TABLE IF NOT EXISTS tags_sistema (
     id SERIAL PRIMARY KEY,
     nome VARCHAR(100) NOT NULL UNIQUE,
-    icone VARCHAR(50) NOT NULL,
-    cor_badge VARCHAR(50) NOT NULL,
     tipo VARCHAR(50) NOT NULL DEFAULT 'comentario',  -- 'comentario', 'tarefa', 'ambos'
     ordem INTEGER NOT NULL DEFAULT 0,
     ativo BOOLEAN NOT NULL DEFAULT true,
@@ -20,29 +18,38 @@ CREATE TABLE IF NOT EXISTS tags_sistema (
 );
 
 -- Popular com tags atuais
-INSERT INTO tags_sistema (nome, icone, cor_badge, ordem, tipo)
-SELECT 'Ação interna', 'bi-briefcase', 'bg-primary', 1, 'ambos'
-WHERE NOT EXISTS (SELECT 1 FROM tags_sistema WHERE nome = 'Ação interna');
+INSERT INTO tags_sistema (nome, ordem, tipo)
+SELECT 'AÃ§Ã£o interna', 1, 'ambos'
+WHERE NOT EXISTS (SELECT 1 FROM tags_sistema WHERE nome = 'AÃ§Ã£o interna');
 
-INSERT INTO tags_sistema (nome, icone, cor_badge, ordem, tipo)
-SELECT 'Reunião', 'bi-calendar-event', 'bg-danger', 2, 'ambos'
-WHERE NOT EXISTS (SELECT 1 FROM tags_sistema WHERE nome = 'Reunião');
+INSERT INTO tags_sistema (nome, ordem, tipo)
+SELECT 'ReuniÃ£o', 2, 'ambos'
+WHERE NOT EXISTS (SELECT 1 FROM tags_sistema WHERE nome = 'ReuniÃ£o');
 
-INSERT INTO tags_sistema (nome, icone, cor_badge, ordem, tipo)
-SELECT 'No Show', 'bi-calendar-x', 'bg-warning text-dark', 3, 'comentario'
+INSERT INTO tags_sistema (nome, ordem, tipo)
+SELECT 'No Show', 3, 'comentario'
 WHERE NOT EXISTS (SELECT 1 FROM tags_sistema WHERE nome = 'No Show');
 
-INSERT INTO tags_sistema (nome, icone, cor_badge, ordem, tipo)
-SELECT 'Simples registro', 'bi-pencil-square', 'bg-secondary', 4, 'comentario'
+INSERT INTO tags_sistema (nome, ordem, tipo)
+SELECT 'Simples registro', 4, 'comentario'
 WHERE NOT EXISTS (SELECT 1 FROM tags_sistema WHERE nome = 'Simples registro');
 
-INSERT INTO tags_sistema (nome, icone, cor_badge, ordem, tipo)
-SELECT 'Cliente', 'bi-person-badge', 'bg-info', 5, 'tarefa'
+INSERT INTO tags_sistema (nome, ordem, tipo)
+SELECT 'Cliente', 5, 'tarefa'
 WHERE NOT EXISTS (SELECT 1 FROM tags_sistema WHERE nome = 'Cliente');
 
-INSERT INTO tags_sistema (nome, icone, cor_badge, ordem, tipo)
-SELECT 'Rede', 'bi-diagram-3', 'bg-success', 6, 'tarefa'
+INSERT INTO tags_sistema (nome, ordem, tipo)
+SELECT 'Rede', 6, 'tarefa'
 WHERE NOT EXISTS (SELECT 1 FROM tags_sistema WHERE nome = 'Rede');
+
+
+INSERT INTO tags_sistema (nome, ordem, tipo)
+SELECT 'Visita', 7, 'comentario'
+WHERE NOT EXISTS (SELECT 1 FROM tags_sistema WHERE nome = 'Visita');
+
+INSERT INTO tags_sistema (nome, ordem, tipo)
+SELECT 'Live', 8, 'comentario'
+WHERE NOT EXISTS (SELECT 1 FROM tags_sistema WHERE nome = 'Live');
 
 DO $$
 BEGIN
@@ -66,7 +73,7 @@ BEGIN
 END$$;
 
 -- ============================================
--- 2. TABELA DE STATUS DE IMPLANTAÇÃO
+-- 2. TABELA DE STATUS DE IMPLANTAÃ‡ÃƒO
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS status_implantacao (
@@ -98,7 +105,7 @@ SELECT 'parada', 'Parada', '#fd7e14', 'bi-pause-circle', 4
 WHERE NOT EXISTS (SELECT 1 FROM status_implantacao WHERE codigo = 'parada');
 
 INSERT INTO status_implantacao (codigo, nome, cor, icone, ordem)
-SELECT 'sem_previsao', 'Sem Previsão', '#dc3545', 'bi-question-circle', 5
+SELECT 'sem_previsao', 'Sem PrevisÃ£o', '#dc3545', 'bi-question-circle', 5
 WHERE NOT EXISTS (SELECT 1 FROM status_implantacao WHERE codigo = 'sem_previsao');
 
 INSERT INTO status_implantacao (codigo, nome, cor, icone, ordem)
@@ -174,7 +181,7 @@ BEGIN
 END$$;
 
 -- ============================================
--- 4. TABELA DE NÍVEIS DE ATENDIMENTO
+-- 4. TABELA DE NÃVEIS DE ATENDIMENTO
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS niveis_atendimento (
@@ -189,15 +196,15 @@ CREATE TABLE IF NOT EXISTS niveis_atendimento (
 );
 
 INSERT INTO niveis_atendimento (codigo, nome, descricao, ordem)
-SELECT 'CB', 'Contas Base', 'Atendimento padrão para contas base', 1
+SELECT 'CB', 'Contas Base', 'Atendimento padrÃ£o para contas base', 1
 WHERE NOT EXISTS (SELECT 1 FROM niveis_atendimento WHERE codigo = 'CB');
 
 INSERT INTO niveis_atendimento (codigo, nome, descricao, ordem)
-SELECT 'N1', 'Nível 1', 'Atendimento prioritário nível 1', 2
+SELECT 'N1', 'NÃ­vel 1', 'Atendimento prioritÃ¡rio nÃ­vel 1', 2
 WHERE NOT EXISTS (SELECT 1 FROM niveis_atendimento WHERE codigo = 'N1');
 
 INSERT INTO niveis_atendimento (codigo, nome, descricao, ordem)
-SELECT 'N2', 'Nível 2', 'Atendimento prioritário nível 2', 3
+SELECT 'N2', 'NÃ­vel 2', 'Atendimento prioritÃ¡rio nÃ­vel 2', 3
 WHERE NOT EXISTS (SELECT 1 FROM niveis_atendimento WHERE codigo = 'N2');
 
 INSERT INTO niveis_atendimento (codigo, nome, descricao, ordem)
@@ -227,7 +234,7 @@ CREATE TABLE IF NOT EXISTS tipos_evento (
 );
 
 INSERT INTO tipos_evento (codigo, nome, icone, cor)
-SELECT 'criacao', 'Criação', 'bi-plus-circle', '#0d6efd'
+SELECT 'criacao', 'CriaÃ§Ã£o', 'bi-plus-circle', '#0d6efd'
 WHERE NOT EXISTS (SELECT 1 FROM tipos_evento WHERE codigo = 'criacao');
 
 INSERT INTO tipos_evento (codigo, nome, icone, cor)
@@ -235,7 +242,7 @@ SELECT 'tarefa_alterada', 'Tarefa Alterada', 'bi-check-square', '#198754'
 WHERE NOT EXISTS (SELECT 1 FROM tipos_evento WHERE codigo = 'tarefa_alterada');
 
 INSERT INTO tipos_evento (codigo, nome, icone, cor)
-SELECT 'responsavel_alterado', 'Responsável Alterado', 'bi-person', '#ffc107'
+SELECT 'responsavel_alterado', 'ResponsÃ¡vel Alterado', 'bi-person', '#ffc107'
 WHERE NOT EXISTS (SELECT 1 FROM tipos_evento WHERE codigo = 'responsavel_alterado');
 
 INSERT INTO tipos_evento (codigo, nome, icone, cor)
@@ -243,7 +250,7 @@ SELECT 'prazo_alterado', 'Prazo Alterado', 'bi-calendar', '#fd7e14'
 WHERE NOT EXISTS (SELECT 1 FROM tipos_evento WHERE codigo = 'prazo_alterado');
 
 INSERT INTO tipos_evento (codigo, nome, icone, cor)
-SELECT 'comentario_adicionado', 'Comentário Adicionado', 'bi-chat-left-text', '#0dcaf0'
+SELECT 'comentario_adicionado', 'ComentÃ¡rio Adicionado', 'bi-chat-left-text', '#0dcaf0'
 WHERE NOT EXISTS (SELECT 1 FROM tipos_evento WHERE codigo = 'comentario_adicionado');
 
 INSERT INTO tipos_evento (codigo, nome, icone, cor)
@@ -255,7 +262,7 @@ SELECT 'plano_aplicado', 'Plano Aplicado', 'bi-clipboard-check', '#d63384'
 WHERE NOT EXISTS (SELECT 1 FROM tipos_evento WHERE codigo = 'plano_aplicado');
 
 INSERT INTO tipos_evento (codigo, nome, icone, cor)
-SELECT 'finalizacao', 'Finalização', 'bi-flag', '#198754'
+SELECT 'finalizacao', 'FinalizaÃ§Ã£o', 'bi-flag', '#198754'
 WHERE NOT EXISTS (SELECT 1 FROM tipos_evento WHERE codigo = 'finalizacao');
 
 INSERT INTO tipos_evento (codigo, nome, icone, cor)
@@ -286,7 +293,7 @@ BEGIN
 END$$;
 
 -- ============================================
--- 6. TABELA DE MÓDULOS DO SISTEMA
+-- 6. TABELA DE MÃ“DULOS DO SISTEMA
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS modulos_sistema (
@@ -303,11 +310,11 @@ CREATE TABLE IF NOT EXISTS modulos_sistema (
 );
 
 INSERT INTO modulos_sistema (codigo, nome, descricao, icone, categoria, ordem)
-SELECT 'nota_fiscal', 'Nota Fiscal', 'Módulo de emissão de notas fiscais', 'bi-file-earmark-text', 'Financeiro', 1
+SELECT 'nota_fiscal', 'Nota Fiscal', 'MÃ³dulo de emissÃ£o de notas fiscais', 'bi-file-earmark-text', 'Financeiro', 1
 WHERE NOT EXISTS (SELECT 1 FROM modulos_sistema WHERE codigo = 'nota_fiscal');
 
 INSERT INTO modulos_sistema (codigo, nome, descricao, icone, categoria, ordem)
-SELECT 'vendas_online', 'Vendas Online', 'Módulo de vendas pela internet', 'bi-cart', 'Vendas', 2
+SELECT 'vendas_online', 'Vendas Online', 'MÃ³dulo de vendas pela internet', 'bi-cart', 'Vendas', 2
 WHERE NOT EXISTS (SELECT 1 FROM modulos_sistema WHERE codigo = 'vendas_online');
 
 INSERT INTO modulos_sistema (codigo, nome, descricao, icone, categoria, ordem)
@@ -315,7 +322,7 @@ SELECT 'app_treino', 'App de Treino', 'Aplicativo mobile para treinos', 'bi-phon
 WHERE NOT EXISTS (SELECT 1 FROM modulos_sistema WHERE codigo = 'app_treino');
 
 INSERT INTO modulos_sistema (codigo, nome, descricao, icone, categoria, ordem)
-SELECT 'recorrencia', 'Recorrência', 'Módulo de pagamentos recorrentes', 'bi-arrow-repeat', 'Financeiro', 4
+SELECT 'recorrencia', 'RecorrÃªncia', 'MÃ³dulo de pagamentos recorrentes', 'bi-arrow-repeat', 'Financeiro', 4
 WHERE NOT EXISTS (SELECT 1 FROM modulos_sistema WHERE codigo = 'recorrencia');
 
 INSERT INTO modulos_sistema (codigo, nome, descricao, icone, categoria, ordem)
@@ -327,7 +334,7 @@ SELECT 'facial', 'Reconhecimento Facial', 'Controle de acesso por reconhecimento
 WHERE NOT EXISTS (SELECT 1 FROM modulos_sistema WHERE codigo = 'facial');
 
 INSERT INTO modulos_sistema (codigo, nome, descricao, icone, categoria, ordem)
-SELECT 'boleto', 'Boleto Bancário', 'Geração de boletos bancários', 'bi-file-earmark-bar-graph', 'Financeiro', 7
+SELECT 'boleto', 'Boleto BancÃ¡rio', 'GeraÃ§Ã£o de boletos bancÃ¡rios', 'bi-file-earmark-bar-graph', 'Financeiro', 7
 WHERE NOT EXISTS (SELECT 1 FROM modulos_sistema WHERE codigo = 'boleto');
 
 INSERT INTO modulos_sistema (codigo, nome, descricao, icone, categoria, ordem)
@@ -335,15 +342,15 @@ SELECT 'pix', 'PIX', 'Pagamentos via PIX', 'bi-qr-code', 'Financeiro', 8
 WHERE NOT EXISTS (SELECT 1 FROM modulos_sistema WHERE codigo = 'pix');
 
 INSERT INTO modulos_sistema (codigo, nome, descricao, icone, categoria, ordem)
-SELECT 'cartao', 'Cartão de Crédito', 'Pagamentos com cartão', 'bi-credit-card', 'Financeiro', 9
+SELECT 'cartao', 'CartÃ£o de CrÃ©dito', 'Pagamentos com cartÃ£o', 'bi-credit-card', 'Financeiro', 9
 WHERE NOT EXISTS (SELECT 1 FROM modulos_sistema WHERE codigo = 'cartao');
 
 INSERT INTO modulos_sistema (codigo, nome, descricao, icone, categoria, ordem)
-SELECT 'wellhub', 'Wellhub', 'Integração com Wellhub (Gympass)', 'bi-heart-pulse', 'Integrações', 10
+SELECT 'wellhub', 'Wellhub', 'IntegraÃ§Ã£o com Wellhub (Gympass)', 'bi-heart-pulse', 'IntegraÃ§Ãµes', 10
 WHERE NOT EXISTS (SELECT 1 FROM modulos_sistema WHERE codigo = 'wellhub');
 
 INSERT INTO modulos_sistema (codigo, nome, descricao, icone, categoria, ordem)
-SELECT 'totalpass', 'Totalpass', 'Integração com Totalpass', 'bi-ticket-perforated', 'Integrações', 11
+SELECT 'totalpass', 'Totalpass', 'IntegraÃ§Ã£o com Totalpass', 'bi-ticket-perforated', 'IntegraÃ§Ãµes', 11
 WHERE NOT EXISTS (SELECT 1 FROM modulos_sistema WHERE codigo = 'totalpass');
 
 DO $$
@@ -378,24 +385,24 @@ SELECT 'Aguardando resposta do cliente', 'Cliente'
 WHERE NOT EXISTS (SELECT 1 FROM motivos_parada WHERE descricao = 'Aguardando resposta do cliente');
 
 INSERT INTO motivos_parada (descricao, categoria)
-SELECT 'Aguardando documentação', 'Documentação'
-WHERE NOT EXISTS (SELECT 1 FROM motivos_parada WHERE descricao = 'Aguardando documentação');
+SELECT 'Aguardando documentaÃ§Ã£o', 'DocumentaÃ§Ã£o'
+WHERE NOT EXISTS (SELECT 1 FROM motivos_parada WHERE descricao = 'Aguardando documentaÃ§Ã£o');
 
 INSERT INTO motivos_parada (descricao, categoria)
-SELECT 'Aguardando aprovação interna', 'Interno'
-WHERE NOT EXISTS (SELECT 1 FROM motivos_parada WHERE descricao = 'Aguardando aprovação interna');
+SELECT 'Aguardando aprovaÃ§Ã£o interna', 'Interno'
+WHERE NOT EXISTS (SELECT 1 FROM motivos_parada WHERE descricao = 'Aguardando aprovaÃ§Ã£o interna');
 
 INSERT INTO motivos_parada (descricao, categoria)
-SELECT 'Problemas técnicos', 'Técnico'
-WHERE NOT EXISTS (SELECT 1 FROM motivos_parada WHERE descricao = 'Problemas técnicos');
+SELECT 'Problemas tÃ©cnicos', 'TÃ©cnico'
+WHERE NOT EXISTS (SELECT 1 FROM motivos_parada WHERE descricao = 'Problemas tÃ©cnicos');
 
 INSERT INTO motivos_parada (descricao, categoria)
 SELECT 'Falta de recursos', 'Recursos'
 WHERE NOT EXISTS (SELECT 1 FROM motivos_parada WHERE descricao = 'Falta de recursos');
 
 INSERT INTO motivos_parada (descricao, categoria)
-SELECT 'Dependência de terceiros', 'Externo'
-WHERE NOT EXISTS (SELECT 1 FROM motivos_parada WHERE descricao = 'Dependência de terceiros');
+SELECT 'DependÃªncia de terceiros', 'Externo'
+WHERE NOT EXISTS (SELECT 1 FROM motivos_parada WHERE descricao = 'DependÃªncia de terceiros');
 
 INSERT INTO motivos_parada (descricao, categoria)
 SELECT 'Aguardando pagamento', 'Financeiro'
@@ -442,24 +449,24 @@ SELECT 'Problemas contratuais', 'Contratual'
 WHERE NOT EXISTS (SELECT 1 FROM motivos_cancelamento WHERE descricao = 'Problemas contratuais');
 
 INSERT INTO motivos_cancelamento (descricao, categoria)
-SELECT 'Cliente fechou o negócio', 'Cliente'
-WHERE NOT EXISTS (SELECT 1 FROM motivos_cancelamento WHERE descricao = 'Cliente fechou o negócio');
+SELECT 'Cliente fechou o negÃ³cio', 'Cliente'
+WHERE NOT EXISTS (SELECT 1 FROM motivos_cancelamento WHERE descricao = 'Cliente fechou o negÃ³cio');
 
 INSERT INTO motivos_cancelamento (descricao, categoria)
-SELECT 'Não atende requisitos técnicos', 'Técnico'
-WHERE NOT EXISTS (SELECT 1 FROM motivos_cancelamento WHERE descricao = 'Não atende requisitos técnicos');
+SELECT 'NÃ£o atende requisitos tÃ©cnicos', 'TÃ©cnico'
+WHERE NOT EXISTS (SELECT 1 FROM motivos_cancelamento WHERE descricao = 'NÃ£o atende requisitos tÃ©cnicos');
 
 INSERT INTO motivos_cancelamento (descricao, categoria)
 SELECT 'Migrou para concorrente', 'Mercado'
 WHERE NOT EXISTS (SELECT 1 FROM motivos_cancelamento WHERE descricao = 'Migrou para concorrente');
 
 INSERT INTO motivos_cancelamento (descricao, categoria)
-SELECT 'Insatisfação com serviço', 'Qualidade'
-WHERE NOT EXISTS (SELECT 1 FROM motivos_cancelamento WHERE descricao = 'Insatisfação com serviço');
+SELECT 'InsatisfaÃ§Ã£o com serviÃ§o', 'Qualidade'
+WHERE NOT EXISTS (SELECT 1 FROM motivos_cancelamento WHERE descricao = 'InsatisfaÃ§Ã£o com serviÃ§o');
 
 INSERT INTO motivos_cancelamento (descricao, categoria)
-SELECT 'Mudança de estratégia do cliente', 'Cliente'
-WHERE NOT EXISTS (SELECT 1 FROM motivos_cancelamento WHERE descricao = 'Mudança de estratégia do cliente');
+SELECT 'MudanÃ§a de estratÃ©gia do cliente', 'Cliente'
+WHERE NOT EXISTS (SELECT 1 FROM motivos_cancelamento WHERE descricao = 'MudanÃ§a de estratÃ©gia do cliente');
 
 INSERT INTO motivos_cancelamento (descricao, categoria)
 SELECT 'Outros motivos', 'Outros'
@@ -476,8 +483,8 @@ END$$;
 -- 9. ADICIONAR TIMESTAMPS EM TABELAS HISTORY
 -- ============================================
 
--- Adicionar changed_at nas tabelas de histórico
--- Adicionar changed_at nas tabelas de histórico
+-- Adicionar changed_at nas tabelas de histÃ³rico
+-- Adicionar changed_at nas tabelas de histÃ³rico
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'checklist_prazos_history' AND column_name = 'changed_at') THEN
@@ -500,20 +507,20 @@ BEGIN
 END$$;
 
 -- ============================================
--- 10. COMENTÁRIOS DE DOCUMENTAÇÃO
+-- 10. COMENTÃRIOS DE DOCUMENTAÃ‡ÃƒO
 -- ============================================
 
-COMMENT ON TABLE tags_sistema IS 'Tags dinâmicas do sistema para comentários e tarefas';
-COMMENT ON TABLE status_implantacao IS 'Status possíveis para implantações';
+COMMENT ON TABLE tags_sistema IS 'Tags dinÃ¢micas do sistema para comentÃ¡rios e tarefas';
+COMMENT ON TABLE status_implantacao IS 'Status possÃ­veis para implantaÃ§Ãµes';
 COMMENT ON TABLE carteiras IS 'Carteiras/Equipes de atendimento';
-COMMENT ON TABLE niveis_atendimento IS 'Níveis de prioridade de atendimento';
+COMMENT ON TABLE niveis_atendimento IS 'NÃ­veis de prioridade de atendimento';
 COMMENT ON TABLE tipos_evento IS 'Tipos de eventos para timeline';
-COMMENT ON TABLE modulos_sistema IS 'Módulos disponíveis no sistema';
-COMMENT ON TABLE motivos_parada IS 'Motivos para parada de implantação';
-COMMENT ON TABLE motivos_cancelamento IS 'Motivos para cancelamento de implantação';
+COMMENT ON TABLE modulos_sistema IS 'MÃ³dulos disponÃ­veis no sistema';
+COMMENT ON TABLE motivos_parada IS 'Motivos para parada de implantaÃ§Ã£o';
+COMMENT ON TABLE motivos_cancelamento IS 'Motivos para cancelamento de implantaÃ§Ã£o';
 
 -- ============================================
--- FIM DA MIGRAÇÃO
+-- FIM DA MIGRAÃ‡ÃƒO
 -- ============================================
 
 -- Verificar tabelas criadas

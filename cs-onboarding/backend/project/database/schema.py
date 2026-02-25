@@ -586,8 +586,6 @@ def _criar_tabelas_basicas_sqlite(cursor):
         CREATE TABLE IF NOT EXISTS tags_sistema (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nome VARCHAR(100) NOT NULL,
-            icone VARCHAR(50) DEFAULT '',
-            cor_badge VARCHAR(30) DEFAULT '#6c757d',
             ordem INTEGER DEFAULT 0,
             tipo VARCHAR(20) DEFAULT 'ambos',
             ativo INTEGER DEFAULT 1
@@ -884,17 +882,19 @@ def _popular_dados_configuracao(cursor):
         cursor.execute("SELECT COUNT(*) FROM tags_sistema")
         if cursor.fetchone()[0] == 0:
             tags = [
-                ("Ação interna", "bi-chat-left-dots", "#0d6efd", 1, "comentario"),
-                ("Reunião", "bi-camera-video", "#198754", 2, "comentario"),
-                ("No Show", "bi-x-circle", "#dc3545", 3, "comentario"),
-                ("Treinamento", "bi-mortarboard", "#6f42c1", 4, "ambos"),
-                ("Migração", "bi-arrow-left-right", "#fd7e14", 5, "ambos"),
-                ("Suporte", "bi-headset", "#20c997", 6, "ambos"),
+                ("Ação interna", 1, "comentario"),
+                ("Reunião", 2, "comentario"),
+                ("No Show", 3, "comentario"),
+                ("Treinamento", 4, "ambos"),
+                ("Migração", 5, "ambos"),
+                ("Suporte", 6, "ambos"),
+                ("Visita", 7, "comentario"),
+                ("Live", 8, "comentario"),
             ]
-            for nome, icone, cor, ordem, tipo in tags:
+            for nome, ordem, tipo in tags:
                 cursor.execute(
-                    "INSERT OR IGNORE INTO tags_sistema (nome, icone, cor_badge, ordem, tipo) VALUES (?, ?, ?, ?, ?)",
-                    (nome, icone, cor, ordem, tipo),
+                    "INSERT OR IGNORE INTO tags_sistema (nome, ordem, tipo) VALUES (?, ?, ?)",
+                    (nome, ordem, tipo),
                 )
 
         # ── status_implantacao ──

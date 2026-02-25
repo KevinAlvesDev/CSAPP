@@ -171,7 +171,7 @@ export interface PlanoSucessoAcao {
 export interface Tag {
     id: number;
     nome: string;
-    icone: string;
+    icone?: string;
     cor_badge: string;
     ordem: number;
     tipo: string;

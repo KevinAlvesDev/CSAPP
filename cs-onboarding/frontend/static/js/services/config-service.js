@@ -43,11 +43,16 @@ class ConfigService {
             const data = await response.json();
 
             if (data.ok) {
+                const tags = (data.tags || []).map(tag => ({
+                    ...tag,
+                    icone: tag.icone || this._resolveTagIcon(tag.nome),
+                    cor_badge: this._resolveTagBadgeClass(tag.nome)
+                }));
                 // Atualizar cache
-                this.cache.tags[cacheKey] = data.tags;
+                this.cache.tags[cacheKey] = tags;
                 this.cache.lastFetch.tags = now;
 
-                return data.tags;
+                return tags;
             } else {
                 console.error('Erro ao carregar tags:', data.error);
                 return this._getFallbackTags(tipo);
@@ -78,7 +83,7 @@ class ConfigService {
     async getTagIcon(tagNome) {
         const tags = await this.getTags();
         const tag = tags.find(t => t.nome === tagNome);
-        return tag ? tag.icone : 'bi-tag';
+        return tag ? (tag.icone || this._resolveTagIcon(tag.nome)) : 'bi-tag';
     }
 
     /**
@@ -206,11 +211,47 @@ class ConfigService {
             { id: 3, nome: 'No Show', icone: 'bi-calendar-x', cor_badge: 'bg-warning text-dark', tipo: 'comentario', ordem: 3 },
             { id: 4, nome: 'Simples registro', icone: 'bi-pencil-square', cor_badge: 'bg-secondary', tipo: 'comentario', ordem: 4 },
             { id: 5, nome: 'Cliente', icone: 'bi-person-badge', cor_badge: 'bg-info', tipo: 'tarefa', ordem: 5 },
-            { id: 6, nome: 'Rede', icone: 'bi-diagram-3', cor_badge: 'bg-success', tipo: 'tarefa', ordem: 6 }
+            { id: 6, nome: 'Rede', icone: 'bi-diagram-3', cor_badge: 'bg-success', tipo: 'tarefa', ordem: 6 },
+            { id: 7, nome: 'Visita', icone: 'bi-geo-alt', cor_badge: 'bg-info', tipo: 'comentario', ordem: 7 },
+            { id: 8, nome: 'Live', icone: 'bi-broadcast', cor_badge: 'bg-danger', tipo: 'comentario', ordem: 8 }
         ];
 
         if (!tipo || tipo === 'ambos') return allTags;
         return allTags.filter(t => t.tipo === tipo || t.tipo === 'ambos');
+    }
+
+    _resolveTagBadgeClass(tagNome) {
+        const key = String(tagNome || '').trim().toLowerCase();
+        const map = {
+            'ação interna': 'bg-primary',
+            'acao interna': 'bg-primary',
+            'reunião': 'bg-danger',
+            'reuniao': 'bg-danger',
+            'no show': 'bg-warning text-dark',
+            'simples registro': 'bg-secondary',
+            cliente: 'bg-info',
+            rede: 'bg-success',
+            visita: 'bg-info',
+            live: 'bg-danger'
+        };
+        return map[key] || 'bg-secondary';
+    }
+
+    _resolveTagIcon(tagNome) {
+        const key = String(tagNome || '').trim().toLowerCase();
+        const map = {
+            'ação interna': 'bi-briefcase',
+            'acao interna': 'bi-briefcase',
+            'reunião': 'bi-calendar-event',
+            'reuniao': 'bi-calendar-event',
+            'no show': 'bi-calendar-x',
+            'simples registro': 'bi-pencil-square',
+            cliente: 'bi-person-badge',
+            rede: 'bi-diagram-3',
+            visita: 'bi-geo-alt',
+            live: 'bi-broadcast'
+        };
+        return map[key] || 'bi-tag';
     }
 }
 
