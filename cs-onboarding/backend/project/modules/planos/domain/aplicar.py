@@ -273,14 +273,9 @@ def aplicar_plano_a_implantacao_checklist(
             )
 
             try:
-                from ....common.utils import format_date_br
                 from ....db import logar_timeline
 
-                prev_txt = format_date_br(data_previsao_termino, include_time=False) if data_previsao_termino else None
-
                 detalhe = f"Plano aplicado: '{plano.get('nome')}'"
-                if prev_txt:
-                    detalhe += f"; previsão de término: {prev_txt}"
                 logar_timeline(implantacao_id, usuario, "plano_aplicado", detalhe)
             except Exception:
                 pass
@@ -490,11 +485,11 @@ def remover_plano_de_implantacao(implantacao_id: int, usuario: str, excluir_come
                 from ....db import logar_timeline
 
                 acao = "plano_removido"
-                detalhe = f"Plano de sucesso removido da implantaÃ§Ã£o por {usuario}."
+                detalhe = f"Plano de sucesso removido da implantacao por {usuario}."
                 if excluir_comentarios:
-                    detalhe += " ComentÃ¡rios excluÃ­dos."
+                    detalhe += " Comentarios excluidos."
                 else:
-                    detalhe += " ComentÃ¡rios preservados."
+                    detalhe += " Comentarios preservados."
                 logar_timeline(implantacao_id, usuario, acao, detalhe)
             except Exception:
                 pass
