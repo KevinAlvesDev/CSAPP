@@ -119,7 +119,8 @@
             }
 
             const params = new URLSearchParams({
-                somente_templates: 'true'
+                somente_templates: 'true',
+                context
             });
             if (termoBusca) params.set('busca', termoBusca);
 

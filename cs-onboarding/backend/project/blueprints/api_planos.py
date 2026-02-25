@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
 
+from ..common.context_navigation import detect_current_context, normalize_context
 from ..modules.planos.application import planos_sucesso_service
 
 api_planos_bp = Blueprint("api_planos", __name__, url_prefix="/api")
@@ -9,6 +10,7 @@ api_planos_bp = Blueprint("api_planos", __name__, url_prefix="/api")
 def api_listar_planos():
     """Endpoint API para listar planos de sucesso filtrando por status e usuario_id."""
     try:
+        context = normalize_context(request.args.get("context")) or detect_current_context()
         status = request.args.get("status")
         usuario_id = request.args.get("usuario_id")
         processo_id = request.args.get("processo_id")
@@ -21,6 +23,7 @@ def api_listar_planos():
                 processo_id = None
 
         planos = planos_sucesso_service.listar_planos_sucesso(
+            context=context,
             status=status if status else None,
             usuario_id=usuario_id if usuario_id else None,
             processo_id=processo_id,
@@ -28,7 +31,9 @@ def api_listar_planos():
         )
 
         contagens = planos_sucesso_service.contar_planos_por_status(
-            usuario_id=usuario_id if usuario_id else None, somente_templates=somente_templates
+            usuario_id=usuario_id if usuario_id else None,
+            context=context,
+            somente_templates=somente_templates,
         )
 
         return jsonify({"success": True, "planos": planos, "contagens": contagens}), 200
