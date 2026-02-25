@@ -74,7 +74,8 @@ def dashboard():
     # Filtros de data para relatorio de tags
     start_date = _arg_or_saved("start_date")
     end_date = _arg_or_saved("end_date")
-    date_type_param = _arg_or_saved("date_type")
+    # date_type NÃO deve herdar da sessão; usa apenas o que veio na requisição atual.
+    date_type_param = request.args.get("date_type")
     date_type_request_param = request.args.get("date_type")
     date_type = (date_type_param or "").strip().lower()
     if date_type not in ["", "criacao", "inicio", "finalizacao", "parada", "cancelamento"]:
@@ -88,7 +89,7 @@ def dashboard():
         and date_type in ["criacao", "inicio"]
         and not (start_date or end_date)
     ):
-        flash("Para filtrar por Criacao ou Inicio, informe ao menos uma data.", "warning")
+        # Sem datas: não aplicar filtro de período (silencioso, sem alerta).
         date_type = ""
         start_date = None
         end_date = None
