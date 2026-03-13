@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(__name__)
 """
 Módulo de Análise de Cancelamentos
 Dados e métricas de cancelamentos.
@@ -5,8 +7,6 @@ Princípio SOLID: Single Responsibility
 """
 
 from datetime import date, datetime, timedelta
-
-from flask import current_app
 
 from ....db import query_db
 from .utils import date_col_expr, date_param_expr
@@ -16,7 +16,6 @@ def get_cancelamentos_data(cs_email=None, start_date=None, end_date=None, contex
     """
     Retorna dados detalhados de cancelamentos com métricas e gráficos.
     """
-    is_sqlite = current_app.config.get("USE_SQLITE_LOCALLY", False)
     args = []
     query = """
             SELECT i.id, i.nome_empresa, i.usuario_cs, i.data_criacao, i.data_cancelamento,
@@ -50,7 +49,7 @@ def get_cancelamentos_data(cs_email=None, start_date=None, end_date=None, contex
                 dt = datetime.strptime(ds, "%Y-%m-%d").date()
             except ValueError:
                 return None, None
-        if is_end and not is_sqlite:
+        if is_end:
             return "<", (dt + timedelta(days=1)).strftime("%Y-%m-%d")
         return "<=" if is_end else ">=", ds
 
@@ -90,13 +89,14 @@ def get_cancelamentos_data(cs_email=None, start_date=None, end_date=None, contex
         if dc and cri:
             try:
                 r["tempo_permanencia_dias"] = max(0, (dc.date() - cri.date()).days)
-            except Exception:
+            except Exception as exc:
+                logger.exception("Unhandled exception", exc_info=True)
                 r["tempo_permanencia_dias"] = max(0, (dc - cri).days)
         else:
             r["tempo_permanencia_dias"] = None
 
     # Categorização de motivos
-    motivos = {}
+    motivos: dict[str, int] = {}
     for r in rows:
         m = (r.get("motivo_cancelamento") or "").strip().lower()
         if not m:
@@ -118,7 +118,7 @@ def get_cancelamentos_data(cs_email=None, start_date=None, end_date=None, contex
     motivo_perc = [(c / total_cancel * 100) if total_cancel > 0 else 0 for c in motivo_counts]
 
     # Série temporal
-    series = {}
+    series: dict[str, int] = {}
     for r in rows:
         dc = _to_dt(r.get("data_cancelamento"))
         if not dc:
@@ -136,8 +136,8 @@ def get_cancelamentos_data(cs_email=None, start_date=None, end_date=None, contex
         ma3.append(round(sum(window) / len(window), 2))
 
     # Contagens por segmento, plano, tamanho
-    seg_counts = {}
-    planos_counts = {}
+    seg_counts: dict[str, int] = {}
+    planos_counts: dict[str, int] = {}
     tamanho_counts = {"micro": 0, "pequena": 0, "media": 0, "grande": 0}
     for r in rows:
         seg = r.get("seguimento") or "não informado"
@@ -181,7 +181,7 @@ def get_cancelamentos_data(cs_email=None, start_date=None, end_date=None, contex
     perda_anual = round(sum(valores) * 12 / max(1, len(labels)), 2) if labels else 0.0
 
     # Nível de receita
-    nivel_counts = {}
+    nivel_counts: dict[str, int] = {}
     for r in rows:
         nv = r.get("nivel_receita") or "não informado"
         nivel_counts[nv] = nivel_counts.get(nv, 0) + 1

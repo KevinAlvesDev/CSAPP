@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(__name__)
 """
 Módulo de Consulta OAMD
 Função principal para consulta de empresas no banco externo OAMD.
@@ -70,6 +72,7 @@ def consultar_empresa_oamd(id_favorecido=None, infra_req=None):
         return _handle_connection_error(e, id_favorecido)
 
     except Exception as e:
+        logger.exception("Unhandled exception", exc_info=True)
         return _handle_general_error(e, id_favorecido)
 
 
@@ -128,7 +131,7 @@ def _handle_connection_error(error, id_favorecido):
     Returns:
         dict: Resposta de erro formatada
     """
-    api_logger.error(f"Erro de conexão OAMD ao consultar ID {id_favorecido}: {error}")
+    api_logger.error(f"Erro de conexão OAMD ao consultar ID {id_favorecido}: {error}", exc_info=True)
 
     error_msg = str(error).lower()
 

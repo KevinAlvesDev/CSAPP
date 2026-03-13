@@ -206,6 +206,50 @@
         }, true);
     }
 
+    // Confirmação padrão do projeto para formulários tradicionais (sempre ativa)
+    function attachStandardConfirmListener() {
+        if (window.__standardConfirmAttached) return;
+        window.__standardConfirmAttached = true;
+
+        document.addEventListener('submit', function (ev) {
+            var form = ev.target;
+            if (!form || !form.matches('form[data-confirm-message]')) return;
+            if (form.dataset.confirmBypass === '1') {
+                form.dataset.confirmBypass = '';
+                return;
+            }
+
+            ev.preventDefault();
+            var message = form.getAttribute('data-confirm-message') || 'Tem certeza que deseja continuar?';
+            var title = form.getAttribute('data-confirm-title') || 'Confirmar ação';
+            var detail = form.getAttribute('data-confirm-detail') || '';
+            var type = form.getAttribute('data-confirm-type') || 'warning';
+
+            var proceed = function (ok) {
+                if (!ok) return;
+                form.dataset.confirmBypass = '1';
+                form.submit();
+            };
+
+            if (window.showConfirm) {
+                window.showConfirm({
+                    title: title,
+                    message: message,
+                    detail: detail,
+                    type: type,
+                    confirmText: 'Confirmar',
+                    cancelText: 'Cancelar'
+                }).then(function (confirmed) {
+                    proceed(Boolean(confirmed));
+                }).catch(function () {
+                    proceed(false);
+                });
+            } else {
+                proceed(window.confirm(message));
+            }
+        }, true);
+    }
+
     function setupHTMXFallback() {
         if (!window.htmx) {
             if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', ensureHTMX); }
@@ -443,6 +487,9 @@
 
         // Setup HTMX fallback
         setupHTMXFallback();
+
+        // Setup confirmação padrão para formulários tradicionais
+        attachStandardConfirmListener();
 
         // Initialize global modals
         initGlobalModals();

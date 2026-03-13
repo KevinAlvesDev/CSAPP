@@ -3,7 +3,7 @@
  */
 
 .profile-page {
-  max-width: 1200px;
+  max-width: 1560px;
   margin: 0 auto;
   padding: 0;
 }
@@ -16,7 +16,11 @@
 }
 
 .profile-card__body {
-  padding: var(--space-8);
+  padding: var(--space-12);
+}
+
+.profile-card {
+  min-height: 680px;
 }
 
 .profile-card__header {

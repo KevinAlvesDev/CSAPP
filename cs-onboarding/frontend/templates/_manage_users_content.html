@@ -1,17 +1,7 @@
-{% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-        {% for category, message in messages %}
-            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show my-3" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        {% endfor %}
-    {% endif %}
-{% endwith %}
-
-{% set total_users = users|length %}
+{% set total_users = pagination.total %}
 {% set perfis = perfis_list %}
-{% set sem_perfil = users|rejectattr('perfil_acesso')|list|length %}
+{% set current_page = pagination.page %}
+{% set total_pages = pagination.pages %}
 
 <section class="users-shell">
 
@@ -32,51 +22,51 @@
             </div>
             <div class="user-role">
                 {% if user.perfil_acesso %}
-                    <span class="role-pill
+                <span class="role-pill
                         {% if user.perfil_acesso == 'Administrador' %}role-admin
                         {% elif user.perfil_acesso == 'Gerente' %}role-manager
                         {% elif user.perfil_acesso == 'Coordenador' %}role-coordinator
                         {% else %}role-default{% endif %}
                     ">
-                        {{ user.perfil_acesso }}
-                    </span>
+                    {{ user.perfil_acesso }}
+                </span>
                 {% else %}
-                    <span class="role-pill role-empty">Sem perfil</span>
+                <span class="role-pill role-empty">Sem perfil</span>
                 {% endif %}
             </div>
 
             <div class="user-actions">
-                <form method="POST" action="{{ url_for('management.update_user_perfil') }}" class="user-role-form"
-                      hx-post="{{ url_for('management.update_user_perfil') }}"
-                      hx-target="#users-management-content"
-                      hx-swap="innerHTML"
-                      hx-confirm="Tem certeza que deseja alterar o Perfil de Acesso de {{ user.usuario }}?">
+                <form method="POST" action="{{ url_for('management.update_user_perfil', page=current_page) }}"
+                    class="user-role-form" hx-post="{{ url_for('management.update_user_perfil', page=current_page) }}"
+                    hx-target="#users-management-content" hx-swap="innerHTML"
+                    hx-confirm="Tem certeza que deseja alterar o Perfil de Acesso de {{ user.usuario }}?">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="usuario_email" value="{{ user.usuario }}">
                     <select name="new_perfil" class="form-select form-select-sm">
                         <option value="">Sem perfil</option>
                         {% for perfil in perfis_list %}
-                            <option value="{{ perfil }}" {% if user.perfil_acesso == perfil %}selected{% endif %}>
-                                {{ perfil }}
-                            </option>
+                        <option value="{{ perfil }}" {% if user.perfil_acesso==perfil %}selected{% endif %}>
+                            {{ perfil }}
+                        </option>
                         {% endfor %}
                     </select>
-                    <button type="submit" class="btn btn-primary btn-sm"
-                            {% if user.usuario == g.user_email and g.perfil.perfil_acesso == 'Administrador' %}disabled title="Voce nao pode remover seu proprio perfil de Admin."{% endif %}>
+                    <button type="submit" class="btn btn-primary btn-sm" {% if user.usuario==g.user_email and
+                        g.perfil.perfil_acesso=='Administrador' %}disabled
+                        title="Voce nao pode remover seu proprio perfil de Admin." {% endif %}>
                         Salvar
                     </button>
                 </form>
 
-                {% set can_delete = g.perfil.perfil_acesso == 'Administrador' and user.usuario != g.user_email and user.usuario != ADMIN_EMAIL %}
-                <form method="POST" action="{{ url_for('management.delete_user') }}" class="user-delete-form"
-                      hx-post="{{ url_for('management.delete_user') }}"
-                      hx-target="#users-management-content"
-                      hx-swap="innerHTML"
-                      hx-confirm="ATENCAO: A exclusao de {{ user.usuario }} e IRREVERSIVEL e removera todos os dados! Tem certeza?">
+                {% set can_delete = g.perfil.perfil_acesso == 'Administrador' and user.usuario != g.user_email and
+                user.usuario != ADMIN_EMAIL %}
+                <form method="POST" action="{{ url_for('management.delete_user', page=current_page) }}"
+                    class="user-delete-form" hx-post="{{ url_for('management.delete_user', page=current_page) }}"
+                    hx-target="#users-management-content" hx-swap="innerHTML"
+                    hx-confirm="ATENCAO: A exclusao de {{ user.usuario }} e IRREVERSIVEL e removera todos os dados! Tem certeza?">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="usuario_email" value="{{ user.usuario }}">
-                    <button type="submit" class="btn btn-outline-danger btn-sm"
-                            {% if not can_delete %}disabled title="Voce nao pode excluir a si mesmo ou este usuario."{% endif %}>
+                    <button type="submit" class="btn btn-outline-danger btn-sm" {% if not can_delete %}disabled
+                        title="Voce nao pode excluir a si mesmo ou este usuario." {% endif %}>
                         <i class="bi bi-trash"></i>
                         Excluir
                     </button>
@@ -85,6 +75,47 @@
         </article>
         {% endfor %}
     </div>
+
+    {# Controles de Paginação #}
+    {% if total_pages > 1 %}
+    <div class="pagination-wrapper mt-4 d-flex justify-content-center">
+        <nav aria-label="Navegação de usuários">
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item {{ 'disabled' if current_page == 1 }}">
+                    <a class="page-link" href="#"
+                        hx-get="{{ url_for('management.manage_users_modal', page=current_page - 1) }}"
+                        hx-target="#users-management-content" hx-push-url="true">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+
+                {% for p in range(1, total_pages + 1) %}
+                {% if p == 1 or p == total_pages or (p >= current_page - 2 and p <= current_page + 2) %} <li
+                    class="page-item {{ 'active' if p == current_page }}">
+                    <a class="page-link" href="#" hx-get="{{ url_for('management.manage_users_modal', page=p) }}"
+                        hx-target="#users-management-content" hx-push-url="true">{{ p }}</a>
+                    </li>
+                    {% elif p == current_page - 3 or p == current_page + 3 %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                    {% endfor %}
+
+                    <li class="page-item {{ 'disabled' if current_page == total_pages }}">
+                        <a class="page-link" href="#"
+                            hx-get="{{ url_for('management.manage_users_modal', page=current_page + 1) }}"
+                            hx-target="#users-management-content" hx-push-url="true">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+            </ul>
+        </nav>
+    </div>
+    <div class="text-center mt-2">
+        <small class="text-muted">Mostrando página {{ current_page }} de {{ total_pages }} (Total: {{ total_users }}
+            usuários)</small>
+    </div>
+    {% endif %}
+
     {% else %}
     <div class="card users-empty">
         <p class="text-muted mb-0">Nenhum usuario encontrado no sistema.</p>

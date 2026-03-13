@@ -1,37 +1,25 @@
-
 <div class="profile-modal">
-  {% with messages = get_flashed_messages(with_categories=true) %}
-  {% if messages %}
-    {% for category, message in messages %}
-    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
-      {{ message }}
-      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-    {% endfor %}
-  {% endif %}
-  {% endwith %}
-
-  <form action="{{ url_for('profile.save_profile') }}" method="POST" enctype="multipart/form-data" hx-post="{{ url_for('profile.save_profile') }}" hx-target="#profile-content" hx-swap="innerHTML">
+  <form action="{{ url_for('profile.save_profile') }}" method="POST" enctype="multipart/form-data"
+    hx-post="{{ url_for('profile.save_profile') }}" hx-target="#profile-content" hx-swap="innerHTML">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="next" value="{{ request.path }}">
 
     <div class="d-flex align-items-center mb-3">
-      <div class="me-3 text-center">
+      <div class="me-3 text-center" id="modal-avatar-container">
         {% if g.perfil.foto_url %}
-        <img id="profile-photo-preview" 
-             src="{{ g.perfil.foto_url }}" 
-             alt="Foto de Perfil" 
-             class="rounded-circle border" 
-             style="width: 96px; height: 96px; object-fit: cover;">
+        <img id="modal-profile-photo-preview" src="{{ g.perfil.foto_url }}" alt="Foto de Perfil"
+          class="rounded-circle border" style="width: 96px; height: 96px; object-fit: cover;">
         {% else %}
-        <div id="profile-photo-preview" 
-             class="rounded-circle border d-flex align-items-center justify-content-center bg-light" 
-             style="width: 96px; height: 96px;">
+        <div id="modal-profile-photo-fallback"
+          class="rounded-circle border d-flex align-items-center justify-content-center bg-light"
+          style="width: 96px; height: 96px;">
           <i class="bi bi-person-circle" style="font-size: 64px; color: #6c757d;"></i>
         </div>
         {% endif %}
         <label for="foto" class="btn btn-sm btn-outline-primary mt-2 w-100">Trocar Foto</label>
-        <input type="file" name="foto" id="foto" class="d-none" accept="image/png, image/jpeg" {% if not r2_configurado %}disabled{% endif %}>
+        <input type="file" name="foto" id="foto" class="d-none" accept="image/png, image/jpeg" {% if not r2_configurado
+          %}disabled{% endif %}
+          onchange="previewImage(this, 'modal-profile-photo-preview', 'modal-profile-photo-fallback', 'modal-avatar-container')">
         {% if not r2_configurado %}
         <small class="form-text text-danger d-block mt-1">Upload desativado (R2 não configurado).</small>
         {% endif %}
@@ -52,14 +40,15 @@
         <label for="cargo" class="form-label">Cargo</label>
         <select id="cargo" name="cargo" class="form-select" required>
           <option value="">Selecione...</option>
-          <option value="Júnior" {% if (g.perfil.cargo or '') == 'Júnior' %}selected{% endif %}>Júnior</option>
-          <option value="Pleno" {% if (g.perfil.cargo or '') == 'Pleno' %}selected{% endif %}>Pleno</option>
-          <option value="Sênior" {% if (g.perfil.cargo or '') == 'Sênior' %}selected{% endif %}>Sênior</option>
+          <option value="Júnior" {% if (g.perfil.cargo or '' )=='Júnior' %}selected{% endif %}>Júnior</option>
+          <option value="Pleno" {% if (g.perfil.cargo or '' )=='Pleno' %}selected{% endif %}>Pleno</option>
+          <option value="Sênior" {% if (g.perfil.cargo or '' )=='Sênior' %}selected{% endif %}>Sênior</option>
         </select>
       </div>
       <div class="col-md-6">
         <label for="perfil_acesso" class="form-label">Perfil de Acesso</label>
-        <input type="text" id="perfil_acesso" name="perfil_acesso" class="form-control" value="{{ g.perfil.perfil_acesso or 'N/D' }}" readonly disabled>
+        <input type="text" id="perfil_acesso" name="perfil_acesso" class="form-control"
+          value="{{ g.perfil.perfil_acesso or 'N/D' }}" readonly disabled>
       </div>
       <div class="col-12">
         <label for="email" class="form-label">Email (Usuário)</label>

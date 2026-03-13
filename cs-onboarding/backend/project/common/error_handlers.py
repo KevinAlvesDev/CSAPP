@@ -22,25 +22,25 @@ def handle_api_errors(f):
             return f(*args, **kwargs)
         except ValueError as e:
             # Erros de validação de negócio
-            api_logger.warning(f"Validation error in {f.__name__}: {e!s}")
+            api_logger.warning(f"Validation error in {f.__name__}: {e!s}", exc_info=True)
             return jsonify({"ok": False, "error": str(e), "error_type": "validation_error"}), 400
         except PermissionError as e:
             # Erros de permissão
-            api_logger.warning(f"Permission denied in {f.__name__}: {e!s}")
+            api_logger.warning(f"Permission denied in {f.__name__}: {e!s}", exc_info=True)
             return jsonify({"ok": False, "error": str(e) or "Permissão negada", "error_type": "permission_error"}), 403
         except FileNotFoundError as e:
             # Recurso não encontrado
-            api_logger.warning(f"Resource not found in {f.__name__}: {e!s}")
+            api_logger.warning(f"Resource not found in {f.__name__}: {e!s}", exc_info=True)
             return jsonify({"ok": False, "error": str(e) or "Recurso não encontrado", "error_type": "not_found"}), 404
         except ConnectionError as e:
             # Erros de conexão (banco, APIs externas)
-            api_logger.error(f"Connection error in {f.__name__}: {e!s}")
+            api_logger.error(f"Connection error in {f.__name__}: {e!s}", exc_info=True)
             return jsonify(
                 {"ok": False, "error": "Erro de conexão. Tente novamente.", "error_type": "connection_error"}
             ), 503
         except TimeoutError as e:
             # Timeout
-            api_logger.error(f"Timeout in {f.__name__}: {e!s}")
+            api_logger.error(f"Timeout in {f.__name__}: {e!s}", exc_info=True)
             return jsonify(
                 {"ok": False, "error": "Operação demorou muito. Tente novamente.", "error_type": "timeout_error"}
             ), 504
@@ -160,12 +160,12 @@ def validate_pagination(max_per_page=100):
                     per_page = max_per_page
 
                 # Adicionar ao request para uso na função
-                request.validated_page = page
-                request.validated_per_page = per_page
+                request.validated_page = page  # type: ignore[attr-defined]
+                request.validated_per_page = per_page  # type: ignore[attr-defined]
 
             except (ValueError, TypeError):
-                request.validated_page = 1
-                request.validated_per_page = 20
+                request.validated_page = 1  # type: ignore[attr-defined]
+                request.validated_per_page = 20  # type: ignore[attr-defined]
 
             return f(*args, **kwargs)
 
@@ -177,16 +177,12 @@ def validate_pagination(max_per_page=100):
 class ValidationError(Exception):
     """Exceção customizada para erros de validação"""
 
-    pass
 
 
 class PermissionDeniedError(PermissionError):
     """Exceção customizada para erros de permissão"""
 
-    pass
 
 
 class ResourceNotFoundError(FileNotFoundError):
     """Exceção customizada para recursos não encontrados"""
-
-    pass

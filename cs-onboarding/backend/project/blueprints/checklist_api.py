@@ -73,7 +73,8 @@ def toggle_item(item_id: int):
     Se não fornecido, inverte o status atual.
     """
     try:
-        item_id = validate_integer(item_id, min_value=1)
+        val = validate_integer(item_id, min_value=1)
+        item_id_int = int(val) if val is not None else 0
     except ValidationError as e:
         return jsonify({"ok": False, "error": f"ID inválido: {e!s}"}), 400
 
@@ -115,18 +116,18 @@ def toggle_item(item_id: int):
             # Como removi query_db, não posso fazer isso.
             # Vou enviar False por padrão mas logar aviso.
             api_logger.warning(
-                f"Toggle chamado sem status explícito para item {item_id}. Assumindo inversão não suportada sem query."
+                f"Toggle chamado sem status explícito para item {item_id_int}. Assumindo inversão não suportada sem query."
             )
             return jsonify(
                 {"ok": False, "error": "Status explícito (completed) é obrigatório nesta versão da API"}
             ), 400
 
-        result = toggle_item_status(item_id, new_status, usuario_email)
+        result = toggle_item_status(item_id_int, new_status, usuario_email)
 
         return jsonify(
             {
                 "ok": True,
-                "item_id": item_id,
+                "item_id": item_id_int,
                 "completed": new_status,
                 "items_updated": result["items_updated"],
                 "progress": result["progress"],
@@ -136,105 +137,114 @@ def toggle_item(item_id: int):
         )
 
     except ValueError as e:
-        api_logger.error(f"Erro de validação ao fazer toggle do item {item_id}: {e}")
+        api_logger.error(f"Erro de validação ao fazer toggle do item {item_id_int}: {e}", exc_info=True)
         return jsonify({"ok": False, "error": str(e)}), 400
     except Exception as e:
-        api_logger.error(f"Erro ao fazer toggle do item {item_id}: {e}", exc_info=True)
+        api_logger.error(f"Erro ao fazer toggle do item {item_id_int}: {e}", exc_info=True)
         return jsonify({"ok": False, "error": "Erro interno ao alterar status"}), 500
+
+
+def _try_send_external_comment_email(result: dict, item_id_int: int, usuario_email: str | None) -> None:
+    """Tenta enviar email de notificação para comentário externo. Falhas são logadas mas não propagadas."""
+    try:
+        from ..mail.email_utils import send_external_comment_notification
+
+        comentario_id = result.get("id") or result.get("comentario", {}).get("id")
+        if not comentario_id:
+            return
+
+        email_data = obter_comentario_para_email(comentario_id)
+        if not email_data or not email_data.get("email_responsavel"):
+            return
+
+        implantacao = {
+            "id": email_data["impl_id"],
+            "nome_empresa": email_data["nome_empresa"],
+            "email_responsavel": email_data["email_responsavel"],
+        }
+        comentario_obj = {
+            "id": email_data["id"],
+            "texto": email_data["texto"],
+            "tarefa_filho": email_data["tarefa_nome"],
+            "usuario_cs": email_data["usuario_cs"],
+        }
+
+        sent = send_external_comment_notification(implantacao, comentario_obj)
+        result["email_sent"] = sent
+
+        if sent:
+            try:
+                from ..modules.checklist.application.checklist_service import registrar_envio_email_comentario
+                detalhe = f"E-mail enviado para responsável com resumo de '{email_data.get('tarefa_nome') or ''}'."
+                registrar_envio_email_comentario(email_data["impl_id"], usuario_email, detalhe)
+            except Exception as e:
+                api_logger.warning(f"Falha ao registrar envio de e-mail de comentário no histórico: {e}", exc_info=True)
+
+    except Exception as e:
+        api_logger.error(f"Erro ao tentar enviar email automático para comentário {item_id_int}: {e}", exc_info=True)
+        result["email_sent"] = False
+        result["email_error"] = str(e)
+
+
+_VALID_COMMENT_TAGS = {"Ação interna", "Reunião", "No Show", "Simples registro", "Visita", "Live"}
+
+
+def _parse_comment_data(data: dict) -> dict:
+    """Extrai e normaliza os campos de dados do comentário a partir do JSON da request."""
+    texto = data.get("texto", "") or data.get("comment", "")
+    visibilidade = data.get("visibilidade", "interno")
+    tag = data.get("tag")
+    return {
+        "texto": texto,
+        "visibilidade": visibilidade if visibilidade in ("interno", "externo") else "interno",
+        "noshow": data.get("noshow", False),
+        "tag": tag if tag in _VALID_COMMENT_TAGS else None,
+        "imagem_url": data.get("imagem_url"),
+        "imagem_base64": data.get("imagem_base64"),
+        "send_email": data.get("send_email", False),
+    }
 
 
 @checklist_bp.route("/comment/<int:item_id>", methods=["POST"])
 @login_required
 @validate_api_origin
 @validate_context_access(id_param="item_id", entity_type="checklist_item")
-@limiter.limit("1000 per minute", key_func=lambda: g.user_email or get_remote_address())
+@limiter.limit("200 per minute", key_func=lambda: g.user_email or get_remote_address())
 def add_comment(item_id: int):
     """
     Adiciona um novo comentário ao histórico de um item.
     """
     try:
-        item_id = validate_integer(item_id, min_value=1)
+        val = validate_integer(item_id, min_value=1)
+        item_id_int = int(val) if val is not None else 0
     except ValidationError as e:
         return jsonify({"ok": False, "error": f"ID inválido: {e!s}"}), 400
 
     if not request.is_json:
         return jsonify({"ok": False, "error": "Content-Type deve ser application/json"}), 400
 
-    data = request.get_json() or {}
-    texto = data.get("texto", "") or data.get("comment", "")
-    visibilidade = data.get("visibilidade", "interno")
-    noshow = data.get("noshow", False)
-    tag = data.get("tag")  # Ação interna, Reunião, or No Show
-    imagem_url = data.get("imagem_url")  # URL da imagem anexada
-    imagem_base64 = data.get("imagem_base64")  # Imagem em base64
-
-    has_attachment = bool(imagem_url or imagem_base64)
-    if (not texto or not texto.strip()) and not has_attachment:
+    params = _parse_comment_data(request.get_json() or {})
+    has_content = bool((params["texto"] and params["texto"].strip()) or params["imagem_url"] or params["imagem_base64"])
+    if not has_content:
         return jsonify({"ok": False, "error": "Informe texto ou anexo no comentário"}), 400
 
-    if visibilidade not in ("interno", "externo"):
-        visibilidade = "interno"
-
-    # Validate tag if provided
-    valid_tags = ["Ação interna", "Reunião", "No Show", "Simples registro", "Visita", "Live", None, ""]
-    if tag and tag not in valid_tags:
-        tag = None
-
-    send_email = data.get("send_email", False)
     usuario_email = g.user_email if hasattr(g, "user_email") else None
 
     try:
         result = add_comment_to_item(
-            item_id, texto, visibilidade, usuario_email, noshow, tag, imagem_url, imagem_base64
+            item_id_int, params["texto"], params["visibilidade"], usuario_email,
+            params["noshow"], params["tag"], params["imagem_url"], params["imagem_base64"],
         )
 
-        if result.get("ok") and send_email and visibilidade == "externo":
-            try:
-                from ..mail.email_utils import send_external_comment_notification
-
-                # We need full data for email. Reuse existing query function.
-                # Assuming id was added to result in previous step.
-                comentario_id = result.get("id") or result.get("comentario", {}).get("id")
-
-                if comentario_id:
-                    email_data = obter_comentario_para_email(comentario_id)
-
-                    if email_data and email_data["email_responsavel"]:
-                        implantacao = {
-                            "id": email_data["impl_id"],
-                            "nome_empresa": email_data["nome_empresa"],
-                            "email_responsavel": email_data["email_responsavel"],
-                        }
-                        comentario_obj = {
-                            "id": email_data["id"],
-                            "texto": email_data["texto"],
-                            "tarefa_filho": email_data["tarefa_nome"],
-                            "usuario_cs": email_data["usuario_cs"],
-                        }
-
-                        sent = send_external_comment_notification(implantacao, comentario_obj)
-                        result["email_sent"] = sent
-
-                        if sent:
-                            try:
-                                from ..modules.checklist.application.checklist_service import registrar_envio_email_comentario
-
-                                detalhe = f"E-mail enviado para responsável com resumo de '{email_data.get('tarefa_nome') or ''}'."
-                                registrar_envio_email_comentario(email_data["impl_id"], usuario_email, detalhe)
-                            except Exception:
-                                pass
-
-            except Exception as e:
-                api_logger.error(f"Erro ao tentar enviar email automático para comentário {item_id}: {e}")
-                result["email_sent"] = False
-                result["email_error"] = str(e)
+        if result.get("ok") and params["send_email"] and params["visibilidade"] == "externo":
+            _try_send_external_comment_email(result, item_id_int, usuario_email)
 
         return jsonify(result)
     except ValueError as e:
-        api_logger.error(f"Erro de validação ao adicionar comentário ao item {item_id}: {e}")
+        api_logger.error(f"Erro de validação ao adicionar comentário ao item {item_id_int}: {e}", exc_info=True)
         return jsonify({"ok": False, "error": str(e)}), 400
     except Exception as e:
-        api_logger.error(f"Erro ao adicionar comentário ao item {item_id}: {e}", exc_info=True)
+        api_logger.error(f"Erro ao adicionar comentário ao item {item_id_int}: {e}", exc_info=True)
         return jsonify({"ok": False, "error": "Erro interno ao adicionar comentário"}), 500
 
 
@@ -289,22 +299,23 @@ def get_comments(item_id: int):
     Retorna o histórico de comentários de um item.
     """
     try:
-        item_id = validate_integer(item_id, min_value=1)
+        val = validate_integer(item_id, min_value=1)
+        item_id_int = int(val) if val is not None else 0
     except ValidationError as e:
         return jsonify({"ok": False, "error": f"ID inválido: {e!s}"}), 400
 
     try:
-        result = listar_comentarios_item(item_id)
+        result = listar_comentarios_item(item_id_int)
         return jsonify(
             {
                 "ok": True,
-                "item_id": item_id,
+                "item_id": item_id_int,
                 "comentarios": result["comentarios"],
                 "email_responsavel": result["email_responsavel"],
             }
         )
     except Exception as e:
-        api_logger.error(f"Erro ao buscar comentários do item {item_id}: {e}", exc_info=True)
+        api_logger.error(f"Erro ao buscar comentários do item {item_id_int}: {e}", exc_info=True)
         return jsonify({"ok": False, "error": "Erro interno ao buscar comentários"}), 500
 
 
@@ -319,12 +330,13 @@ def send_comment_email(comentario_id):
     from ..mail.email_utils import send_external_comment_notification
 
     try:
-        comentario_id = validate_integer(comentario_id, min_value=1)
+        val = validate_integer(comentario_id, min_value=1)
+        comentario_id_int = int(val) if val is not None else 0
     except ValidationError as e:
         return jsonify({"ok": False, "error": f"ID inválido: {e!s}"}), 400
 
     try:
-        dados = obter_comentario_para_email(comentario_id)
+        dados = obter_comentario_para_email(comentario_id_int)
 
         if not dados:
             return jsonify({"ok": False, "error": "Comentário não encontrado"}), 404
@@ -361,14 +373,14 @@ def send_comment_email(comentario_id):
                 from ..modules.checklist.application.checklist_service import registrar_envio_email_comentario
 
                 registrar_envio_email_comentario(dados["impl_id"], usuario_email, detalhe)
-            except Exception:
-                pass
+            except Exception as e:
+                api_logger.warning(f"Falha ao registrar envio de e-mail de comentário no histórico: {e}", exc_info=True)
             return jsonify({"ok": True, "message": "Email enviado com sucesso"})
         else:
             return jsonify({"ok": False, "error": "Falha ao enviar email"}), 500
 
     except Exception as e:
-        api_logger.error(f"Erro ao enviar email do comentário {comentario_id}: {e}", exc_info=True)
+        api_logger.error(f"Erro ao enviar email do comentário {comentario_id_int}: {e}", exc_info=True)
         return jsonify({"ok": False, "error": "Erro interno ao enviar email"}), 500
 
 
@@ -383,7 +395,8 @@ def update_comment(comentario_id):
     from ..constants import PERFIS_COM_GESTAO
 
     try:
-        comentario_id = validate_integer(comentario_id, min_value=1)
+        val = validate_integer(comentario_id, min_value=1)
+        comentario_id_int = int(val) if val is not None else 0
     except ValidationError as e:
         return jsonify({"ok": False, "error": f"ID inválido: {e!s}"}), 400
 
@@ -399,13 +412,13 @@ def update_comment(comentario_id):
     is_manager = g.perfil and g.perfil.get("perfil_acesso") in PERFIS_COM_GESTAO
 
     try:
-        result = update_comment_service(comentario_id, novo_texto, usuario_email, is_manager)
+        result = update_comment_service(comentario_id_int, novo_texto, usuario_email, is_manager)
         return jsonify(result)
     except ValueError as ve:
         # Erro de validação ou permissão (incluindo timeout de 3h)
         return jsonify({"ok": False, "error": str(ve)}), 403
     except Exception as e:
-        api_logger.error(f"Erro ao atualizar comentário {comentario_id}: {e}", exc_info=True)
+        api_logger.error(f"Erro ao atualizar comentário {comentario_id_int}: {e}", exc_info=True)
         return jsonify({"ok": False, "error": "Erro interno ao atualizar comentário"}), 500
 
 
@@ -419,7 +432,8 @@ def delete_comment(comentario_id):
     from ..constants import PERFIS_COM_GESTAO
 
     try:
-        comentario_id = validate_integer(comentario_id, min_value=1)
+        val = validate_integer(comentario_id, min_value=1)
+        comentario_id_int = int(val) if val is not None else 0
     except ValidationError as e:
         return jsonify({"ok": False, "error": f"ID inválido: {e!s}"}), 400
 
@@ -429,12 +443,12 @@ def delete_comment(comentario_id):
     is_manager = g.perfil and g.perfil.get("perfil_acesso") in PERFIS_COM_GESTAO
 
     try:
-        excluir_comentario_service(comentario_id, usuario_email, is_manager)
+        excluir_comentario_service(comentario_id_int, usuario_email, is_manager)
         return jsonify({"ok": True, "message": "Comentário excluído"})
     except ValueError as ve:
         return jsonify({"ok": False, "error": str(ve)}), 403
     except Exception as e:
-        api_logger.error(f"Erro ao excluir comentário {comentario_id}: {e}", exc_info=True)
+        api_logger.error(f"Erro ao excluir comentário {comentario_id_int}: {e}", exc_info=True)
         return jsonify({"ok": False, "error": "Erro interno ao excluir comentário"}), 500
 
 
@@ -507,7 +521,10 @@ def dispense_item(item_id: int):
     from ..modules.perfis.application.perfis_service import verificar_permissao_por_contexto
 
     try:
-        item_id = validate_integer(item_id, min_value=1)
+        val_id = validate_integer(item_id, min_value=1)
+        if val_id is None:
+            return jsonify({"ok": False, "error": "ID inválido"}), 400
+        item_id = val_id
     except ValidationError as e:
         return jsonify({"ok": False, "error": f"ID inválido: {e!s}"}), 400
 
@@ -545,18 +562,15 @@ def get_tree():
     Retorna a árvore completa do checklist.
     """
     try:
-        implantacao_id = request.args.get("implantacao_id", type=int)
-        root_item_id = request.args.get("root_item_id", type=int)
+        implantacao_id_val = request.args.get("implantacao_id", type=int)
+        root_item_id_val = request.args.get("root_item_id", type=int)
         format_type = request.args.get("format", "flat").lower()
 
-        plano_id = request.args.get("plano_id", type=int)
-
-        if implantacao_id:
-            implantacao_id = validate_integer(implantacao_id, min_value=1)
-        if root_item_id:
-            root_item_id = validate_integer(root_item_id, min_value=1)
-        if plano_id:
-            plano_id = validate_integer(plano_id, min_value=1)
+        plano_id_val = request.args.get("plano_id", type=int)
+        
+        implantacao_id = validate_integer(implantacao_id_val, min_value=1) if implantacao_id_val is not None else None
+        root_item_id = validate_integer(root_item_id_val, min_value=1) if root_item_id_val is not None else None
+        plano_id = validate_integer(plano_id_val, min_value=1) if plano_id_val is not None else None
 
         if format_type not in ["flat", "nested"]:
             return jsonify({"ok": False, "error": 'format deve ser "flat" ou "nested"'}), 400
@@ -590,22 +604,23 @@ def get_item_progress(item_id):
     Retorna as estatísticas de progresso de um item específico (X/Y).
     """
     try:
-        item_id = validate_integer(item_id, min_value=1)
+        val = validate_integer(item_id, min_value=1)
+        item_id_int = int(val) if val is not None else 0
     except ValidationError as e:
         return jsonify({"ok": False, "error": f"ID inválido: {e!s}"}), 400
 
     try:
-        stats = get_item_progress_stats(item_id)
+        stats = get_item_progress_stats(item_id_int)
         return jsonify(
             {
                 "ok": True,
-                "item_id": item_id,
+                "item_id": item_id_int,
                 "progress": stats,
                 "progress_label": f"{stats['completed']}/{stats['total']}" if stats["has_children"] else None,
             }
         )
     except Exception as e:
-        api_logger.error(f"Erro ao buscar progresso do item {item_id}: {e}", exc_info=True)
+        api_logger.error(f"Erro ao buscar progresso do item {item_id_int}: {e}", exc_info=True)
         return jsonify({"ok": False, "error": "Erro interno ao buscar progresso"}), 500
 
 
@@ -616,7 +631,8 @@ def get_item_progress(item_id):
 @limiter.limit("200 per minute", key_func=lambda: g.user_email or get_remote_address())
 def update_responsavel(item_id: int):
     try:
-        item_id = validate_integer(item_id, min_value=1)
+        val = validate_integer(item_id, min_value=1)
+        item_id_int = int(val) if val is not None else 0
     except ValidationError as e:
         return jsonify({"ok": False, "error": f"ID inválido: {e!s}"}), 400
 
@@ -632,12 +648,12 @@ def update_responsavel(item_id: int):
     usuario_email = g.user_email if hasattr(g, "user_email") else None
 
     try:
-        result = update_item_responsavel(item_id, novo_resp, usuario_email)
+        result = update_item_responsavel(item_id_int, novo_resp, usuario_email)
         return jsonify(result)
     except ValueError as e:
         return jsonify({"ok": False, "error": str(e)}), 400
     except Exception as e:
-        api_logger.error(f"Erro ao atualizar responsável do item {item_id}: {e}", exc_info=True)
+        api_logger.error(f"Erro ao atualizar responsável do item {item_id_int}: {e}", exc_info=True)
         return jsonify({"ok": False, "error": "Erro interno ao atualizar responsável"}), 500
 
 
@@ -648,7 +664,8 @@ def update_responsavel(item_id: int):
 @limiter.limit("200 per minute", key_func=lambda: g.user_email or get_remote_address())
 def update_prazos(item_id: int):
     try:
-        item_id = validate_integer(item_id, min_value=1)
+        val = validate_integer(item_id, min_value=1)
+        item_id_int = int(val) if val is not None else 0
     except ValidationError as e:
         return jsonify({"ok": False, "error": f"ID inválido: {e!s}"}), 400
     if not request.is_json:
@@ -661,12 +678,12 @@ def update_prazos(item_id: int):
     usuario_email = g.user_email if hasattr(g, "user_email") else None
 
     try:
-        result = atualizar_prazo_item(item_id, nova_prev, usuario_email)
+        result = atualizar_prazo_item(item_id_int, nova_prev, usuario_email)
         return jsonify({"ok": True, **result})
     except ValueError as e:
         return jsonify({"ok": False, "error": str(e)}), 400
     except Exception as e:
-        api_logger.error(f"Erro ao atualizar prazos do item {item_id}: {e}", exc_info=True)
+        api_logger.error(f"Erro ao atualizar prazos do item {item_id_int}: {e}", exc_info=True)
         return jsonify({"ok": False, "error": "Erro interno ao atualizar prazos"}), 500
 
 
@@ -675,14 +692,15 @@ def update_prazos(item_id: int):
 @validate_api_origin
 def get_responsavel_history(item_id):
     try:
-        item_id = validate_integer(item_id, min_value=1)
+        val = validate_integer(item_id, min_value=1)
+        item_id_int = int(val) if val is not None else 0
     except ValidationError as e:
         return jsonify({"ok": False, "error": f"ID inválido: {e!s}"}), 400
     try:
-        entries = obter_historico_responsavel(item_id)
-        return jsonify({"ok": True, "item_id": item_id, "history": entries})
+        entries = obter_historico_responsavel(item_id_int)
+        return jsonify({"ok": True, "item_id": item_id_int, "history": entries})
     except Exception as e:
-        api_logger.error(f"Erro ao buscar histórico de responsável do item {item_id}: {e}", exc_info=True)
+        api_logger.error(f"Erro ao buscar histórico de responsável do item {item_id_int}: {e}", exc_info=True)
         return jsonify({"ok": False, "error": "Erro interno ao buscar histórico"}), 500
 
 
@@ -691,14 +709,15 @@ def get_responsavel_history(item_id):
 @validate_api_origin
 def get_prazos_history(item_id):
     try:
-        item_id = validate_integer(item_id, min_value=1)
+        val = validate_integer(item_id, min_value=1)
+        item_id_int = int(val) if val is not None else 0
     except ValidationError as e:
         return jsonify({"ok": False, "error": f"ID inválido: {e!s}"}), 400
     try:
-        entries = obter_historico_prazos(item_id)
+        entries = obter_historico_prazos(item_id_int)
         return jsonify({"ok": True, "history": entries})
     except Exception as e:
-        api_logger.error(f"Erro ao buscar histórico de prazos do item {item_id}: {e}", exc_info=True)
+        api_logger.error(f"Erro ao buscar histórico de prazos do item {item_id_int}: {e}", exc_info=True)
         return jsonify({"ok": False, "error": "Erro interno ao buscar histórico de prazos"}), 500
 
 
@@ -718,7 +737,8 @@ def move_item_endpoint(item_id: int):
         }
     """
     try:
-        item_id = validate_integer(item_id, min_value=1)
+        val = validate_integer(item_id, min_value=1)
+        item_id_int = int(val) if val is not None else 0
     except ValidationError as e:
         return jsonify({"ok": False, "error": f"ID inválido: {e!s}"}), 400
 
@@ -734,11 +754,11 @@ def move_item_endpoint(item_id: int):
     usuario_email = g.user_email if hasattr(g, "user_email") else None
 
     try:
-        result = move_item(item_id, new_parent_id=new_parent_id, new_order=new_order, usuario_email=usuario_email)
+        result = move_item(item_id_int, new_parent_id=new_parent_id, new_order=new_order, usuario_email=usuario_email)
         return jsonify(result)
     except ValueError as e:
-        api_logger.warning(f"Erro de validação ao mover item {item_id}: {e}")
+        api_logger.warning(f"Erro de validação ao mover item {item_id_int}: {e}", exc_info=True)
         return jsonify({"ok": False, "error": str(e)}), 400
     except Exception as e:
-        api_logger.error(f"Erro ao mover item {item_id}: {e}", exc_info=True)
+        api_logger.error(f"Erro ao mover item {item_id_int}: {e}", exc_info=True)
         return jsonify({"ok": False, "error": "Erro interno ao mover item"}), 500

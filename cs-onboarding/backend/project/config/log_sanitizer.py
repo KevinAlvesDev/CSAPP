@@ -32,7 +32,6 @@ class SensitiveDataFilter(logging.Filter):
     # Nomes de variáveis de ambiente que contêm dados sensíveis
     SENSITIVE_ENV_VARS = [
         "SECRET_KEY",
-        "FLASK_SECRET_KEY",
         "DATABASE_URL",
         "EXTERNAL_DB_URL",
         "DB_EXT_URL",

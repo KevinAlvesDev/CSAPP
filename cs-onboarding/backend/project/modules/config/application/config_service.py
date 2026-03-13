@@ -1,4 +1,14 @@
+from typing import Any
 from ....db import query_db
+
+__all__ = [
+    "listar_tags",
+    "listar_status_implantacao",
+    "listar_niveis_atendimento",
+    "listar_tipos_evento",
+    "listar_motivos_parada",
+    "listar_motivos_cancelamento",
+]
 
 
 def listar_tags(tipo: str = "ambos") -> list[dict]:
@@ -7,7 +17,7 @@ def listar_tags(tipo: str = "ambos") -> list[dict]:
         FROM tags_sistema
         WHERE ativo = %s
     """
-    params = [True]
+    params: list[Any] = [True]
     if tipo != "ambos":
         sql += " AND (tipo = %s OR tipo = 'ambos')"
         params.append(tipo)

@@ -1,14 +1,15 @@
+import logging
 import os
+logger = logging.getLogger(__name__)
 
 import click
 from dotenv import find_dotenv, load_dotenv
 from flask import Flask, current_app, flash, g, jsonify, redirect, render_template, request, session, url_for
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
 from flask_wtf.csrf import CSRFProtect
 
+from .app_bootstrap import init_middleware, init_security, register_blueprints
 from .config.logging_config import setup_logging
-from .core.extensions import init_limiter, init_r2, limiter, oauth
+from .core.extensions import init_limiter, init_r2, oauth
 
 csrf = CSRFProtect()
 
@@ -17,9 +18,8 @@ def create_app(test_config=None):
     app = Flask(__name__, static_folder="../../frontend/static", template_folder="../../frontend/templates")
 
     # Configuração do ProxyFix para lidar com HTTPS atrás de proxies (Render, Heroku, etc.)
-    from werkzeug.middleware.proxy_fix import ProxyFix
-
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+    from werkzeug.middleware.proxy_fix import ProxyFix # type: ignore[import-not-found]
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1) # type: ignore[assignment]
 
     try:
         from pathlib import Path
@@ -39,15 +39,16 @@ def create_app(test_config=None):
             # Fallback para tentar encontrar o .env subindo diretórios
             _dotenv_path = find_dotenv()
             if _dotenv_path:
-                load_dotenv(_dotenv_path, override=True)
+                load_dotenv(str(_dotenv_path), override=True)
             else:
                 load_dotenv(override=True)
-    except Exception:
+    except Exception as exc:
+        logger.exception("Unhandled exception", exc_info=True)
         pass
 
-    from .config import Config
+    from .config import get_config
 
-    app.config.from_object(Config)
+    app.config.from_object(get_config())
 
     # ================================================
     # VALIDAÇÃO DE SECRETS (fail-fast em produção)
@@ -61,9 +62,9 @@ def create_app(test_config=None):
     except Exception as e:
         # Em produção, SecretsValidationError já foi lançada
         # Em dev, apenas logar
-        if not app.config.get("USE_SQLITE_LOCALLY", False):
+        if not app.config.get("DEBUG", False):
             raise
-        app.logger.warning(f"Validação de secrets ignorada em dev: {e}")
+        app.logger.warning(f"Validação de secrets ignorada em dev: {e}", exc_info=True)
 
     # CSRF nunca expira (evita erro de token expirado em sessões longas)
     app.config["WTF_CSRF_TIME_LIMIT"] = None
@@ -71,13 +72,7 @@ def create_app(test_config=None):
     if test_config is not None:
         app.config.from_mapping(test_config)
 
-    try:
-        if app.config.get("USE_SQLITE_LOCALLY", False) or app.config.get("DEBUG", False):
-            app.config["RATELIMIT_ENABLED"] = False
-        else:
-            app.config["RATELIMIT_ENABLED"] = True
-    except Exception:
-        app.config["RATELIMIT_ENABLED"] = True
+    app.config["RATELIMIT_ENABLED"] = not app.config.get("DEBUG", False)
 
     from .common.i18n import get_translator
 
@@ -87,18 +82,25 @@ def create_app(test_config=None):
     def inject_i18n():
         return {"t": translator, "lang": app.config.get("LANG", "pt")}
 
+    @app.context_processor
+    def inject_csp_nonce():
+        return {"csp_nonce": lambda: getattr(g, "csp_nonce", "")}
+
     try:
-        os.environ.setdefault("OAUTHLIB_INSECURE_TRANSPORT", "1")
-        os.environ.setdefault("AUTHLIB_INSECURE_TRANSPORT", "1")
-    except Exception:
+        if app.config.get("DEBUG", False):
+            os.environ.setdefault("OAUTHLIB_INSECURE_TRANSPORT", "1")
+            os.environ.setdefault("AUTHLIB_INSECURE_TRANSPORT", "1")
+        else:
+            os.environ.pop("OAUTHLIB_INSECURE_TRANSPORT", None)
+            os.environ.pop("AUTHLIB_INSECURE_TRANSPORT", None)
+    except Exception as exc:
+        logger.exception("Unhandled exception", exc_info=True)
         pass
 
-    from . import db
     from .common.utils import format_date_br, format_date_iso_for_json
-    from .constants import ADMIN_EMAIL, PERFIL_ADMIN, PERFIS_COM_GESTAO
+    from .constants import PERFIL_ADMIN, PERFIS_COM_GESTAO
     from .database import schema
-    from .db import execute_db, query_db
-    from .modules.gamification.application.gamification_service import _get_all_gamification_rules_grouped
+    from .db import Session, init_db_session
 
     app.jinja_env.filters["format_date_br"] = format_date_br
     app.jinja_env.filters["format_date_iso"] = format_date_iso_for_json
@@ -113,14 +115,18 @@ def create_app(test_config=None):
     APP_VERSION = str(int(time.time()))
 
     # Função para obter versão do arquivo (mtime) ou fallback para APP_VERSION
-    def get_static_version(filename):
+    def get_static_version(filename: str) -> str:
         """Retorna a versão do arquivo estático para cache-busting."""
         try:
+            if not app.static_folder:
+                return APP_VERSION
+                
             static_folder = Path(app.static_folder)
             file_path = static_folder / filename
             if file_path.exists():
                 return str(int(file_path.stat().st_mtime))
-        except Exception:
+        except Exception as exc:
+            logger.exception("Unhandled exception", exc_info=True)
             pass
         return APP_VERSION
 
@@ -143,13 +149,14 @@ def create_app(test_config=None):
 
     init_r2(app)
     schema.init_app(app)
+    init_db_session(app)
 
     try:
         from .config.sentry_config import init_sentry
 
         init_sentry(app)
     except Exception as e:
-        app.logger.warning(f"Sentry não inicializado: {e}")
+        app.logger.warning(f"Sentry não inicializado: {e}", exc_info=True)
 
     from flask_compress import Compress
 
@@ -171,24 +178,21 @@ def create_app(test_config=None):
     performance_monitor.init_app(app)
 
     from .database import close_db_connection, init_connection_pool
-    from .database.schema import ensure_implantacoes_status_constraint
 
     # Inicializar pool de conexões (com retry logic para conexões instáveis)
     db_initialized = init_connection_pool(app)
 
-    if db_initialized and not app.config.get("USE_SQLITE_LOCALLY", False):
-        try:
-            with app.app_context():
-                ensure_implantacoes_status_constraint()
-        except Exception as e:
-            app.logger.warning(f"⚠️  Não foi possível verificar constraints: {e}")
-    elif not db_initialized and not app.config.get("USE_SQLITE_LOCALLY", False):
+    if not db_initialized:
         app.logger.warning(
             "⚠️  Aplicação iniciando SEM conexão com banco de dados. "
-            "Algumas funcionalidades podem não estar disponíveis."
+            "Algumas funcionalidades críticas podem falhar."
         )
 
-    app.teardown_appcontext(close_db_connection)
+    # Ignore de typevar devido a Callable incompatível das versões antigas Flask vs current mypy
+    @app.teardown_appcontext
+    def shutdown_session(exception=None):
+        close_db_connection(exception)
+        Session.remove()
 
     init_limiter(app)
 
@@ -207,12 +211,9 @@ def create_app(test_config=None):
             handler.addFilter(sanitize_filter)
         app.logger.info("🔒 Sanitização de logs ativada")
     except Exception as e:
-        app.logger.warning(f"Sanitização de logs não ativada: {e}")
+        app.logger.warning(f"Sanitização de logs não ativada: {e}", exc_info=True)
 
-    from .security.middleware import configure_cors, init_security_headers
-
-    init_security_headers(app)
-    configure_cors(app)
+    init_security(app)
 
     from .config.cache_config import init_cache
 
@@ -227,7 +228,7 @@ def create_app(test_config=None):
         cache_manager.init_app(app, cache_instance=cache_instance)
         app.logger.info("📦 Cache Manager com TTL por recurso inicializado")
     except Exception as e:
-        app.logger.warning(f"Cache Manager não inicializado: {e}")
+        app.logger.warning(f"Cache Manager não inicializado: {e}", exc_info=True)
 
     # ================================================
     # SERVICE CONTAINER (Dependency Injection)
@@ -239,70 +240,35 @@ def create_app(test_config=None):
         container = ServiceContainer(app)
         register_all_services(app, container)
     except Exception as e:
-        app.logger.warning(f"ServiceContainer não inicializado: {e}")
+        app.logger.warning(f"ServiceContainer não inicializado: {e}", exc_info=True)
 
     # ================================================
     # EVENT HANDLERS (reações a eventos de domínio)
     # ================================================
     try:
         from .core.event_handlers import register_event_handlers
-        from .core.events import event_bus
+        from .core.events import configure_event_bus_after_commit, event_bus
 
         register_event_handlers(event_bus)
+        configure_event_bus_after_commit(app, event_bus)
     except Exception as e:
-        app.logger.warning(f"Event Handlers não registrados: {e}")
+        app.logger.warning(f"Event Handlers não registrados: {e}", exc_info=True)
 
     # Monitoramento de performance
-    from .monitoring.performance_middleware import init_performance_monitoring
-
-    init_performance_monitoring(app)
+    init_middleware(app)
 
     try:
-        # Log explícito do modo de banco de dados
-        if app.config.get("USE_SQLITE_LOCALLY", False):
-            app.logger.info("🗄️  DATABASE MODE: SQLite LOCAL")
-        else:
-            app.logger.info("🗄️  DATABASE MODE: PostgreSQL (Production)")
+        app.logger.info("🗄️  DATABASE MODE: PostgreSQL (Production)")
 
-        if app.config.get("USE_SQLITE_LOCALLY", False):
+        # Inicialização do schema usando a conexão PostgreSQL padrão
+        try:
             with app.app_context():
-                # Garantir que o banco existe e está inicializado
-                try:
-                    from .database import get_db_connection
-
-                    conn, _db_type = get_db_connection()
-                    if conn:
-                        conn.close()
-                except Exception as e:
-                    app.logger.warning(f"Banco não existe ainda, será criado: {e}")
-
                 schema.init_db()
-                try:
-                    from .common.context_profiles import ensure_context_profile_schema
+        except Exception as e:
+            app.logger.warning(f"Falha ao rodar schema em DB remota: {e}", exc_info=True)
 
-                    ensure_context_profile_schema()
-                except Exception as e_ctx_schema:
-                    app.logger.warning(f"Falha ao inicializar schema contextual de perfis: {e_ctx_schema}")
-
-                # Criar usuário admin padrão automaticamente
-                try:
-                    from werkzeug.security import generate_password_hash
-
-                    from .constants import ADMIN_EMAIL
-
-                    seeded_hash = generate_password_hash("admin123@")
-                    # Usar INSERT OR REPLACE para garantir que o admin existe
-                    execute_db(
-                        "INSERT OR REPLACE INTO usuarios (usuario, senha) VALUES (%s, %s)", (ADMIN_EMAIL, seeded_hash)
-                    )
-                    execute_db(
-                        "INSERT OR REPLACE INTO perfil_usuario (usuario, nome, cargo, perfil_acesso, foto_url) VALUES (%s, %s, %s, %s, %s)",
-                        (ADMIN_EMAIL, "Administrador", None, PERFIL_ADMIN, None),
-                    )
-                except Exception as e_seed:
-                    app.logger.warning(f"Falha ao garantir usuário admin: {e_seed}")
     except Exception as e_dbinit:
-        app.logger.warning(f"Falha na inicialização do banco (dev): {e_dbinit}")
+        app.logger.warning(f"Falha na inicialização do banco: {e_dbinit}", exc_info=True)
 
     # ================================================
     # CACHE WARMING (moved after DB init)
@@ -313,7 +279,7 @@ def create_app(test_config=None):
         with app.app_context():
             ensure_context_profile_schema()
     except Exception as e:
-        app.logger.warning(f"Falha ao garantir schema contextual de perfis: {e}")
+        app.logger.warning(f"Falha ao garantir schema contextual de perfis: {e}", exc_info=True)
 
     try:
         from .config.cache_warming import warm_cache
@@ -321,27 +287,9 @@ def create_app(test_config=None):
         with app.app_context():
             warm_cache(app)
     except Exception as e:
-        app.logger.warning(f"Cache Warming falhou: {e}")
+        app.logger.warning(f"Cache Warming falhou: {e}", exc_info=True)
 
-    if app.config.get("AUTH0_ENABLED", True):
-        raw_domain = (app.config.get("AUTH0_DOMAIN") or "").strip().strip("`").strip()
-        if raw_domain.startswith("http://") or raw_domain.startswith("https://"):
-            raw_domain = raw_domain.split("://", 1)[1]
-        auth0_domain = raw_domain.rstrip("/")
 
-        authorize_url = f"https://{auth0_domain}/authorize"
-        access_token_url = f"https://{auth0_domain}/oauth/token"
-        server_metadata_url = f"https://{auth0_domain}/.well-known/openid-configuration"
-
-        oauth.register(
-            name="auth0",
-            client_id=app.config["AUTH0_CLIENT_ID"],
-            client_secret=app.config["AUTH0_CLIENT_SECRET"],
-            authorize_url=authorize_url,
-            access_token_url=access_token_url,
-            server_metadata_url=server_metadata_url,
-            client_kwargs={"scope": "openid profile email"},
-        )
 
     try:
         if app.config.get("GOOGLE_OAUTH_ENABLED", False):
@@ -360,101 +308,21 @@ def create_app(test_config=None):
                     "include_granted_scopes": "true",  # AUTORIZAÇÃO INCREMENTAL
                 },
             )
-        pass
-    except Exception:
-        pass
-
-    from .modules.dashboard.api.agenda import agenda_bp
-    from .modules.analytics.api.analytics import analytics_bp
-    from .blueprints.api import api_bp
-    from .blueprints.api_docs import api_docs_bp
-    from .blueprints.api_v1 import api_v1_bp
-    from .blueprints.api_planos import api_planos_bp
-    from .blueprints.auth import auth_bp  # Blueprint de autenticação
-    from .blueprints.checklist_api import checklist_bp
-    from .blueprints.checklist_finalizacao_bp import checklist_finalizacao_bp
-    from .blueprints.diagnostic_smtp import diagnostic_bp  # Diagnóstico SMTP
-    from .blueprints.gamification import gamification_bp
-    from .blueprints.health import health_bp
-
-    # from .blueprints.implantacao_actions import implantacao_actions_bp # MOVIDO
-    from .blueprints.main import main_bp
-    from .blueprints.management import management_bp
-    from .blueprints.perfis_bp import perfis_bp
-    from .modules.planos.api.planos_bp import planos_bp
-    from .blueprints.profile import profile_bp
-    from .blueprints.risc_bp import risc_bp  # RISC (Proteção entre Contas)
-    from .blueprints.upload import upload_bp
-
-    try:
-        csrf.exempt(api_v1_bp)
-        csrf.exempt(health_bp)
-        csrf.exempt(api_docs_bp)
-        csrf.exempt(upload_bp)
-        csrf.exempt(risc_bp)  # RISC precisa receber eventos do Google sem CSRF
-        csrf.exempt(checklist_finalizacao_bp)  # API REST de checklist de finalização
-        csrf.exempt(diagnostic_bp)  # Diagnóstico SMTP
-
-        # checklist_bp deixa de ser isento para proteger mutações
-    except Exception:
+    except Exception as exc:
+        logger.exception("Unhandled exception", exc_info=True)
         pass
 
-    app.register_blueprint(main_bp)
-    app.register_blueprint(auth_bp)
-    app.register_blueprint(api_bp)
-    app.register_blueprint(api_v1_bp)
-    app.register_blueprint(api_planos_bp)
-    # app.register_blueprint(implantacao_actions_bp) # MOVIDO PARA ONBOARDING
+    register_blueprints(app, csrf)
 
-    from .modules.onboarding.api.actions import onboarding_actions_bp
-
-    app.register_blueprint(onboarding_actions_bp)
-    app.register_blueprint(profile_bp)
-    app.register_blueprint(management_bp)
-    app.register_blueprint(analytics_bp)
-    app.register_blueprint(gamification_bp)
-    app.register_blueprint(agenda_bp)
-    app.register_blueprint(health_bp)
-    app.register_blueprint(api_docs_bp)
-    app.register_blueprint(planos_bp)
-
-    app.register_blueprint(checklist_bp)
-    app.register_blueprint(perfis_bp)
-    app.register_blueprint(upload_bp)
-    app.register_blueprint(risc_bp)  # RISC (Proteção entre Contas)
-    app.register_blueprint(checklist_finalizacao_bp)
-    app.register_blueprint(diagnostic_bp)  # Diagnóstico SMTP
-
-    from .blueprints.core import core_bp
-
-    app.register_blueprint(core_bp)
-
-    from .blueprints.config_api import config_api
-
-    app.register_blueprint(config_api)
-
-    from .blueprints.onboarding import onboarding_bp
-
-    app.register_blueprint(onboarding_bp)
-
-    from .blueprints.ongoing import ongoing_bp
-
-    app.register_blueprint(ongoing_bp)
-
-    from .blueprints.grandes_contas import grandes_contas_bp
-
-    app.register_blueprint(grandes_contas_bp)
-
-    from .modules.grandes_contas.api.actions import grandes_contas_actions_bp
-
-    app.register_blueprint(grandes_contas_actions_bp, url_prefix="/grandes-contas/actions")
-
-    try:
-        with app.app_context():
-            app.gamification_rules = _get_all_gamification_rules_grouped()
-    except Exception as e:
-        app.logger.error(f"Falha ao carregar regras de gamificação na inicialização: {e}", exc_info=True)
-        app.gamification_rules = {}
+    @app.after_request
+    def _force_utf8(resp):
+        try:
+            ct = resp.headers.get("Content-Type", "")
+            if ct.startswith("text/html") and "charset" not in ct.lower():
+                resp.headers["Content-Type"] = f"{ct}; charset=utf-8"
+        except Exception:
+            pass
+        return resp
 
     @app.cli.command("backup-db")
     def backup_db_command():
@@ -465,6 +333,7 @@ def create_app(test_config=None):
             result = perform_backup()
             click.echo(result.get("backup_file"))
         except Exception as e:
+            logger.exception("Unhandled exception", exc_info=True)
             click.echo(f"Erro ao executar backup: {e}")
             raise
 
@@ -484,48 +353,13 @@ def create_app(test_config=None):
         persist_current_context()
 
         # Importar constantes no início da função para garantir escopo
-        from .constants import ADMIN_EMAIL, MASTER_ADMIN_EMAIL, PERFIL_ADMIN
+        from .constants import MASTER_ADMIN_EMAIL
 
         # Carregar usuário da sessão PRIMEIRO
         g.user_email = session.get("user", {}).get("email")
         g.user = session.get("user")
 
-        # Login automático em desenvolvimento local
-        use_sqlite = app.config.get("USE_SQLITE_LOCALLY", False)
-        flask_debug = app.config.get("DEBUG", False)
-        flask_env = os.environ.get("FLASK_ENV", "production")
-        auth0_enabled = app.config.get("AUTH0_ENABLED", True)
 
-        # Se estiver em dev local, Auth0 desabilitado, não houver usuário, e não for rota de auth
-        if (use_sqlite or flask_debug) and flask_env != "production" and not auth0_enabled:
-            rotas_auth = [
-                "/login",
-                "/dev-login",
-                "/dev-login-as",
-                "/logout",
-                "/callback",
-                "/login/google",
-                "/login/google/callback",
-            ]
-            is_rota_auth = any(request.path.startswith(rota) for rota in rotas_auth)
-
-            if not is_rota_auth and not g.user_email:
-                try:
-                    admin_email = ADMIN_EMAIL
-                    session["user"] = {"email": admin_email, "name": "Administrador", "sub": "dev|local"}
-                    session.permanent = True
-                    # Atualizar g.user_email IMEDIATAMENTE
-                    g.user_email = admin_email
-                    g.user = session["user"]
-                    # Sincronizar perfil
-                    try:
-                        from .blueprints.auth import _sync_user_profile
-
-                        _sync_user_profile(admin_email, "Administrador", "dev|local")
-                    except Exception as e:
-                        app.logger.warning(f"Falha ao sincronizar perfil automático: {e}")
-                except Exception as e:
-                    app.logger.error(f"Erro no login automático: {e}")
 
         g.perfil = None
         if g.user_email:
@@ -535,44 +369,26 @@ def create_app(test_config=None):
                 g.perfil = get_contextual_profile(g.user_email, getattr(g, "modulo_atual", None))
             except Exception as e:
                 # Se a tabela não existir ainda, criar perfil básico
-                app.logger.warning(f"Falha ao buscar perfil para {g.user_email}: {e}")
+                app.logger.warning(f"Falha ao buscar perfil para {g.user_email}: {e}", exc_info=True)
                 g.perfil = None
 
-        # Fallback para admin em desenvolvimento local
-        if not auth0_enabled and g.user_email and g.user_email == ADMIN_EMAIL:
-            if not g.perfil or g.perfil.get("perfil_acesso") is None:
-                g.perfil = {
-                    "nome": g.user.get("name", g.user_email) if g.user else "Administrador",
-                    "usuario": g.user_email,
-                    "foto_url": None,
-                    "cargo": None,
-                    "perfil_acesso": PERFIL_ADMIN,
-                    "contexto": getattr(g, "modulo_atual", "onboarding"),
-                }
-
-        # Robustez: garantir PERFIL_ADMIN para ADMIN_EMAIL sempre que detectado
-        if g.user_email and g.user_email == MASTER_ADMIN_EMAIL:
+        # Fallback para perfil admin para conta MASTER_ADMIN_EMAIL (apenas se configurado via env)
+        if MASTER_ADMIN_EMAIL and g.user_email and g.user_email == MASTER_ADMIN_EMAIL:
             try:
                 if not g.perfil or g.perfil.get("perfil_acesso") != PERFIL_ADMIN:
-                    from .common.context_profiles import set_user_role_for_all_contexts
-                    from .modules.auth.application.auth_service import sync_user_profile_service, update_user_role_service
+                    from .modules.auth.application.auth_service import (
+                        sync_user_profile_service,
+                        update_user_role_service,
+                    )
 
                     # Cria perfil se necessário e marca como admin
                     sync_user_profile_service(g.user_email, g.user.get("name", "Administrador"), "system|enforce")
                     update_user_role_service(g.user_email, PERFIL_ADMIN)
-                    set_user_role_for_all_contexts(g.user_email, PERFIL_ADMIN, updated_by="system|enforce")
-                    from .common.context_profiles import get_contextual_profile
 
-                    g.perfil = get_contextual_profile(g.user_email, getattr(g, "modulo_atual", None)) or {
-                        "nome": g.user.get("name", g.user_email) if g.user else "Administrador",
-                        "usuario": g.user_email,
-                        "foto_url": None,
-                        "cargo": None,
-                        "perfil_acesso": PERFIL_ADMIN,
-                        "contexto": getattr(g, "modulo_atual", "onboarding"),
-                    }
+                    from .common.context_profiles import get_contextual_profile
+                    g.perfil = get_contextual_profile(g.user_email, getattr(g, "modulo_atual", None))
             except Exception as e:
-                app.logger.warning(f"Falha ao reforçar perfil admin: {e}")
+                app.logger.warning(f"Falha ao reforçar perfil admin: {e}", exc_info=True)
 
         if g.perfil is None:
             g.perfil = {
@@ -614,7 +430,41 @@ def create_app(test_config=None):
             return jsonify({"ok": False, "error": "Erro interno do servidor"}), 500
 
         flash("Ocorreu um erro interno no servidor. Redirecionando para o Dashboard.", "error")
-        return redirect(url_for("main.dashboard"))
+        from .common.context_navigation import redirect_to_current_dashboard
+        return redirect_to_current_dashboard()
+
+    from .common.exceptions import CSAPPException, ValidationError, ResourceNotFoundError, AuthenticationError, AuthorizationError
+
+    @app.errorhandler(CSAPPException)
+    def handle_csapp_exception(e):
+        """Manipulador global para exceções de domínio da aplicação."""
+        # Se for uma exceção de validação ou regra de negócio, logar como warning
+        # Erros técnicos (DatabaseError, ExternalServiceError) logar como error
+        log_level = "warning"
+        status_code = 400
+        
+        if isinstance(e, (ValidationError, ResourceNotFoundError)):
+            status_code = 404 if isinstance(e, ResourceNotFoundError) else 400
+        elif isinstance(e, (AuthenticationError, AuthorizationError)):
+            status_code = 401 if isinstance(e, AuthenticationError) else 403
+        else:
+            log_level = "error"
+            status_code = 500
+
+        getattr(app.logger, log_level)(f"CSAPP Exception [{e.__class__.__name__}]: {e.message} - Details: {e.details}")
+
+        if request.path.startswith("/api") or request.is_json:
+            return jsonify({
+                "ok": False, 
+                "error": e.message,
+                "type": e.__class__.__name__,
+                "details": e.details
+            }), status_code
+
+        flash(e.message, "error")
+        # Tenta redirecionar para a página anterior ou dashboard
+        target = request.referrer or url_for("main.dashboard")
+        return redirect(target)
 
     # Verificação de endpoints críticos na inicialização
     if app.config.get("DEBUG") or app.config.get("FLASK_ENV") == "development":

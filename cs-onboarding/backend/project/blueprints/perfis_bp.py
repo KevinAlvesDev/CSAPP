@@ -43,7 +43,7 @@ def novo_perfil():
         recursos = perfis_service.listar_recursos()
 
         # Agrupar recursos por categoria
-        recursos_agrupados = {}
+        recursos_agrupados: dict[str, list[dict]] = {}
         for recurso in recursos:
             cat = recurso["categoria"]
             if cat not in recursos_agrupados:
@@ -74,8 +74,15 @@ def editar_perfil(perfil_id):
             return redirect(url_for("perfis.listar_perfis"))
 
         categorias = perfis_service.obter_categorias()
+        modulos_ativos = perfis_service.obter_modulos_perfil(perfil_id)
 
-        return render_template("pages/perfis_editor.html", perfil=perfil, categorias=categorias, modo="editar")
+        return render_template(
+            "pages/perfis_editor.html",
+            perfil=perfil,
+            categorias=categorias,
+            modulos_ativos=modulos_ativos,
+            modo="editar",
+        )
     except Exception as e:
         logger.error(f"Erro ao editar perfil {perfil_id}: {e}", exc_info=True)
         flash(f"Erro: {e!s}", "error")
@@ -250,6 +257,36 @@ def clonar_perfil(perfil_id):
         return redirect(url_for("perfis.listar_perfis"))
 
 
+@perfis_bp.route("/<int:perfil_id>/modulos", methods=["POST"])
+@login_required
+@csrf.exempt
+def atualizar_modulos(perfil_id):
+    """Atualiza os módulos em que o perfil está disponível"""
+    try:
+        data = request.get_json() if request.is_json else request.form
+        modulos = data.getlist("modulos") if hasattr(data, "getlist") else data.get("modulos", [])
+
+        perfis_service.atualizar_modulos_perfil(perfil_id, modulos, context=getattr(g, "modulo_atual", None))
+
+        if request.is_json:
+            return jsonify({"ok": True, "message": "Módulos atualizados com sucesso!"}), 200
+
+        flash("Módulos atualizados com sucesso!", "success")
+        return redirect(url_for("perfis.editar_perfil", perfil_id=perfil_id))
+
+    except ValidationError as e:
+        if request.is_json:
+            return jsonify({"error": str(e)}), 400
+        flash(str(e), "error")
+        return redirect(url_for("perfis.editar_perfil", perfil_id=perfil_id))
+    except Exception as e:
+        logger.error(f"Erro ao atualizar módulos do perfil {perfil_id}: {e}", exc_info=True)
+        if request.is_json:
+            return jsonify({"error": str(e)}), 500
+        flash(f"Erro: {e!s}", "error")
+        return redirect(url_for("perfis.editar_perfil", perfil_id=perfil_id))
+
+
 @perfis_bp.route("/api/recursos", methods=["GET"])
 @login_required
 def api_recursos():
@@ -259,7 +296,7 @@ def api_recursos():
         recursos = perfis_service.listar_recursos(categoria)
 
         # Agrupar por categoria
-        agrupados = {}
+        agrupados: dict[str, list[dict]] = {}
         for recurso in recursos:
             cat = recurso["categoria"]
             if cat not in agrupados:

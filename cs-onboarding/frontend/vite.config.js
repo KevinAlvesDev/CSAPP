@@ -20,7 +20,7 @@ import viteCompression from 'vite-plugin-compression';
 
 // Encontrar todos os arquivos JS e TS de entrada
 const jsEntries = glob.sync('static/js/**/*.{js,ts}', {
-    ignore: ['static/js/dist/**', 'static/js/tests/**', 'static/js/**/*.min.js', 'static/js/**/*.d.ts'],
+    ignore: ['static/js/dist/**', 'static/js/**/*.min.js', 'static/js/**/*.d.ts'],
 });
 
 // Criar mapa de entradas para build

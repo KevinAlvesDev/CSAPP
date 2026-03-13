@@ -4,9 +4,7 @@ Funções auxiliares de formatação de datas e cálculos de tempo.
 Princípio SOLID: Single Responsibility
 """
 
-from datetime import date, datetime, timedelta
-
-from flask import current_app
+from datetime import date, datetime, timedelta, timezone
 
 from ....db import query_db
 
@@ -44,7 +42,7 @@ def calculate_time_in_status(impl_id, status_target="parada"):
             data_inicio_parada_datetime = data_inicio_parada_obj
 
         if data_inicio_parada_datetime:
-            agora = datetime.now()
+            agora = datetime.now(timezone.utc)
             agora_naive = agora.replace(tzinfo=None) if agora.tzinfo else agora
             parada_naive = (
                 data_inicio_parada_datetime.replace(tzinfo=None)
@@ -60,7 +58,7 @@ def calculate_time_in_status(impl_id, status_target="parada"):
     return None
 
 
-def _format_date_for_query(val, is_end_date=False, is_sqlite=False):
+def _format_date_for_query(val, is_end_date=False):
     """
     Formata um valor de data para uso em queries SQL.
     """
@@ -80,21 +78,19 @@ def _format_date_for_query(val, is_end_date=False, is_sqlite=False):
         except ValueError:
             return None, None
 
-    if is_end_date and not is_sqlite:
+    if is_end_date:
         return "<", (date_obj + timedelta(days=1)).strftime("%Y-%m-%d")
     return "<=" if is_end_date else ">=", date_str
 
 
 def date_col_expr(col: str) -> str:
     """Retorna expressão SQL para extrair a porção de data da coluna conforme o banco."""
-    is_sqlite = current_app.config.get("USE_SQLITE_LOCALLY", False)
-    return f"date({col})" if is_sqlite else f"CAST({col} AS DATE)"
+    return f"CAST({col} AS DATE)"
 
 
 def date_param_expr() -> str:
     """Retorna expressão SQL para parâmetro de data conforme o banco."""
-    is_sqlite = current_app.config.get("USE_SQLITE_LOCALLY", False)
-    return "date(%s)" if is_sqlite else "CAST(%s AS DATE)"
+    return "CAST(%s AS DATE)"
 
 
 def _to_datetime(val):

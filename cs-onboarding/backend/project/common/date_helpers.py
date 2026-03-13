@@ -3,7 +3,7 @@ Date Helpers - Funções reutilizáveis para cálculos de data
 Elimina duplicação de lógica de datas em todo o projeto
 """
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 
 def calculate_days_between(
@@ -71,7 +71,10 @@ def format_relative_time_simple(dt: datetime | date | str | None) -> tuple[str, 
         dt = datetime.combine(dt, datetime.min.time())
 
     # Calcular diferença
-    now = datetime.now(dt.tzinfo) if dt.tzinfo else datetime.now()
+    if dt.tzinfo:
+        now = datetime.now(dt.tzinfo)
+    else:
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
     delta = now - dt
     dias = delta.days
 

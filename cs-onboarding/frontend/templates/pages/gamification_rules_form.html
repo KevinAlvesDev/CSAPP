@@ -23,104 +23,92 @@
     </header>
 
     <main class="grf-content" id="main-content">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show grf-alert" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-
         {% if not regras_agrupadas %}
-            <div class="alert alert-warning grf-alert">Nenhuma regra de gamificação encontrada no banco de dados.</div>
+        <div class="alert alert-warning grf-alert text-center py-4">
+            <h4 class="alert-heading fs-5 mb-2">Nenhuma regra inicializada</h4>
+            <p class="mb-0">Aguarde o carregamento do banco de dados.</p>
+        </div>
         {% endif %}
 
-        <form id="gamification-rules-form" action="{{ url_for('gamification.save_gamification_rules_from_modal') }}" method="POST">
+        <form id="gamification-rules-form" action="{{ url_for('gamification.save_gamification_rules_from_modal') }}"
+            method="POST">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
             <section class="grf-grid">
                 {% for categoria, regras in regras_agrupadas.items() %}
-                    {% set is_penalty = 'Penalidades' in categoria %}
-                    {% set heading_icon = 'bi-circle-fill' %}
-                    {% set heading_class = 'is-blue' %}
+                {% set is_penalty = 'Penalidades' in categoria %}
+                {% set heading_icon = 'bi-circle-fill' %}
+                {% set heading_class = 'is-blue' %}
 
-                    {% if categoria == 'Bônus' %}
-                        {% set heading_icon = 'bi-star-fill' %}
-                        {% set heading_class = 'is-blue' %}
-                    {% elif categoria == 'Penalidades' %}
-                        {% set heading_icon = 'bi-exclamation-triangle' %}
-                        {% set heading_class = 'is-red' %}
-                    {% elif categoria == 'Elegibilidade' %}
-                        {% set heading_icon = 'bi-card-checklist' %}
-                        {% set heading_class = 'is-blue' %}
-                    {% elif categoria == 'Bônus: Reuniões Pres.' %}
-                        {% set heading_icon = 'bi-people-fill' %}
-                        {% set heading_class = 'is-blue' %}
-                    {% elif categoria == 'Pontos: Assiduidade' %}
-                        {% set heading_icon = 'bi-calendar2-check' %}
-                        {% set heading_class = 'is-purple' %}
-                    {% elif categoria == 'Pontos: Planos Sucesso' %}
-                        {% set heading_icon = 'bi-check-circle' %}
-                        {% set heading_class = 'is-green' %}
-                    {% elif categoria == 'Pontos: Impl. Iniciadas' %}
-                        {% set heading_icon = 'bi-play-circle' %}
-                        {% set heading_class = 'is-teal' %}
-                    {% elif categoria == 'Pontos: Satisfação' %}
-                        {% set heading_icon = 'bi-emoji-smile' %}
-                        {% set heading_class = 'is-pink' %}
-                    {% elif categoria == 'Pontos: Qualidade' %}
-                        {% set heading_icon = 'bi-award' %}
-                        {% set heading_class = 'is-indigo' %}
-                    {% elif categoria == 'Pontos: Ações/Dia' %}
-                        {% set heading_icon = 'bi-speedometer2' %}
-                        {% set heading_class = 'is-cyan' %}
-                    {% elif categoria == 'Pontos: TMA' %}
-                        {% set heading_icon = 'bi-stopwatch' %}
-                        {% set heading_class = 'is-amber' %}
-                    {% endif %}
+                {% if categoria == 'Bônus' %}
+                {% set heading_icon = 'bi-star-fill' %}
+                {% set heading_class = 'is-blue' %}
+                {% elif categoria == 'Penalidades' %}
+                {% set heading_icon = 'bi-exclamation-triangle' %}
+                {% set heading_class = 'is-red' %}
+                {% elif categoria == 'Elegibilidade' %}
+                {% set heading_icon = 'bi-card-checklist' %}
+                {% set heading_class = 'is-blue' %}
+                {% elif categoria == 'Bônus: Reuniões Pres.' %}
+                {% set heading_icon = 'bi-people-fill' %}
+                {% set heading_class = 'is-blue' %}
+                {% elif categoria == 'Pontos: Assiduidade' %}
+                {% set heading_icon = 'bi-calendar2-check' %}
+                {% set heading_class = 'is-purple' %}
+                {% elif categoria == 'Pontos: Planos Sucesso' %}
+                {% set heading_icon = 'bi-check-circle' %}
+                {% set heading_class = 'is-green' %}
+                {% elif categoria == 'Pontos: Impl. Iniciadas' %}
+                {% set heading_icon = 'bi-play-circle' %}
+                {% set heading_class = 'is-teal' %}
+                {% elif categoria == 'Pontos: Satisfação' %}
+                {% set heading_icon = 'bi-emoji-smile' %}
+                {% set heading_class = 'is-pink' %}
+                {% elif categoria == 'Pontos: Qualidade' %}
+                {% set heading_icon = 'bi-award' %}
+                {% set heading_class = 'is-indigo' %}
+                {% elif categoria == 'Pontos: Ações/Dia' %}
+                {% set heading_icon = 'bi-speedometer2' %}
+                {% set heading_class = 'is-cyan' %}
+                {% elif categoria == 'Pontos: TMA' %}
+                {% set heading_icon = 'bi-stopwatch' %}
+                {% set heading_class = 'is-amber' %}
+                {% endif %}
 
-                    <article class="grf-card{% if is_penalty %} is-penalty{% endif %}">
-                        <header class="grf-card-head {{ heading_class }}">
-                            <div class="grf-card-title">
-                                <i class="bi {{ heading_icon }}" aria-hidden="true"></i>
-                                <h2>{{ categoria }}</h2>
-                            </div>
-                            {% if is_penalty %}
-                                <span class="grf-chip-negative">IMPACTO NEGATIVO</span>
-                            {% endif %}
-                        </header>
-
-                        <div class="grf-card-body">
-                            {% for regra in regras %}
-                                {% set suffix = 'pts' %}
-                                {% if regra.tipo_valor == 'percentual' %}
-                                    {% set suffix = '%' %}
-                                {% elif regra.tipo_valor == 'quantidade' %}
-                                    {% set suffix = 'unid.' %}
-                                {% elif regra.tipo_valor == 'dias' %}
-                                    {% set suffix = 'dias' %}
-                                {% endif %}
-
-                                <div class="grf-rule-row">
-                                    <label for="regra-{{ regra.regra_id }}" class="grf-rule-label">{{ regra.descricao }}</label>
-                                    <div class="grf-input-wrap{% if is_penalty %} is-penalty{% endif %}">
-                                        <input
-                                            type="number"
-                                            id="regra-{{ regra.regra_id }}"
-                                            name="regra-{{ regra.regra_id }}"
-                                            value="{{ regra.valor_pontos }}"
-                                            step="1"
-                                            required
-                                        >
-                                        <span>{{ suffix }}</span>
-                                    </div>
-                                </div>
-                            {% endfor %}
+                <article class="grf-card{% if is_penalty %} is-penalty{% endif %}">
+                    <header class="grf-card-head {{ heading_class }}">
+                        <div class="grf-card-title">
+                            <i class="bi {{ heading_icon }}" aria-hidden="true"></i>
+                            <h2>{{ categoria }}</h2>
                         </div>
-                    </article>
+                        {% if is_penalty %}
+                        <span class="grf-chip-negative">IMPACTO NEGATIVO</span>
+                        {% endif %}
+                    </header>
+
+                    <div class="grf-card-body">
+                        {% for regra in regras %}
+                        {% set suffix = 'pts' %}
+                        {% if regra.tipo_valor == 'percentual' %}
+                        {% set suffix = '%' %}
+                        {% elif regra.tipo_valor == 'quantidade' %}
+                        {% set suffix = 'unid.' %}
+                        {% elif regra.tipo_valor == 'dias' %}
+                        {% set suffix = 'dias' %}
+                        {% endif %}
+
+                        <div class="grf-rule-row">
+                            <label for="regra-{{ regra.regra_id }}" class="grf-rule-label">{{ regra.descricao
+                                }}</label>
+                            <div class="grf-input-wrap{% if is_penalty %} is-penalty{% endif %}">
+                                <input type="number" id="regra-{{ regra.regra_id }}" name="regra-{{ regra.regra_id }}"
+                                    value="{{ regra.valor_pontos }}" step="1" required>
+                                <span>{{ suffix }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </article>
                 {% endfor %}
             </section>
         </form>
@@ -129,4 +117,3 @@
     <footer class="grf-footer">&copy; 2024 CS Management Tool. All rights reserved.</footer>
 </div>
 {% endblock %}
-

@@ -159,21 +159,23 @@ def validate_alunos_ativos(alunos: int | None) -> tuple[bool, str | None]:
     return True, None
 
 
-def validate_valor_monetario(valor: str | None) -> tuple[bool, str | None]:
+def validate_valor_monetario(valor: str | int | float | None) -> tuple[bool, str | None]:
     """
     Validate monetary value.
-
-    Args:
-        valor: Monetary value (can be string or float)
-
-    Returns:
-        (is_valid, error_message)
+    Handles formats like: "123.45", "123,45", "R$ 1.234,56"
     """
     if not valor:
         return True, None
 
+    # Clean the string from currency symbols and thousand separators
+    clean_val = str(valor).replace("R$", "").replace(" ", "").strip()
+
+    # If using BR format (1.234,56), remove thousands dot and change decimal comma to dot
+    if "," in clean_val:
+        clean_val = clean_val.replace(".", "").replace(",", ".")
+
     try:
-        valor_float = float(str(valor).replace(",", "."))
+        valor_float = float(clean_val)
     except (ValueError, TypeError):
         return False, "Valor monetário inválido"
 

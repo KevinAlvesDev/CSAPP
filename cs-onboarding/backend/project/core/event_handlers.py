@@ -17,6 +17,7 @@ Categorias de handlers:
 - Gamification: Atualiza métricas de gamificação
 """
 
+
 from __future__ import annotations
 
 import logging
@@ -31,7 +32,6 @@ if TYPE_CHECKING:
         ImplantacaoIniciada,
         ImplantacaoTransferida,
         PlanoAtribuido,
-        PlanoRemovido,
         UsuarioLogado,
     )
 
@@ -60,7 +60,7 @@ def handle_audit_implantacao_criada(event: ImplantacaoCriada) -> None:
         )
         logger.debug(f"📝 Audit: implantação {event.implantacao_id} criada")
     except Exception as e:
-        logger.warning(f"Audit handler falhou (ImplantacaoCriada): {e}")
+        logger.warning(f"Audit handler falhou (ImplantacaoCriada): {e}", exc_info=True)
 
 
 def handle_audit_implantacao_finalizada(event: ImplantacaoFinalizada) -> None:
@@ -81,7 +81,7 @@ def handle_audit_implantacao_finalizada(event: ImplantacaoFinalizada) -> None:
         )
         logger.debug(f"📝 Audit: implantação {event.implantacao_id} finalizada")
     except Exception as e:
-        logger.warning(f"Audit handler falhou (ImplantacaoFinalizada): {e}")
+        logger.warning(f"Audit handler falhou (ImplantacaoFinalizada): {e}", exc_info=True)
 
 
 def handle_audit_implantacao_transferida(event: ImplantacaoTransferida) -> None:
@@ -101,7 +101,7 @@ def handle_audit_implantacao_transferida(event: ImplantacaoTransferida) -> None:
         )
         logger.debug(f"📝 Audit: implantação {event.implantacao_id} transferida")
     except Exception as e:
-        logger.warning(f"Audit handler falhou (ImplantacaoTransferida): {e}")
+        logger.warning(f"Audit handler falhou (ImplantacaoTransferida): {e}", exc_info=True)
 
 
 
@@ -120,7 +120,7 @@ def handle_cache_implantacao_iniciada(event: ImplantacaoIniciada) -> None:
         clear_dashboard_cache()
         logger.debug(f"🗑️ Cache invalidado: implantação {event.implantacao_id} iniciada")
     except Exception as e:
-        logger.warning(f"Cache handler falhou (ImplantacaoIniciada): {e}")
+        logger.warning(f"Cache handler falhou (ImplantacaoIniciada): {e}", exc_info=True)
 
 
 def handle_cache_implantacao_finalizada(event: ImplantacaoFinalizada) -> None:
@@ -133,7 +133,7 @@ def handle_cache_implantacao_finalizada(event: ImplantacaoFinalizada) -> None:
         clear_dashboard_cache()
         logger.debug(f"🗑️ Cache invalidado: implantação {event.implantacao_id} finalizada")
     except Exception as e:
-        logger.warning(f"Cache handler falhou (ImplantacaoFinalizada): {e}")
+        logger.warning(f"Cache handler falhou (ImplantacaoFinalizada): {e}", exc_info=True)
 
 
 def handle_cache_item_concluido(event: ChecklistItemConcluido) -> None:
@@ -144,7 +144,7 @@ def handle_cache_item_concluido(event: ChecklistItemConcluido) -> None:
         clear_implantacao_cache(event.implantacao_id)
         logger.debug(f"🗑️ Cache invalidado: item {event.item_id} concluído")
     except Exception as e:
-        logger.warning(f"Cache handler falhou (ChecklistItemConcluido): {e}")
+        logger.warning(f"Cache handler falhou (ChecklistItemConcluido): {e}", exc_info=True)
 
 
 def handle_cache_comentario_adicionado(event: ChecklistComentarioAdicionado) -> None:
@@ -156,7 +156,7 @@ def handle_cache_comentario_adicionado(event: ChecklistComentarioAdicionado) -> 
         clear_dashboard_cache()
         logger.debug(f"🗑️ Cache invalidado: comentário no item {event.item_id}")
     except Exception as e:
-        logger.warning(f"Cache handler falhou (ChecklistComentarioAdicionado): {e}")
+        logger.warning(f"Cache handler falhou (ChecklistComentarioAdicionado): {e}", exc_info=True)
 
 
 def handle_cache_plano_atribuido(event: PlanoAtribuido) -> None:
@@ -167,7 +167,7 @@ def handle_cache_plano_atribuido(event: PlanoAtribuido) -> None:
         clear_implantacao_cache(event.implantacao_id)
         logger.debug(f"🗑️ Cache invalidado: plano {event.plano_id} atribuído")
     except Exception as e:
-        logger.warning(f"Cache handler falhou (PlanoAtribuido): {e}")
+        logger.warning(f"Cache handler falhou (PlanoAtribuido): {e}", exc_info=True)
 
 
 def handle_cache_implantacao_transferida(event: ImplantacaoTransferida) -> None:
@@ -181,7 +181,7 @@ def handle_cache_implantacao_transferida(event: ImplantacaoTransferida) -> None:
         clear_dashboard_cache()
         logger.debug(f"🗑️ Cache invalidado: implantação {event.implantacao_id} transferida")
     except Exception as e:
-        logger.warning(f"Cache handler falhou (ImplantacaoTransferida): {e}")
+        logger.warning(f"Cache handler falhou (ImplantacaoTransferida): {e}", exc_info=True)
 
 
 # ──────────────────────────────────────────────
@@ -197,7 +197,7 @@ def handle_gamification_finalizada(event: ImplantacaoFinalizada) -> None:
         clear_gamification_cache()
         logger.debug(f"🎮 Gamificação: cache limpo após finalização {event.implantacao_id}")
     except Exception as e:
-        logger.warning(f"Gamification handler falhou (ImplantacaoFinalizada): {e}")
+        logger.warning(f"Gamification handler falhou (ImplantacaoFinalizada): {e}", exc_info=True)
 
 
 def handle_gamification_item_concluido(event: ChecklistItemConcluido) -> None:
@@ -212,7 +212,7 @@ def handle_gamification_item_concluido(event: ChecklistItemConcluido) -> None:
                 f"🎮 Gamificação: cache limpo (marco {event.progresso_atual}% atingido)"
             )
     except Exception as e:
-        logger.warning(f"Gamification handler falhou (ChecklistItemConcluido): {e}")
+        logger.warning(f"Gamification handler falhou (ChecklistItemConcluido): {e}", exc_info=True)
 
 
 # ──────────────────────────────────────────────

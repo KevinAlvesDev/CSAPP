@@ -97,7 +97,7 @@
 
 .comments-open-badge {
     position: fixed;
-    bottom: 20px;
+    bottom: 74px;
     right: 20px;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
@@ -211,7 +211,7 @@ body.dark-mode .comments-open-badge {
     }
 
     .comments-open-badge {
-        bottom: 10px;
+        bottom: 74px;
         right: 10px;
         padding: 0.5rem 1rem;
         font-size: 0.75rem;

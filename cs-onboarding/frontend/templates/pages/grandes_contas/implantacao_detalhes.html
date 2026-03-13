@@ -933,7 +933,7 @@ Sim - Academia XYZ
 
 {% block scripts_extra %}
 
-<script>
+<script nonce="{{ csp_nonce() }}">
     // Dados do checklist para renderização
     window.CHECKLIST_DATA = {{ checklist_tree | tojson if checklist_tree else '[]' }};
     window.IMPLANTACAO_ID = {{ implantacao.id }};
@@ -942,12 +942,12 @@ Sim - Academia XYZ
 </script>
 
 <!-- Service Layer Scripts (SOLID architecture) -->
-<script src="{{ url_for('static', filename='js/core/service-container.js') }}"></script>
-<script src="{{ url_for('static', filename='js/services/api-service.js') }}"></script>
-<script src="{{ url_for('static', filename='js/services/notification-service.js') }}"></script>
-<script src="{{ url_for('static', filename='js/services/checklist-api.js') }}"></script>
-<script src="{{ url_for('static', filename='js/services/checklist-service.js') }}"></script>
-<script>
+<script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/core/service-container.js') }}"></script>
+<script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/services/api-service.js') }}"></script>
+<script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/services/notification-service.js') }}"></script>
+<script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/services/checklist-api.js') }}"></script>
+<script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/services/checklist-service.js') }}"></script>
+<script nonce="{{ csp_nonce() }}">
     // Inicializa servicos antes dos componentes do checklist
     if (window.initializeServices) {
         window.initializeServices();
@@ -955,16 +955,16 @@ Sim - Academia XYZ
 </script>
 
 <!-- Scripts de Drag and Drop e Checklist -->
-<script src="{{ url_for('static', filename='js/components/checklist/checklist_drag_drop.js') }}"></script>
-<script src="{{ url_for('static', filename='js/components/checklist_renderer.js') }}"></script>
-<script src="{{ url_for('static', filename='js/components/checklist/checklist_comments.js') }}"></script>
-<script src="{{ url_for('static', filename='js/pages/carteira_editor.js') }}"></script>
-<script src="{{ url_for('static', filename='js/components/avisos_manager.js') }}"></script>
+<script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/components/checklist/checklist_drag_drop.js') }}"></script>
+<script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/components/checklist_renderer.js') }}"></script>
+<script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/components/checklist/checklist_comments.js') }}"></script>
+<script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/pages/carteira_editor.js') }}"></script>
+<script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/components/avisos_manager.js') }}"></script>
 
 <!-- Logica principal da pagina -->
-<script src="{{ url_for('static', filename='js/pages/implantacao_detalhes_ui.js') }}"></script>
+<script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/pages/implantacao_detalhes_ui.js') }}"></script>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
     function abrirModalHistoricoPlano(planoId, planoNome) {
         const modalEl = document.getElementById('modalHistoricoPlano');
         const modalInstance = new bootstrap.Modal(modalEl);

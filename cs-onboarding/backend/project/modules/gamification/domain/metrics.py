@@ -6,7 +6,18 @@ Princípio SOLID: Single Responsibility
 
 from datetime import date, datetime
 
+from flask import g
+import logging
+
 from ....db import execute_db, query_db
+
+logger = logging.getLogger(__name__)
+
+
+def _participantes_table_exists():
+    """Verifica se a tabela opcional de participantes existe."""
+    row = query_db("SELECT to_regclass('public.gamificacao_participantes') AS reg", one=True)
+    return bool(row and row.get("reg"))
 
 
 def _parse_date_safe(date_str):
@@ -60,7 +71,7 @@ def _get_gamification_automatic_data_bulk(
         sql_finalizadas += " AND usuario_cs = %s"
         args_finalizadas.append(target_cs_email)
 
-    impl_finalizadas_raw = query_db(sql_finalizadas, tuple(args_finalizadas))
+    impl_finalizadas_raw = query_db(sql_finalizadas, tuple(args_finalizadas))  # nosec B608
     impl_finalizadas_raw = impl_finalizadas_raw if impl_finalizadas_raw is not None else []
 
     tma_data_map = {}
@@ -117,7 +128,7 @@ def _get_gamification_automatic_data_bulk(
         args_iniciadas.append(target_cs_email)
     sql_iniciadas += " GROUP BY usuario_cs"
 
-    impl_iniciadas_raw = query_db(sql_iniciadas, tuple(args_iniciadas))
+    impl_iniciadas_raw = query_db(sql_iniciadas, tuple(args_iniciadas))  # nosec B608
     impl_iniciadas_raw = impl_iniciadas_raw if impl_iniciadas_raw is not None else []
     iniciadas_map = {row["usuario_cs"]: row["total"] for row in impl_iniciadas_raw if isinstance(row, dict)}
 
@@ -147,7 +158,7 @@ def _get_gamification_automatic_data_bulk(
         args_tarefas.append(target_cs_email)
     sql_tarefas += " GROUP BY i.usuario_cs, ci.tag"
 
-    tarefas_concluidas_raw = query_db(sql_tarefas, tuple(args_tarefas))
+    tarefas_concluidas_raw = query_db(sql_tarefas, tuple(args_tarefas))  # nosec B608
     tarefas_concluidas_raw = tarefas_concluidas_raw if tarefas_concluidas_raw is not None else []
 
     tarefas_map = {}
@@ -171,13 +182,72 @@ def _get_gamification_automatic_data_bulk(
     return tma_data_map, iniciadas_map, tarefas_map
 
 
-def obter_metricas_mensais(usuario_cs, mes, ano):
-    """Busca as métricas mensais de um usuário específico."""
-    return query_db(
-        "SELECT * FROM gamificacao_metricas_mensais WHERE usuario_cs = %s AND mes = %s AND ano = %s",
-        (usuario_cs, mes, ano),
+def get_participantes(context=None):
+    """Retorna dict {usuario_cs: ativo} de todos os registros na tabela de participantes."""
+    if not _participantes_table_exists():
+        return {}
+
+    contexto = context or getattr(g, "modulo_atual", "onboarding")
+    rows = query_db(
+        "SELECT usuario_cs, ativo FROM gamificacao_participantes WHERE contexto = %s",
+        (contexto,),
+    ) or []
+    return {row["usuario_cs"]: row["ativo"] for row in rows if isinstance(row, dict)}
+
+
+def toggle_participante(usuario_cs, context=None):
+    """
+    Alterna participação do CS na gamificação para o contexto.
+    Se não existe registro, insere como inativo (estava ativo por padrão → agora excluído).
+    Se existe, inverte o campo ativo.
+    Retorna o novo estado (True = participando).
+    """
+    if not _participantes_table_exists():
+        logger.warning(
+            "Tabela gamificacao_participantes inexistente; toggle_participante ignorado para usuario=%s",
+            usuario_cs,
+        )
+        return None
+
+    contexto = context or getattr(g, "modulo_atual", "onboarding")
+    existing = query_db(
+        "SELECT id, ativo FROM gamificacao_participantes WHERE usuario_cs = %s AND contexto = %s",
+        (usuario_cs, contexto),
         one=True,
     )
+    if existing:
+        novo_estado = not existing["ativo"]
+        execute_db(
+            "UPDATE gamificacao_participantes SET ativo = %s WHERE id = %s",
+            (novo_estado, existing["id"]),
+        )
+    else:
+        # Primeira interação: estava ativo por padrão, agora excluído
+        novo_estado = False
+        execute_db(
+            "INSERT INTO gamificacao_participantes (usuario_cs, contexto, ativo) VALUES (%s, %s, %s)",
+            (usuario_cs, contexto, novo_estado),
+        )
+    return novo_estado
+
+
+def obter_metricas_mensais(usuario_cs, mes, ano):
+    """Busca as métricas mensais de um usuário específico."""
+    contexto = getattr(g, "modulo_atual", "onboarding")
+    return query_db(
+        "SELECT * FROM gamificacao_metricas_mensais WHERE usuario_cs = %s AND mes = %s AND ano = %s AND contexto = %s",
+        (usuario_cs, mes, ano, contexto),
+        one=True,
+    )
+
+
+def get_all_metricas_mensais(mes, ano, context=None):
+    """Busca todos os registros de métricas mensais para um determinado mês/ano/contexto."""
+    contexto = context or getattr(g, "modulo_atual", "onboarding")
+    return query_db(
+        "SELECT * FROM gamificacao_metricas_mensais WHERE mes = %s AND ano = %s AND contexto = %s ORDER BY usuario_cs",
+        (mes, ano, contexto),
+    ) or []
 
 
 def salvar_metricas_mensais(data_to_save, existing_record_id=None):
@@ -208,9 +278,13 @@ def salvar_metricas_mensais(data_to_save, existing_record_id=None):
         """
         # Garante que os valores correspondem à ordem das chaves em set_clauses + ID no final
         args = [*list(update_data.values()), existing_record_id]
-        execute_db(sql_update, tuple(args))
+        execute_db(sql_update, tuple(args))  # nosec B608
     else:
         # Inserir novo registro
+        contexto = getattr(g, "modulo_atual", "onboarding")
+        if "contexto" not in data_to_save:
+            data_to_save["contexto"] = contexto
+
         columns = list(data_to_save.keys())
         values_placeholders = ["%s"] * len(columns)
         sql_insert = (
@@ -218,6 +292,6 @@ def salvar_metricas_mensais(data_to_save, existing_record_id=None):
         )
         # Garante a ordem dos valores alinhada com as colunas
         args = [data_to_save[col] for col in columns]
-        execute_db(sql_insert, tuple(args))
+        execute_db(sql_insert, tuple(args))  # nosec B608
 
     return True

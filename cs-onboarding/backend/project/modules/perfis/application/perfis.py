@@ -1,1 +1,1 @@
-from .perfis_service import *  # noqa: F401,F403
+from .perfis_service import *  # noqa: F403

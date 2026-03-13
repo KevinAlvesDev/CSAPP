@@ -35,7 +35,7 @@
 
             <!-- Card Plano de Sucesso (Lógica Importante) -->
             {% if plano_ativo_instancia and plano_ativo_instancia.status == 'em_andamento' %}
-            <div class="custom-card border-primary border-top border-4">
+            <div class="custom-card border-primary border-top border-4 card-plano-atual">
                 <div class="custom-card-header">
                     <h5 class="custom-card-title"><i class="bi bi-diagram-3-fill me-2 text-primary"></i>Plano Atual</h5>
                     <div class="d-flex gap-1">
@@ -73,7 +73,7 @@
                 </div>
             </div>
             {% else %}
-            <div class="custom-card cta-card mb-4">
+            <div class="custom-card cta-card mb-4 card-plano-atual">
                 <div class="custom-card-body text-center">
                     <div class="mb-3 text-danger">
                         <i class="bi bi-exclamation-circle-fill" style="font-size: 3rem;"></i>
@@ -90,7 +90,7 @@
             {% endif %}
 
             <!-- Card Ações Rápidas -->
-            <div class="custom-card">
+            <div class="custom-card card-acoes-rapidas">
                 <div class="custom-card-header">
                     <h5 class="custom-card-title">Ações Rápidas</h5>
                 </div>
@@ -103,10 +103,8 @@
                             <h6 class="mb-0 fw-bold">Editar Detalhes</h6>
                         </div>
                     </button>
-                    <button
-                        class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-3"
-                        id="btn-gerar-resumo-implantacao"
-                        data-bs-toggle="modal"
+                    <button class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-3"
+                        id="btn-gerar-resumo-implantacao" data-bs-toggle="modal"
                         data-bs-target="#modalResumoImplantacao">
                         <div class="bg-primary bg-opacity-10 p-2 rounded text-primary">
                             <i class="bi bi-stars"></i>
@@ -195,7 +193,7 @@
             </div>
 
             <!-- Card Resumo da Empresa -->
-            <div class="custom-card mt-3">
+            <div class="custom-card mt-3 card-resumo-empresa">
                 <div class="custom-card-header border-0 pb-0">
                     <h5 class="custom-card-title d-flex align-items-center">
                         <div class="rounded-circle bg-primary bg-opacity-10 p-2 me-2 d-flex align-items-center justify-content-center"
@@ -417,29 +415,33 @@
                         </a>
                         {% endif %}
                     </div>
-                    {% set plano_em_andamento_visivel = (plano_ativo_instancia and plano_ativo_instancia.status == 'em_andamento') %}
-                    {% set planos_concluidos_lista = planos_lista | default([]) | selectattr('status', 'equalto', 'concluido') | list %}
-                    {% set plano_concluido_ref = (plano_sucesso if plano_sucesso and plano_sucesso.status == 'concluido' else (planos_concluidos_lista[0] if planos_concluidos_lista else None)) %}
-                    {% set plano_concluido_atual = (is_historico_view and plano_ativo_instancia and plano_ativo_instancia.status == 'concluido') %}
+                    {% set plano_em_andamento_visivel = (plano_ativo_instancia and plano_ativo_instancia.status ==
+                    'em_andamento') %}
+                    {% set planos_concluidos_lista = planos_lista | default([]) | selectattr('status', 'equalto',
+                    'concluido') | list %}
+                    {% set plano_concluido_ref = (plano_sucesso if plano_sucesso and plano_sucesso.status == 'concluido'
+                    else (planos_concluidos_lista[0] if planos_concluidos_lista else None)) %}
+                    {% set plano_concluido_atual = (is_historico_view and plano_ativo_instancia and
+                    plano_ativo_instancia.status == 'concluido') %}
 
                     <!-- Tabs de navegação -->
                     <ul class="nav tab-switcher" id="contentTabs" role="tablist">
-                          <li class="nav-item" role="presentation">
-                              <button class="nav-link {% if not plano_concluido_atual %}active{% endif %}"
-                                  id="plano-andamento-tab" data-bs-toggle="tab"
-                                  data-bs-target="#plano-andamento-content" type="button" role="tab"
-                                  aria-selected="{{ 'true' if not plano_concluido_atual else 'false' }}">
-                                  <i class="bi bi-play-circle me-1"></i>Plano de sucesso em andamento
-                              </button>
-                          </li>
-                          <li class="nav-item" role="presentation">
-                              <button class="nav-link {% if plano_concluido_atual %}active{% endif %}"
-                                  id="plano-concluido-tab" data-bs-toggle="tab"
-                                  data-bs-target="#plano-concluido-content" type="button" role="tab"
-                                  aria-selected="{{ 'true' if plano_concluido_atual else 'false' }}">
-                                  <i class="bi bi-check-circle me-1"></i>Plano de sucesso concluído
-                              </button>
-                          </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link {% if not plano_concluido_atual %}active{% endif %}"
+                                id="plano-andamento-tab" data-bs-toggle="tab" data-bs-target="#plano-andamento-content"
+                                type="button" role="tab"
+                                aria-selected="{{ 'true' if not plano_concluido_atual else 'false' }}">
+                                <i class="bi bi-play-circle me-1"></i>Plano de sucesso em andamento
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link {% if plano_concluido_atual %}active{% endif %}"
+                                id="plano-concluido-tab" data-bs-toggle="tab" data-bs-target="#plano-concluido-content"
+                                type="button" role="tab"
+                                aria-selected="{{ 'true' if plano_concluido_atual else 'false' }}">
+                                <i class="bi bi-check-circle me-1"></i>Plano de sucesso concluído
+                            </button>
+                        </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" id="timeline-tab" data-bs-toggle="tab"
                                 data-bs-target="#timeline-content" type="button" role="tab">
@@ -486,14 +488,18 @@
                     </style>
                     {% set progresso_atual = progresso_porcentagem if progresso_porcentagem is defined else 0 %}
                     {% set pode_concluir = progresso_atual >= 100 %}
-                    {% set plano_em_andamento_visivel = (plano_ativo_instancia and plano_ativo_instancia.status == 'em_andamento') %}
-                    {% set planos_concluidos_lista = planos_lista | default([]) | selectattr('status', 'equalto', 'concluido') | list %}
-                    {% set plano_concluido_ref = (plano_sucesso if plano_sucesso and plano_sucesso.status == 'concluido' else (planos_concluidos_lista[0] if planos_concluidos_lista else None)) %}
-                    {% set plano_concluido_atual = (is_historico_view and plano_ativo_instancia and plano_ativo_instancia.status == 'concluido') %}
+                    {% set plano_em_andamento_visivel = (plano_ativo_instancia and plano_ativo_instancia.status ==
+                    'em_andamento') %}
+                    {% set planos_concluidos_lista = planos_lista | default([]) | selectattr('status', 'equalto',
+                    'concluido') | list %}
+                    {% set plano_concluido_ref = (plano_sucesso if plano_sucesso and plano_sucesso.status == 'concluido'
+                    else (planos_concluidos_lista[0] if planos_concluidos_lista else None)) %}
+                    {% set plano_concluido_atual = (is_historico_view and plano_ativo_instancia and
+                    plano_ativo_instancia.status == 'concluido') %}
 
                     <!-- Tab: Plano de Sucesso em Andamento -->
-                      <div class="tab-pane fade {% if not plano_concluido_atual %}show active{% endif %}"
-                          id="plano-andamento-content" role="tabpanel">
+                    <div class="tab-pane fade {% if not plano_concluido_atual %}show active{% endif %}"
+                        id="plano-andamento-content" role="tabpanel">
                         <div class="custom-card-body">
                             {% if plano_em_andamento_visivel %}
                             {% if is_historico_view %}
@@ -506,7 +512,7 @@
                             {% endif %}
 
                             <div
-                                class="alert alert-light border d-flex justify-content-between align-items-center mb-3 shadow-sm">
+                                class="alert alert-light border d-flex justify-content-between align-items-center mb-3 shadow-sm plano-andamento-summary">
                                 <div>
                                     <h5 class="alert-heading mb-1 text-primary fw-bold">{{
                                         plano_ativo_instancia.nome.split(' (Concluído')[0] }}</h5>
@@ -518,18 +524,18 @@
                                         plano_ativo_instancia.data_criacao_fmt }}</small>
 
                                     {% if (is_manager or is_owner) and not is_historico_view %}
-                                        <form id="formConcluirPlanoImplantacao"
-                                            action="{{ url_for('onboarding_actions.concluir_plano_implantacao') }}"
-                                            method="POST">
-                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                            <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
-                                            <input type="hidden" name="plano_instancia_id"
-                                                value="{{ plano_ativo_instancia.id }}">
-                                            <button type="submit" class="btn btn-success btn-sm fw-bold"
-                                                data-concluir-plano-btn {% if not pode_concluir %}disabled{% endif %}>
-                                                <i class="bi bi-check-lg me-1"></i>Concluir Plano
-                                            </button>
-                                        </form>
+                                    <form id="formConcluirPlanoImplantacao"
+                                        action="{{ url_for('onboarding_actions.concluir_plano_implantacao') }}"
+                                        method="POST">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="implantacao_id" value="{{ implantacao.id }}">
+                                        <input type="hidden" name="plano_instancia_id"
+                                            value="{{ plano_ativo_instancia.id }}">
+                                        <button type="submit" class="btn btn-success btn-sm fw-bold"
+                                            data-concluir-plano-btn {% if not pode_concluir %}disabled{% endif %}>
+                                            <i class="bi bi-check-lg me-1"></i>Concluir Plano
+                                        </button>
+                                    </form>
                                     {% elif is_historico_view and plano_ativo_instancia.status == 'concluido' %}
                                     <span class="badge bg-success">Concluído</span>
                                     {% endif %}
@@ -550,53 +556,63 @@
                     </div>
 
                     <!-- Tab: Plano de Sucesso Concluido -->
-                      <div class="tab-pane fade {% if plano_concluido_atual %}show active{% endif %}"
-                          id="plano-concluido-content" role="tabpanel">
+                    <div class="tab-pane fade {% if plano_concluido_atual %}show active{% endif %}"
+                        id="plano-concluido-content" role="tabpanel">
                         <div class="custom-card-body">
                             {% if planos_concluidos_ordenados %}
-                                {% if is_historico_view and plano_ativo_instancia and plano_ativo_instancia.status == 'concluido' %}
-                                <div class="alert alert-light border d-flex justify-content-between align-items-center mb-3 shadow-sm">
-                                    <div>
-                                        <h5 class="alert-heading mb-1 text-success fw-bold">{{ plano_ativo_instancia.nome.split(' (Concluido')[0] }}</h5>
-                                        <p class="mb-0 text-muted small">{{ plano_ativo_instancia.descricao or 'Sem descricao' }}</p>
+                            {% if is_historico_view and plano_ativo_instancia and plano_ativo_instancia.status ==
+                            'concluido' %}
+                            <div
+                                class="alert alert-light border d-flex justify-content-between align-items-center mb-3 shadow-sm">
+                                <div>
+                                    <h5 class="alert-heading mb-1 text-success fw-bold">{{
+                                        plano_ativo_instancia.nome.split(' (Concluido')[0] }}</h5>
+                                    <p class="mb-0 text-muted small">{{ plano_ativo_instancia.descricao or 'Sem
+                                        descricao' }}</p>
+                                </div>
+                                <small class="text-muted">Concluido em: {{ plano_ativo_instancia.data_conclusao_fmt or
+                                    plano_ativo_instancia.data_atualizacao_fmt }}</small>
+                            </div>
+                            {% if historico_sem_execucao %}
+                            <div class="alert alert-warning mb-0">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                Este plano concluido nao possui snapshot historico de execucao preservado.
+                            </div>
+                            {% else %}
+                            {% include 'partials/_plano_sucesso_checklist_onboarding.html' %}
+                            {% endif %}
+                            {% else %}
+                            <div class="list-group">
+                                {% for plano in planos_concluidos_ordenados %}
+                                <div
+                                    class="list-group-item list-group-item-action flex-column align-items-start p-4 mb-2 border rounded shadow-sm">
+                                    <div class="d-flex w-100 justify-content-between mb-2">
+                                        <h5 class="mb-1 fw-bold text-success">
+                                            <i class="bi bi-check-circle-fill me-2"></i>{{ plano.nome.split('
+                                            (Concluido')[0] }}
+                                        </h5>
+                                        <small class="text-muted">Concluido em: {{ plano.data_conclusao_fmt or 'N/A'
+                                            }}</small>
                                     </div>
-                                    <small class="text-muted">Concluido em: {{ plano_ativo_instancia.data_conclusao_fmt or plano_ativo_instancia.data_atualizacao_fmt }}</small>
-                                </div>
-                                {% if historico_sem_execucao %}
-                                <div class="alert alert-warning mb-0">
-                                    <i class="bi bi-exclamation-triangle me-2"></i>
-                                    Este plano concluido nao possui snapshot historico de execucao preservado.
-                                </div>
-                                {% else %}
-                                {% include 'partials/_plano_sucesso_checklist_onboarding.html' %}
-                                {% endif %}
-                                {% else %}
-                                <div class="list-group">
-                                    {% for plano in planos_concluidos_ordenados %}
-                                    <div class="list-group-item list-group-item-action flex-column align-items-start p-4 mb-2 border rounded shadow-sm">
-                                        <div class="d-flex w-100 justify-content-between mb-2">
-                                            <h5 class="mb-1 fw-bold text-success">
-                                                <i class="bi bi-check-circle-fill me-2"></i>{{ plano.nome.split(' (Concluido')[0] }}
-                                            </h5>
-                                            <small class="text-muted">Concluido em: {{ plano.data_conclusao_fmt or 'N/A' }}</small>
-                                        </div>
-                                        <p class="mb-2 text-secondary">{{ plano.descricao or 'Sem descricao' }}</p>
-                                        <div class="d-flex justify-content-between align-items-center mt-3">
-                                            <small class="text-muted">
-                                                <i class="bi bi-calendar-event me-1"></i>Inicio: {{ plano.data_criacao_fmt }}
-                                                {% if plano.concluido_por %}
-                                                <span class="ms-3"><i class="bi bi-person-check me-1"></i>Por: {{ plano.concluido_por }}</span>
-                                                {% endif %}
-                                            </small>
-                                            <a href="{{ url_for('onboarding.ver_implantacao', impl_id=implantacao.id, plano_historico_id=plano.id) }}"
-                                                class="btn btn-outline-secondary btn-sm">
-                                                <i class="bi bi-eye me-1"></i>Visualizar Itens
-                                            </a>
-                                        </div>
+                                    <p class="mb-2 text-secondary">{{ plano.descricao or 'Sem descricao' }}</p>
+                                    <div class="d-flex justify-content-between align-items-center mt-3">
+                                        <small class="text-muted">
+                                            <i class="bi bi-calendar-event me-1"></i>Inicio: {{ plano.data_criacao_fmt
+                                            }}
+                                            {% if plano.concluido_por %}
+                                            <span class="ms-3"><i class="bi bi-person-check me-1"></i>Por: {{
+                                                plano.concluido_por }}</span>
+                                            {% endif %}
+                                        </small>
+                                        <a href="{{ url_for('onboarding.ver_implantacao', impl_id=implantacao.id, plano_historico_id=plano.id) }}"
+                                            class="btn btn-outline-secondary btn-sm">
+                                            <i class="bi bi-eye me-1"></i>Visualizar Itens
+                                        </a>
                                     </div>
-                                    {% endfor %}
                                 </div>
-                                {% endif %}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
                             {% else %}
                             <div class="text-center py-5 text-muted">
                                 <i class="bi bi-inbox display-4 mb-3 d-block opacity-50"></i>
@@ -1005,7 +1021,8 @@ Sim - Academia XYZ
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p>Tem certeza que deseja remover o plano <strong>{{ plano_ativo_instancia.nome if plano_ativo_instancia else ''
+                <p>Tem certeza que deseja remover o plano <strong>{{ plano_ativo_instancia.nome if plano_ativo_instancia
+                        else ''
                         }}</strong> desta implantação?</p>
                 <p class="text-muted small mb-3">
                     <i class="bi bi-info-circle me-1"></i>
@@ -1078,7 +1095,10 @@ Sim - Academia XYZ
             </div>
             <div class="modal-footer bg-light">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                <button type="button" class="btn btn-outline-success" id="btn-salvar-resumo-implantacao">
+                <button type="button" class="btn btn-outline-danger d-none" id="btn-excluir-resumo-implantacao">
+                    <i class="bi bi-trash me-1"></i>Excluir resumo
+                </button>
+                <button type="button" class="btn btn-outline-success d-none" id="btn-salvar-resumo-implantacao">
                     Salvar resumo
                 </button>
                 <button type="button" class="btn btn-primary" id="btn-regenerar-resumo-implantacao">
@@ -1089,7 +1109,7 @@ Sim - Academia XYZ
     </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
     (function () {
         'use strict';
 
@@ -1424,7 +1444,7 @@ Sim - Academia XYZ
                     data-bs-dismiss="modal"></button>
             </div>
             <form action="{{ url_for('onboarding_actions.cancelar_implantacao') }}" method="POST"
-                enctype="multipart/form-data" id="formCancelarImplantacao">
+                id="formCancelarImplantacao">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <p class="fw-bold">Deseja realmente cancelar esta implantação?</p>
@@ -1438,13 +1458,12 @@ Sim - Academia XYZ
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold">Motivo *</label>
-                        <textarea class="form-control" name="motivo_cancelamento" rows="3" required
-                            placeholder="Descreva o motivo..."></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Comprovante (Print/PDF) *</label>
-                        <input type="file" class="form-control" name="comprovante_cancelamento"
-                            accept="image/*, application/pdf" required>
+                        <select class="form-select" name="motivo_cancelamento" required>
+                            <option value="">Selecione o motivo...</option>
+                            {% for motivo in motivos_cancelamento %}
+                            <option value="{{ motivo }}">{{ motivo }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
                 </div>
                 <div class="modal-footer bg-light">
@@ -1478,7 +1497,7 @@ Sim - Academia XYZ
     </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
     // Dados do checklist para renderização
     window.CHECKLIST_DATA = {{ checklist_tree | tojson if checklist_tree else '[]' }};
     window.IMPLANTACAO_ID = {{ implantacao.id }};
@@ -1487,12 +1506,12 @@ Sim - Academia XYZ
 </script>
 
 <!-- Service Layer Scripts (SOLID architecture) -->
-<script src="{{ url_for('static', filename='js/core/service-container.js') }}"></script>
-<script src="{{ url_for('static', filename='js/services/api-service.js') }}"></script>
-<script src="{{ url_for('static', filename='js/services/notification-service.js') }}"></script>
-<script src="{{ url_for('static', filename='js/services/checklist-api.js') }}"></script>
-<script src="{{ url_for('static', filename='js/services/checklist-service.js') }}"></script>
-<script>
+<script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/core/service-container.js') }}"></script>
+<script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/services/api-service.js') }}"></script>
+<script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/services/notification-service.js') }}"></script>
+<script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/services/checklist-api.js') }}"></script>
+<script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/services/checklist-service.js') }}"></script>
+<script nonce="{{ csp_nonce() }}">
     // Inicializa serviços após carregamento
     if (window.initializeServices) {
         window.initializeServices();
@@ -1523,17 +1542,12 @@ Sim - Academia XYZ
     });
 </script>
 
-<script src="{{ url_for('static', filename='js/components/checklist/checklist_drag_drop.js') }}"></script>
-<script src="{{ url_for('static', filename='js/components/checklist/checklist_comments.js') }}"></script>
-<script
+<script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/components/checklist/checklist_drag_drop.js') }}"></script>
+<script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/components/checklist/checklist_comments.js') }}"></script>
+<script nonce="{{ csp_nonce() }}"
     src="{{ url_for('static', filename='js/components/checklist_renderer.js') }}?v={{ range(1, 10000) | random }}"></script>
 
-<script src="{{ url_for('static', filename='js/utils/checklist_comments_ui.js') }}"></script>
-<script src="{{ url_for('static', filename='js/utils/drag_drop_visual_patch.js') }}"></script>
-<script src="{{ url_for('static', filename='js/utils/placeholder_drop_fix.js') }}"></script>
-
-
-<script src="{{ url_for('static', filename='js/pages/implantacao_detalhes_ui.js') }}"></script>
+<script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/pages/implantacao_detalhes_ui.js') }}"></script>
 
 <!-- Modal Selecionar Plano (Externo) -->
 {% include 'partials/_modal_selecionar_plano.html' %}
@@ -1737,10 +1751,10 @@ Sim - Academia XYZ
 
 {% block scripts_extra %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-<script src="{{ url_for('static', filename='js/utils/modal_cleanup.js') }}"></script>
-<script src="{{ url_for('static', filename='js/pages/carteira_editor.js') }}"></script>
-<script src="{{ url_for('static', filename='js/components/avisos_manager.js') }}"></script>
-<script src="{{ url_for('static', filename='js/pages/checklist_finalizacao.js') }}"></script>
+<script nonce="{{ csp_nonce() }}" src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script nonce="{{ csp_nonce() }}" src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/utils/modal_cleanup.js') }}"></script>
+<script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/pages/carteira_editor.js') }}"></script>
+<script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/components/avisos_manager.js') }}"></script>
+<script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/pages/checklist_finalizacao.js') }}"></script>
 {% endblock %}

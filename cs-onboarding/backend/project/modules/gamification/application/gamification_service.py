@@ -22,10 +22,15 @@ from ..domain import (
     _get_all_gamification_rules_grouped,
     # Metrics
     _get_gamification_automatic_data_bulk,
+    get_all_metricas_mensais,
+    get_participantes,
+    toggle_participante,
     # Rules
     _get_gamification_rules_as_dict,
     # Utils
     clear_gamification_cache,
+    criar_regra_gamificacao,
+    deletar_regra_gamificacao,
     get_all_cs_users_for_gamification,
     # Report
     get_gamification_report_data,
@@ -52,7 +57,12 @@ __all__ = [
     "get_all_cs_users_for_gamification",
     # Report
     "get_gamification_report_data",
+    "get_all_metricas_mensais",
+    "get_participantes",
+    "toggle_participante",
     "obter_metricas_mensais",
     "salvar_metricas_mensais",
     "salvar_regras_gamificacao",
+    "criar_regra_gamificacao",
+    "deletar_regra_gamificacao",
 ]

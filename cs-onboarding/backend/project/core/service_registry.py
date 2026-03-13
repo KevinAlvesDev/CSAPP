@@ -10,6 +10,7 @@ Uso:
     register_all_services(app, container)
 """
 
+
 from __future__ import annotations
 
 import logging
@@ -62,7 +63,7 @@ def _register_core_services(app: Flask, container: ServiceContainer) -> None:
         container.register("event_bus", event_bus)
         logger.debug("EventBus registrado no container")
     except Exception as e:
-        logger.warning(f"EventBus não registrado: {e}")
+        logger.warning(f"EventBus não registrado: {e}", exc_info=True)
 
     # Query Profiler
     try:
@@ -71,7 +72,7 @@ def _register_core_services(app: Flask, container: ServiceContainer) -> None:
         container.register("query_profiler", QueryProfiler)
         logger.debug("QueryProfiler registrado no container")
     except Exception as e:
-        logger.warning(f"QueryProfiler não registrado: {e}")
+        logger.warning(f"QueryProfiler não registrado: {e}", exc_info=True)
 
 
 def _register_domain_services(app: Flask, container: ServiceContainer) -> None:
@@ -162,4 +163,3 @@ def _import(module_path: str) -> Any:
     import importlib
 
     return importlib.import_module(module_path)
-

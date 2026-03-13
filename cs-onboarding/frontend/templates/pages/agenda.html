@@ -5,7 +5,7 @@
 {% block head_extra %}
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <style>
-  /* Agenda Semana (grid inspirado no Google Calendar) */
+  /* ── Toolbar ── */
   .agenda-toolbar {
     display: flex;
     justify-content: flex-end;
@@ -18,52 +18,69 @@
     font-size: 0.8rem;
   }
 
+  /* ── Week header ── */
   .agenda-week-header {
     display: grid;
-    grid-template-columns: 60px repeat(7, 1fr);
+    grid-template-columns: 80px repeat(7, 1fr);
     align-items: center;
     border-bottom: 1px solid var(--table-border-color);
     background: var(--header-bg);
+    position: sticky;
+    top: 0;
+    z-index: 10;
   }
 
   .agenda-week-header .dow {
-    padding: 0.75rem;
+    padding: 0.6rem 0.75rem;
     font-weight: 600;
+    font-size: 0.8rem;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
   }
 
   .agenda-week-header .dow.today {
-    color: var(--accent-color);
+    color: #f59e0b;
   }
 
+  /* ── Grid ── */
   .agenda-grid {
     display: grid;
-    grid-template-columns: 60px repeat(7, 1fr);
+    grid-template-columns: 80px repeat(7, 1fr);
   }
 
+  /* ── Hours column ── */
   .hours-col {
     background: var(--container-bg);
     border-right: 1px solid var(--table-border-color);
   }
 
   .hours-col .hour {
-    height: 60px;
-    font-size: 0.75rem;
-    color: #888;
+    height: 80px;
+    font-size: 0.7rem;
+    color: #9ca3af;
     padding-right: 0.5rem;
     display: flex;
     justify-content: flex-end;
     align-items: flex-start;
+    padding-top: 4px;
   }
 
+  /* ── Day columns ── */
   .day-col {
     position: relative;
     border-right: 1px solid var(--table-border-color);
+    transition: background 0.15s;
   }
 
   .day-col:last-child {
     border-right: none;
   }
 
+  .day-col.today {
+    background: rgba(245, 158, 11, 0.04);
+  }
+
+  /* ── All-day strip ── */
   .allday-strip {
     min-height: 32px;
     border-bottom: 1px solid var(--table-border-color);
@@ -73,29 +90,33 @@
     gap: 4px;
   }
 
+  /* ── Events area (08:00 – 20:00 = 12h × 80px = 960px) ── */
   .events-area {
     position: relative;
-    height: 1440px;
-    background-image: linear-gradient(to bottom, var(--table-border-color) 1.25px, transparent 1px);
-    background-size: 100% 60px;
+    height: 960px;
+    background-image: linear-gradient(to bottom, var(--table-border-color) 1px, transparent 1px);
+    background-size: 100% 80px;
     background-repeat: repeat;
   }
 
+  /* ── Event cards ── */
   .event-card {
     position: absolute;
     left: 4px;
     right: 4px;
     border-radius: 6px;
-    padding: 6px 8px;
-    color: #000000;
-    font-size: 0.85rem;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    padding: 5px 8px;
+    color: #fff;
+    font-size: 0.8rem;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
     overflow: hidden;
+    cursor: pointer;
   }
 
   .event-time {
     font-weight: 700;
-    margin-right: 6px;
+    margin-right: 4px;
+    opacity: 0.9;
   }
 
   .event-title {
@@ -103,68 +124,13 @@
   }
 
   .event-loc {
-    font-size: 0.75rem;
-    opacity: 0.9;
-  }
-
-  /* Cores aproximadas por colorId */
-  .bg-default {
-    background-color: var(--accent-color);
-  }
-
-  .bg-1 {
-    background-color: #7986cb;
-  }
-
-  .bg-2 {
-    background-color: #33b679;
-  }
-
-  .bg-3 {
-    background-color: #8e24aa;
-  }
-
-  .bg-4 {
-    background-color: #e67c73;
-  }
-
-  .bg-5 {
-    background-color: #f6c026;
-    color: #222;
-  }
-
-  .bg-6 {
-    background-color: #f5511d;
-  }
-
-  .bg-7 {
-    background-color: #039be5;
-  }
-
-  .bg-8 {
-    background-color: #616161;
-  }
-
-  .bg-9 {
-    background-color: #3f51b5;
-  }
-
-  .bg-10 {
-    background-color: #0b8043;
-  }
-
-  .bg-11 {
-    background-color: #d50000;
-  }
-
-  /* Altura com rolagem para evitar espaço vazio de madrugada */
-  .agenda-grid-scroll {
-    height: 720px;
-    overflow-y: auto;
+    font-size: 0.72rem;
+    opacity: 0.85;
+    margin-top: 2px;
   }
 
   .event-card.selected {
-    outline: 2px solid #000000;
+    outline: 2px solid #000;
   }
 
   .event-card .resize-handle {
@@ -174,19 +140,47 @@
     bottom: 0;
     height: 6px;
     cursor: ns-resize;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 0 0 6px 6px;
   }
 
   .event-card.dragging {
     opacity: 0.85;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   }
+
+  /* ── Google Calendar color palette ── */
+  .bg-default { background-color: #0ea5e9; }
+  .bg-1  { background-color: #7986cb; }
+  .bg-2  { background-color: #33b679; }
+  .bg-3  { background-color: #8e24aa; }
+  .bg-4  { background-color: #e67c73; }
+  .bg-5  { background-color: #f6c026; color: #222; }
+  .bg-6  { background-color: #f5511d; }
+  .bg-7  { background-color: #0ea5e9; }
+  .bg-8  { background-color: #616161; }
+  .bg-9  { background-color: #3f51b5; }
+  .bg-10 { background-color: #0b8043; }
+  .bg-11 { background-color: #d50000; }
+
+  /* ── Scroll container ── */
+  .agenda-grid-scroll {
+    height: calc(100vh - 280px);
+    min-height: 400px;
+    overflow-y: auto;
+  }
+
+  .agenda-grid-scroll::-webkit-scrollbar { width: 6px; }
+  .agenda-grid-scroll::-webkit-scrollbar-track { background: transparent; }
+  .agenda-grid-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+  .agenda-grid-scroll::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid p-0">
   <header class="header-bg p-3 d-flex align-items-center position-relative rounded-3">
-    <h1 class="main-title mb-0 fs-4 w-100 text-center">CS ONBOARDING Minha Agenda</h1>
+    <h1 class="main-title mb-0 fs-4 w-100 text-center">Agenda</h1>
     <div class="d-flex align-items-center position-absolute end-0 top-50 translate-middle-y">
       <a href="{{ url_for(current_dashboard) }}" class="btn btn-sm btn-outline-secondary">
         <i class="bi bi-house me-1"></i> Dashboard
@@ -196,8 +190,6 @@
   <main class="container py-3">
     <div class="d-flex justify-content-between align-items-center mb-3">
       <div class="agenda-toolbar">
-        <a href="{{ url_for(current_dashboard) }}" class="btn btn-outline-primary btn-sm"><i
-            class="bi bi-arrow-left me-1"></i> Voltar ao dashboard</a>
         {% if google_connected %}
         <span class="agenda-timezone d-none d-md-inline"></span>
         <a href="{{ url_for('agenda.agenda_disconnect') }}" class="btn btn-outline-danger btn-sm"><i
@@ -239,7 +231,7 @@
           <div class="agenda-grid-scroll">
             <div class="agenda-grid">
               <div class="hours-col">
-                {% for h in range(0,24) %}
+                {% for h in range(8, 20) %}
                 <div class="hour">{{ '%02d:00' % h }}</div>
                 {% endfor %}
               </div>

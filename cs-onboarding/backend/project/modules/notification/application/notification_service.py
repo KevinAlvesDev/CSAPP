@@ -4,10 +4,14 @@ Sistema completo de notificações para o implantador.
 Inclui 9 tipos de notificações com regras de frequência específicas.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from ....config.logging_config import api_logger
 from ....db import query_db
+
+__all__ = [
+    "get_user_notifications",
+]
 
 
 def _get_context_url(path, context):
@@ -46,7 +50,7 @@ def get_user_notifications(user_email, context=None):
     try:
         api_logger.info(f"Iniciando busca de notificações para {user_email}, contexto: {context}")
 
-        hoje = datetime.now()
+        hoje = datetime.now(timezone.utc).replace(tzinfo=None)
         inicio_semana = hoje - timedelta(days=hoje.weekday())
         inicio_semana = inicio_semana.replace(hour=0, minute=0, second=0, microsecond=0)
         fim_hoje = hoje.replace(hour=23, minute=59, second=59)
@@ -163,7 +167,7 @@ def _get_false_start(user_email, hoje, context):
             where_context = "AND contexto = %s"
             params.append(context)
 
-    sql = f"""
+    sql = """
         SELECT id, nome_empresa, data_criacao
         FROM implantacoes
         WHERE usuario_cs = %s
@@ -175,7 +179,7 @@ def _get_false_start(user_email, hoje, context):
             WHERE implantacao_id = implantacoes.id
             AND completed = TRUE
         ) = 0
-    """
+    """.format(where_context=where_context)
     results = query_db(sql, tuple(params)) or []
 
     for row in results:
@@ -212,7 +216,7 @@ def _get_silent_stagnation(user_email, hoje, context):
 
     params.append(limite)
 
-    sql = f"""
+    sql = """
         SELECT i.id, i.nome_empresa, MAX(tl.data_criacao) as ultima_interacao
         FROM implantacoes i
         LEFT JOIN timeline_log tl ON tl.implantacao_id = i.id
@@ -221,7 +225,7 @@ def _get_silent_stagnation(user_email, hoje, context):
         AND i.status = 'andamento'
         GROUP BY i.id
         HAVING MAX(tl.data_criacao) < %s OR MAX(tl.data_criacao) IS NULL
-    """
+    """.format(where_context=where_context)
     results = query_db(sql, tuple(params)) or []
 
     for row in results:
@@ -260,7 +264,7 @@ def _get_slow_pace(user_email, hoje, context):
 
     params.append(limite)
 
-    sql = f"""
+    sql = """
         SELECT i.id, i.nome_empresa, MAX(ci.data_conclusao) as ultima_conclusao
         FROM implantacoes i
         JOIN checklist_items ci ON ci.implantacao_id = i.id
@@ -270,7 +274,7 @@ def _get_slow_pace(user_email, hoje, context):
         AND ci.completed = TRUE
         GROUP BY i.id
         HAVING MAX(ci.data_conclusao) < %s
-    """
+    """.format(where_context=where_context)
     results = query_db(sql, tuple(params)) or []
 
     for row in results:
@@ -305,7 +309,7 @@ def _get_final_sprint(user_email, context):
             where_context = "AND i.contexto = %s"
             params.append(context)
 
-    sql = f"""
+    sql = """
         SELECT i.id, i.nome_empresa,
                CAST(SUM(CASE WHEN ci.completed THEN 1 ELSE 0 END) AS FLOAT) / COUNT(*) * 100 as progresso
         FROM implantacoes i
@@ -316,7 +320,7 @@ def _get_final_sprint(user_email, context):
         AND ci.tipo_item = 'subtarefa'
         GROUP BY i.id
         HAVING (CAST(SUM(CASE WHEN ci.completed THEN 1 ELSE 0 END) AS FLOAT) / COUNT(*)) >= 0.8
-    """
+    """.format(where_context=where_context)
     results = query_db(sql, tuple(params)) or []
 
     for row in results:
@@ -349,7 +353,7 @@ def _get_critical_tasks(user_email, hoje, fim_hoje, context):
 
     params.extend([fim_hoje, hoje])
 
-    sql_criticas = f"""
+    sql_criticas = """
         SELECT
             i.id,
             i.nome_empresa,
@@ -368,8 +372,8 @@ def _get_critical_tasks(user_email, hoje, fim_hoje, context):
         HAVING COUNT(ci.id) > 0
         ORDER BY COUNT(CASE WHEN ci.previsao_original < %s THEN 1 END) DESC
         LIMIT 5
-    """
-    criticas = query_db(sql_criticas, tuple(params)) or []
+    """.format(where_context=where_context)
+    criticas = query_db(sql_criticas, tuple(params)) or []  # nosec B608
 
     for row in criticas:
         if isinstance(row, dict):
@@ -412,7 +416,7 @@ def _get_stopped_implementations(user_email, hoje, context):
             where_context = "AND i.contexto = %s"
             params.append(context)
 
-    sql_paradas = f"""
+    sql_paradas = """
         SELECT
             i.id,
             i.nome_empresa,
@@ -429,8 +433,8 @@ def _get_stopped_implementations(user_email, hoje, context):
         WHERE i.usuario_cs = %s
         {where_context}
         AND i.status = 'parada'
-    """
-    paradas = query_db(sql_paradas, tuple(params)) or []
+    """.format(where_context=where_context)
+    paradas = query_db(sql_paradas, tuple(params)) or []  # nosec B608
 
     for row in paradas:
         if isinstance(row, dict):
@@ -476,7 +480,7 @@ def _get_urgent_tasks(user_email, hoje, fim_hoje, context):
 
     params.extend([fim_hoje, depois_amanha])
 
-    sql_urgentes = f"""
+    sql_urgentes = """
         SELECT
             i.id,
             i.nome_empresa,
@@ -495,8 +499,8 @@ def _get_urgent_tasks(user_email, hoje, fim_hoje, context):
         HAVING COUNT(ci.id) > 0
         ORDER BY COUNT(ci.id) DESC
         LIMIT 5
-    """
-    urgentes = query_db(sql_urgentes, tuple(params)) or []
+    """.format(where_context=where_context)
+    urgentes = query_db(sql_urgentes, tuple(params)) or []  # nosec B608
 
     for row in urgentes:
         if isinstance(row, dict):
@@ -533,7 +537,7 @@ def _get_upcoming_future(user_email, hoje, context):
 
     params.append(daqui_7_dias)
 
-    sql_futuras = f"""
+    sql_futuras = """
         SELECT
             id,
             nome_empresa,
@@ -544,8 +548,8 @@ def _get_upcoming_future(user_email, hoje, context):
         AND status = 'futura'
         AND data_inicio_previsto IS NOT NULL
         AND DATE(data_inicio_previsto) = DATE(%s)
-    """
-    futuras = query_db(sql_futuras, tuple(params)) or []
+    """.format(where_context=where_context)
+    futuras = query_db(sql_futuras, tuple(params)) or []  # nosec B608
 
     for row in futuras:
         if isinstance(row, dict):
@@ -578,7 +582,7 @@ def _get_no_forecast(user_email, hoje, context):
             where_context = "AND contexto = %s"
             params.append(context)
 
-    sql_sem_previsao = f"""
+    sql_sem_previsao = """
         SELECT
             id,
             nome_empresa,
@@ -588,8 +592,8 @@ def _get_no_forecast(user_email, hoje, context):
         {where_context}
         AND status = 'sem_previsao'
         AND data_inicio_previsto IS NULL
-    """
-    sem_previsao = query_db(sql_sem_previsao, tuple(params)) or []
+    """.format(where_context=where_context)
+    sem_previsao = query_db(sql_sem_previsao, tuple(params)) or []  # nosec B608
 
     for row in sem_previsao:
         if isinstance(row, dict):
@@ -635,7 +639,7 @@ def _get_upcoming_tasks(user_email, hoje, context):
 
     params.extend([depois_amanha, daqui_7_dias])
 
-    sql_proximas = f"""
+    sql_proximas = """
         SELECT
             i.id,
             i.nome_empresa,
@@ -654,8 +658,8 @@ def _get_upcoming_tasks(user_email, hoje, context):
         HAVING COUNT(ci.id) > 0
         ORDER BY COUNT(ci.id) DESC
         LIMIT 5
-    """
-    proximas = query_db(sql_proximas, tuple(params)) or []
+    """.format(where_context=where_context)
+    proximas = query_db(sql_proximas, tuple(params)) or []  # nosec B608
 
     for row in proximas:
         if isinstance(row, dict):
@@ -689,14 +693,14 @@ def _get_new_waiting(user_email, context):
             where_context = "AND contexto = %s"
             params.append(context)
 
-    sql_novas = f"""
+    sql_novas = """
         SELECT COUNT(*) as total
         FROM implantacoes
         WHERE usuario_cs = %s
         {where_context}
         AND status = 'nova'
-    """
-    novas = query_db(sql_novas, tuple(params), one=True)
+    """.format(where_context=where_context)
+    novas = query_db(sql_novas, tuple(params), one=True)  # nosec B608
     total_novas = novas.get("total", 0) if novas else 0
 
     if total_novas > 0:
@@ -727,7 +731,7 @@ def _get_weekly_summary(user_email, hoje, context):
                 where_context = "AND i.contexto = %s"
                 params.append(context)
 
-        sql_pendentes = f"""
+        sql_pendentes = """
             SELECT
                 COUNT(DISTINCT i.id) as implantacoes,
                 COUNT(ci.id) as tarefas
@@ -738,8 +742,8 @@ def _get_weekly_summary(user_email, hoje, context):
             AND i.status = 'andamento'
             AND ci.tipo_item = 'subtarefa'
             AND ci.completed = FALSE
-        """
-        pendentes = query_db(sql_pendentes, tuple(params), one=True)
+        """.format(where_context=where_context)
+        pendentes = query_db(sql_pendentes, tuple(params), one=True)  # nosec B608
 
         if pendentes:
             total_tarefas = pendentes.get("tarefas", 0) or 0
@@ -772,15 +776,15 @@ def _get_completed_this_week(user_email, inicio_semana, context):
             where_context = "AND contexto = %s"
             params.append(context)
 
-    sql_concluidas = f"""
+    sql_concluidas = """
         SELECT COUNT(*) as total
         FROM implantacoes
         WHERE usuario_cs = %s
         AND status = 'finalizada'
         AND data_finalizacao >= %s
         {where_context}
-    """
-    concluidas = query_db(sql_concluidas, tuple(params), one=True)
+    """.format(where_context=where_context)
+    concluidas = query_db(sql_concluidas, tuple(params), one=True)  # nosec B608
     total_concluidas = concluidas.get("total", 0) if concluidas else 0
 
     if total_concluidas > 0:
@@ -807,33 +811,3 @@ def _parse_datetime(value):
     return value
 
 
-def get_test_notifications():
-    """
-    Gera notificações de teste para visualização.
-    """
-    return {
-        "ok": True,
-        "notifications": [
-            {"type": "danger", "title": "🔥 Crítico", "message": "Cliente X está muito descontente", "action_url": "#"},
-            {
-                "type": "warning",
-                "title": "⏰ Prazo Vencendo",
-                "message": "Treinamento Financeiro - Academia Y",
-                "action_url": "#",
-            },
-            {
-                "type": "info",
-                "title": "📋 Novo Processo",
-                "message": "Reunião de alinhamento agendada",
-                "action_url": "#",
-            },
-            {
-                "type": "success",
-                "title": "✅ Concluído",
-                "message": "Implantação da Academia Z finalizada",
-                "action_url": "#",
-            },
-        ],
-        "total": 4,
-        "test_mode": True,
-    }

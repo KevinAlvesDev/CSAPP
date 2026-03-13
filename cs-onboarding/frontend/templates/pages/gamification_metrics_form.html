@@ -15,6 +15,10 @@
                 <i class="bi bi-house me-1"></i>
                 Dashboard
             </a>
+            <a href="{{ url_for('gamification.metrics_overview', context=current_context, mes=current_mes, ano=current_ano) }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-table me-1"></i>
+                Visão Geral
+            </a>
             <a href="{{ url_for('gamification.gamification_report', context=current_context) }}" class="btn btn-sm btn-warning">
                 <i class="bi bi-clipboard-data me-1"></i>
                 Ver Relatório
@@ -22,17 +26,6 @@
         </div>
     </header>
     <main class="p-4">
-
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-    {% for category, message in messages %}
-    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show mt-3" role="alert">
-        {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-    {% endfor %}
-    {% endif %}
-    {% endwith %}
 
     <section class="mm-filter-card">
         <form method="GET" action="{{ url_for('gamification.manage_gamification_metrics') }}" id="metrics-filter-form" class="mm-filter-grid">
@@ -103,7 +96,7 @@
     <form action="{{ url_for('gamification.manage_gamification_metrics', cs_email=current_cs_email, mes=current_mes, ano=current_ano, context=current_context) }}" method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-        <script>
+        <script nonce="{{ csp_nonce() }}">
             const pontosRegrasManuais = {};
         </script>
 
@@ -112,21 +105,29 @@
                 <article class="mm-metric-card mm-performance">
                     <h3><i class="bi bi-award"></i> Métricas de Performance</h3>
                     <div class="mm-input-grid two-col">
-                        <label for="nota_qualidade" class="visually-hidden">Nota de Qualidade (0-100)</label>
-                        <input type="number" class="form-control metric-input" id="nota_qualidade" name="nota_qualidade" min="0" max="100" step="0.1" placeholder="Nota de Qualidade (0-100)" value="{{ metricas_atuais.nota_qualidade if metricas_atuais.nota_qualidade is not none }}" data-regra-id="pts_qualidade" data-score-type="performance">
+                        <div class="mm-field">
+                            <label for="nota_qualidade" class="mm-input-label">Nota de Qualidade (0-100)</label>
+                            <input type="number" class="form-control metric-input" id="nota_qualidade" name="nota_qualidade" min="0" max="100" step="0.1" value="{{ metricas_atuais.nota_qualidade if metricas_atuais.nota_qualidade is not none }}" data-regra-id="pts_qualidade" data-score-type="performance">
+                        </div>
 
-                        <label for="assiduidade" class="visually-hidden">Assiduidade (0-100)</label>
-                        <input type="number" class="form-control metric-input" id="assiduidade" name="assiduidade" min="0" max="100" step="0.1" placeholder="Assiduidade (0-100)" value="{{ metricas_atuais.assiduidade if metricas_atuais.assiduidade is not none }}" data-regra-id="pts_assiduidade" data-score-type="performance">
+                        <div class="mm-field">
+                            <label for="assiduidade" class="mm-input-label">Assiduidade (0-100)</label>
+                            <input type="number" class="form-control metric-input" id="assiduidade" name="assiduidade" min="0" max="100" step="0.1" value="{{ metricas_atuais.assiduidade if metricas_atuais.assiduidade is not none }}" data-regra-id="pts_assiduidade" data-score-type="performance">
+                        </div>
 
-                        <label for="planos_sucesso_perc" class="visually-hidden">Planos de Sucesso (0-100)</label>
-                        <input type="number" class="form-control metric-input" id="planos_sucesso_perc" name="planos_sucesso_perc" min="0" max="100" step="0.1" placeholder="Planos de Sucesso (0-100)" value="{{ metricas_atuais.planos_sucesso_perc if metricas_atuais.planos_sucesso_perc is not none }}" data-regra-id="pts_planos" data-score-type="performance">
+                        <div class="mm-field">
+                            <label for="planos_sucesso_perc" class="mm-input-label">Planos de Sucesso (0-100)</label>
+                            <input type="number" class="form-control metric-input" id="planos_sucesso_perc" name="planos_sucesso_perc" min="0" max="100" step="0.1" value="{{ metricas_atuais.planos_sucesso_perc if metricas_atuais.planos_sucesso_perc is not none }}" data-regra-id="pts_planos" data-score-type="performance">
+                        </div>
 
-                        <label for="satisfacao_processo" class="visually-hidden">Satisfação do Processo (0-100)</label>
-                        <input type="number" class="form-control metric-input" id="satisfacao_processo" name="satisfacao_processo" min="0" max="100" step="0.1" placeholder="Satisfação do Processo (0-100)" value="{{ metricas_atuais.satisfacao_processo if metricas_atuais.satisfacao_processo is not none }}" data-regra-id="pts_satisfacao" data-score-type="performance">
+                        <div class="mm-field">
+                            <label for="satisfacao_processo" class="mm-input-label">Satisfação do Processo (0-100)</label>
+                            <input type="number" class="form-control metric-input" id="satisfacao_processo" name="satisfacao_processo" min="0" max="100" step="0.1" value="{{ metricas_atuais.satisfacao_processo if metricas_atuais.satisfacao_processo is not none }}" data-regra-id="pts_satisfacao" data-score-type="performance">
+                        </div>
                     </div>
                 </article>
 
-                <script>
+                <script nonce="{{ csp_nonce() }}">
                     pontosRegrasManuais['pts_qualidade'] = {
                         100: {{ regras_agrupadas['Pontos: Qualidade'] | selectattr('regra_id', 'equalto', 'pts_qualidade_100') | map(attribute='valor_pontos') | first | default(0) }},
                         95: {{ regras_agrupadas['Pontos: Qualidade'] | selectattr('regra_id', 'equalto', 'pts_qualidade_95') | map(attribute='valor_pontos') | first | default(0) }},
@@ -143,10 +144,10 @@
 
                     pontosRegrasManuais['pts_planos'] = {
                         100: {{ regras_agrupadas['Pontos: Planos Sucesso'] | selectattr('regra_id', 'equalto', 'pts_planos_100') | map(attribute='valor_pontos') | first | default(0) }},
-                        95: {{ regras_agrupadas['Pontos: Planos Sucesso'] | selectattr('regra_id', 'equalto', 'pts_planos_95') | map(attribute='valor_pontos') | first | default(0) }},
-                        90: {{ regras_agrupadas['Pontos: Planos Sucesso'] | selectattr('regra_id', 'equalto', 'pts_planos_90') | map(attribute='valor_pontos') | first | default(0) }},
-                        85: {{ regras_agrupadas['Pontos: Planos Sucesso'] | selectattr('regra_id', 'equalto', 'pts_planos_85') | map(attribute='valor_pontos') | first | default(0) }},
-                        80: {{ regras_agrupadas['Pontos: Planos Sucesso'] | selectattr('regra_id', 'equalto', 'pts_planos_80') | map(attribute='valor_pontos') | first | default(0) }}
+                        80: {{ regras_agrupadas['Pontos: Planos Sucesso'] | selectattr('regra_id', 'equalto', 'pts_planos_95') | map(attribute='valor_pontos') | first | default(0) }},
+                        60: {{ regras_agrupadas['Pontos: Planos Sucesso'] | selectattr('regra_id', 'equalto', 'pts_planos_90') | map(attribute='valor_pontos') | first | default(0) }},
+                        40: {{ regras_agrupadas['Pontos: Planos Sucesso'] | selectattr('regra_id', 'equalto', 'pts_planos_85') | map(attribute='valor_pontos') | first | default(0) }},
+                        20: {{ regras_agrupadas['Pontos: Planos Sucesso'] | selectattr('regra_id', 'equalto', 'pts_planos_80') | map(attribute='valor_pontos') | first | default(0) }}
                     };
 
                     pontosRegrasManuais['pts_satisfacao'] = {
@@ -165,24 +166,29 @@
                     </div>
 
                     <div class="mm-input-grid two-col">
-                        <label for="impl_finalizadas_mes" class="visually-hidden">Implantações / Planos Finalizados</label>
-                        <input type="number" class="form-control metric-input" id="impl_finalizadas_mes" name="impl_finalizadas_mes" min="0" step="1" placeholder="Implantações / Planos Finalizados" value="{{ metricas_atuais.impl_finalizadas_mes if metricas_atuais.impl_finalizadas_mes is not none else (metricas_automaticas.impl_finalizadas_mes | default(0)) }}" data-regra-id="eleg_finalizadas" data-score-type="none">
+                        <div class="mm-field">
+                            <label for="tma_medio_mes" class="mm-input-label">Tempo Médio de Implantação (TMA)</label>
+                            <input type="number" class="form-control metric-input" id="tma_medio_mes" name="tma_medio_mes" min="0" step="0.1" value="{{ metricas_atuais.tma_medio_mes if metricas_atuais.tma_medio_mes is not none else (metricas_automaticas.tma_medio_mes_raw | default(0)) }}" data-regra-id="pts_tma" data-score-type="performance">
+                        </div>
 
-                        <label for="tma_medio_mes" class="visually-hidden">Tempo Médio de Implantação (TMA)</label>
-                        <input type="number" class="form-control metric-input" id="tma_medio_mes" name="tma_medio_mes" min="0" step="0.1" placeholder="Tempo Médio de Implantação (TMA)" value="{{ metricas_atuais.tma_medio_mes if metricas_atuais.tma_medio_mes is not none else (metricas_automaticas.tma_medio_mes_raw | default(0)) }}" data-regra-id="pts_tma" data-score-type="performance">
+                        <div class="mm-field">
+                            <label for="impl_iniciadas_mes" class="mm-input-label">Implantações / Planos Iniciados</label>
+                            <input type="number" class="form-control metric-input" id="impl_iniciadas_mes" name="impl_iniciadas_mes" min="0" step="1" value="{{ metricas_atuais.impl_iniciadas_mes if metricas_atuais.impl_iniciadas_mes is not none else (metricas_automaticas.impl_iniciadas_mes | default(0)) }}" data-regra-id="pts_iniciadas" data-score-type="performance">
+                        </div>
 
-                        <label for="impl_iniciadas_mes" class="visually-hidden">Implantações / Planos Iniciados</label>
-                        <input type="number" class="form-control metric-input" id="impl_iniciadas_mes" name="impl_iniciadas_mes" min="0" step="1" placeholder="Implantações / Planos Iniciados" value="{{ metricas_atuais.impl_iniciadas_mes if metricas_atuais.impl_iniciadas_mes is not none else (metricas_automaticas.impl_iniciadas_mes | default(0)) }}" data-regra-id="pts_iniciadas" data-score-type="performance">
+                        <div class="mm-field">
+                            <label for="acoes_concluidas_dia_media" class="mm-input-label">Ações realizadas por dia</label>
+                            <input type="number" class="form-control metric-input" id="acoes_concluidas_dia_media" name="acoes_concluidas_dia_media" min="0" step="0.1" value="{{ metricas_atuais.acoes_concluidas_dia_media if metricas_atuais.acoes_concluidas_dia_media is not none else (metricas_automaticas.acoes_concluidas_dia_media | default(0)) }}" data-regra-id="pts_acoes" data-score-type="performance">
+                        </div>
 
-                        <label for="acoes_concluidas_dia_media" class="visually-hidden">Ações realizadas por dia</label>
-                        <input type="number" class="form-control metric-input" id="acoes_concluidas_dia_media" name="acoes_concluidas_dia_media" min="0" step="0.1" placeholder="Ações realizadas por dia" value="{{ metricas_atuais.acoes_concluidas_dia_media if metricas_atuais.acoes_concluidas_dia_media is not none else (metricas_automaticas.acoes_concluidas_dia_media | default(0)) }}" data-regra-id="pts_acoes" data-score-type="performance">
-
-                        <label for="reunioes_concluidas_dia_media" class="visually-hidden">Reuniões Realizadas por Dia</label>
-                        <input type="number" class="form-control metric-input mm-full-row" id="reunioes_concluidas_dia_media" name="reunioes_concluidas_dia_media" min="0" step="0.1" placeholder="Reuniões Realizadas por Dia" value="{{ metricas_atuais.reunioes_concluidas_dia_media if metricas_atuais.reunioes_concluidas_dia_media is not none else (metricas_automaticas.reunioes_concluidas_dia_media | default(0)) }}" data-regra-id="pts_reunioes" data-score-type="performance">
+                        <div class="mm-field">
+                            <label for="reunioes_concluidas_dia_media" class="mm-input-label">Reuniões Realizadas por Dia</label>
+                            <input type="number" class="form-control metric-input" id="reunioes_concluidas_dia_media" name="reunioes_concluidas_dia_media" min="0" step="0.1" value="{{ metricas_atuais.reunioes_concluidas_dia_media if metricas_atuais.reunioes_concluidas_dia_media is not none else (metricas_automaticas.reunioes_concluidas_dia_media | default(0)) }}" data-regra-id="pts_reunioes" data-score-type="performance">
+                        </div>
                     </div>
                 </article>
 
-                <script>
+                <script nonce="{{ csp_nonce() }}">
                     pontosRegrasManuais['pts_tma'] = {
                         30: {{ regras_agrupadas['Pontos: TMA'] | selectattr('regra_id', 'equalto', 'pts_tma_30') | map(attribute='valor_pontos') | first | default(0) }},
                         35: {{ regras_agrupadas['Pontos: TMA'] | selectattr('regra_id', 'equalto', 'pts_tma_35') | map(attribute='valor_pontos') | first | default(0) }},
@@ -223,9 +229,11 @@
                         {% if regras_agrupadas['Bônus'] %}
                         {% for regra in regras_agrupadas['Bônus'] %}
                         {% set field_name = regra.regra_id | replace('bonus_', '') %}
-                        <label for="{{ field_name }}" class="visually-hidden">{{ regra.descricao }}</label>
-                        <input type="number" class="form-control metric-input" id="{{ field_name }}" name="{{ field_name }}" min="0" placeholder="{{ regra.descricao }}" value="{{ metricas_atuais[field_name] | default(0) }}" data-regra-id="{{ regra.regra_id }}" data-score-type="bonus">
-                        <script>
+                        <div class="mm-field">
+                            <label for="{{ field_name }}" class="mm-input-label">{{ regra.descricao }}</label>
+                            <input type="number" class="form-control metric-input" id="{{ field_name }}" name="{{ field_name }}" min="0" value="{{ metricas_atuais[field_name] | default(0) }}" data-regra-id="{{ regra.regra_id }}" data-score-type="bonus">
+                        </div>
+                        <script nonce="{{ csp_nonce() }}">
                             pontosRegrasManuais['{{ regra.regra_id }}'] = {{ regra.valor_pontos }};
                         </script>
                         {% endfor %}
@@ -233,9 +241,11 @@
 
                         {% if regras_agrupadas['Bônus: Reuniões Pres.'] %}
                         {% set field_name = 'reunioes_presenciais' %}
-                        <label for="{{ field_name }}" class="visually-hidden">Bônus: Reuniões Presenciais (Ocorr.)</label>
-                        <input type="number" class="form-control metric-input" id="{{ field_name }}" name="{{ field_name }}" min="0" placeholder="Bônus: Reuniões Presenciais (Ocorr.)" value="{{ metricas_atuais[field_name] | default(0) }}" data-regra-id="bonus_reun_pres" data-score-type="bonus">
-                        <script>
+                        <div class="mm-field">
+                            <label for="{{ field_name }}" class="mm-input-label">Bônus: Reuniões Presenciais (Ocorr.)</label>
+                            <input type="number" class="form-control metric-input" id="{{ field_name }}" name="{{ field_name }}" min="0" value="{{ metricas_atuais[field_name] | default(0) }}" data-regra-id="bonus_reun_pres" data-score-type="bonus">
+                        </div>
+                        <script nonce="{{ csp_nonce() }}">
                             pontosRegrasManuais['bonus_reun_pres'] = {
                                 10: {{ regras_agrupadas['Bônus: Reuniões Pres.'] | selectattr('regra_id', 'equalto', 'bonus_reun_pres_10') | map(attribute='valor_pontos') | first | default(0) }},
                                 7: {{ regras_agrupadas['Bônus: Reuniões Pres.'] | selectattr('regra_id', 'equalto', 'bonus_reun_pres_7') | map(attribute='valor_pontos') | first | default(0) }},
@@ -255,9 +265,11 @@
                     <div class="mm-input-grid two-col">
                         {% for regra in regras_agrupadas['Penalidades'] %}
                         {% set field_name = regra.regra_id | replace('penal_', '') %}
-                        <label for="{{ field_name }}" class="visually-hidden">{{ regra.descricao }}</label>
-                        <input type="number" class="form-control metric-input" id="{{ field_name }}" name="{{ field_name }}" min="0" placeholder="{{ regra.descricao }}" value="{{ metricas_atuais[field_name] | default(0) }}" data-regra-id="{{ regra.regra_id }}" data-score-type="penalty">
-                        <script>
+                        <div class="mm-field">
+                            <label for="{{ field_name }}" class="mm-input-label">{{ regra.descricao }}</label>
+                            <input type="number" class="form-control metric-input" id="{{ field_name }}" name="{{ field_name }}" min="0" value="{{ metricas_atuais[field_name] | default(0) }}" data-regra-id="{{ regra.regra_id }}" data-score-type="penalty">
+                        </div>
+                        <script nonce="{{ csp_nonce() }}">
                             pontosRegrasManuais['{{ regra.regra_id }}'] = {{ regra.valor_pontos }};
                         </script>
                         {% endfor %}
@@ -303,13 +315,13 @@
     <div class="alert alert-info mt-3">Selecione um colaborador e um período para lançar as métricas manuais.</div>
     {% endif %}
 
-    <footer class="mm-footer">© 2026 CS Onboarding Management System</footer>
+    <footer class="mm-footer">© 2026 CS Control Management System</footer>
     </main>
 </div>
 {% endblock %}
 
 {% block scripts_extra %}
-<script>
+<script nonce="{{ csp_nonce() }}">
 document.addEventListener('DOMContentLoaded', function () {
     const inputs = document.querySelectorAll('.metric-input');
     const totalField = document.getElementById('total_pontos_manuais');
@@ -389,10 +401,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (regraId === 'pts_planos') {
             if (valorInput >= 100) return regraPontos[100] || 0;
-            if (valorInput >= 95) return regraPontos[95] || 0;
-            if (valorInput >= 90) return regraPontos[90] || 0;
-            if (valorInput >= 85) return regraPontos[85] || 0;
             if (valorInput >= 80) return regraPontos[80] || 0;
+            if (valorInput >= 60) return regraPontos[60] || 0;
+            if (valorInput >= 40) return regraPontos[40] || 0;
+            if (valorInput >= 20) return regraPontos[20] || 0;
         }
 
         if (regraId === 'pts_satisfacao') {

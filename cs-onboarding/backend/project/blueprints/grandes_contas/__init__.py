@@ -2,4 +2,5 @@ from flask import Blueprint
 
 grandes_contas_bp = Blueprint("grandes_contas", __name__, url_prefix="/grandes-contas")
 
-from ...modules.grandes_contas.api import routes
+from ...modules.grandes_contas.api import routes  # noqa: F401,E402 — registra as rotas no blueprint
+

@@ -66,7 +66,7 @@ class BackgroundTask:
                 try:
                     func(*args, **kwargs)
                 except Exception as e:
-                    app.logger.error(f"Background task error: {e}")
+                    app.logger.error(f"Background task error: {e}", exc_info=True)
 
         thread = threading.Thread(target=wrapper, daemon=True)
         thread.start()
@@ -103,7 +103,7 @@ def send_email_async(
             reply_to="noreply@example.com"
         )
     """
-    app = current_app._get_current_object()
+    app = current_app._get_current_object()  # type: ignore[attr-defined]
 
     def _send():
         """Função interna que será executada na thread."""
@@ -119,7 +119,7 @@ def send_email_async(
                 )
                 app.logger.info(f"Async email sent successfully to {recipients}")
             except Exception as e:
-                app.logger.error(f"Async email failed to {recipients}: {e}")
+                app.logger.error(f"Async email failed to {recipients}: {e}", exc_info=True)
 
     return BackgroundTask.run(_send)
 
@@ -143,13 +143,13 @@ def send_notification_async(user_email: str, notification_type: str, data: dict[
             data={'task_id': 123, 'comment': 'Nova mensagem'}
         )
     """
-    app = current_app._get_current_object()
+    app = current_app._get_current_object()  # type: ignore[attr-defined]
 
     def _notify():
         with app.app_context():
             try:
                 app.logger.info(f"Notification sent: {notification_type} to {user_email}")
             except Exception as e:
-                app.logger.error(f"Notification failed: {e}")
+                app.logger.error(f"Notification failed: {e}", exc_info=True)
 
     return BackgroundTask.run(_notify)

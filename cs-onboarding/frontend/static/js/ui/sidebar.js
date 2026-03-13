@@ -117,24 +117,13 @@
      * Initializes theme toggle functionality.
      */
     function initTheme() {
-        const themeToggle = document.getElementById('themeToggle');
-
-        // Load saved theme
-        const savedTheme = localStorage.getItem('theme');
-        const prefersDark = global.matchMedia && global.matchMedia('(prefers-color-scheme: dark)').matches;
-        const isDarkMode = savedTheme === 'dark' || (savedTheme === null && prefersDark);
-        applyTheme(isDarkMode);
-
-        if (themeToggle) {
-            themeToggle.addEventListener('click', function (e) {
-                e.preventDefault();
-                const isDark = document.body.classList.contains('dark-mode');
-                applyTheme(!isDark);
-                const newTheme = !isDark ? 'dark' : 'light';
-                localStorage.setItem('theme', newTheme);
-                // Set cookie for server-side rendering
-                document.cookie = 'theme=' + newTheme + ';path=/;max-age=31536000';
-            });
+        // Dark mode desativado: força tema claro e limpa preferências antigas.
+        applyTheme(false);
+        try {
+            localStorage.removeItem('theme');
+            document.cookie = 'theme=light;path=/;max-age=31536000';
+        } catch (e) {
+            // ignore
         }
     }
 

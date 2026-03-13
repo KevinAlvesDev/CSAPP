@@ -1,5 +1,5 @@
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import wraps
 
 from flask import current_app, g, request
@@ -64,7 +64,7 @@ class PerformanceMonitor:
             elapsed = time.time() - g.start_time
 
             metric = {
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "method": request.method,
                 "path": request.path,
                 "status_code": response.status_code,
@@ -91,7 +91,14 @@ class PerformanceMonitor:
     def teardown_request(self, exception=None):
         """Executado no teardown da request."""
         if exception:
-            current_app.logger.error(f"Request exception: {exception}")
+            # SSE/stream encerrado pelo cliente nao deve ser tratado como erro.
+            if isinstance(exception, (GeneratorExit, ConnectionResetError, BrokenPipeError)):
+                current_app.logger.debug("Request stream closed by client (GeneratorExit): %s", request.path)
+                return
+            if exception.__class__.__name__ == "GeneratorExit":
+                current_app.logger.debug("Request stream closed by client (GeneratorExit): %s", request.path)
+                return
+            current_app.logger.error(f"Request exception: {exception}", exc_info=True)
 
     def get_summary(self):
         """Retorna resumo das métricas."""
@@ -155,7 +162,7 @@ def monitor_function(func):
             return result
         except Exception as e:
             elapsed = time.time() - start
-            current_app.logger.error(f"Function {func.__name__} failed after {elapsed:.2f}s: {e}")
+            current_app.logger.error(f"Function {func.__name__} failed after {elapsed:.2f}s: {e}", exc_info=True)
             raise
 
     return wrapper

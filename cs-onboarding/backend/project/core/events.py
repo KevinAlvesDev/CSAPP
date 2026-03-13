@@ -29,6 +29,7 @@ Uso:
     ))
 """
 
+
 from __future__ import annotations
 
 import logging
@@ -37,8 +38,12 @@ import traceback
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, TypeVar
 
+from flask import g, has_app_context, has_request_context
+from flask.signals import got_request_exception
+
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from flask import Flask
 
 logger = logging.getLogger("app")
 
@@ -244,17 +249,24 @@ class EventBus:
             try:
                 handler(event)
             except Exception as e:
-                logger.error(f"❌ Erro no handler {handler.__name__} para {event_name}: {e}\n{traceback.format_exc()}")
+                logger.error(f"❌ Erro no handler {handler.__name__} para {event_name}: {e}\n{traceback.format_exc()}", exc_info=True)
 
     def emit_after_commit(self, event: DomainEvent) -> None:
         """
-        Agenda um evento para ser emitido após o commit do DB.
+        Agenda um evento para ser emitido ap?s o commit do DB.
 
-        Em Flask, isso pode ser implementado com after_request ou signals.
-        Por enquanto, emite imediatamente (placeholder para implementação futura).
+        Em request context, enfileira o evento para emiss?o no teardown
+        apenas quando n?o houver exce??o. Fora de request, emite na hora.
         """
-        # TODO: Implementar deferred emit com Flask signals
-        self.emit(event)
+        if not has_request_context():
+            self.emit(event)
+            return
+
+        queue = getattr(g, "_event_bus_queued_events", None)
+        if queue is None:
+            queue = []
+            g._event_bus_queued_events = queue
+        queue.append(event)
 
     def get_handlers(self, event_type: type) -> list[Callable]:
         """Retorna handlers registrados para um tipo de evento."""
@@ -324,4 +336,39 @@ class EventBus:
 # ──────────────────────────────────────────────
 # Instância global
 # ──────────────────────────────────────────────
+
+def configure_event_bus_after_commit(app: "Flask", bus: EventBus | None = None) -> None:
+    """Configura emiss?o diferida de eventos usando signals do Flask."""
+    target_bus = bus or event_bus
+
+    if getattr(app, "_event_bus_after_commit_configured", False):
+        return
+
+    @got_request_exception.connect_via(app)
+    def _mark_request_failed(sender, exception, **extra):  # type: ignore[unused-argument]
+        if has_request_context():
+            g._event_bus_request_failed = True
+
+    @app.teardown_appcontext
+    def _emit_queued_events_after_request(exception=None):
+        if not has_app_context():
+            return
+
+        queue = getattr(g, "_event_bus_queued_events", None)
+        if not queue:
+            return
+
+        request_failed = bool(getattr(g, "_event_bus_request_failed", False))
+        if exception is not None or request_failed:
+            g._event_bus_queued_events = []
+            return
+
+        queued_events = list(queue)
+        g._event_bus_queued_events = []
+
+        for queued_event in queued_events:
+            target_bus.emit(queued_event)
+
+    app._event_bus_after_commit_configured = True
+
 event_bus = EventBus()

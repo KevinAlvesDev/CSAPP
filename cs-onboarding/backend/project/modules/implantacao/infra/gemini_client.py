@@ -13,14 +13,14 @@ def generate_text(
     *,
     model: str | None = None,
     temperature: float = 0.2,
-    max_output_tokens: int = 900,
-    timeout_seconds: int = 20,
+    max_output_tokens: int = 4096,
+    timeout_seconds: int = 45,
 ) -> str:
     api_key = os.getenv("GEMINI_API_KEY", "").strip()
     if not api_key:
         raise GeminiClientError("GEMINI_API_KEY nao configurada.")
 
-    model_name = (model or os.getenv("GEMINI_MODEL") or "gemini-1.5-flash").strip()
+    model_name = (model or os.getenv("GEMINI_MODEL") or "gemini-2.5-flash").strip()
     url = (
         "https://generativelanguage.googleapis.com/v1beta/models/"
         f"{model_name}:generateContent?key={api_key}"

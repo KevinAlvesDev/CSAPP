@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(__name__)
 """
 Módulo de Utilitários do External Service
 Funções auxiliares para serialização e extração de códigos.
@@ -28,7 +30,8 @@ def json_safe_value(v):
     if hasattr(v, "isoformat"):
         try:
             return v.isoformat()
-        except Exception:
+        except Exception as exc:
+            logger.exception("Unhandled exception", exc_info=True)
             pass
 
     # Converter Decimal para string
@@ -39,28 +42,32 @@ def json_safe_value(v):
     if isinstance(v, (bytes, bytearray, memoryview)):
         try:
             return bytes(v).decode("utf-8", "replace")
-        except Exception:
+        except Exception as exc:
+            logger.exception("Unhandled exception", exc_info=True)
             return str(v)
 
     # Converter listas recursivamente
     if isinstance(v, (list, tuple)):
         try:
             return [json_safe_value(x) for x in v]
-        except Exception:
+        except Exception as exc:
+            logger.exception("Unhandled exception", exc_info=True)
             return [str(x) for x in v]
 
     # Converter dicts recursivamente
     if isinstance(v, dict):
         try:
             return {str(k): json_safe_value(val) for k, val in v.items()}
-        except Exception:
+        except Exception as exc:
+            logger.exception("Unhandled exception", exc_info=True)
             return {str(k): str(val) for k, val in v.items()}
 
     # Verificar se já é JSON-serializável
     try:
         json.dumps(v)
         return v
-    except Exception:
+    except Exception as exc:
+        logger.exception("Unhandled exception", exc_info=True)
         return str(v)
 
 
@@ -84,62 +91,73 @@ def sanitize_empresa_data(empresa):
     return empresa_safe, tipos
 
 
+def _extract_digits_from_any_field(empresa) -> str | None:
+    """Estratégia 1: busca padrão ZW_### em qualquer campo string da empresa."""
+    for _v in empresa.values():
+        if isinstance(_v, str) and _v:
+            m = re.search(r"(?i)\bZW[_\-]?(\d{2,})\b", _v)
+            if m:
+                return m.group(1)
+    return None
+
+
+def _extract_digits_from_nomeempresazw(empresa) -> str | None:
+    """Estratégia 2: busca no campo nomeempresazw."""
+    nomezw = str(empresa.get("nomeempresazw") or "").strip()
+    if not nomezw:
+        return None
+    m = re.search(r"zw[_\-]?(\d+)", nomezw, re.IGNORECASE)
+    return m.group(1) if m else None
+
+
+def _extract_digits_from_url_fields(empresa) -> str | None:
+    """Estratégia 3: busca em campos cujo nome contenha 'url'."""
+    for k, v in empresa.items():
+        if k and "url" in str(k).lower() and v:
+            m = re.search(r"zw(\d+)", str(v), re.IGNORECASE)
+            if m:
+                return m.group(1)
+    return None
+
+
+def _extract_digits_from_empresazw(empresa) -> str | None:
+    """Estratégia 4: usa o campo empresazw diretamente como número."""
+    empzw = empresa.get("empresazw")
+    with contextlib.suppress(Exception):
+        ci = int(empzw) if empzw is not None else None
+        if ci is not None and ci > 0 and ci != 1:
+            return str(ci)
+    return None
+
+
+def _extract_digits_from_id_favorecido(id_favorecido) -> str | None:
+    """Estratégia 5: fallback usando o ID Favorecido."""
+    if not id_favorecido:
+        return None
+    with contextlib.suppress(Exception):
+        return str(int(id_favorecido))
+    return None
+
+
 def extract_infra_code(empresa, id_favorecido=None):
     """
     Extrai o código de infraestrutura (ZW_###) dos dados da empresa.
-
-    Args:
-        empresa: Dicionário com dados da empresa
-        id_favorecido: ID favorecido para fallback
+    Tenta 5 estratégias em ordem de prioridade, retornando a primeira que funcionar.
 
     Returns:
         str: Código de infra no formato 'ZW_###' ou string vazia
     """
-    digits_pref = None
+    strategies = [
+        _extract_digits_from_any_field(empresa),
+        _extract_digits_from_nomeempresazw(empresa),
+        _extract_digits_from_url_fields(empresa),
+        _extract_digits_from_empresazw(empresa),
+        _extract_digits_from_id_favorecido(id_favorecido),
+    ]
 
-    # 1. Tentar extrair de qualquer campo que contenha ZW_###
-    for _k, _v in empresa.items():
-        if isinstance(_v, str) and _v:
-            m = re.search(r"(?i)\bZW[_\-]?(\d{2,})\b", _v)
-            if m:
-                digits_pref = m.group(1)
-                break
-
-    # 2. Tentar extrair do nomeempresazw
-    if not digits_pref:
-        nomezw = str(empresa.get("nomeempresazw") or "").strip()
-        if nomezw:
-            mname = re.search(r"zw[_\-]?(\d+)", nomezw, re.IGNORECASE)
-            if mname:
-                digits_pref = mname.group(1)
-
-    # 3. Tentar extrair de campos que contenham URL
-    if not digits_pref:
-        for k, v in empresa.items():
-            if k and "url" in str(k).lower() and v:
-                murl = re.search(r"zw(\d+)", str(v), re.IGNORECASE)
-                if murl:
-                    digits_pref = murl.group(1)
-                    break
-
-    # 4. Tentar usar empresazw diretamente
-    if not digits_pref:
-        empzw = empresa.get("empresazw")
-        try:
-            ci = int(empzw) if empzw is not None else None
-            if ci is not None and ci > 0 and ci != 1:
-                digits_pref = str(ci)
-        except Exception:
-            pass
-
-    # 5. Fallback: usar codigofinanceiro (ID Favorecido)
-    if not digits_pref and id_favorecido:
-        with contextlib.suppress(Exception):
-            digits_pref = str(int(id_favorecido))
-
-    # Formatar resultado
-    if digits_pref and len(digits_pref) >= 2:
-        return f"ZW_{digits_pref}"
+    for digits in strategies:
+        if digits and len(digits) >= 2:
+            return f"ZW_{digits}"
 
     return ""
 

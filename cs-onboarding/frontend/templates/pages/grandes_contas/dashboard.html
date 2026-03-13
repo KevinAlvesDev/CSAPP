@@ -10,6 +10,58 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/onboarding/dashboard_grid.css') }}">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/onboarding/dashboard_uiux.css') }}">
+<style>
+    .search-suggestions {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        margin-top: 6px;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+        z-index: 2000;
+        display: none;
+        max-height: 260px;
+        overflow: auto;
+    }
+
+    .search-suggestions .suggestion-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 8px 10px;
+        text-decoration: none;
+        color: #111827;
+        font-size: 14px;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .search-suggestions .suggestion-item:last-child {
+        border-bottom: 0;
+    }
+
+    .search-suggestions .suggestion-item:hover {
+        background: #f3f4f6;
+    }
+
+    .search-suggestions .suggestion-muted {
+        color: #6b7280;
+        font-size: 12px;
+    }
+
+    .search-suggestions .empty {
+        padding: 10px;
+        color: #6b7280;
+        font-size: 13px;
+    }
+
+    .dashboard-header {
+        overflow: visible;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -20,7 +72,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
             <!-- Seção Esquerda: Busca e Filtros -->
             <div class="d-flex align-items-center justify-content-start" style="flex: 1; gap: 10px;">
                 <form method="GET" action="{{ url_for('grandes_contas.dashboard') }}"
-                    class="d-flex align-items-center gap-2" id="search-form">
+                    class="d-flex align-items-center gap-2" id="search-form" autocomplete="off">
                     <!-- Preservar filtros existentes -->
                     {% if current_cs_filter %}
                     <input type="hidden" name="cs_filter" value="{{ current_cs_filter }}">
@@ -43,20 +95,23 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                             <span class="input-group-text bg-white border-end-0">
                                 <i class="bi bi-search text-muted"></i>
                             </span>
-                            <input type="text" class="form-control border-start-0 ps-0" name="search"
-                                value="{{ current_search or '' }}" placeholder="Buscar empresa..."
+                            <input type="text" class="form-control border-start-0 ps-0" name="search" id="searchEmpresa"
+                                autocomplete="off" spellcheck="false" placeholder="Buscar empresa..."
                                 style="background-color: white;">
-                            {% if current_search %}
-                            <a href="{{ url_for('grandes_contas.dashboard') }}?{% if current_cs_filter %}cs_filter={{ current_cs_filter }}&{% endif %}{% if current_tipo %}tipo={{ current_tipo }}&{% endif %}{% if current_date_type %}date_type={{ current_date_type }}&{% endif %}{% if current_start_date %}start_date={{ current_start_date }}&{% endif %}{% if current_end_date %}end_date={{ current_end_date }}{% endif %}"
-                                class="btn btn-outline-secondary" title="Limpar Busca">
+                            <button class="btn btn-outline-secondary" type="button" id="clearSearch"
+                                style="display: none;" title="Limpar Busca">
                                 <i class="bi bi-x-lg"></i>
-                            </a>
-                            {% else %}
+                            </button>
                             <button class="btn btn-outline-secondary" type="submit">
                                 <i class="bi bi-arrow-right"></i>
                             </button>
-                            {% endif %}
                         </div>
+                        <div id="searchSuggestions" class="search-suggestions" aria-live="polite"></div>
+                        <small class="text-white-50" id="searchCounter"
+                            style="display: none; position: absolute; top: 100%; left: 0; margin-top: 2px; white-space: nowrap;">
+                            <i class="bi bi-info-circle me-1"></i><span id="searchResults">0</span> resultado(s)
+                            encontrado(s)
+                        </small>
                     </div>
                 </form>
             </div>
@@ -203,21 +258,21 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
         {% from 'macros/cards.html' import card_stats %}
         {% set m = metrics or {} %}
         <div class="metrics-grid mb-4 dashboard-metrics">
-            {{ card_stats('Total', m.total_ativos | default(0), 'secondary', monetary_value=metrics.total_valor_ativos)
+            {{ card_stats('Total', m.total_ativos | default(0), 'secondary', monetary_value=metrics.total_valor_ativos, click_key='total')
             }}
-            {{ card_stats('Novas', m.impl_novas | default(0), 'dark', monetary_value=metrics.total_valor_novas) }}
+            {{ card_stats('Novas', m.impl_novas | default(0), 'dark', monetary_value=metrics.total_valor_novas, click_key='novas') }}
             {{ card_stats('Em Andamento', implantacoes_andamento|length if implantacoes_andamento else
-            (m.impl_andamento_total | default(0)), 'primary', monetary_value=metrics.total_valor_andamento) }}
-            {{ card_stats('Paradas', m.impl_paradas | default(0), 'danger', monetary_value=metrics.total_valor_paradas)
+            (m.impl_andamento_total | default(0)), 'primary', monetary_value=metrics.total_valor_andamento, click_key='andamento') }}
+            {{ card_stats('Paradas', m.impl_paradas | default(0), 'danger', monetary_value=metrics.total_valor_paradas, click_key='paradas')
             }}
             {{ card_stats('Futuras', m.implantacoes_futuras | default(0), 'info',
-            monetary_value=metrics.total_valor_futuras) }}
+            monetary_value=metrics.total_valor_futuras, click_key='futuras') }}
             {{ card_stats('Sem previsão', m.implantacoes_sem_previsao | default(0), 'warning',
-            monetary_value=metrics.total_valor_sem_previsao) }}
+            monetary_value=metrics.total_valor_sem_previsao, click_key='sem_previsao') }}
             {{ card_stats('Concluídas', m.impl_finalizadas | default(0), 'success',
-            monetary_value=metrics.total_valor_finalizadas) }}
+            monetary_value=metrics.total_valor_finalizadas, click_key='finalizadas') }}
             {{ card_stats('Canceladas', m.impl_canceladas | default(0), 'secondary',
-            monetary_value=metrics.total_valor_canceladas) }}
+            monetary_value=metrics.total_valor_canceladas, click_key='canceladas') }}
         </div>
 
         <!-- Flash messages agora são exibidos como toasts flutuantes automaticamente -->
@@ -641,7 +696,10 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                                             {% if impl.usuario_cs == g.user_email %}
                                             <form method="POST"
                                                 action="{{ url_for('grandes_contas_actions.retomar_implantacao') }}"
-                                                style="display:inline;" onsubmit="return confirm('Tem certeza?');">
+                                                style="display:inline;"
+                                                data-confirm-message="Deseja retomar esta implantação e alterar o status para Em Andamento?"
+                                                data-confirm-title="Retomar implantação"
+                                                data-confirm-type="warning">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <input type="hidden" name="implantacao_id" value="{{ impl.id }}">
                                                 <input type="hidden" name="redirect_to" value="dashboard">
@@ -936,8 +994,37 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
 
 
 {% block scripts_extra %}
-<script>
+<script nonce="{{ csp_nonce() }}">
+    
     document.addEventListener('DOMContentLoaded', function () {
+        const tableCard = document.querySelector('.dashboard-table-card');
+        const kpiButtons = document.querySelectorAll('.kpi-count-link');
+        const map = {
+            total: 'total-tab',
+            novas: 'novas-tab',
+            andamento: 'andamento-tab',
+            paradas: 'paradas-tab',
+            futuras: 'futuras-tab',
+            sem_previsao: 'sem-previsao-tab',
+            finalizadas: 'finalizadas-tab',
+            canceladas: 'canceladas-tab'
+        };
+        kpiButtons.forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const key = btn.getAttribute('data-kpi') || 'total';
+                const tabId = map[key] || 'total-tab';
+                const tabEl = document.getElementById(tabId);
+                if (tabEl && window.bootstrap && window.bootstrap.Tab) {
+                    new bootstrap.Tab(tabEl).show();
+                }
+                if (tableCard) {
+                    tableCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+    });
+
+document.addEventListener('DOMContentLoaded', function () {
         const tabSelector = '#myTab .nav-link';
         const tabs = document.querySelectorAll(tabSelector);
         const tabStorageKey = 'tabAtiva-dashboard';
@@ -1113,7 +1200,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
         }
     });
 </script>
-<script>
+<script nonce="{{ csp_nonce() }}">
     (function () {
         function parseDiasFromRow(tr) {
             var el = tr.querySelector('.js-dias-badge');
@@ -1132,6 +1219,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                 return desc ? (db - da) : (da - db);
             });
             rows.forEach(function (r) { tbody.appendChild(r); });
+            if (window.__reinitTabPagination) window.__reinitTabPagination('andamento');
         }
         var descBtn = document.getElementById('sort-days-desc');
         var ascBtn = document.getElementById('sort-days-asc');
@@ -1139,12 +1227,12 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
         if (ascBtn) { ascBtn.addEventListener('click', function (e) { e.preventDefault(); sortAndamento(false); }); }
     })();
 </script>
-<script>
+<script nonce="{{ csp_nonce() }}">
     document.addEventListener('DOMContentLoaded', function () {
         // Funções de atualização de badges removidas pois o cálculo agora é feito no backend
     });
 </script>
-<script>
+<script nonce="{{ csp_nonce() }}">
     document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') { updateDashboardProgress(); } });
 
     function updateDashboardProgress() {
@@ -1159,7 +1247,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
         });
     }
 </script>
-<script>
+<script nonce="{{ csp_nonce() }}">
     document.addEventListener('DOMContentLoaded', function () {
         const btnConsultar = document.getElementById('btnConsultarEmpresa');
         if (btnConsultar) {
@@ -1188,16 +1276,16 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                     const data = await response.json();
 
                     if (data.ok) {
-                        feedbackEl.textContent = 'Empresa encontrada: ' + (data.empresa.nomefantasia || data.empresa.razaosocial);
+                        const nomeOamd = data.empresa.nomefantasia || data.empresa.razaosocial;
+                        feedbackEl.textContent = 'Empresa encontrada: ' + nomeOamd;
                         feedbackEl.className = 'form-text text-success';
 
-                        // Auto-fill name if available and empty
-                        if (!nomeEmpresaInput.value) {
-                            if (data.empresa.nomefantasia) {
-                                nomeEmpresaInput.value = data.empresa.nomefantasia;
-                            } else if (data.empresa.razaosocial) {
-                                nomeEmpresaInput.value = data.empresa.razaosocial;
-                            }
+                        // Auto-fill name (prioritizing OAMD data)
+                        if (nomeOamd) {
+                            nomeEmpresaInput.value = nomeOamd;
+                            // Highlight the field briefly to show it was updated
+                            nomeEmpresaInput.classList.add('is-valid');
+                            setTimeout(() => nomeEmpresaInput.classList.remove('is-valid'), 2000);
                         }
                     } else {
                         feedbackEl.textContent = data.error || 'Erro ao consultar empresa.';
@@ -1239,15 +1327,16 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                     const data = await response.json();
 
                     if (data.ok) {
-                        feedbackEl.textContent = 'Empresa encontrada: ' + (data.empresa.nomefantasia || data.empresa.razaosocial);
+                        const nomeOamd = data.empresa.nomefantasia || data.empresa.razaosocial;
+                        feedbackEl.textContent = 'Empresa encontrada: ' + nomeOamd;
                         feedbackEl.className = 'form-text text-success';
 
-                        if (!nomeEmpresaInput.value) {
-                            if (data.empresa.nomefantasia) {
-                                nomeEmpresaInput.value = data.empresa.nomefantasia;
-                            } else if (data.empresa.razaosocial) {
-                                nomeEmpresaInput.value = data.empresa.razaosocial;
-                            }
+                        // Auto-fill name (prioritizing OAMD data)
+                        if (nomeOamd) {
+                            nomeEmpresaInput.value = nomeOamd;
+                            // Highlight the field briefly to show it was updated
+                            nomeEmpresaInput.classList.add('is-valid');
+                            setTimeout(() => nomeEmpresaInput.classList.remove('is-valid'), 2000);
                         }
                     } else {
                         feedbackEl.textContent = data.error || 'Erro ao consultar empresa.';
@@ -1272,6 +1361,68 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
         const clearBtn = document.getElementById('clearSearch');
         const searchCounter = document.getElementById('searchCounter');
         const searchResults = document.getElementById('searchResults');
+        const suggestionsEl = document.getElementById('searchSuggestions');
+        let searchIndex = null;
+
+        function buildSearchIndex() {
+            const rows = document.querySelectorAll('.tab-pane table tbody tr');
+            const unique = new Map();
+            rows.forEach((row) => {
+                const nameEl = row.querySelector('.btn-edit-empresa');
+                const cellEl = row.querySelector('td:first-child');
+                const name = (nameEl ? nameEl.textContent : cellEl ? cellEl.textContent : '') || '';
+                const cleanName = name.trim();
+                if (!cleanName) return;
+                if (!name) return;
+                const linkEl = row.querySelector("a[href*='implantacao']")
+                    || row.querySelector("a[href*='ver_implantacao']")
+                    || row.querySelector("a[href]");
+                if (!linkEl) return;
+                const href = linkEl.getAttribute('href');
+                if (!href) return;
+                const key = href || cleanName;
+                if (unique.has(key)) return;
+                unique.set(key, { name: cleanName, href });
+            });
+            return Array.from(unique.values());
+        }
+
+        function renderSuggestions(term) {
+            if (!suggestionsEl) return 0;
+            const query = term.toLowerCase().trim();
+            if (!query) {
+                suggestionsEl.style.display = 'none';
+                suggestionsEl.innerHTML = '';
+                return 0;
+            }
+
+            searchIndex = buildSearchIndex();
+
+            const matches = (searchIndex || [])
+                .filter(item => item.name.toLowerCase().includes(query))
+                .sort((a, b) => {
+                    const aStarts = a.name.toLowerCase().startsWith(query) ? 0 : 1;
+                    const bStarts = b.name.toLowerCase().startsWith(query) ? 0 : 1;
+                    if (aStarts !== bStarts) return aStarts - bStarts;
+                    return a.name.localeCompare(b.name);
+                })
+                .slice(0, 6);
+
+            if (!matches.length) {
+                suggestionsEl.innerHTML = '<div class="empty">Nenhuma empresa encontrada.</div>';
+                suggestionsEl.style.display = 'block';
+                return 0;
+            }
+
+            suggestionsEl.innerHTML = matches.map((item) => (
+                `<a class="suggestion-item" href="${item.href}">
+                    <span>${item.name}</span>
+                    <span class="suggestion-muted">Ver implantação</span>
+                </a>`
+            )).join('');
+            suggestionsEl.style.display = 'block';
+            return matches.length;
+        }
 
         if (searchInput) {
             searchInput.addEventListener('input', function () {
@@ -1280,39 +1431,8 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                 // Mostrar/ocultar botão de limpar
                 clearBtn.style.display = searchTerm ? 'block' : 'none';
 
-                // Buscar em todas as tabelas
-                const allTables = document.querySelectorAll('.tab-pane table tbody');
-                let totalFound = 0;
+                const totalFound = renderSuggestions(searchTerm);
 
-                allTables.forEach(tbody => {
-                    const rows = tbody.querySelectorAll('tr');
-
-                    rows.forEach(row => {
-                        // Pegar o nome da empresa (primeira coluna)
-                        const empresaCell = row.querySelector('td:first-child');
-                        if (!empresaCell) return;
-
-                        const empresaNome = empresaCell.textContent.toLowerCase();
-                        const matches = empresaNome.includes(searchTerm);
-
-                        if (searchTerm === '') {
-                            // Sem busca: mostrar tudo, remover destaque
-                            row.style.display = '';
-                            row.classList.remove('table-warning');
-                        } else if (matches) {
-                            // Encontrado: mostrar e destacar
-                            row.style.display = '';
-                            row.classList.add('table-warning');
-                            totalFound++;
-                        } else {
-                            // Não encontrado: ocultar
-                            row.style.display = 'none';
-                            row.classList.remove('table-warning');
-                        }
-                    });
-                });
-
-                // Atualizar contador
                 if (searchTerm) {
                     searchResults.textContent = totalFound;
                     searchCounter.style.display = 'block';
@@ -1334,6 +1454,13 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                     clearBtn.click();
                 }
             });
+
+            document.addEventListener('click', function (e) {
+                if (!suggestionsEl) return;
+                if (e.target === searchInput || suggestionsEl.contains(e.target)) return;
+                suggestionsEl.style.display = 'none';
+            });
+
         }
         // ===== VALIDAÇÃO DE DATA FORCE BRUTE =====
         // Monitoramento contínuo para impedir anos > 4 dígitos
@@ -1391,7 +1518,127 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
             }
         });
 
+        // ===== PAGINAÇÃO DOS PAINÉIS =====
+        (function () {
+            const ITEMS_PER_PAGE = 20;
+            const paginationState = {};
+
+            function renderPaginationControls(tabId) {
+                const state = paginationState[tabId];
+                if (!state) return;
+                const { allRows, currentPage, ctrlEl } = state;
+                const totalPages = Math.ceil(allRows.length / ITEMS_PER_PAGE);
+                if (totalPages <= 1) { ctrlEl.innerHTML = ''; return; }
+
+                const prevDisabled = currentPage === 1 ? 'disabled' : '';
+                const nextDisabled = currentPage === totalPages ? 'disabled' : '';
+
+                let pageItems = '';
+                for (let p = 1; p <= totalPages; p++) {
+                    if (p === 1 || p === totalPages || (p >= currentPage - 2 && p <= currentPage + 2)) {
+                        const active = p === currentPage ? 'active' : '';
+                        pageItems += `<li class="page-item ${active}"><a class="page-link" href="#" data-page="${p}">${p}</a></li>`;
+                    } else if (p === currentPage - 3 || p === currentPage + 3) {
+                        pageItems += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+                    }
+                }
+
+                const start = (currentPage - 1) * ITEMS_PER_PAGE + 1;
+                const end = Math.min(currentPage * ITEMS_PER_PAGE, allRows.length);
+
+                ctrlEl.innerHTML = `
+                    <nav aria-label="Navegação de implantações" class="d-flex justify-content-center mt-3">
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                                <a class="page-link" href="#" data-page="1" title="Primeira"><i class="bi bi-chevron-bar-left"></i></a>
+                            </li>
+                            <li class="page-item ${prevDisabled}">
+                                <a class="page-link" href="#" data-page="${currentPage - 1}"><i class="bi bi-chevron-left"></i></a>
+                            </li>
+                            ${pageItems}
+                            <li class="page-item ${nextDisabled}">
+                                <a class="page-link" href="#" data-page="${currentPage + 1}"><i class="bi bi-chevron-right"></i></a>
+                            </li>
+                            <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                                <a class="page-link" href="#" data-page="${totalPages}" title="Última"><i class="bi bi-chevron-bar-right"></i></a>
+                            </li>
+                        </ul>
+                    </nav>
+                    <div class="text-center mt-1">
+                        <small class="text-muted">Mostrando ${start}–${end} de ${allRows.length} implantações (Página ${currentPage} de ${totalPages})</small>
+                    </div>`;
+
+                ctrlEl.querySelectorAll('a[data-page]').forEach(function (a) {
+                    a.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        const p = parseInt(this.getAttribute('data-page'), 10);
+                        if (isNaN(p) || p < 1 || p > totalPages) return;
+                        goToPage(tabId, p);
+                    });
+                });
+            }
+
+            function applyPage(tabId) {
+                const state = paginationState[tabId];
+                if (!state) return;
+                const { allRows, currentPage } = state;
+                const start = (currentPage - 1) * ITEMS_PER_PAGE;
+                const end = start + ITEMS_PER_PAGE;
+                allRows.forEach(function (row, i) {
+                    row.style.display = (i >= start && i < end) ? '' : 'none';
+                });
+                renderPaginationControls(tabId);
+            }
+
+            function goToPage(tabId, page) {
+                if (!paginationState[tabId]) return;
+                paginationState[tabId].currentPage = page;
+                applyPage(tabId);
+            }
+
+            function initTabPagination(tabPane) {
+                const tabId = tabPane.id;
+                const tbody = tabPane.querySelector('table tbody');
+                const tableWrap = tabPane.querySelector('.table-responsive');
+                if (!tbody || !tableWrap) return;
+
+                const allRows = Array.from(tbody.querySelectorAll('tr'));
+                if (allRows.length <= ITEMS_PER_PAGE) return;
+
+                let ctrlEl = tabPane.querySelector('.tab-pagination-ctrl');
+                if (!ctrlEl) {
+                    ctrlEl = document.createElement('div');
+                    ctrlEl.className = 'tab-pagination-ctrl';
+                    tableWrap.insertAdjacentElement('afterend', ctrlEl);
+                }
+
+                paginationState[tabId] = { allRows, currentPage: 1, tbody, ctrlEl };
+                applyPage(tabId);
+            }
+
+            window.__reinitTabPagination = function (tabId) {
+                const state = paginationState[tabId];
+                if (!state) return;
+                const allRows = Array.from(state.tbody.querySelectorAll('tr'));
+                state.allRows = allRows;
+                state.currentPage = 1;
+                applyPage(tabId);
+            };
+
+            document.querySelectorAll('.tab-pane').forEach(function (pane) {
+                initTabPagination(pane);
+            });
+
+            document.querySelectorAll('[data-bs-toggle="tab"]').forEach(function (trigger) {
+                trigger.addEventListener('shown.bs.tab', function (e) {
+                    const targetId = (e.target.getAttribute('href') || e.target.getAttribute('data-bs-target') || '').replace('#', '');
+                    if (paginationState[targetId]) {
+                        goToPage(targetId, 1);
+                    }
+                });
+            });
+        })();
+
     });
 </script>
 {% endblock %}
-

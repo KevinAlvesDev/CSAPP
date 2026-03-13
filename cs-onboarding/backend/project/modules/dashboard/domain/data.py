@@ -1,16 +1,19 @@
+import logging
+logger = logging.getLogger(__name__)
 """
 Módulo de Dados do Dashboard
 Buscar e processar dados para o dashboard.
 Princípio SOLID: Single Responsibility
 """
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from flask import current_app, g
 
-from ....common.utils import format_date_br, format_date_iso_for_json
 from ....common.context_profiles import resolve_context
+from ....common.utils import format_date_br, format_date_iso_for_json
 from ....constants import PERFIL_ADMIN, PERFIL_COORDENADOR, PERFIL_GERENTE
+from ....config.cache_config import cache, get_dashboard_cache_version
 from ....db import execute_db, query_db
 from ....modules.implantacao.domain import _get_progress
 from ....modules.time.application.time_calculator import calculate_days_parada, calculate_days_passed
@@ -36,12 +39,13 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
     if page is not None and per_page is None:
         per_page = 100
 
-    # Cache desabilitado para garantir dados em tempo real
-    # cache_key = f"dashboard_data_{user_email}_{filtered_cs_email or 'all'}_p{page}_pp{per_page}"
-    # if cache and use_cache:
-    #     cached_data = cache.get(cache_key)
-    #     if cached_data:
-    #         return cached_data
+    cache_key = None
+    if cache and use_cache:
+        version = get_dashboard_cache_version(user_email)
+        cache_key = f"dashboard_data_{user_email}_v{version}_{filtered_cs_email or 'all'}_p{page}_pp{per_page}"
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return cached_data
 
     perfil_acesso = g.perfil.get("perfil_acesso") if g.get("perfil") else None
     manager_profiles = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
@@ -76,6 +80,7 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
             GROUP BY ci.implantacao_id
         ) last_activity ON last_activity.implantacao_id = i.id
     """
+    ctx = resolve_context()
     args = [ctx]
 
     if not is_manager_view:
@@ -125,7 +130,8 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
     impl_list = query_db(query_sql, tuple(args))
     impl_list = impl_list if impl_list is not None else []
 
-    dashboard_data = {
+    from typing import Any
+    dashboard_data: dict[str, list[dict[str, Any]]] = {
         "andamento": [],
         "futuras": [],
         "sem_previsao": [],
@@ -153,7 +159,7 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
         "total_valor_modulos": 0.0,
     }
 
-    agora = datetime.now()
+    agora = datetime.now(timezone.utc)
 
     for impl in impl_list:
         if not impl or not isinstance(impl, dict):
@@ -183,8 +189,8 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
                 except (ValueError, TypeError):
                     modulo_valor = 0.0
                 metrics["total_valor_modulos"] += modulo_valor
-        except Exception:
-            pass
+        except Exception as e:
+            current_app.logger.warning(f"Falha ao contabilizar módulo na implantação {impl_id}: {e}", exc_info=True)
 
         impl["data_criacao_iso"] = format_date_iso_for_json(impl.get("data_criacao"), only_date=True)
         impl["data_inicio_efetivo_iso"] = format_date_iso_for_json(impl.get("data_inicio_efetivo"), only_date=True)
@@ -192,13 +198,19 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
         impl["data_final_implantacao_iso"] = format_date_iso_for_json(
             impl.get("data_final_implantacao"), only_date=True
         )
+        impl["data_cancelamento_fmt"] = format_date_br(impl.get("data_cancelamento"), include_time=False)
 
-        try:
-            prog_percent, _, _ = _get_progress(impl_id)
-        except Exception:
-            total_tasks = impl.get("total_tarefas", 0) or 0
-            done_tasks = impl.get("tarefas_concluidas", 0) or 0
-            prog_percent = round((done_tasks / total_tasks) * 100) if total_tasks > 0 else 100
+        plano_status = (impl.get("plano_status") or "").strip().lower()
+        if (not impl.get("plano_sucesso_id")) or (plano_status == "concluido"):
+            prog_percent = 0
+        else:
+            try:
+                prog_percent, _, _ = _get_progress(impl_id)
+            except Exception as exc:
+                logger.exception("Unhandled exception", exc_info=True)
+                total_tasks = impl.get("total_tarefas", 0) or 0
+                done_tasks = impl.get("tarefas_concluidas", 0) or 0
+                prog_percent = round((done_tasks / total_tasks) * 100) if total_tasks > 0 else 0
         impl["progresso"] = prog_percent
 
         try:
@@ -212,7 +224,7 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
             if dias_passados is None:
                 dias_passados = 0
         except Exception as e:
-            current_app.logger.warning(f"Error calculating dias_passados for impl {impl_id}: {e}")
+            current_app.logger.warning(f"Error calculating dias_passados for impl {impl_id}: {e}", exc_info=True)
             dias_passados = 0
         except:
             current_app.logger.error(f"Unexpected error calculating dias_passados for impl {impl_id}")
@@ -229,7 +241,7 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
                         ultima_atividade_raw
                     )
                 except Exception as e:
-                    current_app.logger.warning(f"Erro ao formatar tempo relativo para impl {impl_id}: {e}")
+                    current_app.logger.warning(f"Erro ao formatar tempo relativo para impl {impl_id}: {e}", exc_info=True)
                     ultima_atividade_text, ultima_atividade_dias, ultima_atividade_status = (
                         "Sem comentários",
                         None,
@@ -246,7 +258,7 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
 
         except Exception as e:
             # Fallback completo em caso de erro crítico
-            current_app.logger.error(f"Erro crítico ao processar ultima_atividade para impl {impl_id}: {e}")
+            current_app.logger.error(f"Erro crítico ao processar ultima_atividade para impl {impl_id}: {e}", exc_info=True)
             impl["ultima_atividade_text"] = "Sem comentários"
             impl["ultima_atividade_dias"] = 0
             impl["ultima_atividade_status"] = "gray"
@@ -265,7 +277,7 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
             try:
                 dias_parada = calculate_days_parada(impl_id)
             except Exception as e:
-                current_app.logger.warning(f"Error calculating dias_parada for impl {impl_id}: {e}")
+                current_app.logger.warning(f"Error calculating dias_parada for impl {impl_id}: {e}", exc_info=True)
                 dias_parada = 0
 
             impl["dias_parada"] = dias_parada
@@ -339,9 +351,8 @@ def get_dashboard_data(user_email, filtered_cs_email=None, page=None, per_page=N
 
     result = (dashboard_data, metrics, pagination) if pagination else (dashboard_data, metrics)
 
-    # Cache desabilitado para garantir dados em tempo real
-    # if cache and use_cache:
-    #     cache.set(cache_key, result, timeout=300)
+    if cache and use_cache and cache_key:
+        cache.set(cache_key, result, timeout=300)
 
     return result
 
@@ -415,4 +426,3 @@ def get_tags_metrics(start_date=None, end_date=None, user_email=None):
             report[email]["tags_count"][tag] = qtd
 
     return report
-    ctx = resolve_context()

@@ -25,17 +25,18 @@ NAO_DEFINIDO_BOOL = "Não definido"
 
 SIM_NAO_OPTIONS = [NAO_DEFINIDO_BOOL, "Sim", "Não"]
 
-ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "kevinalveswp@gmail.com")
-MASTER_ADMIN_EMAIL = "kevinalveswp@gmail.com"
-
-CARGOS_LIST = ["Júnior", "Pleno", "Sênior"]
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "kevinpereira@pactosolucoes.com.br")
+MASTER_ADMIN_EMAIL = os.environ.get("MASTER_ADMIN_EMAIL", "")
 
 PERFIL_ADMIN = "Administrador"
 PERFIL_GERENTE = "Gerente"
 PERFIL_COORDENADOR = "Coordenador"
 PERFIL_IMPLANTADOR = "Implantador"
+PERFIL_SEM_ACESSO = "Sem Acesso"
 
-PERFIS_ACESSO_LIST = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR, PERFIL_IMPLANTADOR]
+PERFIS_ACESSO_LIST = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR, PERFIL_IMPLANTADOR, PERFIL_SEM_ACESSO]
+
+CARGOS_VALIDOS = ("Sênior", "Pleno", "Júnior")
 
 # Perfis com permissão de gestão completa (criar, editar, excluir implantações)
 PERFIS_COM_GESTAO = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
@@ -46,14 +47,8 @@ PERFIS_COM_CRIACAO = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
 # Perfis com acesso ao Dashboard Gerencial (Analytics)
 PERFIS_COM_ANALYTICS = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
 
-# Perfis que veem todas as implantações no dashboard
-PERFIS_VER_TODAS_IMPLANTACOES = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
-
 # Perfis com acesso à página de Usuários (manage-users)
 PERFIS_GERENCIAR_USUARIOS = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
-
-# Perfis com acesso ao Plano de Sucesso
-PERFIS_PLANO_SUCESSO = [PERFIL_ADMIN, PERFIL_GERENTE, PERFIL_COORDENADOR]
 
 NIVEIS_RECEITA = [
     "Prata (MRR abaixo de R$699,99)",
@@ -136,3 +131,22 @@ MODULO_OPCOES = {
     "app_treino": "App Treino",
     "recorrencia": "Recorrência",
 }
+
+MOTIVOS_CANCELAMENTO = [
+    "Incompatibilidade com o orçamento",
+    "Corte geral de gastos",
+    "Troca por opção mais barata ou gratuita",
+    "Dificuldade de uso ou sistema muito complexo",
+    "Falta de funcionalidades essenciais",
+    "Instabilidade técnica, lentidão ou falhas",
+    "Falta de integração com outras ferramentas",
+    "Interface ou tecnologia obsoleta",
+    "Suporte técnico ineficiente ou demorado",
+    "Dificuldade na implantação inicial (Onboarding)",
+    "Insatisfação com o atendimento comercial",
+    "Encerramento das atividades da empresa",
+    "Baixa adesão ou falta de engajamento da equipe",
+    "Mudança no porte ou segmento da empresa",
+    "Migração para software concorrente",
+]
+

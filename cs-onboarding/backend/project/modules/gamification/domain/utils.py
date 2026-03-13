@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(__name__)
 """
 Módulo de Utilidades de Gamificação
 Funções auxiliares de cache e listagem de usuários.
@@ -15,7 +17,8 @@ def clear_gamification_cache():
     try:
         gamification_rules_cache.clear()
         return True
-    except Exception:
+    except Exception as exc:
+        logger.exception("Unhandled exception", exc_info=True)
         return False
 
 
@@ -24,12 +27,12 @@ def get_all_cs_users_for_gamification(context=None):
     ctx = resolve_context(context)
     result = query_db(
         """
-        SELECT pu.usuario, pu.nome, pu.cargo
-        FROM perfil_usuario pu
-        LEFT JOIN perfil_usuario_contexto puc ON pu.usuario = puc.usuario AND puc.contexto = %s
-        WHERE COALESCE(puc.perfil_acesso, pu.perfil_acesso) IS NOT NULL
-            AND COALESCE(puc.perfil_acesso, pu.perfil_acesso) != ''
-        ORDER BY pu.nome
+        SELECT u.usuario AS usuario, u.nome, u.cargo
+        FROM perfil_usuario u
+        LEFT JOIN perfil_usuario_contexto puc ON puc.usuario = u.usuario AND puc.contexto = %s
+        WHERE COALESCE(puc.perfil_acesso, 'Sem Acesso') IS NOT NULL
+            AND COALESCE(puc.perfil_acesso, 'Sem Acesso') != ''
+        ORDER BY u.nome
         """,
         (ctx,),
     )

@@ -25,19 +25,15 @@ if config.config_file_name is not None:
 # Obter DATABASE_URL do ambiente
 database_url = os.environ.get('DATABASE_URL')
 
-# Se não houver DATABASE_URL, usar SQLite local
 if not database_url:
-    base_dir = Path(__file__).resolve().parents[1] / 'backend' / 'project'
-    db_path = base_dir / 'dashboard_simples.db'
-    database_url = f'sqlite:///{db_path}'
+    raise RuntimeError("DATABASE_URL não configurado. SQLite local não é suportado.")
 
-# Configurar a URL do banco de dados
-config.set_main_option('sqlalchemy.url', database_url)
+# Configurar a URL do banco de dados.
+# ConfigParser usa '%' para interpolação, então precisamos escapar.
+config.set_main_option('sqlalchemy.url', database_url.replace("%", "%%"))
 
-# add your model's MetaData object here
-# for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
+# Metadata não é necessário para executar migrations versionadas (upgrade/downgrade).
+# Evita quebrar o Alembic quando há conflitos de mapeamento nos modelos da aplicação.
 target_metadata = None
 
 # other values from the config, defined by the needs of env.py,
@@ -96,4 +92,3 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     run_migrations_online()
-

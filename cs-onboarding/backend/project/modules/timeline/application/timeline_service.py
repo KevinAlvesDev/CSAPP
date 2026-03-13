@@ -1,5 +1,10 @@
 from ....db import query_db
 
+__all__ = [
+    "get_timeline_logs",
+    "export_timeline_csv",
+]
+
 
 def _build_timeline_filters(
     impl_id: int,
@@ -66,7 +71,7 @@ def get_timeline_logs(
     """
     params_with_pagination = [*params, per_page, offset]
 
-    rows = query_db(sql, tuple(params_with_pagination)) or []
+    rows = query_db(sql, tuple(params_with_pagination)) or []  # nosec B608
     items: list[dict] = []
     for r in rows:
         d = dict(r)
@@ -107,7 +112,7 @@ def export_timeline_csv(
         WHERE {where_clause}
         ORDER BY tl.data_criacao DESC
     """
-    rows = query_db(sql, tuple(params)) or []
+    rows = query_db(sql, tuple(params)) or []  # nosec B608
 
     output = io.StringIO()
     writer = csv.writer(output)

@@ -1,11 +1,14 @@
+import logging
+logger = logging.getLogger(__name__)
 """
 Serviço de Perfis e Permissões (RBAC)
 Gerencia perfis de acesso e suas permissões no sistema.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
+from typing import Any, cast
 
-from flask import current_app, g
+from flask import current_app, g, has_app_context
 
 from ....common.context_navigation import normalize_context
 from ....common.exceptions import DatabaseError, ValidationError
@@ -14,12 +17,33 @@ from ....db import db_connection, execute_db, query_db
 PERFIS_TABLE = "perfis_acesso_contexto"
 PERMISSOES_TABLE = "permissoes_contexto"
 
+__all__ = [
+    "listar_perfis",
+    "obter_perfil",
+    "obter_perfil_completo",
+    "criar_perfil",
+    "atualizar_perfil",
+    "excluir_perfil",
+    "atualizar_permissoes",
+    "listar_recursos",
+    "obter_categorias",
+    "verificar_permissao",
+    "resolver_perfil_id",
+    "verificar_permissao_por_contexto",
+    "clonar_perfil",
+    "obter_modulos_perfil",
+    "atualizar_modulos_perfil",
+]
+
+VALID_CONTEXTS = ("onboarding", "ongoing", "grandes_contas")
+
 
 def _resolve_context(context=None):
     current_ctx = None
     try:
         current_ctx = getattr(g, "modulo_atual", None)
-    except Exception:
+    except Exception as exc:
+        logger.exception("Unhandled exception", exc_info=True)
         current_ctx = None
     return normalize_context(context) or normalize_context(current_ctx) or "onboarding"
 
@@ -67,7 +91,7 @@ def obter_perfil(perfil_id: int, context: str | None = None) -> dict | None:
     """
     ctx = _resolve_context(context)
     perfil = query_db(f"SELECT * FROM {PERFIS_TABLE} WHERE id = %s AND contexto = %s", (perfil_id, ctx), one=True)
-    return perfil
+    return cast(dict[Any, Any] | None, perfil)
 
 
 def obter_perfil_completo(perfil_id: int, context: str | None = None) -> dict | None:
@@ -143,7 +167,7 @@ def criar_perfil(
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
     """
 
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
 
     with db_connection() as (conn, db_type):
         cursor = conn.cursor()
@@ -162,7 +186,7 @@ def criar_perfil(
         conn.commit()
 
     current_app.logger.info(f"Perfil '{nome}' criado com ID {perfil_id} por {criado_por}")
-    return perfil_id
+    return cast(int, perfil_id)
 
 
 def atualizar_perfil(perfil_id: int, dados: dict, context: str | None = None) -> bool:
@@ -201,13 +225,13 @@ def atualizar_perfil(perfil_id: int, dados: dict, context: str | None = None) ->
         return True
 
     campos.append("atualizado_em = %s")
-    valores.append(datetime.now())
+    valores.append(datetime.now(timezone.utc))
     valores.append(perfil_id)
 
     sql = f"UPDATE {PERFIS_TABLE} SET {', '.join(campos)} WHERE id = %s AND contexto = %s"
 
     valores.append(ctx)
-    execute_db(sql, tuple(valores), raise_on_error=True)
+    execute_db(sql, tuple(valores), raise_on_error=True)  # nosec B608
 
     current_app.logger.info(f"Perfil ID {perfil_id} atualizado")
     return True
@@ -265,19 +289,19 @@ def atualizar_permissoes(perfil_id: int, permissoes: list[int], context: str | N
             if db_type == "sqlite":
                 delete_sql = delete_sql.replace("%s", "?")
 
-            cursor.execute(delete_sql, (perfil_id,))
+            cursor.execute(delete_sql, (perfil_id,))  # nosec B608
 
             # Inserir novas permissões
             if permissoes:
-                insert_sql = (
-                    f"INSERT INTO {PERMISSOES_TABLE} (perfil_ctx_id, recurso_id, concedida, criado_em) VALUES (%s, %s, %s, %s)"
-                )
+                insert_sql = """
+                    INSERT INTO permissoes_contexto (perfil_ctx_id, recurso_id, concedida, criado_em) VALUES (%s, %s, %s, %s)
+                """
                 if db_type == "sqlite":
                     insert_sql = insert_sql.replace("%s", "?")
 
-                now = datetime.now()
+                now = datetime.now(timezone.utc)
                 for recurso_id in permissoes:
-                    cursor.execute(insert_sql, (perfil_id, recurso_id, True, now))
+                    cursor.execute(insert_sql, (perfil_id, recurso_id, True, now))  # nosec B608
 
             conn.commit()
 
@@ -338,7 +362,7 @@ def verificar_permissao(perfil_id: int, recurso_codigo: str) -> bool:
         one=True,
     )
 
-    return resultado and resultado["count"] > 0
+    return bool(resultado and resultado["count"] > 0)
 
 
 def resolver_perfil_id(perfil_contexto: dict | None, context: str | None = None) -> int | None:
@@ -357,21 +381,22 @@ def resolver_perfil_id(perfil_contexto: dict | None, context: str | None = None)
     else:
         try:
             perfil_id = perfil_contexto["id"]
-        except Exception:
+        except Exception as exc:
+            logger.exception("Unhandled exception", exc_info=True)
             perfil_id = None
         try:
             perfil_nome = (perfil_contexto["perfil_acesso"] or "").strip()
-        except Exception:
+        except Exception as exc:
+            logger.exception("Unhandled exception", exc_info=True)
             perfil_nome = ""
 
     if perfil_id:
         try:
             return int(perfil_id)
         except (TypeError, ValueError):
-            current_app.logger.warning(f"perfil_id invalido no contexto: {perfil_id!r}")
+            if has_app_context():
+                current_app.logger.warning(f"perfil_id invalido no contexto: {perfil_id!r}")
 
-    if not perfil_nome:
-        return None
 
     perfil = query_db(
         "SELECT id FROM perfis_acesso_contexto WHERE LOWER(nome) = LOWER(%s) AND contexto = %s LIMIT 1",
@@ -388,6 +413,8 @@ def verificar_permissao_por_contexto(perfil_contexto: dict | None, recurso_codig
     Verifica permissao de um recurso usando o contexto do usuario (g.perfil).
     """
     perfil_id = resolver_perfil_id(perfil_contexto)
+    if perfil_id is None:
+        return False
     return verificar_permissao(perfil_id, recurso_codigo)
 
 
@@ -424,6 +451,80 @@ def clonar_perfil(perfil_id: int, novo_nome: str, criado_por: str = "Sistema", c
         recurso_ids = [p["recurso_id"] for p in permissoes_originais]
         atualizar_permissoes(novo_perfil_id, recurso_ids, context=ctx)
 
-    current_app.logger.info(f"Perfil '{perfil_original['nome']}' clonado como '{novo_nome}' (ID {novo_perfil_id})")
+    if has_app_context():
+        current_app.logger.info(f"Perfil '{perfil_original['nome']}' clonado como '{novo_nome}' (ID {novo_perfil_id})")
 
     return novo_perfil_id
+
+
+def obter_modulos_perfil(perfil_id: int, context: str | None = None) -> list[str]:
+    """
+    Retorna a lista de contextos (módulos) em que este perfil existe.
+    Um perfil existe em um módulo se há linha em perfis_acesso_contexto para aquele contexto e nome.
+    """
+    ctx = _resolve_context(context)
+    perfil = query_db(f"SELECT nome FROM {PERFIS_TABLE} WHERE id = %s AND contexto = %s", (perfil_id, ctx), one=True)
+    if not perfil:
+        return []
+
+    nome = perfil["nome"]
+    rows = query_db(
+        "SELECT contexto FROM perfis_acesso_contexto WHERE nome = %s ORDER BY contexto",
+        (nome,),
+    )
+    return [r["contexto"] for r in rows] if rows else []
+
+
+def atualizar_modulos_perfil(perfil_id: int, modulos_selecionados: list[str], context: str | None = None) -> None:
+    """
+    Atualiza em quais módulos (contextos) o perfil deve existir.
+    - Adiciona linhas em perfis_acesso_contexto para módulos novos.
+    - Remove linhas (e permissoes em cascata) para módulos desmarcados.
+    Não permite remover o contexto atual do próprio perfil.
+    """
+    ctx = _resolve_context(context)
+    perfil = query_db(f"SELECT nome, descricao, sistema, ativo, cor, icone FROM {PERFIS_TABLE} WHERE id = %s AND contexto = %s", (perfil_id, ctx), one=True)
+    if not perfil:
+        raise ValidationError(f"Perfil com ID {perfil_id} não encontrado")
+
+    nome = perfil["nome"]
+    modulos_validos = [m for m in modulos_selecionados if m in VALID_CONTEXTS]
+
+    # Sempre manter o contexto atual
+    if ctx not in modulos_validos:
+        modulos_validos.append(ctx)
+
+    with db_connection() as (conn, db_type):
+        cursor = conn.cursor()
+        ph = "%s" if db_type == "postgres" else "?"
+
+        # Inserir módulos novos
+        for mod in modulos_validos:
+            cursor.execute(f"""
+                INSERT INTO perfis_acesso_contexto
+                    (contexto, nome, descricao, sistema, ativo, cor, icone, criado_por)
+                SELECT {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, 'admin'
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM perfis_acesso_contexto WHERE contexto = {ph} AND nome = {ph}
+                )
+            """, (mod, nome, perfil["descricao"], perfil["sistema"], perfil["ativo"],
+                  perfil["cor"], perfil["icone"], mod, nome))
+
+        # Remover módulos desmarcados (exceto o atual)
+        for mod in VALID_CONTEXTS:
+            if mod not in modulos_validos and mod != ctx:
+                # Apagar permissoes_contexto em cascata
+                cursor.execute(f"""
+                    DELETE FROM permissoes_contexto
+                    WHERE perfil_ctx_id IN (
+                        SELECT id FROM perfis_acesso_contexto WHERE contexto = {ph} AND nome = {ph}
+                    )
+                """, (mod, nome))
+                cursor.execute(f"""
+                    DELETE FROM perfis_acesso_contexto WHERE contexto = {ph} AND nome = {ph}
+                """, (mod, nome))
+
+        conn.commit()
+
+    if has_app_context():
+        current_app.logger.info(f"Módulos do perfil '{nome}' atualizados: {modulos_validos}")

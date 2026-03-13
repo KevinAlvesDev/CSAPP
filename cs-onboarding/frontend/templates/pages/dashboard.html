@@ -1,6 +1,57 @@
 {% extends "base.html" %}
 
-{% block title %}CS Onboarding{% endblock %}
+{% block title %}CS Control{% endblock %}
+
+{% block head_extra %}
+<style>
+    .search-suggestions {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        margin-top: 6px;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+        z-index: 2000;
+        display: none;
+        max-height: 260px;
+        overflow: auto;
+    }
+
+    .search-suggestions .suggestion-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 8px 10px;
+        text-decoration: none;
+        color: #111827;
+        font-size: 14px;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .search-suggestions .suggestion-item:last-child {
+        border-bottom: 0;
+    }
+
+    .search-suggestions .suggestion-item:hover {
+        background: #f3f4f6;
+    }
+
+    .search-suggestions .suggestion-muted {
+        color: #6b7280;
+        font-size: 12px;
+    }
+
+    .search-suggestions .empty {
+        padding: 10px;
+        color: #6b7280;
+        font-size: 13px;
+    }
+</style>
+{% endblock %}
 
 {# Importar macros do dashboard #}
 {% from 'macros/dashboard.html' import empresa_link, empresa_cell, implantador_cell, status_badge, tipo_badge,
@@ -23,6 +74,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                             <i class="bi bi-x-lg"></i>
                         </button>
                     </div>
+                    <div id="searchSuggestions" class="search-suggestions" aria-live="polite"></div>
                     <small class="text-white-50" id="searchCounter"
                         style="display: none; position: absolute; top: 100%; left: 0; margin-top: 2px; white-space: nowrap;">
                         <i class="bi bi-info-circle me-1"></i><span id="searchResults">0</span> resultado(s)
@@ -454,7 +506,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                                             impl.usuario_cs }}</td>
                                         <td>{{ tipo_badge(impl.tipo) }}</td>
                                         <td><span class="badge bg-danger js-dias-badge" data-impl-id="{{ impl.id }}"
-                                                data-start-iso="{{ impl.data_finalizacao | default('') }}"
+                                                data-start-iso="{{ impl.data_parada_referencia_iso | default('') }}"
                                                 data-status="parada">{{ impl.dias_parada | int }} dias</span></td>
                                         <td class="text-truncate" style="max-width: 200px;">{{ impl.motivo_parada |
                                             default('N/A') }}</td>
@@ -467,7 +519,10 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                                             {% if impl.usuario_cs == g.user_email %}
                                             <form method="POST"
                                                 action="{{ url_for('onboarding_actions.retomar_implantacao') }}"
-                                                style="display:inline;" onsubmit="return confirm('Tem certeza?');">
+                                                style="display:inline;"
+                                                data-confirm-message="Deseja retomar esta implantação e alterar o status para Em Andamento?"
+                                                data-confirm-title="Retomar implantação"
+                                                data-confirm-type="warning">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <input type="hidden" name="implantacao_id" value="{{ impl.id }}">
                                                 <input type="hidden" name="redirect_to" value="dashboard">
@@ -762,7 +817,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
 
 
 {% block scripts_extra %}
-<script>
+<script nonce="{{ csp_nonce() }}">
     document.addEventListener('DOMContentLoaded', function () {
         const tabSelector = '#myTab .nav-link';
         const tabs = document.querySelectorAll(tabSelector);
@@ -939,7 +994,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
         }
     });
 </script>
-<script>
+<script nonce="{{ csp_nonce() }}">
     (function () {
         function parseDiasFromRow(tr) {
             var el = tr.querySelector('.js-dias-badge');
@@ -965,7 +1020,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
         if (ascBtn) { ascBtn.addEventListener('click', function (e) { e.preventDefault(); sortAndamento(false); }); }
     })();
 </script>
-<script>
+<script nonce="{{ csp_nonce() }}">
     document.addEventListener('DOMContentLoaded', function () {
         function parseISODate(iso) {
             if (!iso) return null;
@@ -996,7 +1051,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
         setInterval(updateBadges, 60000);
     });
 </script>
-<script>
+<script nonce="{{ csp_nonce() }}">
     document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') { updateDashboardProgress(); } });
 
     function updateDashboardProgress() {
@@ -1011,7 +1066,7 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
         });
     }
 </script>
-<script>
+<script nonce="{{ csp_nonce() }}">
     document.addEventListener('DOMContentLoaded', function () {
         const btnConsultar = document.getElementById('btnConsultarEmpresa');
         if (btnConsultar) {
@@ -1040,16 +1095,16 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                     const data = await response.json();
 
                     if (data.ok) {
-                        feedbackEl.textContent = 'Empresa encontrada: ' + (data.empresa.nomefantasia || data.empresa.razaosocial);
+                        const nomeOamd = data.empresa.nomefantasia || data.empresa.razaosocial;
+                        feedbackEl.textContent = 'Empresa encontrada: ' + nomeOamd;
                         feedbackEl.className = 'form-text text-success';
 
-                        // Auto-fill name if available and empty
-                        if (!nomeEmpresaInput.value) {
-                            if (data.empresa.nomefantasia) {
-                                nomeEmpresaInput.value = data.empresa.nomefantasia;
-                            } else if (data.empresa.razaosocial) {
-                                nomeEmpresaInput.value = data.empresa.razaosocial;
-                            }
+                        // Auto-fill name (prioritizing OAMD data)
+                        if (nomeOamd) {
+                            nomeEmpresaInput.value = nomeOamd;
+                            // Highlight the field briefly to show it was updated
+                            nomeEmpresaInput.classList.add('is-valid');
+                            setTimeout(() => nomeEmpresaInput.classList.remove('is-valid'), 2000);
                         }
                     } else {
                         feedbackEl.textContent = data.error || 'Erro ao consultar empresa.';
@@ -1091,15 +1146,16 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                     const data = await response.json();
 
                     if (data.ok) {
-                        feedbackEl.textContent = 'Empresa encontrada: ' + (data.empresa.nomefantasia || data.empresa.razaosocial);
+                        const nomeOamd = data.empresa.nomefantasia || data.empresa.razaosocial;
+                        feedbackEl.textContent = 'Empresa encontrada: ' + nomeOamd;
                         feedbackEl.className = 'form-text text-success';
 
-                        if (!nomeEmpresaInput.value) {
-                            if (data.empresa.nomefantasia) {
-                                nomeEmpresaInput.value = data.empresa.nomefantasia;
-                            } else if (data.empresa.razaosocial) {
-                                nomeEmpresaInput.value = data.empresa.razaosocial;
-                            }
+                        // Auto-fill name (prioritizing OAMD data)
+                        if (nomeOamd) {
+                            nomeEmpresaInput.value = nomeOamd;
+                            // Highlight the field briefly to show it was updated
+                            nomeEmpresaInput.classList.add('is-valid');
+                            setTimeout(() => nomeEmpresaInput.classList.remove('is-valid'), 2000);
                         }
                     } else {
                         feedbackEl.textContent = data.error || 'Erro ao consultar empresa.';
@@ -1124,6 +1180,65 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
         const clearBtn = document.getElementById('clearSearch');
         const searchCounter = document.getElementById('searchCounter');
         const searchResults = document.getElementById('searchResults');
+        const suggestionsEl = document.getElementById('searchSuggestions');
+        let searchIndex = null;
+
+        function buildSearchIndex() {
+            const rows = document.querySelectorAll('.tab-pane table tbody tr');
+            const unique = new Map();
+            rows.forEach((row) => {
+                const nameEl = row.querySelector('.btn-edit-empresa');
+                if (!nameEl) return;
+                const name = (nameEl.textContent || '').trim();
+                if (!name) return;
+                const linkEl = row.querySelector("a[href*='ver_implantacao']");
+                if (!linkEl) return;
+                const href = linkEl.getAttribute('href');
+                if (!href) return;
+                const key = href || name;
+                if (unique.has(key)) return;
+                unique.set(key, { name, href });
+            });
+            return Array.from(unique.values());
+        }
+
+        function renderSuggestions(term) {
+            if (!suggestionsEl) return;
+            const query = term.toLowerCase().trim();
+            if (!query) {
+                suggestionsEl.style.display = 'none';
+                suggestionsEl.innerHTML = '';
+                return;
+            }
+
+            if (!searchIndex) {
+                searchIndex = buildSearchIndex();
+            }
+
+            const matches = (searchIndex || [])
+                .filter(item => item.name.toLowerCase().includes(query))
+                .sort((a, b) => {
+                    const aStarts = a.name.toLowerCase().startsWith(query) ? 0 : 1;
+                    const bStarts = b.name.toLowerCase().startsWith(query) ? 0 : 1;
+                    if (aStarts !== bStarts) return aStarts - bStarts;
+                    return a.name.localeCompare(b.name);
+                })
+                .slice(0, 6);
+
+            if (!matches.length) {
+                suggestionsEl.innerHTML = '<div class="empty">Nenhuma empresa encontrada.</div>';
+                suggestionsEl.style.display = 'block';
+                return;
+            }
+
+            suggestionsEl.innerHTML = matches.map((item) => (
+                `<a class="suggestion-item" href="${item.href}">
+                    <span>${item.name}</span>
+                    <span class="suggestion-muted">Ver implantação</span>
+                </a>`
+            )).join('');
+            suggestionsEl.style.display = 'block';
+        }
 
         if (searchInput) {
             searchInput.addEventListener('input', function () {
@@ -1171,6 +1286,8 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                 } else {
                     searchCounter.style.display = 'none';
                 }
+
+                renderSuggestions(searchTerm);
             });
 
             // Botão de limpar
@@ -1185,6 +1302,12 @@ ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
                 if (e.key === 'Escape') {
                     clearBtn.click();
                 }
+            });
+
+            document.addEventListener('click', function (e) {
+                if (!suggestionsEl) return;
+                if (e.target === searchInput || suggestionsEl.contains(e.target)) return;
+                suggestionsEl.style.display = 'none';
             });
         }
     });

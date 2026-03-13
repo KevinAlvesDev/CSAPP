@@ -30,7 +30,7 @@
                 id_favorecido: impl.id_favorecido || '',
                 chave_oamd: impl.chave_oamd || '',
                 tela_apoio_link: impl.tela_apoio_link || '',
-                valor_atribuido: impl.valor_atribuido != null ? String(impl.valor_atribuido) : '',
+                nivel_receita: impl.nivel_receita != null ? String(impl.nivel_receita) : '',
                 status_implantacao_oamd: impl.status_implantacao_oamd || '',
                 nivel_atendimento: impl.nivel_atendimento || '',
                 catraca: impl.catraca || '',
@@ -83,7 +83,7 @@
                 id_favorecido: getValue('#modal-id_favorecido'),
                 chave_oamd: getValue('#modal-chave_oamd'),
                 tela_apoio_link: getValue('#modal-tela_apoio_link'),
-                valor_atribuido: getValue('#modal-valor_atribuido'),
+                nivel_receita: getValue('#modal-nivel_receita'),
                 status_implantacao_oamd: getValue('#modal-status_implantacao'),
                 nivel_atendimento: getValue('#modal-nivel_atendimento'),
                 catraca: getValue('#modal-catraca'),
@@ -399,7 +399,8 @@
                     safeSet('#modal-nome_empresa', impl.nome_empresa || '', modal);
 
                     // Tratamento especial para telefone que pode vir no formato "NOME: TELEFONE;"
-                    let telefoneValue = impl.telefone_responsavel || '';
+                    const telefoneRaw = impl.telefone_responsavel || '';
+                    let telefoneValue = telefoneRaw;
                     let nomeResponsavel = impl.responsavel_cliente || '';
 
                     // Verificar se o telefone contém nome concatenado (formato: "NOME: TELEFONE;")
@@ -412,7 +413,7 @@
                             const telPart = parts.slice(1).join(':').trim().replace(/;+$/, '').trim();
 
                             // Se o nome do responsável estiver vazio, usar o nome extraído
-                            if (!nomeResponsavel && nomePart) {
+                            if (!nomeResponsavel && nomePart && !/\d/.test(nomePart)) {
                                 nomeResponsavel = nomePart;
                             }
                             // Usar apenas o telefone limpo
@@ -421,6 +422,12 @@
                             }
                         }
                     }
+                    // Extrair o primeiro telefone válido se houver múltiplos valores concatenados
+                    const phoneMatch = telefoneRaw.match(/(\(?\d{2}\)?\s?\d{4,5}-?\d{4})/);
+                    if (phoneMatch && phoneMatch[1]) {
+                        telefoneValue = phoneMatch[1];
+                    }
+
                     // Remover ";" do final do telefone (caso ainda exista)
                     telefoneValue = telefoneValue.replace(/;+$/, '').trim();
 
@@ -431,7 +438,7 @@
                     safeSet('#modal-id_favorecido', impl.id_favorecido || '', modal);
                     safeSet('#modal-chave_oamd', impl.chave_oamd || '', modal);
                     safeSet('#modal-tela_apoio_link', impl.tela_apoio_link || '', modal);
-                    safeSet('#modal-valor_atribuido', (impl.valor_atribuido != null ? String(impl.valor_atribuido) : ''), modal);
+                    safeSet('#modal-nivel_receita', (impl.nivel_receita != null ? String(impl.nivel_receita) : ''), modal);
                     // Formatar valor_monetario para exibição: 1000.00 -> R$ 1.000,00
                     if (impl.valor_monetario != null && impl.valor_monetario !== '') {
                         let val = parseFloat(impl.valor_monetario);
@@ -560,7 +567,7 @@
                     safeSet('#modal-id_favorecido', getData('id-favorecido'), modal);
                     safeSet('#modal-chave_oamd', getData('chave-oamd'), modal);
                     safeSet('#modal-tela_apoio_link', getData('tela-apoio-link'), modal);
-                    safeSet('#modal-valor_atribuido', getData('nivel-receita'), modal);
+                    safeSet('#modal-nivel_receita', getData('nivel-receita'), modal);
 
                     initializeMultiTagInput('#modal-modalidades', getData('modalidades'));
                     initializeMultiTagInput('#modal-horarios_func', getData('horarios-func'));
@@ -791,7 +798,7 @@
                                 lastTriggerEl.setAttribute('data-id-favorecido', getVal('#modal-id_favorecido'));
                                 lastTriggerEl.setAttribute('data-chave-oamd', getVal('#modal-chave_oamd'));
                                 lastTriggerEl.setAttribute('data-tela-apoio-link', getVal('#modal-tela_apoio_link'));
-                                lastTriggerEl.setAttribute('data-nivel-receita', getVal('#modal-valor_atribuido'));
+                                lastTriggerEl.setAttribute('data-nivel-receita', getVal('#modal-nivel_receita'));
                                 lastTriggerEl.setAttribute('data-modalidades', getVal('#modal-modalidades'));
                                 lastTriggerEl.setAttribute('data-horarios-func', getVal('#modal-horarios_func'));
                                 lastTriggerEl.setAttribute('data-formas-pagamento', getVal('#modal-formas_pagamento'));
@@ -809,11 +816,12 @@
                                 lastTriggerEl.setAttribute('data-facial', getVal('#modal-facial'));
                                 lastTriggerEl.setAttribute('data-modelo-catraca', getVal('#modal-modelo_catraca'));
                                 lastTriggerEl.setAttribute('data-modelo-facial', getVal('#modal-modelo_facial'));
-                                lastTriggerEl.setAttribute('data-valor-atribuido', getVal('#modal-valor_atribuido'));
+                                lastTriggerEl.setAttribute('data-valor-monetario', getVal('#modal-valor_monetario'));
+                                lastTriggerEl.setAttribute('data-nivel-atendimento', getVal('#modal-nivel_atendimento'));
                                 lastTriggerEl.setAttribute('data-resp-estrategico-nome', getVal('#modal-resp_estrategico_nome'));
                                 lastTriggerEl.setAttribute('data-resp-onb-nome', getVal('#modal-resp_onb_nome'));
                                 lastTriggerEl.setAttribute('data-contatos', getVal('#modal-contatos'));
-                                lastTriggerEl.setAttribute('data-resp-estrategico-obs', getVal('#modal-resp_estrategico-obs'));
+                                lastTriggerEl.setAttribute('data-resp-estrategico-obs', getVal('#modal-resp_estrategico_obs'));
                                 lastTriggerEl.setAttribute('data-inicio-efetivo-iso', getVal('#modal-inicio_efetivo'));
                                 lastTriggerEl.setAttribute('data-inicio-producao', getVal('#modal-data_inicio_producao'));
                                 lastTriggerEl.setAttribute('data-final-implantacao', getVal('#modal-data_final_implantacao'));
@@ -882,71 +890,6 @@
                 setTimeout(finishInit, 500);
             });
 
-            modalDetalhesEmpresa.addEventListener('hide.bs.modal', async function (e) {
-                if (isClosingAfterConfirm) {
-                    return;
-                }
-                if (justSaved) {
-                    justSaved = false;
-                    return;
-                }
-
-                checkFormChanges();
-
-                if (formHasChanges) {
-                    e.preventDefault();
-
-                    const validation = validateFormFields();
-
-                    if (!validation.valid) {
-                        if (validation.field) {
-                            validation.field.focus();
-                            validation.field.reportValidity();
-                        }
-
-                        if (window.showToast) {
-                            showToast(validation.message, 'error');
-                        } else {
-                            alert(validation.message);
-                        }
-
-                        const bsModal = bootstrap.Modal.getInstance(modalDetalhesEmpresa);
-                        if (bsModal) {
-                            bsModal.show();
-                        }
-                        return;
-                    }
-
-                    let confirmed = false;
-                    if (window.showConfirm) {
-                        confirmed = await showConfirm({
-                            title: 'Descartar Alterações?',
-                            message: 'Você fez alterações no formulário. Deseja descartar as alterações e fechar o modal?',
-                            confirmText: 'Descartar',
-                            cancelText: 'Cancelar',
-                            type: 'warning',
-                            icon: 'bi-exclamation-triangle-fill'
-                        });
-                    }
-
-                    if (!confirmed) {
-                        e.preventDefault();
-                        const bsModal = bootstrap.Modal.getInstance(modalDetalhesEmpresa);
-                        if (bsModal) {
-                            bsModal.show();
-                        }
-                        return;
-                    }
-
-                    isClosingAfterConfirm = true;
-                    formHasChanges = false;
-
-                    const bsModal = bootstrap.Modal.getInstance(modalDetalhesEmpresa);
-                    if (bsModal) {
-                        bsModal.hide();
-                    }
-                }
-            });
 
             modalDetalhesEmpresa.addEventListener('hidden.bs.modal', function () {
                 if (isClosingAfterConfirm) {
@@ -1092,10 +1035,11 @@
                     setIfEmpty('#modal-id_favorecido', d.persistibles.id_favorecido);
                     setIfEmpty('#modal-chave_oamd', d.persistibles.chave_oamd);
                     setIfEmpty('#modal-cnpj', d.persistibles.cnpj);
-                    setIfEmpty('#modal-status_implantacao', d.persistibles.status_implantacao);
-                    setIfEmpty('#modal-nivel_atendimento', d.persistibles.nivel_atendimento);
+                    setIfEmpty('#modal-status_implantacao', d.persistibles.status_implantacao_oamd);
                     // Preencher Nível de Receita (MRR) se disponível
-                    setIfEmpty('#modal-valor_atribuido', d.persistibles.nivel_receita_do_cliente);
+                    setIfEmpty('#modal-nivel_receita', d.persistibles.nivel_receita_do_cliente);
+
+
                     const dc = toBr(d.persistibles.data_cadastro);
                     if (dc) setIfEmpty('#modal-data_cadastro', dc);
 
@@ -1167,7 +1111,8 @@
                                 }
 
                                 // Telefone Responsável - pode vir com nome concatenado (ex: "NOME: TELEFONE;")
-                                let telResp = empresa.telefone || empresa.responsaveltelefone || '';
+                                const telRaw = empresa.telefone || empresa.responsaveltelefone || '';
+                                let telResp = telRaw;
 
                                 if (telResp && telResp.includes(':')) {
                                     const parts = telResp.split(':');
@@ -1178,13 +1123,18 @@
                                         const numeroDoTelefone = parts.slice(1).join(':').trim().replace(/;+$/, '').trim();
 
                                         // Preencher o campo de Nome com o valor extraído se vazio
-                                        if (nomeDoTelefone) {
+                                        if (nomeDoTelefone && !/\d/.test(nomeDoTelefone)) {
                                             setIfEmpty('#modal-responsavel_cliente', nomeDoTelefone);
                                         }
 
                                         // Usar apenas o número para o campo de telefone
                                         telResp = numeroDoTelefone;
                                     }
+                                }
+
+                                const telMatch = telRaw.match(/(\(?\d{2}\)?\s?\d{4,5}-?\d{4})/);
+                                if (telMatch && telMatch[1]) {
+                                    telResp = telMatch[1];
                                 }
 
                                 if (telResp) {
@@ -1322,3 +1272,4 @@
     });
 
 })();
+

@@ -121,6 +121,7 @@
     const resumoMeta = document.getElementById('resumo-implantacao-meta');
     const btnRegenerarResumo = document.getElementById('btn-regenerar-resumo-implantacao');
     const btnSalvarResumo = document.getElementById('btn-salvar-resumo-implantacao');
+    const btnExcluirResumo = document.getElementById('btn-excluir-resumo-implantacao');
     const resumoStorageKey = `csapp_resumo_implantacao_${CONFIG.implantacaoId}`;
     let resumoCurrentPayload = null;
     let resumoRequestInFlight = false;
@@ -129,6 +130,13 @@
       if (resumoLoading) resumoLoading.classList.toggle('d-none', !isLoading);
       if (btnRegenerarResumo) btnRegenerarResumo.disabled = isLoading;
       if (btnSalvarResumo) btnSalvarResumo.disabled = isLoading;
+      if (btnExcluirResumo) btnExcluirResumo.disabled = isLoading;
+    }
+
+    function updateExcluirBtn() {
+      if (!btnExcluirResumo) return;
+      const hasSaved = !!loadSavedResumo();
+      btnExcluirResumo.classList.toggle('d-none', !hasSaved);
     }
 
     function loadSavedResumo() {
@@ -176,110 +184,58 @@
     function renderStructuredResumo(structured) {
       if (!structured) return '';
       const header = structured.header || {};
-      const sections = (Array.isArray(structured.sections) ?structured.sections : []).filter(sec => {
-        const title = String((sec && sec.title) || '').trim().toLowerCase();
-        return title !== 'andamento atual' && title !== 'pendencias e prazos';
-      });
-      if (!sections.length) return '';
-      const metrics = (Array.isArray(header.metrics) ?header.metrics : []).filter(m => {
-        const label = String((m && m.label) || '').trim().toLowerCase();
-        return label !== 'tags';
-      });
-      const title = escapeHtml(header.title || 'Resumo da Implantacao');
-      const subtitle = escapeHtml(header.subtitle || 'Documento sintetico do andamento');
+      const narrative = String(structured.narrative || '').trim();
+      if (!narrative) return '';
+
+      const metrics = Array.isArray(header.metrics) ? header.metrics : [];
       const empresa = escapeHtml(header.empresa || CONFIG.implantacaoNome || 'N/A');
       const status = escapeHtml(header.status || CONFIG.implantacaoStatus || 'N/A');
-      const normalizeSectionTitle = (value) => String(value || '')
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .trim()
-        .toLowerCase();
-      const sanitizeCommentsText = (value) => String(value || '')
-        .replace(/total\s+de\s+comentarios[^.]*\.?/gi, '')
-        .replace(/autores?\s+mais\s+ativos?[^.]*\.?/gi, '')
-        .replace(/tarefas?\s+com\s+mais\s+coment(?:a|á)rios?[^.]*\.?/gi, '')
-        .replace(/\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/g, '')
-        .replace(/\b\d{4}-\d{2}-\d{2}\b/g, '')
-        .replace(/\b\d{1,2}:\d{2}(?::\d{2})?\b/g, '')
-        .replace(/\b\d{1,2}h\d{2}\b/gi, '')
-        .replace(/\b(?:as|\u00e0s)\b/gi, '')
-        .replace(/[ \t]+/g, ' ')
-        .replace(/\n{3,}/g, '\n\n')
-        .trim();
-      const formatCommentsOverviewHtml = (value) => {
-        let cleaned = sanitizeCommentsText(value);
-        if (!cleaned) return '';
-        cleaned = cleaned
-          .replace(/&quot;/gi, '"')
-          .replace(/&amp;/gi, '&')
-          .replace(/&lt;/gi, '<')
-          .replace(/&gt;/gi, '>');
-        cleaned = cleaned
-          .replace(/\s*(Resumo Descritivo:)/gi, '\n\n$1 ')
-          .replace(/\s*(Regras de Neg[oó]cio e Financeiro)\s*/gi, '\n\n$1\n\n')
-          .replace(/\s*(Fluxo Comercial e Administrativo)\s*/gi, '\n\n$1\n\n')
-          .replace(/\s*(Controle de Acesso e Opera[cç][aã]o)\s*/gi, '\n\n$1\n\n')
-          .replace(/^\n+/, '')
-          .replace(/\n{3,}/g, '\n\n');
-        const headingMap = new Set([
-          'regras de negocio e financeiro',
-          'fluxo comercial e administrativo',
-          'controle de acesso e operacao'
-        ]);
-        const chunks = cleaned.split(/\n{2,}/).map(s => s.trim()).filter(Boolean);
-        return chunks.map(chunk => {
-          const normalized = normalizeSectionTitle(chunk.replace(/:$/, ''));
-          if (chunk.toLowerCase().startsWith('resumo descritivo:')) {
-            return `<p class="resumo-comment-intro">${escapeHtml(chunk)}</p>`;
-          }
-          if (headingMap.has(normalized)) {
-            return `<p class="resumo-comment-heading">${escapeHtml(chunk)}</p>`;
-          }
-          return `<p>${escapeHtml(chunk)}</p>`;
-        }).join('');
-      };
+
       const metricsHtml = metrics.length
-        ?`<div class="resumo-kpis">${metrics.map(m => `
+        ? `<div class="resumo-kpis">${metrics.map(m => `
             <div class="resumo-kpi">
-              <div class="resumo-kpi-label">${escapeHtml(String(m.label || 'Metrica'))}</div>
+              <div class="resumo-kpi-label">${escapeHtml(String(m.label || ''))}</div>
               <div class="resumo-kpi-value">${escapeHtml(String(m.value || 'N/A'))}</div>
-            </div>
-          `).join('')}</div>`
+            </div>`).join('')}</div>`
         : '';
 
-      const sectionHtml = sections.map((sec, index) => {
-        const secTitle = escapeHtml(sec.title || 'Secao');
-        const sectionKey = normalizeSectionTitle(sec.title || '');
-        const bullets = Array.isArray(sec.bullets) ?sec.bullets : [];
-        const isCommentsSection = sectionKey.includes('comentarios');
-        const commentsText = isCommentsSection ? String(sec.text || '') : '';
-        const secText = isCommentsSection ? commentsText : String(sec.text || '');
-        const bulletsHtml = !isCommentsSection && bullets.length
-          ?`<ul class="resumo-bullets">${bullets.map(b => `<li>${escapeHtml(String(b))}</li>`).join('')}</ul>`
-          : '';
-        const textClass = isCommentsSection ?'resumo-section-text resumo-section-text--pre' : 'resumo-section-text';
-        const textHtml = secText
-          ? (isCommentsSection
-            ? `<div class="${textClass}">${formatCommentsOverviewHtml(secText)}</div>`
-            : `<div class="${textClass}">${escapeHtml(secText)}</div>`)
-          : '';
-        const divider = index === sections.length - 1 ?'' : '<div class="resumo-divider"></div>';
-        return `
-          <div class="resumo-section">
-            <div class="resumo-section-title">${secTitle}</div>
-            ${textHtml}
-            ${bulletsHtml}
-          </div>
-          ${divider}
-        `;
-      }).join('');
+      // Converte texto narrativo com **subtitulos** em HTML
+      // Divide em linhas, agrupa por seção detectando **Heading** no início de cada linha
+      const renderNarrative = (text) => {
+        // Normaliza: garante linha em branco antes de cada **Heading**
+        const normalized = text
+          .replace(/([^\n])\n(\*\*[^*]+\*\*)/g, '$1\n\n$2')
+          .replace(/\r\n/g, '\n');
+
+        const blocks = normalized.split(/\n{2,}/).map(s => s.trim()).filter(Boolean);
+        const parts = [];
+
+        for (const block of blocks) {
+          // Bloco que começa com heading **...**
+          const headingMatch = block.match(/^\*\*(.+?)\*\*[\s\n]*([\s\S]*)$/);
+          if (headingMatch) {
+            const heading = escapeHtml(headingMatch[1].trim());
+            const body = headingMatch[2].trim();
+            parts.push(`<div class="resumo-section-title">${heading}</div>`);
+            if (body) {
+              const bodyHtml = escapeHtml(body).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+              parts.push(`<p class="resumo-section-text">${bodyHtml}</p>`);
+            }
+          } else {
+            // Parágrafo normal
+            const html = escapeHtml(block).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            parts.push(`<p class="resumo-section-text">${html}</p>`);
+          }
+        }
+        return parts.join('\n');
+      };
 
       return `
         <div class="resumo-document">
           <div class="resumo-doc-header">
             <div>
-              <div class="resumo-doc-title">${title}</div>
-              <div class="resumo-doc-subtitle">${subtitle}</div>
+              <div class="resumo-doc-title">Relatório de Implantação</div>
+              <div class="resumo-doc-subtitle">Documento executivo de acompanhamento</div>
             </div>
             <div class="resumo-doc-meta">
               <div>Empresa: <strong>${empresa}</strong></div>
@@ -288,13 +244,14 @@
           </div>
           <div class="resumo-doc-body">
             ${metricsHtml}
-            ${sectionHtml}
+            <div class="resumo-narrative">${renderNarrative(narrative)}</div>
           </div>
         </div>
       `;
     }
     function setResumoContent(text, source, structured, options = {}) {
       const normalized = (text || '').trim();
+      const hasContent = Boolean(normalized || structured);
       const sections = structured ?renderStructuredResumo(structured) : parseResumoSections(normalized);
 
       if (sections && resumoSections) {
@@ -309,7 +266,8 @@
         if (resumoSections) resumoSections.classList.add('d-none');
       }
 
-      if (resumoEmpty) resumoEmpty.classList.toggle('d-none', Boolean(normalized));
+      if (resumoEmpty) resumoEmpty.classList.toggle('d-none', hasContent);
+      if (btnSalvarResumo) btnSalvarResumo.classList.toggle('d-none', !hasContent);
       resumoCurrentPayload = {
         text: normalized,
         source: source || '',
@@ -426,6 +384,7 @@
 
     if (resumoModal) {
       resumoModal.addEventListener('show.bs.modal', function () {
+        updateExcluirBtn();
         const savedResumo = loadSavedResumo();
         if (savedResumo) {
           setResumoContent(savedResumo.text || '', savedResumo.source || '', savedResumo.structured || null, {
@@ -455,7 +414,21 @@
           resumoCurrentPayload.structured || null,
           { isSaved: true, savedAt: savedResumo ?savedResumo.savedAt : null }
         );
+        updateExcluirBtn();
         showToast('Resumo salvo com sucesso.', 'success');
+      });
+    }
+
+    if (btnExcluirResumo) {
+      btnExcluirResumo.addEventListener('click', function () {
+        window.localStorage.removeItem(resumoStorageKey);
+        resumoCurrentPayload = null;
+        if (resumoSections) { resumoSections.innerHTML = ''; resumoSections.classList.add('d-none'); }
+        if (resumoContent) { resumoContent.textContent = ''; resumoContent.classList.add('d-none'); }
+        if (resumoMeta) resumoMeta.textContent = '';
+        if (resumoEmpty) resumoEmpty.classList.remove('d-none');
+        updateExcluirBtn();
+        showToast('Resumo excluído.', 'success');
       });
     }
 

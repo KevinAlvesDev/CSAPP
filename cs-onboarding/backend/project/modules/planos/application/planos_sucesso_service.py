@@ -15,7 +15,6 @@ from ..domain import (
     _clonar_plano_para_implantacao,
     _clonar_plano_para_implantacao_checklist,
     _converter_items_para_plano,
-    _criar_estrutura_plano,
     _criar_estrutura_plano_checklist,
     _criar_items_recursivo,
     _plano_usa_checklist_items,
@@ -23,14 +22,14 @@ from ..domain import (
     # Aplicar
     aplicar_plano_a_implantacao,
     aplicar_plano_a_implantacao_checklist,
-    # CRUD
-    concluir_plano_sucesso,
-    contar_planos_em_andamento,
-    contar_planos_por_status,
     # Estrutura
     atualizar_estrutura_plano,
     atualizar_plano_sucesso,
     clonar_plano_sucesso,
+    # CRUD
+    concluir_plano_sucesso,
+    contar_planos_em_andamento,
+    contar_planos_por_status,
     converter_estrutura_editor_para_checklist,
     # CRUD
     criar_plano_sucesso,
@@ -52,7 +51,6 @@ __all__ = [
     "_clonar_plano_para_implantacao",
     "_clonar_plano_para_implantacao_checklist",
     "_converter_items_para_plano",
-    "_criar_estrutura_plano",
     "_criar_estrutura_plano_checklist",
     "_criar_items_recursivo",
     "_plano_usa_checklist_items",

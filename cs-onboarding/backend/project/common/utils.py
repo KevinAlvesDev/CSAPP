@@ -1,4 +1,6 @@
+import logging
 from datetime import UTC, date, datetime, timedelta, timezone
+logger = logging.getLogger(__name__)
 
 # Timezone de Brasília (UTC-3)
 TZ_BRASILIA = timezone(timedelta(hours=-3))
@@ -18,7 +20,8 @@ def _convert_to_date_or_datetime(dt_obj):
                     continue
             return datetime.strptime(original_str.split()[0], "%Y-%m-%d").date()
         return datetime.strptime(dt_obj, "%Y-%m-%d").date()
-    except Exception:
+    except Exception as exc:
+        logger.exception("Unhandled exception", exc_info=True)
         return original_str
 
 
@@ -58,7 +61,8 @@ def format_date_iso_for_json(dt_obj, only_date=False):
             return dt_obj
         try:
             dt_obj = _convert_to_date_or_datetime(dt_obj)
-        except Exception:
+        except Exception as exc:
+            logger.exception("Unhandled exception", exc_info=True)
             return None
 
     dt_obj = _convert_to_date_or_datetime(dt_obj)
@@ -95,7 +99,7 @@ def calcular_dias_decorridos(data_inicio):
         data_inicio = _convert_to_date_or_datetime(data_inicio)
     if isinstance(data_inicio, date) and not isinstance(data_inicio, datetime):
         data_inicio = datetime.combine(data_inicio, datetime.min.time())
-    agora = datetime.now()
+    agora = datetime.now(timezone.utc)
     if isinstance(data_inicio, datetime):
         agora_naive = agora.replace(tzinfo=None) if agora.tzinfo else agora
         inicio_naive = data_inicio.replace(tzinfo=None) if data_inicio.tzinfo else data_inicio
@@ -129,17 +133,17 @@ def load_profiles_list(exclude_self=True):
             query_db(
                 """
             SELECT
-                p.usuario,
-                p.nome,
-                p.cargo,
-                COALESCE(puc.perfil_acesso, p.perfil_acesso) as perfil_acesso,
+                u.usuario AS usuario,
+                u.nome,
+                u.cargo,
+                COALESCE(puc.perfil_acesso, 'Sem Acesso') AS perfil_acesso,
                 COALESCE(SUM(CASE WHEN i.status = 'andamento' THEN 1 ELSE 0 END), 0) AS impl_andamento_total,
                 COALESCE(SUM(CASE WHEN i.status = 'finalizada' THEN 1 ELSE 0 END), 0) AS impl_finalizadas
-            FROM perfil_usuario p
-            LEFT JOIN perfil_usuario_contexto puc ON p.usuario = puc.usuario AND puc.contexto = %s
-            LEFT JOIN implantacoes i ON p.usuario = i.usuario_cs
-            GROUP BY p.usuario, p.nome, p.cargo, COALESCE(puc.perfil_acesso, p.perfil_acesso)
-            ORDER BY p.usuario
+            FROM perfil_usuario u
+            LEFT JOIN perfil_usuario_contexto puc ON puc.usuario = u.usuario AND puc.contexto = %s
+            LEFT JOIN implantacoes i ON u.usuario = i.usuario_cs
+            GROUP BY u.usuario, u.nome, u.cargo, COALESCE(puc.perfil_acesso, 'Sem Acesso')
+            ORDER BY u.usuario
             """,
                 (ctx,),
                 one=False,
@@ -150,5 +154,6 @@ def load_profiles_list(exclude_self=True):
             current_user = getattr(g, "user_email", None)
             users = [u for u in users if u.get("usuario") != current_user]
         return users
-    except Exception:
+    except Exception as exc:
+        logger.exception("Unhandled exception", exc_info=True)
         return []

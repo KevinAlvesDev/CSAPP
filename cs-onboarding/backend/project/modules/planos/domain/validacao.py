@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(__name__)
 """
 Módulo de Validação de Planos
 Validações de estrutura hierárquica e checklist.
@@ -20,7 +22,8 @@ def get_valid_tags():
         """)
         if tags:
             return {tag["nome"] for tag in tags}
-    except Exception:
+    except Exception as exc:
+        logger.exception("Unhandled exception", exc_info=True)
         # Fallback para tags hardcoded se tabela não existir ainda
         pass
 

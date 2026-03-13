@@ -1,22 +1,1644 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
-{% block title %}CS Ongoing - Dashboard{% endblock %}
+{% block title %}Ongoing{% endblock %}
 
-{% block sidebar %}{% endblock %}
+{# Importar macros do dashboard #}
+{% from 'macros/dashboard.html' import empresa_link, empresa_cell, implantador_cell, status_badge, tipo_badge,
+ultima_atividade_cell, valor_cell, dias_cell, progress_bar %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/onboarding/dashboard_grid.css') }}">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/onboarding/dashboard_uiux.css') }}">
+<style>
+    .search-suggestions {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        margin-top: 6px;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+        z-index: 2000;
+        display: none;
+        max-height: 260px;
+        overflow: auto;
+    }
+
+    .search-suggestions .suggestion-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 8px 10px;
+        text-decoration: none;
+        color: #111827;
+        font-size: 14px;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .search-suggestions .suggestion-item:last-child {
+        border-bottom: 0;
+    }
+
+    .search-suggestions .suggestion-item:hover {
+        background: #f3f4f6;
+    }
+
+    .search-suggestions .suggestion-muted {
+        color: #6b7280;
+        font-size: 12px;
+    }
+
+    .search-suggestions .empty {
+        padding: 10px;
+        color: #6b7280;
+        font-size: 13px;
+    }
+
+    .dashboard-header {
+        overflow: visible;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container-fluid p-4">
-    <header class="d-flex justify-content-end align-items-center mb-4">
-        <div>
-            <a href="{{ url_for('core.modules_selection') }}" class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-arrow-left"></i> Trocar Módulo
-            </a>
+<div class="container-fluid p-0 dashboard-shell">
+    <header class="header-bg py-2 px-3 rounded-3 dashboard-header" style="z-index: 1000;">
+        <div class="d-flex align-items-center justify-content-between">
+            <!-- Seção Esquerda: Busca centralizada no espaço -->
+            <!-- Seção Esquerda: Busca e Filtros -->
+            <div class="d-flex align-items-center justify-content-start" style="flex: 1; gap: 10px;">
+                <form method="GET" action="{{ url_for('ongoing.dashboard') }}"
+                    class="d-flex align-items-center gap-2" id="search-form" autocomplete="off">
+                    <!-- Preservar filtros existentes -->
+                    {% if current_cs_filter %}
+                    <input type="hidden" name="cs_filter" value="{{ current_cs_filter }}">
+                    {% endif %}
+                    {% if sort_days %}
+                    <input type="hidden" name="sort_days" value="{{ sort_days }}">
+                    {% endif %}
+                    {% if current_tipo %}
+                    <input type="hidden" name="tipo" value="{{ current_tipo }}">
+                    {% endif %}
+                    {% if current_periodo %}
+                    <input type="hidden" name="periodo" value="{{ current_periodo }}">
+                    {% endif %}
+                    {% if current_date_type %}
+                    <input type="hidden" name="date_type" value="{{ current_date_type }}">
+                    {% endif %}
+
+                    <div style="width: 250px; position: relative;">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white border-end-0">
+                                <i class="bi bi-search text-muted"></i>
+                            </span>
+                            <input type="text" class="form-control border-start-0 ps-0" name="search" id="searchEmpresa"
+                                autocomplete="off" spellcheck="false" placeholder="Buscar empresa..."
+                                style="background-color: white;">
+                            <button class="btn btn-outline-secondary" type="button" id="clearSearch"
+                                style="display: none;" title="Limpar Busca">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                            <button class="btn btn-outline-secondary" type="submit">
+                                <i class="bi bi-arrow-right"></i>
+                            </button>
+                        </div>
+                        <div id="searchSuggestions" class="search-suggestions" aria-live="polite"></div>
+                        <small class="text-white-50" id="searchCounter"
+                            style="display: none; position: absolute; top: 100%; left: 0; margin-top: 2px; white-space: nowrap;">
+                            <i class="bi bi-info-circle me-1"></i><span id="searchResults">0</span> resultado(s)
+                            encontrado(s)
+                        </small>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Título (Centro) -->
+            <div class="d-flex align-items-center justify-content-center" style="flex: 1;">
+                <h1 class="main-title mb-0 fs-4">CS ONGOING</h1>
+            </div>
+
+            <!-- Botões de Ação (Direita) -->
+            <div class="d-flex align-items-center justify-content-end" style="flex: 1;">
+                <!-- Ícone de Notificações -->
+                <div class="position-relative me-3">
+                    <button class="btn btn-sm btn-outline-light position-relative" id="notificationBtn"
+                        title="Notificações" style="overflow: visible;">
+                        <i class="bi bi-bell fs-5"></i>
+                        <span class="position-absolute badge rounded-pill bg-danger" id="notificationBadge"
+                            style="display: none; top: -8px; right: -8px; font-size: 0.7rem; padding: 0.25em 0.5em;">
+                            0
+                        </span>
+                    </button>
+                </div>
+
+                {% if g.perfil and g.perfil.perfil_acesso in PERFIS_COM_CRIACAO %}
+                <button class="btn btn-sm btn-primary me-2" data-bs-toggle="modal"
+                    data-bs-target="#novaImplantacaoModal">
+                    <i class="bi bi-plus-circle me-1"></i> Nova Implantação
+                </button>
+                <button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#implantarModuloModal">
+                    <i class="bi bi-journal-plus me-1"></i> Implantar Módulo
+                </button>
+                {% endif %}
+            </div>
         </div>
     </header>
+    <main class="p-4 dashboard-main" id="main-content" data-context="ongoing">
 
-    <div class="d-flex justify-content-center align-items-center flex-grow-1" style="min-height: calc(100vh - 150px);">
-        <img src="{{ url_for('static', filename='imagens/em_breve.png') }}" alt="Em Breve" class="img-fluid"
-            style="max-height: 80vh; width: auto; max-width: 100%; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
+        <div class="card p-2 px-3 mb-3 dashboard-filters">
+            <form method="GET" action="{{ url_for('ongoing.dashboard') }}" id="cs-filter-form"
+                class="d-flex align-items-center flex-wrap gap-2">
+                {% if current_search %}
+                <input type="hidden" name="search" value="{{ current_search }}">
+                {% endif %}
+                {% if sort_days %}
+                <input type="hidden" name="sort_days" value="{{ sort_days }}">
+                {% endif %}
+
+                <!-- Barra Unificada de Filtros (Ajustada) -->
+                <div class="d-inline-flex align-items-center bg-white rounded-3 border px-2 py-1 shadow-sm"
+                    style="height: 42px;">
+
+                    <!-- Label Icon -->
+                    <div class="d-flex align-items-center px-2 text-secondary">
+                        <i class="bi bi-funnel-fill text-primary opacity-75"></i>
+                    </div>
+
+                    <div class="vr text-secondary opacity-25 mx-1" style="height: 20px;"></div>
+
+                    <!-- CS Filter -->
+                    {% if is_manager %}
+                    <div class="position-relative">
+                        <select id="cs_filter" name="cs_filter"
+                            class="form-select form-select-sm border-0 shadow-none bg-transparent ps-2 pe-5 fw-medium text-dark"
+                            style="width: auto; cursor: pointer; min-width: 180px;">
+                            <option value="" class="text-muted">Todos os Implantadores</option>
+                            {% if all_cs_users %}
+                            {% for cs in all_cs_users %}
+                            <option value="{{ cs.usuario }}" {% if cs.usuario==current_cs_filter %}selected{% endif %}>
+                                {{ cs.nome }}
+                            </option>
+                            {% endfor %}
+                            {% endif %}
+                        </select>
+                    </div>
+                    <div class="vr text-secondary opacity-25 mx-1" style="height: 20px;"></div>
+                    {% endif %}
+
+                    <!-- Tipo Filter -->
+                    <div class="position-relative">
+                        <select name="tipo"
+                            class="form-select form-select-sm border-0 shadow-none bg-transparent ps-2 pe-5 fw-medium text-dark"
+                            style="width: auto; cursor: pointer; min-width: 130px;">
+                            <option value="" class="text-muted">Todos os Tipos</option>
+                            <option value="sistema" {% if current_tipo=='sistema' %}selected{% endif %}>Sistema</option>
+                            <option value="modulo" {% if current_tipo=='modulo' %}selected{% endif %}>Módulo</option>
+                        </select>
+                    </div>
+
+                    <div class="vr text-secondary opacity-25 mx-1" style="height: 20px;"></div>
+
+                    <!-- Date Type Select -->
+                    <div class="position-relative">
+                        <select name="date_type"
+                            class="form-select form-select-sm border-0 shadow-none bg-transparent ps-2 pe-5 text-primary fw-bold"
+                            style="width: auto; cursor: pointer;">
+                            <option value="" {% if not current_date_type %}selected{% endif %}>Selecionar</option>
+                            <option value="criacao" {% if current_date_type=='criacao' %}selected{% endif %}>Criação
+                            </option>
+                            <option value="inicio" {% if current_date_type=='inicio' %}selected{% endif %}>Início
+                            </option>
+                            <option value="finalizacao" {% if current_date_type=='finalizacao' %}selected{% endif %}>
+                                Conclusão
+                            </option>
+                            <option value="parada" {% if current_date_type=='parada' %}selected{% endif %}>Parada
+                                (Atual)
+                            </option>
+                            <option value="cancelamento" {% if current_date_type=='cancelamento' %}selected{% endif %}>
+                                Cancelamento</option>
+                        </select>
+                    </div>
+
+                    <!-- Date Range Inputs -->
+                    <div class="d-flex align-items-center px-1">
+                        <span class="small text-muted mx-1">de</span>
+                        <input type="date" name="start_date"
+                            class="form-control form-control-sm border-0 p-1 shadow-none bg-transparent fw-medium"
+                            value="{{ current_start_date or '' }}" style="width: 115px;" max="2100-12-31">
+
+                        <span class="small text-muted mx-1">até</span>
+                        <input type="date" name="end_date"
+                            class="form-control form-control-sm border-0 p-1 shadow-none bg-transparent fw-medium"
+                            value="{{ current_end_date or '' }}" style="width: 115px;" max="2100-12-31">
+                    </div>
+
+                    <!-- Clear Button (Integrated) -->
+                    {% if current_cs_filter or current_tipo or current_start_date or current_end_date or
+                    current_date_type %}
+                    <div class="vr text-secondary opacity-25 mx-1" style="height: 20px;"></div>
+                    <a href="{{ url_for('ongoing.dashboard', clear_filters=1, search=current_search if current_search else None) }}"
+                        class="btn btn-sm btn-link text-secondary text-decoration-none px-2" title="Limpar Filtros">
+                        <i class="bi bi-x-circle-fill"></i>
+                    </a>
+                    {% endif %}
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="btn btn-primary px-3 shadow-sm d-flex align-items-center"
+                    style="height: 42px;">
+                    <i class="bi bi-search me-2"></i> Consultar
+                </button>
+            </form>
+        </div>
+
+        {% from 'macros/cards.html' import card_stats %}
+        {% set m = metrics or {} %}
+        <div class="metrics-grid mb-4 dashboard-metrics">
+            {{ card_stats('Total', m.total_ativos | default(0), 'secondary', monetary_value=metrics.total_valor_ativos, click_key='total')
+            }}
+            {{ card_stats('Novas', m.impl_novas | default(0), 'dark', monetary_value=metrics.total_valor_novas, click_key='novas') }}
+            {{ card_stats('Em Andamento', implantacoes_andamento|length if implantacoes_andamento else
+            (m.impl_andamento_total | default(0)), 'primary', monetary_value=metrics.total_valor_andamento, click_key='andamento') }}
+            {{ card_stats('Paradas', m.impl_paradas | default(0), 'danger', monetary_value=metrics.total_valor_paradas, click_key='paradas')
+            }}
+            {{ card_stats('Futuras', m.implantacoes_futuras | default(0), 'info',
+            monetary_value=metrics.total_valor_futuras, click_key='futuras') }}
+            {{ card_stats('Sem previsão', m.implantacoes_sem_previsao | default(0), 'warning',
+            monetary_value=metrics.total_valor_sem_previsao, click_key='sem_previsao') }}
+            {{ card_stats('Concluídas', m.impl_finalizadas | default(0), 'success',
+            monetary_value=metrics.total_valor_finalizadas, click_key='finalizadas') }}
+            {{ card_stats('Canceladas', m.impl_canceladas | default(0), 'secondary',
+            monetary_value=metrics.total_valor_canceladas, click_key='canceladas') }}
+        </div>
+
+        <!-- Flash messages agora são exibidos como toasts flutuantes automaticamente -->
+
+        <div class="card dashboard-table-card">
+            <div class="card-header dashboard-table-header">
+                <ul class="nav nav-pills card-header-pills dashboard-tabs" id="myTab" role="tablist">
+                    <li class="nav-item" role="presentation"><button class="nav-link active" id="total-tab"
+                            data-bs-toggle="tab" data-bs-target="#total" type="button" role="tab">Total</button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" id="novas-tab"
+                            data-bs-toggle="tab" data-bs-target="#novas" type="button" role="tab">Novas</button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" id="andamento-tab"
+                            data-bs-toggle="tab" data-bs-target="#andamento" type="button" role="tab">Em
+                            Andamento</button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" id="paradas-tab"
+                            data-bs-toggle="tab" data-bs-target="#paradas" type="button" role="tab">Paradas</button>
+                    </li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" id="futuras-tab"
+                            data-bs-toggle="tab" data-bs-target="#futuras" type="button" role="tab">Futuras</button>
+                    </li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" id="sem-previsao-tab"
+                            data-bs-toggle="tab" data-bs-target="#sem_previsao" type="button" role="tab">Sem
+                            previsão</button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" id="finalizadas-tab"
+                            data-bs-toggle="tab" data-bs-target="#finalizadas" type="button"
+                            role="tab">Concluídas</button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" id="canceladas-tab"
+                            data-bs-toggle="tab" data-bs-target="#canceladas" type="button"
+                            role="tab">Canceladas</button></li>
+                </ul>
+            </div>
+
+            <div class="card-body">
+                <div class="tab-content" id="myTabContent">
+                    <div class="tab-pane fade show active" id="total" role="tabpanel" aria-labelledby="total-tab">
+                        <h2 class="h5 mb-3">Total de Implantações Ativas</h2>
+                        {% if not dashboard_data.total_ativos %}
+                        <div class="alert alert-info text-center" role="alert"> Nenhuma implantação ativa encontrada.
+                        </div>
+                        {% else %}
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover table-sm align-middle">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">ID</th>
+                                        <th scope="col">Empresa</th>
+                                        <th scope="col">Implantador</th>
+                                        <th scope="col">Tipo</th>
+                                        <th scope="col">Status</th>
+                                        <th scope="col">Progresso</th>
+                                        <th scope="col">Valor (Total: R$ {{
+                                            "%.2f"|format(metrics.total_valor_ativos|float) if
+                                            metrics.total_valor_ativos else '0.00' }})</th>
+                                        <th scope="col">Ações</th>
+                                        <th scope="col">Último Comentário</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for impl in dashboard_data.total_ativos %}
+                                    <tr>
+                                        <td class="text-nowrap">{{ impl.id }}</td>
+                                        <td class="text-truncate" style="max-width: 350px;">
+                                            {{ empresa_link(impl) }}
+                                        </td>
+                                        <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or
+                                            impl.usuario_cs }}</td>
+                                        <td>{{ tipo_badge(impl.tipo) }}</td>
+                                        <td>
+                                            {% if impl.status == 'andamento' %}
+                                            <span class="badge bg-primary">Em Andamento</span>
+                                            {% elif impl.status == 'nova' %}
+                                            <span class="badge bg-dark">Nova</span>
+                                            {% elif impl.status == 'parada' %}
+                                            <span class="badge bg-danger">Parada</span>
+                                            {% elif impl.status == 'futura' %}
+                                            <span class="badge bg-info text-dark">Futura</span>
+                                            {% elif impl.status == 'sem_previsao' %}
+                                            <span class="badge bg-warning text-dark">Sem Previsão</span>
+                                            {% else %}
+                                            {{ status_badge(impl.status) }}
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ progress_bar(impl) }}</td>
+                                        <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_monetario|float) if
+                                            impl.valor_monetario else 'N/A' }}</td>
+                                        <td class="text-nowrap">
+                                            <a href="{{ url_for('ongoing.ver_implantacao', impl_id=impl.id) }}"
+                                                class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i>
+                                                Detalhes</a>
+                                        </td>
+                                        {{ ultima_atividade_cell(impl) }}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="tab-pane fade" id="novas" role="tabpanel" aria-labelledby="novas-tab">
+                        <h2 class="h5 mb-3">Implantações Novas (Aguardando Início)</h2>
+                        {% if not implantacoes_novas %}
+                        <div class="alert alert-info text-center" role="alert"> Nenhuma nova implantação aguardando
+                            início. </div>
+                        {% else %}
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover table-sm align-middle">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">ID</th>
+                                        <th scope="col">Empresa</th>
+                                        <th scope="col">Implantador</th>
+                                        <th scope="col">Tipo</th>
+                                        <th scope="col">Status</th>
+                                        <th scope="col">Valor (Total: R$ {{
+                                            "%.2f"|format(metrics.total_valor_novas|float) if metrics.total_valor_novas
+                                            else '0.00' }})</th>
+                                        <th scope="col">Ações</th>
+                                        <th scope="col">Último Comentário</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for impl in implantacoes_novas %}
+                                    <tr>
+                                        <td class="text-nowrap">{{ impl.id }}</td>
+                                        <td class="text-truncate" style="max-width: 350px;">
+                                            {{ empresa_link(impl) }}
+                                        </td>
+                                        <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or
+                                            impl.usuario_cs }}</td>
+                                        <td>{{ tipo_badge(impl.tipo) }}</td>
+                                        <td><span class="badge bg-dark">Nova</span></td>
+                                        <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_monetario|float) if
+                                            impl.valor_monetario else 'N/A' }}</td>
+                                        <td class="text-nowrap">
+                                            {% if impl.usuario_cs == g.user_email %}
+                                            <button type="button" class="btn btn-sm btn-success btn-iniciar-implantacao"
+                                                title="Iniciar Implantação" data-impl-id="{{ impl.id }}"
+                                                data-impl-nome="{{ impl.nome_empresa }}">
+                                                <i class="bi bi-play-circle me-1"></i> Iniciar
+                                            </button>
+                                            {% else %}
+                                            <span class="text-muted small">Aguardando</span>
+                                            {% endif %}
+                                            <a href="{{ url_for('ongoing.ver_implantacao', impl_id=impl.id) }}"
+                                                class="btn btn-sm btn-primary ms-1"><i class="bi bi-eye me-1"></i> Ver
+                                                Detalhes</a>
+                                        </td>
+                                        {{ ultima_atividade_cell(impl) }}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="tab-pane fade" id="sem_previsao" role="tabpanel" aria-labelledby="sem-previsao-tab">
+                        <h2 class="h5 mb-3">Implantações Sem Previsão</h2>
+                        {% if not implantacoes_sem_previsao %} <div class="alert alert-info text-center" role="alert">
+                            Nenhuma implantação marcada como sem previsão. </div>
+                        {% else %} <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">ID</th>
+                                        <th scope="col">Empresa</th>
+                                        <th scope="col">Implantador</th>
+                                        <th scope="col">Tipo</th>
+                                        <th scope="col">Status</th>
+                                        <th scope="col">Início Previsto</th>
+                                        <th scope="col">Valor (Total: R$ {{
+                                            "%.2f"|format(metrics.total_valor_sem_previsao|float) if
+                                            metrics.total_valor_sem_previsao else '0.00' }})</th>
+                                        <th scope="col">Ações</th>
+                                        <th scope="col">Último Comentário</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for impl in implantacoes_sem_previsao %} <tr>
+                                        <td class="text-nowrap">{{ impl.id }}</td>
+                                        <td class="text-truncate" style="max-width: 350px;">
+                                            {{ empresa_link(impl) }}
+                                        </td>
+                                        <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or
+                                            impl.usuario_cs }}</td>
+                                        <td>{{ tipo_badge(impl.tipo) }}</td>
+                                        <td>{{ status_badge('sem_previsao') }}</td>
+                                        <td><span class="text-muted small">Sem previsão</span></td>
+                                        <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_monetario|float) if
+                                            impl.valor_monetario else 'N/A' }}</td>
+                                        <td class="text-nowrap">
+                                            {% if impl.usuario_cs == g.user_email %}
+                                            <button type="button" class="btn btn-sm btn-success btn-iniciar-implantacao"
+                                                title="Iniciar Implantação" data-impl-id="{{ impl.id }}"
+                                                data-impl-nome="{{ impl.nome_empresa }}">
+                                                <i class="bi bi-play-circle me-1"></i> Iniciar
+                                            </button>
+                                            {% else %}
+                                            <span class="text-muted small">Aguardando</span>
+                                            {% endif %}
+                                            <a href="{{ url_for('ongoing.ver_implantacao', impl_id=impl.id) }}"
+                                                class="btn btn-sm btn-primary ms-1"><i class="bi bi-eye me-1"></i> Ver
+                                                Detalhes</a>
+                                        </td>
+                                        {{ ultima_atividade_cell(impl) }}
+                                    </tr> {% endfor %} </tbody>
+                            </table>
+                        </div> {% endif %}
+                    </div>
+
+                    <div class="tab-pane fade" id="andamento" role="tabpanel" aria-labelledby="andamento-tab">
+                        <h2 class="h5 mb-3">Clientes em Andamento</h2>
+                        {% if not implantacoes_andamento %} <div class="alert alert-info text-center" role="alert">
+                            Nenhuma implantação em andamento. </div>
+                        {% else %} <div class="table-responsive">
+                            <table class="table table-striped table-hover table-sm align-middle">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">ID</th>
+                                        <th scope="col">Empresa</th>
+                                        <th scope="col">Implantador</th>
+                                        <th scope="col">Tipo</th>
+                                        <th scope="col">Dias</th>
+                                        <th scope="col" style="width: 20%;">Progresso</th>
+                                        <th scope="col">Valor (Total: R$ {{
+                                            "%.2f"|format(metrics.total_valor_andamento|float) if
+                                            metrics.total_valor_andamento else '0.00' }})</th>
+                                        <th scope="col">Ações</th>
+                                        <th scope="col">Último Comentário</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="andamento-tbody">
+                                    {% for impl in implantacoes_andamento %} <tr>
+                                        <td class="text-nowrap">{{ impl.id }}</td>
+                                        <td class="text-truncate" style="max-width: 350px;">
+                                            {{ empresa_link(impl) }}
+                                        </td>
+                                        <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or
+                                            impl.usuario_cs }}</td>
+                                        <td>{{ tipo_badge(impl.tipo) }}</td>
+                                        {{ dias_cell(impl) }}
+                                        <td>{{ progress_bar(impl) }}</td>
+                                        <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_monetario|float) if
+                                            impl.valor_monetario else 'N/A' }}</td>
+                                        <td><a href="{{ url_for('ongoing.ver_implantacao', impl_id=impl.id) }}"
+                                                class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver
+                                                Detalhes</a></td>
+                                        {{ ultima_atividade_cell(impl) }}
+                                    </tr> {% endfor %} </tbody>
+                            </table>
+                        </div> {% endif %}
+                    </div>
+
+                    <div class="tab-pane fade" id="futuras" role="tabpanel" aria-labelledby="futuras-tab">
+                        <h2 class="h5 mb-3">Implantações Futuras (Agendadas)</h2>
+                        {% if not implantacoes_futuras %} <div class="alert alert-info text-center" role="alert">
+                            Nenhuma implantação futura agendada. </div>
+                        {% else %} <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">ID</th>
+                                        <th scope="col">Empresa</th>
+                                        <th scope="col">Implantador</th>
+                                        <th scope="col">Tipo</th>
+                                        <th scope="col">Status</th>
+                                        <th scope="col">Início Previsto</th>
+                                        <th scope="col">Valor (Total: R$ {{
+                                            "%.2f"|format(metrics.total_valor_futuras|float) if
+                                            metrics.total_valor_futuras else '0.00' }})</th>
+                                        <th scope="col">Ações</th>
+                                        <th scope="col">Último Comentário</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for impl in implantacoes_futuras %} <tr>
+                                        <td class="text-nowrap">{{ impl.id }}</td>
+                                        <td class="text-truncate" style="max-width: 350px;">
+                                            {{ empresa_link(impl) }}
+                                        </td>
+                                        <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or
+                                            impl.usuario_cs }}</td>
+                                        <td>{{ tipo_badge(impl.tipo) }}</td>
+                                        <td>{{ status_badge('futura') }}</td>
+                                        <td>
+                                            {% if impl.data_inicio_previsto_fmt_d %}
+                                            <span
+                                                class="badge {% if impl.atrasada_para_iniciar %}bg-danger{% else %}bg-secondary{% endif %}">
+                                                {{ impl.data_inicio_previsto_fmt_d }}
+                                            </span>
+                                            {% if impl.atrasada_para_iniciar %}
+                                            <span class="badge bg-danger ms-1" title="Início atrasado!"><i
+                                                    class="bi bi-exclamation-triangle-fill"></i></span>
+                                            {% endif %}
+                                            {% else %}
+                                            <span class="text-muted small">N/A</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_monetario|float) if
+                                            impl.valor_monetario else 'N/A' }}</td>
+                                        <td class="text-nowrap">
+                                            {% if impl.usuario_cs == g.user_email %}
+                                            <button type="button" class="btn btn-sm btn-success btn-iniciar-implantacao"
+                                                title="Iniciar Agora" data-impl-id="{{ impl.id }}"
+                                                data-impl-nome="{{ impl.nome_empresa }}">
+                                                <i class="bi bi-play-circle me-1"></i> Iniciar
+                                            </button>
+
+                                            <button type="button" class="btn btn-sm btn-warning ms-1 btn-agendar-futuro"
+                                                data-bs-toggle="modal" data-bs-target="#agendarInicioModal"
+                                                data-impl-id="{{ impl.id }}" data-impl-nome="{{ impl.nome_empresa }}"
+                                                title="Reagendar Início">
+                                                <i class="bi bi-calendar-event me-1"></i> Reagendar
+                                            </button>
+                                            {% else %}
+                                            <span class="text-muted small">Aguardando</span>
+                                            {% endif %}
+                                            <a href="{{ url_for('ongoing.ver_implantacao', impl_id=impl.id) }}"
+                                                class="btn btn-sm btn-primary ms-1"><i class="bi bi-eye me-1"></i> Ver
+                                                Detalhes</a>
+                                        </td>
+                                        {{ ultima_atividade_cell(impl) }}
+                                    </tr> {% endfor %} </tbody>
+                            </table>
+                        </div> {% endif %}
+                    </div>
+
+                    <div class="tab-pane fade" id="finalizadas" role="tabpanel" aria-labelledby="finalizadas-tab">
+                        <h2 class="h5 mb-3">Implantações Concluídas</h2>
+                        {% if not implantacoes_finalizadas %} <div class="alert alert-info text-center" role="alert">
+                            Nenhuma implantação finalizada. </div>
+                        {% else %} <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">ID</th>
+                                        <th scope="col">Empresa</th>
+                                        <th scope="col">Implantador</th>
+                                        <th scope="col">Tipo</th>
+                                        <th scope="col">Progresso</th>
+                                        <th scope="col">Valor (Total: R$ {{
+                                            "%.2f"|format(metrics.total_valor_finalizadas|float) if
+                                            metrics.total_valor_finalizadas else '0.00' }})</th>
+                                        <th scope="col">Ações</th>
+                                        <th scope="col">Último Comentário</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for impl in implantacoes_finalizadas %} <tr>
+                                        <td class="text-nowrap">{{ impl.id }}</td>
+                                        <td class="text-truncate" style="max-width: 350px;">
+                                            {{ empresa_link(impl) }}
+                                        </td>
+                                        <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or
+                                            impl.usuario_cs }}</td>
+                                        <td>{{ tipo_badge(impl.tipo) }}</td>
+                                        <td><span class="badge bg-success">100% Concluída</span></td>
+                                        <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_monetario|float) if
+                                            impl.valor_monetario else 'N/A' }}</td>
+                                        <td class="text-nowrap">
+                                            <a href="{{ url_for('ongoing.ver_implantacao', impl_id=impl.id) }}"
+                                                class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver
+                                                Histórico</a>
+                                            {% if impl.usuario_cs == g.user_email %}
+                                            <form method="POST"
+                                                action="{{ url_for('ongoing_actions.reabrir_implantacao') }}"
+                                                style="display:inline;" onsubmit="return confirm('Tem certeza?');">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <input type="hidden" name="implantacao_id" value="{{ impl.id }}">
+                                                <input type="hidden" name="redirect_to" value="dashboard">
+                                                <button type="submit" class="btn btn-sm btn-warning ms-1"><i
+                                                        class="bi bi-folder-symlink me-1"></i> Reabrir</button>
+                                            </form>
+                                            {% endif %}
+                                        </td>
+                                        {{ ultima_atividade_cell(impl) }}
+                                    </tr> {% endfor %} </tbody>
+                            </table>
+                        </div> {% endif %}
+                    </div>
+
+                    <div class="tab-pane fade" id="paradas" role="tabpanel" aria-labelledby="paradas-tab">
+                        <h2 class="h5 mb-3">Implantações Paradas</h2>
+                        {% if not implantacoes_paradas %} <div class="alert alert-info text-center" role="alert">
+                            Nenhuma implantação parada. </div>
+                        {% else %} <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">ID</th>
+                                        <th scope="col">Empresa</th>
+                                        <th scope="col">Implantador</th>
+                                        <th scope="col">Tipo</th>
+                                        <th scope="col">Dias</th>
+                                        <th scope="col" style="width: 20%;">Progresso</th>
+                                        <th scope="col">Valor (Total: R$ {{
+                                            "%.2f"|format(metrics.total_valor_paradas|float) if
+                                            metrics.total_valor_paradas else '0.00' }})</th>
+                                        <th scope="col">Ações</th>
+                                        <th scope="col">Último Comentário</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for impl in implantacoes_paradas %} <tr>
+                                        <td class="text-nowrap">{{ impl.id }}</td>
+                                        <td class="text-truncate" style="max-width: 350px;">
+                                            {{ empresa_link(impl) }}
+                                        </td>
+                                        <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or
+                                            impl.usuario_cs }}</td>
+                                        <td>{{ tipo_badge(impl.tipo) }}</td>
+                                        <td><span class="badge bg-danger">{{ impl.dias_parada | int }} dias</span></td>
+                                        <td>{{ progress_bar(impl) }}</td>
+                                        <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_monetario|float) if
+                                            impl.valor_monetario else 'N/A' }}</td>
+                                        <td class="text-nowrap">
+                                            <a href="{{ url_for('ongoing.ver_implantacao', impl_id=impl.id) }}"
+                                                class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver
+                                                Detalhes</a>
+                                            {% if impl.usuario_cs == g.user_email %}
+                                            <form method="POST"
+                                                action="{{ url_for('ongoing_actions.retomar_implantacao') }}"
+                                                style="display:inline;"
+                                                data-confirm-message="Deseja retomar esta implantação e alterar o status para Em Andamento?"
+                                                data-confirm-title="Retomar implantação"
+                                                data-confirm-type="warning">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <input type="hidden" name="implantacao_id" value="{{ impl.id }}">
+                                                <input type="hidden" name="redirect_to" value="dashboard">
+                                                <button type="submit" class="btn btn-sm btn-success ms-1"><i
+                                                        class="bi bi-play-fill me-1"></i> Retomar</button>
+                                            </form>
+                                            {% endif %}
+                                        </td>
+                                        {{ ultima_atividade_cell(impl) }}
+                                    </tr> {% endfor %} </tbody>
+                            </table>
+                        </div> {% endif %}
+                    </div>
+
+                    <div class="tab-pane fade" id="canceladas" role="tabpanel" aria-labelledby="canceladas-tab">
+                        <h2 class="h5 mb-3">Implantações Canceladas</h2>
+                        {% if not implantacoes_canceladas %} <div class="alert alert-info text-center" role="alert">
+                            Nenhuma implantação cancelada. </div>
+                        {% else %} <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">ID</th>
+                                        <th scope="col">Empresa</th>
+                                        <th scope="col">Implantador</th>
+                                        <th scope="col">Tipo</th>
+                                        <th scope="col">Motivo</th>
+                                        <th scope="col">Data Cancelamento</th>
+                                        <th scope="col">Valor (Total: R$ {{
+                                            "%.2f"|format(metrics.total_valor_canceladas|float) if
+                                            metrics.total_valor_canceladas else '0.00' }})</th>
+                                        <th scope="col">Ações</th>
+                                        <th scope="col">Último Comentário</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for impl in implantacoes_canceladas %} <tr>
+                                        <td class="text-nowrap">{{ impl.id }}</td>
+                                        <td class="text-truncate" style="max-width: 350px;">{{ impl.nome_empresa }}</td>
+                                        <td class="text-truncate" style="max-width: 150px;">{{ impl.cs_nome or
+                                            impl.usuario_cs }}</td>
+                                        <td><span class="badge bg-info text-dark">{{ 'Módulo' if impl.tipo == 'modulo'
+                                                else 'Sistema' }}</span></td>
+                                        <td class="text-truncate" style="max-width: 200px;">{{ impl.motivo_cancelamento
+                                            |
+                                            default('N/A') }}</td>
+                                        <td>{{ impl.data_cancelamento_fmt if impl.data_cancelamento_fmt else 'N/A' }}
+                                        </td>
+                                        <td class="text-nowrap">R$ {{ "%.2f"|format(impl.valor_monetario|float) if
+                                            impl.valor_monetario else 'N/A' }}</td>
+                                        <td class="text-nowrap">
+                                            <a href="{{ url_for('ongoing.ver_implantacao', impl_id=impl.id) }}"
+                                                class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i> Ver
+                                                Detalhes</a>
+                                        </td>
+                                        {{ ultima_atividade_cell(impl) }}
+                                    </tr> {% endfor %} </tbody>
+                            </table>
+                        </div> {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<div class="modal fade" id="novaImplantacaoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title">Nova Implantação</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('ongoing_actions.criar_implantacao') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    {% if g.perfil.perfil_acesso in PERFIS_COM_CRIACAO %}
+                    <div class="mb-3">
+                        <label for="idFavorecido" class="form-label">ID Favorecido</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="idFavorecido" name="id_favorecido"
+                                placeholder="Digite o ID Favorecido" min="1" required>
+                            <button class="btn btn-outline-primary" type="button" id="btnConsultarEmpresa">
+                                <span class="spinner-border spinner-border-sm d-none" role="status"
+                                    aria-hidden="true"></span>
+                                Consultar
+                            </button>
+                        </div>
+                        <div id="consultaFeedback" class="form-text"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="nomeEmpresa" class="form-label">Nome Empresa</label>
+                        <input type="text" class="form-control" id="nomeEmpresa" name="nome_empresa" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="usuario_atribuido_cs" class="form-label">Atribuir ao Implantador</label>
+                        <select class="form-select" id="usuario_atribuido_cs" name="usuario_atribuido_cs" required>
+                            <option value="">Selecione um usuário...</option>
+                            {% if all_cs_users %}
+                            {% for user in all_cs_users %}
+                            <option value="{{ user.usuario }}">{{ user.nome }} ({{ user.usuario }})</option>
+                            {% endfor %}
+                            {% endif %}
+                        </select>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning"> Seu perfil de acesso ({{ g.perfil.perfil_acesso or 'Nenhum' }})
+                        não tem permissão para criar novas implantações. </div>
+                    {% endif %}
+                </div>
+                <div class="modal-footer header-bg">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    {% if g.perfil.perfil_acesso in PERFIS_COM_CRIACAO %}
+                    <button type="submit" class="btn btn-primary">Criar</button>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
     </div>
 </div>
+
+<div class="modal fade" id="implantarModuloModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title">Implantar Novo Módulo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('ongoing_actions.criar_implantacao_modulo') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    {% if g.perfil.perfil_acesso in PERFIS_COM_CRIACAO %}
+                    <p>Isso criará uma nova implantação do tipo "Módulo" e a definirá como "Nova" para o implantador
+                        selecionado.</p>
+                    <div class="mb-3">
+                        <label for="idFavorecidoModulo" class="form-label">ID Favorecido</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="idFavorecidoModulo" name="id_favorecido"
+                                placeholder="Digite o ID Favorecido" min="1" required>
+                            <button class="btn btn-outline-primary" type="button" id="btnConsultarEmpresaModulo">
+                                <span class="spinner-border spinner-border-sm d-none" role="status"
+                                    aria-hidden="true"></span>
+                                Consultar
+                            </button>
+                        </div>
+                        <div id="consultaFeedbackModulo" class="form-text"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="nomeEmpresaModulo" class="form-label">Nome Empresa (Cliente Existente)</label>
+                        <input type="text" class="form-control" id="nomeEmpresaModulo" name="nome_empresa_modulo"
+                            required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="modulo_tipo" class="form-label">Módulo a ser implantado</label>
+                        <select class="form-select" id="modulo_tipo" name="modulo_tipo" required>
+                            <option value="">Selecione um módulo...</option>
+                            <option value="nota_fiscal">Nota fiscal</option>
+                            <option value="vendas_online">Vendas Online</option>
+                            <option value="app_treino">App Treino</option>
+                            <option value="recorrencia">Recorrência</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="usuario_atribuido_cs_modulo" class="form-label">Atribuir ao Implantador</label>
+                        <select class="form-select" id="usuario_atribuido_cs_modulo" name="usuario_atribuido_cs_modulo"
+                            required>
+                            <option value="">Selecione um usuário...</option>
+                            {% if all_cs_users %}
+                            {% for user in all_cs_users %}
+                            <option value="{{ user.usuario }}">{{ user.nome }} ({{ user.usuario }})</option>
+                            {% endfor %}
+                            {% endif %}
+                        </select>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning"> Seu perfil de acesso ({{ g.perfil.perfil_acesso or 'Nenhum' }})
+                        não tem permissão para esta ação. </div>
+                    {% endif %}
+                </div>
+                <div class="modal-footer header-bg">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    {% if g.perfil.perfil_acesso in PERFIS_COM_CRIACAO %}
+                    <button type="submit" class="btn btn-primary">Criar Módulo</button>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="agendarInicioModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title" id="agendarInicioModalLabel">Agendar Início Futuro</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('ongoing_actions.agendar_implantacao') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <p>Selecione a data de início previsto para a implantação: <strong id="agendarNomeEmpresa"></strong>
+                    </p>
+                    <input type="hidden" name="implantacao_id" id="agendarImplId" value="">
+                    <div class="mb-3">
+                        <label for="data_inicio_previsto" class="form-label">Data de Início Previsto</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control flatpickr-date" id="data_inicio_previsto"
+                                name="data_inicio_previsto" placeholder="DD/MM/AAAA" inputmode="numeric"
+                                pattern="\d{2}/\d{2}/\d{4}" required>
+                            <button class="btn btn-outline-secondary" type="button" id="btn-cal-data_inicio_previsto"
+                                aria-label="Abrir calendário"><i class="bi bi-calendar3"></i></button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer header-bg">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-outline-warning"
+                        formaction="{{ url_for('ongoing_actions.marcar_sem_previsao') }}" formmethod="POST"
+                        formnovalidate>Sem
+                        previsão</button>
+                    <button type="submit" class="btn btn-primary">Agendar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal único para Iniciar Implantação (fora das tabelas) -->
+<div class="modal fade" id="modalIniciarImplantacao" tabindex="-1" aria-labelledby="modalIniciarImplantacaoLabel"
+    aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header header-bg">
+                <h5 class="modal-title" id="modalIniciarImplantacaoLabel">Iniciar Implantação</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-break mb-3">Escolha como deseja iniciar a implantação de <strong class="text-break"
+                        id="iniciarNomeEmpresa"></strong>:</p>
+
+                <!-- Opção 1: Iniciar Agora -->
+                <form method="POST" action="{{ url_for('ongoing_actions.iniciar_implantacao') }}"
+                    id="formIniciarAgora" class="mb-3">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="implantacao_id" id="iniciarImplId" value="">
+                    <input type="hidden" name="redirect_to" value="dashboard">
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="bi bi-play-circle me-2"></i> Iniciar Agora
+                    </button>
+                </form>
+
+                <!-- Opção 2: Agendar Início Futuro -->
+                <form method="POST" action="{{ url_for('ongoing_actions.agendar_implantacao') }}"
+                    id="formAgendarFuturo" class="mb-3">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="implantacao_id" id="agendarImplId2" value="">
+                    <div class="mb-2">
+                        <label for="data_inicio_previsto_modal" class="form-label small">Data de Início
+                            Previsto:</label>
+                        <div class="input-group input-group-sm">
+                            <input type="text" class="form-control flatpickr-date" id="data_inicio_previsto_modal"
+                                name="data_inicio_previsto" placeholder="DD/MM/AAAA" inputmode="numeric"
+                                pattern="\d{2}/\d{2}/\d{4}" required>
+                            <button class="btn btn-outline-secondary" type="button" id="btn-cal-modal"
+                                aria-label="Abrir calendário"><i class="bi bi-calendar3"></i></button>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-info w-100">
+                        <i class="bi bi-calendar-event me-2"></i> Agendar Início Futuro
+                    </button>
+                </form>
+
+                <!-- Opção 3: Sem Previsão -->
+                <form method="POST" action="{{ url_for('ongoing_actions.marcar_sem_previsao') }}"
+                    id="formSemPrevisao">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="implantacao_id" id="semPrevisaoImplId" value="">
+                    <button type="submit" class="btn btn-warning w-100">
+                        <i class="bi bi-question-circle me-2"></i> Marcar como Sem Previsão
+                    </button>
+                </form>
+            </div>
+            <div class="modal-footer header-bg">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{% endblock %}
+
+
+{% block scripts_extra %}
+<script nonce="{{ csp_nonce() }}">
+    
+    document.addEventListener('DOMContentLoaded', function () {
+        const tableCard = document.querySelector('.dashboard-table-card');
+        const kpiButtons = document.querySelectorAll('.kpi-count-link');
+        const map = {
+            total: 'total-tab',
+            novas: 'novas-tab',
+            andamento: 'andamento-tab',
+            paradas: 'paradas-tab',
+            futuras: 'futuras-tab',
+            sem_previsao: 'sem-previsao-tab',
+            finalizadas: 'finalizadas-tab',
+            canceladas: 'canceladas-tab'
+        };
+        kpiButtons.forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const key = btn.getAttribute('data-kpi') || 'total';
+                const tabId = map[key] || 'total-tab';
+                const tabEl = document.getElementById(tabId);
+                if (tabEl && window.bootstrap && window.bootstrap.Tab) {
+                    new bootstrap.Tab(tabEl).show();
+                }
+                if (tableCard) {
+                    tableCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+    });
+
+document.addEventListener('DOMContentLoaded', function () {
+        const tabSelector = '#myTab .nav-link';
+        const tabs = document.querySelectorAll(tabSelector);
+        const tabStorageKey = 'tabAtiva-dashboard';
+
+        tabs.forEach(tab => {
+            tab.addEventListener('shown.bs.tab', event => {
+                localStorage.setItem(tabStorageKey, event.target.id);
+            });
+        });
+
+        const abaAtivaId = localStorage.getItem(tabStorageKey);
+        const defaultTabEl = document.getElementById('total-tab');
+
+        if (abaAtivaId) {
+            const tabEl = document.getElementById(abaAtivaId);
+            if (tabEl) {
+                try {
+                    new bootstrap.Tab(tabEl).show();
+                } catch (e) {
+                    localStorage.removeItem(tabStorageKey);
+                    if (defaultTabEl) new bootstrap.Tab(defaultTabEl).show();
+                }
+            } else {
+                localStorage.removeItem(tabStorageKey);
+                if (defaultTabEl) new bootstrap.Tab(defaultTabEl).show();
+            }
+        } else {
+            if (defaultTabEl) new bootstrap.Tab(defaultTabEl).show();
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        var agendarModal = document.getElementById('agendarInicioModal');
+        if (agendarModal) {
+            agendarModal.addEventListener('show.bs.modal', function (event) {
+                var button = event.relatedTarget;
+
+                var implId = button.getAttribute('data-impl-id');
+                var implNome = button.getAttribute('data-impl-nome');
+
+                var modalNomeEmpresa = agendarModal.querySelector('#agendarNomeEmpresa');
+                var modalImplIdInput = agendarModal.querySelector('#agendarImplId');
+
+                if (modalNomeEmpresa) {
+                    modalNomeEmpresa.textContent = implNome;
+                }
+                if (modalImplIdInput) {
+                    modalImplIdInput.value = implId;
+                }
+                var semPrevIdInput = agendarModal.querySelector('#semPrevImplId');
+                if (semPrevIdInput) {
+                    semPrevIdInput.value = implId;
+                }
+
+                var dateInput = agendarModal.querySelector('#data_inicio_previsto');
+                if (dateInput) {
+                    var today = new Date().toISOString().split('T')[0];
+                    dateInput.setAttribute('min', today);
+                }
+            });
+            var agendarForm = agendarModal.querySelector('form');
+            if (agendarForm) {
+                agendarForm.addEventListener('submit', function (e) {
+                    var input = agendarForm.querySelector('#data_inicio_previsto');
+                    if (!input) return;
+                    var v = (input.value || '').trim();
+                    var m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+                    if (!m) return;
+                    input.value = m[3] + '-' + m[2] + '-' + m[1];
+                });
+            }
+
+            if (window.flatpickr) {
+                var fpPrevisto = window.flatpickr('#data_inicio_previsto', {
+                    dateFormat: 'Y-m-d',
+                    altInput: true,
+                    altFormat: 'd/m/Y',
+                    allowInput: true,
+                    appendTo: agendarModal.querySelector('.modal-body'),
+                    static: false,
+                    position: 'auto',
+                    minDate: 'today'
+                });
+                var btnPrevisto = document.getElementById('btn-cal-data_inicio_previsto');
+                if (btnPrevisto && fpPrevisto) btnPrevisto.addEventListener('click', function () { fpPrevisto.open(); });
+                var alt = fpPrevisto && fpPrevisto._input ? fpPrevisto._input : null;
+                if (alt) {
+                    alt.addEventListener('input', function (e) {
+                        var v = e.target.value.replace(/[^\d]/g, '').slice(0, 8);
+                        var out = '';
+                        if (v.length >= 2) out = v.slice(0, 2);
+                        if (v.length >= 4) out = out + '/' + v.slice(2, 4);
+                        if (v.length >= 5) out = out + '/' + v.slice(4, 8);
+                        e.target.value = out;
+                    });
+                }
+            }
+        }
+
+        // Handler para o modal único de Iniciar Implantação
+        var iniciarModal = document.getElementById('modalIniciarImplantacao');
+        if (iniciarModal) {
+            document.querySelectorAll('.btn-iniciar-implantacao').forEach(function (btn) {
+                btn.addEventListener('click', function (e) {
+                    var implId = this.getAttribute('data-impl-id');
+                    var implNome = this.getAttribute('data-impl-nome');
+
+                    var modalNomeEl = iniciarModal.querySelector('#iniciarNomeEmpresa');
+                    var modalImplIdInput = iniciarModal.querySelector('#iniciarImplId');
+                    var agendarImplIdInput = iniciarModal.querySelector('#agendarImplId2');
+                    var semPrevisaoImplIdInput = iniciarModal.querySelector('#semPrevisaoImplId');
+
+                    if (modalNomeEl) {
+                        modalNomeEl.textContent = implNome;
+                    }
+                    if (modalImplIdInput) {
+                        modalImplIdInput.value = implId;
+                    }
+                    if (agendarImplIdInput) {
+                        agendarImplIdInput.value = implId;
+                    }
+                    if (semPrevisaoImplIdInput) {
+                        semPrevisaoImplIdInput.value = implId;
+                    }
+
+                    // Abrir o modal
+                    var bsModal = new bootstrap.Modal(iniciarModal);
+                    bsModal.show();
+                });
+            });
+
+            // Configurar flatpickr para o campo de data no modal
+            if (window.flatpickr) {
+                var fpModal = window.flatpickr('#data_inicio_previsto_modal', {
+                    dateFormat: 'd/m/Y',
+                    allowInput: true,
+                    minDate: 'today',
+                    locale: {
+                        firstDayOfWeek: 0,
+                        weekdays: {
+                            shorthand: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
+                            longhand: ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
+                        },
+                        months: {
+                            shorthand: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+                            longhand: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+                        }
+                    }
+                });
+                var btnModal = document.getElementById('btn-cal-modal');
+                if (btnModal && fpModal) {
+                    btnModal.addEventListener('click', function () {
+                        fpModal.open();
+                    });
+                }
+            }
+
+            // Converter data DD/MM/AAAA para YYYY-MM-DD antes de enviar
+            var formAgendarFuturo = iniciarModal.querySelector('#formAgendarFuturo');
+            if (formAgendarFuturo) {
+                formAgendarFuturo.addEventListener('submit', function (e) {
+                    var input = formAgendarFuturo.querySelector('#data_inicio_previsto_modal');
+                    if (!input) return;
+                    var v = (input.value || '').trim();
+                    var m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+                    if (m) {
+                        input.value = m[3] + '-' + m[2] + '-' + m[1];
+                    }
+                });
+            }
+
+            // Data agora será convertida antes do envio
+        }
+    });
+</script>
+<script nonce="{{ csp_nonce() }}">
+    (function () {
+        function parseDiasFromRow(tr) {
+            var el = tr.querySelector('.js-dias-badge');
+            if (!el) return 0;
+            var txt = (el.textContent || '').trim();
+            var n = parseInt(txt, 10);
+            return isNaN(n) ? 0 : n;
+        }
+        function sortAndamento(desc) {
+            var tbody = document.getElementById('andamento-tbody');
+            if (!tbody) return;
+            var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+            rows.sort(function (a, b) {
+                var da = parseDiasFromRow(a);
+                var db = parseDiasFromRow(b);
+                return desc ? (db - da) : (da - db);
+            });
+            rows.forEach(function (r) { tbody.appendChild(r); });
+            if (window.__reinitTabPagination) window.__reinitTabPagination('andamento');
+        }
+        var descBtn = document.getElementById('sort-days-desc');
+        var ascBtn = document.getElementById('sort-days-asc');
+        if (descBtn) { descBtn.addEventListener('click', function (e) { e.preventDefault(); sortAndamento(true); }); }
+        if (ascBtn) { ascBtn.addEventListener('click', function (e) { e.preventDefault(); sortAndamento(false); }); }
+    })();
+</script>
+<script nonce="{{ csp_nonce() }}">
+    document.addEventListener('DOMContentLoaded', function () {
+        // Funções de atualização de badges removidas pois o cálculo agora é feito no backend
+    });
+</script>
+<script nonce="{{ csp_nonce() }}">
+    document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') { updateDashboardProgress(); } });
+
+    function updateDashboardProgress() {
+        var bars = document.querySelectorAll('.js-progress-bar[data-progress-url]');
+        bars.forEach(function (bar) {
+            var url = bar.getAttribute('data-progress-url');
+            if (!url) return;
+            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'include' })
+                .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+                .then(function (data) { var p = parseInt(data.progresso || 0, 10); if (isNaN(p)) p = 0; bar.style.width = p + '%'; bar.setAttribute('aria-valuenow', p); bar.textContent = p + '%'; })
+                .catch(function () { });
+        });
+    }
+</script>
+<script nonce="{{ csp_nonce() }}">
+    document.addEventListener('DOMContentLoaded', function () {
+        const btnConsultar = document.getElementById('btnConsultarEmpresa');
+        if (btnConsultar) {
+            btnConsultar.addEventListener('click', async function () {
+                const idFavorecidoInput = document.getElementById('idFavorecido');
+                const idFavorecido = idFavorecidoInput.value;
+                const feedbackEl = document.getElementById('consultaFeedback');
+                const btn = this;
+                const spinner = btn.querySelector('.spinner-border');
+                const nomeEmpresaInput = document.getElementById('nomeEmpresa');
+
+                if (!idFavorecido) {
+                    feedbackEl.textContent = 'Por favor, digite um ID Favorecido.';
+                    feedbackEl.className = 'form-text text-danger';
+                    return;
+                }
+
+                // Reset state
+                feedbackEl.textContent = '';
+                feedbackEl.className = 'form-text';
+                btn.disabled = true;
+                spinner.classList.remove('d-none');
+
+                try {
+                    const response = await fetch(`/api/consultar_empresa?id_favorecido=${idFavorecido}`);
+                    const data = await response.json();
+
+                    if (data.ok) {
+                        const nomeOamd = data.empresa.nomefantasia || data.empresa.razaosocial;
+                        feedbackEl.textContent = 'Empresa encontrada: ' + nomeOamd;
+                        feedbackEl.className = 'form-text text-success';
+
+                        // Auto-fill name (prioritizing OAMD data)
+                        if (nomeOamd) {
+                            nomeEmpresaInput.value = nomeOamd;
+                            // Highlight the field briefly to show it was updated
+                            nomeEmpresaInput.classList.add('is-valid');
+                            setTimeout(() => nomeEmpresaInput.classList.remove('is-valid'), 2000);
+                        }
+                    } else {
+                        feedbackEl.textContent = data.error || 'Erro ao consultar empresa.';
+                        feedbackEl.className = 'form-text text-danger';
+                    }
+                } catch (error) {
+                    feedbackEl.textContent = 'Erro de conexão ao consultar empresa.';
+                    feedbackEl.className = 'form-text text-danger';
+                } finally {
+                    btn.disabled = false;
+                    spinner.classList.add('d-none');
+                }
+            });
+        }
+
+        const btnConsultarModulo = document.getElementById('btnConsultarEmpresaModulo');
+        if (btnConsultarModulo) {
+            btnConsultarModulo.addEventListener('click', async function () {
+                const idFavorecidoInput = document.getElementById('idFavorecidoModulo');
+                const idFavorecido = idFavorecidoInput.value;
+                const feedbackEl = document.getElementById('consultaFeedbackModulo');
+                const btn = this;
+                const spinner = btn.querySelector('.spinner-border');
+                const nomeEmpresaInput = document.getElementById('nomeEmpresaModulo');
+
+                if (!idFavorecido) {
+                    feedbackEl.textContent = 'Por favor, digite um ID Favorecido.';
+                    feedbackEl.className = 'form-text text-danger';
+                    return;
+                }
+
+                feedbackEl.textContent = '';
+                feedbackEl.className = 'form-text';
+                btn.disabled = true;
+                spinner.classList.remove('d-none');
+
+                try {
+                    const response = await fetch(`/api/consultar_empresa?id_favorecido=${idFavorecido}`);
+                    const data = await response.json();
+
+                    if (data.ok) {
+                        const nomeOamd = data.empresa.nomefantasia || data.empresa.razaosocial;
+                        feedbackEl.textContent = 'Empresa encontrada: ' + nomeOamd;
+                        feedbackEl.className = 'form-text text-success';
+
+                        // Auto-fill name (prioritizing OAMD data)
+                        if (nomeOamd) {
+                            nomeEmpresaInput.value = nomeOamd;
+                            // Highlight the field briefly to show it was updated
+                            nomeEmpresaInput.classList.add('is-valid');
+                            setTimeout(() => nomeEmpresaInput.classList.remove('is-valid'), 2000);
+                        }
+                    } else {
+                        feedbackEl.textContent = data.error || 'Erro ao consultar empresa.';
+                        feedbackEl.className = 'form-text text-danger';
+                    }
+                } catch (error) {
+                    feedbackEl.textContent = 'Erro de conexão ao consultar empresa.';
+                    feedbackEl.className = 'form-text text-danger';
+                } finally {
+                    btn.disabled = false;
+                    spinner.classList.add('d-none');
+                }
+            });
+        }
+
+        // NOTA: A consulta OAMD foi centralizada em modal_detalhes_empresa.js
+        // Não é mais necessário código duplicado aqui
+
+
+        // ===== BUSCA RÁPIDA DE EMPRESA =====
+        const searchInput = document.getElementById('searchEmpresa');
+        const clearBtn = document.getElementById('clearSearch');
+        const searchCounter = document.getElementById('searchCounter');
+        const searchResults = document.getElementById('searchResults');
+        const suggestionsEl = document.getElementById('searchSuggestions');
+        let searchIndex = null;
+
+        function buildSearchIndex() {
+            const rows = document.querySelectorAll('.tab-pane table tbody tr');
+            const unique = new Map();
+            rows.forEach((row) => {
+                const nameEl = row.querySelector('.btn-edit-empresa');
+                const cellEl = row.querySelector('td:first-child');
+                const name = (nameEl ? nameEl.textContent : cellEl ? cellEl.textContent : '') || '';
+                const cleanName = name.trim();
+                if (!cleanName) return;
+                if (!name) return;
+                const linkEl = row.querySelector("a[href*='implantacao']")
+                    || row.querySelector("a[href*='ver_implantacao']")
+                    || row.querySelector("a[href]");
+                if (!linkEl) return;
+                const href = linkEl.getAttribute('href');
+                if (!href) return;
+                const key = href || cleanName;
+                if (unique.has(key)) return;
+                unique.set(key, { name: cleanName, href });
+            });
+            return Array.from(unique.values());
+        }
+
+        function renderSuggestions(term) {
+            if (!suggestionsEl) return 0;
+            const query = term.toLowerCase().trim();
+            if (!query) {
+                suggestionsEl.style.display = 'none';
+                suggestionsEl.innerHTML = '';
+                return 0;
+            }
+
+            searchIndex = buildSearchIndex();
+
+            const matches = (searchIndex || [])
+                .filter(item => item.name.toLowerCase().includes(query))
+                .sort((a, b) => {
+                    const aStarts = a.name.toLowerCase().startsWith(query) ? 0 : 1;
+                    const bStarts = b.name.toLowerCase().startsWith(query) ? 0 : 1;
+                    if (aStarts !== bStarts) return aStarts - bStarts;
+                    return a.name.localeCompare(b.name);
+                })
+                .slice(0, 6);
+
+            if (!matches.length) {
+                suggestionsEl.innerHTML = '<div class="empty">Nenhuma empresa encontrada.</div>';
+                suggestionsEl.style.display = 'block';
+                return 0;
+            }
+
+            suggestionsEl.innerHTML = matches.map((item) => (
+                `<a class="suggestion-item" href="${item.href}">
+                    <span>${item.name}</span>
+                    <span class="suggestion-muted">Ver implantação</span>
+                </a>`
+            )).join('');
+            suggestionsEl.style.display = 'block';
+            return matches.length;
+        }
+
+        if (searchInput) {
+            searchInput.addEventListener('input', function () {
+                const searchTerm = this.value.toLowerCase().trim();
+
+                // Mostrar/ocultar botão de limpar
+                clearBtn.style.display = searchTerm ? 'block' : 'none';
+
+                const totalFound = renderSuggestions(searchTerm);
+
+                if (searchTerm) {
+                    searchResults.textContent = totalFound;
+                    searchCounter.style.display = 'block';
+                } else {
+                    searchCounter.style.display = 'none';
+                }
+            });
+
+            // Botão de limpar
+            clearBtn.addEventListener('click', function () {
+                searchInput.value = '';
+                searchInput.dispatchEvent(new Event('input'));
+                searchInput.focus();
+            });
+
+            // Atalho: ESC para limpar busca
+            searchInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') {
+                    clearBtn.click();
+                }
+            });
+
+            document.addEventListener('click', function (e) {
+                if (!suggestionsEl) return;
+                if (e.target === searchInput || suggestionsEl.contains(e.target)) return;
+                suggestionsEl.style.display = 'none';
+            });
+
+        }
+        // ===== VALIDAÇÃO DE DATA FORCE BRUTE =====
+        // Monitoramento contínuo para impedir anos > 4 dígitos
+        const dateInputs = document.querySelectorAll('input[type="date"]');
+
+        dateInputs.forEach(input => {
+            let intervalId;
+
+            // Quando foca, inicia verificação a cada 100ms
+            input.addEventListener('focus', function () {
+                intervalId = setInterval(() => {
+                    const val = input.value;
+                    if (!val) return;
+
+                    const parts = val.split('-');
+                    // Se ano > 4 dígitos (ex: 20265...)
+                    if (parts[0].length > 4) {
+                        parts[0] = parts[0].substring(0, 4);
+                        input.value = parts.join('-');
+                    }
+                    // Se ano > 2100 logica extra
+                    if (parts[0] > 2100) {
+                        parts[0] = "2100";
+                        input.value = parts.join('-');
+                    }
+                }, 100);
+            });
+
+            // Quando sai, para e faz verificação final
+            input.addEventListener('blur', function () {
+                clearInterval(intervalId);
+                const max = '2100-12-31';
+                if (this.value > max) {
+                    this.value = max;
+                }
+            });
+        });
+
+
+        // Anti-Cache: Adicionar timestamp em formulários GET para forçar atualização
+        const cacheBustForms = ["cs-filter-form", "search-form"];
+        cacheBustForms.forEach(formId => {
+            const form = document.getElementById(formId);
+            if (form) {
+                let hidden = form.querySelector('input[name="_t"]');
+                if (!hidden) {
+                    hidden = document.createElement("input");
+                    hidden.type = "hidden";
+                    hidden.name = "_t";
+                    form.appendChild(hidden);
+                }
+                form.addEventListener("submit", function () {
+                    hidden.value = Date.now();
+                });
+            }
+        });
+
+        // ===== PAGINAÇÃO DOS PAINÉIS =====
+        (function () {
+            const ITEMS_PER_PAGE = 20;
+            const paginationState = {};
+
+            function renderPaginationControls(tabId) {
+                const state = paginationState[tabId];
+                if (!state) return;
+                const { allRows, currentPage, ctrlEl } = state;
+                const totalPages = Math.ceil(allRows.length / ITEMS_PER_PAGE);
+                if (totalPages <= 1) { ctrlEl.innerHTML = ''; return; }
+
+                const prevDisabled = currentPage === 1 ? 'disabled' : '';
+                const nextDisabled = currentPage === totalPages ? 'disabled' : '';
+
+                let pageItems = '';
+                for (let p = 1; p <= totalPages; p++) {
+                    if (p === 1 || p === totalPages || (p >= currentPage - 2 && p <= currentPage + 2)) {
+                        const active = p === currentPage ? 'active' : '';
+                        pageItems += `<li class="page-item ${active}"><a class="page-link" href="#" data-page="${p}">${p}</a></li>`;
+                    } else if (p === currentPage - 3 || p === currentPage + 3) {
+                        pageItems += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+                    }
+                }
+
+                const start = (currentPage - 1) * ITEMS_PER_PAGE + 1;
+                const end = Math.min(currentPage * ITEMS_PER_PAGE, allRows.length);
+
+                ctrlEl.innerHTML = `
+                    <nav aria-label="Navegação de implantações" class="d-flex justify-content-center mt-3">
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                                <a class="page-link" href="#" data-page="1" title="Primeira"><i class="bi bi-chevron-bar-left"></i></a>
+                            </li>
+                            <li class="page-item ${prevDisabled}">
+                                <a class="page-link" href="#" data-page="${currentPage - 1}"><i class="bi bi-chevron-left"></i></a>
+                            </li>
+                            ${pageItems}
+                            <li class="page-item ${nextDisabled}">
+                                <a class="page-link" href="#" data-page="${currentPage + 1}"><i class="bi bi-chevron-right"></i></a>
+                            </li>
+                            <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                                <a class="page-link" href="#" data-page="${totalPages}" title="Última"><i class="bi bi-chevron-bar-right"></i></a>
+                            </li>
+                        </ul>
+                    </nav>
+                    <div class="text-center mt-1">
+                        <small class="text-muted">Mostrando ${start}–${end} de ${allRows.length} implantações (Página ${currentPage} de ${totalPages})</small>
+                    </div>`;
+
+                ctrlEl.querySelectorAll('a[data-page]').forEach(function (a) {
+                    a.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        const p = parseInt(this.getAttribute('data-page'), 10);
+                        if (isNaN(p) || p < 1 || p > totalPages) return;
+                        goToPage(tabId, p);
+                    });
+                });
+            }
+
+            function applyPage(tabId) {
+                const state = paginationState[tabId];
+                if (!state) return;
+                const { allRows, currentPage } = state;
+                const start = (currentPage - 1) * ITEMS_PER_PAGE;
+                const end = start + ITEMS_PER_PAGE;
+                allRows.forEach(function (row, i) {
+                    row.style.display = (i >= start && i < end) ? '' : 'none';
+                });
+                renderPaginationControls(tabId);
+            }
+
+            function goToPage(tabId, page) {
+                if (!paginationState[tabId]) return;
+                paginationState[tabId].currentPage = page;
+                applyPage(tabId);
+            }
+
+            function initTabPagination(tabPane) {
+                const tabId = tabPane.id;
+                const tbody = tabPane.querySelector('table tbody');
+                const tableWrap = tabPane.querySelector('.table-responsive');
+                if (!tbody || !tableWrap) return;
+
+                const allRows = Array.from(tbody.querySelectorAll('tr'));
+                if (allRows.length <= ITEMS_PER_PAGE) return;
+
+                let ctrlEl = tabPane.querySelector('.tab-pagination-ctrl');
+                if (!ctrlEl) {
+                    ctrlEl = document.createElement('div');
+                    ctrlEl.className = 'tab-pagination-ctrl';
+                    tableWrap.insertAdjacentElement('afterend', ctrlEl);
+                }
+
+                paginationState[tabId] = { allRows, currentPage: 1, tbody, ctrlEl };
+                applyPage(tabId);
+            }
+
+            window.__reinitTabPagination = function (tabId) {
+                const state = paginationState[tabId];
+                if (!state) return;
+                const allRows = Array.from(state.tbody.querySelectorAll('tr'));
+                state.allRows = allRows;
+                state.currentPage = 1;
+                applyPage(tabId);
+            };
+
+            document.querySelectorAll('.tab-pane').forEach(function (pane) {
+                initTabPagination(pane);
+            });
+
+            document.querySelectorAll('[data-bs-toggle="tab"]').forEach(function (trigger) {
+                trigger.addEventListener('shown.bs.tab', function (e) {
+                    const targetId = (e.target.getAttribute('href') || e.target.getAttribute('data-bs-target') || '').replace('#', '');
+                    if (paginationState[targetId]) {
+                        goToPage(targetId, 1);
+                    }
+                });
+            });
+        })();
+
+    });
+</script>
 {% endblock %}

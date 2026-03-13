@@ -26,7 +26,6 @@ from .query import (
 
 # Funções utilitárias
 from .utils import (
-    build_tela_apoio_link,
     extract_infra_code,
     json_safe_value,
     sanitize_empresa_data,

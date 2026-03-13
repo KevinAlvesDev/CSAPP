@@ -8,7 +8,9 @@ Sentry captura automaticamente:
 - Breadcrumbs (logs de contexto)
 """
 
+import logging
 import os
+logger = logging.getLogger(__name__)
 
 try:
     import sentry_sdk
@@ -44,7 +46,7 @@ def init_sentry(app):
 
     environment = app.config.get("FLASK_ENV", "production")
 
-    logging_integration = LoggingIntegration(level=None, event_level="ERROR")
+    logging_integration = LoggingIntegration(level=None, event_level=logging.ERROR)
 
     sentry_sdk.init(
         dsn=sentry_dsn,
@@ -97,8 +99,9 @@ def before_send_filter(event, hint):
 
         if hasattr(g, "user_email"):
             event.setdefault("user", {})["email"] = g.user_email
-    except Exception:
-        pass
+    except Exception as e:
+        logger.exception("Unhandled exception", exc_info=True)
+        logging.getLogger(__name__).warning(f"Falha ao enriquecer evento do Sentry com e-mail do usuário: {e}", exc_info=True)
 
     return event
 

@@ -1,53 +1,13 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-<!-- CRITICAL: Prevent flash of white on dark mode -->
-<script>
-  (function () {
-    var theme = localStorage.getItem('theme');
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark-mode');
-      document.documentElement.style.backgroundColor = '#0f172a';
-      document.documentElement.style.colorScheme = 'dark';
-    }
-  })();
-</script>
-{% set current_dashboard = 'onboarding.dashboard' %}
-{% if request.blueprint == 'ongoing' %}
-{% set current_dashboard = 'ongoing.dashboard' %}
-{% elif request.blueprint == 'grandes_contas' %}
-{% set current_dashboard = 'grandes_contas.dashboard' %}
-{% elif request.blueprint == 'onboarding' %}
-{% set current_dashboard = 'onboarding.dashboard' %}
-{% elif g.modulo_atual == 'grandes_contas' %}
-{% set current_dashboard = 'grandes_contas.dashboard' %}
-{% elif g.modulo_atual == 'ongoing' %}
-{% set current_dashboard = 'ongoing.dashboard' %}
-{% endif %}
-
-{% set current_context = 'onboarding' %}
-{% if request.blueprint == 'grandes_contas' or (request.blueprint in ['analytics', 'planos', 'gamification'] and
-request.args.get('context') == 'grandes_contas') or (request.blueprint == 'perfis' and g.modulo_atual ==
-'grandes_contas') %}
-{% set current_context = 'grandes_contas' %}
-{% elif request.blueprint == 'ongoing' or (request.blueprint in ['analytics', 'planos', 'gamification'] and request.args.get('context')
-== 'ongoing') or (request.blueprint == 'perfis' and g.modulo_atual == 'ongoing') %}
-{% set current_context = 'ongoing' %}
-{% endif %}
+{% set current_context = g.modulo_atual or 'onboarding' %}
+{% set current_dashboard = current_context + '.dashboard' %}
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="google-site-verification" content="fYdVPcoNNnG6eyLSXqa39Ukhx7yWRzK5y5e6XyJMTdY">
-  <title>{% block title %}CS Onboarding{% endblock %}</title>
-
-  <!-- Inline critical CSS to prevent flash -->
-  <style>
-    html.dark-mode,
-    html.dark-mode body {
-      background-color: #0f172a !important;
-      color: #e2e8f0;
-    }
-  </style>
+  <title>{% block title %}CS Control{% endblock %}</title>
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
@@ -61,16 +21,13 @@ request.args.get('context') == 'grandes_contas') or (request.blueprint == 'perfi
   <link rel="stylesheet" href="{{ 'css/style.css' | static_versioned }}">
   <link rel="stylesheet" href="{{ 'css/theme.css' | static_versioned }}">
   <link rel="stylesheet" href="{{ 'css/responsive_global.css' | static_versioned }}">
+  <link rel="stylesheet" href="{{ 'css/components/_chat_widget.css' | static_versioned }}">
 
 
   {% block head_extra %}{% endblock %}
-  <script>
-    // Global context for JS components (notifications, etc)
-    window.currentContext = "{{ current_context }}";
-  </script>
 </head>
 
-<body class="{% if request.cookies.get('theme') == 'dark' %}dark-mode{% endif %}">
+<body data-current-context="{{ current_context }}">
 
 
   <div class="main-layout">
@@ -104,18 +61,24 @@ request.args.get('context') == 'grandes_contas') or (request.blueprint == 'perfi
       <ul class="nav flex-column sidebar-nav-main">
         <li class="nav-item"><a
             class="nav-link {% if request.endpoint and 'dashboard' in request.endpoint %}active{% endif %}"
-            href="{{ url_for(current_dashboard) }}"><i class="bi bi-grid me-2"></i><span class="nav-link-text">
+            href="{{ url_for(current_dashboard, context=current_context) }}"><i class="bi bi-grid me-2"></i><span
+              class="nav-link-text">
               Dashboard</span></a></li>
+        <li class="nav-item"><a
+            class="nav-link {% if request.endpoint and 'agenda' in request.endpoint %}active{% endif %}"
+            href="{{ url_for('agenda.agenda_home') }}"><i class="bi bi-calendar3 me-2"></i><span
+              class="nav-link-text"> Agenda</span></a></li>
         {% if implantacao and implantacao.id %}
         {% set ver_impl_blueprint = (request.blueprint if request.blueprint in ['onboarding', 'grandes_contas',
         'ongoing'] else (implantacao.contexto if (implantacao and implantacao.contexto) else 'onboarding')) %}
         <li class="nav-item"><a
             class="nav-link {% if '.ver_implantacao' in (request.endpoint or '') %}active{% endif %}"
-            href="{{ url_for(ver_impl_blueprint + '.ver_implantacao', impl_id=implantacao.id) }}"><i
+            href="{{ url_for(ver_impl_blueprint + '.ver_implantacao', impl_id=implantacao.id, context=current_context) }}"><i
               class="bi bi-kanban me-2"></i><span class="nav-link-text"> Detalhes da Implantação</span></a></li>
         {% endif %}
         <li class="nav-item"><a class="nav-link {% if request.endpoint == 'profile.profile' %}active{% endif %}"
-            href="{{ url_for('profile.profile') }}"><i class="bi bi-person-circle me-2"></i><span class="nav-link-text">
+            href="{{ url_for('profile.profile', context=current_context) }}"><i
+              class="bi bi-person-circle me-2"></i><span class="nav-link-text">
               Perfil</span></a></li>
         {% if g.perfil and g.perfil.perfil_acesso in g.PERFIS_COM_GESTAO %}
         <li class="nav-item"><a
@@ -123,12 +86,13 @@ request.args.get('context') == 'grandes_contas') or (request.blueprint == 'perfi
             href="{{ url_for('planos.listar_planos', context=current_context) }}"><i
               class="bi bi-signpost-split me-2"></i><span class="nav-link-text"> Planos de Sucesso</span></a></li>
         <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.manage_users' %}active{% endif %}"
-            href="{{ url_for('management.manage_users') }}"><i class="bi bi-people me-2"></i><span class="nav-link-text">
+            href="{{ url_for('management.manage_users', context=current_context) }}"><i
+              class="bi bi-people me-2"></i><span class="nav-link-text">
               Usuários</span></a></li>
         <li class="nav-item"><a
             class="nav-link {% if request.endpoint and request.endpoint.startswith('perfis.') %}active{% endif %}"
-            href="{{ url_for('perfis.listar_perfis') }}"><i class="bi bi-shield-shaded me-2"></i><span
-              class="nav-link-text"> Perfis de Acesso</span></a></li>
+            href="{{ url_for('perfis.listar_perfis', context=current_context) }}"><i
+              class="bi bi-shield-shaded me-2"></i><span class="nav-link-text"> Perfis de Acesso</span></a></li>
         <li class="nav-item"><a
             class="nav-link {% if request.endpoint == 'analytics.analytics_dashboard' %}active{% endif %}"
             href="{{ url_for('analytics.analytics_dashboard', context=current_context) }}"><i
@@ -141,8 +105,8 @@ request.args.get('context') == 'grandes_contas') or (request.blueprint == 'perfi
               class="bi bi-list-check me-2"></i><span class="nav-link-text"> Métricas</span></a></li>
         <li class="nav-item"><a
             class="nav-link {% if request.endpoint == 'gamification.manage_gamification_rules' %}active{% endif %}"
-            href="{{ url_for('gamification.manage_gamification_rules', context=current_context) }}"><i class="bi bi-card-list me-2"></i><span
-              class="nav-link-text"> Critérios da Gamificação</span></a></li>
+            href="{{ url_for('gamification.manage_gamification_rules', context=current_context) }}"><i
+              class="bi bi-card-list me-2"></i><span class="nav-link-text"> Critérios da Gamificação</span></a></li>
         <li class="nav-item"><a
             class="nav-link {% if request.endpoint == 'gamification.gamification_report' %}active{% endif %}"
             href="{{ url_for('gamification.gamification_report', context=current_context) }}"><i
@@ -152,17 +116,6 @@ request.args.get('context') == 'grandes_contas') or (request.blueprint == 'perfi
       <ul class="nav flex-column sidebar-nav-footer">
         <li class="nav-item nav-item-divider">
           <hr>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link nav-link-theme" href="#" id="themeToggle">
-            <span class="nav-link-theme-left">
-              <i class="bi bi-moon-stars me-2" id="themeIcon"></i>
-              <span class="nav-link-text" id="themeText">Tema Escuro</span>
-            </span>
-            <span class="theme-switch" aria-hidden="true">
-              <span class="theme-switch-thumb"></span>
-            </span>
-          </a>
         </li>
         <li class="nav-item">
           <a class="nav-link" href="{{ url_for('core.modules_selection') }}">
@@ -225,72 +178,143 @@ request.args.get('context') == 'grandes_contas') or (request.blueprint == 'perfi
     <!-- Toasts serão inseridos aqui dinamicamente -->
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
-  <script src="https://unpkg.com/imask"></script>
-  <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+  {% if g.user_email and g.perfil and g.perfil.perfil_acesso and g.perfil.perfil_acesso != 'Sem Acesso' %}
+  <div
+    id="chatWidgetRoot"
+    data-context="{{ current_context }}"
+    data-current-user-email="{{ g.user_email }}"
+    data-current-user-name="{{ g.perfil.nome or g.user_email }}"
+    data-current-user-photo-url="{{ g.perfil.foto_url or '' }}"
+  >
+    <button id="chatWidgetToggle" class="chat-widget-toggle" type="button" aria-label="Abrir chat">
+      <i class="bi bi-chat-dots-fill"></i>
+      <span>Chat</span>
+      <span id="chatWidgetBadge" class="badge text-bg-danger d-none">0</span>
+    </button>
+
+    <section id="chatWidgetPanel" class="chat-widget-panel" aria-label="Chat interno">
+      <div class="chat-widget-layout">
+        <aside class="chat-conversations">
+          <header class="chat-pane-header">
+            <h2 class="chat-pane-title">CHATS</h2>
+            <button id="chatWidgetNewConversation" type="button" class="chat-icon-btn" title="Nova conversa">
+              <i class="bi bi-plus-lg"></i>
+            </button>
+          </header>
+
+          <div id="chatSearchBox" class="chat-search-box d-none">
+            <input id="chatUserSearchInput" type="text" class="form-control form-control-sm" placeholder="Buscar usuário por nome ou e-mail">
+            <div id="chatUserSearchResults" class="chat-user-search-results"></div>
+          </div>
+
+          <div id="chatConversationList" class="chat-conversation-list"></div>
+        </aside>
+
+        <div class="chat-thread">
+          <header class="chat-thread-header">
+            <div class="chat-thread-header-main">
+              <span id="chatThreadAvatar" class="chat-thread-avatar">CI</span>
+              <div class="chat-thread-header-text">
+                <h2 id="chatThreadTitle" class="chat-thread-title">Chat Interno</h2>
+                <p id="chatThreadSubtitle" class="chat-thread-subtitle">Canal de Produtividade - Equipe CS</p>
+              </div>
+            </div>
+            <div class="chat-widget-actions">
+              <button id="chatWidgetNewConversationAlt" type="button" class="chat-icon-btn" title="Nova conversa">
+                <i class="bi bi-plus-lg"></i>
+              </button>
+              <button id="chatWidgetMinimize" type="button" class="chat-icon-btn" title="Minimizar">
+                <i class="bi bi-dash-lg"></i>
+              </button>
+              <button id="chatWidgetClose" type="button" class="chat-icon-btn" title="Fechar">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+          </header>
+
+          <div class="chat-thread-body">
+            <div id="chatDateLabel" class="chat-date-label">HOJE</div>
+            <div id="chatMessages" class="chat-messages"></div>
+          </div>
+
+          <div class="chat-composer">
+            <div class="chat-composer-input-wrap">
+              <div id="chatEditBanner" class="chat-edit-banner d-none">
+                <span class="chat-edit-banner-text"><i class="bi bi-pencil-square me-1"></i>Editando mensagem</span>
+                <button type="button" id="chatCancelEditBtn" class="chat-attachment-remove" title="Cancelar edicao">
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              </div>
+              <div id="chatAttachmentPreview" class="chat-attachment-preview d-none"></div>
+              <textarea id="chatMessageInput" class="chat-message-input" placeholder="Digite sua mensagem..."></textarea>
+              <div class="chat-composer-icons">
+                <button type="button" id="chatAttachFileBtn" class="chat-mini-icon" title="Anexar arquivo"><i class="bi bi-paperclip"></i></button>
+                <button type="button" id="chatAttachImageBtn" class="chat-mini-icon" title="Anexar imagem"><i class="bi bi-image"></i></button>
+                <button type="button" id="chatEmojiBtn" class="chat-mini-icon" title="Emoji"><i class="bi bi-emoji-smile"></i></button>
+              </div>
+              <div id="chatEmojiPickerHost" class="chat-emoji-host d-none" aria-label="Seletor de emojis"></div>
+            </div>
+            <input id="chatFileInput" type="file" class="d-none" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp,application/pdf">
+            <button id="chatSendMessage" type="button" class="chat-send-btn" title="Enviar">
+              <i class="bi bi-send-fill"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <footer class="chat-widget-bottom-status">
+        <span class="chat-online-dot"></span>
+        <span id="chatOnlineStatus">Online - {{ g.perfil.nome or g.user_email }}</span>
+      </footer>
+    </section>
+  </div>
+  {% endif %}
+  <script nonce="{{ csp_nonce() }}" src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script nonce="{{ csp_nonce() }}" src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <script nonce="{{ csp_nonce() }}" src="https://cdn.jsdelivr.net/npm/picmo@5.8.5/dist/umd/index.js"></script>
+  <script nonce="{{ csp_nonce() }}" src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script nonce="{{ csp_nonce() }}" src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
+  <script nonce="{{ csp_nonce() }}" src="https://unpkg.com/imask"></script>
+  <script nonce="{{ csp_nonce() }}" src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 
   <!-- ========================================
        MODULAR ARCHITECTURE (SOLID Principles)
        ======================================== -->
 
   <!-- Utils Layer - Com cache-busting automático -->
-  <script src="{{ 'js/utils/date-utils.js' | static_versioned }}"></script>
-  <script src="{{ 'js/utils/phone-utils.js' | static_versioned }}"></script>
-  <script src="{{ 'js/utils/html-utils.js' | static_versioned }}"></script>
-  <script src="{{ 'js/utils/fetch_retry.js' | static_versioned }}"></script>
+  <script nonce="{{ csp_nonce() }}" src="{{ 'js/utils/date-utils.js' | static_versioned }}"></script>
+  <script nonce="{{ csp_nonce() }}" src="{{ 'js/utils/phone-utils.js' | static_versioned }}"></script>
+  <script nonce="{{ csp_nonce() }}" src="{{ 'js/utils/html-utils.js' | static_versioned }}"></script>
+  <script nonce="{{ csp_nonce() }}" src="{{ 'js/utils/fetch_retry.js' | static_versioned }}"></script>
 
   <!-- UI Layer -->
-  <script src="{{ 'js/ui/toast.js' | static_versioned }}"></script>
-  <script src="{{ 'js/ui/confirm-dialog.js' | static_versioned }}"></script>
-  <script src="{{ 'js/ui/loading.js' | static_versioned }}"></script>
-  <script src="{{ 'js/ui/nprogress.js' | static_versioned }}"></script>
-  <script src="{{ 'js/ui/sidebar.js' | static_versioned }}"></script>
+  <script nonce="{{ csp_nonce() }}" src="{{ 'js/ui/toast.js' | static_versioned }}"></script>
+  <script nonce="{{ csp_nonce() }}" src="{{ 'js/ui/confirm-dialog.js' | static_versioned }}"></script>
+  <script nonce="{{ csp_nonce() }}" src="{{ 'js/ui/loading.js' | static_versioned }}"></script>
+  <script nonce="{{ csp_nonce() }}" src="{{ 'js/ui/nprogress.js' | static_versioned }}"></script>
+  <script nonce="{{ csp_nonce() }}" src="{{ 'js/ui/sidebar.js' | static_versioned }}"></script>
 
   <!-- Core (Legacy - will be refactored) -->
-  <script src="{{ 'js/common.js' | static_versioned }}"></script>
+  <script nonce="{{ csp_nonce() }}" src="{{ 'js/common.js' | static_versioned }}"></script>
 
   <!-- Services & Utilities -->
-  <script src="{{ 'js/utils/bug_prevention_service.js' | static_versioned }}"></script>
-  <script src="{{ 'js/utils/table_sort.js' | static_versioned }}"></script>
+  <script nonce="{{ csp_nonce() }}" src="{{ 'js/utils/bug_prevention_service.js' | static_versioned }}"></script>
+  <script nonce="{{ csp_nonce() }}" src="{{ 'js/utils/table_sort.js' | static_versioned }}"></script>
 
   <!-- Components -->
-  <script src="{{ 'js/components/modal_detalhes_empresa.js' | static_versioned }}"></script>
-  <script src="{{ 'js/components/notifications.js' | static_versioned }}"></script>
+  <script nonce="{{ csp_nonce() }}" src="{{ 'js/components/modal_detalhes_empresa.js' | static_versioned }}"></script>
+  <script nonce="{{ csp_nonce() }}" src="{{ 'js/components/notifications.js' | static_versioned }}"></script>
+  <script nonce="{{ csp_nonce() }}" src="{{ 'js/components/chat_widget.js' | static_versioned }}"></script>
 
   {% block scripts_extra %}{% endblock %}
 
   <!-- Converte flash messages para toasts flutuantes automaticamente -->
-  {% with messages = get_flashed_messages(with_categories=true) %}
-  {% if messages %}
-  <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      const flashMessages = {{ messages | tojson | safe
-    }};
-    flashMessages.forEach(function (msg) {
-      const category = msg[0];
-      const message = msg[1];
-      // Mapeia categorias do Flask para tipos de toast
-      const typeMap = {
-        'success': 'success',
-        'error': 'error',
-        'danger': 'error',
-        'warning': 'warning',
-        'info': 'info',
-        'primary': 'primary'
-      };
-      const toastType = typeMap[category] || 'info';
-      if (window.showToast) {
-        window.showToast(message, toastType, 6000);
-      }
-    });
-    });
-  </script>
-  {% endif %}
-  {% endwith %}
+  <script nonce="{{ csp_nonce() }}" type="application/json" id="flash-messages-json">{% with messages = get_flashed_messages(with_categories = true) %}{{ messages | tojson | safe }}{% endwith %}</script>
+  <script nonce="{{ csp_nonce() }}" src="{{ 'js/pages/base_page.js' | static_versioned }}"></script>
 </body>
 
 </html>
+
+

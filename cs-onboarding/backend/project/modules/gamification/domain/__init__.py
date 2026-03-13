@@ -23,8 +23,11 @@ from .calculator import (
 # Importações de metrics.py
 from .metrics import (
     _get_gamification_automatic_data_bulk,
+    get_all_metricas_mensais,
+    get_participantes,
     obter_metricas_mensais,
     salvar_metricas_mensais,
+    toggle_participante,
 )
 
 # Importações de report.py
@@ -34,6 +37,8 @@ from .report import (
 from .rules import (
     _get_all_gamification_rules_grouped,
     _get_gamification_rules_as_dict,
+    criar_regra_gamificacao,
+    deletar_regra_gamificacao,
     salvar_regras_gamificacao,
 )
 
@@ -61,7 +66,12 @@ __all__ = [
     "get_all_cs_users_for_gamification",
     # Report
     "get_gamification_report_data",
+    "get_all_metricas_mensais",
+    "get_participantes",
+    "toggle_participante",
     "obter_metricas_mensais",
     "salvar_metricas_mensais",
     "salvar_regras_gamificacao",
+    "criar_regra_gamificacao",
+    "deletar_regra_gamificacao",
 ]

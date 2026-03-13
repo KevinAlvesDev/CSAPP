@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(__name__)
 """
 Endpoint de diagnóstico para testar SMTP no Railway
 Adicione isso temporariamente em algum blueprint para testar
@@ -7,20 +9,32 @@ import smtplib
 import socket
 import ssl
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, current_app, g, jsonify
+
+from .auth import login_required
 
 diagnostic_bp = Blueprint("diagnostic", __name__)
 
 
 @diagnostic_bp.route("/api/diagnostic/smtp-test", methods=["GET"])
+@login_required
 def test_smtp_connection():
     """
     Endpoint para testar conexão SMTP (use apenas em desenvolvimento/debug)
     Acesse: https://seu-app.railway.app/api/diagnostic/smtp-test
     """
-    from flask import current_app
+    from typing import Any, Dict
 
-    results = {"config": {}, "tests": {}, "errors": []}
+    # Defesa em profundidade: rota acessível apenas em debug ou quando habilitada por env.
+    if not (current_app.config.get("DEBUG", False) or current_app.config.get("ENABLE_DIAGNOSTIC_SMTP", False)):
+        return jsonify({"ok": False, "error": "Endpoint desabilitado neste ambiente"}), 404
+
+    # Permitir apenas administradores.
+    perfil = g.perfil.get("perfil_acesso") if getattr(g, "perfil", None) else None
+    if perfil != "Administrador":
+        return jsonify({"ok": False, "error": "Acesso negado"}), 403
+
+    results: Dict[str, Any] = {"config": {}, "tests": {}, "errors": []}
 
     # Pegar configurações
     cfg = current_app.config
@@ -30,6 +44,11 @@ def test_smtp_connection():
     password = cfg.get("SMTP_PASSWORD")
     use_ssl = cfg.get("SMTP_USE_SSL", False)
     use_tls = cfg.get("SMTP_USE_TLS", True)
+ 
+    if not host:
+        results["ok"] = False
+        results["errors"].append("SMTP_HOST não configurado")
+        return results
 
     results["config"] = {
         "host": host,
@@ -45,10 +64,12 @@ def test_smtp_connection():
         ip = socket.gethostbyname(host)
         results["tests"]["dns_resolution"] = {"status": "success", "ip": ip}
     except Exception as e:
+        logger.exception("Unhandled exception", exc_info=True)
         results["tests"]["dns_resolution"] = {"status": "failed", "error": str(e)}
         results["errors"].append(f"DNS resolution failed: {e}")
 
     # Teste 2: Conectar ao servidor
+    server: smtplib.SMTP | smtplib.SMTP_SSL | None = None
     try:
         if use_ssl:
             context = ssl.create_default_context()
@@ -64,6 +85,7 @@ def test_smtp_connection():
                     server.starttls()
                     results["tests"]["starttls"] = {"status": "success"}
                 except Exception as e:
+                    logger.exception("Unhandled exception", exc_info=True)
                     results["tests"]["starttls"] = {"status": "failed", "error": str(e)}
                     results["errors"].append(f"STARTTLS failed: {e}")
 
@@ -73,6 +95,7 @@ def test_smtp_connection():
                 server.login(user, password)
                 results["tests"]["authentication"] = {"status": "success"}
             except Exception as e:
+                logger.exception("Unhandled exception", exc_info=True)
                 results["tests"]["authentication"] = {"status": "failed", "error": str(e)}
                 results["errors"].append(f"Authentication failed: {e}")
 
@@ -95,6 +118,7 @@ def test_smtp_connection():
         results["overall_status"] = "failed"
 
     except Exception as e:
+        logger.exception("Unhandled exception", exc_info=True)
         results["tests"]["connection"] = {"status": "failed", "error": str(e), "type": type(e).__name__}
         results["errors"].append(f"Unexpected error: {e}")
         results["overall_status"] = "failed"

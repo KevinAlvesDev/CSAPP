@@ -29,10 +29,12 @@ PRODUCTION_REQUIRED = [
     "DATABASE_URL",
 ]
 
+from typing import Any, Dict
+
 # ──────────────────────────────────────────────
 # Secrets condicionais (obrigatórios se feature ativa)
 # ──────────────────────────────────────────────
-CONDITIONAL_SECRETS = {
+CONDITIONAL_SECRETS: Dict[str, Dict[str, Any]] = {
     "AUTH0_ENABLED": {
         "condition_values": ("true", "1", "yes"),
         "required_secrets": ["AUTH0_DOMAIN", "AUTH0_CLIENT_ID", "AUTH0_CLIENT_SECRET"],
@@ -103,17 +105,15 @@ CREDENTIAL_PATTERNS = [
 class SecretsValidationError(Exception):
     """Erro crítico: secrets obrigatórios ausentes ou inseguros."""
 
-    pass
 
 
 def _is_production() -> bool:
     """Detecta se estamos em ambiente de produção."""
-    use_sqlite = os.getenv("USE_SQLITE_LOCALLY", "").lower() in ("true", "1", "yes")
     flask_env = os.getenv("FLASK_ENV", "production")
     flask_debug = os.getenv("DEBUG", "").lower() in ("true", "1", "yes")
 
-    # É produção se: não usa SQLite, não está em debug, e env é production
-    return not use_sqlite and not flask_debug and flask_env == "production"
+    # É produção se: não está em debug, e env é production
+    return not flask_debug and flask_env == "production"
 
 
 def _check_insecure_values() -> list[str]:
@@ -144,17 +144,23 @@ def _check_conditional_secrets() -> tuple[list[str], list[str]]:
 
         if "condition_values" in config:
             env_value = os.getenv(key, "").lower()
-            feature_active = env_value in config["condition_values"]
+            condition_values = config["condition_values"]
+            if isinstance(condition_values, (tuple, list)):
+                feature_active = env_value in condition_values
         elif "condition_check" in config:
-            try:
-                feature_active = config["condition_check"]()
-            except Exception:
-                feature_active = False
+            condition_check = config["condition_check"]
+            if callable(condition_check):
+                try:
+                    feature_active = condition_check()
+                except Exception as exc:
+                    logger.exception("Unhandled exception", exc_info=True)
+                    feature_active = False
 
         if feature_active:
-            missing = _check_required_secrets(config["required_secrets"])
+            required_secrets = config.get("required_secrets", [])
+            missing = _check_required_secrets(required_secrets)
             if missing:
-                feature_name = config["feature_name"]
+                feature_name = config.get("feature_name", key)
                 msg = f"Feature '{feature_name}' está ativa mas faltam secrets: {', '.join(missing)}"
                 if _is_production():
                     errors.append(f"❌ {msg}")
@@ -186,17 +192,13 @@ def validate_secrets(app: object | None = None) -> dict:
 
     # 1. Verificar secrets sempre obrigatórios
     missing_always = _check_required_secrets(ALWAYS_REQUIRED)
-    
-    # FIX: Fallback para SECRET_KEY para não quebrar deploy existente
-    if "SECRET_KEY" in missing_always:
-        import secrets
-        temp_key = secrets.token_hex(32)
-        os.environ["SECRET_KEY"] = temp_key
-        missing_always.remove("SECRET_KEY")
-        warnings.append("⚠️  SECRET_KEY ausente em PROD! Usando chave temporária aleatória (Sessões cairão ao reiniciar).")
-        _log = app.logger if app and hasattr(app, "logger") else logger
-        _log.critical("🚨 SECRET_KEY NÃO CONFIGURADA! APLICAÇÃO RODANDO COM CHAVE TEMPORÁRIA. CONFIGURE IMEDIATAMENTE!")
 
+    # SECRET_KEY deve existir em qualquer ambiente
+    if "SECRET_KEY" in missing_always:
+        _log = app.logger if app and hasattr(app, "logger") else logger
+        msg = "❌ SECRET_KEY não configurada. Defina a variável de ambiente antes de iniciar a aplicação."
+        _log.critical(msg)
+        raise SecretsValidationError(msg)
     if missing_always:
         errors.append(f"❌ Secrets obrigatórios ausentes: {', '.join(missing_always)}")
 

@@ -85,8 +85,8 @@ def toggle_item(item_id):
                     changes={"concluido": concluido},
                     user_email=usuario,
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Falha ao registrar auditoria de CHECKLIST_TOGGLE: {e}", exc_info=True)
 
             return jsonify(
                 {"ok": True, "message": f"Item marcado como {'concluído' if concluido else 'pendente'}"}

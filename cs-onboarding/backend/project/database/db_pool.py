@@ -11,9 +11,10 @@ Inclui:
 
 from __future__ import annotations
 
-import contextlib
+import logging
+logger = logging.getLogger(__name__)
+
 import os
-import sqlite3
 import time
 from threading import Lock
 from typing import TYPE_CHECKING, Any
@@ -59,10 +60,6 @@ def init_connection_pool(app: Flask) -> bool:
     """
     global _pg_pool
 
-    if app.config.get("USE_SQLITE_LOCALLY", False):
-        app.logger.info("🗄️  Usando SQLite - pool de conexões não necessário")
-        return True
-
     if not PSYCOPG2_AVAILABLE:
         app.logger.warning("⚠️  psycopg2 não disponível - usando fallback")
         return False
@@ -90,6 +87,7 @@ def init_connection_pool(app: Flask) -> bool:
                         minconn=POOL_MIN_CONN,
                         maxconn=POOL_MAX_CONN,
                         dsn=database_url,
+                        options="-c search_path=public",
                         cursor_factory=DictCursor,
                     )
 
@@ -103,7 +101,7 @@ def init_connection_pool(app: Flask) -> bool:
 
         except PgOperationalError as e:
             error_msg = str(e)
-            app.logger.warning(f"⚠️  Tentativa {attempt}/{POOL_RETRY_ATTEMPTS} falhou: {error_msg}")
+            app.logger.warning(f"⚠️  Tentativa {attempt}/{POOL_RETRY_ATTEMPTS} falhou: {error_msg}", exc_info=True)
 
             if attempt < POOL_RETRY_ATTEMPTS:
                 app.logger.info(f"⏳ Aguardando {POOL_RETRY_DELAY}s antes de tentar novamente...")
@@ -118,7 +116,7 @@ def init_connection_pool(app: Flask) -> bool:
                 return False
 
         except Exception as e:
-            app.logger.error(f"❌ Erro inesperado ao inicializar pool: {e}")
+            app.logger.error(f"❌ Erro inesperado ao inicializar pool: {e}", exc_info=True)
             if attempt >= POOL_RETRY_ATTEMPTS:
                 return False
             time.sleep(POOL_RETRY_DELAY)
@@ -128,49 +126,19 @@ def init_connection_pool(app: Flask) -> bool:
 
 def get_db_connection() -> tuple[Any, str]:
     """
-    Retorna uma conexão do pool (PostgreSQL) ou cria nova (SQLite).
-    Para PostgreSQL, a conexão é armazenada em g.db e reutilizada durante a requisição.
+    Retorna uma conexão do pool PostgreSQL.
+    A conexão é armazenada em g.db e reutilizada durante a requisição.
 
     Returns:
-        tuple: (connection, db_type) onde db_type é 'postgres' ou 'sqlite'
+        tuple: (connection, db_type) onde db_type é 'postgres'
 
     Raises:
-        RuntimeError: Se o pool não estiver inicializado e não for SQLite
+        RuntimeError: Se o pool não estiver inicializado
     """
-    use_sqlite = current_app.config.get("USE_SQLITE_LOCALLY", False)
-
-    if use_sqlite:
-        return _get_sqlite_connection()
-    else:
-        return _get_postgres_connection()
+    return _get_postgres_connection()
 
 
-def _get_sqlite_connection() -> tuple[Any, str]:
-    """Obtém conexão SQLite."""
-    try:
-        database_url = current_app.config.get("DATABASE_URL", "")
 
-        if database_url and database_url.startswith("sqlite"):
-            db_path = database_url.replace("sqlite:///", "")
-
-            if db_path == ":memory:":
-                pass
-            elif not os.path.isabs(db_path):
-                base_dir = os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-                db_path = os.path.join(base_dir, db_path)
-        else:
-            base_dir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
-            is_testing = current_app.config.get("TESTING", False)
-            db_filename = "dashboard_simples_test.db" if is_testing else "dashboard_simples.db"
-            db_path = os.path.join(base_dir, db_filename)
-
-        conn = sqlite3.connect(db_path, isolation_level=None, timeout=30.0)
-        conn.row_factory = sqlite3.Row
-        return conn, "sqlite"
-
-    except sqlite3.Error as e:
-        current_app.logger.error(f"SQLite connection error: {e}")
-        raise
 
 
 def _get_postgres_connection() -> tuple[Any, str]:
@@ -192,16 +160,17 @@ def _get_postgres_connection() -> tuple[Any, str]:
                     # Conexão fechada, obter nova
                     g.db_conn = _pg_pool.getconn()
                     g.db_type = "postgres"
-            except Exception:
+            except Exception as exc:
+                logger.exception("Unhandled exception", exc_info=True)
                 # Erro ao verificar, obter nova conexão
                 g.db_conn = _pg_pool.getconn()
                 g.db_type = "postgres"
 
     except PgOperationalError as e:
-        current_app.logger.error(f"Failed to get connection from pool: {e}")
+        current_app.logger.error(f"Failed to get connection from pool: {e}", exc_info=True)
         raise RuntimeError(f"Database connection error: {e}") from e
     except Exception as e:
-        current_app.logger.error(f"Unexpected error getting connection: {e}")
+        current_app.logger.error(f"Unexpected error getting connection: {e}", exc_info=True)
         raise
 
     return g.db_conn, g.db_type
@@ -227,12 +196,8 @@ def close_db_connection(error: Exception | None = None) -> None:
             try:
                 current_app.logger.debug(f"Error returning connection to pool: {e}")
                 db_conn.close()
-            except Exception:
-                pass
-
-    elif db_type == "sqlite":
-        with contextlib.suppress(Exception):
-            db_conn.close()
+            except Exception as e:
+                current_app.logger.warning(f"Falha ao fechar conexão após erro no pool: {e}", exc_info=True)
 
 
 def close_all_connections() -> None:
@@ -246,8 +211,10 @@ def close_all_connections() -> None:
         with _pool_lock:
             try:
                 _pg_pool.closeall()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.exception("Unhandled exception", exc_info=True)
+                import logging
+                logging.getLogger(__name__).warning(f"Falha ao fechar todas as conexões do pool: {e}", exc_info=True)
             finally:
                 _pg_pool = None
 
@@ -273,5 +240,6 @@ def get_pool_stats() -> dict[str, Any]:
             # ThreadedConnectionPool não expõe estatísticas detalhadas
             # mas podemos adicionar contadores customizados se necessário
         }
-    except Exception:
+    except Exception as exc:
+        logger.exception("Unhandled exception", exc_info=True)
         return {"initialized": True, "error": "Could not get stats"}

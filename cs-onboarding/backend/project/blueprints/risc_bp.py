@@ -32,7 +32,11 @@ def receive_security_event():
     """
     try:
         # O Google envia o token no campo 'SET' (Security Event Token)
-        token = request.form.get("SET") or request.json.get("SET") if request.is_json else None
+        token = None
+        if request.is_json and request.json:
+            token = request.json.get("SET")
+        if not token:
+            token = request.form.get("SET")
 
         if not token:
             risc_logger.warning("Evento de segurança recebido sem token")

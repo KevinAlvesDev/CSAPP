@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(__name__)
 """
 Módulo de Progresso de Implantação
 Responsável pelo cálculo de progresso e gerenciamento de cache.
@@ -47,7 +49,7 @@ def cached_progress(ttl=30):
 
                 return result
             except Exception as e:
-                current_app.logger.warning(f"Erro no cache de progresso para impl_id {impl_id}: {e}")
+                current_app.logger.warning(f"Erro no cache de progresso para impl_id {impl_id}: {e}", exc_info=True)
                 return func(impl_id, *args, **kwargs)
 
         return wrapper
@@ -71,7 +73,7 @@ def invalidar_cache_progresso(impl_id):
         cache.delete(cache_key)
     except Exception as e:
         if current_app:
-            current_app.logger.warning(f"Erro ao invalidar cache de progresso para impl_id {impl_id}: {e}")
+            current_app.logger.warning(f"Erro ao invalidar cache de progresso para impl_id {impl_id}: {e}", exc_info=True)
 
 
 def _get_progress_optimized(impl_id):
@@ -86,84 +88,55 @@ def _get_progress_optimized(impl_id):
     """
     try:
         items_exist = query_db("SELECT id FROM checklist_items WHERE implantacao_id = %s LIMIT 1", (impl_id,), one=True)
-    except Exception:
+    except Exception as exc:
+        logger.exception("Unhandled exception", exc_info=True)
         items_exist = None
 
     if not items_exist:
         return 0, 0, 0
 
-    is_sqlite = current_app.config.get("USE_SQLITE_LOCALLY", False)
-
     try:
-        if is_sqlite:
-            query = """
-                SELECT
-                    COUNT(*) as total,
-                    SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END) as done
-                FROM checklist_items ci
-                WHERE ci.implantacao_id = ?
-                AND COALESCE(ci.dispensada, 0) = 0
-                AND NOT EXISTS (
-                    SELECT 1 FROM checklist_items filho
-                    WHERE filho.parent_id = ci.id
-                    AND filho.implantacao_id = ?
-                    AND COALESCE(filho.dispensada, 0) = 0
-                )
-            """
-            result = query_db(query, (impl_id, impl_id), one=True) or {}
+        query = """
+            SELECT
+                COUNT(*) as total,
+                SUM(CASE WHEN completed THEN 1 ELSE 0 END) as done
+            FROM checklist_items ci
+            WHERE ci.implantacao_id = %s
+            AND COALESCE(ci.dispensada, FALSE) = FALSE
+            AND NOT EXISTS (
+                SELECT 1 FROM checklist_items filho
+                WHERE filho.parent_id = ci.id
+                AND filho.implantacao_id = %s
+                AND COALESCE(filho.dispensada, FALSE) = FALSE
+            )
+        """
+        result = query_db(query, (impl_id, impl_id), one=True) or {}
 
-            total = int(result.get("total", 0) or 0)
-            done = int(result.get("done", 0) or 0)
-        else:
-            query = """
-                SELECT
-                    COUNT(*) as total,
-                    SUM(CASE WHEN completed THEN 1 ELSE 0 END) as done
-                FROM checklist_items ci
-                WHERE ci.implantacao_id = %s
-                AND COALESCE(ci.dispensada, FALSE) = FALSE
-                AND NOT EXISTS (
-                    SELECT 1 FROM checklist_items filho
-                    WHERE filho.parent_id = ci.id
-                    AND filho.implantacao_id = %s
-                    AND COALESCE(filho.dispensada, FALSE) = FALSE
-                )
-            """
-            result = query_db(query, (impl_id, impl_id), one=True) or {}
-
-            total = int(result.get("total", 0) or 0)
-            done = int(result.get("done", 0) or 0)
+        total = int(result.get("total", 0) or 0)
+        done = int(result.get("done", 0) or 0)
 
         if total == 0:
             any_items = query_db(
                 "SELECT COUNT(*) as count FROM checklist_items WHERE implantacao_id = %s", (impl_id,), one=True
             )
             if any_items and int(any_items.get("count", 0) or 0) > 0:
-                if is_sqlite:
-                    fallback_query = """
-                        SELECT
-                            COUNT(*) as total,
-                            SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END) as done
-                        FROM checklist_items
-                        WHERE implantacao_id = ?
-                        AND COALESCE(dispensada, 0) = 0
-                    """
-                    fallback_result = query_db(fallback_query, (impl_id,), one=True) or {}
-                else:
-                    fallback_query = """
-                        SELECT
-                            COUNT(*) as total,
-                            SUM(CASE WHEN completed THEN 1 ELSE 0 END) as done
-                        FROM checklist_items
-                        WHERE implantacao_id = %s
-                        AND COALESCE(dispensada, FALSE) = FALSE
-                    """
-                    fallback_result = query_db(fallback_query, (impl_id,), one=True) or {}
+                fallback_query = """
+                    SELECT
+                        COUNT(*) as total,
+                        SUM(CASE WHEN completed THEN 1 ELSE 0 END) as done
+                    FROM checklist_items
+                    WHERE implantacao_id = %s
+                    AND COALESCE(dispensada, FALSE) = FALSE
+                """
+                fallback_result = query_db(fallback_query, (impl_id,), one=True) or {}
 
                 total = int(fallback_result.get("total", 0) or 0)
                 done = int(fallback_result.get("done", 0) or 0)
 
-        return round((done / total) * 100) if total > 0 else 100, total, done
+        if total <= 0:
+            return 0, total, done
+
+        return round((done / total) * 100), total, done
 
     except Exception as e:
         current_app.logger.error(f"Erro ao calcular progresso otimizado para impl_id {impl_id}: {e}", exc_info=True)
@@ -177,7 +150,8 @@ def _get_progress_legacy(impl_id):
     """
     try:
         items_exist = query_db("SELECT id FROM checklist_items WHERE implantacao_id = %s LIMIT 1", (impl_id,), one=True)
-    except Exception:
+    except Exception as exc:
+        logger.exception("Unhandled exception", exc_info=True)
         items_exist = None
 
     if items_exist:
@@ -218,7 +192,10 @@ def _get_progress_legacy(impl_id):
 
         total = int(sub.get("total", 0) or 0) + int(th_no.get("total", 0) or 0)
         done = int(sub.get("done", 0) or 0) + int(th_no.get("done", 0) or 0)
-        return round((done / total) * 100) if total > 0 else 100, total, done
+        if total <= 0:
+            return 0, total, done
+
+        return round((done / total) * 100), total, done
 
     return 0, 0, 0
 
@@ -226,16 +203,37 @@ def _get_progress_legacy(impl_id):
 @cached_progress(ttl=30)
 def _get_progress(impl_id):
     """
-    Calcula progresso da implantação usando apenas modelo hierárquico.
-    Usa versão otimizada se habilitada via feature flag.
+    Calcula progresso da implantacao usando apenas modelo hierarquico.
+    Usa versao otimizada se habilitada via feature flag.
     """
+    try:
+        impl_row = query_db(
+            """
+            SELECT i.plano_sucesso_id, i.status as implantacao_status, ps.status as plano_status
+            FROM implantacoes i
+            LEFT JOIN planos_sucesso ps ON i.plano_sucesso_id = ps.id
+            WHERE i.id = %s
+            """
+            , (impl_id,), one=True
+        )
+    except Exception as exc:
+        logger.exception("Unhandled exception", exc_info=True)
+        impl_row = None
+
+    if impl_row:
+        plano_id = impl_row.get("plano_sucesso_id")
+        plano_status = (impl_row.get("plano_status") or "").strip().lower()
+        status_raw = impl_row.get("implantacao_status") or ""
+        status = str(status_raw).strip().lower()
+        if (not plano_id or plano_status == "concluido") and status not in ("finalizada", "concluida", "entregue"):
+            return 0, 0, 0
+
     use_optimized = current_app.config.get("USE_OPTIMIZED_PROGRESS", True)
 
     if use_optimized:
         return _get_progress_optimized(impl_id)
     else:
         return _get_progress_legacy(impl_id)
-
 
 # Aliases para compatibilidade
 get_progress = _get_progress

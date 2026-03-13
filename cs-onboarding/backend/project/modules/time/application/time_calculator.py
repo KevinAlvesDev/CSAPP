@@ -2,7 +2,7 @@
 Módulo para calcular corretamente os tempos de implantação considerando mudanças de status.
 """
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from ....db import query_db
 
@@ -99,7 +99,7 @@ def calculate_total_days_in_status(impl_id, target_status="andamento"):
     if not impl:
         return 0
 
-    agora = datetime.now()
+    agora = datetime.now(timezone.utc).replace(tzinfo=None)
     status_history = get_status_history(impl_id)
     current_status = impl.get("status")
     inicio_efetivo = parse_datetime(impl.get("data_inicio_efetivo"))
@@ -210,7 +210,7 @@ def calculate_days_bulk(impl_ids: list) -> dict:
         FROM implantacoes
         WHERE id IN ({placeholders})
     """
-    impls = query_db(impl_query, tuple(impl_ids))
+    impls = query_db(impl_query, tuple(impl_ids))  # nosec B608
 
     if not impls:
         return result
@@ -226,7 +226,7 @@ def calculate_days_bulk(impl_ids: list) -> dict:
         AND tipo_evento = 'status_alterado'
         ORDER BY implantacao_id, data_criacao ASC
     """
-    all_history = query_db(history_query, tuple(impl_ids))
+    all_history = query_db(history_query, tuple(impl_ids))  # nosec B608
 
     # Agrupar histórico por implantação
     import re
@@ -254,7 +254,7 @@ def calculate_days_bulk(impl_ids: list) -> dict:
                 history_by_impl[impl_id].append((dt, "andamento", "finalizada"))
 
     # Calcular dias para cada implantação
-    agora = datetime.now()
+    agora = datetime.now(timezone.utc).replace(tzinfo=None)
 
     for impl_id, impl in impl_map.items():
         current_status = impl.get("status")

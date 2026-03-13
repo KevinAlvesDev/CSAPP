@@ -1,34 +1,20 @@
-﻿import contextlib
-import os
-import re
-import time
-from datetime import datetime
 
-from flask import Blueprint, current_app, flash, g, jsonify, redirect, request, url_for
+from flask import Blueprint, flash, g, jsonify, redirect, url_for
 from flask_limiter.util import get_remote_address
-from werkzeug.utils import secure_filename
 
-from ....common import utils
-from ....common.audit_decorator import audit
-from ....common.validation import ValidationError, sanitize_string, validate_date, validate_integer
-from ....config.cache_config import clear_implantacao_cache, clear_user_cache
-from ....config.logging_config import app_logger
-from ....constants import PERFIS_COM_CRIACAO, PERFIS_COM_GESTAO
-from ....core.extensions import limiter, r2_client
-from ....db import logar_timeline
 from ....blueprints.auth import login_required, permission_required
 from ....blueprints.helpers.shared_actions import (
     handle_agendar_implantacao,
     handle_atualizar_detalhes_empresa,
     handle_cancelar_implantacao,
+    handle_create_jira_issue,
     handle_criar_implantacao,
     handle_criar_implantacao_modulo,
-    handle_create_jira_issue,
     handle_delete_jira_link,
     handle_desfazer_inicio_implantacao,
     handle_excluir_implantacao,
-    handle_finalizar_implantacao,
     handle_fetch_jira_issue,
+    handle_finalizar_implantacao,
     handle_get_jira_issues,
     handle_iniciar_implantacao,
     handle_marcar_sem_previsao,
@@ -38,6 +24,10 @@ from ....blueprints.helpers.shared_actions import (
     handle_retomar_implantacao,
     handle_transferir_implantacao,
 )
+from ....common.audit_decorator import audit
+from ....constants import PERFIS_COM_CRIACAO, PERFIS_COM_GESTAO
+from ....core.extensions import limiter
+from ....modules.perfis.application.perfis_service import verificar_permissao_por_contexto
 
 grandes_contas_actions_bp = Blueprint("grandes_contas_actions", __name__)
 
@@ -74,6 +64,9 @@ def criar_implantacao_modulo():
 @login_required
 @limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 def iniciar_implantacao():
+    if not verificar_permissao_por_contexto(g.perfil, "implantacoes.change_status"):
+        flash("Sem permissão para alterar status de implantações.", "error")
+        return redirect(url_for("grandes_contas.dashboard"))
     return handle_iniciar_implantacao(
         dashboard_endpoint="grandes_contas.dashboard",
         detail_endpoint="grandes_contas.ver_implantacao",
@@ -106,6 +99,9 @@ def marcar_sem_previsao():
 @limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 @audit(action="FINALIZE_IMPLANTACAO_GC", target_type="implantacao")
 def finalizar_implantacao():
+    if not verificar_permissao_por_contexto(g.perfil, "implantacoes.change_status"):
+        flash("Sem permissão para finalizar implantações.", "error")
+        return redirect(url_for("grandes_contas.dashboard"))
     return handle_finalizar_implantacao(
         dashboard_endpoint="grandes_contas.dashboard",
         detail_endpoint="grandes_contas.ver_implantacao",
@@ -117,6 +113,9 @@ def finalizar_implantacao():
 @login_required
 @limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 def parar_implantacao():
+    if not verificar_permissao_por_contexto(g.perfil, "implantacoes.change_status"):
+        flash("Sem permissão para parar implantações.", "error")
+        return redirect(url_for("grandes_contas.dashboard"))
     return handle_parar_implantacao(
         detail_endpoint="grandes_contas.ver_implantacao",
         clear_dashboard=True,
@@ -173,6 +172,9 @@ def remover_plano_implantacao():
 @limiter.limit("30 per minute", key_func=lambda: g.user_email or get_remote_address())
 @audit(action="TRANSFER_IMPLANTACAO_GC", target_type="implantacao")
 def transferir_implantacao():
+    if not verificar_permissao_por_contexto(g.perfil, "implantacoes.transfer"):
+        flash("Sem permissão para transferir implantações.", "error")
+        return redirect(url_for("grandes_contas.dashboard"))
     return handle_transferir_implantacao(
         dashboard_endpoint="grandes_contas.dashboard",
         detail_endpoint="grandes_contas.ver_implantacao",
@@ -184,6 +186,9 @@ def transferir_implantacao():
 @limiter.limit("100 per minute", key_func=lambda: g.user_email or get_remote_address())
 @audit(action="DELETE_IMPLANTACAO_GC", target_type="implantacao")
 def excluir_implantacao():
+    if not verificar_permissao_por_contexto(g.perfil, "implantacoes.delete"):
+        flash("Sem permissão para excluir implantações.", "error")
+        return redirect(url_for("grandes_contas.dashboard"))
     return handle_excluir_implantacao(
         dashboard_endpoint="grandes_contas.dashboard",
         clear_dashboard=True,
@@ -194,6 +199,9 @@ def excluir_implantacao():
 @login_required
 @audit(action="CANCEL_IMPLANTACAO_GC", target_type="implantacao")
 def cancelar_implantacao():
+    if not verificar_permissao_por_contexto(g.perfil, "implantacoes.change_status"):
+        flash("Sem permissão para cancelar implantações.", "error")
+        return redirect(url_for("grandes_contas.dashboard"))
     return handle_cancelar_implantacao(
         dashboard_endpoint="grandes_contas.dashboard",
         detail_endpoint="grandes_contas.ver_implantacao",
@@ -207,6 +215,8 @@ def get_jira_issues(implantacao_id):
 @grandes_contas_actions_bp.route("/api/implantacao/<int:implantacao_id>/jira-issues", methods=["POST"])
 @login_required
 def create_jira_issue_action(implantacao_id):
+    if not verificar_permissao_por_contexto(g.perfil, "jira.create"):
+        return jsonify({"ok": False, "error": "Sem permissão para criar tickets Jira"}), 403
     return handle_create_jira_issue(implantacao_id, use_onboarding_status_codes=False)
 
 @grandes_contas_actions_bp.route("/api/implantacao/<int:implantacao_id>/jira-issues/fetch", methods=["POST"])
@@ -219,13 +229,6 @@ def fetch_jira_issue_action(implantacao_id):
 )
 @login_required
 def delete_jira_link_action(implantacao_id, jira_key):
+    if not verificar_permissao_por_contexto(g.perfil, "jira.delete"):
+        return jsonify({"ok": False, "error": "Sem permissão para desvincular tickets Jira"}), 403
     return handle_delete_jira_link(implantacao_id, jira_key)
-
-
-
-
-
-
-
-
-

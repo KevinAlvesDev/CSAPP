@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(__name__)
 """
 Módulo de Mapeamento do External Service
 Mapeamento de campos OAMD para campos do Frontend.
@@ -69,13 +71,15 @@ def map_oamd_to_frontend(empresa, id_favorecido=None):
     try:
         infra_code = extract_infra_code(empresa, id_favorecido)
         mapped["informacao_infra"] = infra_code
-    except Exception:
+    except Exception as exc:
+        logger.exception("Unhandled exception", exc_info=True)
         mapped["informacao_infra"] = ""
 
     # Construir link da tela de apoio
     try:
         mapped["tela_apoio_link"] = build_tela_apoio_link(id_favorecido)
-    except Exception:
+    except Exception as exc:
+        logger.exception("Unhandled exception", exc_info=True)
         mapped["tela_apoio_link"] = ""
 
     return mapped

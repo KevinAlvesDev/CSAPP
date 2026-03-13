@@ -1,8 +1,11 @@
 import contextlib
 import uuid
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
+import logging
+logger = logging.getLogger(__name__)
 
 import requests
+from typing import Any, cast
 from flask import Blueprint, current_app, flash, g, jsonify, redirect, render_template, request, session, url_for
 
 from ....blueprints.auth import login_required
@@ -27,6 +30,67 @@ def _google_oauth_configured():
     )
 
 
+def _get_google_access_token():
+    """Valida configuração OAuth e retorna (access_token, None) ou (None, response_tuple)."""
+    if not _google_oauth_configured():
+        return None, (jsonify({"ok": False, "error": "Google OAuth não configurado"}), 400)
+    access_token = (session.get("google_token") or {}).get("access_token")
+    if not access_token:
+        return None, (jsonify({"ok": False, "error": "Sessão do Google ausente"}), 401)
+    return access_token, None
+
+
+def _build_event_datetime_fields(payload: dict) -> tuple[dict, str | None]:
+    """Constrói campos start/end para o corpo de um evento do Google Calendar.
+
+    Returns:
+        (fields_dict, error_msg) — error_msg é None se não houver erro.
+        fields_dict vazio indica que nenhuma alteração de horário deve ser feita.
+    """
+    date_str = payload.get("date")
+    start_time = payload.get("startTime")
+    end_time = payload.get("endTime")
+    time_zone = payload.get("timeZone") or "UTC"
+    all_day = payload.get("allDay")
+
+    if all_day is True:
+        if not date_str:
+            return {}, "date é obrigatório para dia inteiro"
+        return {"start": {"date": date_str}, "end": {"date": date_str}}, None
+
+    if all_day is False or (start_time and end_time):
+        if not (date_str and start_time and end_time):
+            missing = "startTime e endTime são obrigatórios" if date_str else "date, startTime e endTime são obrigatórios"
+            return {}, missing
+        start_dt = f"{date_str}T{start_time}:00"
+        end_dt = f"{date_str}T{end_time}:00"
+        return {
+            "start": {"dateTime": start_dt, "timeZone": time_zone},
+            "end": {"dateTime": end_dt, "timeZone": time_zone},
+        }, None
+
+    return {}, None  # Sem alteração de horário (PATCH parcial)
+
+
+def _call_google_calendar_api(method: str, url: str, access_token: str, json_body: dict | None = None, params=None):
+    """Executa requisição à API Google Calendar e retorna resposta Flask-compatível."""
+    headers: dict[str, str] = {"Authorization": f"Bearer {access_token}"}
+    if json_body is not None:
+        headers["Content-Type"] = "application/json"
+    try:
+        resp = requests.request(method, url, headers=headers, json=json_body, params=params, timeout=10)
+        if resp.status_code == 401:
+            return jsonify({"ok": False, "error": "Token expirado. Refaça a conexão com o Google."}), 401
+        if resp.status_code >= 400:
+            return jsonify({"ok": False, "error": resp.text}), resp.status_code
+        if resp.status_code == 204:
+            return jsonify({"ok": True})
+        return jsonify({"ok": True, "event": resp.json()})
+    except Exception as e:
+        logger.exception("Unhandled exception", exc_info=True)
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
 @agenda_bp.route("/agenda")
 @login_required
 def agenda_home():
@@ -45,7 +109,7 @@ def agenda_home():
 
         token = get_valid_token(g.user_email)
     except Exception as e:
-        agenda_logger.error(f"Erro ao obter token válido: {e}")
+        agenda_logger.error(f"Erro ao obter token válido: {e}", exc_info=True)
         token = None
 
     with contextlib.suppress(Exception):
@@ -67,7 +131,8 @@ def agenda_home():
     base_day = None
     try:
         base_day = date.fromisoformat(start_qs) if start_qs else date.today()
-    except Exception:
+    except Exception as exc:
+        logger.exception("Unhandled exception", exc_info=True)
         base_day = date.today()
 
     weekday = base_day.weekday()
@@ -94,7 +159,7 @@ def agenda_home():
         resp = requests.get(
             google_events_endpoint(calendar_id),
             headers={"Authorization": f"Bearer {access_token}"},
-            params=params,
+            params=cast(dict[str, Any], params),
             timeout=10,
         )
         agenda_logger.debug(f"Resposta Google Calendar status={resp.status_code}")
@@ -108,7 +173,7 @@ def agenda_home():
             agenda_logger.info(f"Eventos carregados: {len(events)} para {g.user_email}")
         week_days = [(week_start + timedelta(days=i)).isoformat() for i in range(7)]
         return render_template(
-            "agenda.html",
+            "pages/agenda.html",
             events=events,
             google_connected=True,
             view=view,
@@ -153,9 +218,12 @@ def agenda_connect():
 
         redirect_uri = url_for("agenda.agenda_callback", _external=True)
 
-        # Forçar HTTPS em produção
-        is_local = current_app.config.get("USE_SQLITE_LOCALLY", False) or current_app.config.get("DEBUG", False)
-        if not is_local and redirect_uri.startswith("http://"):
+        # Forçar HTTPS fora de debug
+        is_debug = current_app.config.get("DEBUG", False)
+        preferred_scheme = current_app.config.get("PREFERRED_URL_SCHEME", "https")
+        if preferred_scheme == "http":
+            logger.info(f"Usando HTTP na redirect_uri (dev): {redirect_uri}")
+        elif not is_debug and redirect_uri.startswith("http://"):
             redirect_uri = redirect_uri.replace("http://", "https://", 1)
 
         # Usar autorização incremental
@@ -206,10 +274,12 @@ def agenda_list_calendars():
         ]
         return jsonify({"ok": True, "calendars": calendars})
     except Exception as e:
+        logger.exception("Unhandled exception", exc_info=True)
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
 @agenda_bp.route("/agenda/callback")
+@login_required
 def agenda_callback():
     """
     Callback do OAuth para Google Calendar.
@@ -223,8 +293,6 @@ def agenda_callback():
         token = oauth.google.authorize_access_token()
 
         # Salvar token no banco de dados
-        from datetime import datetime, timedelta
-
         from ..application.google_oauth_service import save_user_google_token
 
         # Preparar token para salvar
@@ -232,7 +300,7 @@ def agenda_callback():
             "access_token": token.get("access_token"),
             "refresh_token": token.get("refresh_token"),
             "token_type": token.get("token_type", "Bearer"),
-            "expires_at": datetime.utcnow() + timedelta(seconds=token.get("expires_in", 3600)),
+            "expires_at": datetime.now(timezone.utc) + timedelta(seconds=token.get("expires_in", 3600)),
             "scope": token.get("scope", ""),
         }
 
@@ -264,105 +332,53 @@ def agenda_callback():
 @login_required
 def agenda_create_event():
     """Cria um evento no calendário principal do usuário."""
-    if not _google_oauth_configured():
-        return jsonify({"ok": False, "error": "Google OAuth não configurado"}), 400
-
-    token = session.get("google_token") or {}
-    access_token = token.get("access_token")
-    if not access_token:
-        return jsonify({"ok": False, "error": "Sessão do Google ausente"}), 401
+    access_token, err = _get_google_access_token()
+    if err:
+        return err
 
     payload = request.get_json(silent=True) or {}
-    summary = (payload.get("summary") or "Compromisso").strip()
     date_str = payload.get("date")
-    start_time = payload.get("startTime")
-    end_time = payload.get("endTime")
-    time_zone = payload.get("timeZone") or "UTC"
-    location = payload.get("location")
-    all_day = bool(payload.get("allDay"))
-    description = payload.get("description")
-    calendar_id = payload.get("calendarId") or "primary"
-
     if not date_str:
         return jsonify({"ok": False, "error": 'Campo "date" é obrigatório'}), 400
 
-    event_body = {"summary": summary}
-    if location:
-        event_body["location"] = location
-    if description:
-        event_body["description"] = description
+    calendar_id = payload.get("calendarId") or "primary"
+    event_body: dict[str, Any] = {"summary": (payload.get("summary") or "Compromisso").strip()}
+    if payload.get("location"):
+        event_body["location"] = payload["location"]
+    if payload.get("description"):
+        event_body["description"] = payload["description"]
 
-    if all_day:
-        event_body["start"] = {"date": date_str}
-        event_body["end"] = {"date": date_str}
-    else:
-        if not (start_time and end_time):
-            return jsonify({"ok": False, "error": "startTime e endTime são obrigatórios"}), 400
-        start_dt = f"{date_str}T{start_time}:00"
-        end_dt = f"{date_str}T{end_time}:00"
-        event_body["start"] = {"dateTime": start_dt, "timeZone": time_zone}
-        event_body["end"] = {"dateTime": end_dt, "timeZone": time_zone}
+    # Coerce allDay para bool: ausente/falsy → False (exige startTime+endTime)
+    dt_payload = {**payload, "allDay": bool(payload.get("allDay"))}
+    dt_fields, err_msg = _build_event_datetime_fields(dt_payload)
+    if err_msg:
+        return jsonify({"ok": False, "error": err_msg}), 400
+    event_body.update(dt_fields)
 
-    recurrence = payload.get("recurrence")
-    reminders = payload.get("reminders")
+    if payload.get("recurrence") is not None:
+        event_body["recurrence"] = payload["recurrence"]
+    if payload.get("reminders") is not None:
+        event_body["reminders"] = payload["reminders"]
 
-    if recurrence is not None:
-        event_body["recurrence"] = recurrence
-    if reminders is not None:
-        event_body["reminders"] = reminders
-
-    conference = bool((payload.get("conference") is True) or (payload.get("createMeetLink") is True))
     extra_params = None
-    if conference:
+    if payload.get("conference") is True or payload.get("createMeetLink") is True:
         event_body["conferenceData"] = {
             "createRequest": {"requestId": str(uuid.uuid4()), "conferenceSolutionKey": {"type": "hangoutsMeet"}}
         }
-
         extra_params = {"conferenceDataVersion": 1}
 
-    try:
-        resp = requests.post(
-            google_events_endpoint(calendar_id),
-            headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"},
-            json=event_body,
-            params=extra_params,
-            timeout=10,
-        )
-        if resp.status_code == 401:
-            return jsonify({"ok": False, "error": "Token expirado. Refaça a conexão com o Google."}), 401
-        if resp.status_code >= 400:
-            return jsonify({"ok": False, "error": resp.text}), resp.status_code
-        return jsonify({"ok": True, "event": resp.json()})
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
+    return _call_google_calendar_api("POST", google_events_endpoint(calendar_id), access_token, event_body, extra_params)
 
 
 @agenda_bp.route("/agenda/events/<event_id>", methods=["DELETE"])
 @login_required
 def agenda_delete_event(event_id):
     """Exclui um evento do calendário principal do usuário."""
-    if not _google_oauth_configured():
-        return jsonify({"ok": False, "error": "Google OAuth não configurado"}), 400
-
-    token = session.get("google_token") or {}
-    access_token = token.get("access_token")
-    if not access_token:
-        return jsonify({"ok": False, "error": "Sessão do Google ausente"}), 401
-
+    access_token, err = _get_google_access_token()
+    if err:
+        return err
     calendar_id = request.args.get("calendarId") or "primary"
-    try:
-        resp = requests.delete(
-            f"{google_events_endpoint(calendar_id)}/{event_id}",
-            headers={"Authorization": f"Bearer {access_token}"},
-            timeout=10,
-        )
-        if resp.status_code == 401:
-            return jsonify({"ok": False, "error": "Token expirado. Refaça a conexão com o Google."}), 401
-        if resp.status_code >= 400:
-            return jsonify({"ok": False, "error": resp.text}), resp.status_code
-        return jsonify({"ok": True})
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
+    return _call_google_calendar_api("DELETE", f"{google_events_endpoint(calendar_id)}/{event_id}", access_token)
 
 
 @agenda_bp.route("/agenda/disconnect")
@@ -370,9 +386,11 @@ def agenda_delete_event(event_id):
 def agenda_disconnect():
     try:
         session.pop("google_token", None)
+        from ..infra.google_oauth_service import revoke_google_token
+        revoke_google_token(g.user_email)
         flash("Agenda do Google desconectada.", "info")
-    except Exception:
-        pass
+    except Exception as e:
+        agenda_logger.warning(f"Falha ao desconectar agenda do Google da sessão: {e}", exc_info=True)
     return redirect(url_for("agenda.agenda_home"))
 
 
@@ -380,65 +398,27 @@ def agenda_disconnect():
 @login_required
 def agenda_update_event(event_id):
     """Atualiza um evento: título, horário, local, descrição, lembretes e recorrência."""
-    if not _google_oauth_configured():
-        return jsonify({"ok": False, "error": "Google OAuth não configurado"}), 400
-
-    token = session.get("google_token") or {}
-    access_token = token.get("access_token")
-    if not access_token:
-        return jsonify({"ok": False, "error": "Sessão do Google ausente"}), 401
+    access_token, err = _get_google_access_token()
+    if err:
+        return err
 
     payload = request.get_json(silent=True) or {}
     calendar_id = payload.get("calendarId") or request.args.get("calendarId") or "primary"
 
-    summary = payload.get("summary")
-    description = payload.get("description")
-    location = payload.get("location")
-    date_str = payload.get("date")
-    start_time = payload.get("startTime")
-    end_time = payload.get("endTime")
-    time_zone = payload.get("timeZone") or "UTC"
-    all_day = payload.get("allDay")
-    recurrence = payload.get("recurrence")
-    reminders = payload.get("reminders")
+    dt_fields, err_msg = _build_event_datetime_fields(payload)
+    if err_msg:
+        return jsonify({"ok": False, "error": err_msg}), 400
 
-    event_body = {}
-    if summary is not None:
-        event_body["summary"] = summary
-    if description is not None:
-        event_body["description"] = description
-    if location is not None:
-        event_body["location"] = location
+    event_body: dict[str, Any] = {}
+    event_body.update(dt_fields)
 
-    if all_day is True:
-        if not date_str:
-            return jsonify({"ok": False, "error": "date é obrigatório para dia inteiro"}), 400
-        event_body["start"] = {"date": date_str}
-        event_body["end"] = {"date": date_str}
-    elif all_day is False or (start_time and end_time):
-        if not (date_str and start_time and end_time):
-            return jsonify({"ok": False, "error": "date, startTime e endTime são obrigatórios"}), 400
-        start_dt = f"{date_str}T{start_time}:00"
-        end_dt = f"{date_str}T{end_time}:00"
-        event_body["start"] = {"dateTime": start_dt, "timeZone": time_zone}
-        event_body["end"] = {"dateTime": end_dt, "timeZone": time_zone}
+    for field in ("summary", "description", "location"):
+        if payload.get(field) is not None:
+            event_body[field] = payload[field]
 
-    if recurrence is not None:
-        event_body["recurrence"] = recurrence
-    if reminders is not None:
-        event_body["reminders"] = reminders
+    if payload.get("recurrence") is not None:
+        event_body["recurrence"] = payload["recurrence"]
+    if payload.get("reminders") is not None:
+        event_body["reminders"] = payload["reminders"]
 
-    try:
-        resp = requests.patch(
-            f"{google_events_endpoint(calendar_id)}/{event_id}",
-            headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"},
-            json=event_body,
-            timeout=10,
-        )
-        if resp.status_code == 401:
-            return jsonify({"ok": False, "error": "Token expirado. Refaça a conexão com o Google."}), 401
-        if resp.status_code >= 400:
-            return jsonify({"ok": False, "error": resp.text}), resp.status_code
-        return jsonify({"ok": True, "event": resp.json()})
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
+    return _call_google_calendar_api("PATCH", f"{google_events_endpoint(calendar_id)}/{event_id}", access_token, event_body)

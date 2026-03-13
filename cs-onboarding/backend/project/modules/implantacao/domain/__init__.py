@@ -26,6 +26,7 @@ from .details import (
     _format_implantacao_dates,
     _get_timeline_logs,
     atualizar_detalhes_empresa_service,
+    get_implantacao_details,
 )
 
 # Importações de listing.py
@@ -57,7 +58,6 @@ from .status import (
     reabrir_implantacao_service,
     retomar_implantacao_service,
 )
-from .details import get_implantacao_details
 
 # Exports públicos
 __all__ = [

@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(__name__)
 """
 Configuração de cache para a aplicação.
 Usa Flask-Caching com backend configurável (Redis em produção, Simple em desenvolvimento).
@@ -8,6 +10,33 @@ import os
 from flask_caching import Cache
 
 cache = None
+
+
+def _dashboard_version_key(user_email: str) -> str:
+    return f"dashboard_version_{user_email}"
+
+
+def get_dashboard_cache_version(user_email: str) -> int:
+    if not cache:
+        return 0
+    try:
+        version = cache.get(_dashboard_version_key(user_email))
+        return int(version) if version is not None else 0
+    except Exception as exc:
+        logger.exception("Unhandled exception", exc_info=True)
+        return 0
+
+
+def bump_dashboard_cache_version(user_email: str) -> int:
+    if not cache:
+        return 0
+    try:
+        version = get_dashboard_cache_version(user_email) + 1
+        cache.set(_dashboard_version_key(user_email), version, timeout=60 * 60 * 24 * 7)
+        return version
+    except Exception as exc:
+        logger.exception("Unhandled exception", exc_info=True)
+        return 0
 
 
 def init_cache(app):
@@ -23,14 +52,18 @@ def init_cache(app):
 
     if redis_url:
         cache_config = {
-            "CACHE_TYPE": "redis",
+            "CACHE_TYPE": "flask_caching.backends.rediscache.RedisCache",
             "CACHE_REDIS_URL": redis_url,
             "CACHE_DEFAULT_TIMEOUT": 30,  # 30 segundos - cache curto para dados frescos
             "CACHE_KEY_PREFIX": "csapp_",
         }
         app.logger.info("Cache initialized with Redis backend")
     else:
-        cache_config = {"CACHE_TYPE": "SimpleCache", "CACHE_DEFAULT_TIMEOUT": 30, "CACHE_THRESHOLD": 500}
+        cache_config = {
+            "CACHE_TYPE": "flask_caching.backends.simplecache.SimpleCache",
+            "CACHE_DEFAULT_TIMEOUT": 30,
+            "CACHE_THRESHOLD": 500,
+        }
         app.logger.info("Cache initialized with SimpleCache backend (development)")
 
     cache = Cache(app, config=cache_config)
@@ -46,21 +79,8 @@ def clear_user_cache(user_email):
     if cache:
         cache.delete(f"user_profile_{user_email}")  # Cache de perfil
         cache.delete(f"user_implantacoes_{user_email}")
-
-        # Limpar variações de dashboard_data
-        # Padrão: dashboard_data_{user_email}_{filtered_cs_email or 'all'}_p{page}_pp{per_page}
-        pages = [None, 1, 2, 3]
-        per_pages = [None, 20, 50, 100]
-        filtered_cs = ["all", None]
-
-        for page in pages:
-            for per_page in per_pages:
-                for cs in filtered_cs:
-                    cs_str = cs if cs else "all"
-                    cache.delete(f"dashboard_data_{user_email}_{cs_str}_p{page}_pp{per_page}")
-
-        # Legado
-        cache.delete(f"dashboard_data_{user_email}")
+        bump_dashboard_cache_version(user_email)
+        cache.delete(f"dashboard_data_{user_email}")  # legado
 
 
 def clear_implantacao_cache(implantacao_id):

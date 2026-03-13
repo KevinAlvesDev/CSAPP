@@ -1,3 +1,6 @@
+import logging
+logger = logging.getLogger(__name__)
+
 import boto3
 from authlib.integrations.flask_client import OAuth
 from botocore.client import Config as BotocoreConfig
@@ -5,12 +8,20 @@ from cachetools import TTLCache
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
+_logger = logging.getLogger(__name__)
+
 oauth = OAuth()
 
 r2_client = None
-limiter = None
 
-gamification_rules_cache = TTLCache(maxsize=10, ttl=3600)
+# Type hint para satisfazer mypy
+from typing import cast
+from typing import Any
+
+limiter: Limiter = cast(Limiter, None) 
+
+# Cache para regras de gamificação (100 itens, 10 min TTL)
+gamification_rules_cache: TTLCache[str, Any] = TTLCache(maxsize=100, ttl=600)
 
 
 def init_limiter(app):
@@ -33,8 +44,8 @@ def init_limiter(app):
         )
 
         limiter.init_app(app)
-    except Exception:
-        limiter = None
+    except Exception as e:
+        _logger.error(f"Falha ao inicializar Flask-Limiter: {e}", exc_info=True)
 
 
 def init_r2(app):
@@ -51,6 +62,6 @@ def init_r2(app):
                 config=BotocoreConfig(signature_version="s3v4", s3={"addressing_style": "virtual"}),
                 region_name="auto",
             )
-            pass
-    except Exception:
-        pass
+    except Exception as e:
+        _logger.error(f"Falha ao inicializar cliente R2: {e}", exc_info=True)
+        r2_client = None

@@ -1,0 +1,600 @@
+{% extends "base.html" %}
+
+{% block title %}Gestão de Métricas Mensais{% endblock %}
+
+{% block head_extra %}
+<style>
+.gmo-page {
+    background: #eff1f5;
+    min-height: calc(100vh - 1.5rem);
+}
+
+.gmo-filter-card {
+    background: #fff;
+    border: 1px solid #d8dde5;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    padding: 16px 20px;
+}
+
+.gmo-filter-form {
+    align-items: flex-end;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.gmo-filter-form .form-select,
+.gmo-filter-form .form-control {
+    font-size: 14px;
+}
+
+.gmo-filter-form label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: #8d95a3;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+.gmo-filter-field { min-width: 120px; }
+.gmo-filter-action { align-self: flex-end; }
+
+.gmo-stats {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.gmo-stat {
+    background: #fff;
+    border: 1px solid #d8dde5;
+    border-radius: 10px;
+    padding: 12px 20px;
+    text-align: center;
+    min-width: 120px;
+}
+
+.gmo-stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #273142;
+    line-height: 1;
+}
+
+.gmo-stat-label {
+    font-size: 11px;
+    color: #8d95a3;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    margin-top: 4px;
+}
+
+.gmo-stat.success .gmo-stat-value { color: #16a34a; }
+.gmo-stat.warning .gmo-stat-value { color: #d97706; }
+
+.gmo-table-wrap {
+    background: #fff;
+    border: 1px solid #d8dde5;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.gmo-table {
+    margin: 0;
+    width: 100%;
+    font-size: 13.5px;
+}
+
+.gmo-table thead th {
+    background: #f4f6f9;
+    border-bottom: 1px solid #d8dde5;
+    color: #8d95a3;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    padding: 10px 14px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.gmo-table tbody td {
+    border-bottom: 1px solid #eef0f3;
+    padding: 10px 14px;
+    vertical-align: middle;
+}
+
+.gmo-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.gmo-table tbody tr.sem-lancamento {
+    background: #fffbeb;
+}
+
+.gmo-table tbody tr:hover td {
+    background: #f8f9fb;
+}
+
+.gmo-table tbody tr.sem-lancamento:hover td {
+    background: #fef3c7;
+}
+
+.gmo-avatar {
+    align-items: center;
+    border-radius: 50%;
+    color: #fff;
+    display: inline-flex;
+    font-size: 13px;
+    font-weight: 700;
+    height: 34px;
+    justify-content: center;
+    width: 34px;
+    flex-shrink: 0;
+}
+
+.gmo-avatar-img {
+    border-radius: 50%;
+    height: 34px;
+    object-fit: cover;
+    width: 34px;
+    flex-shrink: 0;
+}
+
+.gmo-cs-cell {
+    align-items: center;
+    display: flex;
+    gap: 10px;
+}
+
+.gmo-cs-name {
+    color: #273142;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.gmo-cs-cargo {
+    color: #8d95a3;
+    font-size: 11.5px;
+}
+
+.badge-lancado {
+    background: #dcfce7;
+    border-radius: 999px;
+    color: #16a34a;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    white-space: nowrap;
+}
+
+.badge-sem {
+    background: #fef9c3;
+    border-radius: 999px;
+    color: #b45309;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    white-space: nowrap;
+}
+
+.badge-excluido {
+    background: #f1f5f9;
+    border-radius: 999px;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    white-space: nowrap;
+}
+
+.gmo-table tbody tr.excluido td {
+    opacity: .5;
+}
+
+.btn-toggle {
+    background: none;
+    border: 1px solid #d8dde5;
+    border-radius: 7px;
+    color: #64748b;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 10px;
+    transition: background .15s, color .15s;
+    white-space: nowrap;
+}
+
+.btn-toggle:hover { background: #f1f5f9; }
+.btn-toggle.loading { opacity: .6; pointer-events: none; }
+
+.btn-toggle-add {
+    border-color: #16a34a;
+    color: #16a34a;
+}
+
+.btn-toggle-add:hover { background: #f0fdf4; }
+
+.badge-elegivel {
+    background: #dbeafe;
+    border-radius: 999px;
+    color: #1d4ed8;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+}
+
+.badge-nao-elegivel {
+    background: #fee2e2;
+    border-radius: 999px;
+    color: #b91c1c;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+}
+
+.gmo-metric-val {
+    color: #273142;
+    font-variant-numeric: tabular-nums;
+}
+
+.gmo-metric-none {
+    color: #c5cad3;
+    font-size: 12px;
+}
+
+.gmo-pts {
+    color: #7c3aed;
+    font-size: 15px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+}
+
+.btn-editar {
+    background: #f4f6f9;
+    border: 1px solid #d8dde5;
+    border-radius: 7px;
+    color: #273142;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 12px;
+    text-decoration: none;
+    transition: background .15s;
+    white-space: nowrap;
+}
+
+.btn-editar:hover {
+    background: #e2e8f0;
+    color: #273142;
+}
+
+.gmo-empty {
+    color: #8d95a3;
+    padding: 40px;
+    text-align: center;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{% set month_names = [
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+] %}
+{% set avatar_palette = ['#4f7bf5', '#c155dd', '#25b873', '#f15c2a', '#27a0dd', '#f06067', '#566173', '#7c58f8'] %}
+
+{% set total = rows | length %}
+{% set participando_rows = rows | selectattr('participando') | list %}
+{% set com_lancamento = participando_rows | selectattr('tem_lancamento') | list | length %}
+{% set sem_lancamento = participando_rows | length - com_lancamento %}
+{% set excluidos = rows | rejectattr('participando') | list | length %}
+
+<div class="container-fluid p-0 gmo-page">
+    <header class="header-bg p-3 d-flex align-items-center position-relative rounded-3">
+        <h1 class="main-title mb-0 fs-4 w-100 text-center">Gestão de Métricas Mensais</h1>
+        <div class="d-flex align-items-center position-absolute end-0 top-50 translate-middle-y pe-3 gap-2">
+            <a href="{{ url_for(current_dashboard) }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-house me-1"></i>
+                Dashboard
+            </a>
+            <a href="{{ url_for('gamification.gamification_report', context=current_context) }}" class="btn btn-sm btn-warning">
+                <i class="bi bi-clipboard-data me-1"></i>
+                Ver Relatório
+            </a>
+        </div>
+    </header>
+
+    <main class="p-4">
+
+        <section class="gmo-filter-card">
+            <form method="GET" action="{{ url_for('gamification.metrics_overview') }}" class="gmo-filter-form">
+                {% if current_context %}
+                <input type="hidden" name="context" value="{{ current_context }}">
+                {% endif %}
+
+                <div class="gmo-filter-field">
+                    <label for="mes_filter">Mês</label>
+                    <select class="form-select form-select-sm" id="mes_filter" name="mes">
+                        {% for i in range(1, 13) %}
+                        <option value="{{ i }}" {% if i == current_mes %}selected{% endif %}>
+                            {{ month_names[i-1] }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="gmo-filter-field">
+                    <label for="ano_filter">Ano</label>
+                    <select class="form-select form-select-sm" id="ano_filter" name="ano">
+                        {% for i in range(current_year, current_year - 5, -1) %}
+                        <option value="{{ i }}" {% if i == current_ano %}selected{% endif %}>{{ i }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="gmo-filter-action">
+                    <button type="submit" class="btn btn-sm btn-primary">
+                        <i class="bi bi-search me-1"></i>Filtrar
+                    </button>
+                </div>
+
+                {% if excluidos > 0 %}
+                <div class="gmo-filter-action ms-auto">
+                    <button type="button" id="btn-mostrar-excluidos" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-eye me-1"></i>Mostrar excluídos ({{ excluidos }})
+                    </button>
+                </div>
+                {% endif %}
+            </form>
+        </section>
+
+        <div class="gmo-stats">
+            <div class="gmo-stat">
+                <div class="gmo-stat-value">{{ participando_rows | length }}</div>
+                <div class="gmo-stat-label">Participando</div>
+            </div>
+            <div class="gmo-stat success">
+                <div class="gmo-stat-value">{{ com_lancamento }}</div>
+                <div class="gmo-stat-label">Com lançamento</div>
+            </div>
+            <div class="gmo-stat warning">
+                <div class="gmo-stat-value">{{ sem_lancamento }}</div>
+                <div class="gmo-stat-label">Sem lançamento</div>
+            </div>
+            {% if excluidos > 0 %}
+            <div class="gmo-stat">
+                <div class="gmo-stat-value" style="color:#64748b">{{ excluidos }}</div>
+                <div class="gmo-stat-label">Excluídos</div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="gmo-table-wrap">
+            {% if rows %}
+            <table class="table gmo-table">
+                <thead>
+                    <tr>
+                        <th>Colaborador</th>
+                        <th>Status</th>
+                        <th>Qualidade</th>
+                        <th>Assiduidade</th>
+                        <th>Planos Sucesso</th>
+                        <th>Finalizadas</th>
+                        <th>Pontuação</th>
+                        <th>Elegível</th>
+                        <th>Participação</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for row in rows %}
+                {% set name_parts = row.nome.split() %}
+                {% set first_initial = name_parts[0][0] | upper if name_parts else '?' %}
+                {% set second_initial = name_parts[1][0] | upper if name_parts | length > 1 else '' %}
+                {% set avatar_bg = avatar_palette[loop.index0 % avatar_palette | length] %}
+                <tr class="{{ 'excluido' if not row.participando else ('' if row.tem_lancamento else 'sem-lancamento') }}" data-email="{{ row.email }}">
+                    <td>
+                        <div class="gmo-cs-cell">
+                            {% if row.foto_url %}
+                            <img class="gmo-avatar-img" src="{{ row.foto_url }}" alt="{{ row.nome }}" referrerpolicy="no-referrer">
+                            {% else %}
+                            <span class="gmo-avatar" style="background-color: {{ avatar_bg }};">{{ first_initial }}{{ second_initial }}</span>
+                            {% endif %}
+                            <div>
+                                <div class="gmo-cs-name">{{ row.nome }}</div>
+                                {% if row.cargo %}<div class="gmo-cs-cargo">{{ row.cargo }}</div>{% endif %}
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        {% if row.tem_lancamento %}
+                        <span class="badge-lancado"><i class="bi bi-check-circle-fill me-1"></i>Lançado</span>
+                        {% else %}
+                        <span class="badge-sem"><i class="bi bi-exclamation-circle me-1"></i>Pendente</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if row.nota_qualidade is not none %}
+                        <span class="gmo-metric-val">{{ row.nota_qualidade | round(1) }}</span>
+                        {% else %}
+                        <span class="gmo-metric-none">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if row.assiduidade is not none %}
+                        <span class="gmo-metric-val">{{ row.assiduidade | round(1) }}</span>
+                        {% else %}
+                        <span class="gmo-metric-none">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if row.planos_sucesso_perc is not none %}
+                        <span class="gmo-metric-val">{{ row.planos_sucesso_perc | round(1) }}%</span>
+                        {% else %}
+                        <span class="gmo-metric-none">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if row.impl_finalizadas_mes is not none %}
+                        <span class="gmo-metric-val">{{ row.impl_finalizadas_mes }}</span>
+                        {% else %}
+                        <span class="gmo-metric-none">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if row.pontuacao_calculada is not none %}
+                        <span class="gmo-pts">{{ row.pontuacao_calculada | round(1) }}</span>
+                        {% else %}
+                        <span class="gmo-metric-none">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if row.elegivel is not none %}
+                            {% if row.elegivel %}
+                            <span class="badge-elegivel"><i class="bi bi-star-fill me-1"></i>Sim</span>
+                            {% else %}
+                            <span class="badge-nao-elegivel">Não</span>
+                            {% endif %}
+                        {% else %}
+                        <span class="gmo-metric-none">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button type="button"
+                            class="btn-toggle {{ 'btn-toggle-add' if not row.participando else '' }}"
+                            data-email="{{ row.email }}"
+                            data-participando="{{ 'true' if row.participando else 'false' }}"
+                            data-toggle-url="{{ url_for('gamification.toggle_participante_route', context=current_context) }}"
+                            title="{{ 'Excluir da gamificação' if row.participando else 'Incluir na gamificação' }}">
+                            {% if row.participando %}
+                            <i class="bi bi-person-dash me-1"></i>Excluir
+                            {% else %}
+                            <i class="bi bi-person-plus me-1"></i>Incluir
+                            {% endif %}
+                        </button>
+                    </td>
+                    <td>
+                        {% if row.participando %}
+                        <a href="{{ url_for('gamification.manage_gamification_metrics', cs_email=row.email, mes=current_mes, ano=current_ano, context=current_context) }}"
+                           class="btn-editar">
+                            <i class="bi bi-pencil me-1"></i>
+                            {{ 'Editar' if row.tem_lancamento else 'Lançar' }}
+                        </a>
+                        {% else %}
+                        <span class="badge-excluido"><i class="bi bi-slash-circle me-1"></i>Excluído</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="gmo-empty">
+                <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+                Nenhum colaborador encontrado para este contexto.
+            </div>
+            {% endif %}
+        </div>
+
+    </main>
+</div>
+
+<script nonce="{{ csp_nonce() }}">
+(function() {
+    var excluidos = document.querySelectorAll('tr.excluido');
+    var mostrandoExcluidos = false;
+
+    // Ocultar excluídos inicialmente
+    excluidos.forEach(function(r) { r.style.display = 'none'; });
+
+    var btnMostrar = document.getElementById('btn-mostrar-excluidos');
+    if (btnMostrar) {
+        btnMostrar.addEventListener('click', function() {
+            mostrandoExcluidos = !mostrandoExcluidos;
+            excluidos.forEach(function(r) {
+                r.style.display = mostrandoExcluidos ? '' : 'none';
+            });
+            btnMostrar.innerHTML = mostrandoExcluidos
+                ? '<i class="bi bi-eye-slash me-1"></i>Ocultar excluídos'
+                : '<i class="bi bi-eye me-1"></i>Mostrar excluídos ({{ excluidos }})';
+        });
+    }
+
+    document.querySelectorAll('.btn-toggle').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var email = btn.dataset.email;
+            var url = btn.dataset.toggleUrl;
+            btn.classList.add('loading');
+
+            var fd = new FormData();
+            fd.append('cs_email', email);
+            fd.append('csrf_token', '{{ csrf_token() }}');
+
+            fetch(url, { method: 'POST', body: fd })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    var participando = data.ativo;
+                    var row = btn.closest('tr');
+
+                    if (!participando) {
+                        // Excluir: animar saída e ocultar
+                        row.style.transition = 'opacity .25s';
+                        row.style.opacity = '0';
+                        setTimeout(function() {
+                            row.classList.add('excluido');
+                            row.style.opacity = '';
+                            row.style.transition = '';
+                            if (!mostrandoExcluidos) {
+                                row.style.display = 'none';
+                            }
+                            // Atualizar botão para "Incluir"
+                            btn.classList.add('btn-toggle-add');
+                            btn.innerHTML = '<i class="bi bi-person-plus me-1"></i>Incluir';
+                            btn.title = 'Incluir na gamificação';
+                            btn.closest('tr').querySelector('td:last-child').innerHTML =
+                                '<span class="badge-excluido"><i class="bi bi-slash-circle me-1"></i>Excluído</span>';
+                            // Atualizar contador no botão "Mostrar excluídos"
+                            excluidos = document.querySelectorAll('tr.excluido');
+                            if (btnMostrar) {
+                                btnMostrar.style.display = '';
+                                btnMostrar.innerHTML = mostrandoExcluidos
+                                    ? '<i class="bi bi-eye-slash me-1"></i>Ocultar excluídos'
+                                    : '<i class="bi bi-eye me-1"></i>Mostrar excluídos (' + excluidos.length + ')';
+                            }
+                        }, 250);
+                    } else {
+                        // Incluir: mostrar row de volta
+                        row.classList.remove('excluido');
+                        row.style.display = '';
+                        btn.classList.remove('btn-toggle-add');
+                        btn.innerHTML = '<i class="bi bi-person-dash me-1"></i>Excluir';
+                        btn.title = 'Excluir da gamificação';
+                        row.querySelector('td:last-child').innerHTML =
+                            '<span class="badge-lancado" style="background:#f1f5f9;color:#273142"><i class="bi bi-arrow-clockwise me-1"></i>Recarregue para editar</span>';
+                        // Atualizar contador
+                        excluidos = document.querySelectorAll('tr.excluido');
+                        if (btnMostrar) {
+                            if (excluidos.length === 0) {
+                                btnMostrar.style.display = 'none';
+                            } else {
+                                btnMostrar.innerHTML = mostrandoExcluidos
+                                    ? '<i class="bi bi-eye-slash me-1"></i>Ocultar excluídos'
+                                    : '<i class="bi bi-eye me-1"></i>Mostrar excluídos (' + excluidos.length + ')';
+                            }
+                        }
+                    }
+                })
+                .catch(function() {
+                    alert('Erro ao atualizar participação. Tente novamente.');
+                })
+                .finally(function() {
+                    btn.classList.remove('loading');
+                });
+        });
+    });
+})();
+</script>
+{% endblock %}

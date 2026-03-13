@@ -17,6 +17,7 @@ Uso:
     cache_mgr.invalidate_resource("implantacao", implantacao_id=123)
 """
 
+
 from __future__ import annotations
 
 import functools
@@ -125,7 +126,7 @@ class CacheManager:
     def get_ttl(self, resource_type: str) -> int:
         """Retorna o TTL configurado para um recurso."""
         config = CACHE_TTL_CONFIG.get(resource_type, {})
-        return config.get("ttl", 60)  # Default: 60 segundos
+        return int(config.get("ttl", 60))  # Default: 60 segundos
 
     def get(self, resource_type: str, **kwargs) -> Any | None:
         """Busca valor do cache."""
@@ -267,8 +268,8 @@ def cached_resource(resource_type: str, **cache_kwargs) -> Callable:
                         lambda: func(*args, **kwargs),
                         **cache_kwargs,
                     )
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Falha ao buscar dados do cache (resource_type={resource_type}): {e}", exc_info=True)
             return func(*args, **kwargs)
 
         return wrapper

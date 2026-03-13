@@ -6,16 +6,12 @@ Princípio SOLID: Single Responsibility
 
 from datetime import date, datetime, timedelta
 
-from flask import current_app
-
 from ....db import query_db
 from .utils import date_col_expr, date_param_expr
 
 
 def get_implants_by_day(start_date=None, end_date=None, cs_email=None, context=None):
     """Contagem de implantações finalizadas por dia, com filtros opcionais."""
-    is_sqlite = current_app.config.get("USE_SQLITE_LOCALLY", False)
-
     query = f"""
         SELECT {date_col_expr("i.data_finalizacao")} AS dia, COUNT(*) AS total
         FROM implantacoes i
@@ -49,7 +45,7 @@ def get_implants_by_day(start_date=None, end_date=None, cs_email=None, context=N
                 dt = datetime.strptime(ds, "%Y-%m-%d").date()
             except ValueError:
                 return None, None
-        if is_end and not is_sqlite:
+        if is_end:
             return "<", (dt + timedelta(days=1)).strftime("%Y-%m-%d")
         return "<=" if is_end else ">=", ds
 
@@ -74,8 +70,6 @@ def get_implants_by_day(start_date=None, end_date=None, cs_email=None, context=N
 
 def get_funnel_counts(start_date=None, end_date=None, cs_email=None, context=None):
     """Contagem de implantações por status, com período opcional (data_criacao)."""
-    is_sqlite = current_app.config.get("USE_SQLITE_LOCALLY", False)
-
     query = """
         SELECT i.status, COUNT(*) AS total
         FROM implantacoes i
@@ -109,7 +103,7 @@ def get_funnel_counts(start_date=None, end_date=None, cs_email=None, context=Non
                 dt = datetime.strptime(ds, "%Y-%m-%d").date()
             except ValueError:
                 return None, None
-        if is_end and not is_sqlite:
+        if is_end:
             return "<", (dt + timedelta(days=1)).strftime("%Y-%m-%d")
         return "<=" if is_end else ">=", ds
 
@@ -129,6 +123,6 @@ def get_funnel_counts(start_date=None, end_date=None, cs_email=None, context=Non
     rows = query_db(query, tuple(args)) or []
     mapping = {r.get("status"): r.get("total", 0) for r in rows}
     ordered_labels = ["nova", "futura", "andamento", "parada", "finalizada", "cancelada"]
-    labels_pt = ["Novas", "Futuras", "Em Andamento", "Paradas", "Finalizadas", "Canceladas"]
+    labels_pt = ["Novas", "Futuras", "Em Andamento", "Paradas", "Concluídas", "Canceladas"]
     data = [mapping.get(k, 0) for k in ordered_labels]
     return {"labels": labels_pt, "data": data}

@@ -299,6 +299,11 @@
     width: 24px;
 }
 
+.gmr-avatar-img {
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
 .gmr-colab-name {
     font-size: 16px;
     font-weight: 600;

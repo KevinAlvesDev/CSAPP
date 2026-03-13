@@ -22,10 +22,16 @@ Uso: {% from 'macros/cards.html' import card_stats, card_base %}
 </div>
 {% endmacro %}
 
-{% macro card_stats(label, value, variant='primary', icon='', trend=none, monetary_value=none) %}
+{% macro card_stats(label, value, variant='primary', icon='', trend=none, monetary_value=none, click_key=none) %}
 <div class="card card-stats card-{{ variant }} p-3 text-center">
     <h6 class="text-secondary">{{ label }}</h6>
-    <h4 class="mb-0 text-{{ variant }}">{{ value }}</h4>
+    <h4 class="mb-0 text-{{ variant }}">
+        {% if click_key %}
+        <button type="button" class="kpi-count-link" data-kpi="{{ click_key }}">{{ value }}</button>
+        {% else %}
+        {{ value }}
+        {% endif %}
+    </h4>
     {% if monetary_value is not none %}
     <div class="text-muted small">R$ {{ "%.2f"|format(monetary_value|float) if monetary_value else '0.00' }}</div>
     {% endif %}

@@ -1,17 +1,29 @@
+import secrets
 from datetime import UTC
 
-from flask import request
+from flask import g, request
 
 
 def init_security_headers(app):
+    @app.before_request
+    def ensure_csp_nonce():
+        if not getattr(g, "csp_nonce", None):
+            g.csp_nonce = secrets.token_urlsafe(16)
+
     @app.after_request
     def set_security_headers(response):
-        use_sqlite = app.config.get("USE_SQLITE_LOCALLY", False)
-        is_production = not use_sqlite
+        is_production = not app.config.get("DEBUG", False)
+        nonce = getattr(g, "csp_nonce", "")
+        strict_nonce_mode = bool(app.config.get("CSP_STRICT_NONCE", False))
+        script_inline_policy = "" if strict_nonce_mode else " 'unsafe-inline'"
 
         csp_directives = [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com",
+            (
+                "script-src 'self'"
+                + script_inline_policy
+                + f" 'nonce-{nonce}' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com"
+            ),
             "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com",
             "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
             "img-src 'self' data: https: blob:",

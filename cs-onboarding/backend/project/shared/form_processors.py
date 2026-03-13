@@ -5,6 +5,7 @@ Princípio SOLID: Single Responsibility
 """
 
 from datetime import date, datetime
+from decimal import Decimal, InvalidOperation
 
 from flask import request
 
@@ -63,8 +64,8 @@ def normalize_date_str(s):
             try:
                 datetime.strptime(s, "%Y-%m-%d")
                 return s
-            except Exception:
-                pass
+            except Exception as e:
+                app_logger.warning(f"Falha ao converter data no formato YYYY-MM-DD (valor: {s!r}): {e}", exc_info=True)
 
         # Formato DD/MM/YYYY
         if "/" in s:
@@ -79,13 +80,14 @@ def normalize_date_str(s):
                 try:
                     datetime.strptime(result, "%Y-%m-%d")
                     return result
-                except Exception:
+                except Exception as exc:
+                    logger.exception("Unhandled exception", exc_info=True)
                     return None
 
         return None
 
     except Exception as e:
-        app_logger.error(f"ERRO ao normalizar data '{s}': {e}")
+        app_logger.error(f"ERRO ao normalizar data '{s}': {e}", exc_info=True)
         return None
 
 
@@ -107,14 +109,14 @@ def parse_valor_monetario(valor_raw):
         # Se tem vírgula, é formato BR: 1.234,56
         if "," in v:
             v = v.replace(".", "").replace(",", ".")  # 1.234,56 -> 1234.56
-        # Se não tem vírgula mas tem ponto, remove pontos (são separadores de milhar BR)
+        # Se não tem vírgula mas tem ponto, remove pontos (separadores de milhar)
         elif "." in v:
             v = v.replace(".", "")  # 1.000 -> 1000
 
-        v_float = float(v)
-        return f"{v_float:.2f}"
-    except (ValueError, AttributeError) as e:
-        app_logger.error(f"Erro ao converter valor monetário: {e}")
+        valor = Decimal(v)
+        return valor.quantize(Decimal("0.01"))
+    except (InvalidOperation, ValueError, AttributeError) as e:
+        app_logger.error(f"Erro ao converter valor monetário: {e}", exc_info=True)
         return None
 
 
@@ -173,7 +175,16 @@ def build_detalhes_campos():
     # Processar campos simples
     cargo_responsavel_val = get_form_value("cargo_responsavel")
     nivel_receita_val = get_form_value("nivel_receita")
-    valor_atribuido_val = get_form_value("valor_atribuido")  # Nível de Receita (MRR) no modal
+    if not nivel_receita_val:
+        legacy_mrr_val = get_form_value("valor_atribuido")
+        if legacy_mrr_val:
+            nivel_receita_val = legacy_mrr_val
+    if nivel_receita_val:
+        # Remover prefixo longo para evitar estourar limite de coluna
+        nivel_receita_val = nivel_receita_val.replace("MRR do grupo entre ", "MRR ")
+        nivel_receita_val = nivel_receita_val.replace("MRR do grupo abaixo de ", "MRR ")
+        nivel_receita_val = nivel_receita_val.replace("MRR do grupo ", "MRR ")
+        nivel_receita_val = " ".join(nivel_receita_val.split())
     sistema_anterior_val = get_form_value("sistema_anterior")
     recorrencia_usa_val = get_form_value("recorrencia_usa")
 
@@ -191,7 +202,6 @@ def build_detalhes_campos():
         "data_inicio_efetivo": data_inicio_efetivo,
         "id_favorecido": get_form_value("id_favorecido"),
         "nivel_receita": nivel_receita_val,
-        "valor_atribuido": valor_atribuido_val,  # Nível de Receita (MRR)
         "chave_oamd": get_form_value("chave_oamd"),
         "tela_apoio_link": get_form_value("tela_apoio_link"),
         "informacao_infra": get_form_value("informacao_infra"),
@@ -224,13 +234,53 @@ def build_detalhes_campos():
         "contatos": get_form_value("contatos"),
     }
 
+    if "valor_atribuido" in request.form and "nivel_receita" not in request.form:
+        campos["valor_atribuido"] = get_form_value("valor_atribuido")
+
     # Limpar chave OAMD
     co = campos.get("chave_oamd")
     if co and isinstance(co, str):
         campos["chave_oamd"] = co.strip() if co.strip() else None
 
+    # Validar limites de tamanho das colunas (evita erro de varchar no DB)
+    max_len_fields = {
+        "telefone_responsavel": 50,
+        "valor_monetario": 50,
+        "valor_atribuido": 50,
+        "diaria": 50,
+        "freepass": 50,
+        "importacao": 50,
+        "recorrencia_usa": 50,
+        "boleto": 50,
+        "nota_fiscal": 50,
+        "catraca": 50,
+        "facial": 50,
+        "wellhub": 50,
+        "totalpass": 50,
+        "cnpj": 20,
+        "usuario_cs": 255,
+        "nome_empresa": 255,
+        "email_responsavel": 255,
+        "responsavel_cliente": 255,
+        "cargo_responsavel": 100,
+        "status_implantacao_oamd": 100,
+        "id_favorecido": 100,
+        "nivel_receita": 100,
+        "nivel_atendimento": 100,
+        "chave_oamd": 100,
+        "sistema_anterior": 100,
+        "modelo_catraca": 100,
+        "modelo_facial": 100,
+    }
+    for field, limit in max_len_fields.items():
+        val = campos.get(field)
+        if isinstance(val, str) and len(val) > limit:
+            return None, f"Campo '{field}' excedeu o limite de {limit} caracteres (tamanho: {len(val)})."
+
+    from typing import Any, Dict
+
     # Preparar campos finais (converter datas)
-    final_campos = {}
+    final_campos: Dict[str, Any] = {}
     for k, v in campos.items():
         if v is None:
             final_campos[k] = None
@@ -239,7 +289,8 @@ def build_detalhes_campos():
         elif isinstance(v, (datetime, date)):
             try:
                 final_campos[k] = v.strftime("%Y-%m-%d")
-            except Exception:
+            except Exception as exc:
+                logger.exception("Unhandled exception", exc_info=True)
                 final_campos[k] = str(v)
         else:
             final_campos[k] = v

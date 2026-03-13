@@ -1,6 +1,7 @@
 import logging
 import os
 from logging.handlers import RotatingFileHandler
+logger = logging.getLogger(__name__)
 
 from flask import g
 
@@ -52,6 +53,9 @@ def setup_logging(app):
     # Max 5MB por arquivo, mantém 10 backups (total ~55MB)
     max_bytes = int(app.config.get("LOG_MAX_BYTES", 5 * 1024 * 1024))
     backup_count = int(app.config.get("LOG_BACKUP_COUNT", 10))
+
+    file_handler: logging.FileHandler
+    error_handler: logging.FileHandler
 
     if rotation_enabled:
         # RotatingFileHandler é mais confiável no Windows que TimedRotatingFileHandler

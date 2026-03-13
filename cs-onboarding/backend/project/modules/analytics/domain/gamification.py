@@ -4,7 +4,7 @@ Ranking de gamificação por mês/ano.
 Princípio SOLID: Single Responsibility
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ....common.context_profiles import resolve_context
 from ....db import query_db
@@ -12,7 +12,7 @@ from ....db import query_db
 
 def get_gamification_rank(month=None, year=None, context=None):
     """Ranking de gamificação por mês/ano, usando tabela de métricas mensais."""
-    agora = datetime.now()
+    agora = datetime.now(timezone.utc)
     m = month or agora.month
     y = year or agora.year
     ctx = resolve_context(context)

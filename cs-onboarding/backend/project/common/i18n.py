@@ -1,4 +1,6 @@
 from collections.abc import Callable
+import logging
+logger = logging.getLogger(__name__)
 
 TRANSLATIONS = {
     "pt": {
@@ -48,7 +50,8 @@ def get_translator(app) -> Callable[[str], str]:
         if kwargs:
             try:
                 return text.format(**kwargs)
-            except Exception:
+            except Exception as exc:
+                logger.exception("Unhandled exception", exc_info=True)
                 return text
         return text
 

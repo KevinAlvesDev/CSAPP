@@ -21,6 +21,7 @@ Uso:
     container.register("db", mock_db)
 """
 
+
 from __future__ import annotations
 
 import logging
@@ -152,13 +153,14 @@ def get_container() -> ServiceContainer:
         container = get_container()
     """
     from flask import current_app
-
+    from typing import cast
+    
     container = getattr(current_app, "service_container", None)
     if container is None:
         raise RuntimeError(
             "ServiceContainer não inicializado. Certifique-se de chamar ServiceContainer(app) no create_app()."
         )
-    return container
+    return cast(ServiceContainer, container)
 
 
 def inject_service(service_name: str) -> Callable:

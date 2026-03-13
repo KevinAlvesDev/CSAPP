@@ -1,3 +1,5 @@
+from typing import Any
+
 class CSAPPException(Exception):
     def __init__(self, message: str, details: dict | None = None):
         self.message = message
@@ -22,7 +24,7 @@ class AuthorizationError(CSAPPException):
 
 
 class ResourceNotFoundError(CSAPPException):
-    def __init__(self, resource_type: str, resource_id: any):
+    def __init__(self, resource_type: str, resource_id: Any):
         message = f"{resource_type} com ID {resource_id} não encontrado"
         details = {"resource_type": resource_type, "resource_id": resource_id}
         super().__init__(message, details)
@@ -62,3 +64,7 @@ class RateLimitExceededError(CSAPPException):
 
 class BusinessLogicError(CSAPPException):
     pass
+
+
+class BusinessRuleError(BusinessLogicError):
+    """Exceção para violações de regras de negócio específicas."""

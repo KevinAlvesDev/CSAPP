@@ -13,6 +13,7 @@ def normalize_context(value):
     aliases = {
         "grandes-contas": "grandes_contas",
         "grandescontas": "grandes_contas",
+        "grandes contas": "grandes_contas",
         "gc": "grandes_contas",
         "on-boarding": "onboarding",
         "onboard": "onboarding",
@@ -68,7 +69,15 @@ def detect_current_context():
 def persist_current_context():
     context = detect_current_context()
     g.modulo_atual = context
-    session["modulo_atual"] = context
+
+    # Evitar "Session Pollution": Requisições AJAX ou de API não devem alterar o contexto persistente da sessão
+    # apenas o contexto da requisição atual (g.modulo_atual).
+    is_api = request.path.startswith("/api/")
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.accept_mimetypes.best == "application/json"
+
+    if not (is_api or is_ajax):
+        session["modulo_atual"] = context
+
     return context
 
 

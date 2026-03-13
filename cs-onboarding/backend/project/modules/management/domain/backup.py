@@ -3,7 +3,7 @@ import io
 import os
 import shutil
 import zipfile
-from datetime import datetime
+from datetime import datetime, timezone
 
 from flask import current_app
 
@@ -16,7 +16,7 @@ def perform_backup():
     backup_dir = os.path.join(base_dir, "backups")
     os.makedirs(backup_dir, exist_ok=True)
 
-    ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
 
     with db_connection() as (conn, db_type):
         if db_type == "sqlite":
@@ -34,14 +34,12 @@ def perform_backup():
 
         if db_type == "postgres":
             tables = [
-                "usuarios",
                 "perfil_usuario",
                 "implantacoes",
-                "tarefas",
-                "comentarios",
                 "timeline_log",
                 "gamificacao_regras",
                 "gamificacao_metricas_mensais",
+                "perfil_usuario_contexto",
             ]
             zip_path = os.path.join(backup_dir, f"db-postgres-{ts}.zip")
             with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:

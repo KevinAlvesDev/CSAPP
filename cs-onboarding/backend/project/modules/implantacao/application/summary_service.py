@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-import json
+import logging
+logger = logging.getLogger(__name__)
+
 import re
-from html import unescape
 import unicodedata
 from collections import Counter
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
+from html import unescape
 from typing import Any
 
 from ....common.dataloader import ChecklistDataLoader
@@ -16,6 +18,16 @@ from ....modules.checklist.domain.comments import listar_comentarios_implantacao
 from ....modules.implantacao.domain.progress import _get_progress
 from ....modules.timeline.application.timeline_service import get_timeline_logs
 from ..infra.gemini_client import GeminiClientError, generate_text
+
+
+def _strip_html(text: str) -> str:
+    """Remove tags HTML e entidades de um texto."""
+    if not text:
+        return ""
+    cleaned = unescape(str(text))
+    cleaned = re.sub(r"<[^>]+>", "", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    return cleaned
 
 
 def _to_datetime(value: Any) -> datetime | None:
@@ -228,6 +240,7 @@ def _build_comments_overview(comments: list[dict[str, Any]], *, company_name: st
     return _truncate(result, 2400, preserve_newlines=True)
 
 def _enforce_comments_section(structured: dict[str, Any], context: dict[str, Any], source: str) -> dict[str, Any]:
+    """Garante que a secao de comentarios tenha conteudo de qualidade."""
     if not isinstance(structured, dict):
         structured = {}
 
@@ -237,52 +250,21 @@ def _enforce_comments_section(structured: dict[str, Any], context: dict[str, Any
 
     company_name = (context.get("implantacao") or {}).get("nome_empresa")
     comments_overview = _build_comments_overview(context.get("comentarios_tarefas", []), company_name=company_name)
-    found = False
 
     for sec in sections:
         if not isinstance(sec, dict):
             continue
         title = _normalize_section_title(sec.get("title") or "")
-        if "comentarios" not in title:
+        if "comentarios" not in title and "reuniao" not in title and "reunioes" not in title:
             continue
         text = str(sec.get("text") or "").strip()
-        bullets = [str(b or "").strip() for b in (sec.get("bullets") or []) if str(b or "").strip()]
-
-        # Prioriza o texto original do LLM; usa fallback apenas se vier vazio/ruim.
-        if source == "gemini":
-            merged_parts = []
-            if text:
-                merged_parts.append(_strip_datetime_tokens(text))
-            if bullets:
-                merged_parts.extend([_strip_datetime_tokens(b) for b in bullets])
-            merged = "\n\n".join([p for p in merged_parts if p]).strip()
-            unique_items = sorted(
-                {
-                    str(c.get("item_title") or "").strip()
-                    for c in context.get("comentarios_tarefas", [])
-                    if str(c.get("item_title") or "").strip()
-                }
-            )
-            merged_lower = merged.lower()
-            covered_items = [item for item in unique_items if item.lower() in merged_lower]
-            min_item_coverage = min(3, len(unique_items))
-            has_coverage = len(covered_items) >= min_item_coverage if min_item_coverage > 0 else True
-            sec["text"] = merged if (len(merged) >= 120 and has_coverage) else comments_overview
+        if source == "gemini" and len(text) >= 120:
+            sec["text"] = _strip_datetime_tokens(text)
         else:
             sec["text"] = comments_overview
         sec["bullets"] = []
-        sec["title"] = "Comentarios e treinamentos"
-        found = True
+        sec["title"] = "Comentarios e Reunioes"
         break
-
-    if not found:
-        sections.append(
-            {
-                "title": "Comentarios e treinamentos",
-                "text": comments_overview,
-                "bullets": [],
-            }
-        )
 
     structured["sections"] = sections
     return structured
@@ -327,122 +309,145 @@ def _build_context(impl_id: int, user_email: str | None, is_manager: bool) -> di
     if not impl:
         raise ValueError("Implantacao nao encontrada.")
 
+    # Nome do CS responsavel (tabela usuario e do OAMD, pode nao existir)
+    cs_nome: str | None = None
+    cs_email = impl.get("usuario_cs")
+    if cs_email:
+        try:
+            cs_row = query_db("SELECT nome FROM usuario WHERE email = %s", (cs_email,), one=True)
+            if cs_row and cs_row.get("nome"):
+                cs_nome = cs_row.get("nome")
+        except Exception:
+            pass
+    cs_nome = cs_nome or cs_email or "N/A"
+
     loader = ChecklistDataLoader(impl_id)
     items = loader.get_all_items()
     progress_pct, total_items, completed_items = _get_progress(impl_id)
     leaf_types = {"tarefa", "subtarefa"}
 
+    now = datetime.now(timezone.utc)
+    upcoming_limit = now + timedelta(days=7)
+
+    # Dias em andamento
+    start_dt = _to_datetime(impl.get("data_inicio_efetivo"))
+    dias_em_andamento: int | None = (now.date() - start_dt.date()).days if start_dt else None
+
+    # Grupos/fases do checklist com progresso
+    root_items = [i for i in items if not i.get("parent_id")]
+    checklist_grupos: list[dict[str, Any]] = []
+    for grupo in root_items[:20]:
+        gid = grupo.get("id")
+        filhos_folha = [
+            i for i in items
+            if i.get("tipo_item") in leaf_types and _is_descendant(items, i, gid)
+        ]
+        total_g = len(filhos_folha)
+        done_g = sum(1 for i in filhos_folha if i.get("completed"))
+        pct_g = int(done_g / total_g * 100) if total_g else 0
+        checklist_grupos.append({
+            "titulo": _truncate(grupo.get("title") or "", 80),
+            "total": total_g,
+            "concluidos": done_g,
+            "percentual": pct_g,
+        })
+
     pending_items: list[dict[str, Any]] = []
     overdue_items: list[dict[str, Any]] = []
     upcoming_items: list[dict[str, Any]] = []
 
-    now = datetime.now()
-    upcoming_limit = now + timedelta(days=7)
     for item in items:
         if item.get("tipo_item") not in leaf_types:
             continue
-        completed = bool(item.get("completed"))
+        if bool(item.get("completed")):
+            continue
         prazo_fim = _to_datetime(item.get("prazo_fim"))
-        if not completed:
-            pending_items.append(
-                {
-                    "id": item.get("id"),
-                    "titulo": _truncate(item.get("title") or "", 120),
-                    "responsavel": item.get("responsavel"),
-                    "prazo_fim": format_date_br(prazo_fim) if prazo_fim else None,
-                }
-            )
-            if prazo_fim and prazo_fim.date() < now.date():
-                overdue_items.append(pending_items[-1])
-            elif prazo_fim and now.date() <= prazo_fim.date() <= upcoming_limit.date():
-                upcoming_items.append(pending_items[-1])
+        entry = {
+            "titulo": _truncate(item.get("title") or "", 100),
+            "responsavel": item.get("responsavel") or "N/A",
+            "prazo_fim": format_date_br(prazo_fim) if prazo_fim else None,
+        }
+        pending_items.append(entry)
+        if prazo_fim and prazo_fim.date() < now.date():
+            dias_atraso = (now.date() - prazo_fim.date()).days
+            overdue_items.append({**entry, "dias_atraso": dias_atraso})
+        elif prazo_fim and now.date() <= prazo_fim.date() <= upcoming_limit.date():
+            upcoming_items.append(entry)
 
     comments_data = _load_comments_for_summary(impl_id, per_page=100, max_pages=50)
-    comments = comments_data.get("comments", [])
-    comments = sorted(comments, key=_comment_sort_key, reverse=True)
-    comments_total = comments_data.get("total", len(comments))
+    all_comments = comments_data.get("comments", [])
+    comments_total = comments_data.get("total", len(all_comments))
+
+    # Cronologico: mais antigo primeiro (para narrativa)
+    comments_chrono = sorted(all_comments, key=_comment_sort_key)
+    # Mais recente primeiro (para highlights rapidos)
+    comments_recent = sorted(all_comments, key=_comment_sort_key, reverse=True)
+
     comments_for_summary = [
         {
-            "id": c.get("id"),
             "autor": c.get("usuario_nome") or c.get("usuario_cs"),
-            "item_title": _truncate(c.get("item_title") or "Tarefa", 90),
-            "texto": c.get("texto") or "",
+            "item_title": _truncate(c.get("item_title") or "Tarefa", 80),
+            "texto": _truncate(c.get("texto") or "", 300),
+            "tag": c.get("tag"),
         }
-        for c in comments
+        for c in comments_chrono
         if (c.get("texto") or "").strip()
     ]
-    recent_comments = [
+
+    attachments = [
         {
-            "id": c.get("id"),
             "autor": c.get("usuario_nome") or c.get("usuario_cs"),
-            "texto": _truncate(c.get("texto") or "", 240),
-            "tag": c.get("tag"),
-            "data": c.get("data_criacao"),
-            "imagem_url": c.get("imagem_url"),
             "item_title": c.get("item_title"),
+            "imagem_url": c.get("imagem_url"),
         }
-        for c in comments
+        for c in comments_recent
+        if c.get("imagem_url")
     ]
 
-    meeting_comments = [
-        c
-        for c in recent_comments
-        if (c.get("tag") and "reun" in c.get("tag", "").lower())
-        or ("reun" in (c.get("texto") or "").lower())
-    ]
-
-    attachments = [c for c in recent_comments if c.get("imagem_url")]
-
-    # Estatisticas de comentarios
-    tag_counts = Counter([c.get("tag") for c in recent_comments if c.get("tag")])
-    top_tags = [f"{tag} ({count})" for tag, count in tag_counts.most_common(6)]
-    author_counts = Counter([c.get("autor") for c in recent_comments if c.get("autor")])
-    top_authors = [f"{author} ({count})" for author, count in author_counts.most_common(5)]
-    task_counts = Counter([c.get("item_title") for c in recent_comments if c.get("item_title")])
-    top_tasks = [f"{task} ({count})" for task, count in task_counts.most_common(5)]
-
-    treinamentos = []
-    for c in recent_comments:
-        text = (c.get("texto") or "").lower()
-        tag = (c.get("tag") or "").lower()
-        if any(k in text for k in ["trein", "capacita", "onboard", "aula", "workshop"]) or any(
-            k in tag for k in ["trein", "reun", "kickoff", "welcome"]
-        ):
-            snippet = _truncate(c.get("texto") or "", 140)
-            tarefa = c.get("item_title") or "Tarefa"
-            treinamentos.append(f"{tarefa}: {snippet}")
-        if len(treinamentos) >= 8:
-            break
-
-    comentarios_highlights = []
-    for c in recent_comments[:12]:
-        titulo = c.get("item_title") or "Tarefa"
-        comentarios_highlights.append(
-            f"{titulo} - {c.get('autor') or 'N/A'}: {c.get('texto')}"
-        )
-
-    timeline = get_timeline_logs(impl_id=impl_id, page=1, per_page=30)
-    timeline_logs = timeline.get("logs", [])
-
-    last_activity = query_db(
-        "SELECT MAX(data_criacao) as last_activity FROM timeline_log WHERE implantacao_id = %s",
-        (impl_id,),
-        one=True,
+    tag_counts = Counter([c.get("tag") for c in all_comments if c.get("tag")])
+    top_tags = [tag for tag, _ in tag_counts.most_common(6)]
+    author_counts = Counter(
+        [c.get("usuario_nome") or c.get("usuario_cs") for c in all_comments
+         if c.get("usuario_nome") or c.get("usuario_cs")]
     )
-    last_activity_dt = _to_datetime(last_activity.get("last_activity") if last_activity else None)
+    top_authors = [f"{a} ({n}x)" for a, n in author_counts.most_common(5)]
+
+    # Timeline: get_timeline_logs retorna data_criacao ja formatada e em ordem DESC
+    timeline = get_timeline_logs(impl_id=impl_id, page=1, per_page=50)
+    timeline_logs_raw = timeline.get("logs", [])
+    # Reverter para cronologico (mais antigo primeiro)
+    timeline_entries = [
+        {
+            "data": t.get("data_criacao") or "N/A",
+            "tipo": t.get("tipo_evento") or "",
+            "detalhe": _truncate(_strip_html(str(t.get("detalhes") or "")), 120),
+        }
+        for t in reversed(timeline_logs_raw[:50])
+    ]
+
+    # data da ultima atividade (primeiro item = mais recente)
+    last_activity_dt = _to_datetime(
+        timeline_logs_raw[0].get("data_criacao") if timeline_logs_raw else None
+    )
+    # Se _to_datetime falhou (string BR), estimar pela posicao (log mais recente existe = ativo recentemente)
+    if last_activity_dt is None and timeline_logs_raw:
+        last_activity_dt = datetime.now(timezone.utc)  # assume ativo, sem alerta de inatividade
 
     riscos: list[str] = []
     if impl.get("status") == "parada":
-        riscos.append("Implantacao esta parada.")
+        motivo = impl.get("motivo_parada") or ""
+        riscos.append(f"Implantacao esta parada. Motivo: {motivo}" if motivo else "Implantacao esta parada.")
     if impl.get("status") == "cancelada":
         riscos.append("Implantacao foi cancelada.")
     if overdue_items:
-        riscos.append(f"{len(overdue_items)} tarefa(s) com prazo estourado.")
+        riscos.append(f"{len(overdue_items)} tarefa(s) com prazo vencido.")
     previsao = _to_datetime(impl.get("data_previsao_termino"))
     if previsao and previsao.date() < now.date() and impl.get("status") not in {"finalizada", "cancelada"}:
-        riscos.append("Prazo previsto ultrapassado.")
-    if last_activity_dt and (now - last_activity_dt).days >= 14:
-        riscos.append("Sem movimentacao na timeline ha 14+ dias.")
+        riscos.append("Previsao de termino ja ultrapassada.")
+    if last_activity_dt:
+        dias_inativo = (now - last_activity_dt).days if last_activity_dt.tzinfo else (datetime.utcnow() - last_activity_dt).days
+        if dias_inativo >= 14:
+            riscos.append(f"Sem movimentacao registrada ha {dias_inativo} dias.")
 
     return {
         "implantacao": {
@@ -450,45 +455,58 @@ def _build_context(impl_id: int, user_email: str | None, is_manager: bool) -> di
             "nome_empresa": impl.get("nome_empresa"),
             "status": impl.get("status"),
             "tipo": impl.get("tipo"),
-            "usuario_cs": impl.get("usuario_cs"),
+            "cs_responsavel": cs_nome,
             "data_criacao": format_date_br(impl.get("data_criacao")),
-            "data_inicio_efetivo": format_date_br(impl.get("data_inicio_efetivo")),
-            "data_previsao_termino": format_date_br(impl.get("data_previsao_termino")),
+            "data_inicio_efetivo": format_date_br(impl.get("data_inicio_efetivo")) or "Nao iniciada",
+            "data_previsao_termino": format_date_br(impl.get("data_previsao_termino")) or "Sem previsao",
             "data_finalizacao": format_date_br(impl.get("data_finalizacao")),
             "data_parada": format_date_br(impl.get("data_parada")),
             "data_cancelamento": format_date_br(impl.get("data_cancelamento")),
-            "motivo_parada": _truncate(impl.get("motivo_parada") or "", 180),
-            "motivo_cancelamento": _truncate(impl.get("motivo_cancelamento") or "", 180),
+            "motivo_parada": _truncate(impl.get("motivo_parada") or "", 200),
+            "motivo_cancelamento": _truncate(impl.get("motivo_cancelamento") or "", 200),
+            "dias_em_andamento": dias_em_andamento,
         },
         "progresso": {
             "percentual": progress_pct,
             "total_itens": total_items,
             "concluidos": completed_items,
+            "pendentes": total_items - completed_items,
         },
+        "checklist_grupos": checklist_grupos,
         "pendencias": {
-            "total": len(pending_items),
+            "total_abertas": len(pending_items),
             "overdue_total": len(overdue_items),
             "upcoming_total": len(upcoming_items),
-            "overdue_itens": overdue_items[:10],
-            "upcoming_itens": upcoming_items[:10],
+            "overdue_itens": overdue_items[:8],
+            "upcoming_itens": upcoming_items[:8],
         },
-        "timeline": timeline_logs[:20],
-        "comentarios_recentes": recent_comments[:25],
-        "comentarios_tarefas": comments_for_summary,
-        "comentarios_reunioes": meeting_comments[:15],
-        "anexos_recentes": attachments[:10],
+        "timeline": timeline_entries,
+        "comentarios_tarefas": comments_for_summary[:30],
+        "anexos_recentes": attachments[:8],
         "comentarios_total": comments_total,
-        "tags_top": top_tags,
-        "autores_top": top_authors,
-        "tarefas_top": top_tasks,
-        "treinamentos": treinamentos,
-        "comentarios_highlights": comentarios_highlights,
+        "tags_frequentes": top_tags,
+        "autores_ativos": top_authors,
         "riscos": riscos,
         "metadados": {
             "gerado_por": user_email,
             "is_manager": is_manager,
         },
     }
+
+
+def _is_descendant(items: list[dict[str, Any]], item: dict[str, Any], ancestor_id: Any) -> bool:
+    """Verifica se um item descende de ancestor_id na arvore do checklist."""
+    parent = item.get("parent_id")
+    visited: set = set()
+    while parent is not None:
+        if parent in visited:
+            break
+        visited.add(parent)
+        if parent == ancestor_id:
+            return True
+        parent_item = next((i for i in items if i.get("id") == parent), None)
+        parent = parent_item.get("parent_id") if parent_item else None
+    return False
 
 
 def _build_minimal_context(impl_id: int, user_email: str | None, is_manager: bool) -> dict[str, Any]:
@@ -506,7 +524,8 @@ def _build_minimal_context(impl_id: int, user_email: str | None, is_manager: boo
 
     try:
         progress_pct, total_items, completed_items = _get_progress(impl_id)
-    except Exception:
+    except Exception as exc:
+        logger.exception("Unhandled exception", exc_info=True)
         progress_pct, total_items, completed_items = 0, 0, 0
 
     return {
@@ -515,7 +534,7 @@ def _build_minimal_context(impl_id: int, user_email: str | None, is_manager: boo
             "nome_empresa": impl.get("nome_empresa"),
             "status": impl.get("status"),
             "tipo": impl.get("tipo"),
-            "usuario_cs": impl.get("usuario_cs"),
+            "cs_responsavel": impl.get("usuario_cs") or "N/A",
             "data_criacao": format_date_br(impl.get("data_criacao")),
             "data_inicio_efetivo": "Nao informado",
             "data_previsao_termino": "Nao informado",
@@ -524,30 +543,28 @@ def _build_minimal_context(impl_id: int, user_email: str | None, is_manager: boo
             "data_cancelamento": "Nao informado",
             "motivo_parada": "",
             "motivo_cancelamento": "",
+            "dias_em_andamento": None,
         },
         "progresso": {
             "percentual": progress_pct,
             "total_itens": total_items,
             "concluidos": completed_items,
+            "pendentes": total_items - completed_items,
         },
+        "checklist_grupos": [],
         "pendencias": {
-            "total": 0,
+            "total_abertas": 0,
             "overdue_total": 0,
             "upcoming_total": 0,
             "overdue_itens": [],
             "upcoming_itens": [],
         },
         "timeline": [],
-        "comentarios_recentes": [],
         "comentarios_tarefas": [],
-        "comentarios_reunioes": [],
         "anexos_recentes": [],
         "comentarios_total": 0,
-        "tags_top": [],
-        "autores_top": [],
-        "tarefas_top": [],
-        "treinamentos": [],
-        "comentarios_highlights": [],
+        "tags_frequentes": [],
+        "autores_ativos": [],
         "riscos": [],
         "metadados": {
             "gerado_por": user_email,
@@ -557,32 +574,245 @@ def _build_minimal_context(impl_id: int, user_email: str | None, is_manager: boo
 
 
 def _build_prompt(context: dict[str, Any]) -> str:
+    imp = context.get("implantacao", {})
+    prog = context.get("progresso", {})
+    pend = context.get("pendencias", {})
+    grupos = context.get("checklist_grupos", [])
+    timeline = context.get("timeline", [])
+    comentarios = context.get("comentarios_tarefas", [])
+    riscos = context.get("riscos", [])
+    tags = context.get("tags_frequentes", [])
+    autores = context.get("autores_ativos", [])
+
+    grupos_txt = "\n".join(
+        f"  - {g['titulo']}: {g['concluidos']}/{g['total']} ({g['percentual']}%)"
+        for g in grupos
+    ) or "  Nao disponivel."
+
+    timeline_txt = "\n".join(
+        f"  [{t['data']}] {t['tipo']}: {_strip_html(t['detalhe'])}"
+        for t in timeline
+        if t.get("tipo") and t.get("detalhe")
+    ) or "  Nenhum evento registrado."
+
+    overdue_txt = "\n".join(
+        f"  - {i['titulo']} | Responsavel: {i['responsavel']} | Venceu ha {i.get('dias_atraso', '?')} dias"
+        for i in pend.get("overdue_itens", [])
+    ) or "  Nenhuma tarefa atrasada."
+
+    upcoming_txt = "\n".join(
+        f"  - {i['titulo']} | Responsavel: {i['responsavel']} | Prazo: {i['prazo_fim']}"
+        for i in pend.get("upcoming_itens", [])
+    ) or "  Nenhuma tarefa com prazo proximo."
+
+    riscos_txt = "\n".join(f"  ! {r}" for r in riscos) or "  Nenhum risco critico identificado."
+
+    comentarios_txt = "\n".join(
+        f"  [{c['item_title']}] {c['autor']}: {c['texto']}"
+        for c in comentarios[:25]
+    ) or "  Nenhum comentario registrado."
+
+    dias_label = f"{imp.get('dias_em_andamento')} dias" if imp.get("dias_em_andamento") is not None else "N/A"
+
+    return f"""Voce e um gerente de projetos senior de Customer Success que redige relatorios executivos internos para diretores de operacoes.
+
+Escreva o relatorio abaixo em TEXTO CORRIDO, em portugues, tom direto e profissional — como se estivesse descrevendo a situacao em voz alta para um colega senior. Use linguagem precisa, nao burocratica.
+
+REGRAS OBRIGATORIAS:
+- Texto corrido em paragrafos. ZERO listas, ZERO bullets, ZERO hifens como marcador.
+- Use **negrito** para destacar nomes de empresa, pessoas, datas criticas e numeros relevantes diretamente no texto — nao apenas nos subtitulos.
+- Use subtitulos em negrito em linha propria (ex: **Como chegamos ate aqui**).
+- LIMITE RIGOROSO: maximo 450 palavras no total. Cada paragrafo: maximo 4 frases. Seja denso — cada frase deve carregar informacao real, nao repeticoes.
+- NAO use JSON. NAO use markdown com # ou -.
+- Se o prazo de termino ja passou, mencione isso explicitamente com urgencia.
+- Se nao houver riscos criticos, diga isso em uma frase e passe para o proximo ponto.
+- PARE assim que terminar os 5 subtitulos. Nao adicione introducao antes do primeiro subtitulo nem conclusao depois do ultimo.
+
+---
+DADOS DA IMPLANTACAO:
+Empresa: {imp.get('nome_empresa')} | Status: {imp.get('status')} | CS: {imp.get('cs_responsavel')}
+Inicio efetivo: {imp.get('data_inicio_efetivo')} | Dias em andamento: {dias_label}
+Previsao de termino: {imp.get('data_previsao_termino')} | Finalizado em: {imp.get('data_finalizacao') or 'nao finalizado'}
+Parado em: {imp.get('data_parada') or 'nao'} | Motivo parada: {imp.get('motivo_parada') or 'N/A'}
+Cancelado em: {imp.get('data_cancelamento') or 'nao'}
+
+PROGRESSO: {prog.get('percentual', 0)}% — {prog.get('concluidos', 0)}/{prog.get('total_itens', 0)} itens | {pend.get('total_abertas', 0)} abertas | {pend.get('overdue_total', 0)} atrasadas | {pend.get('upcoming_total', 0)} vencem em 7 dias
+
+FASES DO CHECKLIST:
+{grupos_txt}
+
+TAREFAS ATRASADAS:
+{overdue_txt}
+
+TAREFAS VENCENDO EM 7 DIAS:
+{upcoming_txt}
+
+ALERTAS:
+{riscos_txt}
+
+TIMELINE (cronologica, mais antigo primeiro — use para contar a historia):
+{timeline_txt}
+
+COMENTARIOS NAS TAREFAS (cronologicos — use para enriquecer a narrativa):
+{comentarios_txt}
+
+AUTORES ATIVOS: {', '.join(autores) if autores else 'N/A'}
+
+---
+ESCREVA O RELATORIO COM EXATAMENTE ESTA ESTRUTURA:
+
+**Resumo Executivo**
+[1 paragrafo, max 3 frases: empresa em negrito, CS em negrito, status, progresso %, inicio e previsao. Se prazo passou, diga explicitamente.]
+
+**Como chegamos ate aqui**
+[1 paragrafo, max 4 frases: cronologia real da timeline — criacao, inicio, paradas, retomadas. Use apenas eventos que existem nos dados, sem inventar.]
+
+**Onde estamos hoje**
+[1 paragrafo, max 4 frases: fases concluidas pelo nome, fases em andamento com %, fases nao iniciadas. Mencione o que o cliente aguarda se houver nos comentarios.]
+
+**Pendencias e Riscos**
+[1 paragrafo, max 3 frases: tarefas atrasadas pelo nome e ha quantos dias. Prazos proximos. Alertas ativos. Se nao houver, diga em 1 frase.]
+
+**Proximos Passos**
+[1 paragrafo, max 3 frases: acoes especificas e concretas. O QUE fazer, COM QUEM e POR QUE. Sem generalizacoes.]"""
+
+
+def _narrative_fallback(context: dict[str, Any]) -> str:
+    """Gera narrativa em texto corrido sem depender do Gemini."""
+    imp = context.get("implantacao", {})
+    prog = context.get("progresso", {})
+    pend = context.get("pendencias", {})
+    riscos = context.get("riscos", [])
+    timeline = context.get("timeline", [])
+    grupos = context.get("checklist_grupos", [])
+
+    empresa = imp.get("nome_empresa", "N/A")
+    status = imp.get("status", "N/A")
+    cs = imp.get("cs_responsavel", "N/A")
+    dias = imp.get("dias_em_andamento")
+    dias_label = f"{dias} dias" if dias is not None else "período não informado"
+    pct = prog.get("percentual", 0)
+    total = prog.get("total_itens", 0)
+    concluidos = prog.get("concluidos", 0)
+    previsao = imp.get("data_previsao_termino") or "sem previsão definida"
+    inicio = imp.get("data_inicio_efetivo") or "não informado"
+
+    # Formata CS: se for e-mail, exibe apenas a parte antes do @
+    cs_display = cs.split("@")[0] if "@" in cs else cs
+
+    resumo = (
+        f"A implantação de **{empresa}**, conduzida por {cs_display}, encontra-se atualmente com status "
+        f"'{status}'. O processo registra {pct}% de conclusão ({concluidos}/{total} itens concluídos), "
+        f"com início efetivo em {inicio} e previsão de término em {previsao}."
+    )
+
+    # Filtra apenas eventos relevantes para narrativa (ignora ruídos operacionais)
+    _NOISE_TYPES = {"novo_comentario", "detalhes_alterados", "prazo_alterado", "responsavel_alterado"}
+    _LABEL_MAP = {
+        "criacao": "criação da implantação",
+        "status_alterado": "alteração de status",
+        "parada": "implantação pausada",
+        "retomada": "retomada do processo",
+        "finalizada": "conclusão da implantação",
+        "cancelada": "cancelamento",
+        "plano_aplicado": "plano de sucesso aplicado",
+        "plano_concluido": "plano de sucesso concluído",
+        "inicio": "início efetivo",
+    }
+    eventos_filtrados = [
+        t for t in timeline
+        if t.get("tipo") and t.get("detalhe")
+        and t.get("tipo") not in _NOISE_TYPES
+    ][:6]
+
+    if eventos_filtrados:
+        partes_crono = []
+        for t in eventos_filtrados:
+            tipo_label = _LABEL_MAP.get(t.get("tipo", ""), t.get("tipo", ""))
+            detalhe = _strip_html(t.get("detalhe", ""))
+            # Evita detalhe muito longo ou igual ao tipo
+            detalhe_curto = _truncate(detalhe, 80) if detalhe and detalhe.lower() != tipo_label else ""
+            if detalhe_curto:
+                partes_crono.append(f"em {t['data']}, {tipo_label} ({detalhe_curto})")
+            else:
+                partes_crono.append(f"em {t['data']}, {tipo_label}")
+        cronologia = (
+            f"Os principais marcos registrados foram: "
+            + "; ".join(partes_crono) + "."
+        )
+    elif imp.get("data_inicio_efetivo") and imp.get("data_inicio_efetivo") != "Nao iniciada":
+        cronologia = (
+            f"A implantação teve início efetivo em {imp.get('data_inicio_efetivo')} "
+            f"e está em andamento há {dias_label}. Não foram registrados eventos adicionais de marcos na timeline."
+        )
+    else:
+        cronologia = (
+            f"A implantação está em andamento há {dias_label}. "
+            "Nenhum evento de marco foi registrado na timeline até o momento."
+        )
+
+    if grupos:
+        concluidos_grupos = [g for g in grupos if g["percentual"] == 100]
+        em_andamento_grupos = [g for g in grupos if 0 < g["percentual"] < 100]
+        nao_iniciados = [g for g in grupos if g["percentual"] == 0 and g["total"] > 0]
+        partes = []
+        if concluidos_grupos:
+            partes.append("fase(s) concluída(s): " + ", ".join(g["titulo"] for g in concluidos_grupos))
+        if em_andamento_grupos:
+            detalhes = "; ".join(
+                f"{g['titulo']} ({g['concluidos']}/{g['total']}, {g['percentual']}%)"
+                for g in em_andamento_grupos
+            )
+            partes.append("em andamento: " + detalhes)
+        if nao_iniciados:
+            partes.append("ainda não iniciada(s): " + ", ".join(g["titulo"] for g in nao_iniciados))
+        andamento = "O progresso está distribuído da seguinte forma — " + "; ".join(partes) + "."
+    else:
+        pendentes = prog.get("pendentes", 0)
+        andamento = (
+            f"O progresso geral é de {pct}%, com {concluidos} itens concluídos e "
+            f"{pendentes} ainda em aberto."
+        )
+
+    overdue = pend.get("overdue_itens", [])
+    upcoming = pend.get("upcoming_itens", [])
+    pend_parts = []
+    if overdue:
+        nomes = ", ".join(i["titulo"] for i in overdue[:4])
+        pend_parts.append(
+            f"{len(overdue)} tarefa(s) com prazo vencido ({nomes})"
+        )
+    if upcoming:
+        pend_parts.append(f"{len(upcoming)} tarefa(s) com prazo nos próximos 7 dias")
+    for r in riscos:
+        pend_parts.append(r)
+    if pend_parts:
+        pendencias = "Os pontos de atenção identificados são: " + "; ".join(pend_parts) + "."
+    else:
+        pendencias = "Nenhuma pendência crítica identificada no momento. O processo segue dentro do esperado."
+
+    proximos_parts = []
+    if pend.get("overdue_total", 0) > 0:
+        proximos_parts.append(f"regularizar as {pend['overdue_total']} tarefa(s) com prazo vencido")
+    if pend.get("upcoming_total", 0) > 0:
+        proximos_parts.append(f"acompanhar as {pend['upcoming_total']} tarefa(s) com prazo nos próximos 7 dias")
+    if imp.get("status") == "parada":
+        proximos_parts.append("retomar o processo e realinhar o cronograma com o cliente")
+    if not imp.get("data_finalizacao") and pct >= 80:
+        proximos_parts.append("agendar reunião de validação final com o cliente para concluir a implantação")
+    if not proximos_parts:
+        proximos_parts = [
+            "validar prazos e responsáveis das tarefas em aberto com o cliente",
+            "manter os registros e evidências atualizados nas tarefas",
+        ]
+    proximos = "As próximas ações recomendadas são: " + "; ".join(proximos_parts) + "."
+
     return (
-        "Voce e um assistente que gera relatorios completos para CS Onboarding.\n"
-        "Responda APENAS em JSON valido, sem texto extra.\n"
-        "Use as chaves exatamente como abaixo. Se algo nao existir, use 'Nao informado' ou lista vazia.\n\n"
-        "Chaves obrigatorias:\n"
-        "- header: {title, subtitle, empresa, status, metrics[]}\n"
-        "- sections: lista de objetos com {title, text, bullets}\n\n"
-        "Secoes (na ordem):\n"
-        "1. Resumo executivo\n"
-        "2. Andamento atual\n"
-        "3. Pendencias e prazos\n"
-        "4. Comentarios e treinamentos\n"
-        "5. Tags e temas recorrentes\n"
-        "6. Anexos e evidencias\n"
-        "7. Ultimos eventos relevantes\n"
-        "8. Proximos passos sugeridos\n\n"
-        "Regra obrigatoria para 'Comentarios e treinamentos':\n"
-        "- Gere texto descritivo com subtitulos tematicos exatamente nesta ordem quando houver conteudo:\n"
-        "  1) Regras de Negocio e Financeiro\n"
-        "  2) Fluxo Comercial e Administrativo\n"
-        "  3) Controle de Acesso e Operacao\n"
-        "- Use TODOS os comentarios das tarefas fornecidos no contexto.\n"
-        "- Quando houver varios comentarios, cubra multiplas frentes e nao foque em um unico comentario.\n"
-        "- Nao exiba total de comentarios, contagens, data ou horario.\n\n"
-        "Dados estruturados (JSON):\n"
-        f"{json.dumps(context, ensure_ascii=False)}"
+        f"**Resumo Executivo**\n{resumo}\n\n"
+        f"**Como chegamos até aqui**\n{cronologia}\n\n"
+        f"**Onde estamos hoje**\n{andamento}\n\n"
+        f"**Pendências e Riscos**\n{pendencias}\n\n"
+        f"**Próximos Passos**\n{proximos}"
     )
 
 
@@ -592,88 +822,120 @@ def _structured_fallback(context: dict[str, Any]) -> dict[str, Any]:
     pend = context.get("pendencias", {})
     riscos = context.get("riscos", [])
     timeline = context.get("timeline", [])
-    tags_top = context.get("tags_top", [])
+    grupos = context.get("checklist_grupos", [])
     comentarios_tarefas = context.get("comentarios_tarefas", [])
     comentarios_total = context.get("comentarios_total", 0)
     anexos = context.get("anexos_recentes", [])
 
+    empresa = imp.get("nome_empresa", "N/A")
+    status = imp.get("status", "N/A")
+    cs = imp.get("cs_responsavel", "N/A")
+    dias = imp.get("dias_em_andamento")
+    dias_label = f"{dias} dias" if dias is not None else "N/A"
+
+    # Resumo executivo
+    resumo_parts = [f"Implantacao de {empresa} sob responsabilidade de {cs}, atualmente com status '{status}'."]
+    if imp.get("data_inicio_efetivo") and imp.get("data_inicio_efetivo") != "Nao informado":
+        resumo_parts.append(f"Iniciada em {imp['data_inicio_efetivo']}, com previsao de termino em {imp.get('data_previsao_termino', 'N/A')}.")
+    resumo_parts.append(
+        f"Progresso atual: {prog.get('percentual', 0)}% ({prog.get('concluidos', 0)}/{prog.get('total_itens', 0)} itens concluidos)."
+    )
+
+    # Cronologia a partir da timeline (detalhe ja limpo de HTML em _build_context)
+    cronologia_bullets = [
+        f"{t['data']} — {t['tipo']}: {_strip_html(t['detalhe'])}"
+        for t in timeline[:15]
+        if t.get("tipo") and t.get("detalhe")
+    ] or ["Nenhum evento registrado na timeline."]
+
+    # Tarefas por grupo
+    grupos_bullets = [
+        f"{g['titulo']}: {g['concluidos']}/{g['total']} concluidos ({g['percentual']}%)"
+        for g in grupos
+    ] or [f"Progresso geral: {prog.get('percentual', 0)}% ({prog.get('concluidos', 0)}/{prog.get('total_itens', 0)} itens)."]
+
+    # Pendencias e riscos
+    pend_bullets: list[str] = []
+    for i in pend.get("overdue_itens", [])[:6]:
+        dias_atraso = i.get("dias_atraso", "?")
+        pend_bullets.append(f"[ATRASADO {dias_atraso}d] {i['titulo']} — {i['responsavel']}")
+    for i in pend.get("upcoming_itens", [])[:4]:
+        pend_bullets.append(f"[Vence em breve] {i['titulo']} — {i['responsavel']} (prazo: {i['prazo_fim']})")
+    for r in riscos:
+        pend_bullets.append(f"[Alerta] {r}")
+    if not pend_bullets:
+        pend_bullets = ["Nenhuma pendencia critica identificada."]
+
+    pend_text = (
+        f"{pend.get('total_abertas', 0)} tarefas abertas, {pend.get('overdue_total', 0)} atrasadas, "
+        f"{pend.get('upcoming_total', 0)} vencem nos proximos 7 dias."
+    )
+
+    # Comentarios
+    comentarios_text = _build_comments_overview(comentarios_tarefas, company_name=empresa)
+
+    # Proximo passos baseados nos dados reais
+    proximos: list[str] = []
+    if pend.get("overdue_total", 0) > 0:
+        proximos.append(f"Regularizar as {pend['overdue_total']} tarefa(s) com prazo vencido.")
+    if pend.get("upcoming_total", 0) > 0:
+        proximos.append(f"Acompanhar as {pend['upcoming_total']} tarefa(s) com prazo nos proximos 7 dias.")
+    if imp.get("status") == "parada":
+        proximos.append("Retomar o processo de implantacao e alinhar novo cronograma com o cliente.")
+    if not imp.get("data_finalizacao") and prog.get("percentual", 0) >= 80:
+        proximos.append("Agendar reuniao de validacao final com o cliente para concluir a implantacao.")
+    if comentarios_total == 0:
+        proximos.append("Registrar comentarios e evidencias nas tarefas para manter historico atualizado.")
+    if not proximos:
+        proximos = [
+            "Validar prazos e responsaveis das tarefas abertas com o cliente.",
+            "Manter registros de reunioes e treinamentos nas tarefas correspondentes.",
+        ]
+
     sections = [
         {
-            "title": "Resumo executivo",
-            "text": (
-                f"Implantacao de {imp.get('nome_empresa', 'N/A')} em status {imp.get('status', 'N/A')}."
-            ),
+            "title": "Resumo Executivo",
+            "text": " ".join(resumo_parts),
             "bullets": [],
         },
         {
-            "title": "Andamento atual",
-            "text": (
-                f"{prog.get('percentual', 0)}% ({prog.get('concluidos', 0)}/{prog.get('total_itens', 0)} itens)."
-            ),
+            "title": "Cronologia",
+            "text": "Principais eventos registrados na implantacao em ordem cronologica.",
+            "bullets": cronologia_bullets,
+        },
+        {
+            "title": "Tarefas e Progresso",
+            "text": f"Visao do andamento por fase/grupo. Total: {prog.get('total_itens', 0)} itens, {prog.get('pendentes', 0)} ainda abertos.",
+            "bullets": grupos_bullets,
+        },
+        {
+            "title": "Pendencias e Riscos",
+            "text": pend_text,
+            "bullets": pend_bullets,
+        },
+        {
+            "title": "Comentarios e Reunioes",
+            "text": comentarios_text,
             "bullets": [],
         },
         {
-            "title": "Pendencias e prazos",
-            "text": (
-                f"{pend.get('total', 0)} abertas, {pend.get('overdue_total', 0)} atrasadas, "
-                f"{pend.get('upcoming_total', 0)} nos proximos 7 dias."
-            ),
-            "bullets": [
-                *[
-                    f"Atraso: {i.get('titulo')} (prazo {i.get('prazo_fim')})"
-                    for i in pend.get("overdue_itens", [])[:5]
-                ],
-                *[
-                    f"Proximo: {i.get('titulo')} (prazo {i.get('prazo_fim')})"
-                    for i in pend.get("upcoming_itens", [])[:5]
-                ],
-            ],
-        },
-        {
-            "title": "Comentarios e treinamentos",
-            "text": _build_comments_overview(comentarios_tarefas),
-            "bullets": [],
-        },
-        {
-            "title": "Tags e temas recorrentes",
-            "text": "Principais tags identificadas.",
-            "bullets": tags_top[:8] if tags_top else ["Nao informado."],
-        },
-        {
-            "title": "Anexos e evidencias",
-            "text": f"{len(anexos)} anexo(s) recente(s).",
-            "bullets": [f"{a.get('data')}: {a.get('imagem_url')}" for a in anexos[:6]] or ["Nao informado."],
-        },
-        {
-            "title": "Ultimos eventos relevantes",
+            "title": "Proximos Passos",
             "text": "",
-            "bullets": [
-                f"{t.get('data_criacao')}: {t.get('tipo_evento')} - {t.get('detalhes')}"
-                for t in timeline[:6]
-            ]
-            or ["Nao informado."],
-        },
-        {
-            "title": "Proximos passos sugeridos",
-            "text": "",
-            "bullets": [
-                "Revisar pendencias e validar prazos com o cliente.",
-                "Garantir registro de treinamentos e alinhamentos recentes.",
-            ],
+            "bullets": proximos,
         },
     ]
 
     return {
         "header": {
-            "title": "Resumo da Implantacao",
-            "subtitle": "Documento sintetico do andamento",
-            "empresa": imp.get("nome_empresa", "N/A"),
-            "status": imp.get("status", "N/A"),
+            "title": "Relatorio de Implantacao",
+            "subtitle": "Documento executivo de acompanhamento",
+            "empresa": empresa,
+            "status": status,
             "metrics": [
                 {"label": "Progresso", "value": f"{prog.get('percentual', 0)}%"},
                 {"label": "Itens", "value": f"{prog.get('concluidos', 0)}/{prog.get('total_itens', 0)}"},
-                {"label": "Comentarios", "value": str(comentarios_total)},
-                {"label": "Tags", "value": str(len(tags_top))},
+                {"label": "Dias em andamento", "value": dias_label},
+                {"label": "Tarefas atrasadas", "value": str(pend.get("overdue_total", 0))},
             ],
         },
         "sections": sections,
@@ -682,26 +944,34 @@ def _structured_fallback(context: dict[str, Any]) -> dict[str, Any]:
 
 def _structured_to_text(structured: dict[str, Any]) -> str:
     sections = structured.get("sections", [])
-    mapping = {
-        "Resumo executivo": "Resumo executivo",
-        "Andamento atual": "Andamento",
-        "Pendencias e prazos": "Pendencias",
-        "Comentarios e treinamentos": "Comentarios e treinamentos",
-        "Tags e temas recorrentes": "Tags e temas",
-        "Anexos e evidencias": "Anexos",
-        "Ultimos eventos relevantes": "Ultimos eventos",
-        "Proximos passos sugeridos": "Proximos passos sugeridos",
-    }
     lines = []
     for sec in sections:
-        title = mapping.get(sec.get("title"), sec.get("title", "Secao"))
+        title = sec.get("title", "Secao")
         text = (sec.get("text") or "").strip()
         bullets = sec.get("bullets") or []
         line = f"{title}: {text}" if text else f"{title}:"
         if bullets:
-            line += " " + "; ".join([str(b) for b in bullets[:4]])
+            line += " " + "; ".join([str(b) for b in bullets[:5]])
         lines.append(line)
     return "\n".join(lines)
+
+
+def _build_kpi_header(context: dict[str, Any]) -> dict[str, Any]:
+    """Retorna apenas o header com KPIs para exibicao no modal."""
+    imp = context.get("implantacao", {})
+    prog = context.get("progresso", {})
+    pend = context.get("pendencias", {})
+    dias = imp.get("dias_em_andamento")
+    return {
+        "empresa": imp.get("nome_empresa", "N/A"),
+        "status": imp.get("status", "N/A"),
+        "metrics": [
+            {"label": "Progresso", "value": f"{prog.get('percentual', 0)}%"},
+            {"label": "Itens", "value": f"{prog.get('concluidos', 0)}/{prog.get('total_itens', 0)}"},
+            {"label": "Dias em andamento", "value": f"{dias} dias" if dias is not None else "N/A"},
+            {"label": "Tarefas atrasadas", "value": str(pend.get("overdue_total", 0))},
+        ],
+    }
 
 
 def gerar_resumo_implantacao_service(
@@ -713,40 +983,35 @@ def gerar_resumo_implantacao_service(
     try:
         context = _build_context(impl_id, user_email, is_manager)
     except Exception:
+        logger.exception("Unhandled exception", exc_info=True)
         context = _build_minimal_context(impl_id, user_email, is_manager)
-    prompt = _build_prompt(context)
 
-    summary_structured: dict[str, Any] | None = None
+    prompt = _build_prompt(context)
+    narrative: str | None = None
+    source = "gemini"
+
     try:
-        summary_text = generate_text(prompt)
-        source = "gemini"
-        # Tentar extrair JSON
-        raw = summary_text.strip()
+        raw = generate_text(prompt).strip()
+        # Remove blocos de codigo markdown, se o modelo insistir
         if raw.startswith("```"):
-            raw = re.sub(r"^```(json)?", "", raw.strip(), flags=re.IGNORECASE).strip()
+            raw = re.sub(r"^```\w*", "", raw, flags=re.IGNORECASE).strip()
             if raw.endswith("```"):
                 raw = raw[:-3].strip()
-        if raw.startswith("{") and raw.endswith("}"):
-            try:
-                summary_structured = json.loads(raw)
-            except Exception:
-                summary_structured = None
-        if summary_structured is None:
-            summary_structured = _structured_fallback(context)
-            source = "fallback"
+        if len(raw) >= 100:
+            narrative = raw
     except GeminiClientError:
-        summary_structured = _structured_fallback(context)
-        source = "fallback"
+        pass
     except Exception:
-        summary_structured = _structured_fallback(context)
+        logger.exception("Unhandled exception", exc_info=True)
+
+    if not narrative:
+        narrative = _narrative_fallback(context)
         source = "fallback"
 
-    summary_structured = _enforce_comments_section(summary_structured, context, source)
-    summary_text = _structured_to_text(summary_structured)
+    kpi_header = _build_kpi_header(context)
 
     return {
-        "summary": summary_text,
-        "summary_structured": summary_structured,
+        "summary": narrative,
+        "summary_structured": {"header": kpi_header, "narrative": narrative},
         "source": source,
     }
-

@@ -63,7 +63,6 @@
       const title = dados?.title || dados?.nome || '';
       const comment = dados?.comment || dados?.descricao || '';
       const obrigatoria = dados?.obrigatoria || false;
-      const tag = dados?.tag || '';
       const diasOffset = dados?.dias_offset ?? '';
       const isExpanded = dados?.expanded !== false;
       const hasChildren = dados?.children && dados.children.length > 0;
@@ -85,14 +84,7 @@
                 value="${this.escapeHtml(title)}"
                 required
               >
-              <select class="form-select form-select-sm item-tag-select" style="max-width: 180px;">
-                <option value="">Sem tag</option>
-                <option value="Ação interna" ${tag === 'Ação interna' ? 'selected' : ''}>Ação interna</option>
-                <option value="Reunião" ${tag === 'Reunião' ? 'selected' : ''}>Reunião</option>
-                <option value="Cliente" ${tag === 'Cliente' ? 'selected' : ''}>Cliente</option>
-                <option value="Rede" ${tag === 'Rede' ? 'selected' : ''}>Rede</option>
-              </select>
-              <div class="input-group input-group-sm" style="max-width: 130px;">
+              <div class="input-group input-group-sm item-dias-group">
                 <input 
                   type="number" 
                   class="form-control form-control-sm item-dias-offset-input" 
@@ -102,18 +94,18 @@
                   max="365"
                   value="${diasOffset}"
                 >
-                <span class="input-group-text d-none d-sm-block" style="font-size: 0.75rem;">dias úteis</span>
+                <span class="input-group-text">dias úteis</span>
               </div>
             </div>
             <div class="d-flex align-items-center gap-1">
-               <button type="button" class="btn btn-sm btn-light border btn-move-item drag-handle" title="Mover">
+               <button type="button" class="btn btn-sm btn-light border btn-move-item drag-handle item-action-btn" title="Mover">
                 <i class="bi bi-grip-vertical text-secondary"></i>
               </button>
-              <button type="button" class="btn btn-sm btn-primary btn-add-child" title="Adicionar filho">
+              <button type="button" class="btn btn-sm btn-primary btn-add-child item-action-btn" title="Adicionar filho">
                 <i class="bi bi-plus-lg"></i>
               </button>
               <button type="button" 
-                      class="btn btn-sm btn-danger btn-remove-item ${obrigatoria ? 'disabled' : ''}" 
+                      class="btn btn-sm btn-danger btn-remove-item item-action-btn ${obrigatoria ? 'disabled' : ''}" 
                       title="${obrigatoria ? 'Não é possível excluir tarefas obrigatórias' : 'Remover'}"
                       ${obrigatoria ? 'disabled' : ''}>
                 <i class="bi bi-trash"></i>
@@ -311,16 +303,13 @@
       const obrigatoriaInput = body ? body.querySelector(':scope > .mb-2 .item-obrigatoria-input') : null;
       const obrigatoria = obrigatoriaInput ? obrigatoriaInput.checked : false;
 
-      const tagInput = header ? header.querySelector('.item-tag-select') : null;
-      const tag = tagInput ? tagInput.value : '';
-
       const level = parseInt(element.getAttribute('data-level'));
 
       const item = {
         title: title,
         comment: comment,
         obrigatoria: obrigatoria,
-        tag: tag,
+        tag: '',
         level: level,
         ordem: 0, // Será calculado no backend se necessário
         children: []
@@ -722,3 +711,4 @@
     PlanoEditor.init();
   }
 })();
+

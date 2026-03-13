@@ -42,130 +42,6 @@ def atualizar_estrutura_plano(plano_id: int, estrutura: dict) -> bool:
             raise DatabaseError(f"Erro ao atualizar estrutura do plano: {e}") from e
 
 
-def _criar_estrutura_plano(cursor, db_type: str, plano_id: int, estrutura: dict):
-    """
-    Cria estrutura do plano usando checklist_items (consolidado).
-    """
-    fases = estrutura.get("fases", [])
-
-    for fase_data in fases:
-        sql_fase = """
-            INSERT INTO checklist_items
-            (parent_id, title, completed, comment, level, ordem, plano_id, tipo_item, descricao, created_at, updated_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-        """
-        if db_type == "sqlite":
-            sql_fase = sql_fase.replace("%s", "?")
-
-        cursor.execute(
-            sql_fase,
-            (
-                None,  # parent_id (fase é raiz)
-                fase_data["nome"],
-                False,  # completed
-                fase_data.get("descricao", ""),  # comment
-                0,  # level (fase é nível 0)
-                fase_data.get("ordem", 0),
-                plano_id,
-                "plano_fase",  # tipo_item
-                fase_data.get("descricao", ""),  # descricao
-            ),
-        )
-
-        if db_type == "postgres":
-            cursor.execute("SELECT lastval()")
-            fase_id = cursor.fetchone()[0]
-        else:
-            fase_id = cursor.lastrowid
-
-        grupos = fase_data.get("grupos", [])
-        for grupo_data in grupos:
-            sql_grupo = """
-                INSERT INTO checklist_items
-                (parent_id, title, completed, comment, level, ordem, plano_id, tipo_item, descricao, created_at, updated_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-            """
-            if db_type == "sqlite":
-                sql_grupo = sql_grupo.replace("%s", "?")
-
-            cursor.execute(
-                sql_grupo,
-                (
-                    fase_id,  # parent_id (grupo pertence à fase)
-                    grupo_data["nome"],
-                    False,  # completed
-                    grupo_data.get("descricao", ""),  # comment
-                    1,  # level (grupo é nível 1)
-                    grupo_data.get("ordem", 0),
-                    plano_id,
-                    "plano_grupo",  # tipo_item
-                    grupo_data.get("descricao", ""),  # descricao
-                ),
-            )
-
-            if db_type == "postgres":
-                cursor.execute("SELECT lastval()")
-                grupo_id = cursor.fetchone()[0]
-            else:
-                grupo_id = cursor.lastrowid
-
-            tarefas = grupo_data.get("tarefas", [])
-            for tarefa_data in tarefas:
-                sql_tarefa = """
-                    INSERT INTO checklist_items
-                    (parent_id, title, completed, comment, level, ordem, plano_id, tipo_item, descricao, obrigatoria, status, created_at, updated_at)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                """
-                if db_type == "sqlite":
-                    sql_tarefa = sql_tarefa.replace("%s", "?")
-
-                cursor.execute(
-                    sql_tarefa,
-                    (
-                        grupo_id,  # parent_id (tarefa pertence ao grupo)
-                        tarefa_data["nome"],
-                        False,  # completed
-                        tarefa_data.get("descricao", ""),  # comment
-                        2,  # level (tarefa é nível 2)
-                        tarefa_data.get("ordem", 0),
-                        plano_id,
-                        "plano_tarefa",  # tipo_item
-                        tarefa_data.get("descricao", ""),  # descricao
-                        tarefa_data.get("obrigatoria", False),  # obrigatoria
-                        "pendente",  # status padrão
-                    ),
-                )
-
-                if db_type == "postgres":
-                    cursor.execute("SELECT lastval()")
-                    tarefa_id = cursor.fetchone()[0]
-                else:
-                    tarefa_id = cursor.lastrowid
-
-                subtarefas = tarefa_data.get("subtarefas", [])
-                for subtarefa_data in subtarefas:
-                    sql_subtarefa = """
-                        INSERT INTO checklist_items
-                        (parent_id, title, completed, comment, level, ordem, plano_id, tipo_item, descricao, created_at, updated_at)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                    """
-                    if db_type == "sqlite":
-                        sql_subtarefa = sql_subtarefa.replace("%s", "?")
-
-                    cursor.execute(
-                        sql_subtarefa,
-                        (
-                            tarefa_id,  # parent_id (subtarefa pertence à tarefa)
-                            subtarefa_data["nome"],
-                            False,  # completed
-                            subtarefa_data.get("descricao", ""),  # comment
-                            3,  # level (subtarefa é nível 3)
-                            subtarefa_data.get("ordem", 0),
-                            plano_id,
-                            "plano_subtarefa",  # tipo_item
-                            subtarefa_data.get("descricao", ""),  # descricao
-                        ),
-                    )
 
 
 def _criar_estrutura_plano_checklist(cursor, db_type: str, plano_id: int, estrutura: dict):
@@ -353,7 +229,8 @@ def converter_estrutura_editor_para_checklist(estrutura_editor: dict) -> list[di
     Converte estrutura do editor (fases/grupos OU items aninhados) para formato plano de checklist_items.
     Retorna lista plana com parent_id, level, ordem.
     """
-    resultado = []
+    from typing import Any
+    resultado: list[dict[str, Any]] = []
 
     if "items" in estrutura_editor:
         items = estrutura_editor["items"]

@@ -1,1 +1,1 @@
-from .hierarquia_service import *  # noqa: F401,F403
+from .hierarquia_service import *  # noqa: F403

@@ -1,11 +1,12 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
 {% block title %}Dashboard Gerencial{% endblock %}
 
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/analytics_dashboard.css') }}">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script nonce="{{ csp_nonce() }}" src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 {% endblock %}
+
 
 {% block content %}
 {% set k = kpi_cards or {} %}
@@ -13,24 +14,27 @@
 {% set stats_novas = k.total_novas | default(0) %}
 {% set stats_andamento = k.total_andamento | default(0) %}
 {% set stats_futuras = k.total_futuras | default(0) %}
+{% set stats_sem_previsao = k.total_sem_previsao | default(0) %}
 {% set stats_paradas = k.total_paradas | default(0) %}
 {% set stats_canceladas = k.total_canceladas | default(0) %}
 {% set stats_finalizadas = k.total_finalizadas | default(0) %}
 
 {% set mrr_ns = namespace(values={}) %}
-{% if chart_data and chart_data.nivel_receita and chart_data.nivel_receita.labels and chart_data.nivel_receita.data %}
-{% for idx in range(chart_data.nivel_receita.labels | length) %}
-{% set _ = mrr_ns.values.update({ (chart_data.nivel_receita.labels[idx] | string): (chart_data.nivel_receita.data[idx] | int) }) %}
+{% if mrr_chart_data and mrr_chart_data.labels and mrr_chart_data.data %}
+{% for idx in range(mrr_chart_data.labels | length) %}
+{% set _ = mrr_ns.values.update({ (mrr_chart_data.labels[idx] | string): (mrr_chart_data.data[idx] | int) }) %}
 {% endfor %}
 {% endif %}
-{% set mrr_prata = mrr_ns.values.get('Prata (MRR < 699)', 0) %}
-{% set mrr_ouro = mrr_ns.values.get('Ouro (MRR 700-999)', 0) %}
-{% set mrr_platina = mrr_ns.values.get('Platina (MRR 1k-1.9k)', 0) %}
-{% set mrr_diamante = mrr_ns.values.get('Diamante (MRR > 2k)', 0) %}
-{% set mrr_pendente = mrr_ns.values.get('Não Definido', 0) + mrr_ns.values.get('Nao Definido', 0) %}
+{% set mrr_prata = mrr_ns.values.get('Prata (MRR < 699)', mrr_ns.values.get('Prata (MRR abaixo de R$699,99)', 0)) %}
+{% set mrr_ouro = mrr_ns.values.get('Ouro (MRR 700-999)', mrr_ns.values.get('Ouro (MRR entre R$700,00 a R$999,99)', 0)) %}
+{% set mrr_platina = mrr_ns.values.get('Platina (MRR 1k-1.9k)', mrr_ns.values.get('Platina (MRR entre R$1.000,00 a R$1999,99)', 0)) %}
+{% set mrr_diamante_base = mrr_ns.values.get('Diamante (MRR > 2k)', mrr_ns.values.get('Diamante (MRR acima de R$2000,00)', 0)) %}
+{% set mrr_grandes = mrr_ns.values.get('Grandes contas', 0) %}
+{% set mrr_diamante = mrr_diamante_base + mrr_grandes %}
+{% set mrr_pendente = mrr_ns.values.get('Nao Definido', 0) + mrr_ns.values.get('Nao Definido', 0) %}
 {% set mrr_total = mrr_prata + mrr_ouro + mrr_platina + mrr_diamante + mrr_pendente %}
 
-<div class="gerencial-page">
+<div class="gerencial-page" data-analytics-signature="{{ analytics_signature or '' }}">
     <header class="header-bg p-3 d-flex align-items-center position-relative rounded-3">
         <h1 class="main-title mb-0 fs-4 w-100 text-center">Dashboard Gerencial</h1>
         <div class="d-flex align-items-center position-absolute end-0 top-50 translate-middle-y pe-3">
@@ -43,7 +47,7 @@
     <main class="gerencial-main">
         <section class="ger-card filter-card">
             <div class="card-title-row">
-                <h2>Filtros Globais</h2>
+                <h2>Filtrar Status</h2>
                 <span class="muted" id="updatedAtLabel">Atualizado: agora</span>
             </div>
             <form method="GET" action="{{ url_for('analytics.analytics_dashboard') }}" class="filters-grid">
@@ -55,11 +59,26 @@
                 {% if context %}
                 <input type="hidden" name="context" value="{{ context }}">
                 {% endif %}
+                {% if current_module_cs_email %}<input type="hidden" name="module_cs_email" value="{{ current_module_cs_email }}">{% endif %}
+                {% if current_module_status_filter %}<input type="hidden" name="module_status_filter" value="{{ current_module_status_filter }}">{% endif %}
+                {% if current_module_days_sort %}<input type="hidden" name="module_days_sort" value="{{ current_module_days_sort }}">{% endif %}
+                {% if current_mrr_cs_email %}<input type="hidden" name="mrr_cs_email" value="{{ current_mrr_cs_email }}">{% endif %}
+                {% if current_impl_list_cs_email %}<input type="hidden" name="impl_list_cs_email" value="{{ current_impl_list_cs_email }}">{% endif %}
+                {% if current_impl_list_status %}<input type="hidden" name="impl_list_status" value="{{ current_impl_list_status }}">{% endif %}
+                {% if current_impl_list_date_field %}<input type="hidden" name="impl_list_date_field" value="{{ current_impl_list_date_field }}">{% endif %}
+                {% if current_impl_list_start_date %}<input type="hidden" name="impl_list_start_date" value="{{ current_impl_list_start_date }}">{% endif %}
+                {% if current_impl_list_end_date %}<input type="hidden" name="impl_list_end_date" value="{{ current_impl_list_end_date }}">{% endif %}
+                {% if current_stop_cs_email %}<input type="hidden" name="stop_cs_email" value="{{ current_stop_cs_email }}">{% endif %}
+                {% if current_stop_tipo %}<input type="hidden" name="stop_tipo" value="{{ current_stop_tipo }}">{% endif %}
+                {% if current_stop_days_sort %}<input type="hidden" name="stop_days_sort" value="{{ current_stop_days_sort }}">{% endif %}
+                {% if current_cancel_cs_email %}<input type="hidden" name="cancel_cs_email" value="{{ current_cancel_cs_email }}">{% endif %}
+                {% if current_cancel_start_date %}<input type="hidden" name="cancel_start_date" value="{{ current_cancel_start_date }}">{% endif %}
+                {% if current_cancel_end_date %}<input type="hidden" name="cancel_end_date" value="{{ current_cancel_end_date }}">{% endif %}
 
                 <label class="field-wrap">
                     <span>Colaborador</span>
                     <select name="cs_email">
-                        <option value="">Todos os Especialistas</option>
+                        <option value="">Todos os usuários</option>
                         {% for cs in all_cs %}
                         <option value="{{ cs.usuario }}" {% if cs.usuario == current_cs_email %}selected{% endif %}>{{ cs.nome }}</option>
                         {% endfor %}
@@ -76,7 +95,7 @@
                 </label>
 
                 <label class="field-wrap">
-                    <span>Início</span>
+                    <span>De</span>
                     <div class="input-icon-wrap">
                         <input type="text" class="flatpickr-date" name="start_date" id="start_date_filter" placeholder="DD/MM/AAAA" value="{{ current_start_date or '' }}">
                         <i class="bi bi-calendar3"></i>
@@ -84,7 +103,7 @@
                 </label>
 
                 <label class="field-wrap">
-                    <span>Fim</span>
+                    <span>Até</span>
                     <div class="input-icon-wrap">
                         <input type="text" class="flatpickr-date" name="end_date" id="end_date_filter" placeholder="DD/MM/AAAA" value="{{ current_end_date or '' }}">
                         <i class="bi bi-calendar3"></i>
@@ -92,95 +111,175 @@
                 </label>
 
                 <div class="filter-actions">
-                    <button class="btn-apply" type="submit"><i class="bi bi-funnel"></i> Aplicar</button>
+                    <button class="btn-apply" type="submit"><i class="bi bi-funnel"></i> Filtrar</button>
                     <a class="btn-reset" href="{{ url_for('analytics.analytics_dashboard', context=context) }}" aria-label="Limpar filtros"><i class="bi bi-arrow-clockwise"></i></a>
                 </div>
             </form>
         </section>
 
         <section class="kpi-grid">
-            <article class="kpi-card tone-total"><span>Total Clientes</span><strong>{{ stats_total }}</strong></article>
-            <article class="kpi-card tone-novas"><span>Novas</span><strong>{{ stats_novas }}</strong></article>
-            <article class="kpi-card tone-andamento"><span>Em Andamento</span><strong>{{ stats_andamento }}</strong></article>
-            <article class="kpi-card tone-futuras"><span>Futuras</span><strong>{{ stats_futuras }}</strong></article>
-            <article class="kpi-card tone-paradas"><span>Paradas</span><strong>{{ stats_paradas }}</strong></article>
-            <article class="kpi-card tone-canceladas"><span>Canceladas</span><strong>{{ stats_canceladas }}</strong></article>
-            <article class="kpi-card tone-finalizadas"><span>Finalizadas</span><strong>{{ stats_finalizadas }}</strong></article>
+            <article class="kpi-card tone-total" data-kpi="total"><span>Total Clientes</span><button type="button" class="kpi-count-link" data-kpi="total">{{ stats_total }}</button></article>
+            <article class="kpi-card tone-novas" data-kpi="nova"><span>Novas</span><button type="button" class="kpi-count-link" data-kpi="nova">{{ stats_novas }}</button></article>
+            <article class="kpi-card tone-andamento" data-kpi="andamento"><span>Em Andamento</span><button type="button" class="kpi-count-link" data-kpi="andamento">{{ stats_andamento }}</button></article>
+            <article class="kpi-card tone-paradas" data-kpi="parada"><span>Paradas</span><button type="button" class="kpi-count-link" data-kpi="parada">{{ stats_paradas }}</button></article>
+            <article class="kpi-card tone-futuras" data-kpi="futura"><span>Futuras</span><button type="button" class="kpi-count-link" data-kpi="futura">{{ stats_futuras }}</button></article>
+            <article class="kpi-card tone-sem-prev" data-kpi="sem_previsao"><span>Sem Previsao</span><button type="button" class="kpi-count-link" data-kpi="sem_previsao">{{ stats_sem_previsao }}</button></article>
+            <article class="kpi-card tone-finalizadas" data-kpi="finalizada"><span>Concluidas</span><button type="button" class="kpi-count-link" data-kpi="finalizada">{{ stats_finalizadas }}</button></article>
+            <article class="kpi-card tone-canceladas" data-kpi="cancelada"><span>Canceladas</span><button type="button" class="kpi-count-link" data-kpi="cancelada">{{ stats_canceladas }}</button></article>
         </section>
 
         <section class="charts-grid">
             <article class="ger-card">
                 <div class="card-title-row">
-                    <h3>Carteira por MRR</h3>
+                    <div>
+                        <h3>Carteira por MRR</h3>
+                    </div>
+                    <form method="GET" action="{{ url_for('analytics.analytics_dashboard') }}" class="mini-filter">
+                        {% if current_cs_email %}<input type="hidden" name="cs_email" value="{{ current_cs_email }}">{% endif %}
+                        {% if current_status_filter %}<input type="hidden" name="status_filter" value="{{ current_status_filter }}">{% endif %}
+                        {% if current_start_date %}<input type="hidden" name="start_date" value="{{ current_start_date }}">{% endif %}
+                        {% if current_end_date %}<input type="hidden" name="end_date" value="{{ current_end_date }}">{% endif %}
+                        {% if current_task_cs_email %}<input type="hidden" name="task_cs_email" value="{{ current_task_cs_email }}">{% endif %}
+                        {% if current_task_start_date %}<input type="hidden" name="task_start_date" value="{{ current_task_start_date }}">{% endif %}
+                        {% if current_task_end_date %}<input type="hidden" name="task_end_date" value="{{ current_task_end_date }}">{% endif %}
+                        {% if context %}<input type="hidden" name="context" value="{{ context }}">{% endif %}
+                        {% if current_module_cs_email %}<input type="hidden" name="module_cs_email" value="{{ current_module_cs_email }}">{% endif %}
+                        {% if current_module_status_filter %}<input type="hidden" name="module_status_filter" value="{{ current_module_status_filter }}">{% endif %}
+                        {% if current_module_days_sort %}<input type="hidden" name="module_days_sort" value="{{ current_module_days_sort }}">{% endif %}
+                        {% if current_impl_list_cs_email %}<input type="hidden" name="impl_list_cs_email" value="{{ current_impl_list_cs_email }}">{% endif %}
+                        {% if current_impl_list_status %}<input type="hidden" name="impl_list_status" value="{{ current_impl_list_status }}">{% endif %}
+                        {% if current_impl_list_date_field %}<input type="hidden" name="impl_list_date_field" value="{{ current_impl_list_date_field }}">{% endif %}
+                        {% if current_impl_list_start_date %}<input type="hidden" name="impl_list_start_date" value="{{ current_impl_list_start_date }}">{% endif %}
+                        {% if current_impl_list_end_date %}<input type="hidden" name="impl_list_end_date" value="{{ current_impl_list_end_date }}">{% endif %}
+                        {% if current_stop_cs_email %}<input type="hidden" name="stop_cs_email" value="{{ current_stop_cs_email }}">{% endif %}
+                        {% if current_stop_tipo %}<input type="hidden" name="stop_tipo" value="{{ current_stop_tipo }}">{% endif %}
+                        {% if current_stop_days_sort %}<input type="hidden" name="stop_days_sort" value="{{ current_stop_days_sort }}">{% endif %}
+                        {% if current_cancel_cs_email %}<input type="hidden" name="cancel_cs_email" value="{{ current_cancel_cs_email }}">{% endif %}
+                        {% if current_cancel_start_date %}<input type="hidden" name="cancel_start_date" value="{{ current_cancel_start_date }}">{% endif %}
+                        {% if current_cancel_end_date %}<input type="hidden" name="cancel_end_date" value="{{ current_cancel_end_date }}">{% endif %}
+                        <select name="mrr_cs_email">
+                            <option value="">Todos os usuários</option>
+                            {% for cs in all_cs %}
+                            <option value="{{ cs.usuario }}" {% if cs.usuario == current_mrr_cs_email %}selected{% endif %}>{{ cs.nome }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit"><i class="bi bi-funnel-fill"></i> Filtrar</button>
+                        <button type="button" class="btn-reset mini-filter-clear"
+                            data-clear-fields="mrr_cs_email"
+                            data-clear-defaults="{}"
+                            aria-label="Limpar filtro da carteira por MRR"><i class="bi bi-arrow-clockwise"></i></button>
+                    </form>
                 </div>
-                <p class="muted">Distribuição de clientes por faixa de receita recorrente</p>
+                <p class="muted">Distribuicao de clientes por faixa de receita recorrente</p>
 
                 <div class="mrr-list">
-                    <div class="mrr-item"><span>Prata (MRR &lt; 699)</span><b>{{ (mrr_prata * 100 / mrr_total) | round(0) if mrr_total else 0 }}%</b><i style="--fill: {{ (mrr_prata * 100 / mrr_total) | round(2) if mrr_total else 0 }}%"></i></div>
-                    <div class="mrr-item"><span>Ouro (MRR 700-999)</span><b>{{ (mrr_ouro * 100 / mrr_total) | round(0) if mrr_total else 0 }}%</b><i style="--fill: {{ (mrr_ouro * 100 / mrr_total) | round(2) if mrr_total else 0 }}%"></i></div>
-                    <div class="mrr-item"><span>Platina (MRR 1k-1.9k)</span><b>{{ (mrr_platina * 100 / mrr_total) | round(0) if mrr_total else 0 }}%</b><i style="--fill: {{ (mrr_platina * 100 / mrr_total) | round(2) if mrr_total else 0 }}%"></i></div>
-                    <div class="mrr-item"><span>Diamante (MRR &gt; 2k)</span><b>{{ (mrr_diamante * 100 / mrr_total) | round(0) if mrr_total else 0 }}%</b><i style="--fill: {{ (mrr_diamante * 100 / mrr_total) | round(2) if mrr_total else 0 }}%"></i></div>
-                    <div class="mrr-item highlight"><span>Não Definido / Pendente</span><b>{{ mrr_pendente }} Clientes</b><i style="--fill: {{ (mrr_pendente * 100 / mrr_total) | round(2) if mrr_total else 0 }}%"></i></div>
+                    <div class="mrr-item"><span>Prata (MRR &lt; 699)</span><button type="button" class="mrr-count-link" data-mrr="prata">{{ mrr_prata }} Clientes</button><i style="--fill: {{ (mrr_prata * 100 / mrr_total) | round(2) if mrr_total else 0 }}%"></i></div>
+                    <div class="mrr-item"><span>Ouro (MRR 700-999)</span><button type="button" class="mrr-count-link" data-mrr="ouro">{{ mrr_ouro }} Clientes</button><i style="--fill: {{ (mrr_ouro * 100 / mrr_total) | round(2) if mrr_total else 0 }}%"></i></div>
+                    <div class="mrr-item"><span>Platina (MRR 1k-1.9k)</span><button type="button" class="mrr-count-link" data-mrr="platina">{{ mrr_platina }} Clientes</button><i style="--fill: {{ (mrr_platina * 100 / mrr_total) | round(2) if mrr_total else 0 }}%"></i></div>
+                    <div class="mrr-item"><span>Diamante (MRR &gt; 2k)</span><button type="button" class="mrr-count-link" data-mrr="diamante">{{ mrr_diamante }} Clientes</button><i style="--fill: {{ (mrr_diamante * 100 / mrr_total) | round(2) if mrr_total else 0 }}%"></i></div>
+                    <div class="mrr-item highlight"><span>Nao Definido / Pendente</span><button type="button" class="mrr-count-link" data-mrr="pendente">{{ mrr_pendente }} Clientes</button><i style="--fill: {{ (mrr_pendente * 100 / mrr_total) | round(2) if mrr_total else 0 }}%"></i></div>
                 </div>
             </article>
 
             <article class="ger-card">
                 <div class="card-title-row">
-                    <h3>Status das Implantações</h3>
+                    <h3>Status das Implantacoes</h3>
                 </div>
-                <p class="muted">Visão geral do pipeline de onboarding</p>
                 <div class="status-chart-wrap">
                     <canvas id="chartStatusClientes" height="230"></canvas>
                 </div>
             </article>
         </section>
 
-        <section class="ger-card table-card">
+
+        <section class="ger-card table-card" id="tags-section">
             <div class="card-title-row">
                 <div>
                     <h3>Produtividade por Tags</h3>
-                    <p class="muted">Comentários com tags lançados no plano de sucesso</p>
+                    <p class="muted">Comentarios com tags lancados no plano de sucesso</p>
                 </div>
-                <form method="GET" class="mini-filter">
+                <form method="GET" class="mini-filter" data-ajax-target="#tags-section">
                     {% if current_cs_email %}<input type="hidden" name="cs_email" value="{{ current_cs_email }}">{% endif %}
                     {% if current_status_filter %}<input type="hidden" name="status_filter" value="{{ current_status_filter }}">{% endif %}
                     {% if current_start_date %}<input type="hidden" name="start_date" value="{{ current_start_date }}">{% endif %}
                     {% if current_end_date %}<input type="hidden" name="end_date" value="{{ current_end_date }}">{% endif %}
                     {% if context %}<input type="hidden" name="context" value="{{ context }}">{% endif %}
+                    {% if current_module_cs_email %}<input type="hidden" name="module_cs_email" value="{{ current_module_cs_email }}">{% endif %}
+                    {% if current_module_status_filter %}<input type="hidden" name="module_status_filter" value="{{ current_module_status_filter }}">{% endif %}
+                    {% if current_module_days_sort %}<input type="hidden" name="module_days_sort" value="{{ current_module_days_sort }}">{% endif %}
+                    {% if current_impl_list_cs_email %}<input type="hidden" name="impl_list_cs_email" value="{{ current_impl_list_cs_email }}">{% endif %}
+                    {% if current_impl_list_status %}<input type="hidden" name="impl_list_status" value="{{ current_impl_list_status }}">{% endif %}
+                    {% if current_impl_list_date_field %}<input type="hidden" name="impl_list_date_field" value="{{ current_impl_list_date_field }}">{% endif %}
+                    {% if current_impl_list_start_date %}<input type="hidden" name="impl_list_start_date" value="{{ current_impl_list_start_date }}">{% endif %}
+                    {% if current_impl_list_end_date %}<input type="hidden" name="impl_list_end_date" value="{{ current_impl_list_end_date }}">{% endif %}
+                    {% if current_cancel_cs_email %}<input type="hidden" name="cancel_cs_email" value="{{ current_cancel_cs_email }}">{% endif %}
+                    {% if current_cancel_start_date %}<input type="hidden" name="cancel_start_date" value="{{ current_cancel_start_date }}">{% endif %}
+                    {% if current_cancel_end_date %}<input type="hidden" name="cancel_end_date" value="{{ current_cancel_end_date }}">{% endif %}
                     <select name="task_cs_email">
-                        <option value="">Todos os Usuários</option>
+                        <option value="">Todos os usuários</option>
                         {% for cs in all_cs %}
                         <option value="{{ cs.usuario }}" {% if cs.usuario == current_task_cs_email %}selected{% endif %}>{{ cs.nome }}</option>
                         {% endfor %}
                     </select>
+                    <label class="mini-filter-field">
+                        <span>DE</span>
+                        <input type="text" class="flatpickr-date mini-filter-date" name="task_start_date" placeholder="DD/MM/AAAA" value="{{ current_task_start_date or '' }}">
+                    </label>
+                    <label class="mini-filter-field">
+                        <span>ATÉ</span>
+                        <input type="text" class="flatpickr-date mini-filter-date" name="task_end_date" placeholder="DD/MM/AAAA" value="{{ current_task_end_date or '' }}">
+                    </label>
                     <button type="submit"><i class="bi bi-funnel-fill"></i> Filtrar</button>
+                    <button type="button" class="btn-reset mini-filter-clear"
+                        data-clear-fields="task_cs_email,task_start_date,task_end_date"
+                        data-clear-defaults="{}"
+                        aria-label="Limpar filtros de produtividade por tags"><i class="bi bi-arrow-clockwise"></i></button>
                 </form>
             </div>
 
             <div class="table-wrap">
                 <table class="ger-table tags-table">
                     {% set tag_columns = (tags_chart_data.datasets if tags_chart_data and tags_chart_data.datasets else []) %}
-                    {% set dynamic_colspan = (tag_columns | length) + 2 %}
+                    {% set cleaned_tag_columns = [] %}
+                    {% for ds in tag_columns %}
+                        {% set label_clean = (ds.label | default('') | trim) %}
+                        {% if label_clean and label_clean != '-' %}
+                            {% set _ = cleaned_tag_columns.append(ds) %}
+                        {% endif %}
+                    {% endfor %}
+                    {% set preferred_tags = ['Interno', 'Externo'] %}
+                    {% set ordered_tag_columns = [] %}
+                    {% for pt in preferred_tags %}
+                        {% for ds in cleaned_tag_columns if (ds.label | default('')) == pt %}
+                            {% set _ = ordered_tag_columns.append(ds) %}
+                        {% endfor %}
+                    {% endfor %}
+                    {% for ds in cleaned_tag_columns %}
+                        {% if (ds.label | default('')) not in preferred_tags %}
+                            {% set _ = ordered_tag_columns.append(ds) %}
+                        {% endif %}
+                    {% endfor %}
+                    {% set dynamic_colspan = (ordered_tag_columns | length) + 2 %}
                     <thead>
                         <tr>
                             <th>COLABORADOR</th>
-                            {% for ds in tag_columns %}
+                            {% for ds in ordered_tag_columns %}
                             <th>{{ (ds.label | default('-')) | upper }}</th>
                             {% endfor %}
                             <th>TOTAL GERAL</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% if tags_chart_data and tags_chart_data.labels and tags_chart_data.datasets %}
+                        {% if tags_chart_data and tags_chart_data.labels %}
                         {% set totals = namespace(by_tag={}, geral=0) %}
-                        {% for ds in tag_columns %}
+                        {% for ds in ordered_tag_columns %}
                         {% set _ = totals.by_tag.update({ (ds.label | string): 0 }) %}
                         {% endfor %}
                         {% for user_idx in range(tags_chart_data.labels|length) %}
                         {% set row = namespace(total=0) %}
                         <tr>
                             <td>{{ tags_chart_data.labels[user_idx] }}</td>
-                            {% for ds in tag_columns %}
+                            {% for ds in ordered_tag_columns %}
                             {% set value = (ds.data[user_idx] | default(0) | int) %}
                             {% set row.total = row.total + value %}
                             {% set _ = totals.by_tag.update({ (ds.label | string): (totals.by_tag.get(ds.label | string, 0) + value) }) %}
@@ -192,29 +291,72 @@
                         {% endfor %}
                         <tr class="consolidated-row">
                             <td>TOTAL CONSOLIDADO</td>
-                            {% for ds in tag_columns %}
+                            {% for ds in ordered_tag_columns %}
                             <td>{{ totals.by_tag.get(ds.label | string, 0) }}</td>
                             {% endfor %}
                             <td><span class="pill-total">{{ totals.geral }}</span></td>
                         </tr>
                         {% else %}
-                        <tr><td colspan="{{ dynamic_colspan }}" class="empty-state">Nenhum dado disponível para os filtros selecionados.</td></tr>
+                        <tr><td colspan="{{ dynamic_colspan }}" class="empty-state">Nenhum dado disponivel para os filtros selecionados.</td></tr>
                         {% endif %}
                     </tbody>
                 </table>
             </div>
         </section>
 
-        <section class="ger-card table-card">
+        <section class="ger-card table-card" id="modules-section">
             <div class="card-title-row">
                 <div>
-                    <h3>Lista de Implantações</h3>
+                    <h3>Lista de Implantacoes</h3>
                     <p class="muted">Total de {{ implantacoes_lista_detalhada | length }} registros encontrados</p>
                 </div>
-                <div class="table-actions">
-                    <button type="button" class="icon-button"><i class="bi bi-download"></i></button>
-                    <button type="button" class="icon-button"><i class="bi bi-printer"></i></button>
-                </div>
+                <form method="GET" class="mini-filter" data-ajax-target="#modules-section">
+                    {% if current_cs_email %}<input type="hidden" name="cs_email" value="{{ current_cs_email }}">{% endif %}
+                    {% if current_status_filter %}<input type="hidden" name="status_filter" value="{{ current_status_filter }}">{% endif %}
+                    {% if current_start_date %}<input type="hidden" name="start_date" value="{{ current_start_date }}">{% endif %}
+                    {% if current_end_date %}<input type="hidden" name="end_date" value="{{ current_end_date }}">{% endif %}
+                    {% if current_task_cs_email %}<input type="hidden" name="task_cs_email" value="{{ current_task_cs_email }}">{% endif %}
+                    {% if current_task_start_date %}<input type="hidden" name="task_start_date" value="{{ current_task_start_date }}">{% endif %}
+                    {% if current_task_end_date %}<input type="hidden" name="task_end_date" value="{{ current_task_end_date }}">{% endif %}
+                    {% if context %}<input type="hidden" name="context" value="{{ context }}">{% endif %}
+                    {% if current_module_cs_email %}<input type="hidden" name="module_cs_email" value="{{ current_module_cs_email }}">{% endif %}
+                    {% if current_module_status_filter %}<input type="hidden" name="module_status_filter" value="{{ current_module_status_filter }}">{% endif %}
+                    {% if current_module_days_sort %}<input type="hidden" name="module_days_sort" value="{{ current_module_days_sort }}">{% endif %}
+                    {% if current_stop_cs_email %}<input type="hidden" name="stop_cs_email" value="{{ current_stop_cs_email }}">{% endif %}
+                    {% if current_stop_tipo %}<input type="hidden" name="stop_tipo" value="{{ current_stop_tipo }}">{% endif %}
+                    {% if current_stop_days_sort %}<input type="hidden" name="stop_days_sort" value="{{ current_stop_days_sort }}">{% endif %}
+                    {% if current_cancel_cs_email %}<input type="hidden" name="cancel_cs_email" value="{{ current_cancel_cs_email }}">{% endif %}
+                    {% if current_cancel_start_date %}<input type="hidden" name="cancel_start_date" value="{{ current_cancel_start_date }}">{% endif %}
+                    {% if current_cancel_end_date %}<input type="hidden" name="cancel_end_date" value="{{ current_cancel_end_date }}">{% endif %}
+                    <select name="impl_list_cs_email">
+                        <option value="">Todos os usuários</option>
+                        {% for cs in all_cs %}
+                        <option value="{{ cs.usuario }}" {% if cs.usuario == current_impl_list_cs_email %}selected{% endif %}>{{ cs.nome }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="impl_list_status">
+                        {% for opt in status_options %}
+                        <option value="{{ opt.value }}" {% if opt.value == current_impl_list_status %}selected{% endif %}>{{ opt.label }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="impl_list_date_field">
+                        <option value="data_criacao" {% if current_impl_list_date_field == 'data_criacao' %}selected{% endif %}>Inicio Impl.</option>
+                        <option value="data_inicio_efetivo" {% if current_impl_list_date_field == 'data_inicio_efetivo' %}selected{% endif %}>Inicio Prod.</option>
+                    </select>
+                    <label class="mini-filter-field">
+                        <span>DE</span>
+                        <input type="text" class="flatpickr-date mini-filter-date" name="impl_list_start_date" placeholder="DD/MM/AAAA" value="{{ current_impl_list_start_date or '' }}">
+                    </label>
+                    <label class="mini-filter-field">
+                        <span>ATÉ</span>
+                        <input type="text" class="flatpickr-date mini-filter-date" name="impl_list_end_date" placeholder="DD/MM/AAAA" value="{{ current_impl_list_end_date or '' }}">
+                    </label>
+                    <button type="submit"><i class="bi bi-funnel-fill"></i> Filtrar</button>
+                    <button type="button" class="btn-reset mini-filter-clear"
+                        data-clear-fields="impl_list_cs_email,impl_list_status,impl_list_date_field,impl_list_start_date,impl_list_end_date"
+                        data-clear-defaults='{"impl_list_status":"todas","impl_list_date_field":"data_criacao"}'
+                        aria-label="Limpar filtros da lista de implantacoes"><i class="bi bi-arrow-clockwise"></i></button>
+                </form>
             </div>
 
             <div class="table-wrap">
@@ -223,10 +365,10 @@
                         <tr>
                             <th>EMPRESA</th>
                             <th>IMPLANTADOR</th>
-                            <th>INÍCIO IMPL.</th>
-                            <th>INÍCIO PROD.</th>
+                            <th>INICIO IMPL.</th>
+                            <th>INICIO PROD.</th>
                             <th>STATUS</th>
-                            <th>AÇÕES</th>
+                            <th>ACOES</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -240,7 +382,7 @@
                             <td>{{ impl.data_inicio_efetivo.strftime('%d/%m/%Y') if impl.data_inicio_efetivo and impl.data_inicio_efetivo.strftime is defined else ((impl.data_inicio_efetivo|string)[:10] | replace('-', '/')) if impl.data_inicio_efetivo else '-' }}</td>
                             <td>
                                 <span class="status-pill status-{{ status | replace('_', '-') }}">
-                                    {% if status == 'andamento' %}Em Andamento{% elif status == 'finalizada' %}Concluído{% elif status == 'futura' %}Futura{% elif status == 'parada' %}Parada{% elif status == 'cancelada' %}Cancelada{% else %}Nova{% endif %}
+                                    {% if status == 'andamento' %}Em Andamento{% elif status == 'finalizada' %}Concluido{% elif status == 'futura' %}Futura{% elif status == 'parada' %}Parada{% elif status == 'cancelada' %}Cancelada{% else %}Nova{% endif %}
                                 </span>
                             </td>
                             <td>
@@ -249,19 +391,54 @@
                         </tr>
                         {% endfor %}
                         {% else %}
-                        <tr><td colspan="6" class="empty-state">Nenhuma implantação encontrada.</td></tr>
+                        <tr><td colspan="6" class="empty-state">Nenhuma implantacao encontrada.</td></tr>
                         {% endif %}
                     </tbody>
                 </table>
             </div>
         </section>
 
-        <section class="ger-card stopped-card">
+        <section class="ger-card stopped-card" id="paradas-section"
+            data-gargalos-labels='{{ (chart_data.gargalos_parada.labels if chart_data and chart_data.gargalos_parada else []) | tojson | forceescape }}'
+            data-gargalos-values='{{ (chart_data.gargalos_parada.data if chart_data and chart_data.gargalos_parada else []) | tojson | forceescape }}'
+            data-paradas-items='{{ (implantacoes_paradas_lista or []) | tojson | forceescape }}'>
             <div class="card-title-row">
                 <div>
-                    <h3><span class="danger-square"><i class="bi bi-exclamation-triangle-fill"></i></span> Implantações Paradas</h3>
-                    <p class="muted">Atenção requerida: {{ implantacoes_paradas_lista | length }} casos com atraso significativo</p>
+                    <h3><span class="danger-square"><i class="bi bi-exclamation-triangle-fill"></i></span> Implantacoes Paradas</h3>
                 </div>
+                <form method="GET" class="mini-filter" data-ajax-target="#paradas-section">
+                    {% if current_cs_email %}<input type="hidden" name="cs_email" value="{{ current_cs_email }}">{% endif %}
+                    {% if current_status_filter %}<input type="hidden" name="status_filter" value="{{ current_status_filter }}">{% endif %}
+                    {% if current_start_date %}<input type="hidden" name="start_date" value="{{ current_start_date }}">{% endif %}
+                    {% if current_end_date %}<input type="hidden" name="end_date" value="{{ current_end_date }}">{% endif %}
+                    {% if current_task_cs_email %}<input type="hidden" name="task_cs_email" value="{{ current_task_cs_email }}">{% endif %}
+                    {% if current_task_start_date %}<input type="hidden" name="task_start_date" value="{{ current_task_start_date }}">{% endif %}
+                    {% if current_task_end_date %}<input type="hidden" name="task_end_date" value="{{ current_task_end_date }}">{% endif %}
+                    {% if context %}<input type="hidden" name="context" value="{{ context }}">{% endif %}
+                    {% if current_module_cs_email %}<input type="hidden" name="module_cs_email" value="{{ current_module_cs_email }}">{% endif %}
+                    {% if current_module_status_filter %}<input type="hidden" name="module_status_filter" value="{{ current_module_status_filter }}">{% endif %}
+                    {% if current_module_days_sort %}<input type="hidden" name="module_days_sort" value="{{ current_module_days_sort }}">{% endif %}
+                    {% if current_cancel_cs_email %}<input type="hidden" name="cancel_cs_email" value="{{ current_cancel_cs_email }}">{% endif %}
+                    {% if current_cancel_start_date %}<input type="hidden" name="cancel_start_date" value="{{ current_cancel_start_date }}">{% endif %}
+                    {% if current_cancel_end_date %}<input type="hidden" name="cancel_end_date" value="{{ current_cancel_end_date }}">{% endif %}
+                    {% if current_stop_days_sort %}<input type="hidden" name="stop_days_sort" value="{{ current_stop_days_sort }}">{% endif %}
+                    <select name="stop_cs_email">
+                        <option value="">Todos os usuários</option>
+                        {% for cs in all_cs %}
+                        <option value="{{ cs.usuario }}" {% if cs.usuario == current_stop_cs_email %}selected{% endif %}>{{ cs.nome }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="stop_tipo">
+                        <option value="">Todos os tipos</option>
+                        <option value="Sistema" {% if current_stop_tipo == 'Sistema' %}selected{% endif %}>Sistema</option>
+                        <option value="Modulo" {% if current_stop_tipo == 'Modulo' %}selected{% endif %}>Modulo</option>
+                    </select>
+                    <button type="submit"><i class="bi bi-funnel-fill"></i> Filtrar</button>
+                    <button type="button" class="btn-reset mini-filter-clear"
+                        data-clear-fields="stop_cs_email,stop_tipo,stop_days_sort"
+                        data-clear-defaults='{"stop_days_sort":"recent_first"}'
+                        aria-label="Limpar filtros das implantacoes paradas"><i class="bi bi-arrow-clockwise"></i></button>
+                </form>
             </div>
 
             <div class="stopped-grid">
@@ -271,7 +448,39 @@
                             <tr>
                                 <th>EMPRESA</th>
                                 <th>MOTIVO DO BLOQUEIO</th>
-                                <th>TEMPO PARADO</th>
+                                <th>TIPO</th>
+                                <th class="dias-header">
+                                    <span>TEMPO PARADO</span>
+                                    <form method="GET" class="mini-filter mini-filter-inline-sort" data-ajax-target="#paradas-section">
+                                        {% if current_cs_email %}<input type="hidden" name="cs_email" value="{{ current_cs_email }}">{% endif %}
+                                        {% if current_status_filter %}<input type="hidden" name="status_filter" value="{{ current_status_filter }}">{% endif %}
+                                        {% if current_start_date %}<input type="hidden" name="start_date" value="{{ current_start_date }}">{% endif %}
+                                        {% if current_end_date %}<input type="hidden" name="end_date" value="{{ current_end_date }}">{% endif %}
+                                        {% if current_task_cs_email %}<input type="hidden" name="task_cs_email" value="{{ current_task_cs_email }}">{% endif %}
+                                        {% if current_task_start_date %}<input type="hidden" name="task_start_date" value="{{ current_task_start_date }}">{% endif %}
+                                        {% if current_task_end_date %}<input type="hidden" name="task_end_date" value="{{ current_task_end_date }}">{% endif %}
+                                        {% if context %}<input type="hidden" name="context" value="{{ context }}">{% endif %}
+                                        {% if current_module_cs_email %}<input type="hidden" name="module_cs_email" value="{{ current_module_cs_email }}">{% endif %}
+                                        {% if current_module_status_filter %}<input type="hidden" name="module_status_filter" value="{{ current_module_status_filter }}">{% endif %}
+                                        {% if current_module_days_sort %}<input type="hidden" name="module_days_sort" value="{{ current_module_days_sort }}">{% endif %}
+                                        {% if current_cancel_cs_email %}<input type="hidden" name="cancel_cs_email" value="{{ current_cancel_cs_email }}">{% endif %}
+                                        {% if current_cancel_start_date %}<input type="hidden" name="cancel_start_date" value="{{ current_cancel_start_date }}">{% endif %}
+                                        {% if current_cancel_end_date %}<input type="hidden" name="cancel_end_date" value="{{ current_cancel_end_date }}">{% endif %}
+                                        {% if current_stop_cs_email %}<input type="hidden" name="stop_cs_email" value="{{ current_stop_cs_email }}">{% endif %}
+                                        {% if current_stop_tipo %}<input type="hidden" name="stop_tipo" value="{{ current_stop_tipo }}">{% endif %}
+                                        {% if current_stop_days_sort == 'oldest_first' %}
+                                        <input type="hidden" name="stop_days_sort" value="recent_first">
+                                        <button type="submit" class="sort-days-btn is-desc" aria-label="Ordenar tempo parado: mais recente para mais antigo" title="Atual: mais antigo para mais recente. Clique para inverter.">
+                                            <i class="bi bi-arrow-down-up"></i>
+                                        </button>
+                                        {% else %}
+                                        <input type="hidden" name="stop_days_sort" value="oldest_first">
+                                        <button type="submit" class="sort-days-btn is-asc" aria-label="Ordenar tempo parado: mais antigo para mais recente" title="Atual: mais recente para mais antigo. Clique para inverter.">
+                                            <i class="bi bi-arrow-down-up"></i>
+                                        </button>
+                                        {% endif %}
+                                    </form>
+                                </th>
                                 <th>DETALHES</th>
                             </tr>
                         </thead>
@@ -280,19 +489,20 @@
                             {% for item in implantacoes_paradas_lista[:3] %}
                             <tr>
                                 <td>{{ item.nome_empresa | default('-') }}</td>
-                                <td class="stop-motive">{{ item.motivo_parada | default('Motivo não informado') }}</td>
+                                <td class="stop-motive">{{ item.motivo_parada | default('Motivo nao informado') }}</td>
+                                <td>{{ item.tipo | default('-') }}</td>
                                 <td><span class="danger-pill">{{ item.dias_parada | default(0) }} dias</span></td>
                                 <td><a href="{{ url_for((context if context and context != 'None' else 'onboarding') + '.ver_implantacao', impl_id=item.id) }}" class="text-link">Ver</a></td>
                             </tr>
                             {% endfor %}
                             {% else %}
-                            <tr><td colspan="4" class="empty-state">Sem implantações paradas.</td></tr>
+                            <tr><td colspan="5" class="empty-state">Sem implantacoes paradas.</td></tr>
                             {% endif %}
                         </tbody>
                     </table>
                 </div>
                 <div class="stopped-chart-box">
-                    <h4>Distribuição de Motivos</h4>
+                    <h4>Distribuicao de Motivos</h4>
                     <div class="stopped-chart-wrap">
                         <canvas id="chartGargalos"></canvas>
                     </div>
@@ -300,12 +510,47 @@
             </div>
         </section>
 
-        <section class="ger-card table-card">
+        <section class="ger-card table-card" id="canceladas-section">
             <div class="card-title-row">
                 <div>
-                    <h3>Implantações Canceladas</h3>
-                    <p class="muted">Listando {{ implantacoes_canceladas_lista | length }} implantações canceladas.</p>
+                    <h3>Implantacoes Canceladas</h3>
+                    <p class="muted">Listando {{ implantacoes_canceladas_lista | length }} implantacoes canceladas.</p>
                 </div>
+                <form method="GET" class="mini-filter" data-ajax-target="#canceladas-section">
+                    {% if current_cs_email %}<input type="hidden" name="cs_email" value="{{ current_cs_email }}">{% endif %}
+                    {% if current_status_filter %}<input type="hidden" name="status_filter" value="{{ current_status_filter }}">{% endif %}
+                    {% if current_start_date %}<input type="hidden" name="start_date" value="{{ current_start_date }}">{% endif %}
+                    {% if current_end_date %}<input type="hidden" name="end_date" value="{{ current_end_date }}">{% endif %}
+                    {% if current_task_cs_email %}<input type="hidden" name="task_cs_email" value="{{ current_task_cs_email }}">{% endif %}
+                    {% if current_task_start_date %}<input type="hidden" name="task_start_date" value="{{ current_task_start_date }}">{% endif %}
+                    {% if current_task_end_date %}<input type="hidden" name="task_end_date" value="{{ current_task_end_date }}">{% endif %}
+                    {% if context %}<input type="hidden" name="context" value="{{ context }}">{% endif %}
+                    {% if current_module_cs_email %}<input type="hidden" name="module_cs_email" value="{{ current_module_cs_email }}">{% endif %}
+                    {% if current_module_status_filter %}<input type="hidden" name="module_status_filter" value="{{ current_module_status_filter }}">{% endif %}
+                    {% if current_module_days_sort %}<input type="hidden" name="module_days_sort" value="{{ current_module_days_sort }}">{% endif %}
+                    {% if current_stop_cs_email %}<input type="hidden" name="stop_cs_email" value="{{ current_stop_cs_email }}">{% endif %}
+                    {% if current_stop_tipo %}<input type="hidden" name="stop_tipo" value="{{ current_stop_tipo }}">{% endif %}
+                    {% if current_stop_days_sort %}<input type="hidden" name="stop_days_sort" value="{{ current_stop_days_sort }}">{% endif %}
+                    <select name="cancel_cs_email">
+                        <option value="">Todos os usuários</option>
+                        {% for cs in all_cs %}
+                        <option value="{{ cs.usuario }}" {% if cs.usuario == current_cancel_cs_email %}selected{% endif %}>{{ cs.nome }}</option>
+                        {% endfor %}
+                    </select>
+                    <label class="mini-filter-field">
+                        <span>DE</span>
+                        <input type="text" class="flatpickr-date mini-filter-date" name="cancel_start_date" placeholder="DD/MM/AAAA" value="{{ current_cancel_start_date or '' }}">
+                    </label>
+                    <label class="mini-filter-field">
+                        <span>ATÉ</span>
+                        <input type="text" class="flatpickr-date mini-filter-date" name="cancel_end_date" placeholder="DD/MM/AAAA" value="{{ current_cancel_end_date or '' }}">
+                    </label>
+                    <button type="submit"><i class="bi bi-funnel-fill"></i> Filtrar</button>
+                    <button type="button" class="btn-reset mini-filter-clear"
+                        data-clear-fields="cancel_cs_email,cancel_start_date,cancel_end_date"
+                        data-clear-defaults="{}"
+                        aria-label="Limpar filtros das implantacoes canceladas"><i class="bi bi-arrow-clockwise"></i></button>
+                </form>
             </div>
             <div class="table-wrap">
                 <table class="ger-table">
@@ -314,7 +559,7 @@
                             <th>EMPRESA</th>
                             <th>IMPLANTADOR</th>
                             <th>DATA DO CANCELAMENTO</th>
-                            <th>AÇÕES</th>
+                            <th>ACOES</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -330,28 +575,102 @@
                         </tr>
                         {% endfor %}
                         {% else %}
-                        <tr><td colspan="4" class="empty-state">Nenhuma implantação cancelada encontrada.</td></tr>
+                        <tr><td colspan="4" class="empty-state">Nenhuma implantacao cancelada encontrada.</td></tr>
                         {% endif %}
                     </tbody>
                 </table>
             </div>
         </section>
 
-        <section class="ger-card table-card">
+        <section class="ger-card table-card" id="modules-detailed-section">
             <div class="card-title-row">
                 <div>
-                    <h3>Lista Detalhada de Módulos em Implantação</h3>
+                    <h3>Lista Detalhada de Modulos em Implantacao</h3>
                 </div>
+            <form method="GET" class="mini-filter" data-ajax-target="#modules-detailed-section">
+                {% if current_cs_email %}<input type="hidden" name="cs_email" value="{{ current_cs_email }}">{% endif %}
+                {% if current_status_filter %}<input type="hidden" name="status_filter" value="{{ current_status_filter }}">{% endif %}
+                {% if current_start_date %}<input type="hidden" name="start_date" value="{{ current_start_date }}">{% endif %}
+                {% if current_end_date %}<input type="hidden" name="end_date" value="{{ current_end_date }}">{% endif %}
+                {% if current_task_cs_email %}<input type="hidden" name="task_cs_email" value="{{ current_task_cs_email }}">{% endif %}
+                {% if current_task_start_date %}<input type="hidden" name="task_start_date" value="{{ current_task_start_date }}">{% endif %}
+                {% if current_task_end_date %}<input type="hidden" name="task_end_date" value="{{ current_task_end_date }}">{% endif %}
+                {% if context %}<input type="hidden" name="context" value="{{ context }}">{% endif %}
+                {% if current_module_days_sort %}<input type="hidden" name="module_days_sort" value="{{ current_module_days_sort }}">{% endif %}
+                {% if current_impl_list_cs_email %}<input type="hidden" name="impl_list_cs_email" value="{{ current_impl_list_cs_email }}">{% endif %}
+                {% if current_impl_list_status %}<input type="hidden" name="impl_list_status" value="{{ current_impl_list_status }}">{% endif %}
+                {% if current_impl_list_date_field %}<input type="hidden" name="impl_list_date_field" value="{{ current_impl_list_date_field }}">{% endif %}
+                {% if current_impl_list_start_date %}<input type="hidden" name="impl_list_start_date" value="{{ current_impl_list_start_date }}">{% endif %}
+                {% if current_impl_list_end_date %}<input type="hidden" name="impl_list_end_date" value="{{ current_impl_list_end_date }}">{% endif %}
+                {% if current_stop_cs_email %}<input type="hidden" name="stop_cs_email" value="{{ current_stop_cs_email }}">{% endif %}
+                {% if current_stop_tipo %}<input type="hidden" name="stop_tipo" value="{{ current_stop_tipo }}">{% endif %}
+                {% if current_stop_days_sort %}<input type="hidden" name="stop_days_sort" value="{{ current_stop_days_sort }}">{% endif %}
+                {% if current_cancel_cs_email %}<input type="hidden" name="cancel_cs_email" value="{{ current_cancel_cs_email }}">{% endif %}
+                {% if current_cancel_start_date %}<input type="hidden" name="cancel_start_date" value="{{ current_cancel_start_date }}">{% endif %}
+                {% if current_cancel_end_date %}<input type="hidden" name="cancel_end_date" value="{{ current_cancel_end_date }}">{% endif %}
+                <select name="module_cs_email">
+                    <option value="">Todos os usuários</option>
+                    {% for cs in all_cs %}
+                    <option value="{{ cs.usuario }}" {% if cs.usuario == current_module_cs_email %}selected{% endif %}>{{ cs.nome }}</option>
+                    {% endfor %}
+                </select>
+                <select name="module_status_filter">
+                    {% for opt in status_options %}
+                    <option value="{{ opt.value }}" {% if opt.value == current_module_status_filter %}selected{% endif %}>{{ opt.label }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit"><i class="bi bi-funnel-fill"></i> Filtrar</button>
+                <button type="button" class="btn-reset mini-filter-clear"
+                    data-clear-fields="module_cs_email,module_status_filter,module_days_sort"
+                    data-clear-defaults='{"module_status_filter":"todas","module_days_sort":"recent_first"}'
+                    aria-label="Limpar filtros da lista detalhada de modulos"><i class="bi bi-arrow-clockwise"></i></button>
+            </form>
             </div>
             <div class="table-wrap">
                 <table class="ger-table">
                     <thead>
                         <tr>
                             <th>EMPRESA</th>
-                            <th>RESPONSÁVEL</th>
+                            <th>RESPONSAVEL</th>
                             <th>STATUS</th>
-                            <th>DIAS</th>
-                            <th>AÇÕES</th>
+                            <th class="dias-header">
+                                <span>DIAS</span>
+                                <form method="GET" class="mini-filter mini-filter-inline-sort" data-ajax-target="#modules-detailed-section">
+                                    {% if current_cs_email %}<input type="hidden" name="cs_email" value="{{ current_cs_email }}">{% endif %}
+                                    {% if current_status_filter %}<input type="hidden" name="status_filter" value="{{ current_status_filter }}">{% endif %}
+                                    {% if current_start_date %}<input type="hidden" name="start_date" value="{{ current_start_date }}">{% endif %}
+                                    {% if current_end_date %}<input type="hidden" name="end_date" value="{{ current_end_date }}">{% endif %}
+                                    {% if current_task_cs_email %}<input type="hidden" name="task_cs_email" value="{{ current_task_cs_email }}">{% endif %}
+                                    {% if current_task_start_date %}<input type="hidden" name="task_start_date" value="{{ current_task_start_date }}">{% endif %}
+                                    {% if current_task_end_date %}<input type="hidden" name="task_end_date" value="{{ current_task_end_date }}">{% endif %}
+                                    {% if context %}<input type="hidden" name="context" value="{{ context }}">{% endif %}
+                                    {% if current_module_cs_email %}<input type="hidden" name="module_cs_email" value="{{ current_module_cs_email }}">{% endif %}
+                                    {% if current_module_status_filter %}<input type="hidden" name="module_status_filter" value="{{ current_module_status_filter }}">{% endif %}
+                                    {% if current_impl_list_cs_email %}<input type="hidden" name="impl_list_cs_email" value="{{ current_impl_list_cs_email }}">{% endif %}
+                                    {% if current_impl_list_status %}<input type="hidden" name="impl_list_status" value="{{ current_impl_list_status }}">{% endif %}
+                                    {% if current_impl_list_date_field %}<input type="hidden" name="impl_list_date_field" value="{{ current_impl_list_date_field }}">{% endif %}
+                                    {% if current_impl_list_start_date %}<input type="hidden" name="impl_list_start_date" value="{{ current_impl_list_start_date }}">{% endif %}
+                                    {% if current_impl_list_end_date %}<input type="hidden" name="impl_list_end_date" value="{{ current_impl_list_end_date }}">{% endif %}
+                                    {% if current_stop_cs_email %}<input type="hidden" name="stop_cs_email" value="{{ current_stop_cs_email }}">{% endif %}
+                                    {% if current_stop_tipo %}<input type="hidden" name="stop_tipo" value="{{ current_stop_tipo }}">{% endif %}
+                                    {% if current_stop_days_sort %}<input type="hidden" name="stop_days_sort" value="{{ current_stop_days_sort }}">{% endif %}
+                                    {% if current_cancel_cs_email %}<input type="hidden" name="cancel_cs_email" value="{{ current_cancel_cs_email }}">{% endif %}
+                                    {% if current_cancel_start_date %}<input type="hidden" name="cancel_start_date" value="{{ current_cancel_start_date }}">{% endif %}
+                                    {% if current_cancel_end_date %}<input type="hidden" name="cancel_end_date" value="{{ current_cancel_end_date }}">{% endif %}
+                                    {% if current_module_days_sort == 'oldest_first' %}
+                                    <input type="hidden" name="module_days_sort" value="recent_first">
+                                    <button type="submit" class="sort-days-btn is-desc" aria-label="Ordenar dias: mais recente para mais antigo" title="Atual: mais antigo para mais recente. Clique para inverter.">
+                                        <i class="bi bi-arrow-down-up"></i>
+                                    </button>
+                                    {% else %}
+                                    <input type="hidden" name="module_days_sort" value="oldest_first">
+                                    <button type="submit" class="sort-days-btn is-asc" aria-label="Ordenar dias: mais antigo para mais recente" title="Atual: mais recente para mais antigo. Clique para inverter.">
+                                        <i class="bi bi-arrow-down-up"></i>
+                                    </button>
+                                    {% endif %}
+                                </form>
+                            </th>
+                            <th>ACOES</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -363,7 +682,7 @@
                             <td>{{ mod.cs_nome | default('-') }}</td>
                             <td>
                                 <span class="status-pill status-{{ mod_status | replace('_', '-') }}">
-                                    {% if mod_status == 'andamento' %}Em Andamento{% elif mod_status == 'finalizada' %}Concluído{% elif mod_status == 'futura' %}Futura{% elif mod_status == 'parada' %}Parada{% elif mod_status == 'cancelada' %}Cancelada{% elif mod_status == 'sem_previsao' %}sem_previsao{% else %}Nova{% endif %}
+                                    {% if mod_status == 'andamento' %}Em Andamento{% elif mod_status == 'finalizada' %}Concluido{% elif mod_status == 'futura' %}Futura{% elif mod_status == 'parada' %}Parada{% elif mod_status == 'cancelada' %}Cancelada{% elif mod_status == 'sem_previsao' %}Sem Previsao{% else %}Nova{% endif %}
                                 </span>
                             </td>
                             <td><span class="days-pill">{{ mod.dias | default(0) }} dias</span></td>
@@ -373,7 +692,7 @@
                         </tr>
                         {% endfor %}
                         {% else %}
-                        <tr><td colspan="5" class="empty-state">Nenhum módulo em implantação encontrado.</td></tr>
+                        <tr><td colspan="5" class="empty-state">Nenhum modulo em implantacao encontrado.</td></tr>
                         {% endif %}
                     </tbody>
                 </table>
@@ -386,8 +705,8 @@
         <section class="ger-card chart-large-card">
             <div class="card-title-row">
                 <div>
-                    <h3>Ranking Implantação por Período</h3>
-                    <p class="muted">Total de implantações finalizadas no ano corrente, agrupadas por mês.</p>
+                    <h3>Ranking Implantacao por Periodo</h3>
+                    <p class="muted">Total de implantacoes finalizadas no ano corrente, agrupadas por mes.</p>
                 </div>
             </div>
             <div class="chart-large-wrap">
@@ -396,13 +715,13 @@
         </section>
 
         <section class="performance-block">
-            <h3 class="perf-title">Análise de Performance &amp; Previsão</h3>
+            <h3 class="perf-title">Analise de Performance &amp; Previsao</h3>
             <div class="performance-grid">
                 <article class="ger-card">
                     <div class="card-title-row">
                         <h3>Velocidade de Entrega</h3>
                     </div>
-                    <p class="muted">Distribuição de dias para finalizar implantações (Histograma).</p>
+                    <p class="muted">Distribuicao de dias para finalizar implantacoes (Histograma).</p>
                     <div class="perf-chart-wrap">
                         <canvas id="chartVelocidade"></canvas>
                     </div>
@@ -411,27 +730,205 @@
                     <div class="card-title-row">
                         <h3>Previsibilidade de Entregas</h3>
                     </div>
-                    <p class="muted">Previsão de término para implantações em andamento/futuras.</p>
+                    <p class="muted">Previsao de termino para implantacoes em andamento/futuras.</p>
                     <div class="perf-chart-wrap">
                         <canvas id="chartPrevisao"></canvas>
                     </div>
                 </article>
             </div>
         </section>
+
+        <section class="ger-card">
+            <div class="card-title-row">
+                <div>
+                    <h3>Perfil Operacional das Empresas</h3>
+                    <p class="muted">Distribuicao dos detalhes operacionais preenchidos na implantacao.</p>
+                </div>
+            </div>
+
+            <div class="details-grid">
+                <article class="detail-chart">
+                    <h4>Segmento</h4>
+                    <div class="detail-chart-wrap">
+                        <canvas id="chartSegmento"></canvas>
+                    </div>
+                </article>
+                <article class="detail-chart">
+                    <h4>Modalidades</h4>
+                    <div class="detail-chart-wrap">
+                        <canvas id="chartModalidades"></canvas>
+                    </div>
+                </article>
+                <article class="detail-chart">
+                    <h4>Tipos de Planos</h4>
+                    <div class="detail-chart-wrap">
+                        <canvas id="chartTiposPlanos"></canvas>
+                    </div>
+                </article>
+            </div>
+
+            <div class="details-grid">
+                <article class="detail-chart">
+                    <h4>Formas de Pagamento</h4>
+                    <div class="detail-chart-wrap">
+                        <canvas id="chartPagamentos"></canvas>
+                    </div>
+                </article>
+                <article class="detail-chart">
+                    <h4>Sistema Anterior (Top 10)</h4>
+                    <div class="detail-chart-wrap">
+                        <canvas id="chartSistemaAnterior"></canvas>
+                    </div>
+                </article>
+                <article class="detail-chart">
+                    <h4>Recorrencia Utilizada</h4>
+                    <div class="detail-chart-wrap">
+                        <canvas id="chartRecorrencia"></canvas>
+                    </div>
+                </article>
+            </div>
+
+            <div class="details-grid">
+                <article class="detail-chart">
+                    <h4>Horarios</h4>
+                    <div class="detail-chart-wrap">
+                        <canvas id="chartHorarios"></canvas>
+                    </div>
+                </article>
+                <article class="detail-chart">
+                    <h4>Alunos Ativos</h4>
+                    <div class="detail-chart-wrap">
+                        <canvas id="chartAlunosAtivos"></canvas>
+                    </div>
+                </article>
+            </div>
+
+            <div class="details-mini-grid">
+                <article class="detail-mini">
+                    <h4>Diaria</h4>
+                    <div class="detail-mini-wrap"><canvas id="chartDiaria"></canvas></div>
+                </article>
+                <article class="detail-mini">
+                    <h4>Freepass</h4>
+                    <div class="detail-mini-wrap"><canvas id="chartFreepass"></canvas></div>
+                </article>
+                <article class="detail-mini">
+                    <h4>Importacao</h4>
+                    <div class="detail-mini-wrap"><canvas id="chartImportacao"></canvas></div>
+                </article>
+                <article class="detail-mini">
+                    <h4>Boleto</h4>
+                    <div class="detail-mini-wrap"><canvas id="chartBoleto"></canvas></div>
+                </article>
+                <article class="detail-mini">
+                    <h4>Nota Fiscal</h4>
+                    <div class="detail-mini-wrap"><canvas id="chartNotaFiscal"></canvas></div>
+                </article>
+                <article class="detail-mini">
+                    <h4>Catraca</h4>
+                    <div class="detail-mini-wrap"><canvas id="chartCatraca"></canvas></div>
+                </article>
+                <article class="detail-mini">
+                    <h4>Facial</h4>
+                    <div class="detail-mini-wrap"><canvas id="chartFacial"></canvas></div>
+                </article>
+                <article class="detail-mini">
+                    <h4>WellHub</h4>
+                    <div class="detail-mini-wrap"><canvas id="chartWellhub"></canvas></div>
+                </article>
+                <article class="detail-mini">
+                    <h4>TotalPass</h4>
+                    <div class="detail-mini-wrap"><canvas id="chartTotalpass"></canvas></div>
+                </article>
+            </div>
+        </section>
     </main>
 </div>
+
+
+    </div>
+</div>
+
+<div class="modal fade" id="mrrClientesModal" tabindex="-1" aria-labelledby="mrrClientesTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="mrrClientesTitle">Clientes por MRR</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <span class="muted" id="mrrClientesSubtitle"></span>
+                    <span class="badge bg-primary" id="mrrClientesCount"></span>
+                </div>
+                <ul class="list-group" id="mrrClientesList"></ul>
+                <div class="empty-state mt-3" id="mrrClientesEmpty" style="display:none;">Nenhum cliente encontrado.</div>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts_extra %}
-<script>
+<script nonce="{{ csp_nonce() }}">
 (function () {
     let liveSignature = {{ (analytics_signature or '') | tojson | safe }};
+    let isMiniFilterUpdating = false;
     const statusData = {{ (chart_data.status_clientes if chart_data else {}) | tojson | safe }};
     const gargalosData = {{ (chart_data.gargalos_parada if chart_data else {}) | tojson | safe }};
     const rankingData = {{ (chart_data.ranking_periodo if chart_data else {}) | tojson | safe }};
     const velocidadeData = {{ (chart_data.velocidade_entrega if chart_data else {}) | tojson | safe }};
     const previsaoData = {{ (chart_data.previsao_receita if chart_data else {}) | tojson | safe }};
+    const detalhesData = {{ (chart_data.detalhes_operacionais if chart_data else {}) | tojson | safe }};
+    const recursosData = {{ (chart_data.recursos if chart_data else {}) | tojson | safe }};
+    const alunosData = {{ (chart_data.alunos_ativos if chart_data else {}) | tojson | safe }};
+    const implList = {{ (implantacoes_lista_detalhada or []) | tojson | safe }};
+    const mrrImplList = {{ (mrr_implantacoes_lista or []) | tojson | safe }};
     const paradasList = {{ (implantacoes_paradas_lista or []) | tojson | safe }};
+
+    const lazyCharts = new Map();
+
+    function registerLazy(id, init) {
+        const el = document.getElementById(id);
+        if (!el || typeof init !== 'function') return;
+        lazyCharts.set(el, init);
+    }
+
+    function initLazyCharts() {
+        if (!lazyCharts.size) return;
+        if (!('IntersectionObserver' in window)) {
+            lazyCharts.forEach((fn, el) => {
+                fn();
+                lazyCharts.delete(el);
+            });
+            return;
+        }
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                if (!entry.isIntersecting) return;
+                const el = entry.target;
+                const fn = lazyCharts.get(el);
+                if (fn) {
+                    fn();
+                    lazyCharts.delete(el);
+                }
+                observer.unobserve(el);
+            });
+        }, { rootMargin: '200px 0px' });
+
+        lazyCharts.forEach((_, el) => observer.observe(el));
+    }
+
+    function parseSectionJson(raw, fallback) {
+        if (!raw) return fallback;
+        try {
+            return JSON.parse(raw);
+        } catch (_) {
+            return fallback;
+        }
+    }
 
     function createDoughnut(id, labels, values, colors, cutout, showLegendRight, showPercent, fallbackLabels) {
         const el = document.getElementById(id);
@@ -440,12 +937,78 @@
             ? labels
             : (Array.isArray(fallbackLabels) && fallbackLabels.length >= values.length ? fallbackLabels.slice(0, values.length) : values.map((_, idx) => `Item ${idx + 1}`));
         const total = values.reduce((sum, value) => sum + Number(value || 0), 0);
+        
+        const centerTextPlugin = {
+            id: 'centerText',
+            beforeDraw: function(chart) {
+                if (chart.config.type !== 'doughnut') return;
+                const ctx = chart.ctx;
+                const centerX = (chart.chartArea.left + chart.chartArea.right) / 2;
+                const centerY = (chart.chartArea.top + chart.chartArea.bottom) / 2;
+                ctx.save();
+                ctx.font = 'bold 24px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#374151';
+                ctx.fillText(total, centerX, centerY);
+                ctx.font = '12px sans-serif';
+                ctx.fillStyle = '#6b7280';
+                ctx.fillText('Total', centerX, centerY + 20);
+                ctx.restore();
+            }
+        };
+        
+        const datalabelsPlugin = {
+            id: 'doughnutLabels',
+            afterDatasetsDraw(chart) {
+                const { ctx, data, chartArea: { top, bottom, left, right } } = chart;
+                const dataset = data.datasets[0];
+                const meta = chart.getDatasetMeta(0);
+                
+                const centerX = (left + right) / 2;
+                const centerY = (top + bottom) / 2;
+                const radius = Math.min(right - left, bottom - top) / 2;
+                const cutoutRadius = radius * 0.68;
+                
+                let currentAngle = -Math.PI / 2;
+                
+                dataset.data.forEach((value, i) => {
+                    if (value === 0) return;
+                    
+                    const sliceAngle = (value / total) * 2 * Math.PI;
+                    const midAngle = currentAngle + sliceAngle / 2;
+                    
+                    const labelRadius = cutoutRadius + (radius - cutoutRadius) * 0.5;
+                    const x = centerX + Math.cos(midAngle) * labelRadius;
+                    const y = centerY + Math.sin(midAngle) * labelRadius;
+                    
+                    const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+                    
+                    ctx.save();
+                    ctx.font = 'bold 11px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillStyle = '#fff';
+                    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                    ctx.shadowBlur = 3;
+                    ctx.shadowOffsetX = 1;
+                    ctx.shadowOffsetY = 1;
+                    
+                    ctx.fillText(`${value} (${pct}%)`, x, y);
+                    ctx.restore();
+                    
+                    currentAngle += sliceAngle;
+                });
+            }
+        };
+        
         new Chart(el, {
             type: 'doughnut',
             data: {
                 labels: resolvedLabels,
                 datasets: [{ data: values, backgroundColor: colors, borderWidth: 0 }]
             },
+            plugins: [centerTextPlugin, datalabelsPlugin],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -488,6 +1051,27 @@
     function createBar(id, labels, values, color) {
         const el = document.getElementById(id);
         if (!el || !window.Chart || !Array.isArray(values) || !values.length) return;
+        const barValuePlugin = {
+            id: 'barValuePlugin',
+            afterDatasetsDraw(chart) {
+                const { ctx } = chart;
+                const meta = chart.getDatasetMeta(0);
+                ctx.save();
+                ctx.font = 'bold 11px sans-serif';
+                ctx.fillStyle = '#1f2937';
+                ctx.textAlign = 'center';
+                meta.data.forEach((bar, index) => {
+                    const val = values[index];
+                    if (val === null || val === undefined) return;
+                    const pos = bar.tooltipPosition();
+                    const label = Number.isFinite(val) ? Math.round(val) : val;
+                    const baseY = Number.isFinite(bar.base) ? bar.base : chart.chartArea.bottom;
+                    const y = Math.min(chart.chartArea.bottom - 8, baseY - 8);
+                    ctx.fillText(label, pos.x, y);
+                });
+                ctx.restore();
+            }
+        };
         new Chart(el, {
             type: 'bar',
             data: {
@@ -499,6 +1083,7 @@
                     borderSkipped: false
                 }]
             },
+            plugins: [barValuePlugin],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -511,9 +1096,34 @@
         });
     }
 
+    function safeBar(id, dataset, color) {
+        if (!dataset) return;
+        createBar(id, dataset.labels || [], dataset.data || [], color);
+    }
+
     function createLineArea(id, labels, values) {
         const el = document.getElementById(id);
         if (!el || !window.Chart || !Array.isArray(values) || !values.length) return;
+        const lineValuePlugin = {
+            id: 'lineValuePlugin',
+            afterDatasetsDraw(chart) {
+                const { ctx } = chart;
+                const meta = chart.getDatasetMeta(0);
+                ctx.save();
+                ctx.font = 'bold 11px sans-serif';
+                ctx.fillStyle = '#1f2937';
+                ctx.textAlign = 'center';
+                meta.data.forEach((point, index) => {
+                    const val = values[index];
+                    if (val === null || val === undefined) return;
+                    const pos = point.tooltipPosition();
+                    const label = Number.isFinite(val) ? Math.round(val) : val;
+                    const y = Math.max(chart.chartArea.top + 12, pos.y - 10);
+                    ctx.fillText(label, pos.x, y);
+                });
+                ctx.restore();
+            }
+        };
         new Chart(el, {
             type: 'line',
             data: {
@@ -528,6 +1138,7 @@
                     pointBackgroundColor: '#3b82f6'
                 }]
             },
+            plugins: [lineValuePlugin],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -540,63 +1151,482 @@
         });
     }
 
-    createDoughnut(
-        'chartStatusClientes',
-        statusData.labels || [],
-        statusData.data || [],
-        ['#9CA3AF', '#F59E0B', '#10B981', '#3B82F6', '#EF4444', '#475569'],
-        '70%',
-        true,
-        true,
-        ['Novas', 'Em Andamento', 'Finalizadas', 'Futuras', 'Paradas', 'Canceladas']
-    );
+    
+    const statusLabels = (statusData.labels && statusData.labels.length)
+        ? statusData.labels
+        : ['Novas', 'Em Andamento', 'Paradas', 'Futuras', 'Sem Previsao', 'Concluidas', 'Canceladas'];
 
-    let gargalosLabels = Array.isArray(gargalosData.labels) ? gargalosData.labels : [];
-    let gargalosValues = Array.isArray(gargalosData.data) ? gargalosData.data : [];
-    if (!gargalosValues.length && Array.isArray(paradasList) && paradasList.length) {
-        const motivosMap = {};
-        paradasList.forEach((item) => {
-            const motivo = (item && item.motivo_parada) ? String(item.motivo_parada) : 'Motivo não informado';
-            motivosMap[motivo] = (motivosMap[motivo] || 0) + 1;
+    registerLazy('chartStatusClientes', function () {
+        createBar(
+            'chartStatusClientes',
+            statusLabels,
+            statusData.data || [],
+            'rgba(37, 99, 235, 0.85)'
+        );
+    });
+
+    function initParadasChart(sectionEl) {
+        const section = sectionEl || document.getElementById('paradas-section');
+        if (!section) return;
+
+        let gargalosLabels = parseSectionJson(section.getAttribute('data-gargalos-labels'), []);
+        let gargalosValues = parseSectionJson(section.getAttribute('data-gargalos-values'), []);
+        const sectionParadasList = parseSectionJson(section.getAttribute('data-paradas-items'), []);
+
+        if (!gargalosValues.length && Array.isArray(sectionParadasList) && sectionParadasList.length) {
+            const motivosMap = {};
+            sectionParadasList.forEach((item) => {
+                const motivo = (item && item.motivo_parada) ? String(item.motivo_parada) : 'Motivo não informado';
+                motivosMap[motivo] = (motivosMap[motivo] || 0) + 1;
+            });
+            gargalosLabels = Object.keys(motivosMap);
+            gargalosValues = Object.values(motivosMap);
+        }
+
+        createDoughnut(
+            'chartGargalos',
+            gargalosLabels,
+            gargalosValues,
+            ['#DB2777', '#EA580C', '#047857', '#7C3AED', '#1D4ED8', '#CA8A04'],
+            '58%',
+            true,
+            false,
+            []
+        );
+    }
+
+    registerLazy('chartRankingPeriodo', function () {
+        createBar(
+            'chartRankingPeriodo',
+            rankingData.labels || [],
+            rankingData.data || [],
+            'rgba(20, 184, 166, 0.75)'
+        );
+    });
+
+    registerLazy('chartVelocidade', function () {
+        createBar(
+            'chartVelocidade',
+            velocidadeData.labels || [],
+            velocidadeData.data || [],
+            'rgba(59, 130, 246, 0.85)'
+        );
+    });
+
+    registerLazy('chartPrevisao', function () {
+        createBar(
+            'chartPrevisao',
+            previsaoData.labels || [],
+            previsaoData.data || [],
+            'rgba(20, 184, 166, 0.72)'
+        );
+    });
+
+    registerLazy('chartSegmento', function () {
+        safeBar('chartSegmento', detalhesData.segmento, 'rgba(59, 130, 246, 0.82)');
+    });
+    registerLazy('chartModalidades', function () {
+        safeBar('chartModalidades', detalhesData.modalidades, 'rgba(16, 185, 129, 0.82)');
+    });
+    registerLazy('chartTiposPlanos', function () {
+        safeBar('chartTiposPlanos', detalhesData.tipos_planos, 'rgba(245, 158, 11, 0.8)');
+    });
+    registerLazy('chartPagamentos', function () {
+        safeBar('chartPagamentos', detalhesData.pagamento, 'rgba(99, 102, 241, 0.82)');
+    });
+    registerLazy('chartSistemaAnterior', function () {
+        safeBar('chartSistemaAnterior', detalhesData.sistema_anterior, 'rgba(14, 116, 144, 0.8)');
+    });
+    registerLazy('chartRecorrencia', function () {
+        safeBar('chartRecorrencia', detalhesData.recorrencia, 'rgba(234, 88, 12, 0.82)');
+    });
+    registerLazy('chartHorarios', function () {
+        safeBar('chartHorarios', detalhesData.horarios, 'rgba(217, 119, 6, 0.82)');
+    });
+    registerLazy('chartAlunosAtivos', function () {
+        safeBar('chartAlunosAtivos', alunosData, 'rgba(148, 163, 184, 0.82)');
+    });
+
+    const recursoPalette = ['#94a3b8', '#22c55e', '#ef4444'];
+    registerLazy('chartDiaria', function () { safeBar('chartDiaria', recursosData.diaria, recursoPalette); });
+    registerLazy('chartFreepass', function () { safeBar('chartFreepass', recursosData.freepass, recursoPalette); });
+    registerLazy('chartImportacao', function () { safeBar('chartImportacao', recursosData.importacao, recursoPalette); });
+    registerLazy('chartBoleto', function () { safeBar('chartBoleto', recursosData.boleto, recursoPalette); });
+    registerLazy('chartNotaFiscal', function () { safeBar('chartNotaFiscal', recursosData.nota_fiscal, recursoPalette); });
+    registerLazy('chartCatraca', function () { safeBar('chartCatraca', recursosData.catraca, recursoPalette); });
+    registerLazy('chartFacial', function () { safeBar('chartFacial', recursosData.facial, recursoPalette); });
+    registerLazy('chartWellhub', function () { safeBar('chartWellhub', recursosData.wellhub, recursoPalette); });
+    registerLazy('chartTotalpass', function () { safeBar('chartTotalpass', recursosData.totalpass, recursoPalette); });
+
+    initLazyCharts();
+    initParadasChart();
+
+
+    function normalizeNivelReceita(raw) {
+        if (!raw) return 'pendente';
+        const s = String(raw).toLowerCase();
+        if (s.includes('nao definido') || s.includes('nao definido') || s.includes('pendente')) return 'pendente';
+        if (s.includes('grande')) return 'diamante';
+        if (s.includes('prata')) return 'prata';
+        if (s.includes('ouro') || s.includes('gold')) return 'ouro';
+        if (s.includes('platina') || s.includes('platinum')) return 'platina';
+        if (s.includes('diamante') || s.includes('diamond')) return 'diamante';
+        return 'pendente';
+    }
+
+    function labelFromBucket(bucket) {
+        const map = {
+            prata: 'Prata (MRR < 699)',
+            ouro: 'Ouro (MRR 700-999)',
+            platina: 'Platina (MRR 1k-1.9k)',
+            diamante: 'Diamante (MRR > 2k)',
+            pendente: 'Nao Definido / Pendente'
+        };
+        return map[bucket] || 'Nao Definido / Pendente';
+    }
+
+    function renderMrrList(bucket) {
+        const listEl = document.getElementById('mrrClientesList');
+        const emptyEl = document.getElementById('mrrClientesEmpty');
+        const countEl = document.getElementById('mrrClientesCount');
+        const subtitleEl = document.getElementById('mrrClientesSubtitle');
+        if (!listEl) return;
+
+        const items = (Array.isArray(mrrImplList) ? mrrImplList : []).filter((impl) => {
+            const nivel = impl && (impl.nivel_receita || '');
+            return normalizeNivelReceita(nivel) === bucket;
         });
-        gargalosLabels = Object.keys(motivosMap);
-        gargalosValues = Object.values(motivosMap);
+
+        items.sort((a, b) => String(a?.nome_empresa || '').localeCompare(String(b?.nome_empresa || '')));
+
+        listEl.innerHTML = '';
+        if (!items.length) {
+            emptyEl.style.display = '';
+            countEl.textContent = '0';
+            subtitleEl.textContent = labelFromBucket(bucket);
+            return;
+        }
+        emptyEl.style.display = 'none';
+        countEl.textContent = String(items.length);
+        subtitleEl.textContent = labelFromBucket(bucket);
+
+        items.forEach((impl) => {
+            const li = document.createElement('li');
+            li.className = 'list-group-item d-flex align-items-center justify-content-between';
+            const left = document.createElement('div');
+            const name = document.createElement('div');
+            name.className = 'fw-semibold';
+            name.textContent = impl.nome_empresa || '(Sem nome)';
+            const meta = document.createElement('div');
+            meta.className = 'text-muted small';
+            const cs = impl.cs_nome || impl.usuario_cs || '';
+            meta.textContent = cs ? `CS: ${cs}` : '';
+            left.appendChild(name);
+            if (meta.textContent) left.appendChild(meta);
+
+            const right = document.createElement('span');
+            right.className = 'badge text-bg-light';
+            right.textContent = (impl.status || '').toString();
+
+            li.appendChild(left);
+            if (right.textContent) li.appendChild(right);
+            listEl.appendChild(li);
+        });
     }
-    createDoughnut(
-        'chartGargalos',
-        gargalosLabels,
-        gargalosValues,
-        ['#EC4899', '#F97316', '#F59E0B', '#38BDF8', '#8B5CF6', '#94A3B8'],
-        '58%',
-        true,
-        false,
-        []
-    );
 
-    createLineArea(
-        'chartRankingPeriodo',
-        rankingData.labels || [],
-        rankingData.data || []
-    );
-
-    createBar(
-        'chartVelocidade',
-        velocidadeData.labels || [],
-        velocidadeData.data || [],
-        'rgba(59, 130, 246, 0.85)'
-    );
-
-    createBar(
-        'chartPrevisao',
-        previsaoData.labels || [],
-        previsaoData.data || [],
-        'rgba(20, 184, 166, 0.72)'
-    );
-
-    if (window.flatpickr) {
-        window.flatpickr('#start_date_filter', { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true });
-        window.flatpickr('#end_date_filter', { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true });
+    function setupMrrClick() {
+        const modalEl = document.getElementById('mrrClientesModal');
+        if (!modalEl) return;
+        const btns = document.querySelectorAll('.mrr-count-link');
+        btns.forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const bucket = btn.getAttribute('data-mrr') || 'pendente';
+                renderMrrList(bucket);
+                if (window.bootstrap && window.bootstrap.Modal) {
+                    const modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
+                    modal.show();
+                }
+            });
+        });
     }
+
+    setupMrrClick();
+
+
+    function normalizeStatus(raw) {
+        const s = (raw || '').toString().trim().toLowerCase();
+        if (!s) return 'desconhecido';
+        return s;
+    }
+
+    function kpiLabelFromKey(key) {
+        const map = {
+            total: 'Total Clientes',
+            nova: 'Novas',
+            andamento: 'Em Andamento',
+            futura: 'Futuras',
+            sem_previsao: 'Sem Previsao',
+            parada: 'Paradas',
+            cancelada: 'Canceladas',
+            finalizada: 'Concluidas'
+        };
+        return map[key] || 'Clientes';
+    }
+
+    function renderKpiList(key) {
+        const listEl = document.getElementById('mrrClientesList');
+        const emptyEl = document.getElementById('mrrClientesEmpty');
+        const countEl = document.getElementById('mrrClientesCount');
+        const subtitleEl = document.getElementById('mrrClientesSubtitle');
+        if (!listEl) return;
+
+        const items = (Array.isArray(implList) ? implList : []).filter((impl) => {
+            if (key === 'total') return true;
+            const status = normalizeStatus(impl && impl.status);
+            return status === key;
+        });
+
+        items.sort((a, b) => String(a?.nome_empresa || '').localeCompare(String(b?.nome_empresa || '')));
+
+        listEl.innerHTML = '';
+        if (!items.length) {
+            emptyEl.style.display = '';
+            countEl.textContent = '0';
+            subtitleEl.textContent = kpiLabelFromKey(key);
+            return;
+        }
+        emptyEl.style.display = 'none';
+        countEl.textContent = String(items.length);
+        subtitleEl.textContent = kpiLabelFromKey(key);
+
+        items.forEach((impl) => {
+            const li = document.createElement('li');
+            li.className = 'list-group-item d-flex align-items-center justify-content-between';
+            const left = document.createElement('div');
+            const name = document.createElement('div');
+            name.className = 'fw-semibold';
+            name.textContent = impl.nome_empresa || '(Sem nome)';
+            const meta = document.createElement('div');
+            meta.className = 'text-muted small';
+            const cs = impl.cs_nome || impl.usuario_cs || '';
+            meta.textContent = cs ? `CS: ${cs}` : '';
+            left.appendChild(name);
+            if (meta.textContent) left.appendChild(meta);
+
+            const right = document.createElement('span');
+            right.className = 'badge text-bg-light';
+            right.textContent = (impl.status || '').toString();
+
+            li.appendChild(left);
+            if (right.textContent) li.appendChild(right);
+            listEl.appendChild(li);
+        });
+    }
+
+    function setupKpiClick() {
+        const modalEl = document.getElementById('mrrClientesModal');
+        if (!modalEl) return;
+        const btns = document.querySelectorAll('.kpi-count-link');
+        btns.forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const key = btn.getAttribute('data-kpi') || 'total';
+                renderKpiList(key);
+                if (window.bootstrap && window.bootstrap.Modal) {
+                    const modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
+                    modal.show();
+                }
+            });
+        });
+    }
+
+    setupKpiClick();
+
+    function setFormLoading(form, isLoading) {
+        if (!form) return;
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (!submitBtn) return;
+        if (!submitBtn.dataset.baseLabel) {
+            submitBtn.dataset.baseLabel = submitBtn.innerHTML;
+        }
+        if (isLoading) {
+            submitBtn.classList.add('is-loading');
+            submitBtn.setAttribute('aria-busy', 'true');
+            submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Filtrando...';
+        } else {
+            submitBtn.classList.remove('is-loading');
+            submitBtn.removeAttribute('aria-busy');
+            submitBtn.innerHTML = submitBtn.dataset.baseLabel;
+        }
+    }
+
+    function syncFlatpickrInputValue(input) {
+        if (!input) return;
+        const picker = input._flatpickr;
+        const altInput = picker && picker.altInput ? picker.altInput : null;
+        const visibleValue = ((altInput && altInput.value) || input.value || '').trim();
+
+        if (!visibleValue) {
+            input.value = '';
+            return;
+        }
+
+        const brMatch = visibleValue.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        if (brMatch) {
+            input.value = `${brMatch[3]}-${brMatch[2]}-${brMatch[1]}`;
+            return;
+        }
+
+        const isoMatch = visibleValue.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (isoMatch) {
+            input.value = visibleValue;
+        }
+    }
+
+    function syncFlatpickrFormValues(form) {
+        if (!form) return;
+        const inputs = form.querySelectorAll('input.flatpickr-date');
+        inputs.forEach((input) => syncFlatpickrInputValue(input));
+    }
+
+    function setupGlobalFilterLoading() {
+        const globalForm = document.querySelector('form.filters-grid');
+        if (!globalForm || globalForm.dataset.loadingBound === '1') return;
+        globalForm.dataset.loadingBound = '1';
+        globalForm.addEventListener('submit', () => {
+            syncFlatpickrFormValues(globalForm);
+            setFormLoading(globalForm, true);
+        });
+    }
+
+    function setupMiniFilterClearButtons() {
+        const buttons = document.querySelectorAll('button.mini-filter-clear[data-clear-fields]');
+        buttons.forEach((button) => {
+            if (button.dataset.clearBound === '1') return;
+            button.dataset.clearBound = '1';
+            button.addEventListener('click', () => {
+                const form = button.closest('form');
+                if (!form) return;
+
+                const fields = (button.dataset.clearFields || '')
+                    .split(',')
+                    .map((value) => value.trim())
+                    .filter(Boolean);
+
+                let defaults = {};
+                try {
+                    defaults = JSON.parse(button.dataset.clearDefaults || '{}');
+                } catch (_) {
+                    defaults = {};
+                }
+
+                fields.forEach((fieldName) => {
+                    const elements = form.querySelectorAll(`[name="${fieldName}"]`);
+                    elements.forEach((element) => {
+                        const defaultValue = Object.prototype.hasOwnProperty.call(defaults, fieldName)
+                            ? defaults[fieldName]
+                            : '';
+                        if (element.tagName === 'SELECT') {
+                            element.value = defaultValue;
+                        } else {
+                            element.value = defaultValue;
+                        }
+                    });
+                });
+
+                if (typeof form.requestSubmit === 'function') {
+                    form.requestSubmit();
+                } else {
+                    form.submit();
+                }
+            });
+        });
+    }
+
+    function initDatePickers(root) {
+        if (!window.flatpickr) return;
+        const scope = root || document;
+        const inputs = scope.querySelectorAll('input.flatpickr-date');
+        inputs.forEach((input) => {
+            if (input._flatpickr) return;
+            window.flatpickr(input, {
+                dateFormat: 'Y-m-d',
+                altInput: true,
+                altFormat: 'd/m/Y',
+                allowInput: true
+            });
+        });
+    }
+
+    function setupAjaxMiniFilters() {
+        const forms = document.querySelectorAll('form.mini-filter[data-ajax-target]');
+        forms.forEach((form) => {
+            if (form.dataset.ajaxBound === '1') return;
+            form.dataset.ajaxBound = '1';
+            form.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                syncFlatpickrFormValues(form);
+                isMiniFilterUpdating = true;
+                setFormLoading(form, true);
+                const targetSelector = form.getAttribute('data-ajax-target');
+                const currentTarget = targetSelector ? document.querySelector(targetSelector) : null;
+                if (!targetSelector || !currentTarget) {
+                    isMiniFilterUpdating = false;
+                    form.submit();
+                    return;
+                }
+
+                const params = new URLSearchParams(new FormData(form));
+                const url = `${window.location.pathname}?${params.toString()}`;
+
+                try {
+                    const response = await fetch(url, {
+                        method: 'GET',
+                        credentials: 'include',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    if (!response.ok) {
+                        isMiniFilterUpdating = false;
+                        form.submit();
+                        return;
+                    }
+
+                    const html = await response.text();
+                    const doc = new DOMParser().parseFromString(html, 'text/html');
+                    const newTarget = doc.querySelector(targetSelector);
+                    const liveTarget = document.querySelector(targetSelector);
+                    if (!newTarget || !liveTarget) {
+                        setFormLoading(form, false);
+                        isMiniFilterUpdating = false;
+                        form.submit();
+                        return;
+                    }
+
+                    liveTarget.replaceWith(newTarget);
+                    const nextSignatureSource = doc.querySelector('.gerencial-page[data-analytics-signature]');
+                    if (nextSignatureSource) {
+                        liveSignature = nextSignatureSource.getAttribute('data-analytics-signature') || liveSignature;
+                    }
+                    if (targetSelector === '#paradas-section') {
+                        initParadasChart(document.querySelector('#paradas-section'));
+                    }
+                    window.history.replaceState(null, '', url);
+                    setupAjaxMiniFilters();
+                    setupMiniFilterClearButtons();
+                    initDatePickers(document);
+                    isMiniFilterUpdating = false;
+                } catch (_) {
+                    setFormLoading(form, false);
+                    isMiniFilterUpdating = false;
+                    form.submit();
+                }
+            });
+        });
+    }
+
+    setupGlobalFilterLoading();
+    setupAjaxMiniFilters();
+    setupMiniFilterClearButtons();
+    initDatePickers(document);
 
     const now = new Date();
     const hour = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -604,6 +1634,7 @@
     if (updatedLabel) updatedLabel.textContent = `Atualizado: Hoje, ${hour}`;
 
     async function checkLiveUpdates() {
+        if (isMiniFilterUpdating) return;
         if (document.visibilityState !== 'visible') return;
         try {
             const qs = window.location.search || '';
@@ -633,5 +1664,10 @@
     setInterval(checkLiveUpdates, 5000);
 })();
 </script>
+
+
+    </div>
+</div>
+
 {% endblock %}
 

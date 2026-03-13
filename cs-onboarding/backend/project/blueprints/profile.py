@@ -2,11 +2,20 @@ import io
 import os
 import time
 
-from flask import Blueprint, current_app, flash, g, render_template, request, session
+from flask import (
+    Blueprint,
+    current_app,
+    flash,
+    g,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 from werkzeug.utils import secure_filename
 
 from ..blueprints.auth import login_required
-from ..common.context_navigation import redirect_to_current_dashboard
 from ..config.logging_config import app_logger
 from ..core.extensions import r2_client
 from ..modules.auth.application.auth_service import atualizar_dados_perfil_service
@@ -31,7 +40,7 @@ def _upload_profile_photo(foto, user_email):
 
     try:
         foto_bytes = foto.read()
-    except Exception:
+    except Exception as exc:
         app_logger.error(f"Falha ao ler bytes da foto para {user_email}")
         return None
 
@@ -57,13 +66,13 @@ def _upload_profile_photo(foto, user_email):
             return foto_url
 
         except Exception as e:
-            app_logger.error(f"Falha no upload para R2 para {user_email}: {e}")
+            app_logger.error(f"Falha no upload para R2 para {user_email}: {e}", exc_info=True)
             # Continua para fallback local
 
     # Fallback: salvar localmente
     try:
         unique_name = f"{user_email}_{int(time.time())}_{filename}"
-        static_dir = current_app.static_folder
+        static_dir = current_app.static_folder or "static"
         target_dir = os.path.join(static_dir, "uploads", "profile")
         os.makedirs(target_dir, exist_ok=True)
         save_path = os.path.join(target_dir, unique_name)
@@ -76,7 +85,7 @@ def _upload_profile_photo(foto, user_email):
         return foto_url
 
     except Exception as e:
-        app_logger.error(f"Falha ao salvar foto local para {user_email}: {e}")
+        app_logger.error(f"Falha ao salvar foto local para {user_email}: {e}", exc_info=True)
         flash("Erro ao salvar foto.", "error")
         return None
 
@@ -85,7 +94,6 @@ def _upload_profile_photo(foto, user_email):
 @login_required
 def before_request():
     """Protege todas as rotas de perfil."""
-    pass
 
 
 @profile_bp.route("/")
@@ -104,16 +112,27 @@ def profile_modal():
 def save_profile():
     """Salva as informações básicas do perfil e faz upload da foto."""
 
+    from ..constants import CARGOS_VALIDOS
+
     nome = request.form.get("nome")
     cargo = request.form.get("cargo")
     foto = request.files.get("foto")
 
     if not nome or not cargo:
         flash("Nome e Cargo são obrigatórios.", "error")
-        return redirect_to_current_dashboard()
+        return redirect(request.form.get("next") or url_for("profile.profile", context=getattr(g, "modulo_atual", None)))
+
+    if cargo not in CARGOS_VALIDOS:
+        flash(f"Cargo inválido. Escolha entre: {', '.join(CARGOS_VALIDOS)}.", "error")
+        return redirect(request.form.get("next") or url_for("profile.profile", context=getattr(g, "modulo_atual", None)))
 
     # Manter foto atual se não houver nova
-    foto_url = g.perfil.get("foto_url")
+    foto_url = None
+    if hasattr(g, "perfil") and g.perfil:
+        if isinstance(g.perfil, dict):
+            foto_url = g.perfil.get("foto_url")
+        else:
+            foto_url = getattr(g.perfil, "foto_url", None)
 
     # Fazer upload da nova foto se fornecida
     if foto and foto.filename:
@@ -143,7 +162,7 @@ def save_profile():
         flash("Perfil atualizado com sucesso!", "success")
 
     except Exception as e:
-        app_logger.error(f"Erro ao salvar perfil no DB para {g.user_email}: {e}")
+        app_logger.error(f"Erro ao salvar perfil no DB para {g.user_email}: {e}", exc_info=True)
         flash("Erro ao salvar perfil no banco de dados.", "error")
 
     if request.headers.get("HX-Request") == "true":
@@ -155,4 +174,4 @@ def save_profile():
         response.headers["X-Updated-Cargo"] = cargo or ""
         return response
 
-    return redirect_to_current_dashboard()
+    return redirect(request.form.get("next") or url_for("profile.profile", context=getattr(g, "modulo_atual", None)))

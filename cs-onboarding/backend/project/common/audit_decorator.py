@@ -3,8 +3,12 @@ Decorator para Auditoria
 """
 
 import functools
+import logging
+logger = logging.getLogger(__name__)
 
 from flask import g
+
+_logger = logging.getLogger(__name__)
 
 from ..modules.audit.application.audit_service import log_action
 
@@ -47,8 +51,8 @@ def audit(action: str, target_type: str):
                         data = response.get_json()
                         if data and isinstance(data, dict):
                             target_id = data.get("id") or data.get("implantacao_id")
-                    except:
-                        pass
+                    except Exception as e:
+                        _logger.warning(f"Falha ao extrair ID da resposta JSON para auditoria: {e}", exc_info=True)
 
                 # Registrar log
                 if target_id:
@@ -58,9 +62,9 @@ def audit(action: str, target_type: str):
                         target_id=str(target_id),
                         user_email=getattr(g, "user_email", None),
                     )
-            except Exception:
+            except Exception as e:
                 # Auditoria não deve quebrar a requisição
-                pass
+                _logger.warning(f"Falha ao registrar log de auditoria (action={action}): {e}", exc_info=True)
 
             return response
 

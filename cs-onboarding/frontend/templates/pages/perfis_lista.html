@@ -5,7 +5,7 @@
 {% block head_extra %}
 <style>
     .access-profiles-wrap {
-        --bg-main: #f3f6fb;
+        --bg-main: #ffffff;
         --bg-card: #ffffff;
         --bg-card-soft: #ffffff;
         --border: #d8e2f1;
@@ -57,15 +57,15 @@
     }
 
     .access-search {
-        width: 300px;
-        height: 44px;
+        width: 260px;
+        height: 38px;
         border-radius: 10px;
         border: 1px solid transparent;
         background: #ffffff;
         color: #263850;
         padding: 0 14px 0 36px;
         outline: none;
-        font-size: 15px;
+        font-size: 14px;
         transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
 
@@ -88,21 +88,21 @@
         top: 50%;
         transform: translateY(-50%);
         color: #7d90ad;
-        font-size: 15px;
+        font-size: 14px;
     }
 
     .access-create-btn {
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        height: 44px;
-        padding: 0 18px;
+        height: 38px;
+        padding: 0 14px;
         border-radius: 10px;
         border: 0;
         text-decoration: none;
         color: #ffffff;
         background: linear-gradient(180deg, var(--accent-strong) 0%, var(--accent) 100%);
-        font-size: 17px;
+        font-size: 14px;
         font-weight: 600;
         transition: transform 0.2s ease, filter 0.2s ease;
     }
@@ -122,8 +122,8 @@
     .access-profiles-grid {
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 14px;
-        padding-bottom: 8px;
+        gap: 18px;
+        padding-bottom: 12px;
     }
 
     .access-profile-card {
@@ -131,13 +131,13 @@
         border: 1px solid #d8e2f1;
         border-radius: var(--card-radius);
         overflow: hidden;
-        min-height: 210px;
+        min-height: 260px;
         display: flex;
         flex-direction: column;
     }
 
     .access-profile-main {
-        padding: 12px 12px 10px;
+        padding: 16px 16px 12px;
         flex: 1;
         display: flex;
         flex-direction: column;
@@ -146,58 +146,58 @@
     .access-profile-main-header {
         display: flex;
         align-items: flex-start;
-        margin-bottom: 8px;
+        margin-bottom: 12px;
     }
 
     .access-profile-icon {
-        width: 30px;
-        height: 30px;
+        width: 36px;
+        height: 36px;
         border-radius: 6px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         color: #ffffff;
-        font-size: 14px;
+        font-size: 16px;
         box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
     }
 
     .access-profile-name {
-        margin: 0 0 6px;
+        margin: 0 0 8px;
         color: #152238;
-        font-size: 14px;
+        font-size: 20px;
         font-weight: 600;
         line-height: 1.25;
     }
 
     .access-profile-desc {
-        margin: 0 0 10px;
+        margin: 0 0 14px;
         color: #5f7393;
-        font-size: 11px;
+        font-size: 13px;
         line-height: 1.45;
-        min-height: 50px;
+        min-height: 66px;
     }
 
     .access-profile-stats {
         margin-top: auto;
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 10px;
+        gap: 12px;
         border-top: 1px solid #e2e9f5;
-        padding-top: 10px;
+        padding-top: 14px;
     }
 
     .access-profile-stat-label {
         color: #6e83a4;
         text-transform: uppercase;
-        font-size: 10px;
+        font-size: 11px;
         letter-spacing: 0.06em;
-        margin-bottom: 2px;
+        margin-bottom: 4px;
         font-weight: 600;
     }
 
     .access-profile-stat-value {
         color: #152238;
-        font-size: 18px;
+        font-size: 24px;
         line-height: 1.08;
         font-weight: 700;
         letter-spacing: -0.01em;
@@ -205,7 +205,7 @@
 
     .access-profile-stat-subvalue {
         color: #152238;
-        font-size: 16px;
+        font-size: 22px;
         line-height: 1.08;
         font-weight: 700;
         letter-spacing: -0.01em;
@@ -213,14 +213,14 @@
 
     .access-profile-footer {
         border-top: 1px solid #e2e9f5;
-        padding: 8px 12px;
+        padding: 12px 16px;
         text-align: right;
     }
 
     .access-edit-link {
         color: #2f7eff;
         text-decoration: none;
-        font-size: 12px;
+        font-size: 14px;
         font-weight: 600;
         display: inline-flex;
         align-items: center;
@@ -381,7 +381,7 @@
 {% endblock %}
 
 {% block scripts_extra %}
-<script>
+<script nonce="{{ csp_nonce() }}">
     document.addEventListener('DOMContentLoaded', function () {
         const searchInput = document.getElementById('accessProfileSearch');
         const cards = Array.from(document.querySelectorAll('.access-profile-card'));

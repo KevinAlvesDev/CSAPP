@@ -147,17 +147,23 @@ Macro para barra de progresso
 Uso: {{ progress_bar(impl) }}
 #}
 {% macro progress_bar(impl) %}
-{% if impl.status not in ['andamento', 'atrasada', 'parada'] %}
+{% if impl.status in ['finalizada', 'concluida', 'concluída', 'entregue'] %}
+<div class="progress" style="height: 20px;">
+    <div class="progress-bar bg-success" role="progressbar" style="width: 100%;" aria-valuenow="100">100%</div>
+</div>
+{% elif impl.status == 'cancelada' %}
+<span class="badge bg-secondary">Cancelada</span>
+{% elif impl.status not in ['andamento', 'atrasada', 'parada'] %}
 <span class="badge bg-secondary">0%</span>
 {% else %}
-{% set progress_color = 'bg-danger' if impl.progresso < 40 else ('bg-warning text-dark' if impl.progresso < 80 else 'bg-success') %}
-<div class="progress" style="height: 20px;">
+{% set progress_color = 'bg-danger' if impl.progresso < 40 else ('bg-warning text-dark' if impl.progresso < 80
+    else 'bg-success' ) %} <div class="progress" style="height: 20px;">
     <div class="progress-bar progress-bar-striped {{ progress_color }} js-progress-bar" data-impl-id="{{ impl.id }}"
         data-progress-url="{{ url_for('api.progresso_implantacao', impl_id=impl.id) }}" role="progressbar"
         style="width: {{ impl.progresso }}%;" aria-valuenow="{{ impl.progresso }}">{{ impl.progresso }}%</div>
-</div>
-{% endif %}
-{% endmacro %}
+    </div>
+    {% endif %}
+    {% endmacro %}
 
     {#
     Macro para coluna de empresa (célula completa)

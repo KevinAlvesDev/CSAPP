@@ -37,7 +37,6 @@ from .crud import (
 # Importações de estrutura.py
 from .estrutura import (
     _converter_items_para_plano,
-    _criar_estrutura_plano,
     _criar_estrutura_plano_checklist,
     _criar_items_recursivo,
     atualizar_estrutura_plano,
@@ -57,7 +56,6 @@ __all__ = [
     "_clonar_plano_para_implantacao",
     "_clonar_plano_para_implantacao_checklist",
     "_converter_items_para_plano",
-    "_criar_estrutura_plano",
     "_criar_estrutura_plano_checklist",
     "_criar_items_recursivo",
     "_plano_usa_checklist_items",

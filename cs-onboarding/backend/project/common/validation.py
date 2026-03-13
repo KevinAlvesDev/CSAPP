@@ -7,8 +7,7 @@ import re
 from typing import Any
 
 
-class ValidationError(Exception):
-    pass
+from .exceptions import ValidationError
 
 
 COMMON_PASSWORDS = {

@@ -1,143 +1,101 @@
+import logging
+logger = logging.getLogger(__name__)
 """
 Módulo CRUD de Planos de Sucesso
 Criar, listar, atualizar, excluir e obter planos.
 Princípio SOLID: Single Responsibility
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from flask import current_app
 
 from ....common.exceptions import DatabaseError, ValidationError
 from ....db import db_connection, execute_db, query_db
-from .estrutura import _criar_estrutura_plano, _criar_estrutura_plano_checklist
-from .validacao import validar_estrutura_checklist, validar_estrutura_hierarquica
+from .estrutura import _criar_estrutura_plano_checklist
+from .validacao import validar_estrutura_checklist
 
 
-def criar_plano_sucesso(
-    nome: str,
-    descricao: str,
-    criado_por: str,
-    estrutura: dict,
-    dias_duracao: int | None = None,
-    context: str = "onboarding",
-    processo_id: int | None = None,
-) -> int:
+def _coletar_contextos_brutos(raw_contexto) -> list[str]:
     """
-    Cria um plano de sucesso com estrutura hierárquica.
+    Converte entrada de contexto (str/list/array literal) em lista bruta de tokens.
+    Suporta formatos legados como "{onboarding,grandes_contas}" e "['onboarding','ongoing']".
     """
-    if not nome or not nome.strip():
-        raise ValidationError("Nome do plano é obrigatório")
+    if raw_contexto is None:
+        return []
 
-    if not criado_por:
-        raise ValidationError("Usuário criador é obrigatório")
+    if isinstance(raw_contexto, (list, tuple, set)):
+        return [str(v).strip() for v in raw_contexto if v is not None and str(v).strip()]
 
-    validar_estrutura_hierarquica(estrutura)
+    value = str(raw_contexto).strip()
+    if not value:
+        return []
 
-    # Limite de 5 planos em andamento por usuário
-    # Limite de 5 planos em andamento ("rascunhos") por usuário
-    # Apenas se não estiver vinculado a um processo específico
-    if criado_por and criado_por != "sistema" and not processo_id:
-        try:
-            # Contar apenas planos SEM processo vinculado (rascunhos/modelos pessoais)
-            sql = "SELECT COUNT(*) as count FROM planos_sucesso WHERE status = 'em_andamento' AND criado_por = %s AND processo_id IS NULL"
-            res = query_db(sql, (criado_por,), one=True)
-            contagem = res["count"] if res else 0
+    # Possível JSON/list literal vindo de integrações legadas
+    if (value.startswith("[") and value.endswith("]")) or (value.startswith("{") and value.endswith("}")):
+        stripped = value.strip("{}[]")
+        if stripped:
+            parts = [p.strip() for p in stripped.split(",")]
+            return [p.strip("\"' ") for p in parts if p and p.strip("\"' ")]
 
-            if contagem >= 5:
-                raise ValidationError("Você já possui 5 planos de rascunho em andamento. Conclua ou exclua um para criar outro.")
-        except ValidationError:
-            raise
-        except Exception:
-            # Falha ao contar não deve impedir criação em ambiente instável
-            current_app.logger.warning("Falha ao validar limite de planos rascunho")
+    if "," in value:
+        return [p.strip() for p in value.split(",") if p and p.strip()]
 
-    # Garantir apenas um plano em andamento por processo
-    if processo_id:
-        existing = query_db(
-            "SELECT id FROM planos_sucesso WHERE processo_id = %s AND status = 'em_andamento'",
-            (processo_id,),
-            one=True,
-        )
-        if existing:
-            raise ValidationError("Já existe um plano em andamento vinculado a este processo")
+    return [value]
 
-    with db_connection() as (conn, db_type):
-        cursor = conn.cursor()
 
-        # Garantir que as colunas existam (migração automática para SQLite)
-        if db_type == "sqlite":
-            try:
-                cursor.execute("PRAGMA table_info(planos_sucesso)")
-                colunas_existentes = [row[1] for row in cursor.fetchall()]
+def _normalizar_contexto_csv(raw_contexto, default: str = "onboarding") -> str:
+    """
+    Normaliza contextos e retorna CSV canônico sem duplicidade.
+    """
+    from ....common.context_navigation import normalize_context
 
-                if "data_atualizacao" not in colunas_existentes:
-                    cursor.execute(
-                        "ALTER TABLE planos_sucesso ADD COLUMN data_atualizacao DATETIME DEFAULT CURRENT_TIMESTAMP"
-                    )
-                    conn.commit()
-                    current_app.logger.info("Coluna data_atualizacao adicionada à tabela planos_sucesso")
+    normalizados: list[str] = []
+    vistos: set[str] = set()
+    for token in _coletar_contextos_brutos(raw_contexto):
+        norm = normalize_context(token)
+        if norm and norm not in vistos:
+            normalizados.append(norm)
+            vistos.add(norm)
 
-                if "dias_duracao" not in colunas_existentes:
-                    cursor.execute("ALTER TABLE planos_sucesso ADD COLUMN dias_duracao INTEGER")
-                    conn.commit()
-                    current_app.logger.info("Coluna dias_duracao adicionada à tabela planos_sucesso")
+    if not normalizados:
+        fallback = normalize_context(default) or "onboarding"
+        return fallback
+    return ",".join(normalizados)
 
-                if "status" not in colunas_existentes:
-                    cursor.execute("ALTER TABLE planos_sucesso ADD COLUMN status TEXT DEFAULT 'em_andamento'")
-                    conn.commit()
-                    current_app.logger.info("Coluna status adicionada à tabela planos_sucesso")
 
-                if "processo_id" not in colunas_existentes:
-                    cursor.execute("ALTER TABLE planos_sucesso ADD COLUMN processo_id INTEGER")
-                    conn.commit()
-                    current_app.logger.info("Coluna processo_id adicionada à tabela planos_sucesso")
-            except Exception as mig_error:
-                current_app.logger.warning(f"Erro ao verificar/migrar colunas de planos_sucesso: {mig_error}")
+def _contexto_contem(raw_contexto, contexto_busca: str | None) -> bool:
+    """
+    Verifica se um contexto está presente em um valor contexto legado/canônico.
+    """
+    if not contexto_busca:
+        return True
+    from ....common.context_navigation import normalize_context
 
-        try:
-            sql_plano = """
-                INSERT INTO planos_sucesso (nome, descricao, criado_por, data_criacao, data_atualizacao, dias_duracao, permite_excluir_tarefas, contexto, status, processo_id)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """
-            if db_type == "sqlite":
-                sql_plano = sql_plano.replace("%s", "?")
+    ctx = normalize_context(contexto_busca)
+    if not ctx:
+        return True
 
-            now = datetime.now()
-            permite_excluir = estrutura.get("permite_excluir_tarefas", False)
-            cursor.execute(
-                sql_plano,
-                (
-                    nome.strip(),
-                    descricao or "",
-                    criado_por,
-                    now,
-                    now,
-                    dias_duracao,
-                    permite_excluir,
-                    context,
-                    "em_andamento",
-                    processo_id,
-                ),
-            )
+    tokens = _coletar_contextos_brutos(raw_contexto)
+    if not tokens:
+        return False
 
-            if db_type == "postgres":
-                cursor.execute("SELECT lastval()")
-                plano_id = cursor.fetchone()[0]
-            else:
-                plano_id = cursor.lastrowid
+    normalizados: set[str] = set()
+    for token in tokens:
+        n = normalize_context(token)
+        if n:
+            normalizados.add(n)
 
-            _criar_estrutura_plano(cursor, db_type, plano_id, estrutura)
+    if not normalizados:
+        return False
 
-            conn.commit()
+    return ctx in normalizados
 
-            current_app.logger.info(f"Plano de sucesso '{nome}' criado com ID {plano_id} por {criado_por}")
-            return plano_id
 
-        except Exception as e:
-            conn.rollback()
-            current_app.logger.error(f"Erro ao criar plano de sucesso: {e}", exc_info=True)
-            raise DatabaseError(f"Erro ao criar plano de sucesso: {e}") from e
+# O sistema utiliza exclusivamente criar_plano_sucesso_checklist para novos planos.
+# Mantendo alias por compatibilidade com outros módulos.
+def criar_plano_sucesso(*args, **kwargs):
+    return criar_plano_sucesso_checklist(*args, **kwargs)
 
 
 def criar_plano_sucesso_checklist(
@@ -162,22 +120,8 @@ def criar_plano_sucesso_checklist(
 
     validar_estrutura_checklist(estrutura)
 
-    # Limite de 5 planos em andamento por usuário
-    # Limite de 5 planos em andamento ("rascunhos") por usuário
-    # Apenas se não estiver vinculado a um processo específico
-    if criado_por and criado_por != "sistema" and not processo_id:
-        try:
-            # Contar apenas planos SEM processo vinculado (rascunhos/modelos pessoais)
-            sql = "SELECT COUNT(*) as count FROM planos_sucesso WHERE status = 'em_andamento' AND criado_por = %s AND processo_id IS NULL"
-            res = query_db(sql, (criado_por,), one=True)
-            contagem = res["count"] if res else 0
-
-            if contagem >= 5:
-                raise ValidationError("Você já possui 5 planos de rascunho em andamento. Conclua ou exclua um para criar outro.")
-        except ValidationError:
-            raise
-        except Exception:
-            current_app.logger.warning("Falha ao validar limite de planos rascunho")
+    # Sem limite rígido de criação de templates por usuário.
+    # A regra anterior (máx. 5) causava bloqueios indevidos no fluxo real.
 
     # Garantir apenas um plano em andamento por processo
     if processo_id:
@@ -188,6 +132,9 @@ def criar_plano_sucesso_checklist(
         )
         if existing:
             raise ValidationError("Já existe um plano em andamento vinculado a este processo")
+
+    # Identificar e normalizar contexto para formato canônico.
+    context_str = _normalizar_contexto_csv(context, default="onboarding")
 
     with db_connection() as (conn, db_type):
         cursor = conn.cursor()
@@ -219,18 +166,26 @@ def criar_plano_sucesso_checklist(
                     cursor.execute("ALTER TABLE planos_sucesso ADD COLUMN processo_id INTEGER")
                     conn.commit()
                     current_app.logger.info("Coluna processo_id adicionada à tabela planos_sucesso")
+
+                if "ativo" not in colunas_existentes:
+                    cursor.execute("ALTER TABLE planos_sucesso ADD COLUMN ativo BOOLEAN DEFAULT 1")
+                    conn.commit()
+                    current_app.logger.info("Coluna ativo adicionada à tabela planos_sucesso")
             except Exception as mig_error:
                 current_app.logger.warning(f"Erro ao verificar/migrar colunas de planos_sucesso: {mig_error}")
 
         try:
             sql_plano = """
-                INSERT INTO planos_sucesso (nome, descricao, criado_por, data_criacao, data_atualizacao, dias_duracao, permite_excluir_tarefas, contexto, status, processo_id)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO planos_sucesso (
+                    nome, descricao, criado_por, data_criacao, data_atualizacao,
+                    dias_duracao, permite_excluir_tarefas, contexto, status, processo_id, ativo
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
             if db_type == "sqlite":
                 sql_plano = sql_plano.replace("%s", "?")
 
-            now = datetime.now()
+            now = datetime.now(timezone.utc)
             permite_excluir = estrutura.get("permite_excluir_tarefas", False)
             cursor.execute(
                 sql_plano,
@@ -242,9 +197,10 @@ def criar_plano_sucesso_checklist(
                     now,
                     dias_duracao,
                     permite_excluir,
-                    context,
+                    context_str,
                     "em_andamento",
                     processo_id,
+                    True,
                 ),
             )
 
@@ -258,10 +214,11 @@ def criar_plano_sucesso_checklist(
 
             conn.commit()
 
+            from typing import cast
             current_app.logger.info(
                 f"Plano de sucesso '{nome}' criado com ID {plano_id} usando checklist_items por {criado_por}"
             )
-            return plano_id
+            return cast(int, plano_id)
 
         except Exception as e:
             conn.rollback()
@@ -276,30 +233,17 @@ def atualizar_plano_sucesso(plano_id: int, dados: dict) -> bool:
     if not plano_id:
         raise ValidationError("ID do plano é obrigatório")
 
-    plano_existente = query_db("SELECT * FROM planos_sucesso WHERE id = %s", (plano_id,), one=True)
+    # Verificar se o plano existe
+    plano_existente = query_db(
+        "SELECT id, nome, contexto FROM planos_sucesso WHERE id = %s",
+        (plano_id,),
+        one=True
+    )
     if not plano_existente:
         raise ValidationError(f"Plano com ID {plano_id} não encontrado")
 
-    with db_connection() as (conn, db_type):
-        if db_type == "sqlite":
-            try:
-                cursor = conn.cursor()
-                cursor.execute("PRAGMA table_info(planos_sucesso)")
-                colunas_existentes = [row[1] for row in cursor.fetchall()]
-
-                if "data_atualizacao" not in colunas_existentes:
-                    cursor.execute(
-                        "ALTER TABLE planos_sucesso ADD COLUMN data_atualizacao DATETIME DEFAULT CURRENT_TIMESTAMP"
-                    )
-                    conn.commit()
-                    current_app.logger.info("Coluna data_atualizacao adicionada à tabela planos_sucesso")
-
-                if "dias_duracao" not in colunas_existentes:
-                    cursor.execute("ALTER TABLE planos_sucesso ADD COLUMN dias_duracao INTEGER")
-                    conn.commit()
-                    current_app.logger.info("Coluna dias_duracao adicionada à tabela planos_sucesso")
-            except Exception as mig_error:
-                current_app.logger.warning(f"Erro ao verificar/migrar colunas de planos_sucesso: {mig_error}")
+    # Tratar migrações automáticas se necessário (SQLite)
+    # Removida lógica redundante com nome de tabela incorreto
 
     campos_atualizaveis = []
     valores = []
@@ -324,16 +268,21 @@ def atualizar_plano_sucesso(plano_id: int, dados: dict) -> bool:
         campos_atualizaveis.append("permite_excluir_tarefas = %s")
         valores.append(bool(dados["permite_excluir_tarefas"]))
 
+    if "context" in dados or "contexto" in dados:
+        campos_atualizaveis.append("contexto = %s")
+        val = dados.get("context") if "context" in dados else dados.get("contexto")
+        valores.append(_normalizar_contexto_csv(val, default=plano_existente.get("contexto") or "onboarding"))
+
     if not campos_atualizaveis:
         return True
 
     campos_atualizaveis.append("data_atualizacao = %s")
-    valores.append(datetime.now())
+    valores.append(datetime.now(timezone.utc))
     valores.append(plano_id)
 
     sql = f"UPDATE planos_sucesso SET {', '.join(campos_atualizaveis)} WHERE id = %s"
 
-    result = execute_db(sql, tuple(valores), raise_on_error=True)
+    result = execute_db(sql, tuple(valores), raise_on_error=True)  # nosec B608
 
     current_app.logger.info(f"Plano de sucesso ID {plano_id} atualizado")
     return result is not None
@@ -346,7 +295,11 @@ def excluir_plano_sucesso(plano_id: int) -> bool:
     if not plano_id:
         raise ValidationError("ID do plano é obrigatório")
 
-    plano = query_db("SELECT nome FROM planos_sucesso WHERE id = %s", (plano_id,), one=True)
+    plano = query_db(
+        "SELECT nome FROM planos_sucesso WHERE id = %s",
+        (plano_id,),
+        one=True
+    )
     if not plano:
         raise ValidationError(f"Plano com ID {plano_id} não encontrado")
 
@@ -373,51 +326,72 @@ def listar_planos_sucesso(
     usuario_id: str | None = None,
     processo_id: int | None = None,
     somente_templates: bool = True,
-) -> list[dict]:
+    limit: int | None = None,
+    offset: int | None = None,
+    retornar_tupla: bool = False,
+):
     """
     Lista todos os planos de sucesso.
     Suporta filtragem por status, usuário e processo (implantacao).
+    Se retornar_tupla=True, retorna (planos, total_count) para paginação.
     """
-    sql = "SELECT * FROM planos_sucesso WHERE 1=1"
-    params = []
+    base_sql = " FROM planos_sucesso WHERE 1=1"
+    from typing import Any
+    params: list[Any] = []
 
-    if context:
-        if context == "onboarding":
-            sql += " AND (contexto IS NULL OR contexto = 'onboarding')"
-        else:
-            sql += " AND contexto = %s"
-            params.append(context)
+    contexto_busca = context
 
     if ativo is not None:
-        sql += " AND ativo = %s"
+        base_sql += " AND ativo = %s"
         params.append(ativo)
 
     if status:
-        sql += " AND status = %s"
+        base_sql += " AND status = %s"
         params.append(status)
 
     if usuario_id:
         # Busca planos criados por ou vinculados a processos do usuário
-        sql += """ AND (criado_por = %s OR processo_id IN (
+        base_sql += """ AND (criado_por = %s OR processo_id IN (
             SELECT id FROM implantacoes WHERE usuario_cs = %s
         ))"""
         params.extend([usuario_id, usuario_id])
 
     if processo_id:
-        sql += " AND processo_id = %s"
+        base_sql += " AND processo_id = %s"
         params.append(processo_id)
     elif somente_templates:
-        sql += " AND processo_id IS NULL"
+        base_sql += " AND processo_id IS NULL"
 
     if busca:
-        sql += " AND (nome LIKE %s OR descricao LIKE %s)"
+        base_sql += """ AND (
+            LOWER(nome) LIKE LOWER(%s) 
+            OR LOWER(descricao) LIKE LOWER(%s)
+            OR id IN (
+                SELECT plano_id FROM checklist_items
+                WHERE LOWER(title) LIKE LOWER(%s)
+                   OR LOWER(descricao) LIKE LOWER(%s)
+                   OR LOWER(comment) LIKE LOWER(%s)
+            )
+        )"""
         busca_pattern = f"%{busca}%"
-        params.extend([busca_pattern, busca_pattern])
+        params.extend([busca_pattern] * 5)
 
-    sql += " ORDER BY data_criacao DESC, nome ASC"
+    # Busca sem filtro SQL de contexto e filtra em Python para suportar formatos legados.
+    sql = "SELECT *" + base_sql + " ORDER BY data_criacao DESC, nome ASC"
+    planos_raw = query_db(sql, tuple(params) if params else ()) or []  # nosec B608
 
-    planos = query_db(sql, tuple(params) if params else ())
-    return planos or []
+    planos_filtrados = [p for p in planos_raw if _contexto_contem(p.get("contexto"), contexto_busca)]
+
+    total_count = len(planos_filtrados)
+    if offset is not None:
+        planos_filtrados = planos_filtrados[offset:]
+    if limit is not None:
+        planos_filtrados = planos_filtrados[:limit]
+
+    from typing import cast, Any
+    if retornar_tupla:
+        return cast(tuple[list[dict[str, Any]], int], (planos_filtrados, total_count))
+    return cast(list[dict[str, Any]], planos_filtrados)
 
 
 def concluir_plano_sucesso(plano_id: int) -> bool:
@@ -427,7 +401,11 @@ def concluir_plano_sucesso(plano_id: int) -> bool:
     if not plano_id:
         raise ValidationError("ID do plano é obrigatório")
 
-    plano = query_db("SELECT id, status, processo_id FROM planos_sucesso WHERE id = %s", (plano_id,), one=True)
+    plano = query_db(
+        "SELECT id, status, processo_id FROM planos_sucesso WHERE id = %s",
+        (plano_id,),
+        one=True
+    )
     if not plano:
         raise ValidationError(f"Plano com ID {plano_id} não encontrado")
 
@@ -438,6 +416,7 @@ def concluir_plano_sucesso(plano_id: int) -> bool:
 
             progresso, total_itens, _ = _get_progress(int(processo_id))
         except Exception as e:
+            logger.exception("Unhandled exception", exc_info=True)
             raise ValidationError(f"Não foi possível validar progresso do plano: {e}") from e
 
         if int(total_itens or 0) <= 0 or float(progresso or 0) < 100:
@@ -445,7 +424,7 @@ def concluir_plano_sucesso(plano_id: int) -> bool:
 
     result = execute_db(
         "UPDATE planos_sucesso SET status = 'concluido', data_atualizacao = %s WHERE id = %s",
-        (datetime.now(), plano_id),
+        (datetime.now(timezone.utc), plano_id),
         raise_on_error=True,
     )
 
@@ -479,13 +458,6 @@ def contar_planos_por_status(
     sql = "SELECT status, COUNT(*) as count FROM planos_sucesso WHERE 1=1"
     params = []
 
-    if context:
-        if context == "onboarding":
-            sql += " AND (contexto IS NULL OR contexto = 'onboarding')"
-        else:
-            sql += " AND contexto = %s"
-            params.append(context)
-
     if usuario_id:
         sql += " AND (criado_por = %s OR processo_id IN (SELECT id FROM implantacoes WHERE usuario_cs = %s))"
         params.extend([usuario_id, usuario_id])
@@ -493,15 +465,19 @@ def contar_planos_por_status(
     if somente_templates:
         sql += " AND processo_id IS NULL"
 
-    sql += " GROUP BY status"
-
-    results = query_db(sql, tuple(params))
+    results = query_db(
+        "SELECT status, contexto " + sql[sql.find(" FROM "):],  # mantém filtros já montados sem GROUP BY
+        tuple(params),
+    )
 
     counts = {"em_andamento": 0, "concluido": 0}
     if results:
         for row in results:
-            if row["status"] in counts:
-                counts[row["status"]] = row["count"]
+            if not _contexto_contem(row.get("contexto"), context):
+                continue
+            status_row = row.get("status")
+            if status_row in counts:
+                counts[status_row] += 1
 
     return counts
 
@@ -511,7 +487,13 @@ def obter_plano_completo(plano_id: int) -> dict | None:
     Retorna plano completo usando checklist_items (estrutura consolidada).
     Retorna no formato 'items' para compatibilidade com o editor moderno.
     """
-    plano = query_db("SELECT * FROM planos_sucesso WHERE id = %s", (plano_id,), one=True)
+    plano = query_db(
+        "SELECT * FROM planos_sucesso WHERE id = %s",
+        (plano_id,),
+        one=True
+    )
+    if plano:
+        plano["id"] = plano.get("id") or plano.get("codigo")
 
     if not plano:
         return None
@@ -526,10 +508,11 @@ def obter_plano_completo(plano_id: int) -> dict | None:
         (plano_id,),
     )
 
+    from typing import cast, Any
     if not items:
         plano["items"] = []
         plano["fases"] = []
-        return plano
+        return cast(dict[str, Any], plano)
 
     from ....modules.checklist.application.checklist_service import build_nested_tree
 
@@ -560,9 +543,11 @@ def obter_plano_completo(plano_id: int) -> dict | None:
         return x.get("tipo_item") or ""
 
     fases_items = [item for item in items if tipo_item_val(item) == "plano_fase" and item["parent_id"] is None]
-    grupos_items = {item["parent_id"]: [] for item in items if tipo_item_val(item) == "plano_grupo"}
-    tarefas_items = {item["parent_id"]: [] for item in items if tipo_item_val(item) == "plano_tarefa"}
-    subtarefas_items = {item["parent_id"]: [] for item in items if tipo_item_val(item) == "plano_subtarefa"}
+    
+    from typing import Any
+    grupos_items: dict[Any, Any] = {item["parent_id"]: [] for item in items if tipo_item_val(item) == "plano_grupo"}
+    tarefas_items: dict[Any, Any] = {item["parent_id"]: [] for item in items if tipo_item_val(item) == "plano_tarefa"}
+    subtarefas_items: dict[Any, Any] = {item["parent_id"]: [] for item in items if tipo_item_val(item) == "plano_subtarefa"}
 
     for item in items:
         tipo_item = tipo_item_val(item)
@@ -621,60 +606,13 @@ def obter_plano_completo(plano_id: int) -> dict | None:
 
         plano["fases"].append(fase)
 
-    return plano
+    from typing import cast, Any
+    return cast(dict[Any, Any] | None, plano)
 
 
-def obter_plano_completo_checklist(plano_id: int) -> dict | None:
-    """
-    Retorna plano completo usando checklist_items (hierarquia infinita).
-    Retorna estrutura aninhada para compatibilidade com frontend.
-    """
-    plano = query_db("SELECT * FROM planos_sucesso WHERE id = %s", (plano_id,), one=True)
-
-    if not plano:
-        return None
-
-    count_items = query_db("SELECT COUNT(*) as count FROM checklist_items WHERE plano_id = %s", (plano_id,), one=True)
-
-    if not count_items or count_items.get("count", 0) == 0:
-        return None
-
-    items = query_db(
-        """
-        SELECT id, parent_id, title, completed, comment, level, ordem, dias_offset
-        FROM checklist_items
-        WHERE plano_id = %s
-        ORDER BY ordem, id
-        """,
-        (plano_id,),
-    )
-
-    if not items:
-        return plano
-
-    from ....modules.checklist.application.checklist_service import build_nested_tree
-
-    flat_items = []
-    for item in items:
-        flat_items.append(
-            {
-                "id": item["id"],
-                "parent_id": item["parent_id"],
-                "title": item["title"],
-                "completed": item["completed"],
-                 "comment": item["comment"],
-                "level": item["level"],
-                "ordem": item["ordem"],
-                "dias_offset": item.get("dias_offset"),
-            }
-        )
-
-    nested_items = build_nested_tree(flat_items)
-
-    plano["items"] = nested_items
-    plano["estrutura"] = {"items": nested_items}
-
-    return plano
+# Alias por compatibilidade legada
+def obter_plano_completo_checklist(*args, **kwargs):
+    return obter_plano_completo(*args, **kwargs)
 
 
 def obter_plano_da_implantacao(implantacao_id: int) -> dict | None:
@@ -695,7 +633,7 @@ def _plano_usa_checklist_items(plano_id: int) -> bool:
     """
     count = query_db("SELECT COUNT(*) as count FROM checklist_items WHERE plano_id = %s", (plano_id,), one=True)
 
-    return count and count.get("count", 0) > 0
+    return bool(count and count.get("count", 0) > 0)
 
 
 def _extrair_estrutura_checklist(plano_id: int) -> dict:

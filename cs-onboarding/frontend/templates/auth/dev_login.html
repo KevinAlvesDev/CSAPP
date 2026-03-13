@@ -17,14 +17,6 @@
                     <div class="card-body">
                         <p class="text-muted">Auth0 desativado. Entre com qualquer e-mail para simular um usuário.</p>
 
-                        {% with messages = get_flashed_messages(with_categories=true) %}
-                          {% if messages %}
-                            {% for category, message in messages %}
-                              <div class="alert alert-{{ 'danger' if category == 'error' else category }}">{{ message }}</div>
-                            {% endfor %}
-                          {% endif %}
-                        {% endwith %}
-
                         <form method="POST" action="{{ url_for('auth.dev_login_as') }}">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <div class="mb-3">
@@ -46,6 +38,31 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>
+
+    <script nonce="{{ csp_nonce() }}" src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/ui/toast.js') }}"></script>
+    <script nonce="{{ csp_nonce() }}">
+        document.addEventListener('DOMContentLoaded', function () {
+            const messages = {{ get_flashed_messages(with_categories=true) | tojson | safe }};
+            if (!Array.isArray(messages)) return;
+            const typeMap = {
+                success: 'success',
+                error: 'error',
+                danger: 'error',
+                warning: 'warning',
+                info: 'info',
+                primary: 'primary'
+            };
+            messages.forEach(function (msg) {
+                const category = msg[0];
+                const message = msg[1];
+                const toastType = typeMap[category] || 'info';
+                if (window.showToast) {
+                    window.showToast(message, toastType, 6000);
+                }
+            });
+        });
+    </script>
 </body>
 </html>

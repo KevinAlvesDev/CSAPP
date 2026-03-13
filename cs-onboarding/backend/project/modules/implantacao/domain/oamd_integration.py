@@ -7,6 +7,7 @@ Princípio SOLID: Single Responsibility
 import re
 
 from ....db import db_transaction_with_lock, query_db
+from ....common.exceptions import ResourceNotFoundError, BusinessRuleError
 
 
 def consultar_dados_oamd(impl_id=None, user_email=None, id_favorecido_direto=None):
@@ -44,7 +45,7 @@ def consultar_dados_oamd(impl_id=None, user_email=None, id_favorecido_direto=Non
 
     # Se não temos id_favorecido de nenhuma fonte, erro
     if not id_favorecido and not infra_req:
-        raise ValueError("Implantação não encontrada e nenhum ID Favorecido fornecido")
+        raise BusinessRuleError("Implantação não encontrada e nenhum ID Favorecido fornecido")
 
     # Extract numeric part from infra if possible as fallback
     infra_digits = None
@@ -86,7 +87,7 @@ def _build_persistibles(mapped, empresa, id_favorecido):
         "chave_oamd": mapped.get("chave_oamd"),
         "cnpj": mapped.get("cnpj"),
         "data_cadastro": mapped.get("data_cadastro"),
-        "status_implantacao": mapped.get("status_implantacao"),
+        "status_implantacao_oamd": mapped.get("status_implantacao"),
     }
 
     # Refinando com dados crus da empresa se mapped não tiver tudo
@@ -97,7 +98,6 @@ def _build_persistibles(mapped, empresa, id_favorecido):
         "inicioproducao": "inicio_producao",
         "nivelreceitamensal": "nivel_receita_do_cliente",
         "categoria": "categorias",
-        "nivelatendimento": "nivel_atendimento",
         "condicaoespecial": "condicao_especial",
         "cs_nome": "analista_cs_responsavel",
         "cs_url": "link_agendamento_cs",
@@ -158,7 +158,7 @@ def aplicar_dados_oamd(impl_id, user_email, updates_dict):
     # Validar implantação
     impl = query_db("SELECT id FROM implantacoes WHERE id = %s", (impl_id,), one=True)
     if not impl:
-        raise ValueError("Implantação não encontrada")
+        raise ResourceNotFoundError("Implantação", impl_id)
 
     allowed_fields = [
         "id_favorecido",
@@ -166,9 +166,9 @@ def aplicar_dados_oamd(impl_id, user_email, updates_dict):
         "informacao_infra",
         "tela_apoio_link",
         "status_implantacao_oamd",
-        "nivel_atendimento",
         "cnpj",
         "data_cadastro",
+        "nivel_receita",
         "valor_atribuido",
     ]
     filtered_updates = {k: v for k, v in updates_dict.items() if k in allowed_fields}

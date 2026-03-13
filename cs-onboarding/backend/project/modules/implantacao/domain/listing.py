@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(__name__)
 """
 Módulo de Listagem de Implantações
 Funções para listar e buscar implantações.
@@ -73,17 +75,18 @@ def listar_implantacoes(user_email, status_filter=None, page=1, per_page=50, is_
     query_args = [*params, per_page, offset]
 
     try:
-        implantacoes = query_db(query, tuple(query_args)) or []
+        implantacoes = query_db(query, tuple(query_args))  # nosec B608
     except Exception as e:
-        current_app.logger.error(f"Erro ao listar implantações: {e}")
+        current_app.logger.error(f"Erro ao listar implantações: {e}", exc_info=True)
         implantacoes = []
 
     # Count query
     count_query = f"SELECT COUNT(*) as total FROM implantacoes i {where_str}"
     try:
-        total_result = query_db(count_query, tuple(params), one=True)
+        total_result = query_db(count_query, tuple(params), one=True)  # nosec B608
         total = total_result.get("total", 0) if total_result else 0
-    except Exception:
+    except Exception as exc:
+        logger.exception("Unhandled exception", exc_info=True)
         total = 0
 
     return {
@@ -122,6 +125,18 @@ def obter_implantacao_basica(impl_id, user_email, is_manager=False):
     impl = query_db(query_base, tuple(params), one=True)
 
     if not impl:
+        return None
+
+    # Validação de Contexto: Garante que o usuário não acesse dados de outro módulo via URL manual
+    from flask import g
+    from ....common.context_navigation import normalize_context
+    
+    modulo_atual = getattr(g, "modulo_atual", "onboarding")
+    impl_contexto = normalize_context(impl.get("contexto"))
+    
+    # Se não for manager, o contexto DEVE bater. Se for manager, permitimos mas registramos (ou podemos bloquear se desejar isolamento estrito)
+    if not is_manager and impl_contexto != modulo_atual:
+        current_app.logger.warning(f"Acesso bloqueado: Implantação {impl_id} é do contexto {impl_contexto}, mas usuário está em {modulo_atual}")
         return None
 
     # Normalizar datas

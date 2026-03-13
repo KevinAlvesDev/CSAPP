@@ -1,7 +1,11 @@
+import logging
 import os
 from pathlib import Path
+logger = logging.getLogger(__name__)
 
 from dotenv import find_dotenv, load_dotenv
+
+_logger = logging.getLogger(__name__)
 
 # Prioridade: .env.local (desenvolvimento) > .env (produção)
 try:
@@ -19,47 +23,30 @@ try:
             load_dotenv(_dotenv_path, override=True)
         else:
             load_dotenv(override=True)
-except Exception:
-    pass
+except Exception as e:
+    _logger.warning(f"Falha ao carregar variáveis de ambiente do arquivo .env: {e}", exc_info=True)
 
 
 class Config:
     """Configuração base da aplicação."""
 
-    SECRET_KEY = os.environ.get("SECRET_KEY") or os.environ.get("FLASK_SECRET_KEY")
+    SECRET_KEY = os.environ.get("SECRET_KEY")
     if not SECRET_KEY:
-        raise ValueError("Nenhuma variável de ambiente SECRET_KEY ou FLASK_SECRET_KEY foi definida.")
+        raise ValueError("Nenhuma variável de ambiente SECRET_KEY foi definida.")
 
     DATABASE_URL = os.environ.get("DATABASE_URL")
 
     # --- BANCO DE DADOS EXTERNO ---
-    # Suporta EXTERNAL_DB_URL ou DB_EXT_URL (nome usado no .env)
-    EXTERNAL_DB_URL = os.environ.get("EXTERNAL_DB_URL") or os.environ.get("DB_EXT_URL")
+    # Removido em favor do acesso direto ao OAMD via DATABASE_URL
     # ------------------------------
 
     # Imagem de fundo da tela de login (arquivo em 'frontend/static')
     LOGIN_BG_FILE = os.environ.get("LOGIN_BG_FILE", "imagens/Meet_TimesSquare.png")
 
-    USE_SQLITE_ENV = os.environ.get("USE_SQLITE_LOCALLY", "").lower() in ("true", "1", "yes")
+    # Endpoints de diagnóstico devem ficar desativados por padrão em produção.
+    ENABLE_DIAGNOSTIC_SMTP = os.environ.get("ENABLE_DIAGNOSTIC_SMTP", "false").lower() in ("1", "true", "yes")
+    CSP_STRICT_NONCE = os.environ.get("CSP_STRICT_NONCE", "false").lower() in ("1", "true", "yes")
 
-    # Verificar se é SQLite pela URL ou pela variável USE_SQLITE_LOCALLY
-    if USE_SQLITE_ENV or (DATABASE_URL and DATABASE_URL.startswith("sqlite")):
-        USE_SQLITE_LOCALLY = True
-    elif DATABASE_URL:
-        USE_SQLITE_LOCALLY = False
-    else:
-        USE_SQLITE_LOCALLY = True
-
-    # Auth0 desabilitado automaticamente em desenvolvimento local
-    USE_SQLITE_ENV = os.environ.get("USE_SQLITE_LOCALLY", "").lower() in ("true", "1", "yes")
-    if USE_SQLITE_ENV or (DATABASE_URL and DATABASE_URL.startswith("sqlite")):
-        AUTH0_ENABLED = False  # Desabilitar Auth0 em desenvolvimento local
-    else:
-        AUTH0_ENABLED = os.environ.get("AUTH0_ENABLED", "false").lower() in ("true", "1", "yes")
-
-    AUTH0_DOMAIN = os.environ.get("AUTH0_DOMAIN")
-    AUTH0_CLIENT_ID = os.environ.get("AUTH0_CLIENT_ID")
-    AUTH0_CLIENT_SECRET = os.environ.get("AUTH0_CLIENT_SECRET")
 
     R2_ENDPOINT_URL = os.environ.get("CLOUDFLARE_ENDPOINT_URL")
     R2_ACCESS_KEY_ID = os.environ.get("CLOUDFLARE_ACCESS_KEY_ID")
@@ -77,13 +64,11 @@ class Config:
     # Ajuste para Localhost (HTTP) vs Produção (HTTPS)
     # Em localhost, SECURE deve ser False para o cookie ser enviado
     # SAMESITE='Lax' é recomendado para fluxos OAuth
-    SESSION_COOKIE_SECURE = (
-        os.environ.get("SESSION_COOKIE_SECURE", "True").lower() == "true" if not USE_SQLITE_LOCALLY else False
-    )
+    SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "True").lower() == "true"
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
     # Em produção, forçar HTTPS para evitar redirect_uri_mismatch
-    PREFERRED_URL_SCHEME = "https" if not USE_SQLITE_LOCALLY else "http"
+    PREFERRED_URL_SCHEME = os.environ.get("PREFERRED_URL_SCHEME", "https")
     # SERVER_NAME não será forçado para evitar inconsistências; use o host atual da requisição
 
     GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
@@ -141,3 +126,35 @@ class Config:
     except ImportError:
         # Fallback caso a importação falhe
         PERFIS_DE_ACESSO = ["Administrador", "Gerente", "Coordenador", "Implantador"]
+
+class DevelopmentConfig(Config):
+    DEBUG = True
+    SESSION_COOKIE_SECURE = False
+    PREFERRED_URL_SCHEME = "http"
+
+
+class TestingConfig(Config):
+    TESTING = True
+    SESSION_COOKIE_SECURE = False
+    PREFERRED_URL_SCHEME = "http"
+
+
+class ProductionConfig(Config):
+    SESSION_COOKIE_SECURE = True
+    PREFERRED_URL_SCHEME = "https"
+
+
+_CONFIG_MAP = {
+    "development": DevelopmentConfig,
+    "testing": TestingConfig,
+    "production": ProductionConfig,
+}
+
+
+def get_config() -> type[Config]:
+    """Retorna a classe de config correta para o ambiente atual."""
+    env = os.getenv("FLASK_ENV", "production")
+    env_local = Path(__file__).resolve().parents[3] / ".env.local"
+    if env_local.exists() and env == "production":
+        env = "development"
+    return _CONFIG_MAP.get(env, ProductionConfig)

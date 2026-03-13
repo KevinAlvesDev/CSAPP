@@ -1,7 +1,10 @@
-from flask import Blueprint, flash, g, jsonify, redirect, request, url_for
+import logging
+from flask import Blueprint, current_app, flash, g, jsonify, redirect, request, url_for
 from flask_limiter.util import get_remote_address
+logger = logging.getLogger(__name__)
 
 from ....blueprints.auth import login_required, permission_required
+from ....modules.perfis.application.perfis_service import verificar_permissao_por_contexto
 from ....blueprints.helpers.shared_actions import (
     handle_agendar_implantacao,
     handle_atualizar_detalhes_empresa,
@@ -61,6 +64,9 @@ def criar_implantacao_modulo():
 @login_required
 @limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 def iniciar_implantacao():
+    if not verificar_permissao_por_contexto(g.perfil, "implantacoes.change_status"):
+        flash("Sem permissão para alterar status de implantações.", "error")
+        return redirect(url_for("onboarding.dashboard"))
     return handle_iniciar_implantacao(
         dashboard_endpoint="onboarding.dashboard",
         detail_endpoint="onboarding.ver_implantacao",
@@ -96,8 +102,8 @@ def desfazer_cancelamento_implantacao():
             clear_implantacao_cache(implantacao_id)
             clear_user_cache(usuario_cs_email)
             clear_dashboard_cache()
-        except Exception:
-            pass
+        except Exception as e:
+            current_app.logger.warning(f"Falha ao limpar cache após desfazer cancelamento da implantação {implantacao_id}: {e}", exc_info=True)
 
         return jsonify(
             {"ok": True, "message": "Cancelamento desfeito com sucesso! A implantação retornou para 'Em Andamento'."}
@@ -105,7 +111,8 @@ def desfazer_cancelamento_implantacao():
 
     except ValueError as e:
         return jsonify({"ok": False, "error": str(e)}), 400
-    except Exception:
+    except Exception as exc:
+        logger.exception("Unhandled exception", exc_info=True)
         import traceback
 
         traceback.print_exc()
@@ -131,6 +138,9 @@ def marcar_sem_previsao():
 @limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 @audit(action="FINALIZE_IMPLANTACAO", target_type="implantacao")
 def finalizar_implantacao():
+    if not verificar_permissao_por_contexto(g.perfil, "implantacoes.change_status"):
+        flash("Sem permissão para finalizar implantações.", "error")
+        return redirect(url_for("onboarding.dashboard"))
     return handle_finalizar_implantacao(
         dashboard_endpoint="onboarding.dashboard",
         detail_endpoint="onboarding.ver_implantacao",
@@ -142,6 +152,9 @@ def finalizar_implantacao():
 @login_required
 @limiter.limit("50 per minute", key_func=lambda: g.user_email or get_remote_address())
 def parar_implantacao():
+    if not verificar_permissao_por_contexto(g.perfil, "implantacoes.change_status"):
+        flash("Sem permissão para parar implantações.", "error")
+        return redirect(url_for("onboarding.dashboard"))
     return handle_parar_implantacao(
         detail_endpoint="onboarding.ver_implantacao",
         clear_dashboard=True,
@@ -205,15 +218,14 @@ def concluir_plano_implantacao():
 
         if not implantacao_id:
             flash("Implantação inválida.", "error")
-            return redirect(url_for("onboarding.dashboard"))
+            return redirect(url_for("onboarding.dashboard", context=getattr(g, "modulo_atual", None)))
 
         if not plano_instancia_id:
             from ....db import query_db
 
             plano_em_andamento = query_db(
                 """
-                SELECT id
-                FROM planos_sucesso
+                SELECT id FROM planos_sucesso
                 WHERE processo_id = %s AND status = 'em_andamento'
                 ORDER BY data_criacao DESC
                 LIMIT 1
@@ -221,7 +233,11 @@ def concluir_plano_implantacao():
                 (implantacao_id,),
                 one=True,
             )
-            plano_instancia_id = plano_em_andamento["id"] if plano_em_andamento else None
+            plano_instancia_id = (
+                (plano_em_andamento.get("id") or plano_em_andamento.get("codigo"))
+                if plano_em_andamento
+                else None
+            )
 
         if not plano_instancia_id:
             from ....db import query_db
@@ -235,7 +251,7 @@ def concluir_plano_implantacao():
 
         if not plano_instancia_id:
             flash("Nenhum plano em andamento encontrado para concluir.", "warning")
-            return redirect(url_for("onboarding.ver_implantacao", impl_id=implantacao_id))
+            return redirect(url_for("onboarding.ver_implantacao", impl_id=implantacao_id, context=getattr(g, "modulo_atual", None)))
 
         from ....db import db_connection, query_db
         from ....modules.implantacao.domain.progress import _get_progress
@@ -245,7 +261,7 @@ def concluir_plano_implantacao():
         progresso, total_itens, _ = _get_progress(implantacao_id)
         if int(total_itens or 0) <= 0 or float(progresso or 0) < 100:
             flash("Para concluir o plano, o progresso precisa estar em 100%.", "warning")
-            return redirect(url_for("onboarding.ver_implantacao", impl_id=implantacao_id))
+            return redirect(url_for("onboarding.ver_implantacao", impl_id=implantacao_id, context=getattr(g, "modulo_atual", None)))
 
         plano = query_db("SELECT * FROM planos_sucesso WHERE id = %s", (plano_instancia_id,), one=True)
         if plano and not plano.get("processo_id"):
@@ -267,13 +283,14 @@ def concluir_plano_implantacao():
 
         concluir_plano_sucesso(plano_instancia_id)
         flash("Plano concluído com sucesso!", "success")
-        return redirect(url_for("onboarding.ver_implantacao", impl_id=implantacao_id))
+        return redirect(url_for("onboarding.ver_implantacao", impl_id=implantacao_id, context=getattr(g, "modulo_atual", None)))
     except Exception as e:
+        logger.exception("Unhandled exception", exc_info=True)
         impl_id = request.form.get("implantacao_id", type=int)
         flash(f"Erro ao concluir plano: {e!s}", "error")
         if impl_id:
-            return redirect(url_for("onboarding.ver_implantacao", impl_id=impl_id))
-        return redirect(url_for("onboarding.dashboard"))
+            return redirect(url_for("onboarding.ver_implantacao", impl_id=impl_id, context=getattr(g, "modulo_atual", None)))
+        return redirect(url_for("onboarding.dashboard", context=getattr(g, "modulo_atual", None)))  # pragma: no cover
 
 
 @onboarding_actions_bp.route("/transferir_implantacao", methods=["POST"])
@@ -282,6 +299,9 @@ def concluir_plano_implantacao():
 @limiter.limit("30 per minute", key_func=lambda: g.user_email or get_remote_address())
 @audit(action="TRANSFER_IMPLANTACAO", target_type="implantacao")
 def transferir_implantacao():
+    if not verificar_permissao_por_contexto(g.perfil, "implantacoes.transfer"):
+        flash("Sem permissão para transferir implantações.", "error")
+        return redirect(url_for("onboarding.dashboard"))
     return handle_transferir_implantacao(
         dashboard_endpoint="onboarding.dashboard",
         detail_endpoint="onboarding.ver_implantacao",
@@ -293,6 +313,9 @@ def transferir_implantacao():
 @limiter.limit("100 per minute", key_func=lambda: g.user_email or get_remote_address())
 @audit(action="DELETE_IMPLANTACAO", target_type="implantacao")
 def excluir_implantacao():
+    if not verificar_permissao_por_contexto(g.perfil, "implantacoes.delete"):
+        flash("Sem permissão para excluir implantações.", "error")
+        return redirect(url_for("onboarding.dashboard"))
     return handle_excluir_implantacao(
         dashboard_endpoint="onboarding.dashboard",
         clear_dashboard=True,
@@ -303,6 +326,9 @@ def excluir_implantacao():
 @login_required
 @audit(action="CANCEL_IMPLANTACAO", target_type="implantacao")
 def cancelar_implantacao():
+    if not verificar_permissao_por_contexto(g.perfil, "implantacoes.change_status"):
+        flash("Sem permissão para cancelar implantações.", "error")
+        return redirect(url_for("onboarding.dashboard"))
     return handle_cancelar_implantacao(
         dashboard_endpoint="onboarding.dashboard",
         detail_endpoint="onboarding.ver_implantacao",
@@ -316,6 +342,8 @@ def get_jira_issues(implantacao_id):
 @onboarding_actions_bp.route("/api/implantacao/<int:implantacao_id>/jira-issues", methods=["POST"])
 @login_required
 def create_jira_issue_action(implantacao_id):
+    if not verificar_permissao_por_contexto(g.perfil, "jira.create"):
+        return jsonify({"ok": False, "error": "Sem permissão para criar tickets Jira"}), 403
     return handle_create_jira_issue(implantacao_id, use_onboarding_status_codes=True)
 
 @onboarding_actions_bp.route("/api/implantacao/<int:implantacao_id>/jira-issues/fetch", methods=["POST"])
@@ -326,4 +354,6 @@ def fetch_jira_issue_action(implantacao_id):
 @onboarding_actions_bp.route("/api/implantacao/<int:implantacao_id>/jira-issues/<path:jira_key>", methods=["DELETE"])
 @login_required
 def delete_jira_link_action(implantacao_id, jira_key):
+    if not verificar_permissao_por_contexto(g.perfil, "jira.delete"):
+        return jsonify({"ok": False, "error": "Sem permissão para desvincular tickets Jira"}), 403
     return handle_delete_jira_link(implantacao_id, jira_key)

@@ -503,6 +503,24 @@
     .btn-move-item:active {
         cursor: grabbing;
     }
+
+    .item-action-btn {
+        width: 34px;
+        height: 34px;
+        min-width: 34px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .item-dias-group {
+        width: 170px;
+    }
+
+    .item-dias-group .item-dias-offset-input {
+        min-width: 74px;
+    }
 </style>
 {% endblock %}
 
@@ -524,18 +542,6 @@
         </div>
     </header>
     <main class="p-4" style="padding-top: 20px !important;">
-
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-        {% for category, message in messages %}
-        <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show"
-            role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-        {% endfor %}
-        {% endif %}
-        {% endwith %}
 
         {% if modo == 'visualizar' or not pode_editar %}
         <div class="readonly-badge">
@@ -602,14 +608,13 @@
                     {% if modo != 'criar' %}
                     <input type="hidden" name="_method" value="PUT">
                     {% endif %}
-                    {% if context %}
-                    <input type="hidden" name="context" value="{{ context }}">
-                    {% endif %}
 
                     <div class="form-section">
                         <h3 class="form-section-title">
                             <i class="bi bi-card-text"></i>Informações Básicas
                         </h3>
+
+
 
                         <div class="mb-3">
                             <label for="nome" class="form-label fw-bold">
@@ -625,24 +630,81 @@
                                 placeholder="Descreva o objetivo e aplicação deste plano...">{{ plano.descricao if plano else '' }}</textarea>
                         </div>
 
-                        <div class="mb-3">
-                            <label for="dias_duracao" class="form-label fw-bold">
-                                <i class="bi bi-calendar-range me-1"></i>Dias de Duração <span
-                                    class="text-danger">*</span>
-                            </label>
-                            <div class="input-group" style="max-width: 200px;">
-                                <input type="number" class="form-control" id="dias_duracao" name="dias_duracao" min="1"
-                                    max="365" required placeholder="Ex: 30"
-                                    value="{{ plano.dias_duracao if plano and plano.dias_duracao else '' }}">
-                                <span class="input-group-text">dias</span>
+                        <div class="row align-items-start g-3 mb-3">
+                            <div class="col-auto">
+                                <label for="dias_duracao" class="form-label fw-bold">
+                                    <i class="bi bi-calendar-range me-1"></i>Dias de Duração <span
+                                        class="text-danger">*</span>
+                                </label>
+                                <div class="input-group" style="width: 150px;">
+                                    <input type="number" class="form-control" id="dias_duracao" name="dias_duracao"
+                                        min="1" max="365" required placeholder="Ex: 30"
+                                        value="{{ plano.dias_duracao if plano and plano.dias_duracao else '' }}">
+                                    <span class="input-group-text">dias</span>
+                                </div>
+                                <small class="text-muted d-block mt-1">Define o prazo</small>
                             </div>
-                            <small class="text-muted">Define o prazo esperado para completar todas as tarefas do
-                                plano</small>
-                        </div>
 
+                            <div class="col-auto">
+                                <label class="form-label fw-bold">
+                                    <i class="bi bi-box me-1"></i>Módulos do Template <span class="text-danger">*</span>
+                                </label>
+                                <div class="d-flex flex-wrap gap-3 p-2 bg-light border rounded"
+                                    style="min-width: 400px;">
+                                    {% set current_ctxs = [] %}
+                                    {% if plano and plano.contexto %}
+                                    {% if plano.contexto is string %}
+                                    {% set current_ctxs = plano.contexto.split(',') %}
+                                    {% else %}
+                                    {% set current_ctxs = [plano.contexto] %}
+                                    {% endif %}
+                                    {% elif context %}
+                                    {% set current_ctxs = [context] %}
+                                    {% else %}
+                                    {% set current_ctxs = ['onboarding'] %}
+                                    {% endif %}
+
+                                    {% if contextos_disponiveis %}
+                                    {% for ctx in contextos_disponiveis %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="context"
+                                            value="{{ ctx.id }}" id="ctx_{{ ctx.id }}" {% if ctx.id in current_ctxs
+                                            %}checked{% endif %} {% if modo=='visualizar' or not pode_editar
+                                            %}disabled{% endif %}>
+                                        <label class="form-check-label" for="ctx_{{ ctx.id }}">
+                                            {{ ctx.nome }}
+                                        </label>
+                                    </div>
+                                    {% endfor %}
+                                    {% else %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="context"
+                                            value="onboarding" id="ctx_onboarding" {% if 'onboarding' in current_ctxs
+                                            %}checked{% endif %} {% if modo=='visualizar' or not pode_editar
+                                            %}disabled{% endif %}>
+                                        <label class="form-check-label" for="ctx_onboarding">Onboarding</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="context"
+                                            value="grandes_contas" id="ctx_grandes_contas" {% if 'grandes_contas' in
+                                            current_ctxs %}checked{% endif %} {% if modo=='visualizar' or not
+                                            pode_editar %}disabled{% endif %}>
+                                        <label class="form-check-label" for="ctx_grandes_contas">Grandes Contas</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="context" value="ongoing"
+                                            id="ctx_ongoing" {% if 'ongoing' in current_ctxs %}checked{% endif %} {% if
+                                            modo=='visualizar' or not pode_editar %}disabled{% endif %}>
+                                        <label class="form-check-label" for="ctx_ongoing">Ongoing</label>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <small class="text-muted d-block mt-1">Selecione todos os módulos onde este template
+                                    deve aparecer</small>
+                            </div>
+                        </div>
                         {% if plano %}
                         <div class="form-check form-switch">
-                            <input type="hidden" name="ativo" value="false">
                             <input class="form-check-input" type="checkbox" id="ativo" name="ativo" value="true" {% if
                                 plano.ativo %}checked{% endif %}>
                             <label class="form-check-label" for="ativo">
@@ -697,8 +759,8 @@
         </div>
 </div>
 
-<script src="{{ url_for('static', filename='js/pages/planos_editor.js') }}"></script>
-<script>
+<script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/pages/planos_editor.js') }}"></script>
+<script nonce="{{ csp_nonce() }}">
     document.addEventListener('DOMContentLoaded', function () {
         {% if plano %}
         const planoData = {{ plano | tojson | safe

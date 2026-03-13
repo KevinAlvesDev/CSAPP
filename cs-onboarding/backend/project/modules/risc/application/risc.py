@@ -1,1 +1,1 @@
-from .risc_service import *  # noqa: F401,F403
+from .risc_service import *  # noqa: F403
